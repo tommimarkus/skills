@@ -1,0 +1,16 @@
+{
+  "name": "souroldgeezer",
+  "description": "Claude Code plugins by Sour Old Geezer — skills and subagents for code auditing, review, and development workflows.",
+  "owner": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "plugins": [
+    {
+      "name": "souroldgeezer-audit",
+      "source": "./souroldgeezer-audit",
+      "version": "0.1.0",
+      "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions and matching subagents."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "souroldgeezer-audit",
+  "version": "0.1.0",
+  "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions and matching subagents.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT"
+}
