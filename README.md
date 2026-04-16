@@ -82,6 +82,13 @@ undecided/                         # skills not yet assigned to a plugin
 See [CLAUDE.md](CLAUDE.md) for the full authoring conventions (shared skill
 architecture, subagent pairing rules, skill-specific notes).
 
+## Attribution
+
+Developed with assistance from [Claude](https://www.anthropic.com/claude)
+(Anthropic) via [Claude Code](https://claude.com/claude-code). Per-commit
+co-authorship trailers are intentionally omitted — this repo-wide acknowledgement
+covers the contribution.
+
 ## License
 
 MIT. See plugin manifests for per-plugin metadata.
