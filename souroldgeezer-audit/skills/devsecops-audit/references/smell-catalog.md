@@ -1,6 +1,6 @@
 # DevSecOps Smell Catalog
 
-Compact lookup table for every finding code the skill emits. The rubric prose lives in `docs/security-reference/devsecops.md`; this file is a code-to-section-pointer index. Findings in audit reports cite codes from this catalog and never restate the rubric.
+Compact lookup table for every finding code the skill emits. The rubric prose lives in [../../../docs/security-reference/devsecops.md](../../../docs/security-reference/devsecops.md); this file is a code-to-section-pointer index. Findings in audit reports cite codes from this catalog and never restate the rubric.
 
 **Rules enforced by the skill:**
 

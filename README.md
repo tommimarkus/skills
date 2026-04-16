@@ -46,13 +46,13 @@ and invoke the same skills, making them usable as delegated one-shots.
 - **Rubric-driven.** The skills are *workflows* that apply an external rubric.
   Findings cite smell codes (e.g. `DSO-HC-2`, `HC-1`, `dotnet.I-HC-A1`); the prose
   lives in the rubric, not in the skill.
-- **You bring the rubric.** The audited repo is expected to provide:
-  - `docs/security-reference/devsecops.md` for `devsecops-audit`
-  - `docs/quality-reference/unit-testing.md` (and siblings for integration / E2E)
-    for `test-quality-audit`
+- **Rubric ships with the plugin.** No setup in the audited repo required. The
+  rubric docs live at:
+  - [souroldgeezer-audit/docs/security-reference/devsecops.md](souroldgeezer-audit/docs/security-reference/devsecops.md) for `devsecops-audit`
+  - [souroldgeezer-audit/docs/quality-reference/unit-testing.md](souroldgeezer-audit/docs/quality-reference/unit-testing.md) (and siblings for integration / E2E) for `test-quality-audit`
 
-  Without a rubric the skill will tell you what's missing rather than fabricate
-  codes.
+  The skill reads these by relative path from its own location, so they travel
+  with the installed plugin.
 - **Quick vs Deep modes.** Every audit exposes both. *Quick* = single file or PR
   diff, per-finding output. *Deep* = whole-repo, sectioned rollup, optional MCP
   live-state probes. If the request is ambiguous, the skill asks.

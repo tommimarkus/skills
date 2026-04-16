@@ -35,7 +35,7 @@ Adding a new plugin:
 
 Skills in this repo follow a recurring shape. Understand it before editing any SKILL.md:
 
-- **Rubric vs workflow separation.** SKILL.md is a *workflow* for applying an external rubric. Rubric paths (e.g. `docs/security-reference/devsecops.md`, `docs/quality-reference/unit-testing.md`) refer to files in the **audited repo**, not this one. SKILL.md must **cite** rubric sections and smell codes — never duplicate rubric prose.
+- **Rubric vs workflow separation.** SKILL.md is a *workflow* for applying a rubric; the rubric prose lives in a separate file. Rubrics are **bundled with the plugin** at `<plugin>/docs/security-reference/*.md` and `<plugin>/docs/quality-reference/*.md` (relative paths like `../../docs/security-reference/devsecops.md` resolve to these from a skill dir). SKILL.md must **cite** rubric sections and smell codes — never duplicate rubric prose.
 - **Quick vs Deep modes.** Every audit skill exposes both. Quick = single file / PR diff, per-finding output only. Deep = whole-repo, full sectioned rollup, may use MCP probes. If the user request is ambiguous, the skill asks.
 - **Findings cite codes, not prose.** Reports use smell codes like `DSO-HC-2`, `HC-1`, `dotnet.I-HC-A1`. The prose lives in the rubric.
 - **Extensions are per-stack smell packs** in `skills/<skill>/extensions/*.md`. They are loaded on demand based on detected target type. They can **ADD** namespaced smells (`<ext>.HC-N`, `<ext>.LC-N`, `<ext>.POS-N`) or **CARVE OUT** core smells for idiomatic framework patterns — they **never override** core rules. Each skill's `extensions/README.md` is the authoritative convention for that skill; follow its required-sections list exactly when adding a new extension.

@@ -1,19 +1,19 @@
 ---
 name: devsecops-audit
-description: Use when auditing DevSecOps pipeline and application security posture — workflows, IaC, release artifacts, and code-level security smells — against docs/security-reference/devsecops.md. Supports quick single-target audits and deep whole-repo audits with conditional MCP live-state probes and configurable cost stance.
+description: Use when auditing DevSecOps pipeline and application security posture — workflows, IaC, release artifacts, and code-level security smells — against the bundled rubric at souroldgeezer-audit/docs/security-reference/devsecops.md. Supports quick single-target audits and deep whole-repo audits with conditional MCP live-state probes and configurable cost stance.
 ---
 
 # DevSecOps Audit
 
 ## Overview
 
-Audit a repository's DevSecOps posture against `docs/security-reference/devsecops.md`. The central question, from §1 of the rubric:
+Audit a repository's DevSecOps posture against [../../docs/security-reference/devsecops.md](../../docs/security-reference/devsecops.md). The central question, from §1 of the rubric:
 
 > If any control under audit were silently disabled for a sprint, would anyone notice — via a failed build, a blocked merge, a missed deploy, an alert someone reads, or a report someone acts on?
 
 If no, the control is decorative. The skill's job is to distinguish enforcing controls from decorative ones and produce actionable findings.
 
-**The rubric is `docs/security-reference/devsecops.md`.** This skill is the *workflow* for applying it. Findings cite rubric sections and smell codes by reference; the skill never duplicates rubric prose.
+**The rubric is [../../docs/security-reference/devsecops.md](../../docs/security-reference/devsecops.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Findings cite rubric sections and smell codes by reference; the skill never duplicates rubric prose.
 
 **Read `references/smell-catalog.md`** for the compact code list used in reports.
 
@@ -149,7 +149,7 @@ Findings block only. Footer:
 ```
 Extensions loaded: github-actions, dotnet-security
 Cost stance:       free (source: skills/devsecops-audit/config.yaml)
-Rubric:            docs/security-reference/devsecops.md
+Rubric:            souroldgeezer-audit/docs/security-reference/devsecops.md
 ```
 
 ### Deep mode report
@@ -159,7 +159,7 @@ All twelve sections. Remediation worklist ordered by severity (block → warn �
 ```
 MCP github:  available / unavailable
 Cost stance: <stance> (source: <source>)
-Rubric:      docs/security-reference/devsecops.md
+Rubric:      souroldgeezer-audit/docs/security-reference/devsecops.md
 Honest limits: <verbatim §8 block>
 ```
 
