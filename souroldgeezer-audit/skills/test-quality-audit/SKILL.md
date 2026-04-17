@@ -75,7 +75,7 @@ The core rubric is framework-neutral. **Extensions** are per-stack smell packs l
 
 Extensions live in `extensions/*.md`. Read `extensions/README.md` for the full convention, including the two supported file layouts (single-file vs. core + rubric addons). Current extensions:
 
-- **.NET** — core + rubric addons. [extensions/dotnet-core.md](extensions/dotnet-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker mutation tool); [extensions/dotnet-unit.md](extensions/dotnet-unit.md), [extensions/dotnet-integration.md](extensions/dotnet-integration.md), and [extensions/dotnet-e2e.md](extensions/dotnet-e2e.md) are the rubric-specific addons. Covers xUnit, NUnit, MSTest, bUnit, Playwright .NET, Selenium, Moq, NSubstitute, FakeItEasy, FluentAssertions, Testcontainers, Stryker.NET.
+- **.NET** — core + rubric addons. [extensions/dotnet-core.md](extensions/dotnet-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker mutation tool); [extensions/dotnet-unit.md](extensions/dotnet-unit.md), [extensions/dotnet-integration.md](extensions/dotnet-integration.md), and [extensions/dotnet-e2e.md](extensions/dotnet-e2e.md) are the rubric-specific addons. Covers xUnit, NUnit, MSTest, bUnit, `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory<T>` / `TestAuthHandler`), `Aspire.Hosting.Testing` (`DistributedApplicationTestingBuilder`), Playwright .NET (including Azure Playwright Workspaces and Microsoft Playwright Testing cloud runners), Selenium, Moq (including `.Protected()` + `ItExpr` for `HttpMessageHandler`), NSubstitute, FakeItEasy, FluentAssertions, `Microsoft.Extensions.Logging.Testing` (`FakeLogger`), `Microsoft.Extensions.Time.Testing` (`FakeTimeProvider`), Testcontainers, Stryker.NET.
 
 ### Detection phase (step 0 of every audit)
 
@@ -339,7 +339,7 @@ For every E2E test case examined, emit these fields. Derived from [e2e-testing.m
    - `published-contract` — a WCAG rule set, Web Vitals threshold, CSP policy, or similar cited external source (positive for sub-lanes A/P/S).
    - `none` — no assertion.
 9. **Smells matched** — list of codes from `references/smell-catalog.md` (E2E section) plus any loaded extension entries with `Applies to: e2e` or `Applies to: e2e, ...`. Example: `E-HC-F3, E-HC-F5, dotnet.E-HC-F1`.
-10. **Positive signals matched** — list of codes. Example: `E-POS-2, E-POS-6, dotnet.POS-3`.
+10. **Positive signals matched** — list of codes. Example: `E-POS-2, E-POS-6, dotnet.E-POS-F1, dotnet.E-POS-F3`.
 11. **Verdict** — `specification` / `characterization` / `incidental` / `ambiguous`. The unit rubric's `characterization` and the integration rubric's `incidental` both apply at the E2E layer: the first for tests that pin observed UI output (provenance failure), the second for tests with no defensible scope (scope failure). A test can fail either; cite the dominant failure in the verdict.
 12. **Severity** — `block` / `warn` / `info`.
 13. **Recommended action** — one of: `rewrite-from-user-story` / `add-assertion` / `split` / `narrow-the-journey` / `move-to-integration-lane` / `move-to-unit-lane` / `replace-selector-strategy` / `replace-wait-strategy` / `delete` / `keep`.
