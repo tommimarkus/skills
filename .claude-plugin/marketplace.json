@@ -11,6 +11,12 @@
       "source": "./souroldgeezer-audit",
       "version": "0.1.0",
       "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions and matching subagents."
+    },
+    {
+      "name": "souroldgeezer-design",
+      "source": "./souroldgeezer-design",
+      "version": "0.1.0",
+      "description": "Reference-driven responsive UI design — build, review, and look up responsive web interfaces against WCAG 2.2 AA, i18n, and Core Web Vitals, with per-stack extensions and matching subagents."
     }
   ]
 }
