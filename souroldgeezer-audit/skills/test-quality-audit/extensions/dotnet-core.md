@@ -32,8 +32,8 @@ Consumed by [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric
 Route the test (or the containing file / project) to the integration rubric when any of these are present:
 
 - **Project-level.** Project name matches `*Integration*.Tests*`, OR the project's `<ProjectReference>` transitive closure contains a project using the ASP.NET Core web SDK (`Microsoft.NET.Sdk.Web`).
-- **Using directive.** `using Microsoft.AspNetCore.Mvc.Testing;` — imports `WebApplicationFactory<T>`.
-- **Construction.** The test constructs or injects any of: `WebApplicationFactory<T>`, `HostBuilder`, `IHostBuilder`, `TestServer`, `DistributedApplicationTestingBuilder` (.NET Aspire), or obtains an `HttpClient` via `factory.CreateClient()`.
+- **Using directive.** `using Microsoft.AspNetCore.Mvc.Testing;` — imports `WebApplicationFactory<T>`. `using Aspire.Hosting.Testing;` — imports `DistributedApplicationTestingBuilder` and `IDistributedApplicationTestingBuilder` (.NET Aspire 9.1+; `IDistributedApplicationTestingBuilder` inherits from `IDistributedApplicationBuilder` as of that release).
+- **Construction.** The test constructs or injects any of: `WebApplicationFactory<T>`, `HostBuilder`, `IHostBuilder`, `TestServer`, `DistributedApplicationTestingBuilder.CreateAsync<TEntryPoint>(...)` / `DistributedApplicationTestingBuilder.CreateAsync(typeof(Program), ...)` (.NET Aspire), or obtains an `HttpClient` via `factory.CreateClient()`.
 - **Real infrastructure helpers.** `using Testcontainers.*;`, `using WireMock.Server;`, Respawn for per-test cleanup, or a similar helper that spins up a real adjacent dependency.
 - **Emulator endpoints.** A `CosmosClient` / `BlobServiceClient` / `QueueClient` / equivalent constructed against a local emulator endpoint (`https://localhost:8081` for the Cosmos emulator, `http://127.0.0.1:10000` for Azurite, etc.) rather than mocked.
 
@@ -48,10 +48,10 @@ Route to the unit rubric (the default) when:
 
 Route the test (or the containing file / project) to the E2E rubric when any of these are present:
 
-- **Project-level.** Project name matches `*E2E*` or `*EndToEnd*`, OR the `.csproj` contains a `<PackageReference>` to `Microsoft.Playwright`, `Microsoft.Playwright.NUnit`, `Microsoft.Playwright.MSTest`, `Microsoft.Playwright.Xunit`, or `Selenium.WebDriver`.
-- **Using directive.** `using Microsoft.Playwright;`, `using Microsoft.Playwright.NUnit;`, `using Microsoft.Playwright.MSTest;`, `using OpenQA.Selenium;`, or `using OpenQA.Selenium.Chrome;`.
+- **Project-level.** Project name matches `*E2E*` or `*EndToEnd*`, OR the `.csproj` contains a `<PackageReference>` to `Microsoft.Playwright`, `Microsoft.Playwright.NUnit`, `Microsoft.Playwright.MSTest`, `Microsoft.Playwright.Xunit`, `Microsoft.Playwright.TestAdapter`, `Azure.Developer.Playwright.NUnit` (Azure Playwright Workspaces, cloud browser runner), `Azure.Developer.MicrosoftPlaywrightTesting.NUnit` (Microsoft Playwright Testing Preview), or `Selenium.WebDriver`.
+- **Using directive.** `using Microsoft.Playwright;`, `using Microsoft.Playwright.NUnit;`, `using Microsoft.Playwright.MSTest;`, `using Microsoft.Playwright.Xunit;`, `using Azure.Developer.Playwright.NUnit;`, `using Azure.Developer.MicrosoftPlaywrightTesting.NUnit;`, `using OpenQA.Selenium;`, or `using OpenQA.Selenium.Chrome;`.
 - **Construction.** The test injects or constructs an `IPlaywright`, `IBrowser`, `IBrowserContext`, `IPage`, `IWebDriver`, or similar browser-session type.
-- **Base class or helper.** The test class inherits from `PageTest`, `ContextTest`, `BrowserTest` (Playwright NUnit/MSTest/Xunit base classes), or equivalent project-specific bases that expose a browser session.
+- **Base class or helper.** The test class inherits from `PageTest`, `ContextTest`, `BrowserTest`, `PlaywrightTest` (Playwright NUnit/MSTest/Xunit base classes from `Microsoft.Playwright.NUnit` / `.MSTest` / `.Xunit`), `PlaywrightServiceBrowserNUnit` / `ServicePageTest` (Azure Playwright Workspaces cloud-browser bases), or equivalent project-specific bases that expose a browser session.
 
 Once a file is routed to E2E, classify each test into a sub-lane (`F` functional / `A` accessibility / `P` performance / `S` security) using the sub-lane signals in [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric):
 
@@ -90,7 +90,9 @@ Moq, NSubstitute, FakeItEasy, and Microsoft.Extensions.Logging.Testing all produ
 
 ### Fakes (working implementations)
 
-Types named `Fake*`, `InMemory*`, `TestLogger<T>`, `FakeLogger` (Microsoft.Extensions.Logging.Testing), `CapturingLogger`, `FakeTimeProvider` (Microsoft.Extensions.TimeProvider.Testing), or any custom class that implements the real interface with a recording / in-memory / shortcut body are Fowler **fakes**, not mocks. Positive signals: `dotnet.POS-5` (capture logger), `dotnet.POS-6` (FakeTimeProvider). Do not apply `HC-5` / `HC-6` / `dotnet.HC-1` to fakes.
+Types named `Fake*`, `InMemory*`, `TestLogger<T>`, `FakeLogger` / `FakeLogger<T>` (namespace `Microsoft.Extensions.Logging.Testing`, shipped in the `Microsoft.Extensions.Diagnostics.Testing` NuGet package), `CapturingLogger`, `FakeTimeProvider` (namespace `Microsoft.Extensions.Time.Testing`, shipped in the `Microsoft.Extensions.TimeProvider.Testing` NuGet package), or any custom class that implements the real interface with a recording / in-memory / shortcut body are Fowler **fakes**, not mocks. Positive signals: `dotnet.POS-5` (capture logger), `dotnet.POS-6` (FakeTimeProvider). Do not apply `HC-5` / `HC-6` / `dotnet.HC-1` to fakes.
+
+**Note on package vs namespace.** The package name and namespace differ for both Microsoft.Extensions testing helpers above. Treat the `using` directive (`using Microsoft.Extensions.Time.Testing;`, `using Microsoft.Extensions.Logging.Testing;`) as the authoritative detection signal; the package name appears only in the csproj's `<PackageReference>`.
 
 ### Interpretation rules
 
@@ -313,7 +315,7 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 **Applies to:** `unit, integration`
 
-**Detection:** a `TestLogger<T>`, `CapturingLogger`, `FakeLogger` (from `Microsoft.Extensions.Logging.Testing`), or similar capture-style helper in Arrange.
+**Detection:** a `TestLogger<T>`, `CapturingLogger`, `FakeLogger` / `FakeLogger<T>` (namespace `Microsoft.Extensions.Logging.Testing`, package `Microsoft.Extensions.Diagnostics.Testing`), or similar capture-style helper in Arrange. Assertions typically enumerate `FakeLogCollector.GetSnapshot()` or iterate `FakeLogRecord` entries by key rather than matching on the rendered string.
 
 **Why positive:** a capture helper is a fake (real `ILogger<T>` behavior with recording), not a mock. Assertions on the captured entries test observable behavior, not interaction.
 
@@ -323,9 +325,9 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 **Applies to:** `unit, integration`
 
-**Detection:** `new FakeTimeProvider(...)` or an injected `TimeProvider` with a pinned `DateTimeOffset`.
+**Detection:** `using Microsoft.Extensions.Time.Testing;` plus `new FakeTimeProvider(...)` (optionally seeded via `new FakeTimeProvider(new DateTimeOffset(...))` or advanced via `.Advance(TimeSpan.FromMinutes(...))`), or an injected `TimeProvider` with a pinned `DateTimeOffset`. The `Microsoft.Extensions.TimeProvider.Testing` package ships `FakeTimeProvider` under the `Microsoft.Extensions.Time.Testing` namespace.
 
-**Why positive:** the idiomatic .NET 8+ way to make time-sensitive code deterministic. Not an `HC-11` smell.
+**Why positive:** the idiomatic .NET 8+ way to make time-sensitive code deterministic. `FakeTimeProvider` extends `System.TimeProvider`, defaults to midnight 2000-01-01 UTC, and advances only when the test explicitly calls `Advance`. Not an `HC-11` smell.
 
 ---
 
@@ -347,9 +349,9 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 Patterns that look like core smells but are idiomatic in .NET and must not be flagged:
 
-- **Do not flag `HC-5`** (mock-return-then-mock-called-with) when the mock is `Mock<HttpMessageHandler>` and the verified call is `.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ...)`. This is the supported way to stub `HttpClient` behavior in .NET; `HttpMessageHandler` is a process boundary.
+- **Do not flag `HC-5`** (mock-return-then-mock-called-with) when the mock is `Mock<HttpMessageHandler>` and the verified call is `.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())` (with `using Moq.Protected;`). This is the Microsoft-documented pattern for stubbing `HttpClient` behavior in .NET (see the ASP.NET Core integration-tests docs and the OData client unit-test docs); `HttpMessageHandler.SendAsync` is the process boundary the protected-setup form reaches through. The matching `Verify` also uses `ItExpr.IsAny<...>`.
 
-- **Do not flag `HC-11`** (hardcoded clock values) when the clock is injected via `TimeProvider` (including `FakeTimeProvider` from `Microsoft.Extensions.TimeProvider.Testing`) with a fixed `DateTimeOffset`. That is the idiomatic way to test time-sensitive logic in modern .NET.
+- **Do not flag `HC-11`** (hardcoded clock values) when the clock is injected via `TimeProvider` (including `FakeTimeProvider` — namespace `Microsoft.Extensions.Time.Testing`, package `Microsoft.Extensions.TimeProvider.Testing`) with a fixed `DateTimeOffset`. That is the idiomatic way to test time-sensitive logic in modern .NET.
 
 - **Do not flag `LC-1`** (mocking same-layer code) when the mocked type is an interface owned by the tested module *and* the project has a documented "test via seams" convention (e.g. a `CLAUDE.md` or `README.md` stating that interfaces exist specifically for testability). Ask before flagging if ambiguous.
 

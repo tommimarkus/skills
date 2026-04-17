@@ -10,6 +10,8 @@ Addon to [dotnet-core.md](dotnet-core.md) loaded **only when step 0b selects the
 
 The rubric-neutral smells in `dotnet-core.md` (`dotnet.HC-1` through `dotnet.HC-7`, `dotnet.LC-2`/`LC-4`/`LC-6`..`LC-9`, `dotnet.POS-*`) all apply under the integration rubric too — they declare `Applies to: unit, integration`. Do not re-list them here.
 
+**Aspire-hosted integration tests.** Tests that construct `DistributedApplicationTestingBuilder.CreateAsync<TEntryPoint>(...)` (namespace `Aspire.Hosting.Testing`, package `Aspire.Hosting.Testing`) are integration tests that spin up the full Aspire AppHost topology (Redis, Postgres, project references, etc.) for the test. Treat the entire `builder.BuildAsync()` / `app.StartAsync()` / `app.CreateHttpClient("service-name")` lifecycle as the fixture equivalent of `WebApplicationFactory<T>` — `dotnet.I-HC-A1` (fixture without per-test data scoping) and `dotnet.I-HC-B1` (auth bypass) both apply identically. Aspire's testing builder inherits from `IDistributedApplicationBuilder` as of Aspire 9.1; older code that treats it as a standalone interface will need recompilation.
+
 ---
 
 ## Framework-specific high-confidence integration smells (`dotnet.I-HC-*`)
@@ -54,7 +56,7 @@ public class OrdersApiTests : IClassFixture<WebApplicationFactory<Program>>
 
 **Applies to:** `integration` — refines core `I-HC-B7`.
 
-**Detection:** the test calls `factory.CreateClient()` and then exercises an endpoint that uses `[Authorize]` (or equivalent policy) without either (a) adding an `Authorization` header to the request, (b) configuring a `TestAuthHandler` via `factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddAuthentication("Test").AddScheme<...>))`, or (c) asserting on `401`/`403` for a negative case.
+**Detection:** the test calls `factory.CreateClient()` and then exercises an endpoint that uses `[Authorize]` (or equivalent policy) without either (a) adding an `Authorization` header to the request, (b) configuring a `TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>` via `factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddAuthentication(defaultScheme: "Test").AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => {})))` — the Microsoft-documented mock-authentication pattern (see the ASP.NET Core integration-tests docs for xUnit / NUnit / MSTest) — with the `Test` scheme name matching the default scheme the SUT expects, or (c) asserting on `401`/`403` for a negative case.
 
 **Smell:** the test exercises only the happy path through real middleware but never validates auth behavior. The test will "pass" for any implementation that lets anonymous requests through, including a broken one.
 

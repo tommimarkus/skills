@@ -36,7 +36,7 @@ Currently the .NET extension uses this shape:
 - `dotnet-core.md` — detection signals, test-type dispatch, test-double taxonomy, rubric-neutral smells (`dotnet.HC-*`, `dotnet.LC-*`, `dotnet.POS-*`), carve-outs, SUT surface enumeration, determinism verification, and the Stryker mutation tool declaration. Always loaded when .NET is detected.
 - `dotnet-unit.md` — `Applies to: unit` smells only (`dotnet.HC-4`, `dotnet.LC-1`, `dotnet.LC-3`, `dotnet.LC-5`). Loaded when step 0b selects the unit rubric.
 - `dotnet-integration.md` — `dotnet.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration. Loaded when step 0b selects the integration rubric.
-- `dotnet-e2e.md` — E2E sub-lane refinements and future `dotnet.E-*` smells (stub today). Loaded when step 0b selects the E2E rubric.
+- `dotnet-e2e.md` — E2E sub-lane refinements and `dotnet.E-*` smells / positive signals (Playwright idioms — accessible-name locators, web-first assertions, per-test `IBrowserContext`, axe-builder wiring, Web Vitals performance assertions; cloud-runner / bUnit routing notes). Loaded when step 0b selects the E2E rubric.
 
 **Loading rule for core + addon extensions:** always load the `-core.md` file (it owns detection and test-type dispatch). After step 0b selects the rubric(s), load the addon that matches each selected rubric. Load multiple addons for mixed-rubric audit targets.
 
