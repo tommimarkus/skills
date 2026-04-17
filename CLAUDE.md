@@ -6,21 +6,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A **Claude Code plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories. There is nothing to build, lint, or test — content is Markdown + YAML. Validation is structural (correct filenames, frontmatter, schema) and semantic (does the skill's described workflow still match its SKILL.md).
 
+## Keeping CLAUDE.md and README.md current (MUST)
+
+**Both CLAUDE.md and README.md MUST be kept up to date as the repo evolves.** They have different audiences and different triggers, but both are load-bearing — stale guidance in either causes downstream bugs. Treat drift in either as a blocking bug and fix it in the same commit as the change that introduced the drift.
+
+**CLAUDE.md audience:** Claude Code when authoring or editing skills in this repo. It is the first file Claude reads — stale guidance here causes stale reasoning everywhere else. Update CLAUDE.md whenever any of the following change:
+
+- A plugin is added, removed, or renamed (update "Directory layout" and any plugin-level references).
+- A skill is added, removed, renamed, or moved between plugins (or between a plugin and `undecided/`) (update "Skill-specific notes").
+- A skill's mode set, output contract, or bundled-reference path changes (update "Skill architecture" and "Skill-specific notes").
+- A new convention or pattern emerges across skills — new reference category (e.g. `docs/ui-reference/`), new extension layout, new supporting-file kind, new required SKILL.md section (update "Directory layout" and "Skill architecture").
+- Any statement in this file becomes factually wrong about the current repo state.
+
+**README.md audience:** humans browsing the marketplace (GitHub readers, potential installers). It is the first file humans read. Update README.md whenever any of the following change:
+
+- A plugin is added, removed, or renamed (update the intro paragraph, add/remove the corresponding "What's in `<plugin>`" section, update the repository-layout example).
+- A skill is added or removed within a plugin (update the corresponding plugin's "What's in" table and its "How `<skill>` works" section).
+- Install commands or marketplace slugs change (update "Install").
+- Repository layout changes in a way a new reader would benefit from seeing (update "Repository layout").
+- The audience-facing behaviour of a skill changes — new mode, new output format, new reference path (update the skill's "How it works" section).
+
+Before finishing any task that changes repo structure or a skill's contract, re-read **both files** and diff them mentally against the change. If any section is now wrong or incomplete, amend it in the same commit.
+
 ## Directory layout
 
 ```
 .claude-plugin/marketplace.json        ← marketplace manifest (lists plugins, owner, etc.)
 <plugin-name>/
   .claude-plugin/plugin.json           ← plugin manifest
+  docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
   agents/<skill-name>.md               ← one subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
-                     /extensions/      ← per-stack smell packs (see below)
-                     /references/      ← smell catalog + reusable procedures
+                     /extensions/      ← per-stack packs (see below)
+                     /references/      ← smell catalog + reusable procedures (audit skills)
                      /config.yaml      ← optional, skill-specific (not a Claude Code standard)
-undecided/                             ← skills not yet assigned to a plugin (NOT in marketplace.json)
+undecided/                             ← skills not yet assigned to a plugin (NOT in marketplace.json, NOT production-ready; do not reference from other skills)
   agents/<name>.md                     ← matching subagents sit here too
   <skill-name>/                        ← same shape as a plugin's skill dir
 ```
+
+Current `<kind>-reference/` directories in use:
+- `souroldgeezer-audit/docs/security-reference/devsecops.md` — DevSecOps rubric
+- `souroldgeezer-audit/docs/quality-reference/{unit,integration,e2e}-testing.md` — test-quality rubrics
+- `souroldgeezer-design/docs/ui-reference/responsive-design.md` — responsive-design playbook
 
 When moving a skill out of `undecided/` into a plugin (or vice versa), **also move its matching subagent file** in `agents/<name>.md`. Skill and subagent are paired by identical name.
 
@@ -35,12 +63,13 @@ Adding a new plugin:
 
 Skills in this repo follow a recurring shape. Understand it before editing any SKILL.md:
 
-- **Rubric vs workflow separation.** SKILL.md is a *workflow* for applying a rubric; the rubric prose lives in a separate file. Rubrics are **bundled with the plugin** at `<plugin>/docs/security-reference/*.md` and `<plugin>/docs/quality-reference/*.md` (relative paths like `../../docs/security-reference/devsecops.md` resolve to these from a skill dir). SKILL.md must **cite** rubric sections and smell codes — never duplicate rubric prose.
-- **Quick vs Deep modes.** Every audit skill exposes both. Quick = single file / PR diff, per-finding output only. Deep = whole-repo, full sectioned rollup, may use MCP probes. If the user request is ambiguous, the skill asks.
-- **Findings cite codes, not prose.** Reports use smell codes like `DSO-HC-2`, `HC-1`, `dotnet.I-HC-A1`. The prose lives in the rubric.
-- **Extensions are per-stack smell packs** in `skills/<skill>/extensions/*.md`. They are loaded on demand based on detected target type. They can **ADD** namespaced smells (`<ext>.HC-N`, `<ext>.LC-N`, `<ext>.POS-N`) or **CARVE OUT** core smells for idiomatic framework patterns — they **never override** core rules. Each skill's `extensions/README.md` is the authoritative convention for that skill; follow its required-sections list exactly when adding a new extension.
-- **Supporting files live under `references/`.** `references/smell-catalog.md` is the compact code index; `references/procedures/*.md` are reusable sub-procedures the workflow steps into.
-- **Output footers disclose state.** Every report ends with a footer listing which extensions loaded, MCP availability, cost stance (if applicable), and the rubric path. Don't remove these — they're how users audit the auditor.
+- **Reference vs workflow separation.** SKILL.md is a *workflow* for applying a bundled reference; the reference prose lives in a separate file under `<plugin>/docs/<kind>-reference/*.md` (rubric for audits, playbook for design; see "Directory layout" for the current list). Relative paths like `../../docs/ui-reference/responsive-design.md` resolve to these from a skill dir. SKILL.md must **cite** reference sections and codes — never duplicate reference prose.
+- **Mode dispatch.** Every skill defines its own modes; each SKILL.md lists them. Audit skills (`devsecops-audit`, `test-quality-audit`) use **Quick** (single file / PR diff, per-finding output only) vs **Deep** (whole-repo, full sectioned rollup, may use MCP probes). Design skills (`responsive-design`) use **Build** / **Review** / **Lookup**. If the user request is ambiguous, the skill asks.
+- **Output cites codes / sections, not prose.** Audit reports cite smell codes like `DSO-HC-2`, `HC-1`, `dotnet.I-HC-A1`. Design output cites reference sections (`§3.11`, `§5.8`) plus WCAG SC numbers (`SC 1.4.10`, `SC 2.5.8`). Either way, SKILL.md and its output never duplicate reference prose.
+- **Extensions are per-stack packs** in `skills/<skill>/extensions/*.md`. They are loaded on demand based on detected target type. For audits they **ADD** namespaced smells (`<ext>.HC-N`, `<ext>.LC-N`, `<ext>.POS-N`) or **CARVE OUT** core smells for idiomatic framework patterns; for design they also add stack-specific primitives, patterns, and project-assimilation rules (how to read the stack's token config and component library). Extensions **never override** core rules. Each skill's `extensions/README.md` is the authoritative convention for that skill; follow its required-sections list exactly when adding a new extension.
+- **Supporting files live under `references/`** (audit skills). `references/smell-catalog.md` is the compact code index; `references/procedures/*.md` are reusable sub-procedures the workflow steps into. Design skills may omit `references/` when the bundled doc under `docs/<kind>-reference/` already covers the need.
+- **Project assimilation is one-way** (design skills). Output assimilates the *project* to the *reference*, not the other way around. New code is always reference-compliant; non-compliant existing infrastructure is reused only when substantively compliant, otherwise flagged as legacy debt. See `souroldgeezer-design/skills/responsive-design/SKILL.md` § "Project assimilation" for the canonical form.
+- **Output footers disclose state.** Every report / build output ends with a footer listing which extensions loaded, MCP availability, cost stance (if applicable), reference path, and (design skills) project-assimilation summary. Don't remove these — they're how users audit the auditor / verify the builder.
 
 ## Subagents
 
@@ -48,8 +77,9 @@ Every skill has a matching subagent at `<plugin>/agents/<skill-name>.md`. The su
 
 ## Skill-specific notes
 
-- **`devsecops-audit`** has a `config.yaml` controlling cost stance (`free` / `mixed` / `full`), with a documented resolution precedence (invocation arg > config.yaml > audited repo's `CLAUDE.md` § "Cost Guidance" > default `full`). Only `bicep.md` currently uses cost banding.
-- **`test-quality-audit`** dispatches on detected test type in step 0b to select one of three rubrics (unit / integration / E2E). Extensions can use either a single-file layout (`<stack>.md`) or a core + rubric-addon layout (`<stack>-core.md` plus `<stack>-unit.md`, `-integration.md`, `-e2e.md`). The `.NET` extension is the reference for the addon pattern.
+- **`devsecops-audit`** (plugin `souroldgeezer-audit`) has a `config.yaml` controlling cost stance (`free` / `mixed` / `full`), with a documented resolution precedence (invocation arg > config.yaml > audited repo's `CLAUDE.md` § "Cost Guidance" > default `full`). Only `bicep.md` currently uses cost banding.
+- **`test-quality-audit`** (plugin `souroldgeezer-audit`) dispatches on detected test type in step 0b to select one of three rubrics (unit / integration / E2E). Extensions can use either a single-file layout (`<stack>.md`) or a core + rubric-addon layout (`<stack>-core.md` plus `<stack>-unit.md`, `-integration.md`, `-e2e.md`). The `.NET` extension is the reference for the addon pattern.
+- **`responsive-design`** (plugin `souroldgeezer-design`) exposes three modes: **Build** (produce code embodying reference defaults, run §7 self-check), **Review** (walk §7 checklist, emit per-finding output with layer tags), **Lookup** (narrow-question answer). Checklist items in reference §7 carry verification-layer tags (`[static]` / `[dom]` / `[behaviour]` / `[visual]` / `[a11y-tool]` / `[runtime]`) distinguishing what the skill can verify from source alone vs. what requires a browser, axe-core, or RUM. Runs a pre-flight (locale / theme / stack / viewport floor / perf posture) and a project-assimilation pass before generating or reviewing code. Extension pattern differs from audits: `extensions/blazor-wasm.md` covers hosting-model surface (standalone Blazor WebAssembly vs Blazor Web App `.Client`) and component-library reuse rules (MudBlazor / FluentUI Blazor / Radzen / Blazorise) rather than smell packs only.
 
 ## Things that are not standard Claude Code
 
