@@ -28,7 +28,7 @@ Plus: any Dockerfile with zero `USER` lines.
 **Rubric:** devsecops.md §5.1.13; OWASP Docker Security Cheat Sheet.
 
 **Remediation action:**
-> Declare a non-root `USER` explicitly. Create a dedicated user in the Dockerfile: `RUN adduser --system --uid 10001 app && USER app`. For language base images, many already ship a `nonroot` or numeric UID; prefer those.
+> Declare a non-root `USER` explicitly. Prefer the numeric `UID:GID` form (`USER 10001:10001`) — a named-only `USER app` silently falls back to the root group if no primary group is set. Create a dedicated user in the Dockerfile: `RUN adduser --system --uid 10001 --gid 10001 app` then `USER 10001:10001`. For language base images, many already ship a `nonroot` user or numeric UID; prefer those. See https://docs.docker.com/reference/dockerfile/#user.
 
 ### `docker.HC-2` — `FROM image:tag` without `@sha256:` digest
 
@@ -110,6 +110,84 @@ privileged\s*:\s*true
 **Remediation action:**
 > Remove `privileged: true`. If the container genuinely needs a capability (e.g. `NET_ADMIN`), use `cap_add:` with only that specific capability.
 
+### `docker.HC-6` — `ADD` used instead of `COPY`, or `ADD` with a URL
+
+**Pattern:** an `ADD` directive in a Dockerfile. `ADD <url>` is the harder smell (no authentication, auto-extraction of tarballs can be surprising, no digest verification); plain `ADD <src> <dst>` should be `COPY` unless tar-auto-extraction is explicitly wanted. See https://docs.docker.com/reference/dockerfile/#add.
+
+**Detection (ripgrep):**
+```
+^ADD\s+https?://
+^ADD\s+
+```
+
+**Severity:** `block` (URL form) / `warn` (plain form)
+
+**Rubric:** OWASP Docker Security Cheat Sheet; Docker reference.
+
+**Remediation action:**
+> Replace `ADD` with `COPY` for local files. For remote downloads, use `RUN curl -fsSL <url> -o <path> && echo '<sha256>  <path>' | sha256sum -c -` (or `RUN --mount=type=secret` if the URL needs auth) so the fetch is explicit and digest-verified.
+
+### `docker.HC-7` — `no-new-privileges` not set on compose services
+
+**Pattern:** a service in `docker-compose*.yml` missing `security_opt: ["no-new-privileges:true"]`. This flag prevents setuid / file-capability escalation after process launch and is OWASP-recommended for all containers. See https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html.
+
+**Detection:** parse `services:` and list those without `security_opt` containing `no-new-privileges:true`.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Add `security_opt: ["no-new-privileges:true"]` to every service.
+
+### `docker.HC-8` — Kernel capabilities not dropped
+
+**Pattern:** a service without `cap_drop: [ALL]` (and optionally a narrow `cap_add:` listing only what is truly required). Default Docker capabilities include `NET_RAW`, `SETUID`, `SETGID`, and others that most application containers do not need.
+
+**Detection:** parse `services:` and list those without `cap_drop:` containing `ALL` (or `- ALL`).
+
+**Severity:** `warn`
+
+**Rubric:** OWASP Docker Security Cheat Sheet.
+
+**Remediation action:**
+> Set `cap_drop: [ALL]`. Add a minimal `cap_add:` only for capabilities the service genuinely needs (e.g. `NET_BIND_SERVICE` to bind < 1024 as non-root).
+
+### `docker.HC-9` — No resource limits (DoS surface)
+
+**Pattern:** a service in compose without `mem_limit`, `cpus`, or `pids_limit`. A compromised or buggy container without limits can exhaust host resources and take down co-tenants. OWASP frames this as a DoS-mitigation control.
+
+**Detection:** parse `services:` and list those without `deploy.resources.limits` (swarm form) or `mem_limit` / `cpus` / `pids_limit` (classic form).
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Add `mem_limit: 512m`, `cpus: '1.0'`, `pids_limit: 200` (or whatever fits the service). Tune from actual usage; these are upper bounds, not targets.
+
+### `docker.HC-10` — Missing or permissive `.dockerignore`
+
+**Pattern:** a repo with a `Dockerfile` and either no `.dockerignore` file or a `.dockerignore` that does not exclude at least `.git/`, `.env*`, `*.pem`, `id_rsa*`. Without these exclusions, `COPY . .` bakes git history, local env files, and SSH keys into image layers. See https://docs.docker.com/build/building/best-practices/#exclude-with-dockerignore.
+
+**Detection:** check for `.dockerignore` existence; if present, verify the excluded-pattern list.
+
+**Severity:** `block` (when `.dockerignore` is missing on a repo with secret-adjacent files present) / `warn` (when present but missing core exclusions).
+
+**Remediation action:**
+> Create `.dockerignore` and add at minimum: `.git/`, `.env`, `.env.*`, `*.pem`, `id_rsa*`, `node_modules/` (when appropriate), `**/secrets.*`.
+
+### `docker.HC-11` — No PID 1 / signal handling strategy
+
+**Pattern:** a Dockerfile with an `ENTRYPOINT` that uses shell form (`ENTRYPOINT /app/run.sh`) rather than exec form (`ENTRYPOINT ["/app/run.sh"]`), and no `tini` / `dumb-init` wrapper, and no `STOPSIGNAL`. The shell form wraps the app under `/bin/sh -c`, which does not forward SIGTERM — container-stop becomes container-kill after the 10 s grace period, and subprocesses leak.
+
+**Detection (ripgrep):**
+```
+^ENTRYPOINT\s+[^[]
+```
+(Matches shell form; exec form starts with `[`.) Also flag Dockerfiles with no `STOPSIGNAL` in long-lived services.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Use exec form: `ENTRYPOINT ["/app/run.sh"]`. For apps that don't reap zombies (e.g. some Node / Python entrypoints), wrap with `tini` / `dumb-init` as PID 1. Set `STOPSIGNAL SIGTERM` (or the signal your app handles).
+
 ## Positive signals
 
 ### `docker.POS-1` — All `FROM` references pinned to `@sha256:`
@@ -120,6 +198,18 @@ privileged\s*:\s*true
 
 **Pattern:** every Dockerfile ends with a `USER` directive whose value is not `root` or `0`.
 
+### `docker.POS-3` — Multi-stage build used
+
+**Pattern:** a Dockerfile with ≥ 2 `FROM` stages, where the final stage does not copy the build toolchain (compiler, package-manager cache, test tooling) into the runtime image. Reduces runtime attack surface. See https://docs.docker.com/build/building/best-practices/#use-multi-stage-builds.
+
+### `docker.POS-4` — `COPY --chown` (or `--chmod`) used
+
+**Pattern:** `COPY --chown=<user>:<group>` instead of a separate `RUN chown` layer. Avoids a layer-sized permissions change and pairs cleanly with a non-root `USER`.
+
+### `docker.POS-5` — Build provenance and SBOM attestations emitted
+
+**Pattern:** a CI workflow invokes `docker buildx build` with `--provenance=mode=max` and `--sbom=true` (or equivalent), and the resulting attestations are pushed alongside the image. See https://docs.docker.com/build/metadata/attestations/.
+
 ## Carve-outs
 
-- **Do not flag `docker.HC-2` on test-only compose files that pull from Microsoft-owned registries** (`mcr.microsoft.com`) as `block`; downgrade to `warn`. Microsoft's registry ships signed tags and the trust model is different from arbitrary Docker Hub images. Still a smell, but not a blocker for test fixtures.
+- **Do not flag `docker.HC-2` on test-only compose files that pull from Microsoft-owned registries** (`mcr.microsoft.com`) as `block`; downgrade to `warn` **only when all three conditions hold**: (a) the reference is `mcr.microsoft.com/*`, (b) the file is a test/dev compose (`docker-compose.test.yml`, `docker-compose.override.yml`, or similar — not the production compose), and (c) an in-file comment documents the signed-tag rationale. Microsoft's registry ships signed tags, but neither Docker's docs nor OWASP grant MCR a blanket exemption — require the comment so the decision is auditable.

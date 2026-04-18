@@ -119,8 +119,8 @@ Deep-mode step 4 of the skill scans the repo for each CICD-SEC anti-pattern. The
 | `CICD-SEC-1` | MCP branch-protection probe (`DSO-HC-4`) | `.github/branch-protection.yml` absent, `CODEOWNERS` absent, admin bypass enabled |
 | `CICD-SEC-2` | MCP collaborator probe, `gha.HC-4` | Stale accounts via `mcp__github__get_team_members`, shared PATs as CI secrets |
 | `CICD-SEC-3` | `gha.HC-2`, `docker.HC-2`, `DSO-HC-2` | `*.csproj` `<PackageReference>` without committed lockfile; `dependabot.yml` absent |
-| `CICD-SEC-4` | `gha.HC-3`, `gha.HC-6` (Direct-PPE); `DSO-SUB-2` (Indirect-PPE) | Workflow imports a template from a weaker repo — check `uses:` against known org allow-list |
-| `CICD-SEC-5` | `gha.HC-1`, `gha.POS-2` (OIDC) inverse | Any workflow job with `permissions: write-all` or unspecified permissions |
+| `CICD-SEC-4` | `gha.HC-3`, `gha.HC-6`, `gha.HC-7`, `gha.HC-8`, `gha.HC-9` (Direct-PPE family); `DSO-SUB-2` (Indirect-PPE) | Workflow imports a template from a weaker repo — check `uses:` against known org allow-list |
+| `CICD-SEC-5` | `gha.HC-1`, `gha.HC-12` (self-hosted), `gha.POS-2` (OIDC) inverse | Any workflow job with `permissions: write-all` or unspecified permissions |
 | `CICD-SEC-6` | `dns.HC-1`, `DSO-HC-1`, `DSO-HC-7`, `docker.HC-3` | Long-lived `AZURE_CREDENTIALS` JSON in CI secrets; `gha.POS-2` inverse |
 | `CICD-SEC-7` | `docker.HC-5` (privileged), `bicep.HC-3` (local auth) | Public CI dashboards; outdated plugins — requires MCP or manual inspection |
 | `CICD-SEC-8` | `gha.HC-2` (third-party tag pin), `DSO-LC-4` (> 20 unrelated publishers) | Marketplace Actions beyond an org allow-list; unvetted OAuth apps granted org scopes |
@@ -143,11 +143,19 @@ See `../extensions/github-actions.md` for the full table.
 | `gha.HC-2` | Floating tag in `uses:` (e.g. `@main`, `@v1`) |
 | `gha.HC-3` | `pull_request_target` with untrusted ref checkout |
 | `gha.HC-4` | Shared deploy/merge identity in a single workflow |
-| `gha.HC-5` | Security scan with `continue-on-error: true` |
+| `gha.HC-5` | Security scan failure silently tolerated (`continue-on-error`, `\|\| true`, `if: always()`) |
 | `gha.HC-6` | User-controlled input interpolated into `run:` |
+| `gha.HC-7` | `workflow_run` with untrusted artifact / checkout |
+| `gha.HC-8` | `persist-credentials: true` on checkout followed by push |
+| `gha.HC-9` | `actions/github-script` with user input interpolated into JS |
+| `gha.HC-10` | Reusable workflow called unpinned (cross-repo) |
+| `gha.HC-11` | Secrets interpolated into `run:` shell without env boundary |
+| `gha.HC-12` | Self-hosted runner on public repo, or non-ephemeral |
+| `gha.HC-13` | No `timeout-minutes` on jobs |
 | `gha.POS-1` | Explicit minimum `permissions:` on every job |
 | `gha.POS-2` | OIDC federation via `id-token: write` + `azure/login@<sha>` |
 | `gha.POS-3` | Commit-SHA pinning for third-party actions |
+| `gha.POS-4` | Production deploy gated by environment protection rules |
 
 ### `bicep.*` — bicep extension
 
@@ -158,16 +166,20 @@ See `../extensions/bicep.md` for the full table.
 | Code | Intent |
 |---|---|
 | `bicep.HC-1` | Shared keys / connection strings instead of managed identity |
-| `bicep.HC-2` | TLS < 1.2 |
+| `bicep.HC-2` | TLS < 1.2 (per-resource-type property / value spaces) |
 | `bicep.HC-3` | Local auth enabled where disable-able |
 | `bicep.HC-4` | FTP / basic auth on App Service resources |
 | `bicep.HC-5` | Secrets in params instead of Key Vault references |
 | `bicep.HC-6` | Missing `CanNotDelete` lock on stateful resources |
-| `bicep.HC-7` | Soft delete / purge protection disabled |
+| `bicep.HC-7` | Purge protection / retention disabled (Key Vault, Storage, Cosmos) |
 | `bicep.HC-8` | Diagnostic settings missing |
 | `bicep.HC-9` | Hardcoded names / regions / domains |
 | `bicep.HC-10` | `http20Enabled: false` or client affinity on stateless APIs |
 | `bicep.HC-11` | Param missing `@description` / `@minLength` / `@maxLength` |
+| `bicep.HC-12` | Key Vault still in access-policy mode (no `enableRbacAuthorization`) |
+| `bicep.HC-13` | Storage `requireInfrastructureEncryption` absent |
+| `bicep.HC-14` | Storage public-access flags permissive |
+| `bicep.HC-15` | Cosmos DB `enableFreeTier: true` on production account |
 
 **Band 2 (cost-gated):**
 
@@ -176,9 +188,11 @@ See `../extensions/bicep.md` for the full table.
 | `bicep.B2-1` | Defender for Cloud Standard tier absent |
 | `bicep.B2-2` | Private Link / private endpoints absent |
 | `bicep.B2-3` | Multi-region active-active absent |
-| `bicep.B2-4` | WAF on App Gateway / Front Door Premium absent |
+| `bicep.B2-4` | WAF on App Gateway / Front Door Premium absent (`Premium_AzureFrontDoor` SKU) |
 | `bicep.B2-5` | HSM-backed / Premium Key Vault with CMK absent |
 | `bicep.B2-6` | Azure DDoS Protection Standard absent |
+| `bicep.B2-7` | No Azure Policy assignments for guardrails |
+| `bicep.B2-8` | No federated credential for workload identity |
 
 **Positive signals:**
 
@@ -186,7 +200,7 @@ See `../extensions/bicep.md` for the full table.
 |---|---|
 | `bicep.POS-1` | Managed identity usage |
 | `bicep.POS-2` | Key Vault references in app settings |
-| `bicep.POS-3` | Soft delete / purge protection enabled |
+| `bicep.POS-3` | Key Vault hardened (purge protection + RBAC mode + 90-day retention) |
 | `bicep.POS-4` | Diagnostic settings within free grant |
 | `bicep.POS-5` | Fully parameterized modules |
 
@@ -201,8 +215,17 @@ See `../extensions/dockerfile.md` for the full table.
 | `docker.HC-3` | Build args containing secret material |
 | `docker.HC-4` | Writable root filesystem (missing `read_only: true` in compose) |
 | `docker.HC-5` | Privileged container (`privileged: true`) |
+| `docker.HC-6` | `ADD` used instead of `COPY`, or `ADD` with a URL |
+| `docker.HC-7` | `no-new-privileges` not set on compose services |
+| `docker.HC-8` | Kernel capabilities not dropped (`cap_drop: [ALL]` missing) |
+| `docker.HC-9` | No resource limits (`mem_limit` / `cpus` / `pids_limit`) |
+| `docker.HC-10` | Missing or permissive `.dockerignore` |
+| `docker.HC-11` | No PID 1 / signal-handling strategy (shell-form `ENTRYPOINT`) |
 | `docker.POS-1` | All `FROM` references pinned to `@sha256:` |
 | `docker.POS-2` | Non-root `USER` declared |
+| `docker.POS-3` | Multi-stage build used |
+| `docker.POS-4` | `COPY --chown` (or `--chmod`) used |
+| `docker.POS-5` | Build provenance and SBOM attestations emitted |
 
 ### `dns.*` — dotnet-security extension
 
@@ -214,13 +237,22 @@ See `../extensions/dotnet-security.md` for the full table.
 | `dns.HC-2` | `[AllowAnonymous]` on a non-public endpoint |
 | `dns.HC-3` | Missing `[Authorize]` / `AuthorizationLevel.Function` on non-public endpoint |
 | `dns.HC-4` | `AllowAnyOrigin()` combined with `AllowCredentials()` |
-| `dns.HC-5` | Missing security headers middleware (CSP / HSTS / XFO / Referrer-Policy) |
+| `dns.HC-5` | Missing security headers middleware (CSP / Referrer-Policy / Permissions-Policy) |
 | `dns.HC-6` | Connection string constructed via string concatenation |
 | `dns.HC-7` | Cosmos / Blob / Service Bus client built with shared key where MI is feasible |
 | `dns.HC-8` | Authz denial log missing actor / resource / decision / trace-id |
+| `dns.HC-9` | Antiforgery not applied to state-changing endpoints |
+| `dns.HC-10` | `System.Random` used for security-sensitive values |
+| `dns.HC-11` | SQL injection via `CommandText` concatenation / interpolation |
+| `dns.HC-12` | `BinaryFormatter` usage |
+| `dns.HC-13` | Data Protection keys not persisted to a durable store |
+| `dns.HC-14` | `DefaultAzureCredential` used without explicit managed identity |
 | `dns.LC-1` | Shadow / zombie function endpoint (registered, not in route inventory) |
 | `dns.LC-2` | Mass assignment / BOPLA risk (deserialization into undocumented fields) |
-| `dns.POS-1` | Managed identity client construction |
+| `dns.LC-3` | `new HttpClient(...)` without `IHttpClientFactory` / `PooledConnectionLifetime` |
+| `dns.LC-4` | PII destructured into structured logs (`{@user}`) |
+| `dns.LC-5` | Hardcoded PFX path / password for certificate loading |
+| `dns.POS-1` | Production-grade managed identity client construction |
 | `dns.POS-2` | Key Vault reference resolution |
 | `dns.POS-3` | Explicit CSP / security headers middleware |
 | `dns.POS-4` | `[Authorize(Roles=...)]` with specific role checks |

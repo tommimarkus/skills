@@ -36,17 +36,24 @@ listKeys\(|connectionString\s*:|accountKey\s*:|primaryKey\s*:|masterKey\s*:
 
 ### `bicep.HC-2` — TLS < 1.2
 
-**Pattern:** `minimumTlsVersion` set to `TLS1_0`, `TLS1_1`, `1.0`, or `1.1`. Or the property missing on a resource type that supports it (App Service, Storage, SQL, Cosmos — but **not** required on resource types that default to ≥ 1.2 like Functions Flex Consumption).
+**Pattern:** a minimum-TLS property set below 1.2, or the property missing on a resource type that supports it. Property name and value space differ by resource type:
 
-**Detection (ripgrep):**
+- **Storage** (`Microsoft.Storage/storageAccounts`): `minimumTlsVersion` with `'TLS1_0'` / `'TLS1_1'` / `'TLS1_2'` / `'TLS1_3'`.
+- **App Service** (`Microsoft.Web/sites` → `siteConfig.minTlsVersion`): `'1.0'` / `'1.1'` / `'1.2'` / `'1.3'`.
+- **SQL** (`Microsoft.Sql/servers`): `minimalTlsVersion` with `'1.0'` / `'1.1'` / `'1.2'` / `'1.3'`.
+- **Cosmos DB** (`Microsoft.DocumentDB/databaseAccounts`): `minimalTlsVersion` with `'Tls'` / `'Tls11'` / `'Tls12'` (three-tier enum — no 1.3 option yet).
+- **Key Vault**: no TLS-version property (service-level TLS ≥ 1.2 only).
+
+**Detection (ripgrep, union of spellings; anchor values with quotes to avoid matching unrelated `1.0` / `1.1` fragments):**
 ```
-minimumTlsVersion\s*:\s*['"]?(TLS1_0|TLS1_1|1\.0|1\.1)
+(minimumTlsVersion|minTlsVersion|minimalTlsVersion)\s*:\s*['"](TLS1_0|TLS1_1|1\.0|1\.1|Tls|Tls11)['"]
 ```
+Also flag resources of the supported types that omit the property entirely.
 
 **Severity:** `block`
 
 **Remediation action:**
-> Set `minimumTlsVersion: 'TLS1_2'` (App Service / Storage / SQL) or `minTlsVersion: 'TLS1_2'` (Cosmos). Verify downstream clients support it before merging.
+> Storage / App Service / SQL: prefer TLS 1.3 where downstream clients tolerate it, otherwise TLS 1.2. Cosmos DB: `minimalTlsVersion: 'Tls12'` (1.3 not yet exposed). Verify downstream clients before merging.
 
 ### `bicep.HC-3` — Local auth enabled
 
@@ -103,19 +110,25 @@ disableLocalAuth\s*:\s*false
 
 ### `bicep.HC-7` — Soft delete / purge protection disabled
 
-**Pattern:** Key Vault with `enableSoftDelete: false` or `enablePurgeProtection` missing/false; Storage with `deleteRetentionPolicy.enabled: false`; Cosmos with no backup policy configured.
+**Pattern:**
+- **Key Vault:** `enablePurgeProtection` missing or `false`; `softDeleteRetentionInDays` < 7. Note that soft delete itself has been on-by-default and irrevocable since 2020 — **setting `enableSoftDelete: false` will fail deployment**, so any such literal in IaC is a latent deploy break, not a runtime risk.
+- **Storage:** `deleteRetentionPolicy.enabled: false` (or missing) on blob services; `containerDeleteRetentionPolicy.enabled: false`.
+- **Cosmos DB:** no `backupPolicy` configured, or a `Periodic` policy without a suitable retention.
 
 **Detection (per resource type):**
 ```
 enableSoftDelete\s*:\s*false
 enablePurgeProtection\s*:\s*false
+softDeleteRetentionInDays\s*:\s*[0-6]\b
 deleteRetentionPolicy[\s\S]*?enabled\s*:\s*false
 ```
 
 **Severity:** `block`
 
+**Rubric note:** Key Vault soft-delete-disable is not suppressible — call it out as a deploy break when seen. References: https://learn.microsoft.com/azure/key-vault/general/soft-delete-overview.
+
 **Remediation action:**
-> Enable soft delete and purge protection on Key Vault. Enable blob soft delete with 7+ day retention on Storage. Configure Cosmos continuous backup.
+> Key Vault: set `enablePurgeProtection: true` and `softDeleteRetentionInDays: 90`. Remove any `enableSoftDelete: false` literal. Storage: enable blob soft delete with ≥ 7-day retention. Cosmos: configure continuous backup.
 
 ### `bicep.HC-8` — Diagnostic settings missing
 
@@ -128,7 +141,7 @@ deleteRetentionPolicy[\s\S]*?enabled\s*:\s*false
 **Rubric note:** CLAUDE.md § Cost Guidance explicitly grants the free 5 GB/month LAW ingestion — this remediation is free within the declared budget.
 
 **Remediation action:**
-> Add a `Microsoft.Insights/diagnosticSettings` resource targeting the existing Log Analytics workspace. Enable `AllLogs` and `AllMetrics` category groups.
+> Add a `Microsoft.Insights/diagnosticSettings` resource targeting the existing Log Analytics workspace. For logs, use `categoryGroup: 'AllLogs'` (or `'audit'` for audit-only). For metrics, use `metrics: [{ category: 'AllMetrics', enabled: true }]`. The category-group form is for logs only; metrics still use the per-category form. See https://learn.microsoft.com/azure/azure-monitor/essentials/diagnostic-settings.
 
 ### `bicep.HC-9` — Hardcoded names / regions / domains
 
@@ -167,6 +180,65 @@ clientAffinityEnabled\s*:\s*true
 **Remediation action:**
 > Add `@description('...')` for every param. Add length/value bounds where Azure enforces them. Required by CLAUDE.md § Operational Excellence pillar.
 
+### `bicep.HC-12` — Key Vault still in access-policy mode
+
+**Pattern:** a `Microsoft.KeyVault/vaults` resource without `properties.enableRbacAuthorization: true`. The default (access-policy mode) is legacy; RBAC mode is Microsoft's current recommendation because it centralizes authz through Azure RBAC, supports scoped role assignments, and integrates with conditional access.
+
+**Detection (ripgrep):**
+```
+enableRbacAuthorization\s*:\s*false
+```
+Also flag any Key Vault where the property is absent. See https://learn.microsoft.com/azure/key-vault/general/rbac-guide.
+
+**Severity:** `block`
+
+**Remediation action:**
+> Set `enableRbacAuthorization: true`. Replace `accessPolicies[]` entries with `Microsoft.Authorization/roleAssignments` granting `Key Vault Secrets User` / `Key Vault Crypto User` at vault scope.
+
+### `bicep.HC-13` — Storage infrastructure encryption not required
+
+**Pattern:** a `Microsoft.Storage/storageAccounts` resource without `properties.encryption.requireInfrastructureEncryption: true`. This enables a second layer of service-side encryption (FIPS 140-2 compliant) and cannot be toggled after creation. See https://learn.microsoft.com/azure/storage/common/infrastructure-encryption-enable.
+
+**Detection:** for each storage account, check whether the `encryption` block sets `requireInfrastructureEncryption: true`.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Add `encryption: { requireInfrastructureEncryption: true, services: { blob: { enabled: true }, file: { enabled: true } }, keySource: 'Microsoft.Storage' }` at creation. Cannot be retrofitted — requires a new account.
+
+### `bicep.HC-14` — Storage public-access flags permissive
+
+**Pattern:** a `Microsoft.Storage/storageAccounts` resource with any of:
+- `allowBlobPublicAccess: true` (or absent — default is `true` on older API versions)
+- `supportsHttpsTrafficOnly: false`
+- `publicNetworkAccess: 'Enabled'` without an accompanying `networkAcls.defaultAction: 'Deny'` + explicit allow-list
+- `minimumTlsVersion` missing (see `bicep.HC-2`)
+
+**Detection (ripgrep):**
+```
+allowBlobPublicAccess\s*:\s*true
+supportsHttpsTrafficOnly\s*:\s*false
+```
+
+**Severity:** `block`
+
+**Remediation action:**
+> Set `allowBlobPublicAccess: false`, `supportsHttpsTrafficOnly: true`, and either `publicNetworkAccess: 'Disabled'` (paired with a private endpoint — see `bicep.B2-2`) or `networkAcls: { defaultAction: 'Deny', ... }`.
+
+### `bicep.HC-15` — Cosmos DB free tier on production account
+
+**Pattern:** a `Microsoft.DocumentDB/databaseAccounts` resource with `properties.enableFreeTier: true` outside a dev/test environment (determined by module name, target environment param, or resource-group naming). Free tier is one-per-subscription and not intended for production; its unpredictable throughput caps cause latency regressions and its SLA is weaker. See https://learn.microsoft.com/azure/cosmos-db/free-tier.
+
+**Detection (ripgrep):**
+```
+enableFreeTier\s*:\s*true
+```
+
+**Severity:** `warn` (block if the module is clearly for production — name contains `prod`, `production`, or the environment param is `prod`).
+
+**Remediation action:**
+> Set `enableFreeTier: false` for production accounts. Use a dedicated dev/test subscription or non-prod Cosmos account for the free tier.
+
 ## Band 2 — cost-gated
 
 Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` with the specific code listed in `mixedEnabled`. Under `free`, the skill emits one `info` suppression line for this extension and does not evaluate these codes individually.
@@ -191,7 +263,7 @@ Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` 
 
 ### `bicep.B2-4` — WAF on App Gateway / Front Door Premium absent
 
-**Pattern:** no `Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies` or no `Microsoft.Cdn/profiles` with `Standard_AzureFrontDoor_Premium` SKU fronting public endpoints.
+**Pattern:** no `Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies`, or a `Microsoft.Cdn/profiles` fronting public endpoints whose `sku.name` is not `Premium_AzureFrontDoor`. Valid Front Door SKU names are `Standard_AzureFrontDoor`, `Premium_AzureFrontDoor`, and (legacy) `Classic_AzureFrontDoor`; Premium is the tier that includes managed WAF rulesets and DDoS protection. See https://learn.microsoft.com/azure/frontdoor/create-front-door-cli.
 
 **Severity:** `warn`
 
@@ -207,6 +279,18 @@ Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` 
 
 **Severity:** `warn`
 
+### `bicep.B2-7` — No Azure Policy assignments for guardrails
+
+**Pattern:** the subscription / management-group deployment contains no `Microsoft.Authorization/policyAssignments` (built-in initiatives such as `Azure Security Benchmark`, `CIS Microsoft Azure Foundations Benchmark`, or a customer-defined initiative). Policy assignments are Microsoft's recommended mechanism for preventing regressions (deny-mode) and detecting drift (audit-mode). See https://learn.microsoft.com/azure/governance/policy/overview.
+
+**Severity:** `warn`
+
+### `bicep.B2-8` — No federated credential for workload identity
+
+**Pattern:** a `Microsoft.ManagedIdentity/userAssignedIdentities` intended for CI/CD access to Azure with no `Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials` child configured for the GitHub / GitLab / AKS issuer. Federated workload identity is Microsoft's current recommendation over storing a client secret in the CI/CD system. See https://learn.microsoft.com/entra/workload-id/workload-identity-federation.
+
+**Severity:** `warn`
+
 ## Positive signals
 
 ### `bicep.POS-1` — Managed identity usage
@@ -217,9 +301,9 @@ Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` 
 
 **Pattern:** `@Microsoft.KeyVault(SecretUri=...)` syntax used in `appSettings` / `connectionStrings`.
 
-### `bicep.POS-3` — Soft delete / purge protection enabled
+### `bicep.POS-3` — Key Vault hardened
 
-**Pattern:** Key Vault with both `enableSoftDelete: true` and `enablePurgeProtection: true`.
+**Pattern:** Key Vault with `enablePurgeProtection: true`, `enableRbacAuthorization: true`, and `softDeleteRetentionInDays: 90`. Soft delete itself is always-on and no longer a meaningful signal.
 
 ### `bicep.POS-4` — Diagnostic settings within free grant
 

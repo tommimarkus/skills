@@ -45,7 +45,7 @@ Any real-shape credential in a committed file is a smell — **including** place
 **Rubric:** devsecops.md §5.1.1; CICD-SEC-6.
 
 **Remediation action:**
-> Rotate the credential immediately (assume public compromise). Move to Key Vault. Reference in `appsettings.json` via `@Microsoft.KeyVault(SecretUri=...)` syntax at runtime or via managed identity for Azure SDK clients. Add a pre-commit secret-scan hook.
+> Rotate the credential immediately (assume public compromise). Move to Key Vault. Reference in `appsettings.json` via the App Service / Functions Key Vault reference syntax: either `@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/<name>/)` or the equivalent `@Microsoft.KeyVault(VaultName=<vault>;SecretName=<name>;SecretVersion=<optional>)`. Or prefer managed identity directly for Azure SDK clients. Add a pre-commit secret-scan hook. See https://learn.microsoft.com/azure/app-service/app-service-key-vault-references.
 
 ### `dns.HC-2` — `[AllowAnonymous]` on a non-public endpoint
 
@@ -96,20 +96,20 @@ Or the reverse order.
 
 ### `dns.HC-5` — Missing security headers middleware
 
-**Pattern:** `Program.cs` or `Startup.cs` has no middleware equivalent to CSP, X-Frame-Options / XFO, HSTS, Referrer-Policy. Either via `app.UseSecurityHeaders()`, `app.Use(async ctx => ...)` that sets them, or a library like `NetEscapades.AspNetCore.SecurityHeaders`.
+**Pattern:** `Program.cs` or `Startup.cs` has no middleware setting the headers that ASP.NET Core does **not** ship out-of-the-box: `Content-Security-Policy`, `Referrer-Policy`, `Permissions-Policy`. (Note: `UseHsts()` is built-in, and ASP.NET Core's Antiforgery middleware emits `X-Frame-Options: SAMEORIGIN` on responses that set antiforgery cookies — so `XFO` is partially covered automatically. Blazor Web App also auto-emits `Content-Security-Policy: frame-ancestors 'self'`, tunable via `ContentSecurityFrameAncestorsPolicy`.) Detection should focus on the gaps, not duplicate what the framework already does.
 
-**Detection:** read `Program.cs` / `Startup.cs` and check for any of: `UseSecurityHeaders`, `Content-Security-Policy`, `X-Frame-Options`, `Strict-Transport-Security`, `NetEscapades`.
+**Detection:** read `Program.cs` / `Startup.cs` and check for any of: explicit `Content-Security-Policy` header, `Referrer-Policy` header, `Permissions-Policy` header, or a hand-rolled `app.Use(async ctx => { ctx.Response.Headers["..."] = ...; await next(); })`. A third-party middleware library (e.g. `NetEscapades.AspNetCore.SecurityHeaders`) also counts — Microsoft does not endorse a specific library by name, so any reasonable implementation is acceptable.
 
 **Severity:** `warn` (because the skill can't know the app's threat model without context)
 
 **Rubric:** devsecops.md §5.1.16; ASVS V14.
 
 **Remediation action:**
-> Add security headers middleware. For Blazor WASM, the headers must be set by the host (SWA `staticwebapp.config.json` or Functions middleware). For server Blazor or Functions HTTP, add middleware in `Program.cs`.
+> Add explicit middleware for CSP, Referrer-Policy, and Permissions-Policy. Verify `UseHsts()` is present (built-in). For Blazor WASM, headers must be set by the host (SWA `staticwebapp.config.json` or Functions middleware). For Blazor Server / Blazor Web App, headers go in `Program.cs`; note the framework already sets `frame-ancestors` and antiforgery handles XFO — don't override these unless you have a reason.
 
 ### `dns.HC-6` — Connection string via string concatenation
 
-**Pattern:** a connection-string construction like `"AccountEndpoint=" + endpoint + ";AccountKey=" + key` rather than using `ConnectionStringBuilder` or config sections.
+**Pattern:** a connection-string construction like `"AccountEndpoint=" + endpoint + ";AccountKey=" + key` rather than using a typed builder or config sections.
 
 **Detection (ripgrep):**
 ```
@@ -122,7 +122,7 @@ Similar for SQL: `"Server=".*\+.*"Password="`.
 **Rubric:** devsecops.md §5.1.1 (ties into secret handling).
 
 **Remediation action:**
-> Use the SDK's credential-based client construction (managed identity preferred) or a `ConnectionStringBuilder`. Never concatenate secrets into strings that may end up in logs.
+> Use the SDK's credential-based client construction (managed identity preferred). Where a typed builder is applicable: `SqlConnectionStringBuilder` (SQL), `DbConnectionStringBuilder` (generic ADO.NET). Cosmos / Blob / Service Bus do **not** expose a `ConnectionStringBuilder` — use `CosmosClientBuilder`, `BlobClientOptions`, `ServiceBusClientOptions` with a `TokenCredential`. Never concatenate secrets into strings that may end up in logs.
 
 ### `dns.HC-7` — Cosmos / Blob / Service Bus client with shared key
 
@@ -140,7 +140,7 @@ new\s+ServiceBusClient\s*\(\s*.*ConnectionString
 **Rubric:** devsecops.md §5.3.2 (positive is OIDC / MI); §5.1.7.
 
 **Remediation action:**
-> Replace with `new CosmosClient(endpoint, new DefaultAzureCredential())`. Grant the identity the appropriate data-plane role (e.g. `Cosmos DB Built-in Data Contributor`).
+> Replace with a `TokenCredential`-based client. In **production**, prefer a deterministic credential: `new CosmosClient(endpoint, new ManagedIdentityCredential(clientId: "<uami-client-id>"))`. Microsoft's current guidance deprecates `DefaultAzureCredential` for production use because its credential chain can silently pick the wrong identity when multiple are available — use it only in dev/local. If `DefaultAzureCredential` is used anywhere, set `ManagedIdentityClientId` or `ManagedIdentityResourceId` explicitly via `DefaultAzureCredentialOptions`. Grant the identity the appropriate data-plane role (e.g. `Cosmos DB Built-in Data Contributor`). See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
 
 ### `dns.HC-8` — Authz denial log missing security-relevant fields
 
@@ -154,6 +154,96 @@ new\s+ServiceBusClient\s*\(\s*.*ConnectionString
 
 **Remediation action:**
 > Log structured fields: `_logger.LogWarning("Access denied for user {UserId} on resource {ResourceId}: {Decision} (trace {TraceId})", userId, resourceId, decision, Activity.Current?.TraceId)`.
+
+### `dns.HC-9` — Antiforgery not applied to state-changing endpoints
+
+**Pattern:** Razor Pages / MVC controllers that handle POST / PUT / DELETE without `[AutoValidateAntiforgeryToken]` at the application/controller level or `[ValidateAntiForgeryToken]` per action. Applies to server-rendered forms; not required for pure JSON APIs that never accept browser-submitted form posts. See https://learn.microsoft.com/aspnet/core/security/anti-request-forgery.
+
+**Detection (ripgrep):**
+```
+\[HttpPost\]|\[HttpPut\]|\[HttpDelete\]
+```
+Then check whether the declaring type / assembly has `AddControllersWithViews()` + `AddRazorPages()` (i.e. server-rendered) and whether `[AutoValidateAntiforgeryToken]` is configured globally.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Register globally: `services.AddControllers(options => options.Filters.Add&lt;AutoValidateAntiforgeryTokenAttribute&gt;())`. Or decorate controllers with `[AutoValidateAntiforgeryToken]`. Or per-action with `[ValidateAntiForgeryToken]`.
+
+### `dns.HC-10` — `System.Random` used for security-sensitive values
+
+**Pattern:** `new Random()` or `Random.Shared` used to generate tokens, IDs, nonces, password-reset values, CSRF tokens, session IDs, or anything consumed by an authentication / authorization path. `System.Random` is not cryptographically secure. Microsoft analyzer rule CA5394 already tracks this — turning it on as a build error is the simplest remediation. See https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca5394.
+
+**Detection (ripgrep):**
+```
+new\s+Random\s*\(
+Random\.Shared
+```
+Cross-reference with security-adjacent variable names (`token`, `nonce`, `secret`, `csrf`, `sessionId`, `resetCode`).
+
+**Severity:** `block` when confirmed security use; `warn` otherwise.
+
+**Remediation action:**
+> Use `System.Security.Cryptography.RandomNumberGenerator.GetBytes(span)` or `GetInt32(fromInclusive, toExclusive)`. Enable CA5394 as an error in `.editorconfig`.
+
+### `dns.HC-11` — SQL injection via `CommandText` concatenation
+
+**Pattern:** `SqlCommand.CommandText = "SELECT ... " + userInput` or interpolation `$"SELECT ... {userInput}"` instead of parameterized queries. Microsoft analyzer CA2100 covers this. See https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2100.
+
+**Detection (ripgrep):**
+```
+CommandText\s*=\s*\$?"[^"]*"\s*\+
+new\s+SqlCommand\s*\(\s*\$"
+```
+
+**Severity:** `block`
+
+**Remediation action:**
+> Use `SqlParameter` (or the equivalent on your driver): `cmd.CommandText = "SELECT ... WHERE id = @id"; cmd.Parameters.AddWithValue("@id", id)`. For Dapper / EF Core, use parameterized APIs — never `FromSqlRaw($"...{input}...")`.
+
+### `dns.HC-12` — `BinaryFormatter` usage
+
+**Pattern:** any reference to `System.Runtime.Serialization.Formatters.Binary.BinaryFormatter`. Known-vulnerable by design; obsolete since .NET 5, made unusable in .NET 9 (throws `PlatformNotSupportedException` at runtime). See https://learn.microsoft.com/dotnet/core/compatibility/serialization/9.0/binaryformatter-removal.
+
+**Detection (ripgrep):**
+```
+BinaryFormatter
+```
+
+**Severity:** `block`
+
+**Remediation action:**
+> Migrate to `System.Text.Json` for general data, or `DataContractSerializer` / MessagePack for typed contracts. See the migration guide: https://learn.microsoft.com/dotnet/standard/serialization/binaryformatter-migration-guide/.
+
+### `dns.HC-13` — Data Protection keys not persisted to a durable store
+
+**Pattern:** `AddDataProtection()` call with no `PersistKeysToAzureBlobStorage(...)` and no `ProtectKeysWithAzureKeyVault(...)` (or their file-system / Redis equivalents). Without persistence, keys regenerate on every deploy and in every replica, breaking auth cookies and antiforgery tokens across a multi-instance app. See https://learn.microsoft.com/aspnet/core/security/data-protection/configuration/overview.
+
+**Detection (ripgrep):**
+```
+AddDataProtection\(
+```
+Then check whether the chain contains `PersistKeysTo...` and `ProtectKeysWith...`.
+
+**Severity:** `warn` (single-instance dev) / `block` (multi-instance production confirmed)
+
+**Remediation action:**
+> `services.AddDataProtection().PersistKeysToAzureBlobStorage(blobClient).ProtectKeysWithAzureKeyVault(keyIdentifier, credential);` using the `Azure.Extensions.AspNetCore.DataProtection.Blobs` + `...DataProtection.Keys` packages.
+
+### `dns.HC-14` — `DefaultAzureCredential` used without explicit managed identity
+
+**Pattern:** `new DefaultAzureCredential()` with no `DefaultAzureCredentialOptions.ManagedIdentityClientId` or `ManagedIdentityResourceId` set. In production environments with multiple identities (user-assigned + system-assigned + environment variables), the credential chain may silently pick the wrong one — auth failures appear as permission errors, not identity selection errors. See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
+
+**Detection (ripgrep):**
+```
+new\s+DefaultAzureCredential\s*\(\s*\)
+```
+Then check whether the call is wrapped with options setting `ManagedIdentityClientId` / `ManagedIdentityResourceId`.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Production: replace with `new ManagedIdentityCredential(clientId: "<uami-client-id>")`. Dev: keep `DefaultAzureCredential` but pass `new DefaultAzureCredentialOptions { ManagedIdentityClientId = "<id>" }`.
 
 ### `dns.LC-1` — Shadow / zombie function endpoint
 
@@ -181,11 +271,54 @@ new\s+ServiceBusClient\s*\(\s*.*ConnectionString
 **Remediation action:**
 > Either add the missing fields to the OpenAPI schema (if intentional) or add `[JsonIgnore]` / make the property `init`-only / remove the setter to prevent mass-assignment. Prefer explicit input DTOs that carry only the documented fields.
 
+### `dns.LC-3` — `new HttpClient(...)` without `IHttpClientFactory`
+
+**Pattern:** direct instantiation of `HttpClient` held as a static or singleton, bypassing `IHttpClientFactory` and without `SocketsHttpHandler.PooledConnectionLifetime` configured. Causes socket exhaustion (short-lived) or stale-DNS (long-lived). Security-adjacent: stale DNS can route to a decommissioned endpoint the attacker now controls. See https://learn.microsoft.com/dotnet/fundamentals/networking/http/httpclient-guidelines.
+
+**Detection (ripgrep):**
+```
+new\s+HttpClient\s*\(
+```
+Cross-reference against `IHttpClientFactory` / `AddHttpClient` usage in the same project.
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Register `services.AddHttpClient&lt;TClient&gt;(...)` and inject `IHttpClientFactory` (or the typed client). If a singleton is unavoidable, configure `SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) }`.
+
+### `dns.LC-4` — PII destructured into structured logs
+
+**Pattern:** a log template using the `@` destructuring operator on an object that contains PII (user, account, profile). `_logger.LogInformation("Request from {@User}", user)` serializes the whole object — including `Email`, `PhoneNumber`, `Address` — into log sinks that may have weaker access controls than the app DB.
+
+**Detection (ripgrep):**
+```
+Log(Information|Debug|Trace|Warning|Error).*\{@(user|account|profile|customer|claims)\}
+```
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Log scalar IDs only (`{UserId}`), not whole objects. Or define an explicit log-safe projection (`LogInfo`-style record) and destructure that instead.
+
+### `dns.LC-5` — Hardcoded PFX path / password for certificate loading
+
+**Pattern:** `new X509Certificate2("<path>", "<password>")` where path and password are string literals. Should come from Key Vault certificates + managed identity, not from the file system.
+
+**Detection (ripgrep):**
+```
+new\s+X509Certificate2\s*\(\s*"[^"]+\.pfx"\s*,\s*"
+```
+
+**Severity:** `warn`
+
+**Remediation action:**
+> Store the cert in Key Vault, load via `CertificateClient(new Uri(vault), new ManagedIdentityCredential())` and the certificate's secret ID. No PFX on disk, no password in code.
+
 ## Positive signals
 
-### `dns.POS-1` — Managed identity client construction
+### `dns.POS-1` — Production-grade managed identity client construction
 
-**Pattern:** Azure SDK clients instantiated with a `TokenCredential` (e.g. `DefaultAzureCredential`, `ManagedIdentityCredential`).
+**Pattern:** Azure SDK clients instantiated with a deterministic `TokenCredential` — `ManagedIdentityCredential` with an explicit `clientId` / `resourceId`, or `DefaultAzureCredential` with `DefaultAzureCredentialOptions.ManagedIdentityClientId` set. Bare `new DefaultAzureCredential()` does **not** count (see `dns.HC-14`).
 
 ### `dns.POS-2` — Key Vault reference resolution
 
@@ -207,5 +340,5 @@ new\s+ServiceBusClient\s*\(\s*.*ConnectionString
 
 - **Do not flag `dns.HC-1` on files matching `*.Example.*`** — example files are expected to contain placeholder credentials. Still flag if the placeholder shape matches a real credential format exactly (that's `DSO-HC-1` under a different lens).
 - **Do not flag `dns.HC-2` on endpoints explicitly listed in `SECURITY.md`** as public.
-- **Do not flag `dns.HC-3` on Static Web Apps routes** — SWA handles auth at the edge via `routes.json`, not via `[Authorize]`.
-- **Do not flag `dns.HC-5` on Blazor WASM projects** — the host (SWA / Functions) is responsible for headers, not the WASM client.
+- **Do not flag `dns.HC-3` on Static Web Apps routes** — SWA handles auth at the edge via `staticwebapp.config.json` (the legacy `routes.json` is ignored when `staticwebapp.config.json` exists), not via `[Authorize]`. See https://learn.microsoft.com/azure/static-web-apps/configuration.
+- **Do not flag `dns.HC-5` on Blazor WASM projects** — the host (SWA / Functions) is responsible for headers, not the WASM client. For Blazor **Server** / **Web App**, the framework auto-emits `Content-Security-Policy: frame-ancestors 'self'` and Antiforgery emits `X-Frame-Options: SAMEORIGIN`; do not double-flag those specific headers as missing.
