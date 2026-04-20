@@ -14,7 +14,11 @@ Core [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric) already lists the
 
 Node-ecosystem refinements:
 
-- **Playwright `test.describe.configure({ tag: '@a11y' })` or `test('...', { tag: ['@a11y'] }, ...)`** — the `@playwright/test` tag system is the idiomatic per-test sub-lane marker. `@a11y` → sub-lane A; `@perf` → P; `@security` → S.
+- **Playwright tags** — the `@playwright/test` tag system is the idiomatic per-test sub-lane marker (see https://playwright.dev/docs/test-annotations#tag-tests). Use the `details` argument:
+  - Per-test: `test('title', { tag: '@a11y' }, async ({ page }) => { ... })` or `test('title', { tag: ['@a11y', '@smoke'] }, ...)`.
+  - Per-describe: `test.describe('group', { tag: '@a11y' }, () => { ... })`.
+  - In-title: a `@a11y` token anywhere in the test title also counts (`test('test keyboard nav @a11y', ...)`).
+  - `@a11y` → sub-lane A; `@perf` → P; `@security` → S. (`test.describe.configure(...)` controls `mode` / `retries` / `timeout` but not tags; do not confuse it with the tag system.)
 - **`@axe-core/playwright` / `cypress-axe` / `axe-core` import** — sub-lane A regardless of tag presence.
 - **`web-vitals` npm package / `lighthouse` import / `PerformanceObserver` inside a `page.evaluate` call** — sub-lane P.
 - **`page.context().addCookies(...)` with tampered-value tests / CSP header assertions with browser-enforcement checks** — sub-lane S.
@@ -39,9 +43,9 @@ Node-ecosystem refinements:
 - Playwright: `await page\.waitForTimeout\(\s*\d+\s*\)` anywhere in a test body.
 - Cypress: `cy\.wait\(\s*\d+\s*\)` (a numeric argument — not `cy.wait('@alias')` which waits on a network intercept).
 - WebdriverIO: `await browser\.pause\(\s*\d+\s*\)`.
-- Puppeteer: `await page\.waitForTimeout\(\s*\d+\s*\)` (same API as Playwright, deprecated in Puppeteer v22+).
+- Puppeteer: `await page\.waitForTimeout\(\s*\d+\s*\)` — removed in Puppeteer v22 (the method no longer exists on `Page`); tests still using it fail at runtime. Flag together with the recommended replacement (`await new Promise(r => setTimeout(r, ms))` for the rare legitimate case, or a web-observable wait otherwise).
 
-**Why low-confidence:** fixed-duration waits are flaky by construction — they fail on slow CI runners and waste time on fast ones. Playwright's own [timeout docs](https://playwright.dev/docs/test-timeouts) explicitly discourage them ("Discouraged: Never wait for timeout in production. Tests that wait for time are inherently flaky. Use Locator actions and web assertions that wait automatically."). Cypress [`cy.wait` docs](https://docs.cypress.io/api/commands/wait) say the same. Sometimes legitimate when waiting for a non-observable side effect (e.g. a debounced analytics beacon), but rare. Flag with a note; the author can dismiss if the delay is genuinely tied to wall-clock time.
+**Why low-confidence:** fixed-duration waits are flaky by construction — they fail on slow CI runners and waste time on fast ones. Playwright's own [timeout docs](https://playwright.dev/docs/test-timeouts) explicitly discourage them ("Discouraged: Never wait for timeout in production. Tests that wait for time are inherently flaky. Use Locator actions and web assertions that wait automatically."). Cypress [`cy.wait` docs](https://docs.cypress.io/api/commands/wait) and [best-practices § Unnecessary Waiting](https://docs.cypress.io/app/core-concepts/best-practices#Unnecessary-Waiting) flag `cy.wait(Number)` as an anti-pattern. Sometimes legitimate when waiting for a non-observable side effect (e.g. a debounced analytics beacon), but rare. Flag with a note; the author can dismiss if the delay is genuinely tied to wall-clock time.
 
 **Rewrite (intent):**
 - Playwright: `await expect(locator).toBeVisible()` / `.toHaveText(...)` / `.toHaveURL(...)` web-first assertions retry with a timeout until the condition holds.
@@ -88,13 +92,13 @@ Playwright's documented locator priority puts these first for exactly this reaso
 
 **Detection:**
 
-- Playwright: `test\.use\(\{\s*(storageState|contextOptions)\s*:` at the file or describe-block level (new context per test in the block), OR `const context = await browser\.newContext\(` in `beforeEach` / a test body with `context.close()` in `afterEach`.
-- Cypress: tests that call `cy.clearCookies()` + `cy.clearLocalStorage()` + `cy.clearAllSessionStorage()` in `beforeEach` OR use `cy.session(...)` with per-test cache keys.
+- Playwright: `test\.use\(\{\s*(storageState|contextOptions)\s*:` at the file or describe-block level (new context per test in the block, seeded from `storageState`), OR `const context = await browser\.newContext\(` in `beforeEach` / a test body with `context.close()` in `afterEach`. `@playwright/test` already creates a fresh `BrowserContext` per test by default — isolation is the default, not the opt-in.
+- Cypress: tests that call `cy.clearAllCookies()` + `cy.clearAllLocalStorage()` + `cy.clearAllSessionStorage()` in `beforeEach` OR use `cy.session(id, setup, { validate })` with per-test cache keys. Test-isolation mode (`testIsolation: 'on'`, the default since Cypress v12) already clears cookies / localStorage / sessionStorage between tests in the same spec; the `cy.clearAll*` trio is the explicit opt-in equivalent when isolation is disabled.
 - WebdriverIO: `browser.reloadSession()` in `beforeEach` OR a dedicated session factory per test.
 
 **Why positive:** a per-test context isolates cookies, storage, and auth state between tests. Suites that share a single context across tests bleed state and mask order-dependency bugs; a per-test context removes that whole class of flake. Especially valuable under sub-lane S (security) where cross-test cookie leaks invalidate auth assertions.
 
-Playwright's `test.use({ storageState: 'auth.json' })` pattern is the documented way to share auth across tests while keeping per-test cookies fresh — the stored state is read-only-restored, not reused.
+Playwright's `test.use({ storageState: 'playwright/.auth/user.json' })` pattern is the documented way to share auth across tests while keeping per-test cookies fresh — each test's context is re-seeded from the stored state, not literally reused. See https://playwright.dev/docs/auth#reuse-signed-in-state.
 
 ---
 

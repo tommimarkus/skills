@@ -68,7 +68,7 @@ test('lists users', async () => {
 });
 ```
 
-**Rewrite (intent):** use `prisma.$transaction(async (tx) => { ... })` per test with an interactive transaction the test rolls back, OR truncate in `beforeEach` (`await prisma.$executeRaw\`TRUNCATE "User" CASCADE\``), OR use a per-test schema / tenant / partition key.
+**Rewrite (intent):** truncate per test in `beforeEach` (`await prisma.$executeRaw\`TRUNCATE "User" CASCADE\``), OR use a per-test schema / tenant / partition key, OR wrap each test in an interactive transaction that is deliberately rolled back by throwing from inside the callback (`await prisma.$transaction(async (tx) => { ...; throw new Rollback(); })` with a try/catch that silences the sentinel error — Prisma's `$transaction` commits on success and rolls back on any thrown error).
 
 ---
 
@@ -119,7 +119,7 @@ test('GET /admin/users returns ok', async () => {
 
 **Applies to:** `integration` — refines core `I-HC-B4`.
 
-**Detection:** `import { setupServer } from 'msw/node'` plus handler definitions using `http.<method>('<upstream-url>', () => passthrough())` or `HttpResponse.text(await bypass(req))` or similar — where the handler forwards to the real remote service rather than returning a stub.
+**Detection:** `import { setupServer } from 'msw/node'` plus handler definitions that forward to the real remote service rather than returning a stub — either `http.<method>('<upstream-url>', () => passthrough())` (from `import { passthrough } from 'msw'`) or a handler that calls `await fetch(bypass(request))` (from `import { bypass } from 'msw'`) and returns the result.
 
 **Smell:** the integration test depends on a live external service over the network. CI runs become non-deterministic (the upstream rate-limits, returns a 500, or changes its response shape). The test is an integration sub-lane B masquerading as a unit / sub-lane A test — either call it what it is (contract test against staging) or stub the upstream explicitly.
 
@@ -161,7 +161,7 @@ test('GET /admin/users returns ok', async () => {
 
 **Applies to:** `integration`
 
-**Detection:** `setupServer(...baseHandlers)` once at module scope, then `server.use(http.<method>('<url>', () => HttpResponse.json({...})))` inside specific test bodies to override a single handler for that test — followed by `server.resetHandlers()` in `afterEach`.
+**Detection:** `setupServer(...baseHandlers)` once at module scope, then `server.use(http.<method>('<url>', () => HttpResponse.json({...})))` inside specific test bodies to override a single handler for that test — followed by `server.resetHandlers()` in `afterEach` (which removes runtime handlers and restores the base set, per https://mswjs.io/docs/api/setup-server/reset-handlers).
 
 **Why positive:** the default handlers represent the SUT's production HTTP boundary; per-test overrides let each test specify "for this case, the upstream returns X". Tests stay precise — the seam is the HTTP boundary, and each test declares exactly which edge of that seam it's exercising.
 
@@ -228,21 +228,23 @@ Detect the project's ORM first (presence of the ORM package in `package.json` + 
 
 #### Drizzle
 
-- **File glob:** default is `drizzle/<n>_<name>.sql` at repo root; read `drizzle.config.{ts,js,mjs}` to detect a non-default `out:` path (e.g. `out: './database/migrations'`) and glob accordingly.
-- **Identifier:** filename stem (e.g. `0001_initial_schema`).
-- **Metadata:** `drizzle/meta/_journal.json` lists the migrations in order. Useful for determining upgrade ordering.
+- **File glob:** default `out:` directory is `./drizzle`; regular migrations land as `./drizzle/<NNNN>_<name>.sql` (sequence-prefixed, e.g. `0000_initial_schema.sql`). `drizzle-kit generate --custom` writes SQL into a timestamped subdirectory (`./drizzle/<timestamp>_<name>/migration.sql`) — enumerate both shapes. Read `drizzle.config.{ts,js,mjs}` (the `out:` field passed to `defineConfig`) to detect a non-default output path (e.g. `out: './migrations'`) and glob accordingly.
+- **Identifier:** for flat-file migrations, the filename stem (e.g. `0001_initial_schema`); for custom migrations, the parent-directory name.
+- **Metadata:** `<out>/meta/_journal.json` lists the migrations in order with their `idx` / `when` / `tag` / `breakpoints`. Useful for determining upgrade ordering.
 
 #### TypeORM
 
-- **File glob:** `**/migrations/*.{ts,js}`.
-- **Detection within file:** `class\s+(?P<name>[A-Z]\w+)(?:\d{13})?\s+implements\s+MigrationInterface` — the class name (minus the optional timestamp suffix TypeORM appends) is the identifier.
-- **Content:** each class exports `async up(queryRunner: QueryRunner): Promise<void>` and `async down(...)`.
+- **File glob:** default `**/migrations/*.{ts,js}`; the `DataSource` option `migrations: [...]` is authoritative — read it to detect a custom glob. Files are named `<timestamp>-<Name>.ts` (e.g. `1640000000000-InitialMigration.ts`).
+- **Detection within file:** `class\s+(?P<name>[A-Z]\w+)(?:\d{13})?\s+implements\s+MigrationInterface` — the class name (minus the optional 13-digit timestamp suffix TypeORM appends) is the identifier.
+- **Content:** each class exports `async up(queryRunner: QueryRunner): Promise<void>` and `async down(queryRunner: QueryRunner): Promise<void>`. `QueryRunner` is the documented interface for DDL/DML inside a migration (`createTable`, `addColumn`, `createIndex`, `query`, etc.).
+- **DataSource config flags that affect enumeration:** `synchronize: false`, `migrations: [...]`, `migrationsRun: boolean` (auto-run migrations on `initialize()`), `migrationsTableName` (default `migrations`), `migrationsTransactionMode: 'all' | 'each' | 'none'`.
 
 #### Knex
 
-- **File glob:** `**/migrations/*.{ts,js}` (the default; override in `knexfile.{js,ts}` via `migrations.directory`). Read `knexfile` to detect custom directories.
+- **File glob:** `**/migrations/*.{ts,js}` (the default; override in `knexfile.{js,ts}` via `migrations.directory` — an array is also valid when combined with `sortDirsSeparately: true`). Read `knexfile` to detect custom directories.
 - **Identifier:** filename stem (Knex prefixes with a UTC timestamp, e.g. `20260101120000_add_users_table.ts`).
-- **Content:** each file exports `export async function up(knex: Knex): Promise<void>` and `export async function down(...)` (or CJS `exports.up = ...`).
+- **Content:** each file exports `export async function up(knex: Knex): Promise<void>` and `export async function down(knex: Knex): Promise<void>` (or CJS `exports.up = ...`).
+- **Applying migrations:** programmatic entry points are `knex.migrate.latest([config])` (run all pending migrations), `knex.migrate.up([config])` (run one), `knex.migrate.down([config])` (undo last or named), `knex.migrate.rollback([config], [all])`.
 
 ### Upgrade-path test detection
 
@@ -250,9 +252,9 @@ For each enumerated migration, search the test project for a test method that sa
 
 1. **References the migration identifier.** Depending on the ORM:
    - Prisma: the test imports / shells out to `prisma migrate deploy` for a specific migration name, OR reads the `migration.sql` file, OR asserts on the schema state produced by that migration.
-   - Drizzle: the test imports the migration file or invokes `migrate(db, { migrationsFolder: '...' })` pointing at a directory containing the migration.
-   - TypeORM: `new <MigrationClassName>(...)` construction or `typeof <MigrationClassName>` reference.
-   - Knex: `import * as migration from '../../migrations/<filename>'` then `migration.up(knex)`.
+   - Drizzle: the test imports the migration file or invokes `migrate(db, { migrationsFolder: '...' })` (e.g. from `drizzle-orm/node-postgres/migrator` or the driver-matching migrator path) pointing at a directory containing the migration.
+   - TypeORM: the test invokes `dataSource.runMigrations()` / `dataSource.undoLastMigration()` against a `DataSource` whose `migrations: [...]` glob resolves to the target migration, OR imports the migration class and calls `new <MigrationClassName>().up(queryRunner)` directly.
+   - Knex: `import * as migration from '../../migrations/<filename>'` then `migration.up(knex)` / `migration.down(knex)`, OR `knex.migrate.latest({ directory })` pointing at the migration file's directory.
 2. **Arranges non-empty seed data before the migration runs.** Search the test's Arrange block for `prisma.<table>.create(...)` / `db.insert(<table>).values(...)` (Drizzle) / `queryRunner.query('INSERT ...')` (TypeORM) / `knex('<table>').insert(...)` calls on tables the migration will transform, **before** the migration is invoked.
 3. **Asserts post-migration state.** After the migration invocation, the test reads rows back and asserts a property of the returned data — either a schema-level assertion (column exists, type is correct) or a data-level assertion (seed row's value was transformed correctly).
 
@@ -267,5 +269,5 @@ If all three conditions fail, emit `Gap-MigUpgrade`. If condition 1 holds but 2 
 
 ### Repo-level carve-outs
 
-- **Migration runner test.** If the repo has a single integration test that runs `prisma migrate deploy` / `drizzle-kit migrate` / `DataSource.runMigrations()` / `knex.migrate.latest()` against seed data and asserts post-state for multiple migrations, suppress individual `Gap-MigUpgrade` entries for the migrations that are explicitly named in the runner test's assertion block. Note "covered transitively via migration-runner test".
+- **Migration runner test.** If the repo has a single integration test that runs `prisma migrate deploy` / `migrate(db, { migrationsFolder })` (Drizzle) / `dataSource.runMigrations()` (TypeORM) / `knex.migrate.latest()` against seed data and asserts post-state for multiple migrations, suppress individual `Gap-MigUpgrade` entries for the migrations that are explicitly named in the runner test's assertion block. Note "covered transitively via migration-runner test".
 - **Expand-only migration rule.** If the repo's `CLAUDE.md` or ADR documents an expand-only migration rule (every migration must be safe to deploy while old code is running), the upgrade-path test is doubly important — assertion confidence is `high`. If the rule is absent, confidence stays `high` but the recommendation softens from "required" to "strongly recommended".

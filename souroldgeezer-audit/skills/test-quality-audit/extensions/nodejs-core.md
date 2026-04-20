@@ -133,7 +133,7 @@ API-compatible with Jest. Map `jest.*` → `vi.*` for every primitive:
 
 - **Stub:** `t.mock.fn(original?, implementation?)` or `context.mock.fn(...)` without reading `.mock.calls`.
 - **Mock:** same fn with `assert.strictEqual(fn.mock.callCount(), N)` / iterating `fn.mock.calls` with strict count expectations.
-- **Module mock:** `t.mock.module('path', { namedExports: { ... } })` (Node 22+). Per-export classification follows the rules above.
+- **Module mock:** `t.mock.module('path', { exports: { ... } })` (Node 22.3+, stability 1.0 — experimental). Requires Node to be started with `--experimental-test-module-mocks`. `{ namedExports, defaultExport }` are accepted but deprecated in favor of `{ exports: { default, ... } }`. Per-export classification follows the rules above. See https://nodejs.org/api/test.html#class-mockmodulecontext.
 - **Timer mock:** `t.mock.timers.enable({ apis: ['setTimeout'] })` and `t.mock.timers.tick(ms)` — see `nodejs.POS-5`.
 
 ### testdouble (`testdouble` / `td`)
@@ -271,7 +271,7 @@ test('creates an order', async () => {
 
 **Detection:** `expect\((?P<promise>[^)]+)\)\.(resolves|rejects)\.` without a preceding `await` or `return` on the `expect(...)` call.
 
-**Smell:** Jest's and Vitest's `.resolves` / `.rejects` matchers return a thenable that must be awaited (or returned from the test function) for the assertion to actually run. An un-awaited `.resolves.toBe(...)` / `.rejects.toThrow(...)` silently skips — the test passes regardless of the promise's outcome. Jest's own docs call this out: see https://jestjs.io/docs/asynchronous (§ ".resolves / .rejects").
+**Smell:** Jest's and Vitest's `.resolves` / `.rejects` matchers return a thenable that must be awaited (or returned from the test function) for the assertion to actually run. An un-awaited `.resolves.toBe(...)` / `.rejects.toThrow(...)` silently skips — the test passes regardless of the promise's outcome. Jest's own docs call this out: see https://jestjs.io/docs/asynchronous (§ ".resolves / .rejects") — "Be sure to return the assertion — if you omit this `return` statement, your test will complete before the promise returned from `fetchData` is resolved ... potentially leading to false positives or unexpected test behavior."
 
 **Example (smell):**
 ```ts
@@ -325,7 +325,7 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 **Why low-confidence:** the author left a focused-run marker in. The suite still passes locally but runs only the focused test, suppressing everything else. On CI, some configurations fail closed (good); others silently run only the focused test (bad).
 
-**Rewrite (intent):** remove the `.only` / `f*` prefix before committing. Configure the test runner to fail on `.only` when present (Jest: `--bail --reporters=default` with a custom reporter; Vitest: `allowOnly: false` in the config).
+**Rewrite (intent):** remove the `.only` / `f*` prefix before committing. Configure the test runner to fail on `.only` when present. Vitest defaults `allowOnly` to `false` under CI (auto-detected via `std-env`) and `true` locally — set `allowOnly: false` in `vitest.config` to fail everywhere, or use the `--allowOnly` CLI flag. Jest does not ship a first-party `.only`-forbidden flag; an ESLint rule (`jest/no-focused-tests` from `eslint-plugin-jest`) is the idiomatic enforcement.
 
 ---
 
@@ -631,7 +631,7 @@ Create a minimal `stryker.conf.mjs` at the repo root:
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   packageManager: 'npm',
-  reporters: ['json', 'html', 'clear-text'],
+  reporters: ['clear-text', 'progress', 'html', 'json'],
   testRunner: 'vitest',                 // or 'jest' / 'mocha'
   coverageAnalysis: 'perTest',
   checkers: ['typescript'],             // omit on JS-only projects
@@ -639,6 +639,8 @@ export default {
   mutate: ['src/**/*.ts', '!src/**/*.test.ts', '!src/**/*.spec.ts'],
 };
 ```
+
+The default reporter set is `['clear-text', 'progress', 'html']`; adding `json` gives the audit agent a machine-readable report alongside the defaults. See https://stryker-mutator.io/docs/stryker-js/configuration/#reporters-string for the full reporter list.
 
 Add `.stryker-tmp/` and `reports/mutation/` to `.gitignore`. Commit `stryker.conf.mjs`. Future contributors run `npm install` to get the pinned Stryker version from `package-lock.json`.
 
@@ -690,7 +692,9 @@ Useful for demonstrating mutation testing on one file without waiting for a full
 
 - `--mutationScore <threshold>` — configure the `thresholds.break` value in config. Used for CI gating, not audits.
 - `--concurrency <N>` — override default parallelism. Default is half the available CPU cores; Stryker JS is IO-heavy and setting `concurrency: N` matching the runner's own worker count is often faster.
-- `--logLevel debug` — enable diagnostic logging when troubleshooting a failed run.
+- `--incremental` — only re-mutate files changed since the last recorded incremental run (`reports/stryker-incremental.json`). Fastest for iterative local use once a baseline exists.
+- `--dryRunOnly` — run the initial unmutated test pass and stop. Useful for debugging `stryker.conf.mjs` without paying for the full mutation run.
+- `--logLevel debug` (or `trace`) — enable diagnostic logging when troubleshooting a failed run.
 
 ### 5. Known SUT limitations
 
@@ -729,10 +733,13 @@ Stryker JS cannot mutate every JavaScript / TypeScript SUT shape. Before attempt
 
 ### 6. Output parser notes
 
-- **Report location:** `reports/mutation/mutation.json` relative to the config-file directory (configurable via `reporters` → `json`'s file option). The HTML report lives at `reports/mutation/mutation.html`.
-- **Top-level score:** `mutation-report.json`'s top-level `thresholds` and `systemUnderTestMetrics.metrics.mutationScore` field carry the score; the cleartext reporter also prints `Mutation score based on covered code: N.NN%` and `Mutation score: N.NN%` (the latter uses the `no-coverage` inclusion strategy from `thresholds`).
-- **Per-file extraction:** iterate `files` (keyed by relative path); for each file, iterate `mutants` and group by `status`. Meaningful statuses: `Killed`, `Survived`, `NoCoverage`, `Timeout`, `Ignored`, `CompileError`, `RuntimeError`.
-- **Surviving-mutant details:** for each surviving mutant, extract `location.start.line`, `mutatorName`, `replacement`, and `statusReason` (populated by some reporters). This is the raw material for the "audit-vs-mutation disagreement" reconciliation in step 5 of deep-mode output.
+Stryker's JSON reporter writes the standard [mutation-testing-elements report schema](https://github.com/stryker-mutator/mutation-testing-elements/blob/master/packages/report-schema/src/mutation-testing-report-schema.json) (`schemaVersion: "1.x"`). Fields the audit agent reads:
+
+- **Report location:** `reports/mutation/mutation.json` relative to the config-file directory (configurable via the `jsonReporter.fileName` option). The HTML report lives at `reports/mutation/mutation.html`.
+- **Top-level fields:** `schemaVersion`, `thresholds: { high, low }`, `framework`, `system`, `config`, `files`, `testFiles`. There is **no** top-level `mutationScore` in the JSON; the score is computed from the mutant status counts (the cleartext reporter does print `Mutation score: N.NN%` and `Mutation score based on covered code: N.NN%` — `/reports/html/index.html` also displays the computed score).
+- **Per-file extraction:** iterate `files` (an object keyed by file path relative to the project root). For each file, iterate `mutants` and group by `status`. Meaningful statuses: `Killed`, `Survived`, `NoCoverage`, `Timeout`, `Ignored`, `CompileError`, `RuntimeError`, `Pending`.
+- **Surviving-mutant details:** for each surviving mutant, extract `location.start.line` / `location.start.column`, `mutatorName`, `replacement`, and `statusReason` (populated by some reporters). This is the raw material for the "audit-vs-mutation disagreement" reconciliation in step 5 of deep-mode output. The mutant's `coveredBy` / `killedBy` arrays reference test IDs in the top-level `testFiles`.
+- **Score derivation:** mutation score = `killed / (killed + survived + timeout)` (excludes `NoCoverage` / `Ignored` / `CompileError` / `RuntimeError`); mutation score including no-coverage = `killed / (killed + survived + timeout + noCoverage)`. Use the same formula the CLI prints.
 - **Files entirely without tests:** filter for files whose mutant list has zero `Killed` + zero `Survived` + zero `Timeout` entries (all `NoCoverage` or `Ignored`). These are the "no test touches this file" findings the static audit cannot see.
 
 ### When to run it

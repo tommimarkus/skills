@@ -18,7 +18,7 @@ Addon to [nodejs-core.md](nodejs-core.md) loaded **only when step 0b selects the
 - `screen\.getByTestId\(` or `getByTestId\(` when the same test body does **not** reference an `aria-label`, `role`, `aria-labelledby`, or visible text anywhere — i.e. a `getByTestId` used as the *only* locator strategy with no accessible-name fallback.
 - `screen\.getByClassName\(` / `getByClassName\(` (non-standard but seen in migrated Enzyme tests).
 
-**Smell:** React Testing Library's documented query priority is **role → label → placeholder → text → display-value → alt-text → title → test-id → manual**. Skipping to implementation selectors pins the test to the current DOM structure rather than to user-observable behavior. A refactor that restructures the markup (changes a wrapper `<div>`, swaps `<a>` for `<button>`, reorders class names) breaks the test without changing what the user experiences.
+**Smell:** Testing Library's documented query priority is **`getByRole` → `getByLabelText` → `getByPlaceholderText` → `getByText` → `getByDisplayValue` → `getByAltText` → `getByTitle` → `getByTestId` → `container.querySelector` (manual)** (see https://testing-library.com/docs/queries/about#priority). Skipping to implementation selectors pins the test to the current DOM structure rather than to user-observable behavior. A refactor that restructures the markup (changes a wrapper `<div>`, swaps `<a>` for `<button>`, reorders class names) breaks the test without changing what the user experiences.
 
 **Carve-out:** do not flag `getByTestId` when the SUT renders opaque third-party content (iframe embeds, `<canvas>`, `<svg>` without `<title>` / `aria-label`) where no accessible name is available — the test-id is the legitimate fallback.
 
