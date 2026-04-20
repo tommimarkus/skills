@@ -43,7 +43,7 @@ Two audit skills, each with a matching one-shot subagent:
 | Skill | Audits | Stack extensions |
 |---|---|---|
 | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | Pipelines, IaC, release artifacts, code-level security smells | [bicep](souroldgeezer-audit/skills/devsecops-audit/extensions/bicep.md), [dockerfile](souroldgeezer-audit/skills/devsecops-audit/extensions/dockerfile.md), [dotnet-security](souroldgeezer-audit/skills/devsecops-audit/extensions/dotnet-security.md), [github-actions](souroldgeezer-audit/skills/devsecops-audit/extensions/github-actions.md) |
-| [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | Unit, integration, and E2E test quality (dispatches on detected test type) | [dotnet-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/), built on a shared [dotnet-core](souroldgeezer-audit/skills/test-quality-audit/extensions/dotnet-core.md) |
+| [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | Unit, integration, and E2E test quality (dispatches on detected test type) | [dotnet-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/) on a shared [dotnet-core](souroldgeezer-audit/skills/test-quality-audit/extensions/dotnet-core.md); [nodejs-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/) on a shared [nodejs-core](souroldgeezer-audit/skills/test-quality-audit/extensions/nodejs-core.md) |
 
 Subagents live alongside in [souroldgeezer-audit/agents/](souroldgeezer-audit/agents/)
 and invoke the same skills, making them usable as delegated one-shots.

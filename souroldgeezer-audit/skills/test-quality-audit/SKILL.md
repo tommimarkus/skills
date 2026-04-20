@@ -76,6 +76,7 @@ The core rubric is framework-neutral. **Extensions** are per-stack smell packs l
 Extensions live in `extensions/*.md`. Read `extensions/README.md` for the full convention, including the two supported file layouts (single-file vs. core + rubric addons). Current extensions:
 
 - **.NET** — core + rubric addons. [extensions/dotnet-core.md](extensions/dotnet-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker mutation tool); [extensions/dotnet-unit.md](extensions/dotnet-unit.md), [extensions/dotnet-integration.md](extensions/dotnet-integration.md), and [extensions/dotnet-e2e.md](extensions/dotnet-e2e.md) are the rubric-specific addons. Covers xUnit, NUnit, MSTest, bUnit, `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory<T>` / `TestAuthHandler`), `Aspire.Hosting.Testing` (`DistributedApplicationTestingBuilder`), Playwright .NET (including Azure Playwright Workspaces and Microsoft Playwright Testing cloud runners), Selenium, Moq (including `.Protected()` + `ItExpr` for `HttpMessageHandler`), NSubstitute, FakeItEasy, FluentAssertions, `Microsoft.Extensions.Logging.Testing` (`FakeLogger`), `Microsoft.Extensions.Time.Testing` (`FakeTimeProvider`), Testcontainers, Stryker.NET.
+- **Node.js / TypeScript** — core + rubric addons. [extensions/nodejs-core.md](extensions/nodejs-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker JS mutation tool); [extensions/nodejs-unit.md](extensions/nodejs-unit.md), [extensions/nodejs-integration.md](extensions/nodejs-integration.md), and [extensions/nodejs-e2e.md](extensions/nodejs-e2e.md) are the rubric-specific addons. Covers Jest, Vitest, Mocha, Node's built-in `node:test` runner, Sinon, testdouble, `@testing-library/react` (and Vue / Svelte / DOM variants), `@testing-library/user-event`, `supertest`, `msw` (Node), Testcontainers, Playwright (primary E2E), Cypress / WebdriverIO (minor carve-outs), fast-check, Prisma / Drizzle / TypeORM / Knex (migration-upgrade-path enumeration), Express / Fastify / Hono / NestJS / tRPC route enumeration, Zod / Yup / Joi / class-validator schema enumeration, Stryker Mutator JS.
 
 ### Detection phase (step 0 of every audit)
 
@@ -84,7 +85,7 @@ Before applying the rubric, detect which stacks are present in the audit target.
 | Signal | Extension core to load |
 |---|---|
 | `*.csproj` or `*.sln` in the target; `xunit`, `nunit`, `mstest`, `Moq`, `NSubstitute`, `bunit`, `FluentAssertions`, `Microsoft.Playwright`, `Selenium.WebDriver` package refs | `extensions/dotnet-core.md` |
-| `package.json` with `jest`, `vitest`, `mocha`, `@testing-library/*`, `@playwright/test`, `cypress`, `webdriverio` in devDependencies | *(future)* `extensions/javascript.md` |
+| `package.json` with `jest`, `vitest`, `mocha`, `@jest/globals`, `vitest/globals`, `ava`, `sinon`, `testdouble`, `@testing-library/*`, `@playwright/test`, `cypress`, `webdriverio`, `puppeteer`, `supertest`, `msw`, `testcontainers`, `fast-check`, `@stryker-mutator/core` in dependencies or devDependencies; runner config files `jest.config.*` / `vitest.config.*` / `.mocharc.*` / `ava.config.*`; `import { test } from 'node:test'` in a source file | `extensions/nodejs-core.md` |
 | `pyproject.toml` or `setup.py` with `pytest` or `unittest` | *(future)* `extensions/python.md` |
 
 Detection rules:
@@ -97,11 +98,11 @@ Detection rules:
 
 After step 0b selects the rubric(s) for the audit target, load the matching rubric addon(s) for each loaded extension core:
 
-| Rubric selected for a test / file / project | `dotnet` addon to load |
-|---|---|
-| `unit` (or `component`) | `extensions/dotnet-unit.md` |
-| `integration` | `extensions/dotnet-integration.md` |
-| `e2e` | `extensions/dotnet-e2e.md` |
+| Rubric selected for a test / file / project | `dotnet` addon to load | `nodejs` addon to load |
+|---|---|---|
+| `unit` (or `component`) | `extensions/dotnet-unit.md` | `extensions/nodejs-unit.md` |
+| `integration` | `extensions/dotnet-integration.md` | `extensions/nodejs-integration.md` |
+| `e2e` | `extensions/dotnet-e2e.md` | `extensions/nodejs-e2e.md` |
 
 For a mixed-rubric audit target (e.g. a test project containing both unit and integration tests), load every addon that at least one test in the target needs. Single-file extensions (those that ship `<stack>.md` only, with no addons) have no addon load step — they are fully resident after the detection phase. See `extensions/README.md` for the full convention.
 
