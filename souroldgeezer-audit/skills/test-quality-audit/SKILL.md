@@ -77,6 +77,7 @@ Extensions live in `extensions/*.md`. Read `extensions/README.md` for the full c
 
 - **.NET** — core + rubric addons. [extensions/dotnet-core.md](extensions/dotnet-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker mutation tool); [extensions/dotnet-unit.md](extensions/dotnet-unit.md), [extensions/dotnet-integration.md](extensions/dotnet-integration.md), and [extensions/dotnet-e2e.md](extensions/dotnet-e2e.md) are the rubric-specific addons. Covers xUnit, NUnit, MSTest, bUnit, `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory<T>` / `TestAuthHandler`), `Aspire.Hosting.Testing` (`DistributedApplicationTestingBuilder`), Playwright .NET (including Azure Playwright Workspaces and Microsoft Playwright Testing cloud runners), Selenium, Moq (including `.Protected()` + `ItExpr` for `HttpMessageHandler`), NSubstitute, FakeItEasy, FluentAssertions, `Microsoft.Extensions.Logging.Testing` (`FakeLogger`), `Microsoft.Extensions.Time.Testing` (`FakeTimeProvider`), Testcontainers, Stryker.NET.
 - **Node.js / TypeScript** — core + rubric addons. [extensions/nodejs-core.md](extensions/nodejs-core.md) is the shared core (detection, test-type dispatch, test doubles, rubric-neutral smells, SUT surface enumeration, determinism verification, Stryker JS mutation tool); [extensions/nodejs-unit.md](extensions/nodejs-unit.md), [extensions/nodejs-integration.md](extensions/nodejs-integration.md), and [extensions/nodejs-e2e.md](extensions/nodejs-e2e.md) are the rubric-specific addons. Covers Jest, Vitest, Mocha, Node's built-in `node:test` runner, Sinon, testdouble, `@testing-library/react` (and Vue / Svelte / DOM variants), `@testing-library/user-event`, `supertest`, `msw` (Node), Testcontainers, Playwright (primary E2E), Cypress / WebdriverIO (minor carve-outs), fast-check, Prisma / Drizzle / TypeORM / Knex (migration-upgrade-path enumeration), Express / Fastify / Hono / NestJS / tRPC route enumeration, Zod / Yup / Joi / class-validator schema enumeration, Stryker Mutator JS.
+- **Next.js** — core + rubric addons, **strict superset of Node.js / TypeScript** (always loads `nodejs-core.md` first). [extensions/nextjs-core.md](extensions/nextjs-core.md) is the shared core (Next-specific detection, composition rule, file-shape → rubric routing table, rubric-neutral smells, Next-platform carve-outs against `nodejs.*` smells, SUT surface enumeration extensions for Server Actions / Route Handlers / proxy `matcher`); [extensions/nextjs-unit.md](extensions/nextjs-unit.md), [extensions/nextjs-integration.md](extensions/nextjs-integration.md), and [extensions/nextjs-e2e.md](extensions/nextjs-e2e.md) are the rubric-specific addons. Covers App Router, Pages Router, Route Handlers (`app/**/route.{ts,tsx}` with `GET`/`POST`/`PUT`/`PATCH`/`DELETE`/`HEAD`/`OPTIONS` exports), Server Components, Server Actions (`'use server'`), proxy (`proxy.{ts,js}`, v16+) and legacy middleware (`middleware.{ts,js}`, pre-v16 deprecated in v16.0.0), `next/navigation`, `next/headers`, `next/cache` (`revalidatePath` / `revalidateTag`), `next/font`, `next-router-mock`, `next/experimental/testing/server` (`unstable_doesProxyMatch` / `isRewrite` / `getRewrittenUrl`), Auth.js v5 `auth()` and legacy NextAuth v4 `getServerSession`, Zod-co-located-with-Route-Handler schema carve-outs.
 
 ### Detection phase (step 0 of every audit)
 
@@ -86,6 +87,7 @@ Before applying the rubric, detect which stacks are present in the audit target.
 |---|---|
 | `*.csproj` or `*.sln` in the target; `xunit`, `nunit`, `mstest`, `Moq`, `NSubstitute`, `bunit`, `FluentAssertions`, `Microsoft.Playwright`, `Selenium.WebDriver` package refs | `extensions/dotnet-core.md` |
 | `package.json` with `jest`, `vitest`, `mocha`, `@jest/globals`, `vitest/globals`, `ava`, `sinon`, `testdouble`, `@testing-library/*`, `@playwright/test`, `cypress`, `webdriverio`, `puppeteer`, `supertest`, `msw`, `testcontainers`, `fast-check`, `@stryker-mutator/core` in dependencies or devDependencies; runner config files `jest.config.*` / `vitest.config.*` / `.mocharc.*` / `ava.config.*`; `import { test } from 'node:test'` in a source file | `extensions/nodejs-core.md` |
+| `package.json` with `"next"` in `dependencies`; OR `next.config.{js,ts,mjs,cjs}` at project root; OR `app/` directory with `layout.*` / `page.*` / `route.*`; OR `pages/` directory with `_app.*` / `_document.*`; OR `proxy.{ts,js}` (v16+) / `middleware.{ts,js}` (legacy) at repo or `src/` root; OR any `@next/*` scoped package | `extensions/nextjs-core.md` **in addition to** `extensions/nodejs-core.md` (strict superset — `nodejs-core.md` loads first) |
 | `pyproject.toml` or `setup.py` with `pytest` or `unittest` | *(future)* `extensions/python.md` |
 
 Detection rules:
@@ -98,11 +100,11 @@ Detection rules:
 
 After step 0b selects the rubric(s) for the audit target, load the matching rubric addon(s) for each loaded extension core:
 
-| Rubric selected for a test / file / project | `dotnet` addon to load | `nodejs` addon to load |
-|---|---|---|
-| `unit` (or `component`) | `extensions/dotnet-unit.md` | `extensions/nodejs-unit.md` |
-| `integration` | `extensions/dotnet-integration.md` | `extensions/nodejs-integration.md` |
-| `e2e` | `extensions/dotnet-e2e.md` | `extensions/nodejs-e2e.md` |
+| Rubric selected for a test / file / project | `dotnet` addon to load | `nodejs` addon to load | `nextjs` addon to load (if detected) |
+|---|---|---|---|
+| `unit` (or `component`) | `extensions/dotnet-unit.md` | `extensions/nodejs-unit.md` | `extensions/nextjs-unit.md` |
+| `integration` | `extensions/dotnet-integration.md` | `extensions/nodejs-integration.md` | `extensions/nextjs-integration.md` |
+| `e2e` | `extensions/dotnet-e2e.md` | `extensions/nodejs-e2e.md` | `extensions/nextjs-e2e.md` |
 
 For a mixed-rubric audit target (e.g. a test project containing both unit and integration tests), load every addon that at least one test in the target needs. Single-file extensions (those that ship `<stack>.md` only, with no addons) have no addon load step — they are fully resident after the detection phase. See `extensions/README.md` for the full convention.
 
