@@ -4,10 +4,15 @@ Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
   test quality, with per-stack extensions and matching subagents.
-- **souroldgeezer-design** — reference-driven responsive UI design in build,
-  review, and lookup modes, enforcing WCAG 2.2 AA, internationalization
-  (LTR + RTL + text expansion), and Core Web Vitals, with a Blazor
-  WebAssembly extension and a matching subagent.
+- **souroldgeezer-design** — reference-driven design for modern web UIs and
+  serverless HTTP APIs in build, review, and lookup modes. For UIs: enforces
+  WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core
+  Web Vitals, with a Blazor WebAssembly extension. For serverless APIs:
+  enforces security (Entra ID / managed identities / Key Vault / data-plane
+  RBAC), contract discipline (OpenAPI 3.1, RFC 9457 problem+json), reliability
+  (idempotency, 429 + Retry-After), and observability (structured logs, W3C
+  traceparent), with composable extensions for Azure Functions .NET, Cosmos
+  DB, and Blob Storage. Each skill has a matching subagent.
 
 ## Install
 
@@ -50,14 +55,15 @@ and invoke the same skills, making them usable as delegated one-shots.
 
 ## What's in `souroldgeezer-design`
 
-One design skill with a matching one-shot subagent:
+Two design skills, each with a matching one-shot subagent:
 
 | Skill | Covers | Stack extensions |
 |---|---|---|
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
+| [serverless-api-design](souroldgeezer-design/skills/serverless-api-design/SKILL.md) | Modern serverless HTTP APIs — enforces security (Entra ID / managed identities / Key Vault / data-plane RBAC, `disableLocalAuth`, `allowSharedKeyAccess=false`), contract discipline (OpenAPI 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C traceparent, correlation ID, RU / request-charge visibility) as hard baselines | [azure-functions-dotnet](souroldgeezer-design/skills/serverless-api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/serverless-api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/serverless-api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
 
-Reference lives at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md).
-The matching subagent is at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md).
+References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md) and [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md).
+Matching subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md) and [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md).
 
 ## How the audits work
 
@@ -112,6 +118,48 @@ The matching subagent is at [souroldgeezer-design/agents/responsive-design.md](s
   extensions loaded, self-check counts by verification layer,
   project-assimilation summary (tokens reused, legacy debt flagged,
   migrations performed), and the reference path.
+
+## How `serverless-api-design` works
+
+- **Reference-driven.** Same shape as `responsive-design` — a workflow
+  applying an external reference. Output cites reference sections (e.g.
+  `§3.6`, `§5.6`), RFCs (`RFC 9457`, `RFC 9110`), and MSFT Learn slugs;
+  extension-specific findings cite extension codes (`afdotnet.HC-11`,
+  `cosmos.HC-4`, `blob.HC-2`). The prose lives in the reference
+  ([souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md)),
+  not in the skill.
+- **Three modes.** **Build** produces OpenAPI fragments + handler code +
+  `Program.cs` DI + IaC snippets embodying the reference's decision defaults.
+  **Review** walks the §7 checklist (Contract / Security / Reliability /
+  Observability / Performance) and emits per-finding output with layer
+  tags. **Lookup** answers a narrow question with a citation. If the
+  request is ambiguous, the skill asks.
+- **Verification-layer tags.** Every §7 checklist item carries a tag —
+  `[static]` (source-readable), `[iac]` (Bicep / Terraform review),
+  `[contract]` (OpenAPI review), `[runtime]` (Azure Monitor / RUM),
+  `[security-tool]` (OWASP ZAP / API Management policies), `[load]` (Azure
+  Load Testing / k6). The skill never claims runtime SLIs (p95, cold-start,
+  error rate, RU charge) from a static review.
+- **Project assimilation — one-way.** Used in an existing project, the
+  skill pulls the project *up to* the reference. Added code is always
+  reference-compliant; compliant existing infrastructure (shared auth
+  module, DI-registered Cosmos client, OpenTelemetry pipeline,
+  problem+json middleware) is reused; non-compliant infrastructure
+  (account keys, `allowSharedKeyAccess=true`, `HttpClient` per invocation)
+  is flagged as legacy debt, never silently extended.
+- **Composable per-stack extensions.** `azure-functions-dotnet` (isolated
+  worker only — in-process retired 2026-11-10), `azure-cosmosdb` (NoSQL API
+  with Provisioned vs Serverless surface), and `azure-blob-storage` (Block
+  Blobs with SAS-direct vs API-proxy surface) **load together** when the
+  target spans all three layers. Each extension owns a distinct smell-code
+  namespace (`afdotnet.*`, `cosmos.*`, `blob.*`) so findings never collide,
+  and each contributes stack-specific patterns without overriding the core.
+- **Disclosure footer.** Every output ends with a footer listing which
+  extensions loaded (subset of `azure-functions-dotnet`, `azure-cosmosdb`,
+  `azure-blob-storage`), self-check counts by verification layer,
+  project-assimilation summary, the reference path, and an explicit note
+  that runtime-verified metrics need Azure Load Testing, Application
+  Insights, and Azure Monitor.
 
 ## Repository layout
 

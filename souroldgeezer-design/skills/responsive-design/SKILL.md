@@ -272,6 +272,7 @@ Output contains any of the following? Stop; fix before delivering:
 
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — CSP, CORS, cookie attributes, and supply-chain concerns that surface in browser-facing code live there.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — if asked to write tests that verify responsive/a11y behaviour, E2E sub-lane A covers the test-quality rules; this skill does not author E2E tests.
+- `serverless-api-design` (same plugin `souroldgeezer-design`) — if the UI consumes a serverless HTTP API, that skill enforces the API contract (OpenAPI 3.1, RFC 9457 problem+json, RFC 9110 ETag), security (Entra ID / managed identities / Key Vault / data-plane RBAC), reliability (idempotency, 429 + `Retry-After`), and observability (structured logs, W3C `traceparent`). The two skills compose; neither duplicates the other.
 
 ## Honest limits
 

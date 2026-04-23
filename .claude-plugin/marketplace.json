@@ -16,7 +16,7 @@
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
       "version": "0.1.0",
-      "description": "Reference-driven responsive UI design — build, review, and look up responsive web interfaces against WCAG 2.2 AA, i18n, and Core Web Vitals, with per-stack extensions and matching subagents."
+      "description": "Reference-driven design for modern web UIs and serverless HTTP APIs — build, review, and look up responsive interfaces (WCAG 2.2 AA, i18n, Core Web Vitals) and serverless APIs (security, contract discipline, reliability, observability) across Azure Functions .NET, Cosmos DB, and Blob Storage, with composable per-stack extensions and matching subagents."
     }
   ]
 }
