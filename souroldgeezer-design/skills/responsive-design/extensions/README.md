@@ -46,3 +46,24 @@ Each extension is a single markdown file in this directory. Required sections:
 - Extensions are not general framework guides. They address the *responsive / a11y / i18n / perf* surface only.
 - Extensions do not duplicate the core reference. If a point already lives in `../../../docs/ui-reference/responsive-design.md`, cite it; do not restate.
 - Extensions do not override the WCAG 2.2 AA, i18n, and CWV baselines. A stack cannot opt out of logical properties or Core Web Vitals — it can only provide its own idiomatic way of honouring them.
+
+## Wanted extensions (roadmap)
+
+The skill's core is framework-neutral; extensions close the framework-specific surface. The following are the highest-value stacks currently uncovered. Each would follow the `blazor-wasm.md` template (detection signals → hosting-model surface → stack-specific primitives → patterns → project assimilation → smell codes → carve-outs → applies-to). Pull requests welcome.
+
+| Prefix | Stack | Key surfaces the extension needs to cover |
+|---|---|---|
+| `react` | React (plain, no meta-framework) | `useEffect` for focus restoration after route changes, React Router `useNavigate`-driven focus management, `useSyncExternalStore` bridges for `matchMedia` / `visualViewport`, `Suspense` + skeleton integration, Strict Mode double-render pitfalls for a11y, component-library catalogue (Radix, Headless UI, Base UI, shadcn/ui, Mantine, Chakra, MUI) with reuse rules |
+| `nextjs` | Next.js (App Router + Pages Router) | `next/image` (fetchpriority, sizes, placeholder), `next/font` (self-hosting, size-adjust defaults), `next/link` `scroll` / `prefetch` behaviour, `usePathname` + focus restoration, Server Components → Client Components `'use client'` boundary effects on hydration-driven CLS, metadata API for `theme-color` / `color-scheme`, Route Groups and parallel routes for responsive shells, partial-prerendering interaction with LCP |
+| `vue` | Vue 3 (Composition API) | `<script setup>` + `useHead` / `Unhead`, Vue Router `beforeEach` focus management, `Teleport` for modals / popover, `KeepAlive` + scroll restoration, reactive matchMedia via `useMediaQuery` (VueUse), component-library catalogue (Vuetify, PrimeVue, Naive UI) with reuse rules |
+| `nuxt` | Nuxt 3 | `<NuxtImg>` + IPX provider, `<NuxtLink>` prefetch strategies, `useHead` for theme meta, Nuxt UI / Nuxt components responsive conventions, app.config tokens, `definePageMeta({ scrollToTop })`, SSR hydration CLS |
+| `svelte` | Svelte 5 (runes) | `$state` / `$effect` for matchMedia bridges, SvelteKit `+page.svelte` / `+layout.svelte` focus on navigation, `<svelte:head>` for meta, View Transitions API as a first-class feature, `enhanced:img` for responsive images, Skeleton UI / Svelte Headless UI component library catalogue |
+| `astro` | Astro | `<Image>` / `<Picture>` from `astro:assets`, Partial hydration directives (`client:load` / `client:visible` / `client:media`) and their CLS implications, Astro Islands focus-island boundaries, View Transitions built-in |
+| `angular` | Angular (v17+) | `@defer` blocks for LCP and below-the-fold, `NgOptimizedImage` (`priority`, `fill`, `placeholder`), standalone components, Signals for matchMedia bridges, Router `scrollPositionRestoration: 'enabled'`, Angular CDK a11y primitives (`FocusTrap`, `LiveAnnouncer`), Material component-library reuse rules |
+| `solid` | SolidJS / SolidStart | `createEffect` for matchMedia, Solid Router focus on navigation, `Suspense` + skeleton integration, fine-grained reactivity minimising re-render cost |
+| `qwik` | Qwik / QwikCity | Resumability-vs-hydration CLS implications, `useVisibleTask$` for matchMedia bridges, `<Image>` from `qwik-image`, `qwikcity` route-change focus handling |
+| `rn-web` | React Native Web | Shared-stylesheet constraints (no logical properties in RN paper backend), `useWindowDimensions` vs `matchMedia`, Pressable hit-slop vs SC 2.5.8 target-size, accessibility bridge between RN and ARIA |
+| `webcomp` | Web Components / Lit | Shadow DOM scoped styles, `::part()` theming for consumers, `adoptedStyleSheets` for shared stylesheets, focus delegation (`delegatesFocus`), light-DOM slots vs focus restoration, Lit reactive controllers for matchMedia bridges |
+| `tailwind` | Tailwind v4 (standalone or on any stack above) | `@theme` directive, `@layer` integration with reset / base / components / utilities, first-class `light-dark()` and container-query support (`@container`), `@custom-variant`, breakpoint tokens as CSS variables, per-component `@apply` vs arbitrary-variant trade-offs |
+
+Cross-stack pairs worth noting: `nextjs` is a superset of `react`; `nuxt` of `vue`; `astro` composes with any island framework (React / Vue / Svelte / Solid); `tailwind` composes with any stack. When authoring a superset extension, load the base first then layer stack-specific additions on top (the `test-quality-audit` skill's `nextjs-core` → `nodejs-core` stacking is the reference pattern).

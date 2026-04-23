@@ -232,6 +232,53 @@ Contrast requirements apply to text (SC 1.4.3 Contrast Minimum), non-text UI and
 
 **Default:** verify contrast in both light and dark themes at design time; use `light-dark()` + `color-scheme` for theming; pair every color-coded state with a non-color indicator; test with `forced-colors: active` before shipping.
 
+### 3.18 Token architecture
+Project assimilation reuses existing tokens (see SKILL.md). But when the project is greenfield, a token architecture decision is unavoidable — ad-hoc values accumulate into a style sheet that can't theme, can't localise, and can't be audited. Tokens are the contract between design and code.
+
+**Two-layer naming.** Primitive tokens (`--color-blue-500`, `--space-2`, `--radius-md`) carry raw values; semantic tokens (`--color-text-primary`, `--color-surface-raised`, `--space-form-gap`) carry the *role* a value plays and reference the primitive. UI components consume *semantic* tokens only; primitives are private to the theme layer.
+
+```css
+:root {
+  /* Primitives — raw scale. Private to the theme; components never use these. */
+  --color-gray-0:   oklch(100% 0 0);
+  --color-gray-900: oklch(15%  0 0);
+  --color-blue-500: oklch(55%  0.18 255);
+  --space-1: 0.25rem;  --space-2: 0.5rem;  --space-3: 0.75rem;
+  --space-4: 1rem;     --space-6: 1.5rem;  --space-8: 2rem;
+  --radius-sm: 0.25rem; --radius-md: 0.5rem; --radius-lg: 1rem;
+  --step-0: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);  /* fluid type scale */
+
+  /* Semantics — what components reference. Theme-swappable via light-dark(). */
+  --color-text-primary:     light-dark(var(--color-gray-900), var(--color-gray-0));
+  --color-text-secondary:   light-dark(oklch(40% 0 0),        oklch(70% 0 0));
+  --color-surface-base:     light-dark(var(--color-gray-0),   var(--color-gray-900));
+  --color-surface-raised:   light-dark(oklch(98% 0 0),        oklch(20% 0 0));
+  --color-accent:           var(--color-blue-500);
+  --color-focus-ring:       currentColor;
+
+  --space-form-gap:         var(--space-4);
+  --space-card-padding:     var(--space-6);
+  --radius-control:         var(--radius-md);
+  --radius-card:            var(--radius-lg);
+}
+```
+
+**Default:** two-layer naming (primitive → semantic); semantic names describe role, not value; components consume only semantic tokens.
+
+*When to deviate:* early-stage prototypes where the theme is volatile — a single-layer flat set is fine temporarily. Promote to two-layer before the design ships externally.
+
+**Colour space.** Use **oklch()** (or `oklab()`) for primitive colour definitions. Oklch is perceptually uniform — a 10% lightness change looks like a 10% change regardless of hue, which sRGB famously fails at (blue at 50% lightness looks much darker than yellow at 50%). `color-mix(in oklch, ...)` generates tints and shades that read consistently across a palette. Keep a `oklch()` → sRGB fallback layer only if the project targets browsers without oklch support — Baseline 2024, so usually unnecessary in 2026.
+
+**Dark-mode pair generation.** `light-dark(<light>, <dark>)` collapses the per-theme branch into a single declaration and is the right default. Alternatives: dual-blocked CSS (`:root { … } :root[data-theme="dark"] { … }`) when the site explicitly opts users into a theme (not `prefers-color-scheme`); CSS layers for app-level vs user-level theme overrides (`@layer theme.system, theme.user;`).
+
+**Respecting system colours.** Semantic tokens must have a sensible fallback under `forced-colors: active`. `--color-focus-ring: currentColor` naturally coerces to the system focus colour; a hard-coded `--color-focus-ring: oklch(60% 0.18 260)` becomes whatever the system decides. Audit every semantic token for a forced-colors pass.
+
+**Cascade layers for architecture.** `@layer reset, base, tokens, components, utilities;` — tokens live in a named layer so component-level overrides from utilities layer cleanly without specificity wars. Unlayered CSS beats layered CSS at matching specificity; keep user-authored styles in a layer even if the rest of the framework is unlayered.
+
+**Breakpoint tokens.** Breakpoints are tokens too — name by role (`--bp-content-wide: 48rem`, `--bp-dashboard-split: 64rem`), not by device. Never hard-code `@media (min-width: 768px)` in components; reference a token via CSS custom properties or a preprocessor. Tailwind / CSS-in-JS frameworks have their own token systems — use theirs; don't layer a second one.
+
+**Type scale.** Fluid by default (`clamp()` per §3.1); a stepped scale is a smell unless the editorial design genuinely calls for it. Token names follow modular scale conventions (`--step--1`, `--step-0`, `--step-1`, …) or semantic labels (`--font-size-body`, `--font-size-h1`). Pick one naming convention and keep it consistent across the project.
+
 ## 4. Primitives cheatsheet
 
 Each primitive gets one-line purpose + syntax + key pitfall.
@@ -243,8 +290,10 @@ Each primitive gets one-line purpose + syntax + key pitfall.
 - **`@media (hover: hover)` / `@media (pointer: coarse)`** — input-modality detection. Gate hover enhancements behind `(hover: hover)`; expand tap targets under `(pointer: coarse)`. Pitfall: `any-hover`/`any-pointer` match if *any* connected input has the capability — usually not what you want.
 - **`prefers-reduced-motion`**, **`prefers-color-scheme`**, **`prefers-contrast`**, **`forced-colors`** — user-preference media queries. Honour them. Pitfall: `forced-colors: active` flattens custom colors — don't rely on color as the only information channel.
 - **Logical properties** — `margin-inline`, `padding-block`, `inset-inline-start`, `border-inline-end`, `text-align: start` — MDN CSS Logical Properties. Pitfall: mixing logical and physical on the same element produces unpredictable layouts — pick a lane per component.
-- **`writing-mode`, `direction`, `unicode-bidi`** — script-direction primitives. `writing-mode: vertical-rl` for traditional CJK vertical text; `dir="rtl"` on document or subtree for Arabic/Hebrew.
-- **`:dir(rtl)` / `:dir(ltr)`** — direction-aware styling without JS. Flip a chevron in RTL: `:dir(rtl) .chevron { transform: scaleX(-1); }`.
+- **`writing-mode`, `direction`, `unicode-bidi`** — script-direction primitives. `writing-mode: vertical-rl` for traditional CJK vertical text (columns right-to-left, characters top-to-bottom); `writing-mode: vertical-lr` for Mongolian / traditional columnar layouts where columns flow left-to-right. `dir="rtl"` on document or subtree for Arabic / Hebrew / Farsi / Urdu. Pitfall: mixing `writing-mode: vertical-*` with `dir="rtl"` requires careful logical-property discipline — physical properties become meaningless in a ninety-degree-rotated coordinate system.
+- **`:dir(rtl)` / `:dir(ltr)`** — direction-aware styling without JS. Flip a chevron in RTL: `:dir(rtl) .chevron { transform: scaleX(-1); }`. More semantic than `[dir="rtl"]` because it follows the DOM's computed direction, including subtrees that inherit from an ancestor.
+- **`:lang(en)` / `:lang(ar-SA)` / `:lang(zh-Hans)`** — language-aware styling. `:lang()` matches the language declared on the element *or any ancestor*, so `<html lang="en"><blockquote lang="fr">…</blockquote>` styles the blockquote via `:lang(fr)`. Use for per-language typography (`:lang(ar) { font-family: …; line-height: 1.75; }`), date/number patterns via `@counter-style`, or lang-specific hyphenation (`:lang(de) { hyphens: auto; }`). Pitfall: `:lang()` matches language *tags*, including region subtags — `:lang(zh)` matches `lang="zh-Hans"` and `lang="zh-TW"` both, which is usually what you want.
+- **`<bdi>` element** — bidi isolation for user-generated content whose direction is unknown or may conflict with its surrounding context. `User @<bdi>محمد</bdi> commented` prevents the Arabic name from rewriting the directionality of the surrounding English. `<bdo>` overrides direction explicitly (rare, mostly for testing); `<bdi>` *isolates* it (common, the right tool for any user-display string that mixes scripts). Pitfall: `<span dir="auto">` approximates `<bdi>` in older browsers that lack `<bdi>`, but `<bdi>` is Baseline and should be preferred.
 - **`srcset` + `sizes` + `<picture>`** — DPR and art-direction responsive images — MDN `<img>`. `srcset` with `w` descriptors + `sizes` media-condition list = browser picks the right resolution. Pitfall: forgetting `sizes` when using `w` descriptors makes the browser assume `100vw`.
 - **`loading="lazy"` / `fetchpriority="high"` / `decoding="async"`** — image load ordering — MDN `<img>`. Pitfall: never combine `loading="lazy"` with the LCP image — that guarantees a slow LCP.
 - **`@font-face` descriptors — `font-display`, `size-adjust`, `ascent-override`, `descent-override`, `unicode-range`** — font CLS control and subsetting — MDN `font-display`. Pitfall: omitting `size-adjust` + overrides means the swap visibly reflows text.
@@ -529,8 +578,70 @@ function reportError(fieldId, message) {
 
 *What this demonstrates:* `autocomplete="email|new-password|one-time-code"` + `inputmode="email|numeric"` + `enterkeyhint="next|done"` gives mobile users the right soft keyboard and the Next/Done return key that matches the form's flow. `aria-describedby` links help and error text to each input so screen readers announce them at focus. The live region exists at page load (empty) so updates are announced; creating it on demand would silently fail. The error icon prefix satisfies "not color alone" (SC 1.4.1) — the red border is redundant decoration, not the primary signal.
 
+**Form-level error summary** (for server-rejected submissions or multi-field validation): render a summary block at the top of the form listing every error as a link to the field, move focus into the summary, and `aria-live` it so screen readers announce the count. `role="alert"` is stronger than `role="status"` — use `alert` for server validation failures that demand immediate attention; use `status` + `aria-live="polite"` for per-field errors on blur.
+
+```html
+<div id="error-summary" class="error-summary" role="alert" tabindex="-1" hidden>
+  <h2>There are 2 errors in your submission</h2>
+  <ul>
+    <li><a href="#email">Email is required</a></li>
+    <li><a href="#password">Password must be at least 12 characters</a></li>
+  </ul>
+</div>
+```
+```js
+function reportErrors(errors) {
+  const summary = document.getElementById("error-summary");
+  summary.querySelector("h2").textContent = `There ${errors.length === 1 ? "is 1 error" : `are ${errors.length} errors`} in your submission`;
+  summary.querySelector("ul").replaceChildren(...errors.map(e => {
+    const li = document.createElement("li");
+    const a  = document.createElement("a");
+    a.href = `#${e.fieldId}`; a.textContent = e.message;
+    li.appendChild(a); return li;
+  }));
+  summary.hidden = false;
+  summary.focus();                     // move focus so keyboard users land in the summary
+  summary.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+```
+
+`tabindex="-1"` makes the summary programmatically focusable without adding it to the tab order. Clicking a summary link moves focus to the corresponding field — the browser handles that natively via the fragment link. Clear the summary on successful submit so it doesn't persist stale errors.
+
+**Multi-step forms (wizards).** WCAG 2.2 adds SC 3.3.7 Redundant Entry (don't make users retype information they've already provided) and SC 3.3.8 Accessible Authentication (don't require cognitive-function tests like re-typing CAPTCHAs). Applied to wizards:
+
+- **Progress indicator** — `<ol aria-label="Progress">` with `aria-current="step"` on the active step; list positions are the step numbers. Screen readers announce "step 2 of 5."
+- **Back navigation preserves state** — the Back button returns to the previous step with all fields pre-filled. `autocomplete` tokens on every field so browser autofill works on the first visit and subsequent revisits. Never discard step data when the user navigates back.
+- **Save-and-resume** — persist partial submissions server-side (keyed by the user's session, or a signed resume token emailed to them) so users on flaky networks or interrupted sessions don't lose work. This directly satisfies SC 3.3.7.
+- **Error handling per step** — validate on `submit` (not on `blur` during typing); show the error summary at the top of the current step and move focus into it.
+- **Heading-level continuity** — the page `<h1>` names the form; each step heading is `<h2>`. Screen-reader users navigating by headings can jump between steps without extra markup.
+
+**Accessible Authentication (SC 3.3.8).** The `otp` field in the snippet above uses `autocomplete="one-time-code"` so iOS/Android surface the SMS code inline. For non-SMS flows: `autocomplete="webauthn"` on a password field triggers the passkey prompt where available. Do not require users to solve puzzles, transcribe text, or perform cognitive operations other than recognising a code or a stored credential — that is the SC 3.3.8 bar.
+
 ### 5.6 Data-heavy content (wide tables)
-Tables and wide content use a horizontal scroll container with an uncropped focus ring. Vertical-scroll content must reflow under 1280 CSS px tall; horizontal-scroll content under 320 CSS px wide (SC 1.4.10).
+Real data tables carry three concerns: semantic structure for screen readers, responsive reflow for small viewports and high zoom, and INP cost as the row count grows. Treat them as three separate problems.
+
+**Semantic structure.** Use `<table>` + `<caption>` + `<thead>` + `<tbody>` with `<th scope="col">` / `<th scope="row">`. Tables without `<caption>` and `scope` are navigation-hostile in screen readers — rows read as anonymous cell sequences with no column context. For responsive "card-view" collapses at narrow widths, keep the `<table>` semantics and restyle via CSS (`display: grid` on `tbody`, pseudo-content from `data-label` for cell labels); don't swap to a `<div>` grid that loses table semantics.
+
+```html
+<figure class="table-wrap">
+  <table>
+    <caption>Orders, last 30 days <span class="count">(124 rows)</span></caption>
+    <thead>
+      <tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Placed</th><th scope="col">Total</th><th scope="col">Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><a href="/orders/A-1042">A-1042</a></th>
+        <td data-label="Customer">Acme Corp</td>
+        <td data-label="Placed"><time datetime="2026-04-12">Apr 12</time></td>
+        <td data-label="Total" class="num">$1,240.00</td>
+        <td data-label="Status"><span class="badge badge--shipped">Shipped</span></td>
+      </tr>
+      <!-- more rows -->
+    </tbody>
+  </table>
+</figure>
+```
 
 ```css
 .table-wrap {
@@ -540,7 +651,51 @@ Tables and wide content use a horizontal scroll container with an uncropped focu
 }
 .table-wrap table { border-collapse: collapse; inline-size: max-content; min-inline-size: 100%; }
 .table-wrap :focus-visible { outline-offset: 2px; }
+.table-wrap caption { caption-side: top; text-align: start; padding-block-end: 0.5rem; font-weight: 600; }
+.table-wrap th, .table-wrap td { padding: 0.5rem 0.75rem; text-align: start; }
+.table-wrap .num { text-align: end; font-variant-numeric: tabular-nums; }
+
+/* Sticky column headers for long vertical scroll. */
+.table-wrap thead th {
+  position: sticky;
+  inset-block-start: 0;
+  background: light-dark(#fff, #1a1a1a);
+  z-index: 1;
+}
+
+/* Sticky row header (first column) for wide horizontal scroll. */
+.table-wrap tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  background: light-dark(#fff, #1a1a1a);
+}
+
+/* Card-view collapse at narrow widths — preserves <table> semantics,
+   restyles via grid + pseudo-content. */
+@container (inline-size < 40rem) {
+  .table-wrap table,
+  .table-wrap thead,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap th,
+  .table-wrap td { display: block; }
+  .table-wrap thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  .table-wrap tr { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; padding-block: 0.75rem; border-block-end: 1px solid currentColor; }
+  .table-wrap td::before { content: attr(data-label) ":"; font-weight: 600; }
+}
 ```
+
+**Reflow at zoom.** SC 1.4.10 Reflow requires the table to present without two-dimensional scrolling at 320 CSS px *or* at 400% zoom. The card-view collapse above satisfies it; the naive horizontal-scroll-only table fails at 400% zoom on narrow screens. Verify both axes — 320 px × 100% zoom **and** desktop at 400% zoom — as distinct review steps.
+
+**Sticky headers + focus.** When column headers are sticky and a user tabs into a row, the focused cell can land *behind* the sticky header — an SC 2.4.11 Focus Not Obscured failure. Set `scroll-margin-block-start` on focusable cells to the header's computed height: `.table-wrap tbody a:focus-visible { scroll-margin-block-start: 3rem; }`. The browser will scroll the focused cell clear of the sticky header on focus.
+
+**INP cost as rows grow.** Beyond ~500 visible rows, layout + paint + hit-testing becomes an INP hazard (tap a cell → wait for layout). Three mitigations, ordered by simplicity:
+
+1. **`content-visibility: auto` + `contain-intrinsic-size` on each row** — the browser skips off-screen row work until the row is near the viewport. Cheapest, no JS. Pitfall: `contain-intrinsic-size` must match actual rendered height reasonably well or scrollbar-length jumps on realise.
+2. **Pagination via cursor** (§3.7 / `cosmos.PAT-continuation-cursor` when backed by Cosmos) — render 25–100 rows per page; the server holds the rest. Predictable INP regardless of total-row count.
+3. **Virtualization library** — only when (1) and (2) are insufficient, typically when users genuinely need to scroll thousands of rows continuously. Virtualization adds INP risk on scroll (it runs layout on every viewport update) and complicates keyboard navigation — make sure it preserves focus semantics and `aria-rowcount` / `aria-rowindex` attributes for screen readers.
+
+**Sorting and filtering.** Add `aria-sort="ascending" | "descending" | "none"` on the active `<th>` when the column is sortable; change on click and announce via an `aria-live` region ("Sorted by Placed, ascending. 124 rows."). Keyboard users activate sort via `Enter` on a focused `<th>`-wrapped `<button>`; do not make the `<th>` itself tabbable.
 
 ### 5.7 Carousel / slider / drag interactions
 Any drag gesture has a button or keyboard alternative — SC 2.5.7. Auto-advancing content has a pause/stop control. RTL-aware navigation: in `:dir(rtl)`, "next" means left-ward (reading direction).
@@ -569,6 +724,47 @@ Any drag gesture has a button or keyboard alternative — SC 2.5.7. Auto-advanci
 ```
 
 Autoplay and snap-animation are driven by JS; the rule above disables the smooth-scroll behavior so keyboard and programmatic navigation land without motion. The autoplay script reads `matchMedia('(prefers-reduced-motion: reduce)').matches` on init and does not start the interval if `true` — the CSS rule is the safety net, not the full implementation.
+
+**Keyboard operation.** Arrow-key navigation, `Home` / `End` for first / last slide, `Space` to pause/resume autoplay. Tab order lands on `prev` → scrollable region → `next` → `pause`. The scrollable `<ul class="slides" tabindex="0">` is itself keyboard-scrollable once focused. Do not trap focus inside the carousel — users must be able to Tab out.
+
+```js
+const carousel = document.querySelector(".carousel");
+const slides   = carousel.querySelector(".slides");
+const status   = carousel.querySelector(".active-slide-status");   // aria-live region
+
+slides.addEventListener("keydown", (e) => {
+  const stride = slides.querySelector("li").getBoundingClientRect().width + 16; // gap
+  if (e.key === "ArrowRight") slides.scrollBy({ left:  stride, behavior: "smooth" });
+  if (e.key === "ArrowLeft")  slides.scrollBy({ left: -stride, behavior: "smooth" });
+  if (e.key === "Home")       slides.scrollTo({ left: 0, behavior: "smooth" });
+  if (e.key === "End")        slides.scrollTo({ left: slides.scrollWidth, behavior: "smooth" });
+});
+
+// Active-slide announcement: IntersectionObserver picks the most-visible slide,
+// updates the live region. Debounce so rapid swiping doesn't flood the AT.
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting && e.intersectionRatio > 0.6) {
+    const idx = [...slides.children].indexOf(e.target);
+    queueMicrotask(() => status.textContent = `Slide ${idx + 1} of ${slides.children.length}`);
+  }
+}, { root: slides, threshold: [0.6] });
+for (const li of slides.children) io.observe(li);
+```
+
+```html
+<!-- Live region mirrors active slide for screen readers -->
+<p class="sr-only active-slide-status" role="status" aria-live="polite" aria-atomic="true"></p>
+```
+
+**Autoplay rules (SC 2.2.2 Pause, Stop, Hide).** Any auto-updating content moving longer than 5 seconds must offer a pause / stop control. Applied to carousels:
+
+- Autoplay is **off** by default. Opt-in by setting `data-autoplay="true"` on the container.
+- When on, the `pause` button is visible and keyboard-operable; `aria-pressed` mirrors state.
+- Autoplay pauses on: pointer hover, focus within the carousel, `prefers-reduced-motion: reduce`.
+- On small viewports (`(pointer: coarse)`), consider defaulting autoplay off entirely — users can't hover to pause.
+- Never autoplay carousels with text content users must read — SC 2.2.1 Timing Adjustable becomes harder than it's worth.
+
+**RTL.** `scroll-snap-type: inline mandatory` + `flex` in a `:dir(rtl)` container reverse the visual order automatically (logical flow follows reading direction). The `prev` / `next` icons flip via `:dir(rtl) transform: scaleX(-1)`. Verify by loading with `<html dir="rtl">` and arrowing through — right-arrow should move visually left.
 
 ### 5.8 Dialog / modal
 Use the native `<dialog>` element with `showModal()`: focus trap, backdrop, `Escape` to close, and `inert` on the rest of the page are handled by the platform. Focus is restored automatically when the dialog closes.
@@ -651,6 +847,64 @@ Async content creates two responsive hazards: layout shift during load (CLS), an
 ```
 
 *What this demonstrates:* skeletons match final content geometry (`aspect-ratio`, line heights, `short` modifier) so when real content arrives there's no CLS. `aria-busy="true"` + `aria-live="polite"` announces the load completion. Shimmer animation is disabled under `prefers-reduced-motion: reduce` and replaced with a static tint — still visible, no motion.
+
+**The state family.** Loading is one of four states every async component has to handle; getting the transitions between them right is what distinguishes a polished UI from a janky one:
+
+1. **Initial load** — skeleton matching final geometry. `aria-busy="true"` on the container; swap to real content on settle.
+2. **Pagination / refresh** — smaller indicator (inline spinner at the trigger, or subtle dim-out via `.results[aria-busy="true"] { opacity: 0.6; }`), not a full skeleton redraw. Full skeletons on every page-change feel broken.
+3. **Optimistic update + rollback** — when the user performs an action that will succeed ~always, render the expected result immediately and reconcile on server response. On failure, roll back the UI, restore the input (never silently lose it), and surface a retry affordance.
+4. **Empty** — the backing query succeeded with zero results. A dedicated empty state with a localized message and (if applicable) a primary CTA to unblock the user ("Create your first invoice"). Don't collapse to nothing — users read an empty list as a bug.
+5. **Error** — the request itself failed. Render a retry button, a localized short explanation, and a problem detail for support (trace-id or error code). Distinguish transient errors (auto-retry + indicator) from permanent errors (explicit retry + human-readable cause).
+
+```html
+<section class="results" aria-busy="false">
+  <!-- State slots. Swap one at a time via data attribute; CSS selects which
+       renders. Prevents layout-shift when transitioning between states. -->
+  <ul class="state-loaded"></ul>
+
+  <div class="state-empty" hidden>
+    <!-- Empty-state illustration is decorative SVG (see §5.14). -->
+    <p class="empty-title">No invoices yet</p>
+    <p class="empty-body">Create your first invoice to get started.</p>
+    <button type="button" class="primary">Create invoice</button>
+  </div>
+
+  <div class="state-error" role="alert" hidden>
+    <p class="error-title">Couldn't load invoices</p>
+    <p class="error-body">The server is not responding.</p>
+    <p class="error-support">Support ref: <code>00-4bf9…e736</code></p>
+    <button type="button" class="retry">Try again</button>
+  </div>
+</section>
+```
+
+```js
+async function load(state) {
+  const root = document.querySelector(".results");
+  root.setAttribute("aria-busy", "true");
+  try {
+    const items = await fetchInvoices({ signal: state.controller.signal });
+    renderLoaded(items);
+    switchTo("loaded");
+  } catch (e) {
+    if (e.name === "AbortError") return;           // ignore cancellations
+    renderError(e.problem);                        // RFC 9457 problem+json from the API
+    switchTo("error");
+  } finally {
+    root.setAttribute("aria-busy", "false");
+  }
+}
+
+async function performOptimistic(item) {
+  const prev = renderInsert(item);                 // optimistic: append now
+  try   { await api.create(item); }                 // server reconcile
+  catch (e) { renderRemove(prev); renderRetry(item, e.problem); /* rollback + retry UI */ }
+}
+```
+
+**Retry discipline.** Transient failures (408, 429, 502, 503, 504) can auto-retry *once* with backoff before surfacing an error; anything beyond that is user-visible and user-actioned. Permanent failures (400, 401, 403, 404, 409, 410, 412, 422) never auto-retry — surface the problem-detail `title` and offer the fix. On 429, honour `Retry-After` — a countdown in the retry button is a nice touch; a silent retry that ignores `Retry-After` is an amplification hazard. Cross-reference: `serverless-api-design.md` §3.10 / §3.5.
+
+**Localized empty / error copy.** All state strings (`"No invoices yet"`, `"Create your first invoice"`, `"Couldn't load invoices"`) go through the same i18n pipeline as the rest of the UI. Test empty-state illustrations in RTL and in forced-colors — decorative SVGs that hard-code a light-mode palette become invisible in dark mode or under `forced-colors: active` (see §5.14).
 
 ### 5.10 Skip link + landmark structure
 Keyboard users on narrow viewports must tab through header → nav → main on every page. A skip link lets them jump to main content. Landmarks give screen-reader users a structural map.
@@ -801,6 +1055,250 @@ async function runSearch() {
 
 *What this demonstrates:* debounce (200 ms) keeps the keystroke handler trivial — INP stays good because the filter/network call doesn't run on the critical interaction path. `AbortController` cancels in-flight requests when the user types again, preventing out-of-order results. The `aria-live="polite"` region is in the DOM at page load and gets *updated* (not recreated) so screen-reader announcements fire correctly. `aria-busy` on the list signals to assistive tech that updates are pending. `type="search"` + `inputmode="search"` + `enterkeyhint="search"` give the right mobile soft-keyboard affordance.
 
+### 5.13 Media — video, audio, captions, custom controls
+Responsive media has three concerns that overlap but don't reduce to each other: **a11y** (captions, audio description, controls), **performance** (poster + lazy + preload trade-off), and **autoplay etiquette** (motion, data, battery). Each WCAG success criterion below maps to a specific `<track>` or attribute.
+
+**Baseline video element.**
+
+```html
+<figure class="video">
+  <video
+    controls
+    playsinline
+    muted
+    preload="metadata"
+    poster="/img/intro-poster-1280.avif"
+    width="1280" height="720"
+    crossorigin="anonymous"
+    aria-describedby="intro-summary">
+    <source src="/video/intro.av1.mp4"  type='video/mp4; codecs="av01.0.05M.08"'>
+    <source src="/video/intro.h264.mp4" type='video/mp4; codecs="avc1.64001F"'>
+    <!-- Captions (SC 1.2.2 Captions (Prerecorded), AA) -->
+    <track kind="captions"     srclang="en"    label="English"    src="/vtt/intro.en.vtt" default>
+    <track kind="captions"     srclang="ar"    label="العربية"   src="/vtt/intro.ar.vtt">
+    <!-- Audio description track (SC 1.2.5 Audio Description (Prerecorded), AA) -->
+    <track kind="descriptions" srclang="en"    label="English AD" src="/vtt/intro.ad.en.vtt">
+    <!-- Chapters for navigation (not an SC but improves UX) -->
+    <track kind="chapters"     srclang="en"    label="Chapters"   src="/vtt/intro.chapters.en.vtt">
+    Your browser does not support embedded video.
+    <a href="/video/intro.h264.mp4">Download video</a>.
+  </video>
+  <figcaption id="intro-summary">Intro: how the product works in 90 seconds. <a href="/transcripts/intro">Read transcript</a>.</figcaption>
+</figure>
+```
+
+**Accessibility contract.**
+
+- **Captions (`<track kind="captions">`)** — mandatory for all prerecorded video with audio content at WCAG 2.2 AA. WebVTT, author-written (machine-generated captions from speech-to-text *can* be a starting point but require human review for proper nouns, timing, and non-speech cues).
+- **Audio description (`<track kind="descriptions">`)** — mandatory at AA for video with information that isn't conveyed in the audio track (on-screen text, visual demonstrations). Implemented as a separate timed-text track; browser support for playing the description varies, so also provide a **described version of the video** as an alternative if the audience is likely to need it.
+- **Transcript** — not an SC by itself, but the most robust fallback — works for deaf-blind users (via braille displays), for users on muted devices, and for search indexing. Link it from the `<figcaption>`.
+- **`playsinline`** — prevents iOS Safari from forcing fullscreen on iPhone. Without it, autoplay + fullscreen is how videos bounce users out of your UI.
+- **`preload="metadata"`** (not `"auto"`) — load enough to show duration and thumbnail, not the whole file. `"auto"` on an above-fold hero video competes with the LCP image for bandwidth.
+- **`crossorigin="anonymous"`** — required to read WebVTT tracks from a CDN under CORS.
+
+**Custom controls (when native controls are insufficient).** Replacing the browser's `controls` bar is a large commitment — you now own keyboard operability, focus management, labelled buttons, mobile touch targets, and screen-reader announcement. The minimum:
+
+- Every control is a `<button>` (not a `<div>`), has a visible label or `aria-label`, and is ≥ 24×24 CSS px (SC 2.5.8).
+- `Space` toggles play/pause; `Left`/`Right` seek by 5 s; `Up`/`Down` adjust volume; `M` mutes; `F` fullscreen. These are the platform defaults users expect.
+- Progress bar is a `<input type="range">` with `aria-valuetext="1 minute 23 seconds of 2 minutes 45 seconds"` updated on `timeupdate`.
+- Caption toggle is a `<button aria-pressed>`; updating `track.mode = "showing" | "hidden"` on the active caption track.
+- Hide the native controls (`controls` attribute absent) only *after* confirming your custom controls are complete. Partial custom controls + no native fallback is worse than either alone.
+
+**Autoplay etiquette.** Autoplay is gated by three browser conditions (muted, user-activation or site-engagement, and sometimes data-saver) plus two authoring conditions you control:
+
+- **`muted` + `playsinline`** are required for cross-browser autoplay. Autoplay with sound is denied in every major browser without prior user gesture.
+- **Gate on `prefers-reduced-motion: no-preference`** and (server-side) on `Save-Data` being absent. A marketing auto-loop video on a data-saver connection is hostile.
+
+```js
+const video = document.querySelector("video.hero");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const saveData = document.documentElement.dataset.saveData === "on"; // set by server per Save-Data
+if (!reduce && !saveData) video.play().catch(() => { /* browser blocked; leave paused */ });
+```
+
+**Media Session API.** `navigator.mediaSession.metadata` surfaces title / artwork / artist in the OS lock-screen and Bluetooth controls. Pair with `setActionHandler("play" | "pause" | "seekforward" | "previoustrack" | …)` so hardware keys work. Essential for any audio-first UI (podcasts, audiobooks); nice-to-have for hero videos.
+
+**Picture-in-Picture.** `video.requestPictureInPicture()` is user-gesture-required; wire it to a custom control button rather than attempting it on autoplay. Respect `disablePictureInPicture` when set.
+
+**Audio-only.** `<audio controls preload="metadata">` + the same `<track kind="captions">` (or `kind="subtitles"`) pattern. The poster concept doesn't apply; consider a static waveform image (decorative SVG per §5.14) so the element occupies space before the audio loads.
+
+### 5.14 SVG — decorative vs informative, theming, forced-colors
+SVG is leaked accessibility liability more than it is leaked performance liability. Get the semantic role right, make it theme cleanly, and keep it visible under `forced-colors: active`.
+
+**Decorative SVG** — icons that accompany a text label, empty-state illustrations that don't convey unique information, background shapes. The text already says what the icon says; the SVG is pure ornament.
+
+```html
+<!-- Decorative: hidden from assistive tech; inherits text colour; scales with font. -->
+<button type="button" class="btn-download">
+  <svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" focusable="false">
+    <path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Download
+</button>
+```
+
+- **`aria-hidden="true"`** — the icon duplicates the "Download" text; screen readers would announce it twice otherwise.
+- **`focusable="false"`** — legacy IE / EdgeHTML residual — some assistive tech still honours it; cheap insurance.
+- **`stroke="currentColor"`** (or `fill="currentColor"`) — the icon themes with text, flips cleanly between light and dark, survives `forced-colors: active` (where it renders as `CanvasText`).
+- **`width="1em" height="1em"`** — scales with the surrounding text, never a fixed `px` on user-scalable content.
+
+**Informative SVG** — icons without a text label (icon-only buttons), status badges, data visualisations.
+
+```html
+<!-- Icon-only button: title via aria-label since no visible text. -->
+<button type="button" aria-label="Close">
+  <svg viewBox="0 0 24 24" width="1.25em" height="1.25em" aria-hidden="true" focusable="false">
+    <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+
+<!-- Standalone informative graphic: labelled as an image via role + title/desc. -->
+<svg role="img" aria-labelledby="chart-title chart-desc" viewBox="0 0 400 200">
+  <title id="chart-title">Monthly active users</title>
+  <desc id="chart-desc">A line chart showing users rising from 1,200 in January to 3,800 in April.</desc>
+  <!-- … chart paths … -->
+</svg>
+```
+
+- **Icon-only buttons** — the accessible name is on the `<button>` (`aria-label`), not on the SVG. The SVG is decorative; marking it `aria-hidden` avoids double-announce.
+- **Standalone informative graphics** — `role="img"` + `<title>` (short accessible name) + `<desc>` (longer description). `aria-labelledby` wires both into the accessible name/description.
+- **Data visualisations** — `<title>` alone summarises the takeaway (not "a bar chart" — the actual finding); `<desc>` or an adjacent `<figcaption>` carries the narrative. Also provide a data table (`<table>` per §5.6) as an accessible fallback for users who can't parse the graphic; link it from the caption.
+
+**Theming and forced-colors.**
+
+- **`currentColor` everywhere the SVG should follow text colour.** Never hard-code `fill="#333"` on an icon meant to theme with the UI; it survives exactly one theme and fails the other.
+- **Multi-colour illustrations** use CSS custom properties: `<path fill="var(--accent, currentColor)">` lets the illustration pick up theme tokens and adapt to light/dark via `light-dark(...)` on the custom property.
+- **`forced-colors: active`** — by default, the browser coerces SVG fills and strokes to system colours. That usually works for icons (which are `currentColor` anyway). For illustrations that hard-code colour, override with system-colour-aware styling:
+  ```css
+  @media (forced-colors: active) {
+    .illustration path { fill: CanvasText; stroke: CanvasText; }
+  }
+  ```
+- **Decorative illustrations that must disappear in high contrast** — set `forced-color-adjust: none` cautiously, or hide them (`@media (forced-colors: active) { .decoration { display: none; } }`) if the illustration becomes meaningless when coerced.
+
+**Viewbox and responsive scaling.**
+
+- `viewBox` is the SVG's coordinate space; `width` / `height` are the rendered box. A responsive SVG has `viewBox="0 0 W H"` and scales via its CSS `width` / `height` (or `inline-size` / `block-size`); no intrinsic-size hazard.
+- `preserveAspectRatio="xMidYMid meet"` (the default) fits the graphic inside the box without distortion. Only override when intentional cropping is the goal.
+
+**Sprites.** Icon sprites (`<svg><use href="#icon-download">`) save requests and are fully theme-able via `currentColor`. Pitfall: sprite symbols that hard-code `fill="#123456"` lose theming — author sprites with `currentColor` from the start.
+
+### 5.15 File upload with keyboard fallback and accessible progress
+Drag-and-drop upload is a usability win for mouse users and an accessibility hazard if drag is the *only* way to do it (SC 2.5.7). The correct shape: a visible `<input type="file">` *and* a drop-zone that wraps it; both produce the same result.
+
+```html
+<form class="upload" enctype="multipart/form-data">
+  <label class="drop-zone" for="attachments" id="drop-zone">
+    <input
+      id="attachments" name="attachments"
+      type="file" multiple
+      accept="image/jpeg,image/png,image/webp,application/pdf">
+    <p class="drop-zone__label">
+      <span class="drop-zone__primary">Drop files here</span>
+      <span class="drop-zone__secondary">or <span class="drop-zone__cta">browse</span></span>
+    </p>
+    <p class="drop-zone__hint" id="upload-hint">Up to 10 files, 25&nbsp;MB each. JPEG, PNG, WebP, or PDF.</p>
+  </label>
+
+  <!-- Pre-existing live region for progress and per-file status announcements. -->
+  <p id="upload-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <!-- Per-file progress list; each item is updated in place, not replaced. -->
+  <ul class="upload-list" id="upload-list" aria-describedby="upload-hint"></ul>
+</form>
+```
+
+```css
+.drop-zone {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  min-block-size: 10rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 2px dashed currentColor;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  text-align: center;
+}
+.drop-zone:focus-within,
+.drop-zone.is-dragover { outline: 3px solid currentColor; outline-offset: 2px; background: color-mix(in oklch, currentColor 5%, transparent); }
+/* The file input is visually hidden but remains in the tab order,
+   so keyboard users Tab to it and activate with Space/Enter. */
+.drop-zone input[type="file"] { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+.drop-zone__cta { text-decoration: underline; }
+.upload-list { display: grid; gap: 0.5rem; margin-block-start: 1rem; padding: 0; list-style: none; }
+.upload-list li { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: center; }
+.upload-list progress { inline-size: 100%; }
+```
+
+```js
+const zone   = document.getElementById("drop-zone");
+const input  = document.getElementById("attachments");
+const status = document.getElementById("upload-status");
+const list   = document.getElementById("upload-list");
+
+// Drag-and-drop delegates to the file input.
+["dragenter", "dragover"].forEach(evt => zone.addEventListener(evt, e => {
+  e.preventDefault(); zone.classList.add("is-dragover");
+}));
+["dragleave", "drop"].forEach(evt => zone.addEventListener(evt, e => {
+  e.preventDefault(); zone.classList.remove("is-dragover");
+}));
+zone.addEventListener("drop", e => {
+  input.files = e.dataTransfer.files;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
+input.addEventListener("change", () => {
+  const files = Array.from(input.files);
+  const errors = files.flatMap(validate);
+  if (errors.length) { status.textContent = errors.join(" "); return; }
+  status.textContent = `Uploading ${files.length} file${files.length === 1 ? "" : "s"}.`;
+  files.forEach(uploadOne);
+});
+
+function validate(file) {
+  const errs = [];
+  if (file.size > 25 * 1024 * 1024) errs.push(`${file.name}: exceeds 25 MB limit.`);
+  if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type)) errs.push(`${file.name}: file type not accepted.`);
+  return errs;
+}
+
+async function uploadOne(file) {
+  const li = renderRow(file);                              // renders <progress max=100 value=0>
+  // For large files, prefer a pre-signed direct-to-blob SAS (blob.PAT-direct-upload-sas
+  // in the serverless-api-design Blob Storage extension). The API returns { uploadUrl,
+  // blobUri }; the browser PUTs the payload directly to Blob Storage, not the Function.
+  const { uploadUrl, blobUri } = await fetch("/uploads", { method: "POST", body: JSON.stringify({ name: file.name, size: file.size, type: file.type }), headers: { "Content-Type": "application/json" } }).then(r => r.json());
+
+  const xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener("progress", e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      li.progress.value = pct;
+      li.progress.setAttribute("aria-valuetext", `${pct} percent uploaded`);
+    }
+  });
+  xhr.addEventListener("load", () => {
+    li.setStatus(xhr.status >= 200 && xhr.status < 300 ? "done" : "failed");
+    status.textContent = xhr.status < 300 ? `${file.name} uploaded.` : `${file.name} failed.`;
+  });
+  xhr.open("PUT", uploadUrl);
+  xhr.setRequestHeader("x-ms-blob-type", "BlockBlob");
+  xhr.send(file);
+}
+```
+
+**Key points.**
+
+- **Visible file input inside the drop zone** — the `<label for="attachments">` wraps the input, so clicking anywhere in the zone opens the picker. Keyboard users Tab to the input (visually hidden but in the tab order) and activate with `Space` / `Enter`. SC 2.5.7 satisfied: drag is an enhancement, not the only path.
+- **Validation surfaces to a pre-existing live region** — errors and progress updates go to `#upload-status`; it exists at page load so announcements fire reliably.
+- **Per-file progress via `<progress>`** — native element with `max=100` and `value`, `aria-valuetext` for screen readers ("67 percent uploaded"). Update `value` on `xhr.upload.progress`; don't re-render the whole `<li>` (flickers).
+- **`accept` attribute + server-side validation** — `accept` is a UX hint; clients can always submit any type. Re-validate server-side and reject with problem+json (`invalid-file-type`, `payload-too-large`) per `serverless-api-design.md` §3.11 / §3.12.
+- **Direct-to-blob SAS for large payloads** — the API endpoint `POST /uploads` issues a user-delegation SAS; the browser PUTs directly to Blob Storage. Function memory / timeout no longer constrain payload size. Cross-reference `blob.PAT-direct-upload-sas` in the `serverless-api-design` Blob Storage extension.
+- **`fetchpriority="high"` — not applicable here.** Upload and LCP compete if the page is media-heavy; the upload starts on explicit user gesture, so it's a deliberate choice that takes bandwidth from background loads.
+- **Cancellation** — wire an `AbortController` (or `xhr.abort()`) so a "Cancel" button per row interrupts in-flight uploads. Don't silently let cancelled uploads complete — the server may still receive the payload.
+
 ## 6. Gotchas
 
 Named failures that pass casual QA. Each item is a trap + fix.
@@ -835,6 +1333,8 @@ Named failures that pass casual QA. Each item is a trap + fix.
 - **`autocomplete` attribute missing on account / checkout forms** — breaks password-manager and address autofill, slows mobile checkout, and hurts WCAG 3.3.8 Accessible Authentication. Use the exact tokens from the spec (`email`, `current-password`, `new-password`, `shipping street-address`, `cc-number`, etc.); invented values silently fail.
 - **`aria-live` region added to the DOM at update time** — the announcement doesn't fire because the region didn't exist when the screen reader built its tree. The region must be present at page load; update its contents, don't create it on demand.
 - **`overflow: hidden` on `<html>` or `<body>` to "lock scroll"** — breaks iOS Safari's address-bar collapse and causes content to be clipped. Use `overflow: clip` on a wrapper, or set `position: fixed` on body during a modal and restore on close.
+- **Data-density that breaks at 400% zoom** — dashboards with 8 widgets side-by-side at 1920px must reflow to a single column (or scrollable within bounded panels) at 400% zoom; otherwise SC 1.4.4 Resize Text and SC 1.4.10 Reflow both fail. Use container queries on each widget so the reflow is component-local, not tied to viewport breakpoints. Test with browser zoom pinned at 400% on a 1280×1024 display.
+- **Third-party iframe embeds (video, maps, ads, widgets) break responsive flow** — iframes without an aspect-ratio wrapper collapse to 150×150 default sizing or overflow the column. Wrap in a container with `aspect-ratio: 16 / 9` (or the embed's native ratio) and set `iframe { inline-size: 100%; block-size: 100%; border: 0; }`. Add `loading="lazy"` for off-screen embeds (saves data on Save-Data clients), `title="<descriptive>"` for SC 4.1.2 Name, Role, Value, and `sandbox="allow-scripts allow-same-origin"` + `referrerpolicy="strict-origin-when-cross-origin"` for security. Cross-reference `devsecops-audit` for iframe-related CSP and `frame-ancestors` directives.
 
 ## 7. Review checklist
 
