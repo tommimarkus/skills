@@ -302,21 +302,23 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
           viewpoint="Technology">
       <name xml:lang="en">Checkout — Technology Realisation</name>
 
-      <node identifier="id-n-api" elementRef="id-orders-api"
+      <node xsi:type="Element" identifier="id-n-api" elementRef="id-orders-api"
             x="120" y="120" w="180" h="64"/>
-      <node identifier="id-n-svc" elementRef="id-orders-place"
+      <node xsi:type="Element" identifier="id-n-svc" elementRef="id-orders-place"
             x="120" y="220" w="180" h="64"/>
-      <node identifier="id-n-cosmos" elementRef="id-cosmos-main"
+      <node xsi:type="Element" identifier="id-n-cosmos" elementRef="id-cosmos-main"
             x="120" y="340" w="180" h="64"/>
 
-      <connection identifier="id-c-1" relationshipRef="id-rel-1"
+      <connection xsi:type="Relationship" identifier="id-c-1" relationshipRef="id-rel-1"
                   source="id-n-api" target="id-n-svc"/>
-      <connection identifier="id-c-2" relationshipRef="id-rel-2"
+      <connection xsi:type="Relationship" identifier="id-c-2" relationshipRef="id-rel-2"
                   source="id-n-api" target="id-n-cosmos"/>
     </view>
   </diagrams>
 </views>
 ```
+
+**Abstract-type + `xsi:type` pattern.** `<view>`, `<node>`, and `<connection>` are all typed as abstract complexTypes in OEF (`ViewType`, `ViewNodeType`, `ConnectionType` respectively); every instance disambiguates via `xsi:type`. `<view>` concretises to `Diagram` (the only shape the skill emits in v1). `<node>` concretises to `Element` (when `elementRef` references a model element — the default for skill output), `Container` (layout-only), or `Label` (text). `<connection>` concretises to `Relationship` (when `relationshipRef` references a model relationship — the default) or `Line` (visual-only). Omitting `xsi:type` on a `<node>` or `<connection>` triggers `cvc-type.2` on schema-validating importers (Archi) and is flagged as `AD-15`.
 
 **Viewpoint attribute** carries the canonical ArchiMate 3.2 viewpoint name when one applies (Application Cooperation, Technology, Motivation, Migration, Implementation and Deployment, etc.); custom kinds may omit it. The skill's supported diagram kinds (§9) map to these values.
 
@@ -373,7 +375,7 @@ What OEF carries faithfully:
 ### 6.9 Gaps
 
 - **Viewpoint-specific metadata beyond the `viewpoint` attribute** — concerns tables, stakeholder-viewpoint cross-references, pattern templates — are not modelled by OEF directly; architects extend via custom properties or by splitting into multiple views.
-- **XSD validation is not the skill's job.** OEF files are structurally validated by the downstream tool (Archi on import; `xmllint --schema <url>`). The skill enforces ArchiMate well-formedness (layer discipline, Appendix B relationship validity) in Build and Review; it does not run schema validation at runtime. See §1 for the rationale.
+- **XSD validation is not the skill's job.** OEF files are structurally validated by the downstream tool (Archi on import; `xmllint --schema <url>`). The skill enforces ArchiMate well-formedness (layer discipline, Appendix B relationship validity) in Build and Review; it does not run schema validation at runtime. **Note:** `xmllint --noout` alone is XML well-formedness only and does *not* catch schema-level issues such as abstract-type violations (`AD-15`). For schema-level confidence, use `xmllint --schema http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd <file>.oef.xml` or open in Archi. See §1 for the rationale.
 - **Archi-specific canvas features** — custom figures, visual groupings that are not ArchiMate elements, canvas styling presets — are lost. OEF is tool-neutral; the richer Archi-native `.archimate` format preserves them, at the cost of tool lock-in.
 
 ### 6.10 When OEF is not enough
@@ -437,6 +439,7 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-12` Technology Layer reasoning without Path / Communication Network when concerns are latency or residency** — network-sensitive diagram drawn as if network is frictionless.
 - **`AD-13` Ambiguous Product/Contract/Service** — Product modelled with Service semantics or vice versa; Contract used as a documentation placeholder without a formal agreement.
 - **`AD-14` Forward-only layer emitted without the marker** — Extract output that populated Business/Motivation/Strategy elements without the `FORWARD-ONLY` header block.
+- **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
 
 ## 9. Diagram kinds supported in v1
 
@@ -468,6 +471,7 @@ Each item is tagged with a verification layer consistent with other reference do
 
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).
+- [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
 - [static] Every behaviour element has an active structure assigned; every passive-structure element is accessed only through a behaviour (`AD-3`, `AD-4`).
 - [static] Realisation chains are complete for the scope of the diagram: Business Service has a realising Application Service; Application Service has a realising Application Component; Application Component is assigned to a Technology Node if the diagram reaches Technology (`AD-6`).
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
