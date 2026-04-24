@@ -170,7 +170,7 @@ Project assimilation:
 
 4. **Layout and naming** per reference §6.4–6.7. Invoke [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) to place every `<node>` on the banded grid contracted in §6.4a — fixed rows per layer (Strategy top, Physical bottom), fixed columns per aspect (Motivation left, Active structure, Behaviour, Passive structure, Implementation & Migration right), 10 px grid, deterministic sizes per element class, Composition / Aggregation / Realization nested over explicit edge when both endpoints share a cell, orthogonal connection routing. Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
 
-5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that.
+5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Emit the §6.4a banding marker on every new file: declare `<propertyDefinition identifier="propid-archi-model-banded" type="string"/>` once under `<propertyDefinitions>` at the model root, and emit `<property propertyDefinitionRef="propid-archi-model-banded"><value xml:lang="en">v1</value></property>` once under `<properties>` on the `<model>` element. The marker is the authoritative signal for AD-L1 severity in Review.
 
 6. **Self-check against reference §10** before declaring done. Each checklist item carries `[static]` or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
@@ -207,7 +207,7 @@ Project assimilation:
 
    Placeholders are generated from Application Component names — e.g., an `Orders.Api` Component suggests a plausible Business Service label *Order Management*. The architect confirms or rewrites.
 
-5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer).
+5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). The §6.4a banding marker (`propid-archi-model-banded=v1`) is preserved if present and **never auto-injected** on a legacy file — auto-injecting would assert §6.4a conformance over coordinates that pre-date the bands. Legacy files therefore stay unmarked and Review soft-grades AD-L1 to `info` per reference §8; architects who want full conformance run Build for the affected views, which writes a fresh marker.
 
 6. **Self-check against reference §10** as in Build.
 
@@ -344,7 +344,7 @@ Output contains any of the following? Stop; fix before delivering:
 - **Drift finding asserting a pass from static review alone.** Fix: restate as "source-aligned; drift re-check required against current code/IaC."
 - **Emitting elements with invalid `xsi:type`.** Every `<element>` and `<relationship>` must use an exact ArchiMate 3.2 type name (reference §6.2 for elements, §6.3 for relationships). Misspellings (`Application_Component`, `app-component`, `ApplicationAPI`) break tool import.
 - **View `<node>` or `<connection>` emitted without `xsi:type`.** Fix per `AD-15`; OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — `<node>` must carry `xsi:type="Element"` (or `Container` / `Label`) and `<connection>` must carry `xsi:type="Relationship"` (or `Line`). Archi's XSD-validating import rejects bare elements with `cvc-type.2`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
-- **Node placed outside its layer's band.** Fix per `AD-L1`; reference §6.4a bands are Strategy `y∈[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`.
+- **Node placed outside its layer's band.** Fix per `AD-L1`; reference §6.4a bands are Strategy `y∈[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`. Severity follows the §6.4a banding marker — `warn` when the model carries `propid-archi-model-banded=v1`, `info` when the marker is absent (legacy file preserved across Extract refresh).
 - **Two nodes overlapping** at the same nesting depth in the same view. Fix per `AD-L2`; re-run the layout procedure or widen the containing cell.
 - **Label truncation risk** (`w < 120`, `h < 55`, or `w` too small for the `<name>`). Fix per `AD-L3`; enlarge `w` in 20-px steps until the label fits at the default Archi font.
 - **View over budget** — >20 elements or >30 relationships in a single `<view>`. Fix per `AD-L4`; split the view, or promote a cluster to a Grouping (§4.8; logical, never a layer container).

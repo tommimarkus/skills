@@ -78,6 +78,8 @@ If a prior view exists at the canonical path and contains a `<node>` for this el
 
 Record the set of *new* elements (present in this run, absent from the prior view) — only these get algorithmic placement.
 
+**Pre-§6.4a legacy models.** When the prior file lacks the model-level marker `propid-archi-model-banded=v1` (reference §6.4a *Banding marker*), the file pre-dates the banded-grid contract. Extract preserves its coordinates verbatim per the rule above and **never auto-injects the marker** — auto-injection would assert §6.4a conformance over coordinates that were never §6.4a-conformant. Legacy files therefore stay unmarked; Review soft-grades AD-L1 to `info` for them (reference §8). The architect rebands a legacy file by re-running Build for the affected views, which writes a fresh marker; an automated `rebrand` Extract sub-mode is deferred to a later release.
+
 ### Step 2 — Assign each new element to a cell
 
 Compute `cell(e) = (column(e), row(e))`:
