@@ -63,6 +63,7 @@ Before writing or reviewing code, confirm the following. If the user hasn't supp
 3. **Framework / stack.** Plain HTML/CSS, or a framework? Detect Blazor via file globs; otherwise ask.
 4. **Target viewport floor.** Default: 320 CSS px (SC 1.4.10 Reflow). Do not accept a higher floor without a written reason.
 5. **Performance posture.** Is there a CWV target or a team SLO? Default: web.dev Core Web Vitals at mobile p75.
+6. **Architecture pairing.** Does a paired ArchiMate model exist at `docs/architecture/<feature>.oef.xml` for the feature in scope? If yes: in review mode, the skill auto-dispatches to `architecture-design` Review for drift detection (§ Review mode workflow step 6); in build mode, the architect can opt in ("also update the architecture diagram") to dispatch to `architecture-design` Extract after Build. Default: auto-detect the path for review mode; opt-in for build mode.
 
 If any answer changes a decision's default (e.g., desktop-first product dashboard → §3.5 default flips), state the deviation explicitly.
 
@@ -169,7 +170,9 @@ The legacy-debt list is the record of what the project violates; it is not a lis
    - `[runtime]` items (LCP, CLS, INP): **never** claim a pass from static analysis; report as "not statically verifiable — run Lighthouse-CI; use CrUX / RUM for ground truth."
    If any `[static]` item fails, fix it and re-check.
 
-7. **Emit footer disclosure.**
+7. **Architecture diagram refresh (optional).** If the architect opted in during pre-flight (step 6), dispatch to `architecture-design` Extract targeting the feature just built. The canonical path `docs/architecture/<feature>.oef.xml` is updated with any new or changed Application Layer elements (new Blazor Components, new `@page` routes becoming Application Services, new `HttpClient` call graphs becoming Used-by relationships). If not opted in, skip silently.
+
+8. **Emit footer disclosure.**
 
 ## Review mode workflow
 
@@ -197,7 +200,9 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 5. **Rollup.** After per-finding output, one paragraph per bucket summarising severity counts and the top fix.
 
-6. **Emit footer disclosure.**
+6. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml` (discovered in pre-flight step 6), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `AD-DR-*` findings in a dedicated "Architecture drift" section of the output, after the responsive-design rollup. If no matching diagram exists, skip silently.
+
+7. **Emit footer disclosure.**
 
 ## Lookup mode workflow
 
@@ -245,6 +250,7 @@ Extensions loaded: blazor-wasm | (none)
 Reference: souroldgeezer-design/docs/ui-reference/responsive-design.md
 Self-check: pass | <n failures> | n/a
 Runtime-verified metrics: none — use Lighthouse-CI / CrUX for LCP, CLS, INP
+Architecture pairing: drift-check clean | <n> drift findings | extract refreshed | none (no paired diagram)
 ```
 
 ## Red flags — stop and re-run
@@ -273,6 +279,7 @@ Output contains any of the following? Stop; fix before delivering:
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — CSP, CORS, cookie attributes, and supply-chain concerns that surface in browser-facing code live there.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — if asked to write tests that verify responsive/a11y behaviour, E2E sub-lane A covers the test-quality rules; this skill does not author E2E tests.
 - `serverless-api-design` (same plugin `souroldgeezer-design`) — if the UI consumes a serverless HTTP API, that skill enforces the API contract (OpenAPI 3.1, RFC 9457 problem+json, RFC 9110 ETag), security (Entra ID / managed identities / Key Vault / data-plane RBAC), reliability (idempotency, 429 + `Retry-After`), and observability (structured logs, W3C `traceparent`). The two skills compose; neither duplicates the other.
+- `architecture-design` (same plugin) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application Layer of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
 
 ## Honest limits
 

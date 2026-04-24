@@ -4,15 +4,23 @@ Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
   test quality, with per-stack extensions and matching subagents.
-- **souroldgeezer-design** — reference-driven design for modern web UIs and
-  serverless HTTP APIs in build, review, and lookup modes. For UIs: enforces
-  WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core
-  Web Vitals, with a Blazor WebAssembly extension. For serverless APIs:
-  enforces security (Entra ID / managed identities / Key Vault / data-plane
-  RBAC), contract discipline (OpenAPI 3.1, RFC 9457 problem+json), reliability
-  (idempotency, 429 + Retry-After), and observability (structured logs, W3C
-  traceparent), with composable extensions for Azure Functions .NET, Cosmos
-  DB, and Blob Storage. Each skill has a matching subagent.
+- **souroldgeezer-design** — reference-driven design for modern web UIs,
+  serverless HTTP APIs, and ArchiMate® architecture models. For UIs (build,
+  review, lookup): enforces WCAG 2.2 AA, internationalization (LTR + RTL + text
+  expansion), and Core Web Vitals, with a Blazor WebAssembly extension. For
+  serverless APIs (build, review, lookup): enforces security (Entra ID /
+  managed identities / Key Vault / data-plane RBAC), contract discipline
+  (OpenAPI 3.1, RFC 9457 problem+json), reliability (idempotency,
+  429 + Retry-After), and observability (structured logs, W3C traceparent),
+  with composable extensions for Azure Functions .NET, Cosmos DB, and Blob
+  Storage. For architecture (build, extract, review, lookup): enforces
+  ArchiMate 3.2 layer discipline and Appendix B relationship well-formedness;
+  serialises models as **OEF XML** per The Open Group ArchiMate Model
+  Exchange File Format 3.2 (loadable in Archi, BiZZdesign, Sparx, Orbus);
+  lifts Application + Technology + Implementation & Migration layers from
+  .NET / Bicep / GitHub Actions; marks Business / Motivation / Strategy as
+  forward-only; dispatches from the sibling skills' Review mode to flag drift
+  between code and the architect's model. Each skill has a matching subagent.
 
 ## Install
 
@@ -55,15 +63,18 @@ and invoke the same skills, making them usable as delegated one-shots.
 
 ## What's in `souroldgeezer-design`
 
-Two design skills, each with a matching one-shot subagent:
+Three design skills, each with a matching one-shot subagent:
 
 | Skill | Covers | Stack extensions |
 |---|---|---|
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
 | [serverless-api-design](souroldgeezer-design/skills/serverless-api-design/SKILL.md) | Modern serverless HTTP APIs — enforces security (Entra ID / managed identities / Key Vault / data-plane RBAC, `disableLocalAuth`, `allowSharedKeyAccess=false`), contract discipline (OpenAPI 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C traceparent, correlation ID, RU / request-charge visibility) as hard baselines | [azure-functions-dotnet](souroldgeezer-design/skills/serverless-api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/serverless-api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/serverless-api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
+| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces The Open Group ArchiMate 3.2 (C226, March 2023) layer discipline, Appendix B relationship well-formedness, and Core-vs-extension defaults; serialised as **OEF XML** per The Open Group ArchiMate Model Exchange File Format 3.2 (Appendix E), loadable in Archi / BiZZdesign / Sparx / Orbus. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business / Motivation / Strategy are forward-only), Review (artefact + drift detection against current repo state), Lookup | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md) |
 
-References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md) and [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md).
-Matching subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md) and [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md).
+References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
+Matching subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md).
+
+The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechanism across the three skills: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review (drift detection) when a paired model is present, so code and architecture stay consistent across iterations.
 
 ## How the audits work
 
@@ -161,6 +172,65 @@ Matching subagents are at [souroldgeezer-design/agents/responsive-design.md](sou
   that runtime-verified metrics need Azure Load Testing, Application
   Insights, and Azure Monitor.
 
+## How `architecture-design` works
+
+- **Reference-driven.** Same shape as the sibling design skills — a workflow
+  applying an external reference ([souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md)).
+  Output cites reference sections (e.g. `§4.2`, `§9.3`) and ArchiMate 3.2
+  chapters / Appendix B entries; findings cite smell codes (`AD-*` for
+  artefact, `AD-DR-*` for drift); the prose lives in the reference, not in
+  the skill.
+- **Four modes** (deliberately distinct from the sibling 3-mode shape).
+  **Build** produces an OEF XML model at the canonical path from architect
+  intent. **Extract** lifts a model from existing code, IaC, and workflows
+  — with per-layer asymmetry: Application is lifted from `*.csproj` /
+  solution, Technology from Bicep, Implementation & Migration from
+  `.github/workflows/`; Business / Motivation / Strategy / Physical are
+  forward-only and emitted as typed stubs inside `FORWARD-ONLY — architect
+  fills in` XML comment blocks. **Review** has two sub-behaviours:
+  artefact review (ArchiMate 3.2 well-formedness + `AD-*` smells) and
+  drift detection (model vs current repo state, emitting `AD-DR-*`
+  findings). **Lookup** answers a narrow notation question with a
+  citation.
+- **Verification-layer tags.** Every §10 checklist item carries a tag —
+  `[static]` (readable from the `.oef.xml` source alone) or `[runtime]`
+  (requires reading the current code / IaC / workflow state). Drift
+  findings are always `[runtime]` against the repository; live-deployment
+  drift (IaC vs. what's actually running in Azure) is out of scope and
+  requires Azure Resource Graph / Defender for Cloud.
+- **Canonical path coupling.** `docs/architecture/<feature>.oef.xml` is
+  the single filesystem convention. `responsive-design` and
+  `serverless-api-design` Review mode check for a matching model at this
+  path and auto-dispatch to `architecture-design` for drift detection when
+  one is found. Neither sibling reaches into the architecture-design
+  surface beyond this path.
+- **Per-input-source lifting procedures** live under
+  [souroldgeezer-design/skills/architecture-design/references/procedures/](souroldgeezer-design/skills/architecture-design/references/procedures/) —
+  `.NET` for the Application Layer, `Bicep` for the Technology Layer,
+  `GitHub Actions` for the Implementation & Migration Layer, and a
+  drift-detection procedure. They are always loaded during Extract and
+  Review; the split is by input source (code / IaC / workflow), not by
+  target stack choice, so this skill does not use the `extensions/`
+  pattern the sibling skills do.
+- **Six supported diagram kinds** (reference §9): Capability Map,
+  Application Cooperation, Application-to-Business Realisation,
+  Technology Realisation, Migration View, Motivation View. Other ArchiMate
+  diagram kinds are expressible in OEF XML (the element and relationship
+  vocabulary is unbounded) but not first-class in v1.
+- **OEF XML, tool-neutral.** Output is loadable by every major ArchiMate
+  tool (Archi, BiZZdesign, Sparx, Orbus, Avolution, HOPEX). The skill
+  does not bundle The Open Group's XSD schemas — emitted files reference
+  the canonical schema URL via `xsi:schemaLocation`, and validation is
+  delegated to the architect's toolchain (Archi's import, or
+  `xmllint --schema`).
+- **Disclosure footer.** Every output ends with a footer listing mode,
+  reference path, canonical path, diagram kind, layers in scope, self-
+  check result, project-assimilation summary (existing model reused /
+  identifiers preserved / layers lifted vs stubbed / drift summary),
+  forward-only layers stubbed, and the explicit note that live-deployment
+  drift
+  needs Azure Resource Graph / Defender for Cloud.
+
 ## Repository layout
 
 ```
@@ -178,11 +248,15 @@ souroldgeezer-audit/               # audit plugin
     config.yaml                    # optional, skill-specific
 souroldgeezer-design/              # design plugin
   .claude-plugin/plugin.json
-  docs/ui-reference/               # bundled reference (responsive-design.md)
-  agents/*.md                      # subagents
+  docs/
+    ui-reference/                  # bundled reference (responsive-design.md)
+    api-reference/                 # bundled reference (serverless-api-design.md)
+    architecture-reference/        # bundled reference (architecture.md)
+  agents/*.md                      # subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
+    references/                    # (architecture-design only) smell catalog + per-input-source lifting procedures
 undecided/                         # skills not yet assigned to a plugin — NOT production-ready;
                                    # do not reference from published skills
 ```

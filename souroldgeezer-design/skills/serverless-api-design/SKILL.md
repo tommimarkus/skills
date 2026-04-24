@@ -67,6 +67,7 @@ Before writing or reviewing code, confirm the following. If the user hasn't supp
 4. **Hosting plan target.** Consumption / Flex Consumption / Premium / Dedicated? Default: Flex Consumption for public APIs; Consumption for internal low-traffic; Premium when p95 cold-start must be ~0.
 5. **Reliability posture.** Idempotency required on mutations? Retry tolerance of clients? Default: idempotency on all mutations; safe retry + backoff on all outbound calls.
 6. **Observability target.** Application Insights / OpenTelemetry exporter / team SLO? Default: register OpenTelemetry in `Program.cs` per the current `azure/azure-functions/functions-opentelemetry` page plus end-to-end `traceparent`.
+7. **Architecture pairing.** Does a paired ArchiMate model exist at `docs/architecture/<feature>.oef.xml` for the feature in scope? If yes: in review mode, the skill auto-dispatches to `architecture-design` Review for drift detection (§ Review mode workflow step 6); in build mode, the architect can opt in ("also update the architecture diagram") to dispatch to `architecture-design` Extract after Build. Default: auto-detect the path for review mode; opt-in for build mode.
 
 If any answer changes a decision's default (e.g., "internal only, no client SDKs generated" → §3.2 URI-path versioning becomes header versioning), state the deviation explicitly in the output.
 
@@ -185,7 +186,9 @@ The legacy-debt list is the record of what the project violates; it is not a lis
    - `[runtime]` / `[load]` / `[security-tool]` items: **never** claim a pass from static analysis; report as "not statically verifiable — run load test / RUM / API scanner for ground truth."
    If any `[static]` / `[iac]` / `[contract]` item fails, fix it and re-check.
 
-7. **Emit footer disclosure.**
+7. **Architecture diagram refresh (optional).** If the architect opted in during pre-flight (step 7), dispatch to `architecture-design` Extract targeting the feature just built. The canonical path `docs/architecture/<feature>.oef.xml` is updated with any new or changed Application Layer elements — added Azure Functions projects become Application Components, `[HttpTrigger]` routes become Application Interfaces, and `CosmosClient` / `BlobServiceClient` usage becomes Used-by relationships to Technology Nodes lifted from Bicep. If not opted in, skip silently.
+
+8. **Emit footer disclosure.**
 
 ## Review mode workflow
 
@@ -213,7 +216,9 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 5. **Rollup.** After per-finding output, one paragraph per bucket summarising severity counts and the top fix.
 
-6. **Emit footer disclosure.**
+6. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml` (discovered in pre-flight step 7), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `AD-DR-*` findings in a dedicated "Architecture drift" section of the output, after the serverless-api-design rollup. If no matching diagram exists, skip silently.
+
+7. **Emit footer disclosure.**
 
 ## Lookup mode workflow
 
@@ -263,6 +268,7 @@ Extensions loaded: <space-separated subset of {azure-functions-dotnet, azure-cos
 Reference: souroldgeezer-design/docs/api-reference/serverless-api-design.md
 Self-check: pass | <n failures> | n/a
 Runtime-verified metrics: none — use Azure Load Testing / App Insights / Azure Monitor for p95, error rate, cold-start, RU charge, storage latency
+Architecture pairing: drift-check clean | <n> drift findings | extract refreshed | none (no paired diagram)
 ```
 
 ## Red flags — stop and re-run
@@ -292,6 +298,7 @@ Output contains any of the following? Stop; fix before delivering:
 ## Complementary skills
 
 - `responsive-design` (same plugin `souroldgeezer-design`) — if the API is paired with a web UI, that skill covers the UI contract (WCAG 2.2 AA, i18n, CWV). The two skills compose; neither duplicates the other.
+- `architecture-design` (same plugin) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application and Technology Layers of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — pipeline, release, secrets scanning, IaC posture, CSP / CORS / cookie attributes on the hosting tier. This skill proves the *code and contract* are compliant; the audit skill proves the *pipeline* is compliant.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — integration / E2E test quality for the endpoints this skill produces (Node.js + .NET + Next.js extensions available).
 
