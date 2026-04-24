@@ -28,6 +28,16 @@ A **Claude Code plugin marketplace**, not an application. The root `.claude-plug
 
 Before finishing any task that changes repo structure or a skill's contract, re-read **both files** and diff them mentally against the change. If any section is now wrong or incomplete, amend it in the same commit.
 
+## Repo-internal skills
+
+The repo ships a small set of **internal** skills under `.claude/skills/` — scoped to this repository, auto-discovered by Claude Code when working here, and deliberately *not* bundled with the distributed `souroldgeezer-*` plugins. Internal skills encode how *we* author this repo; they are not capabilities shipped to downstream users.
+
+Current internal skills:
+
+- **`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md) — copyright, trademark, and licence check for any skill-related edit. Fast five-question triage, then copyright / trademark / licence check if triggered, with a codified remediation order and authoritative-sources appendix. Invoke on any create / modify / rename / move / delete touching `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, the plugin / marketplace manifests, or the `CLAUDE.md` / `README.md` sections that describe those artefacts. Prevents verbatim reproduction of copyrighted spec prose / code / figures / samples, enforces ® on first public-visible mention, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, and preserves the repo's nominative-fair-use convention.
+
+Add to this section when new internal skills are introduced. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `plugin.json`.
+
 ## Directory layout
 
 ```
