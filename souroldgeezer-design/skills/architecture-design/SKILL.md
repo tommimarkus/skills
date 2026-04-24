@@ -314,7 +314,9 @@ Two to four lines of prose + one footer line.
 Mode: build | extract | review | lookup
 Reference: souroldgeezer-design/docs/architecture-reference/architecture.md
 Canonical path: docs/architecture/<feature>.oef.xml
-Diagram kind: <reference §9 kind name>
+Diagram kind: <reference §9 kind name — primary kind in scope this run>
+Diagram kinds present: <M> of 8 (<comma-separated §9.x labels>)
+Diagram kinds missing: <comma-separated §9.x labels, or "none">
 Layers in scope: <comma-separated>
 Self-check: pass | <n failures> | n/a
 Project assimilation:
@@ -322,6 +324,8 @@ Project assimilation:
 Forward-only layers stubbed: <list, or "none">
 Runtime-verified drift: <n findings, or "drift detection not run">
 ```
+
+`Diagram kinds present` / `Diagram kinds missing` are computed by scanning the produced or parsed OEF for every `<diagram>` `viewpoint=` attribute and matching against the eight names in reference §9.1–§9.8 (Capability Map · Application Cooperation · Application-to-Business Realisation · Technology Realisation · Migration · Motivation · Business Process Cooperation · Service Realisation). The `M of 8` count is the file-wide coverage; `Diagram kind:` above remains the primary kind in scope for the current run (the one the architect asked for in pre-flight, or the kind being reviewed). For a single-kind file, `Diagram kinds present: 1 of 8` and the `Diagram kind:` line agree.
 
 ## Red flags — stop and re-run
 
