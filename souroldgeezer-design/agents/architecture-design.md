@@ -46,19 +46,27 @@ When invoked, run the architecture-design skill and present results:
    `<relationship>` emitted with its exact ArchiMate 3.2 `xsi:type` (per
    reference §6.2 for elements and §6.3 for relationships); relationships
    validated against ArchiMate 3.2 Appendix B; `xsi:schemaLocation`
-   referencing The Open Group's canonical schema URL (never bundled); default
-   reading direction on view placements (layers top-to-bottom, aspects
-   left-to-right). Cite reference sections the output draws from
-   (`§4.2`, `§5`, `§9.3`, etc.); never duplicate reference prose; run the
-   §10 self-check (`[static]` / `[runtime]` tags) before handing back.
+   referencing The Open Group's canonical schema URL (never bundled).
+   Invoke [references/procedures/layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md)
+   to place every `<node>` on the banded grid contracted in reference §6.4a —
+   fixed rows per layer, fixed columns per aspect, 10-px grid, deterministic
+   sizes, Composition / Aggregation / Realization nested over explicit edge
+   when both endpoints share a cell, orthogonal routing. Cite reference
+   sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
+   never duplicate reference prose; run the §10 self-check (`[static]` /
+   `[runtime]` tags) before handing back.
 4. For extract mode: invoke the three lifting procedures in
    [references/procedures/](../skills/architecture-design/references/procedures/)
    — `lifting-rules-dotnet.md` for the Application Layer, `lifting-rules-bicep.md`
    for the Technology Layer, `lifting-rules-gha.md` for Implementation &
-   Migration. Emit `FORWARD-ONLY — architect fills in` XML comment blocks
-   per reference §7.3 for Business / Motivation / Strategy sections the
-   diagram kind implies. Refuse Extract if the requested scope is entirely
-   forward-only layers, and suggest Build mode instead.
+   Migration. For any element not carrying an architect-authored position
+   in a prior diagram at the canonical path, invoke
+   [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
+   architect-authored positions are preserved verbatim (procedure Step 1).
+   Emit `FORWARD-ONLY — architect fills in` XML comment blocks per reference
+   §7.3 for Business / Motivation / Strategy sections the diagram kind
+   implies. Refuse Extract if the requested scope is entirely forward-only
+   layers, and suggest Build mode instead.
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
    walks reference §10 checklist and emits `AD-*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
    drift detection (OEF file + current code/IaC) invokes
@@ -80,7 +88,11 @@ When invoked, run the architecture-design skill and present results:
    claiming a pass from static review alone; element emitted with an
    `xsi:type` not in the ArchiMate 3.2 catalog; bundled XSD file (the skill
    must reference The Open Group's canonical schema URL, never copy the
-   schema locally).
+   schema locally); layout failures per reference §6.4a — node outside its
+   layer band (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures
+   with truncating labels (`AD-L3`), view over the 20-element / 30-relationship
+   budget (`AD-L4`), nested-plus-edge double representation (`AD-L7`), or
+   off-grid coordinates (`AD-L8`).
 8. Always emit the footer disclosure: mode, reference path, canonical path,
    diagram kind, layers in scope, self-check result, project assimilation
    block (existing model reused; identifiers preserved; layers lifted vs

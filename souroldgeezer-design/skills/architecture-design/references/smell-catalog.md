@@ -28,6 +28,22 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-12` | §8, §4.3 | Technology Layer diagram reasoning about latency or residency without Path / Communication Network elements |
 | `AD-13` | §8, §4.1 | Ambiguous Product / Contract / Service — Product modelled with Service semantics or vice versa; Contract used as a documentation placeholder |
 | `AD-14` | §8, §7.3 | Forward-only layer (Business / Motivation / Strategy) emitted by Extract without the `FORWARD-ONLY — architect fills in` marker block |
+| `AD-15` | §8, §6.4 | View `<node>` or `<connection>` emitted without an `xsi:type` (abstract complexType violates OEF schema) |
+
+## Layout smells — `AD-L*`
+
+Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout smells*; structural contract: §6.4a; algorithm: [procedures/layout-strategy.md](procedures/layout-strategy.md).
+
+| Code | Rubric | Description (one line; see rubric for full) |
+|---|---|---|
+| `AD-L1` | §8 layout, §6.4a | Layer-band violation — element's `y` falls outside the band prescribed for its ArchiMate layer |
+| `AD-L2` | §8 layout, §6.4a | Node overlap — two placements at the same nesting depth whose bounding boxes intersect |
+| `AD-L3` | §8 layout, §6.4a | Undersize — `w < 120`, `h < 55`, or `w` too small to avoid label truncation |
+| `AD-L4` | §8 layout, §6.4a | View density over budget — `>20` elements, `>30` relationships, or nesting depth `>2` |
+| `AD-L5` | §8 layout, §6.4a | Excessive edge crossings — `crossings > node_count / 4` |
+| `AD-L6` | §8 layout, §6.4a | Non-orthogonal routing — diagonal `<connection>` with no `<bendpoint>` between non-aligned endpoints |
+| `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view |
+| `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
 
 ## Drift smells — `AD-DR-*`
 
@@ -56,5 +72,8 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-11` | `info` | Cosmetic |
 | `AD-DR-1` through `AD-DR-7` | `warn` | Real drift; architect decides whether the diagram or the code is the source of truth |
 | `AD-DR-8`, `AD-DR-9`, `AD-DR-10` | `info` | Drift likely, but plausible architect-chosen divergence (friendly labels, planned Plateau transitions, forward-only ownership) |
+| `AD-L1`, `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (wrong band, overlap, truncated label) |
+| `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
+| `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
 
 Severity can be overridden per finding when evidence warrants (e.g., `AD-DR-8` escalated to `warn` when the renamed project is the feature's primary Component and every other diagram also shows the old name).

@@ -324,6 +324,28 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
 
 **Element identity is shared across views.** Placing an element in three diagrams creates three `<node>` entries — three placements with their own coordinates — but the element itself appears once in `<elements>`. This is the model-vs-view separation at the heart of OEF: an Application Component is *one* thing, and every view that shows it shows the same thing.
 
+### 6.4a Layout strategy
+
+Coordinate emission is governed by a deterministic banded-grid procedure — same element set, same relationship set, same diagram kind, same layer scope produces the same `x`, `y`, `w`, `h` on every run. The full algorithm, worked example, and edge-case handling live in [../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md); what follows is the structural contract that Review mode checks and architects can read off without loading the procedure.
+
+**Grid.** 10 px. Every `x`, `y`, `w`, `h` is a multiple of 10. Archi's default snap-to-grid is 10 px, so diagrams open pixel-aligned.
+
+**Canvas rows — one per ArchiMate layer, top to bottom.** Strategy `y∈[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`. 40 px inter-row gutter for cross-layer Realisation / Serving arrows. Matches the canonical ArchiMate Framework arrangement from the specification.
+
+**Canvas columns — one per aspect, left to right.** Motivation `x∈[40,280]`, Active structure `[300,540]`, Behaviour `[560,800]`, Passive structure `[820,1060]`, Implementation & Migration `[1080,1320]`. Motivation and Implementation & Migration columns span all five rows; Core-aspect columns (Active / Behaviour / Passive) apply within each Core row.
+
+**Default sizes.** Structure (Component, Node, Actor, Role, Interface, Artifact) = `140 × 60`. Behaviour (Process, Function, Service, Event) = `160 × 60`. Motivation / Strategy = `180 × 60`. Passive (Data Object, Business Object, Contract, Product) = `140 × 60`. Implementation & Migration = `160 × 60`. Junction = `14 × 14`. Grouping = computed from children, minimum `200 × 120`. Minimum for any element: `120 × 55` — below this the label truncates in Archi's default figure.
+
+**Nesting over explicit edge.** Composition, Aggregation, and Realization relationships between two elements in the same cell are rendered as a nested `<node>` placement (child `x = parent.x + 20`, stacked vertically inside the parent) and the corresponding `<connection>` is suppressed in that view. The relationship carries `<property propertyDefinitionRef="propid-archi-arm"><value xml:lang="en">hide</value></property>` so Archi's Automatic Relationship Management renders the nesting natively and tools without ARM still read the relationship from the model. Nesting crosses cells is not permitted — it would violate §2.1 layer discipline or §2.3 aspect discipline.
+
+**Edge routing.** Orthogonal only (right-angle bends). Bend points on the 10 px grid, emitted as `<bendpoint x="..." y="..."/>` children of `<connection>`. Connections attach to a node's side-midpoint (left / right / top / bottom), never a corner. Parallel edges in the same lane space 20 px apart.
+
+**View budget.** A view is compact when it carries at most 20 elements and 30 relationships; nesting depth capped at 2. Over budget → split by feature or aspect, promote a cluster to a Grouping (§4.8; logical cluster only, never a layer container), or move peripheral concerns to a separate Motivation / Migration view.
+
+**Style.** Do not emit `<style>` on `<node>` placements. Undeclared style lets each rendering tool apply its layer-idiomatic colours. The only acceptable `<style>` emission is a neutral fill on a Grouping to distinguish it from contained elements.
+
+**Re-extract preserves architect positions.** On every run, elements already present at the canonical path with an architect-authored `x`, `y`, `w`, `h` are reused verbatim; only new elements (absent from the prior view) receive algorithmic placement. This is how hand edits survive automated re-extraction (§6.6 identifier preservation is the coupling mechanism).
+
 ### 6.5 Organizations (folder structure)
 
 Optional. Tools like Archi present models in a folder tree. OEF exposes this via `<organizations>`:
@@ -441,6 +463,19 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-14` Forward-only layer emitted without the marker** — Extract output that populated Business/Motivation/Strategy elements without the `FORWARD-ONLY` header block.
 - **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
 
+### Layout smells — `AD-L*`
+
+Artefact smells specific to `<view>` layout, derived from the §6.4a Layout strategy contract. Every `AD-L*` is `[static]` — verifiable from the `.oef.xml` source alone, no runtime reads needed.
+
+- **`AD-L1` Layer-band violation** — an element's `y` coordinate falls outside the band prescribed for its ArchiMate layer in §6.4a. An Application Component at `y=900` is rendered in the Technology band and the diagram visually lies about what layer the element is in.
+- **`AD-L2` Node overlap** — two `<node>` placements at the same nesting depth in the same view whose bounding boxes intersect. Rendering tools render one on top of the other; the diagram is unreadable.
+- **`AD-L3` Undersize** — `w < 120` or `h < 55`, or `w` is smaller than the `<name>` length would need at the default font. Label truncates in Archi and in most other tools; the element becomes ambiguous.
+- **`AD-L4` View density** — view exceeds 20 elements or 30 relationships, or nesting depth exceeds 2. Readability drops sharply past these thresholds (ArchiMate Cookbook "compact and readable"); split the view or promote a cluster to a Grouping.
+- **`AD-L5` Excessive crossings** — edge-crossing count exceeds `node_count / 4`. Indicates either over-density (address via `AD-L4`) or poor placement (address via the one-pass barycentric reorder in the layout procedure).
+- **`AD-L6` Non-orthogonal routing** — a `<connection>` whose source and target don't share an x or y coordinate carries no `<bendpoint>`, so renderers draw a diagonal line. The diagram mixes routing styles and reads inconsistently.
+- **`AD-L7` Nested-plus-edge** — a `<node>` is visually nested inside its parent *and* a visible `<connection>` for the parent-child relationship is emitted in the same view. The relationship is represented twice; Archi's ARM handles this poorly. Either hide the edge (add the `propid-archi-arm` = `hide` property to the relationship) or draw the elements side-by-side.
+- **`AD-L8` Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` coordinate that is not a multiple of 10. Diagrams drift visually on re-open / re-snap; git diffs churn on unrelated edits.
+
 ## 9. Diagram kinds supported in v1
 
 The skill supports a deliberately small set of ArchiMate diagram kinds. Each kind fixes the element palette and the concern, preventing layer soup.
@@ -477,6 +512,14 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
 - [static] Element identifiers and `<name>` values agree semantically (`AD-8`).
 - [static] Extract output with forward-only layers carries the FORWARD-ONLY marker (`AD-14`).
+- [static] Every element's `y` coordinate sits within the band of its ArchiMate layer per §6.4a (Strategy `[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`) (`AD-L1`).
+- [static] No two `<node>` placements in the same view overlap — bounding-box intersection is zero for every pair at the same nesting depth (`AD-L2`).
+- [static] Every element's `w ≥ 120` and `h ≥ 55`; `w` is large enough that the `<name>` does not truncate at the default Archi font (heuristic: 7 px per character) (`AD-L3`).
+- [static] Each view carries at most 20 elements and 30 relationships; nesting depth ≤ 2 (`AD-L4`).
+- [static] Edge crossings per view are bounded by `node_count / 4` (`AD-L5`).
+- [static] Every `<connection>` in the view uses orthogonal routing: bend points are present whenever source and target do not share an x or y coordinate (`AD-L6`).
+- [static] No element is simultaneously nested inside a parent and connected to that parent by a visible `<connection>` — the parent-child relationship is represented once, not twice (`AD-L7`).
+- [static] Every `x`, `y`, `w`, `h`, and `<bendpoint>` coordinate is a multiple of 10 (`AD-L8`).
 - [runtime] Application Components in this diagram correspond to real projects in the solution (for .NET: `*.csproj`); components that have no project are flagged as *planned* or *external*.
 - [runtime] Technology Nodes in this diagram correspond to IaC resources (for Azure: Bicep). Nodes that have no IaC are flagged as *planned* or *out-of-scope*.
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.
