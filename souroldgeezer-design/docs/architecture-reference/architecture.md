@@ -84,12 +84,12 @@ Only the most frequently used elements are surfaced here; consult ArchiMate 3.2 
 
 - **Business Actor** — any party that can act in the business domain: a person, a team, a department, an external organisation such as a customer or supplier. Notation: person icon. Actors don't perform behaviour directly — they occupy Roles, and Roles perform behaviour.
 - **Business Role** — a named pattern of responsibility that an Actor takes on when it performs behaviour. Assignment flows Actor → Role → Behaviour: the Role is the thing formally tied to a Process, Function, or Interaction, with the Actor as its occupant.
-- **Business Collaboration** — an aggregate of two or more Actors or Roles that cooperate to perform collective behaviour.
+- **Business Collaboration** — a grouping of Actors or Roles that operates as a single compound unit of business agency — the collective counterpart to individual Actor / Role participation; modelled when the joint action is itself what the architecture needs to name.
 - **Business Process** — a time-ordered choreography of work steps that delivers a defined business outcome (order shipped, claim paid, user onboarded). Distinct from Business Function in being intrinsically sequential rather than competency-grouped.
 - **Business Function** — behaviour grouped by competency or capability rather than by sequence — *Procurement*, *Treasury*, *Customer Support*. Reorders orthogonally to Processes: the same Process typically passes through multiple Functions.
 - **Business Interaction** — collective behaviour performed by a Collaboration.
 - **Business Service** — the exposed behaviour of a Process, Function, or Interaction that delivers value to a customer. Services, not processes, are what the Application Layer realises or consumes.
-- **Business Event** — something that happens (internally or externally) that triggers or is triggered by business behaviour.
+- **Business Event** — a discrete occurrence — external (regulatory deadline, customer arrival, partner notification) or internal (inventory threshold, timer expiry, escalation) — that starts, interrupts, or concludes a behavioural flow.
 - **Business Object** — a unit of information with business relevance. Customer, Contract, Order. The Data Object in the Application Layer *realises* the Business Object.
 - **Contract** — the specification of rights, obligations, and service levels between a provider and a consumer — the behavioural agreement (SLA, data-sharing terms, compliance scope) captured independently of any specific implementation.
 - **Product** — a commercial or internal bundle — a coordinated set of Services, Business Objects, and Contracts packaged and delivered as one. Example: a *Premium Support* Product bundling a Service Desk service, an SLA, and customer-portal access.
@@ -99,11 +99,11 @@ Only the most frequently used elements are surfaced here; consult ArchiMate 3.2 
 ### 4.2 Application Layer (ArchiMate 3.2 Chapter 6)
 
 - **Application Component** — a software unit that is independently deployable and replaceable — a microservice, a library, a serverless Function App, a Blazor WebAssembly client, a worker. Components expose behaviour through Application Interfaces and realise Application Services.
-- **Application Collaboration** — an aggregate of two or more Components cooperating.
+- **Application Collaboration** — a grouping of Application Components acting as one compound unit; useful when a multi-Component subsystem delivers a single Application Service and the coupling between Components is itself an architectural concern.
 - **Application Interface** — the consumption surface of an Application Service — an HTTP endpoint, a gRPC contract, a UI route, a library method signature — through which a Role, another Component, or a Technology Node actually invokes the Service.
-- **Application Function** — automated behaviour performed by a Component.
-- **Application Process** — a sequence of application behaviours that achieves a specific result.
-- **Application Interaction** — collective application behaviour performed by a Collaboration.
+- **Application Function** — a named internal capability of an Application Component: what the Component does under the hood, prior to any exposure. Contrast with Application Service (the capability offered for consumption) and Application Interface (the consumption surface).
+- **Application Process** — an ordered chain of Application Function calls and sub-behaviours that together deliver a defined automated outcome — the Application Layer counterpart to a Business Process.
+- **Application Interaction** — the joint behaviour emitted by an Application Collaboration when its Components operate together — modelled when the inter-Component dynamics (not the individual Component's behaviour) is the architecturally interesting thing.
 - **Application Service** — the exposed behaviour that fulfills a need (often a Business Service).
 - **Application Event** — a state change that triggers or is triggered by application behaviour.
 - **Data Object** — an automation-facing data structure — records, JSON payloads, database rows, message bodies — that Application Components read, write, or transform. Typically realises a Business Object from the business layer.
@@ -115,11 +115,11 @@ Only the most frequently used elements are surfaced here; consult ArchiMate 3.2 
 - **Node** — a runtime or hosting container that holds System Software and Artifacts and exchanges data with other Nodes. Typical modelling units: a virtual machine, a Kubernetes pod, an Azure App Service / Function App instance, an App Service plan, a physical data-centre server.
 - **Device** — a physical computational resource.
 - **System Software** — software environment for specific types of components and data objects. The .NET runtime, a database engine, an operating system.
-- **Technology Collaboration** — an aggregate of two or more Nodes cooperating.
+- **Technology Collaboration** — a grouping of Technology Nodes acting as a single platform unit; modelled when cluster / farm / mesh / redundancy-group behaviour is the architectural concern rather than individual Node capability.
 - **Path** — a link between Nodes along which communication can occur. An instance of a Communication Network.
 - **Communication Network** — a medium between Nodes.
 - **Technology Interface** — the access mechanism through which a Node's Technology Service becomes consumable — a network endpoint, a protocol binding, a shared-resource handle.
-- **Technology Function** — automated behaviour performed by a Node.
+- **Technology Function** — a named internal capability of a Technology Node: what the Node computes, routes, stores, or enforces at the platform level. Contrast with Technology Service (the exposed, consumable form of the same capability).
 - **Technology Process / Technology Interaction / Technology Event** — dynamic behaviour at the technology layer.
 - **Technology Service** — the exposed behaviour that an element outside the Technology Layer consumes.
 - **Artifact** — a concrete deployable produced by a build pipeline and consumed by a deployment step — the tangible thing that lands on a Node. JARs, DLLs, `.csproj` build outputs, ARM/Bicep templates, Docker images, signed zip packages.

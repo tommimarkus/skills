@@ -1,9 +1,9 @@
 ---
 name: architecture-design
 description: >-
-  Use when building, extracting, reviewing, or looking up ArchiMate architecture
+  Use when building, extracting, reviewing, or looking up ArchiMate® architecture
   models — enterprise, solution, or application architecture modelled in
-  ArchiMate 3.2 and serialised as OEF XML per The Open Group ArchiMate® Model
+  ArchiMate 3.2 and serialised as OEF XML per The Open Group ArchiMate Model
   Exchange File Format 3.2 (Appendix E of C226). Applies the bundled reference
   at souroldgeezer-design/docs/architecture-reference/architecture.md, enforcing
   The Open Group ArchiMate 3.2 (C226, March 2023) well-formedness rules

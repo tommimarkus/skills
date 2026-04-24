@@ -10,7 +10,7 @@ Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
   expansion), and Core Web Vitals, with a Blazor WebAssembly extension. For
   serverless APIs (build, review, lookup): enforces security (Entra ID /
   managed identities / Key Vault / data-plane RBAC), contract discipline
-  (OpenAPI 3.1, RFC 9457 problem+json), reliability (idempotency,
+  (OpenAPI™ 3.1, RFC 9457 problem+json), reliability (idempotency,
   429 + Retry-After), and observability (structured logs, W3C traceparent),
   with composable extensions for Azure Functions .NET, Cosmos DB, and Blob
   Storage. For architecture (build, extract, review, lookup): enforces

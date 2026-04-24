@@ -60,7 +60,7 @@ Current `<kind>-reference/` directories in use:
 - `souroldgeezer-audit/docs/quality-reference/{unit,integration,e2e}-testing.md` — test-quality rubrics
 - `souroldgeezer-design/docs/ui-reference/responsive-design.md` — responsive-design playbook
 - `souroldgeezer-design/docs/api-reference/serverless-api-design.md` — serverless-api-design playbook
-- `souroldgeezer-design/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate 3.2)
+- `souroldgeezer-design/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate® 3.2)
 
 When moving a skill out of `undecided/` into a plugin (or vice versa), **also move its matching subagent file** in `agents/<name>.md`. Skill and subagent are paired by identical name.
 
