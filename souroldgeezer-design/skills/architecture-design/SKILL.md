@@ -70,10 +70,11 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/lifting-rules-dotnet.md` | .NET solutions, Azure Functions (isolated-worker), Blazor WebAssembly | Extract → ArchiMate Application Layer |
 | `references/procedures/lifting-rules-bicep.md` | Bicep IaC | Extract → ArchiMate Technology Layer (Nodes, System Software, Communication Network, Path, Artifact) |
 | `references/procedures/lifting-rules-gha.md` | GitHub Actions workflow files | Extract → ArchiMate Implementation & Migration Layer (Work Package, Deliverable, Implementation Event, Plateau) |
-| `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour |
-| `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → deterministic banded-grid placement of `<node>` coordinates; Review restates its rules as `AD-L*` checks |
+| `references/procedures/lifting-rules-process.md` | Durable Functions orchestrators and Logic Apps workflow definitions (when present) | Extract → ArchiMate Business Layer (Business Process, Event, Interaction only) with per-element `LIFT-CANDIDATE` markers; reverse Lookup consumes the same `source=` attribute. UI route lifting is deferred — §9.8's UI Application Component and Application Interface are hand-authored by the architect per the Blazor idiom in reference §9.8 |
+| `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
+| `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → deterministic banded-grid placement of `<node>` coordinates, plus the process-flow exception for §9.7 views; Review restates its rules as `AD-L*` checks |
 
-Smells are namespaced `AD-*` (reference §8). There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
+Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout and `AD-B-*` for process-flow artefacts (§9.7 / §9.8). There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
 
 Adding a new input source later (Terraform, Azure Pipelines YAML, ARM templates, Kubernetes manifests) means adding a new procedure file, not an extension.
 
@@ -93,9 +94,9 @@ The path is the coupling mechanism for the sibling design skills (`responsive-de
 
 Before producing or reviewing a diagram, confirm the following. If the user hasn't supplied them, ask — don't invent answers:
 
-1. **Diagram kind.** Capability Map / Application Cooperation / Application-to-Business Realisation / Technology Realisation / Migration View / Motivation View (reference §9). Default: the skill offers the closest fit based on the user's prompt; asks if two are plausible. Diagrams outside the six supported kinds are declined.
+1. **Diagram kind.** Capability Map / Application Cooperation / Application-to-Business Realisation / Technology Realisation / Migration View / Motivation View / Business Process Cooperation / Service Realisation (reference §9). Default: the skill offers the closest fit based on the user's prompt; asks if two are plausible. Diagrams outside the eight supported kinds are declined.
 2. **Layer scope.** Which ArchiMate layers is the diagram working with? Default: Core Framework (Business + Application + Technology) unless the diagram kind implies Strategy (Capability Map), Motivation (Motivation View), or Implementation & Migration (Migration View). Crossing extensions into a Core view without cause triggers `AD-7`.
-3. **Extraction posture (Extract mode only).** Which input sources to read — .NET solution, Bicep, GHA workflows, host.json / staticwebapp.config.json. Default: all of the above when present. Forward-only layers (Business / Motivation / Strategy / Physical) are emitted as typed stubs per reference §7.
+3. **Extraction posture (Extract mode only).** Which input sources to read — .NET solution, Bicep, GHA workflows, `host.json` / `staticwebapp.config.json`, and Durable Functions orchestrators / Logic Apps workflow definitions (when present — these enable Business Process / Event / Interaction lifting per reference §7.4 with `LIFT-CANDIDATE` markers; UI routes are not lifted in v1). Default: all of the above when present. Fully forward-only layers (Motivation / Strategy / Physical) and the forward-only subset of Business (Actor / Role / Collaboration / Object / Contract / Product / Service / Function) are emitted as typed stubs per reference §7.
 4. **Feature name.** The `<feature>` slug that becomes the canonical filename. Default: derived from the user's prompt or the solution name.
 
 If any answer deviates from defaults (e.g., "include Physical Layer for this data-centre diagram"), state the deviation explicitly in the output footer.
@@ -250,11 +251,22 @@ Project assimilation:
 
 ## Lookup mode workflow
 
-0. **Dispatch.** Confirm Lookup.
+0. **Dispatch.** Confirm Lookup. Identify sub-behaviour from the question shape:
+   - **Notation Q&A** — "what does Assignment mean", "is a Business Process allowed to trigger an Application Event", "which Appendix B entry covers Serving between Component and Interface". Go to step 1a.
+   - **Domain discovery** — "what processes exist in / for / around {feature}", "what business processes have we modelled". Go to step 1b.
+   - **Reverse lookup** — "which process does {symbol | file | function | endpoint | UI component} belong to". Go to step 1c.
 
-1. **Locate.** Grep reference for the concept (element type, relationship, diagram kind, OEF `xsi:type`, Appendix B entry). Load only the matched section.
+1a. **Notation Q&A — locate.** Grep reference for the concept (element type, relationship, diagram kind, OEF `xsi:type`, Appendix B entry). Load only the matched section.
 
-2. **Answer concisely.** One or two sentences citing the reference section and (if applicable) ArchiMate 3.2 chapter or Appendix B entry. Include the default rule when it's a §4 layer-specific preference or a §5.5 well-formedness rule.
+1b. **Domain discovery — scan canonical paths.** Enumerate `docs/architecture/**/*.oef.xml`. Parse each file and filter views by diagram kind (§9.7 Business Process Cooperation or §9.8 Service Realisation). Within filtered views, list each Business Process / Event / Interaction element with its `<name>`, owning view identifier, and the file path. If the question narrows to a feature area, filter by feature-file basename (e.g., "order-to-cash" → `docs/architecture/order-to-cash.oef.xml`). Return a ranked list — by feature proximity, then by number of incoming Triggering edges (entry-point processes first).
+
+1c. **Reverse lookup — backend path.** If the symbol is a backend orchestrator / workflow: (i) locate the symbol via `Grep` / `Glob`; (ii) find the enclosing Durable Functions orchestrator (`[Function]` on a function whose trigger parameter is `TaskOrchestrationContext` / `IDurableOrchestrationContext`) or Logic Apps workflow (`workflow.json`, `*.logicapp.json`, or Bicep `Microsoft.Logic/workflows`); (iii) search `docs/architecture/**/*.oef.xml` for a Business Process element whose preceding XML comment carries `LIFT-CANDIDATE source=<matching path>` — or whose `<name>` (case-insensitive, whitespace-trimmed) matches the orchestrator / workflow name — or whose `source=` custom property matches. Return the Business Process's `<name>`, owning view, and file path.
+
+1c. **Reverse lookup — UI path.** If the symbol is a UI file (Blazor `*.razor`, Next.js `app/**/page.tsx` or `pages/*.tsx`, or a React Router component file): search `docs/architecture/**/*.oef.xml` for a UI Application Component in a §9.8 view whose `<name>` equals the file's repo-relative path, or whose `source=` custom property matches the file path, or whose `<documentation>` contains the file's basename. If matched, walk the outgoing Realisation edge to the Business Process at the top of the §9.8 stack. Return its `<name>`, owning view, and file path.
+
+1c. **Reverse lookup — unmodelled fallback.** If neither path finds a match: report "unmodelled — for backend symbols, consider running Extract to generate a `LIFT-CANDIDATE` stub; for UI components, check the §9.8 view for this feature and author the UI Application Component per the Blazor idiom in reference §9.8". Do not fabricate a process name.
+
+2. **Answer concisely.** Notation Q&A: one or two sentences citing the reference section and (if applicable) the ArchiMate 3.2 chapter or Appendix B entry. Domain discovery / reverse lookup: return the ranked list or the single resolved Business Process; keep it to one line per entry. Include the default rule when a §4 layer-specific preference or §5.5 well-formedness rule applies.
 
 3. **Footer disclosure** (single line in lookup mode).
 
@@ -277,12 +289,13 @@ Deviations from defaults (if any): <list with reason>
 ### Extract mode
 
 ```
-<OEF XML document with FORWARD-ONLY comment blocks around stub element sections>
+<OEF XML document with FORWARD-ONLY comment blocks around fully-stubbed element sections, and LIFT-CANDIDATE XML comments preceding each Business Process / Event / Interaction emitted from backend workflow sources>
 
 Extraction summary:
-  Layers lifted:          Application (<n>), Technology (<n>), Implementation & Migration (<n>)
-  Layers stubbed (forward-only): Business, Motivation, Strategy — architect fills in
-  Sources read:           <list of files>
+  Layers lifted:          Application (<n>), Technology (<n>), Implementation & Migration (<n>), Business-Process (<n_lift_candidates>)
+  Layers stubbed (forward-only): Motivation, Strategy; Business-other (Actor / Role / Collaboration / Object / Contract / Product / Service / Function)
+  Sources read:           <list of files, including Durable Functions orchestrators and Logic Apps workflows when present>
+  LIFT-CANDIDATE confidence: <n_high> high / <n_medium> medium / <n_low> low
   Elements preserved from existing diagram: <n>/<n>
   Drift vs existing diagram: <added / removed / changed counts, or n/a if greenfield>
 ```
@@ -315,9 +328,14 @@ Runtime-verified drift: <n findings, or "drift detection not run">
 Output contains any of the following? Stop; fix before delivering:
 
 - **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate 3.2 Appendix B (Relationships Table).
-- **Business Process, Business Function, Business Service, Business Actor, Business Role, or Business Object emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`; these layers are forward-only by design.
+- **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2).
+- **Business Process, Event, or Interaction emitted by Extract mode without a `LIFT-CANDIDATE` marker** (or with a marker missing the required `source=` or `confidence=` attribute). Fix per `AD-14-LC`; these elements are *partially* forward-only — lifted from backend workflow sources per reference §7.4 and tagged so the architect can confirm each one.
 - **Motivation or Strategy elements emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`.
-- **Layer soup** — a single diagram containing Business, Application, Technology, Motivation, and Strategy elements without a clear concern. Fix per `AD-1`; pick one of the six supported diagram kinds (reference §9).
+- **Layer soup** — a single diagram containing Business, Application, Technology, Motivation, and Strategy elements without a clear concern. Fix per `AD-1`; pick one of the eight supported diagram kinds (reference §9).
+- **Business Process Cooperation view lacking a Triggering or Flow chain** through its Behaviour elements, or containing non-Business-layer elements. Fix per `AD-B-1` / `AD-B-4`.
+- **Service Realisation view with a Business Process at top but no realising Application Service** (`AD-B-6`) or **no Application Component realising the Application Service** (`AD-B-7`).
+- **Service Realisation view for a user-driven Business Process** (one with a Business Actor Assignment per reference §4.1) **lacking a UI Application Component and Application Interface** at the entry point. Fix per `AD-B-10`; add the UI Component (for Blazor: `<name>` = the page component's file path) and the Application Interface (`<name>` = the `@page` route) with the appropriate Realisation / Assignment edges.
+- **Business Process in a §9.7 view with no Realisation into any §9.8 / §9.3 view for the same feature.** Fix per `AD-B-8`; either author the drill-down view or retract the process.
 - **Missing Realisation chain** — a Business Service in scope with no Application Service realising it, or an Application Service with no Application Component. Fix per `AD-6`.
 - **Active structure directly accessing passive structure** — an Actor drawn accessing a Business Object without a Process / Function in between. Fix per `AD-4`.
 - **Association overuse** — more than one Association relationship in a single diagram. Fix per `AD-5`; pick a real relationship.
@@ -345,4 +363,4 @@ Output contains any of the following? Stop; fix before delivering:
 - **Drift detection reads the repo, not a live Azure subscription.** The skill detects drift between a diagram and the committed code / IaC state; it does not detect drift between the IaC and actual deployed resources. Real-world drift (someone ran `az` in production) needs Azure Resource Graph or Defender for Cloud, not this skill.
 - **Archi-specific canvas features are lost.** OEF is tool-neutral; custom figures, visual group styling, and Archi-specific viewpoint editor state are not round-tripped. Architects who need these edit in Archi directly after the skill's initial import. Reference §6.10.
 - **The well-formedness checker is the skill, not the schema.** The skill does not run XSD validation at runtime — emitted files are correct by construction (every `xsi:type` drawn from the ArchiMate 3.2 catalog, every relationship validated against Appendix B in Build and Review). XSD validation is delegated to the architect's toolchain: Archi's import rejects malformed XML; `xmllint --schema http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd <file>.oef.xml` is the explicit path. **`xmllint --noout` alone is not sufficient** — it checks XML well-formedness only and will not catch schema-level issues such as abstract-type violations (`AD-15`). Build's `[static]` self-check passing does not guarantee schema validity — it guarantees ArchiMate well-formedness only.
-- **The six supported diagram kinds are a deliberate subset** of ArchiMate's expressive range. ViewPoints and less-common kinds (Product Map, Organisation Structure, Information Structure, Physical) are expressible in OEF but not first-class in v1 — reference §9.
+- **The eight supported diagram kinds are a deliberate subset** of ArchiMate's expressive range. ViewPoints and less-common kinds (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF but not first-class in v1 — reference §9.

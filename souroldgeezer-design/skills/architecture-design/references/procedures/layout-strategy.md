@@ -18,7 +18,7 @@ Three design choices drive everything else in this procedure:
 
 1. The element set for the view (already assigned to their ArchiMate layer via `xsi:type`, per reference §3–§4).
 2. The relationship set (already validated against Appendix B, per reference §5).
-3. The diagram kind (one of the six supported in reference §9).
+3. The diagram kind (one of the eight supported in reference §9).
 4. Any prior view at the canonical path, parsed for architect-chosen placements (reference §6.4; project-assimilation rule).
 
 ## The banded grid
@@ -157,6 +157,26 @@ Every `<connection>` that wasn't hidden by Step 5:
 | Edge crossings per view | `node_count / 4` | `AD-L5` info |
 
 Over budget → prefer one of: split into two views (by feature or by aspect), promote a cluster to a Grouping element (reference §4.8; logical cluster, never a layer container), or move peripheral elements to a separate Motivation / Migration view.
+
+## Process-flow exception (Business Process Cooperation, §9.7)
+
+When the view's `viewpoint` attribute is `Business Process Cooperation` (reference §9.7), the Business row is laid out as a three-lane horizontal strip instead of the default banded cell. All other rows in the same view (Application, Technology, etc. — rarely present given §9.7 is a single-layer view, but legal when nested or contextualised) use the default banded grid.
+
+**Trigger.** `diagram_kind == "Business Process Cooperation"` — detected by the view's `viewpoint="Business Process Cooperation"` attribute, or by pre-flight input during Build.
+
+**Three lanes inside the Business band** (`y ∈ [280, 480]` per reference §6.4a):
+
+- **Behaviour lane** `y ∈ [360, 420]` — Business Process, Business Event, and Business Interaction elements placed left-to-right in the order produced by a topological sort of the view's Triggering and Flow relationships. Tiebreaks are resolved by identifier ascending (consistent with Step 3's tiebreak convention). `x` starts at the Behaviour column's `x_start = 560` and advances by `element.w + 40` per element; the strip may span into the Active-structure and Passive-structure columns as needed to accommodate the chain.
+- **Active lane** `y ∈ [280, 340]` — Business Actor, Business Role, and Business Collaboration elements placed directly above the Behaviour element they are Assigned to (same `x` midpoint as the Behaviour element).
+- **Passive lane** `y ∈ [440, 480]` — Business Object, Contract, Product, and Data Object elements placed directly below the Behaviour element that Accesses them (same `x` midpoint).
+
+**Steps preserved.** Step 1 (architect-positioned overrides are respected — on re-run, architect-authored `x`, `y`, `w`, `h` are reused verbatim), Step 5 (nesting of Composition / Aggregation / Realization inside the parent where applicable), Step 7 (orthogonal routing on the 10-px grid with bend points). View-budget caps (`AD-L4`: ≤ 20 elements and ≤ 30 relationships per view) are unchanged.
+
+**Steps replaced for the Business row only.** Steps 2–4 (cell assignment, within-cell vertical stacking, barycentric crossing-minimisation reorder) and Step 6 (default structure / behaviour / passive cell placement) are superseded by the lane rules above. The rest of the view — if any non-Business elements appear — follows the default banded grid.
+
+**Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle are placed in identifier-ascending order, the remaining acyclic elements place normally around them, and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely); a dedicated cycle-specific smell is deferred.
+
+**No layout exception for §9.8 Service Realisation.** Service Realisation views are vertical stacks across layers — exactly what the default banded grid produces. No exception needed; see reference §9.8 for the palette and the `AD-L4` note on the Application band's 4-element budget (UI Component, Interface, Service, Backend Component).
 
 ## Colour and stroke
 

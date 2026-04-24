@@ -96,6 +96,8 @@ Only the most frequently used elements are surfaced here; consult ArchiMate 3.2 
 
 **Default.** Model the Business Layer via Business Process and Business Service first; add Function only when a process is too fine-grained; add Actor/Role only when ownership matters to the diagram.
 
+**User-driven vs system-driven process steps.** A Business Process (or Event / Interaction) is *user-driven* when it carries an Assignment from a Business Actor — optionally playing a Business Role — whose Actor represents a human user of the system (Customer, Admin, Support Agent, External Partner). It is *system-driven* when it has no Actor Assignment, or is Assigned only to Application Services that realise it. The distinction is load-bearing for §9.8 Service Realisation: user-driven steps must show a UI entry point (UI Application Component + Application Interface); system-driven steps need not. Cross-referenced from §9.7 and §9.8.
+
 ### 4.2 Application Layer (ArchiMate 3.2 Chapter 6)
 
 - **Application Component** — a software unit that is independently deployable and replaceable — a microservice, a library, a serverless Function App, a Blazor WebAssembly client, a worker. Components expose behaviour through Application Interfaces and realise Application Services.
@@ -342,6 +344,8 @@ Coordinate emission is governed by a deterministic banded-grid procedure — sam
 
 **View budget.** A view is compact when it carries at most 20 elements and 30 relationships; nesting depth capped at 2. Over budget → split by feature or aspect, promote a cluster to a Grouping (§4.8; logical cluster only, never a layer container), or move peripheral concerns to a separate Motivation / Migration view.
 
+**Process-flow exception (§9.7).** When the view's diagram kind is Business Process Cooperation, the Business row refolds into a three-lane horizontal strip — Behaviour elements placed left-to-right in Triggering/Flow order, Active structure stacked above, Passive structure below — instead of the default cell-per-aspect layout. The 10-px grid, orthogonal routing, and view-budget caps (≤ 20 elements / ≤ 30 relationships) still apply; only the within-row placement changes. Full algorithm and lane boundaries in [../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md). §9.8 Service Realisation uses the default banded grid with no exception — its vertical realisation stack is exactly what the default produces — but its Application band may hold up to 4 elements (UI Component, Application Interface, Application Service, Backend Component), at the `AD-L4` 4-per-cell budget.
+
 **Style.** Do not emit `<style>` on `<node>` placements. Undeclared style lets each rendering tool apply its layer-idiomatic colours. The only acceptable `<style>` emission is a neutral fill on a Grouping to distinguish it from contained elements.
 
 **Re-extract preserves architect positions.** On every run, elements already present at the canonical path with an architect-authored `x`, `y`, `w`, `h` are reused verbatim; only new elements (absent from the prior view) receive algorithmic placement. This is how hand edits survive automated re-extraction (§6.6 identifier preservation is the coupling mechanism).
@@ -425,7 +429,8 @@ then the diagram is out of scope for `architecture-design` Build mode and the ar
 
 | Layer | Why forward-only | Extract output |
 |---|---|---|
-| **Business** | Business Processes, Services, Actors, Roles live in domain understanding, not in code. An Azure Function named `ProcessOrder` is not a Business Process — it may be the Application Function realising one, but the Process itself is a decision the architect makes | Emitted as a typed stub: `' forward-only — architect fills in: Business Layer` block with suggested placeholders inferred from Application Component names (e.g., a Component called `OrdersApi` implies a plausible Business Service *Order Management*) |
+| **Business** (Actor, Role, Collaboration, Object, Contract, Product, Service, Function) | These elements live in domain understanding, not in code. Naming, ownership, agreements, and competency grouping are architect decisions | Emitted as a typed stub: `' forward-only — architect fills in: Business Layer` block with suggested placeholders inferred from Application Component names (e.g., a Component called `OrdersApi` implies a plausible Business Service *Order Management*) |
+| **Business** (Process, Event, Interaction) | Partially extractable from backend workflow sources. When Durable Functions orchestrators or Logic Apps workflow definitions are present, their chain shape is a reasonable candidate for a Business Process (with Events at triggers); the architect confirms or rejects. When those sources are absent, the elements remain forward-only | Emitted with a per-element `LIFT-CANDIDATE` marker (§7.4) citing the source path and a confidence score. Architect removes the marker to accept, or removes the element to reject |
 | **Motivation** | Drivers, Goals, Outcomes, Principles, Requirements live in strategy documents, architectural decision records, compliance artefacts. Extracting them from code would be fabrication | Emitted as a typed stub identifying where the architect should input |
 | **Strategy** | Capabilities and Value Streams are organisational artefacts, not codebase ones | Emitted as a typed stub |
 
@@ -442,6 +447,29 @@ Every Extract output that includes typed stubs for forward-only layers prefixes 
 ```
 
 The footer (§9 of SKILL.md) lists which layers were lifted vs stubbed so the architect's review focus is clear.
+
+### 7.4 Lift candidates for Business Process / Event / Interaction
+
+Business Process, Event, and Interaction sit between the forward-only and extractable categories: their shape is plausibly readable from backend workflow sources, but the final naming, granularity, and business framing are architect calls. Extract emits them with a per-element `LIFT-CANDIDATE` marker so the architect can confirm or reject each one independently.
+
+**Marker format.** An XML comment immediately preceding the `<element>`:
+
+```xml
+<!-- LIFT-CANDIDATE — architect confirms: source={path/to/source:line}, confidence=high|medium|low -->
+<element identifier="id-place-order-proc" xsi:type="BusinessProcess">
+  <name xml:lang="en">Place Order</name>
+</element>
+```
+
+The `source=` attribute cites the file path (and optional line number) of the orchestrator / workflow that motivated the lift. The `confidence=` attribute captures how unambiguously the chain shape mapped — `high` for an unambiguous linear or fan-out-fan-in chain; `medium` for nested sub-orchestrators, dynamic activity names, or multiple triggers; `low` for heuristic fallback. The `source=` attribute is how reverse Lookup (SKILL.md) resolves "which process does this symbol belong to" without an auxiliary index file.
+
+**Architect workflow.** On first review, either (a) accept by deleting the `LIFT-CANDIDATE` comment and keeping the element, (b) reject by deleting both the comment and the element, or (c) rename and enrich the element (Role Assignment, Access to Business Objects, Triggering edges that the lifter didn't see) while keeping the marker until the step is audited. The marker never re-emerges once deleted; re-running Extract on the same source produces the same element identifier and leaves accepted elements alone.
+
+**Lifting sources (v1).** Durable Functions orchestrators (`[OrchestrationTrigger]` / `[Function]` pairs using `IDurableOrchestrationContext` or `TaskOrchestrationContext`) and Logic Apps definitions (`workflow.json`, `*.logicapp.json`, or Bicep `Microsoft.Logic/workflows`). Service Bus subscription chains are a plausible v2 source. GitHub Actions workflows continue to lift to the Implementation & Migration layer (Work Packages) — they describe deployment, not business flow.
+
+**UI routes are not lifted in v1.** §9.8 Service Realisation views that include a UI Application Component and Application Interface at the entry point for a user-driven Business Process are hand-authored by the architect. The Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path; Application Interface `<name>` = the `@page` route string. Other frontend stacks (Next.js App Router / Pages Router, React Router) follow the same convention but do not carry a v1-specific idiom callout. Full authoring rules in [../../skills/architecture-design/references/procedures/lifting-rules-process.md](../../skills/architecture-design/references/procedures/lifting-rules-process.md).
+
+**Drift.** A lifted element whose `source=` file no longer exists (or no longer defines the matching orchestrator / workflow) triggers `AD-DR-11`; an orchestrator / workflow in the repo that no Business Process references triggers `AD-DR-12`. Both are `warn` — the architect decides which side reconciles.
 
 ## 8. Common smells
 
@@ -460,7 +488,8 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-11` Empty Grouping** — a Grouping with no elements, or a Grouping whose only purpose is visual (prefer Location, or drop it).
 - **`AD-12` Technology Layer reasoning without Path / Communication Network when concerns are latency or residency** — network-sensitive diagram drawn as if network is frictionless.
 - **`AD-13` Ambiguous Product/Contract/Service** — Product modelled with Service semantics or vice versa; Contract used as a documentation placeholder without a formal agreement.
-- **`AD-14` Forward-only layer emitted without the marker** — Extract output that populated Business/Motivation/Strategy elements without the `FORWARD-ONLY` header block.
+- **`AD-14` Forward-only layer emitted without the marker** — Extract output that populated Business (Actor / Role / Collaboration / Object / Contract / Product / Service / Function) / Motivation / Strategy elements without the `FORWARD-ONLY` header block (§7.3).
+- **`AD-14-LC` Lift-candidate emitted without the marker** — Extract output that populated a Business Process, Business Event, or Business Interaction from a backend workflow source without the per-element `LIFT-CANDIDATE` comment (§7.4). Without the marker, the architect cannot distinguish a confirmed element from an unreviewed candidate, and reverse Lookup has no `source=` anchor.
 - **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
 
 ### Layout smells — `AD-L*`
@@ -475,6 +504,28 @@ Artefact smells specific to `<view>` layout, derived from the §6.4a Layout stra
 - **`AD-L6` Non-orthogonal routing** — a `<connection>` whose source and target don't share an x or y coordinate carries no `<bendpoint>`, so renderers draw a diagonal line. The diagram mixes routing styles and reads inconsistently.
 - **`AD-L7` Nested-plus-edge** — a `<node>` is visually nested inside its parent *and* a visible `<connection>` for the parent-child relationship is emitted in the same view. The relationship is represented twice; Archi's ARM handles this poorly. Either hide the edge (add the `propid-archi-arm` = `hide` property to the relationship) or draw the elements side-by-side.
 - **`AD-L8` Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` coordinate that is not a multiple of 10. Diagrams drift visually on re-open / re-snap; git diffs churn on unrelated edits.
+
+### Process-flow smells — `AD-B-*`
+
+Artefact smells specific to §9.7 Business Process Cooperation and §9.8 Service Realisation. All `[static]` — verifiable from the `.oef.xml` source alone.
+
+- **`AD-B-1` Missing trigger chain** — a Business Process Cooperation view with two or more Behaviour elements (Business Process / Event / Interaction) that are not linked by any Triggering or Flow relationship into one temporal chain. The diagram shows steps without ordering; the "in what order does the business do what" question is unanswered.
+- **`AD-B-2` Disconnected participant** — a Business Actor, Role, or Collaboration placed in a §9.7 view with no Assignment relationship to any Behaviour element in that view. The participant is visually present but plays no part in the flow.
+- **`AD-B-3` Orphan Business Object** — a Business Object, Contract, Product, or Data Object (realising a Business Object) in a §9.7 view with no Access relationship from any Behaviour element. The passive-structure element floats; cf. `AD-4` for the related active-structure direct-access case.
+- **`AD-B-4` Non-Business element in Business Process Cooperation** — an Application, Technology, Motivation, or Strategy element present in a §9.7 view. Tighter than `AD-7` for this view kind specifically — §9.7 is a single-layer view by construction.
+- **`AD-B-5` Chain without entry or exit** — a §9.7 temporal chain has no Business Event at its origin (no trigger) and no terminal Business Service or Business Event (no declared outcome). The process appears to start and end in the middle of the air.
+- **`AD-B-6` Service Realisation without realising Application Service** — a §9.8 view with a Business Process at the top but no Application Service realising it. The "how is this step implemented" question fails at the first hop.
+- **`AD-B-7` Service Realisation without realising Application Component** — a §9.8 view with an Application Service present but no Application Component realising that service. The Realisation spine breaks at the Application layer before reaching a deployable artefact.
+- **`AD-B-8` Orphan Business Process — §9.7 end** — a Business Process in a §9.7 view has no Realisation chain into any §9.8 or §9.3 view for the same feature. The macro view claims the process exists; the drill-down views do not realise it. Between-view invariant of §7.4.
+- **`AD-B-9` Orphan Application Service — §9.8 end** — an Application Service in a §9.8 view realises no Business Process present in any §9.7 view for the same feature. The drill-down claims to realise a process that the macro view does not know about. Symmetric to `AD-B-8`.
+- **`AD-B-10` User-driven process without UI entry point** — a §9.8 view for a Business Process that carries a Business Actor Assignment in the paired §9.7 view (per §4.1's user-driven definition) lacks a UI Application Component and Application Interface at its entry point. Full-stack agents reading the model cannot tell which UI surface the user interacts with.
+
+### Drift smells — `AD-DR-*`
+
+Runtime smells that require reading current code / IaC / workflow state against the diagram. These extend the existing `AD-DR-*` namespace documented in [`drift-detection.md`](../../skills/architecture-design/references/procedures/drift-detection.md); the two new codes below cover hybrid process drift (§7.4).
+
+- **`AD-DR-11` Model process has no code** — a Business Process / Event / Interaction in a `docs/architecture/**/*.oef.xml` file has no matching Durable Functions orchestrator or Logic Apps workflow in the repo (either by `LIFT-CANDIDATE source=` mismatch, or by `<name>` mismatch when no `LIFT-CANDIDATE` is present) and no `planned` / `external` property marking it as intentionally absent.
+- **`AD-DR-12` Code workflow has no model** — a Durable Functions orchestrator or Logic Apps workflow exists in the repo but no Business Process element in any OEF file names it (directly or via `LIFT-CANDIDATE source=`). The architecture model trails the code; either the workflow should become a Business Process, or the model should acknowledge it as out of scope.
 
 ## 9. Diagram kinds supported in v1
 
@@ -498,7 +549,13 @@ Elements: Plateau (primary — at least Baseline and Target), Gap, Work Package,
 ### 9.6 Motivation View (Motivation only)
 Elements: Stakeholder, Driver, Assessment, Goal, Outcome, Requirement, Constraint, Principle. Influence and Realisation relationships. Linked to Core views via separate realisation arrows from Core elements to Motivation elements.
 
-Diagram kinds not in this list (Product Map, Organisation Structure, Business Process Cooperation, Information Structure, Service Realisation, Layered, Physical) are expressible in OEF XML — the element and relationship vocabulary is unbounded — but the skill does not generate them as a first-class diagram kind in v1. An architect can model them directly in Archi and the skill's Review mode will still parse the result.
+### 9.7 Business Process Cooperation (Business only)
+Elements: Business Process, Business Event, Business Interaction (primary, Behaviour); Business Actor, Business Role, Business Collaboration (Active structure, optional); Business Object, Contract, Product, Data Object (Passive structure, optional). Relationships: Triggering and Flow form the temporal chain; Assignment binds Actor / Role / Collaboration to Behaviour; Access binds Behaviour to Passive structure; Serving surfaces outward-facing Business Services. Used to answer "in what order does the business do what, and with whom". Layout is the process-flow exception in §6.4a — Behaviour left-to-right along the Triggering/Flow chain, Active structure above, Passive structure below. User-driven steps carry a Business Actor Assignment per §4.1; see §9.8 for the cross-layer drill-down that shows how each step is realised, including the UI surface.
+
+### 9.8 Service Realisation (Business + Application + Technology, UI-aware)
+Elements: Business Process (primary, at the top); UI Application Component Realising the Business Process for user-driven steps; Application Interface Assigned to the UI Component (the route); Application Service Realising the Business Process via the backend call path; Backend Application Component Realising the Application Service; Technology Service / Node hosting both Components. Relationships: Realisation forms the vertical spine; Assignment binds Interface → UI Component and Components → Nodes; Serving or Used-by represents UI → Backend-Service calls. Distinct from §9.3 Application-to-Business Realisation (which starts from Business Service); §9.8 starts from Business Process and includes the UI entry point, so full-stack readers can see both the front-end surface and the back-end stack in one diagram. Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path (e.g., `src/Client/Pages/Checkout.razor`); Application Interface `<name>` = the `@page` route string (e.g., `/checkout`). Other frontend stacks follow the same convention without a v1 callout. Layout is the default banded grid; the Application band may hold up to 4 elements (UI Component, Interface, Service, Backend Component), at the `AD-L4` 4-per-cell budget.
+
+Diagram kinds not in this list (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF XML — the element and relationship vocabulary is unbounded — but the skill does not generate them as a first-class diagram kind in v1. An architect can model them directly in Archi and the skill's Review mode will still parse the result.
 
 ## 10. Review checklist
 
@@ -512,6 +569,10 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
 - [static] Element identifiers and `<name>` values agree semantically (`AD-8`).
 - [static] Extract output with forward-only layers carries the FORWARD-ONLY marker (`AD-14`).
+- [static] Extract output with lifted Business Process / Event / Interaction elements carries a per-element `LIFT-CANDIDATE` comment with `source=` and `confidence=` attributes (`AD-14-LC`).
+- [static] Business Process Cooperation (§9.7) views have a connected Triggering/Flow chain (`AD-B-1`); participants are Assigned to Behaviour (`AD-B-2`); Passive structure is Accessed by Behaviour (`AD-B-3`); only Business-layer elements are present (`AD-B-4`); and the chain has a declared entry Event and terminal outcome (`AD-B-5`).
+- [static] Service Realisation (§9.8) views show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`) to an Application Component (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.8 or §9.3 view for the same feature (`AD-B-8`), and each §9.8 Application Service realises a Business Process present in some §9.7 view for the same feature (`AD-B-9`).
+- [static] Service Realisation views for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
 - [static] Every element's `y` coordinate sits within the band of its ArchiMate layer per §6.4a (Strategy `[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`) (`AD-L1`).
 - [static] No two `<node>` placements in the same view overlap — bounding-box intersection is zero for every pair at the same nesting depth (`AD-L2`).
 - [static] Every element's `w ≥ 120` and `h ≥ 55`; `w` is large enough that the `<name>` does not truncate at the default Archi font (heuristic: 7 px per character) (`AD-L3`).
@@ -525,6 +586,7 @@ Each item is tagged with a verification layer consistent with other reference do
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.
 - [runtime] Application Components that represent HTTP APIs have corresponding Azure Function Apps or equivalent described by `serverless-api-design` output; drift between the ArchiMate component set and the deployed API set is reported.
 - [runtime] Application Components that represent UI apps have corresponding Blazor WebAssembly projects or equivalent described by `responsive-design` output; drift is reported.
+- [runtime] Business Processes in `docs/architecture/**/*.oef.xml` have matching Durable Functions orchestrators or Logic Apps workflows in the repo (`AD-DR-11`), and every Durable Functions orchestrator and Logic Apps workflow is referenced by some Business Process (`AD-DR-12`); `LIFT-CANDIDATE source=` paths resolve to existing files.
 
 ## 11. Authoritative sources
 

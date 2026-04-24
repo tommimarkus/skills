@@ -55,18 +55,25 @@ When invoked, run the architecture-design skill and present results:
    sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
    never duplicate reference prose; run the §10 self-check (`[static]` /
    `[runtime]` tags) before handing back.
-4. For extract mode: invoke the three lifting procedures in
+4. For extract mode: invoke the four lifting procedures in
    [references/procedures/](../skills/architecture-design/references/procedures/)
    — `lifting-rules-dotnet.md` for the Application Layer, `lifting-rules-bicep.md`
    for the Technology Layer, `lifting-rules-gha.md` for Implementation &
-   Migration. For any element not carrying an architect-authored position
-   in a prior diagram at the canonical path, invoke
-   [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
+   Migration, `lifting-rules-process.md` for the partially-extractable Business
+   Layer subset (Business Process / Event / Interaction from Durable Functions
+   orchestrators and Logic Apps workflow definitions; each emitted with a
+   per-element `LIFT-CANDIDATE` XML comment per reference §7.4, including
+   `source=` and `confidence=` attributes). For any element not carrying an
+   architect-authored position in a prior diagram at the canonical path,
+   invoke [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
    architect-authored positions are preserved verbatim (procedure Step 1).
    Emit `FORWARD-ONLY — architect fills in` XML comment blocks per reference
-   §7.3 for Business / Motivation / Strategy sections the diagram kind
-   implies. Refuse Extract if the requested scope is entirely forward-only
-   layers, and suggest Build mode instead.
+   §7.3 for Motivation / Strategy and the remaining Business subset (Actor,
+   Role, Collaboration, Object, Contract, Product, Service, Function). Refuse
+   Extract if the requested scope is entirely forward-only layers, and
+   suggest Build mode instead. UI routes are not lifted in v1 — §9.8 UI
+   Application Components are hand-authored by the architect per the Blazor
+   idiom in reference §9.8.
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
    walks reference §10 checklist and emits `AD-*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
    drift detection (OEF file + current code/IaC) invokes
@@ -79,20 +86,30 @@ When invoked, run the architecture-design skill and present results:
 6. For lookup mode: answer in two to four lines with a reference citation
    (ArchiMate 3.2 chapter / Appendix B entry plus `architecture.md` §-ref).
 7. Red flags — stop and fix before delivering: invalid relationship per
-   Appendix B (`AD-2`); Business / Motivation / Strategy element emitted by
-   Extract without the `FORWARD-ONLY` marker (`AD-14`); layer soup in a
-   single diagram (`AD-1`); missing Realisation chain (`AD-6`); Active
-   structure directly accessing passive structure (`AD-4`); Association
-   overuse (`AD-5`); Migration View without a Plateau axis (`AD-9`); Extract
-   refused with no guidance about which mode to use instead; drift finding
-   claiming a pass from static review alone; element emitted with an
-   `xsi:type` not in the ArchiMate 3.2 catalog; bundled XSD file (the skill
-   must reference The Open Group's canonical schema URL, never copy the
-   schema locally); layout failures per reference §6.4a — node outside its
-   layer band (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures
-   with truncating labels (`AD-L3`), view over the 20-element / 30-relationship
+   Appendix B (`AD-2`); Business (Actor / Role / Collaboration / Object /
+   Contract / Product / Service / Function) / Motivation / Strategy element
+   emitted by Extract without the `FORWARD-ONLY` marker (`AD-14`); Business
+   Process / Event / Interaction emitted by Extract without the per-element
+   `LIFT-CANDIDATE` marker (`AD-14-LC`); layer soup in a single diagram
+   (`AD-1`); missing Realisation chain (`AD-6`); Active structure directly
+   accessing passive structure (`AD-4`); Association overuse (`AD-5`);
+   Migration View without a Plateau axis (`AD-9`); Extract refused with no
+   guidance about which mode to use instead; drift finding claiming a pass
+   from static review alone; element emitted with an `xsi:type` not in the
+   ArchiMate 3.2 catalog; bundled XSD file (the skill must reference The
+   Open Group's canonical schema URL, never copy the schema locally);
+   layout failures per reference §6.4a — node outside its layer band
+   (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures with
+   truncating labels (`AD-L3`), view over the 20-element / 30-relationship
    budget (`AD-L4`), nested-plus-edge double representation (`AD-L7`), or
-   off-grid coordinates (`AD-L8`).
+   off-grid coordinates (`AD-L8`); Business Process Cooperation view
+   lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
+   layer elements (`AD-B-4`); Service Realisation view with a Business
+   Process at top but no realising Application Service (`AD-B-6`) or no
+   Application Component (`AD-B-7`); Service Realisation view for a user-
+   driven Business Process (carrying a Business Actor Assignment per
+   reference §4.1) lacking a UI Application Component and Application
+   Interface at the entry point (`AD-B-10`).
 8. Always emit the footer disclosure: mode, reference path, canonical path,
    diagram kind, layers in scope, self-check result, project assimilation
    block (existing model reused; identifiers preserved; layers lifted vs
