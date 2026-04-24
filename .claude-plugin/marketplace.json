@@ -15,7 +15,7 @@
     {
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "description": "Reference-driven design for modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models — build, review, extract, and look up responsive interfaces (WCAG 2.2 AA, i18n, Core Web Vitals), serverless APIs (security, contract discipline, reliability, observability) across Azure Functions .NET, Cosmos DB, and Blob Storage, and ArchiMate 3.2 enterprise / solution architecture (serialised as OEF XML per The Open Group ArchiMate Model Exchange File Format 3.2, loadable in ArchiMate-conformant tools, with layered extract from .NET solutions, Bicep, host.json, staticwebapp.config.json, and GitHub Actions workflows), with composable per-stack extensions, canonical-path drift detection across sibling skills, and matching subagents."
     }
   ]

@@ -130,6 +130,18 @@ Rules:
 - A child may be nested in at most one parent per view. If a child has two valid parents, nest in the one whose relationship is Composition; fall back to the first parent in identifier order.
 - Nesting depth is capped at 2 (parent → child → grandchild). Deeper chains render correctly but exceed the view budget quickly — flag as `AD-L4` risk.
 
+### Step 5b — Multi-row sibling layout (new child, existing siblings)
+
+Common Extract scenario: a refresh adds a new child to a parent that already contains a horizontal row of architect-positioned siblings (matched by Step 1). The default Step 6 placement (centred on `parent.x`, stacked vertically below the last existing child) would put the new child on a second row beneath the first row of siblings. The parent→child Composition edge then routes (per Step 7 orthogonal) along the shortest path, which visually passes through one or more existing sibling boxes — making the relationship look anchored on a sibling instead of on the parent.
+
+Apply this rule before falling through to Step 6 for a *new* nested child whose row would land below at least one existing sibling row in the same parent:
+
+1. **Prefer a non-colliding `x`.** Compute the candidate placement window inside the parent: `x ∈ [parent.x + 20, parent.x + parent.w − 20 − child.w]`. Scan the existing siblings on the row(s) above the new child's row and collect the union of their x-extents `[sibling.x, sibling.x + sibling.w]`. If the candidate window contains any `x` that does not overlap any sibling x-extent, place the new child at the smallest such `x` (deterministic). The Composition edge then drops vertically inside the parent's whitespace and never crosses an existing sibling box; emit it as a normal hidden ARM-managed edge per Step 5.
+2. **Fall back to bendpoint routing.** If no non-colliding `x` fits within the parent's interior — every horizontal pixel inside `parent.w` overlaps an existing sibling — keep the default Step 6 centred placement and emit two bendpoints in Step 7 to route the parent→child Composition edge west of the parent (see Step 7 *Multi-row sibling clause*). The edge is visible (not ARM-hidden); the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling.
+3. **Grow `parent.w` if necessary.** If the candidate window is empty because the parent is narrower than its sibling row, grow `parent.w` per Step 5's existing rule before re-evaluating clause 1.
+
+The rule only fires when (a) the new child is genuinely new (not preserved by Step 1) and (b) the parent already contains at least one existing sibling on a row above the new child's row. Single-row insertions (the new child fits on the existing row at the next free slot) are unchanged from Step 5.
+
 ### Step 6 — Compute concrete coordinates
 
 For each non-nested element in `cell_elements[c, r]` in order:
@@ -147,6 +159,13 @@ Every `<connection>` that wasn't hidden by Step 5:
 - Orthogonal routing only: from source midpoint, one horizontal-then-vertical (or vertical-then-horizontal) path to target midpoint. Choose the path that introduces fewer crossings with existing edges; tiebreak by path-length.
 - Parallel edges in the same lane space 20 px apart.
 - Connection source/target connect to the side of the element that faces the other endpoint (left, right, top, bottom midpoint). Do not connect to corners.
+
+**Multi-row sibling clause.** When Step 5b clause 2 fired (new nested child placed on a row below existing siblings, with no non-colliding `x` available inside the parent), the parent→child Composition edge needs explicit bends to clear the existing sibling row(s); the default shortest-path orthogonal route would visually cross one or more sibling boxes. Emit exactly two bendpoints to route the edge west of the parent:
+
+- **Bendpoint 1** at `(parent.x − 20, parent.y + parent.h / 2)` — exits the parent's left midpoint and steps 20 px west of `parent.x`. Round both coordinates to the nearest 10.
+- **Bendpoint 2** at `(parent.x − 20, child.y + child.h / 2)` — descends along the same vertical lane to the child's y-level.
+
+Connect from the parent's left midpoint to the child's left midpoint via these two bendpoints. The Composition edge is visible in this case (not ARM-hidden) — the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling. If two or more multi-row children share the same parent, space their bendpoint columns 20 px apart per the parallel-edges rule above (`parent.x − 20`, `parent.x − 40`, …); collisions with the parent's own sibling on the layer-row are out of scope of this clause and addressed by widening the parent or splitting the view.
 
 ## View budget
 
