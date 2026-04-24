@@ -216,7 +216,7 @@ When in doubt, consult ArchiMate 3.2 Appendix B before emitting a relationship t
 
 ## 6. OEF XML serialisation
 
-The skill emits ArchiMate 3.2 models in The Open Group's **ArchiMate® Model Exchange File Format (OEF) 3.2**, defined in Appendix E of the ArchiMate 3.2 Specification (C226). OEF XML is the canonical portable interchange format for ArchiMate models; it is read and written by Archi, BiZZdesign Enterprise Studio, Sparx Enterprise Architect, Orbus iServer, Avolution ABACUS, HOPEX, and other conformant tools.
+The skill emits ArchiMate 3.2 models in The Open Group's **ArchiMate® Model Exchange File Format (OEF) 3.2**, defined in Appendix E of the ArchiMate 3.2 Specification (C226). OEF XML is the canonical portable interchange format for ArchiMate models; it is read and written by any ArchiMate-conformant tool (see §1 for the specific tools the skill has been validated against).
 
 ### 6.1 Namespace, schema, and root
 

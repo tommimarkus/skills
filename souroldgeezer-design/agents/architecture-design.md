@@ -11,8 +11,8 @@ description: >-
   discipline, and per-layer extractability (Application / Technology /
   Implementation & Migration are liftable from .NET solutions, Bicep, host.json,
   staticwebapp.config.json, and GitHub Actions workflows; Business / Motivation
-  / Strategy are emitted as forward-only stubs). Output is loadable in Archi,
-  BiZZdesign, Sparx, Orbus, and other ArchiMate-conformant tools. Supports four
+  / Strategy are emitted as forward-only stubs). Output is loadable in
+  ArchiMate-conformant tools. Supports four
   modes — Build (intent → model), Extract (code/IaC → model), Review (artefact
   review + drift detection against code/IaC), Lookup (narrow notation
   question). Bridges to the sibling responsive-design and serverless-api-design
