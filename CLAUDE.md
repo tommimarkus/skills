@@ -67,9 +67,36 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 ## Plugin registration
 
 Adding a new plugin:
-1. Create `<plugin-name>/.claude-plugin/plugin.json` (required: `name`, `version`, `description`; use `author: {name, email}` and `license: MIT` defaults from memory).
+1. Create `<plugin-name>/.claude-plugin/plugin.json` (required: `name`, `version`, `description`; use `author: {name, email}` and `license: MIT` defaults from memory). Start at `0.1.0`.
 2. Add it to `marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`.
-3. Plugin description in `plugin.json` and in `marketplace.json#plugins[]` should stay in sync.
+3. Plugin `name`, `description`, and `version` in `plugin.json` and in `marketplace.json#plugins[]` must stay in sync — every bump updates both files in the same commit.
+
+## Plugin versioning (MUST)
+
+Plugins follow semver, with the repo-specific interpretation below. **The version bump lives in the same commit as the content change that required it** — never defer. Both `<plugin>/.claude-plugin/plugin.json` and the matching `marketplace.json#plugins[]` entry move together.
+
+**What each bump kind means:**
+
+- **Major (`X.0.0` → `(X+1).0.0`)** — a **backwards-incompatible** change. Downstream consumers who installed the previous version will see something they relied on break. Examples: a skill is removed or renamed; a reference file is moved or renamed; an output contract changes (smell-code prefix renamed, canonical path changed, frontmatter field removed); a mode is removed; the `plugin.json#name` changes.
+- **Minor (`0.X.0` → `0.(X+1).0`)** — an **additive** change that existing consumers will not notice as a regression. Examples: a new skill is added to the plugin; a new extension is added under `skills/<skill>/extensions/`; a new mode is added to an existing skill; a new procedure is added under `references/procedures/`; a new reference section that shapes new output (a new `AD-L*` smell namespace, a new `§6.4a`); a new frontmatter field on a skill that downstream tooling may read.
+- **Patch (`0.1.X` → `0.1.(X+1)`)** — **prose-only or no-op behavioural** changes. Examples: rubric / reference prose tightening, typo fixes, clarifying rewrites, tightening language in a skill description that doesn't change what the skill does, README / CLAUDE.md updates that mention the skill without changing its surface.
+
+**When a bump is mandatory.** Commit touches any of the following under a `<plugin>/` directory:
+- `skills/<skill>/SKILL.md`, `agents/<name>.md`, `docs/<kind>-reference/**`, `skills/<skill>/references/**`, `skills/<skill>/extensions/**` → at least *patch*.
+- Any of the above that adds or removes a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace) → at least *minor*.
+- Any of the above that renames, removes, or breaks the contract of an existing top-level artefact → *major*.
+
+Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree.
+
+**Sibling-file sync.** A plugin-version bump often implies updates in neighbouring files that must land in the same commit:
+- `plugin.json#version` and `marketplace.json#plugins[].version` — always both.
+- `plugin.json#description` and `marketplace.json#plugins[].description` — when the change alters the plugin's surface (new skill, new mode), update both descriptions.
+- Frontmatter `description:` in any affected `SKILL.md` and matching `agents/<name>.md` — when the change alters what the skill does; required to stay in sync per the subagent pattern (see "Subagents" below).
+- `README.md` and `CLAUDE.md` — per the "Keeping CLAUDE.md and README.md current" rule above; the plugin bump and the documentation update are one commit.
+
+**Retroactive right-sizing is allowed.** If several content-changing commits landed at the same `0.Y.Z`, a catch-up bump in the next content-change commit is acceptable — note the catch-up in the commit message. Going forward, bump one step per commit.
+
+**Don't bump without content change.** A bare version-increment commit is a smell; it means earlier commits skipped their bump. Either the earlier commit is amended (rare — only before pushing) or the next content commit carries the catch-up.
 
 ## Skill architecture (shared pattern across skills)
 
