@@ -67,3 +67,23 @@ Motivation and Implementation & Migration columns span all five rows; their elem
 Composite types (`Location`, `Grouping`) inherit the row of their dominant child element class. A Grouping containing only Application Components gets the Application row.
 
 Output of Phase 2: each element has a `layer` ∈ {Strategy, Business, Application, Technology, Physical}.
+
+### Phase 3 — Within-layer ordering
+
+For each layer in top-to-bottom order (Strategy first):
+
+1. **Topological sort.** Compute the topological order of the same-layer DAG (post-Phase 1 cycle handling). Ties broken by aspect column (Active < Behaviour < Passive < Motivation < Implementation & Migration), then identifier ascending.
+2. **Aspect bias.** Within the topological order, group by aspect column — elements in the same aspect cluster together. This preserves the §2.3 default reading direction.
+
+Then run **4 passes** of barycentric crossing-minimisation between adjacent layers (current procedure had 1 pass):
+
+- **Pass 1 (top-down):** for each layer L from top to top+1, ..., top+(N-1): for each element `e` in layer L+1, compute `bary(e) = mean(index(n) for n in neighbours(e) where n in layer L)`. Re-sort layer L+1 by `bary(e)` ascending. Elements with no neighbours in layer L keep their Phase 3 step-1 order.
+- **Pass 2 (bottom-up):** symmetric, layer L compared against layer L-1.
+- **Pass 3 (top-down):** same as Pass 1 — refines convergence.
+- **Pass 4 (bottom-up):** same as Pass 2.
+
+After 4 passes, `cell_elements[layer, aspect, position]` is locked. Phase 4 reads this for coordinate computation.
+
+**Tiebreak in barycentric:** identifier ascending (preserves determinism).
+
+**Skip degenerate layers.** Layers with fewer than 2 elements skip the barycentric pass for that layer (no crossings possible).
