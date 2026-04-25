@@ -244,7 +244,7 @@ Every emitted file is a `<model>` element in the ArchiMate 3.0 namespace. The Op
 
 ### 6.1a Metadata (optional)
 
-OEF reserves the optional `<metadata>` block for cataloging metadata that lives outside the ArchiMate vocabulary. Schema-wise, `MetadataType`'s content is `<xs:any namespace="##other" processContents="strict" minOccurs="0" maxOccurs="unbounded"/>` — children **must come from a non-ArchiMate namespace**. The most common choice is Dublin Core (`http://purl.org/dc/elements/1.1/`):
+OEF reserves the optional `<metadata>` block for cataloguing metadata that lives outside the ArchiMate vocabulary. Schema-wise, `MetadataType`'s content is `<xs:any namespace="##other" processContents="strict" minOccurs="0" maxOccurs="unbounded"/>` — children **must come from a non-ArchiMate namespace**. The most common choice is Dublin Core (`http://purl.org/dc/elements/1.1/`):
 
 ```xml
 <metadata>
@@ -584,7 +584,7 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).
 - [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
-- [static] Every emitted `<metadata>` block's children come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: every direct child of `<metadata>` carries an `xmlns="..."` declaration whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
+- [static] Every emitted `<metadata>` block's children come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: every direct child of `<metadata>` carries either a default namespace declaration `xmlns="..."` or a prefixed declaration `xmlns:<prefix>="..."` (or inherits one from an ancestor) whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every behaviour element has an active structure assigned; every passive-structure element is accessed only through a behaviour (`AD-3`, `AD-4`).
 - [static] Realisation chains are complete for the scope of the diagram: Business Service has a realising Application Service; Application Service has a realising Application Component; Application Component is assigned to a Technology Node if the diagram reaches Technology (`AD-6`).
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
