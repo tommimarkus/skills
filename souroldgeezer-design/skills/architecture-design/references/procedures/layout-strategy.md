@@ -1,76 +1,22 @@
-# Layout strategy — banded grid for OEF XML views
+# Layout strategy — Sugiyama-v1 engine for OEF XML views
 
 Procedure for producing `<view>` node placements that are readable, diff-stable, and round-trippable through ArchiMate® conformant tools. Invoked by Build (always) and Extract (when an existing diagram has no prior view placements for the elements being added). Review uses the same rules — restated as checks — to flag `AD-L*` smells.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L8`).
+The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L11`).
 
 **Determinism is the point.** Given the same element set, relationship set, diagram kind, and layer scope, the procedure must produce the same `x`, `y`, `w`, `h` values every run. Re-extracts don't churn coordinates; git diffs on `.oef.xml` stay narrow; architect hand-edits survive because identifiers are preserved (reference §6.6) and layout is recomputed only for elements without an architect-chosen position.
 
-## Why deterministic banded grid
+## The three tiers
 
-Three design choices drive everything else in this procedure:
+The procedure is a deterministic three-tier pipeline:
 
-1. **Banded grid over free placement.** Every element lands in a fixed cell derived from `(layer, aspect)`. Free placement under a loose prompt is how real-world diagrams end up with overlaps, cut-off labels, and crossing soup.
-2. **Coordinates in the XML, not a layout hint.** An alternative is to emit no coordinates and let a tool's auto-layout engine (e.g. Archi's ELK-based plugin) place nodes at render time. That produces empty-coord views that other tools render at `(0, 0)`, loses git-diff readability, and breaks tools that don't ship an auto-layout engine. Explicit coordinates are the portable choice.
-3. **Nest instead of drawing Composition / Aggregation / Realization edges where the parent–child relation is visually natural.** Matches Archi's Automatic Relationship Management convention (the implementation tool most architects use) and is the single biggest crossing-reduction lever per the ArchiMate Cookbook (Hosiaisluoma §2.3.2, §2.3.5).
+1. **Tier 0 — Pre-flight.** Preserve architect-positioned `<node>` placements verbatim. Identify the §6.4a banding marker (`propid-archi-model-banded` value `v1`, `v2`, or absent).
+2. **Tier 1 — Sugiyama-v1 core engine.** Six phases — cycle handling, layer assignment, within-layer ordering (4-pass barycentric crossing minimisation), coordinate assignment (median heuristic), Manhattan A* edge routing, bounding-box normalisation.
+3. **Tier 2 — Per-viewpoint specialisations.** One sub-procedure per §9 viewpoint that overrides Tier 1 phases for the diagram-kind in scope.
 
-## Inputs
+Run Tier 0 → Tier 1 → Tier 2 in order. Tier 2 may short-circuit Tier 1 phases (see each specialisation's "Replaces phases" line).
 
-1. The element set for the view (already assigned to their ArchiMate layer via `xsi:type`, per reference §3–§4).
-2. The relationship set (already validated against Appendix B, per reference §5).
-3. The diagram kind (one of the seven supported in reference §9).
-4. Any prior view at the canonical path, parsed for architect-chosen placements (reference §6.4; project-assimilation rule).
-
-## The banded grid
-
-All coordinates are pixels, origin top-left, positive down — per OEF XML convention (reference §6.4). All values are integer multiples of the grid.
-
-**Grid.** 10 px. Every `x`, `y`, `w`, `h` is a multiple of 10. Matches Archi's default snap-to-grid granularity; architects who open the file see pixel-perfect alignment without re-snapping.
-
-**Canvas columns (aspects — left to right).** Five fixed columns, 240 px wide, 20 px gutters:
-
-| Column | `x` start | `x` end | Used by |
-|---|---:|---:|---|
-| Motivation | 40 | 280 | Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Value, Meaning |
-| Active structure | 300 | 540 | Actor, Role, Component, Node, Device, System Software, Interface, Collaboration |
-| Behaviour | 560 | 800 | Process, Function, Interaction, Service, Event |
-| Passive structure | 820 | 1060 | Business Object, Data Object, Artifact, Contract, Product |
-| Implementation & Migration | 1080 | 1320 | Work Package, Deliverable, Implementation Event, Plateau, Gap |
-
-**Canvas rows (layers — top to bottom).** Five fixed rows, 200 px tall, 40 px gutters; matches the canonical ArchiMate Framework arrangement (Strategy top, Physical bottom) and the Cookbook's Layered View convention (top-down by layer):
-
-| Row | `y` start | `y` end | Used by |
-|---|---:|---:|---|
-| Strategy | 40 | 240 | Resource, Capability, Value Stream, Course of Action |
-| Business | 280 | 480 | Business-layer elements |
-| Application | 520 | 720 | Application-layer elements |
-| Technology | 760 | 960 | Technology-layer elements |
-| Physical | 1000 | 1200 | Physical-layer elements |
-
-Motivation and Implementation & Migration columns span all five rows — they are not per-layer. Their elements are placed by row = the layer their Realisation target belongs to (reference §2.4, Core-vs-extension rule).
-
-A cell is one `(column, row)` intersection. A diagram with only Application Cooperation (reference §9.2) uses one cell (Application × Active / Behaviour / Passive) and the others are empty.
-
-## Default element sizes
-
-Every element placed by this procedure carries explicit `w` and `h`. Sizes are minimums — when a `<name>` is long enough that the default would truncate, enlarge `w` in 20-px steps until it fits (assume 7 px per character at the default font; architects can override after import).
-
-| Element class | Default `w` | Default `h` | Rationale |
-|---|---:|---:|---|
-| Structure (Component, Node, Device, System Software, Actor, Role, Interface, Artifact) | 140 | 60 | Fits 18–20 characters; the commonest case |
-| Behaviour (Process, Function, Interaction, Service, Event) | 160 | 60 | Verb-noun labels run longer ("Place Order", "Process Payment") |
-| Motivation (Goal, Requirement, Constraint, Principle, Driver, Assessment, Stakeholder, Outcome, Value, Meaning) | 180 | 60 | Longer labels plus the layer's icon |
-| Strategy (Capability, Value Stream, Resource, Course of Action) | 180 | 60 | Same as Motivation |
-| Passive (Business Object, Data Object, Contract, Product) | 140 | 60 | Short noun labels |
-| Implementation & Migration (Work Package, Deliverable, Implementation Event, Plateau, Gap) | 160 | 60 | Plateau labels are often environment names ("Production") |
-| Grouping (container for logical cluster) | computed | computed | `w = max(child.w) + 40`, `h = sum(child.h) + 20 × (n+1)`, min `200 × 120` |
-| Junction | 14 | 14 | ArchiMate convention |
-
-**Minimum size enforcement.** `w ≥ 120`, `h ≥ 55`. Below either, the label truncates in Archi's default figure — triggers `AD-L3` in Review.
-
-## Placement algorithm
-
-Run once per view.
+## Tier 0 — Pre-flight
 
 ### Step 1 — Preserve architect positions
 
@@ -78,7 +24,15 @@ If a prior view exists at the canonical path and contains a `<node>` for this el
 
 Record the set of *new* elements (present in this run, absent from the prior view) — only these get algorithmic placement.
 
-**Pre-§6.4a legacy models.** When the prior file lacks the model-level marker `propid-archi-model-banded=v1` (reference §6.4a *Banding marker*), the file pre-dates the banded-grid contract. Extract preserves its coordinates verbatim per the rule above and **never auto-injects the marker** — auto-injection would assert §6.4a conformance over coordinates that were never §6.4a-conformant. Legacy files therefore stay unmarked; Review soft-grades AD-L1 to `info` for them (reference §8). The architect rebands a legacy file by re-running Build for the affected views, which writes a fresh marker; an automated `rebrand` Extract sub-mode is deferred to a later release.
+### Step 2 — Read the banding marker
+
+Inspect `<property propertyDefinitionRef="propid-archi-model-banded">` on the model root. Possible values:
+
+- `v2` — file was authored under the Sugiyama-v1 engine (this procedure). New elements use the full Tier 1 / Tier 2 pipeline; existing layout is consistent.
+- `v1` — legacy file from pre-0.8.0 banded-grid layout. Preserve all coordinates verbatim per Step 1 above; **never auto-inject the v2 marker** — auto-injection would assert §6.4a v2 conformance over coordinates that pre-date it. Architects rebrand a legacy file by re-running Build for the affected views, which writes a fresh `v2` marker.
+- (absent) — pre-§6.4a legacy. Same preservation behaviour as `v1`.
+
+Build emits `v2` on every new file (no prior view at canonical path).
 
 ### Step 2 — Assign each new element to a cell
 
