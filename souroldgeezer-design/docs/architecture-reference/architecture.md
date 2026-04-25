@@ -8,7 +8,7 @@ This reference is the authoritative ground for the skill. It grounds in **The Op
 
 **Notation conformance.** The skill emits ArchiMate 3.2 models as **OEF XML** (The Open Group ArchiMate® Model Exchange File Format 3.2, Appendix E of C226). Files are loadable by Archi, BiZZdesign Enterprise Studio, Sparx Enterprise Architect, Orbus iServer, Avolution ABACUS, HOPEX, and every mainstream ArchiMate tool. The skill does not bundle The Open Group's XSD schemas; emitted files reference the canonical schema URL (`xsi:schemaLocation`) so downstream validators fetch it from The Open Group directly. Validation beyond the skill's own well-formedness checks is pushed to the architect's toolchain — open the file in Archi or run `xmllint --schema <schema-url> <file>.oef.xml`.
 
-**Scope.** ArchiMate Core Framework (Business, Application, Technology layers) plus the Physical, Strategy, Motivation, and Implementation & Migration extensions. Composite elements (Location, Grouping) are in scope. ViewPoints are out of scope as a first-class construct in v1 — the reference instead documents a small set of diagram kinds that cover the concrete use cases (capability map, application cooperation, technology realisation, migration view). See §9.
+**Scope.** ArchiMate Core Framework (Business, Application, Technology layers) plus the Physical, Strategy, Motivation, and Implementation & Migration extensions. Composite elements (Location, Grouping) are in scope. ViewPoints are out of scope as a first-class construct in v1 — the reference instead documents a small set of diagram kinds that cover the concrete use cases (capability map, application cooperation, service realization, technology usage, migration). See §9.
 
 ## 2. Principles
 

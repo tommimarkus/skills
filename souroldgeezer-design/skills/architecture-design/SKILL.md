@@ -33,7 +33,7 @@ Four modes — deliberately distinct from the 3-mode symmetry of `responsive-des
 
 **Use for:** producing a new ArchiMate diagram from architect intent.
 
-**Triggers:** "design the architecture for …", "model the …", "sketch an ArchiMate view of …", "build a capability map / application cooperation / technology realisation / migration view for …", "draw how … fits in the enterprise".
+**Triggers:** "design the architecture for …", "model the …", "sketch an ArchiMate view of …", "build a capability map / application cooperation / service realization / technology usage / migration view for …", "draw how … fits in the enterprise".
 
 ### Extract mode
 
