@@ -98,7 +98,7 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-11` | `info` | Cosmetic |
 | `AD-DR-1` through `AD-DR-7` | `warn` | Real drift; architect decides whether the diagram or the code is the source of truth |
 | `AD-DR-8`, `AD-DR-9`, `AD-DR-10` | `info` | Drift likely, but plausible architect-chosen divergence (friendly labels, planned Plateau transitions, forward-only ownership) |
-| `AD-L1` | `warn` when model carries `propid-archi-model-banded=v1`; `info` when marker absent | Structural layout failure when the model claims §6.4a conformance and breaks it; soft-graded on legacy files preserved across Extract refresh per reference §6.4a *Banding marker* |
+| `AD-L1` | `warn` when model carries `propid-archi-model-banded=v1` or `v2`; `info` when marker absent | Structural layout failure when the model claims §6.4a conformance and breaks it; soft-graded on legacy files preserved across Extract refresh per reference §6.4a *Banding marker* |
 | `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (overlap, truncated label) |
 | `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
 | `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
