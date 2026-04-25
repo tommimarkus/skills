@@ -144,3 +144,50 @@ Apply this rule before falling through to Phase 4's default centred placement fo
 3. **Grow `parent.w` if necessary.** If the candidate window is empty because the parent is narrower than its sibling row, grow `parent.w` per Step 5's existing rule before re-evaluating clause 1.
 
 The rule only fires when (a) the new child is genuinely new (not preserved by Tier 0 Step 1) and (b) the parent already contains at least one existing sibling on a row above the new child's row. Single-row insertions (the new child fits on the existing row at the next free slot) are unchanged from Step 5.
+
+### Phase 5 — Edge routing (Manhattan A* with obstacle avoidance)
+
+For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compute an orthogonal path that **avoids** the bounding boxes of all non-source / non-target nodes.
+
+**Algorithm:**
+
+1. **Source attach point** = side-midpoint of source `<node>` facing the target. Decision rule: pick the side closest to target's centre, breaking ties by preference order: right > down > left > up.
+2. **Target attach point** = side-midpoint of target `<node>` facing the source. Same decision rule (mirror).
+3. **Path: BFS over a 10-px grid.** Each grid cell is `(x // 10, y // 10)`. Start cell = source attach point grid-aligned. Goal cell = target attach point grid-aligned.
+4. **Obstacle map.** For every `<node>` other than source and target, mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden.
+5. **Cost function:** `cost = grid_step_count + bend_count × 5`. Each move along the same direction adds 1; each 90° turn adds the bend penalty (5 grid steps default).
+6. **Bend points:** every grid cell where the path direction changes becomes a `<bendpoint x="..." y="..."/>` child of `<connection>`. Convert grid-cell back to pixel by `x = cell_x × 10`.
+7. **Parallel edges in the same lane** (same source midpoint, same target midpoint) space 20 px apart in the perpendicular direction.
+
+**Multi-row sibling clause** (referenced by Step 5b clause 2). When Step 5b falls back to bendpoint routing for a new nested child placed below existing siblings, Phase 5 emits **two bendpoints** to route the parent→child Composition edge west of the parent's left edge: bendpoint 1 at `(parent.x − 20, parent.y + parent.h / 2)` (round to grid) and bendpoint 2 at `(parent.x − 20, child.y + child.h / 2)` (round to grid). The edge attaches to the parent's left midpoint and the child's left midpoint.
+
+**Specialisation hook for §9.4 Technology Usage:** hosting Assignment edges (`Assignment` relationships from Application Component to Technology Node) skip the A* and draw straight-vertical from source bottom-midpoint to target top-midpoint. Tier 2 §9.4 specialisation enables this carve-out.
+
+**Feedback edges** (marked by Phase 1) route last so other edges' lanes are placed first. No semantic difference; just a layering trick to reduce crossings on common paths.
+
+**Worked example.** Application Cooperation view (reference §9.2) with three Application Components and one Application Service:
+
+- `C1` = Orders API (ApplicationComponent, out-degree 2)
+- `C2` = Payments API (ApplicationComponent, out-degree 1)
+- `C3` = Orders Core (ApplicationComponent, in-degree 2; Composition parent of C1 and C2)
+- `S1` = Place Order (ApplicationService; realised by C1)
+
+Phase 2: all elements → Application layer.
+
+Phase 3: topological order (C3 → C1 → C2 → S1). Aspect grouping: C1, C2, C3 → Active structure column; S1 → Behaviour column.
+
+Phase 4 placements (single Application layer, `y_layer_top = 40` after Phase 6 normalisation; pre-normalisation values shown):
+
+- C3 at `(320, 540, 200, 200)` (grown to contain children).
+- C1 at `(340, 580, 160, 64)` (nested inside C3).
+- C2 at `(340, 664, 160, 64)` (nested inside C3, below C1, sibling gutter 40 px applies between non-nested but C1/C2 are nested — use the inner stacking rule of `+ element.h + 20` for nested children).
+- S1 at `(600, 540, 180, 64)`.
+
+Phase 5: only edge to route is `C1 → S1` (Realization). Composition edges C3 → C1, C3 → C2 are ARM-hidden by Step 5 nesting.
+
+Source: C1 right midpoint = `(500, 612)`. Target: S1 left midpoint = `(600, 572)`. BFS path: right from `(500, 612)` to `(600, 612)` (10 grid steps), up to `(600, 572)` (4 grid steps). One bend at `(600, 612)`. Total cost = 14 + 5 = 19.
+
+Phase 6: `(min_x, min_y) = (320, 540)`. Shift by `(40 - 320, 40 - 540) = (-280, -500)`. After shift:
+- C3 at `(40, 40, 200, 200)`. C1 at `(60, 80, 160, 64)`. C2 at `(60, 164, 160, 64)`. S1 at `(320, 40, 180, 64)`. Bend at `(320, 112)`.
+
+Result: one view, four elements, one visible connection, zero crossings, origin-aligned canvas.
