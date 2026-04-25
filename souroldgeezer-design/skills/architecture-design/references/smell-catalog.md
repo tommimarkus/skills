@@ -22,7 +22,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-6` | §8, §9.3 | Missing Realisation chain — Business Service with no realising Application Service, or Application Service with no realising Application Component |
 | `AD-7` | §8, §3.3, §2.4 | Core / extension mixing without cause — Core view containing Motivation elements, or vice versa |
 | `AD-8` | §8, §6.6–§6.7 | Identifier / `<name>` mismatch — element `identifier` slug carries different semantics than its `<name>` value |
-| `AD-9` | §8, §9.5 | Migration View without Plateau axis |
+| `AD-9` | §8, §9.5 | Migration view without Plateau axis |
 | `AD-10` | §8 | Motivation elements in a non-Motivation view without a Realisation relationship |
 | `AD-11` | §8, §4.8 | Empty Grouping, or Grouping used purely for visual framing |
 | `AD-12` | §8, §4.3 | Technology Layer diagram reasoning about latency or residency without Path / Communication Network elements |
@@ -48,7 +48,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 
 ## Process-flow smells — `AD-B-*`
 
-Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Process-flow smells*; diagram kinds: §9.7 (Business Process Cooperation) and §9.8 (Service Realisation); between-view invariant: §7.4.
+Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Process-flow smells*; diagram kinds: §9.7 (Business Process Cooperation) and §9.3 (Service Realization); between-view invariant: §7.4.
 
 | Code | Rubric | Description (one line; see rubric for full) |
 |---|---|---|
@@ -57,11 +57,11 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Proces
 | `AD-B-3` | §8 AD-B, §9.7 | Orphan Business Object — Business Object / Contract / Product / Data Object in a §9.7 view with no Access from any Behaviour element |
 | `AD-B-4` | §8 AD-B, §9.7, §2.4 | Non-Business element in §9.7 — Application / Technology / Motivation / Strategy element present in a Business Process Cooperation view |
 | `AD-B-5` | §8 AD-B, §9.7 | Chain without entry or exit — §9.7 chain has no Business Event at its origin and no terminal Business Service / Event |
-| `AD-B-6` | §8 AD-B, §9.8 | §9.8 view with a Business Process at top but no Application Service realising it |
-| `AD-B-7` | §8 AD-B, §9.8 | §9.8 view with an Application Service but no Application Component realising it |
-| `AD-B-8` | §8 AD-B, §9.7, §9.8, §7.4 | Orphan Business Process (§9.7 end) — Business Process in a §9.7 view has no Realisation chain into any §9.8 / §9.3 view for the same feature |
-| `AD-B-9` | §8 AD-B, §9.8, §9.7, §7.4 | Orphan Application Service (§9.8 end) — Application Service in a §9.8 view realises no Business Process present in any §9.7 view for the same feature |
-| `AD-B-10` | §8 AD-B, §9.8, §4.1 | User-driven process without UI entry point — §9.8 view for a Business Process carrying a Business Actor Assignment lacks a UI Application Component and Application Interface |
+| `AD-B-6` | §8 AD-B, §9.3 | §9.3 view (Process-rooted modality) with a Business Process at top but no Application Service realising it |
+| `AD-B-7` | §8 AD-B, §9.3 | §9.3 view with an Application Service but no Application Component realising it |
+| `AD-B-8` | §8 AD-B, §9.7, §9.3, §7.4 | Orphan Business Process (§9.7 end) — Business Process in a §9.7 view has no Realisation chain into any §9.3 view (Process-rooted modality) for the same feature |
+| `AD-B-9` | §8 AD-B, §9.3, §9.7, §7.4 | Orphan Application Service (§9.3 end) — Application Service in a §9.3 view (Process-rooted modality) realises no Business Process present in any §9.7 view for the same feature |
+| `AD-B-10` | §8 AD-B, §9.3, §4.1 | User-driven process without UI entry point — §9.3 view (Process-rooted modality) for a Business Process carrying a Business Actor Assignment lacks a UI Application Component and Application Interface |
 
 ## Drift smells — `AD-DR-*`
 

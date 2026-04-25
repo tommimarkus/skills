@@ -90,7 +90,7 @@ Compare Business Process / Event / Interaction elements in the model against Dur
 
 **Reconciliation options** (Step 4, below): (a) update the model — author the missing Business Process and either accept a fresh Extract's `LIFT-CANDIDATE` or hand-author with a `source=` custom property; (b) update the code — rename the orchestrator / workflow to match the modelled process name, or delete the orphan source; (c) annotate as *planned* / *external* when the divergence is intended (a modelled process not yet implemented, or an implementation the architect has no intent to model).
 
-**UI drift is not detected in v1.** A `@page` route in a Blazor project, or a Next.js `app/**/page.tsx` / `pages/*.tsx`, or a React Router declaration, is *not* compared against §9.8 UI Application Components — no UI route lifter runs. A future `AD-DR-13` could fire when a route has no UI Application Component in any §9.8 view; not implemented here.
+**UI drift is not detected in v1.** A `@page` route in a Blazor project, or a Next.js `app/**/page.tsx` / `pages/*.tsx`, or a React Router declaration, is *not* compared against §9.3 UI Application Components — no UI route lifter runs. A future `AD-DR-13` could fire when a route has no UI Application Component in any §9.3 view (Process-rooted modality); not implemented here.
 
 #### § Relationships (cross-layer summary)
 

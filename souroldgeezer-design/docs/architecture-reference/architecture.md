@@ -33,7 +33,7 @@ Business / Application / Technology is the default palette. A diagram claiming t
 Not every relationship is valid between every pair of element types. ArchiMate 3.2 Appendix B (Relationships Table) is the authoritative source. The skill's Review mode cites this table; Build and Extract emit only relationships that are well-formed per the table. A diagram with invalid relationships (e.g., a Business Process *realising* a Technology Node) is a smell regardless of how expressive it looks.
 
 ### 2.6 One layer does not imply one diagram
-A layered architecture can still be shown on a single diagram; a single layer can still require multiple diagrams. The rule is *one concern per diagram*, not *one layer per diagram*. Capability Map, Application Cooperation, Technology Realisation, and Migration View are each a single concern that pins the diagram's kind.
+A layered architecture can still be shown on a single diagram; a single layer can still require multiple diagrams. The rule is *one concern per diagram*, not *one layer per diagram*. Capability Map, Application Cooperation, Technology Usage, and Migration are each a single concern that pins the diagram's kind.
 
 ### 2.7 Extractability tracks the layer model
 Some layers live in code and infrastructure; others live in the architect's head and the business's strategy documents. This is a property of the notation, not a limitation of the skill — see §7.
@@ -96,7 +96,7 @@ Only the most frequently used elements are surfaced here; consult ArchiMate 3.2 
 
 **Default.** Model the Business Layer via Business Process and Business Service first; add Function only when a process is too fine-grained; add Actor/Role only when ownership matters to the diagram.
 
-**User-driven vs system-driven process steps.** A Business Process (or Event / Interaction) is *user-driven* when it carries an Assignment from a Business Actor — optionally playing a Business Role — whose Actor represents a human user of the system (Customer, Admin, Support Agent, External Partner). It is *system-driven* when it has no Actor Assignment, or is Assigned only to Application Services that realise it. The distinction is load-bearing for §9.8 Service Realisation: user-driven steps must show a UI entry point (UI Application Component + Application Interface); system-driven steps need not. Cross-referenced from §9.7 and §9.8.
+**User-driven vs system-driven process steps.** A Business Process (or Event / Interaction) is *user-driven* when it carries an Assignment from a Business Actor — optionally playing a Business Role — whose Actor represents a human user of the system (Customer, Admin, Support Agent, External Partner). It is *system-driven* when it has no Actor Assignment, or is Assigned only to Application Services that realise it. The distinction is load-bearing for §9.3 Service Realization (Process-rooted modality): user-driven steps must show a UI entry point (UI Application Component + Application Interface); system-driven steps need not. Cross-referenced from §9.7 and §9.3.
 
 ### 4.2 Application Layer (ArchiMate 3.2 Chapter 6)
 
@@ -171,7 +171,7 @@ Physical elements extend the Technology Layer with real-world material structure
 - **Plateau** — a named architectural snapshot at one point in the transformation — typically *Baseline* (today), one or more *Transition* states, and *Target* (the intended destination). Each Plateau is internally consistent even if the journey between them isn't.
 - **Gap** — the delta between two Plateaus — what must be added, removed, or changed to move from one architectural state to the next. Closed by Work Packages.
 
-**Default.** Use Plateau + Gap + Work Package in any Migration View that answers "how do we get from here to there." A Migration view without a Plateau axis is not a Migration view.
+**Default.** Use Plateau + Gap + Work Package in any Migration view that answers "how do we get from here to there." A Migration view without a Plateau axis is not a Migration view.
 
 ### 4.8 Composite: Location, Grouping
 
@@ -327,7 +327,7 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
     <view identifier="id-view-tech"
           xsi:type="Diagram"
           viewpoint="Technology">
-      <name xml:lang="en">Checkout — Technology Realisation</name>
+      <name xml:lang="en">Checkout — Technology Usage</name>
 
       <node xsi:type="Element" identifier="id-n-api" elementRef="id-orders-api"
             x="120" y="120" w="180" h="64"/>
@@ -347,7 +347,7 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
 
 **Abstract-type + `xsi:type` pattern.** `<view>`, `<node>`, and `<connection>` are all typed as abstract complexTypes in OEF (`ViewType`, `ViewNodeType`, `ConnectionType` respectively); every instance disambiguates via `xsi:type`. `<view>` concretises to `Diagram` (the only shape the skill emits in v1). `<node>` concretises to `Element` (when `elementRef` references a model element — the default for skill output), `Container` (layout-only), or `Label` (text). `<connection>` concretises to `Relationship` (when `relationshipRef` references a model relationship — the default) or `Line` (visual-only). Omitting `xsi:type` on a `<node>` or `<connection>` triggers `cvc-type.2` on schema-validating importers (Archi) and is flagged as `AD-15`.
 
-**Viewpoint attribute** carries the canonical ArchiMate 3.2 viewpoint name when one applies (Application Cooperation, Technology, Motivation, Migration, Implementation and Deployment, etc.); custom kinds may omit it. The skill's supported diagram kinds (§9) map to these values.
+**Viewpoint attribute.** Every §9 diagram kind has a canonical ArchiMate 3.2 Viewpoint enum value drawn from `ViewpointsEnum` in `archimate3_View.xsd`; the skill emits the exact enum string. The §9 English label and `viewpoint=` attribute value are identical (see §9 for the seven canonical strings). The XSD types `viewpoint` as `xs:union` of `xs:string` and `ViewpointsEnum`, so custom strings are schema-valid; the skill does not use them — every supported kind has a canonical match.
 
 **Element identity is shared across views.** Placing an element in three diagrams creates three `<node>` entries — three placements with their own coordinates — but the element itself appears once in `<elements>`. This is the model-vs-view separation at the heart of OEF: an Application Component is *one* thing, and every view that shows it shows the same thing.
 
@@ -369,7 +369,7 @@ Coordinate emission is governed by a deterministic banded-grid procedure — sam
 
 **View budget.** A view is compact when it carries at most 20 elements and 30 relationships; nesting depth capped at 2. Over budget → split by feature or aspect, promote a cluster to a Grouping (§4.8; logical cluster only, never a layer container), or move peripheral concerns to a separate Motivation / Migration view.
 
-**Process-flow exception (§9.7).** When the view's diagram kind is Business Process Cooperation, the Business row refolds into a three-lane horizontal strip — Behaviour elements placed left-to-right in Triggering/Flow order, Active structure stacked above, Passive structure below — instead of the default cell-per-aspect layout. The 10-px grid, orthogonal routing, and view-budget caps (≤ 20 elements / ≤ 30 relationships) still apply; only the within-row placement changes. Full algorithm and lane boundaries in [../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md). §9.8 Service Realisation uses the default banded grid with no exception — its vertical realisation stack is exactly what the default produces — but its Application band may hold up to 4 elements (UI Component, Application Interface, Application Service, Backend Component), at the `AD-L4` 4-per-cell budget.
+**Process-flow exception (§9.7).** When the view's diagram kind is Business Process Cooperation, the Business row refolds into a three-lane horizontal strip — Behaviour elements placed left-to-right in Triggering/Flow order, Active structure stacked above, Passive structure below — instead of the default cell-per-aspect layout. The 10-px grid, orthogonal routing, and view-budget caps (≤ 20 elements / ≤ 30 relationships) still apply; only the within-row placement changes. Full algorithm and lane boundaries in [../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md). §9.3 Service Realization uses the default banded grid with no exception — its vertical realisation stack is exactly what the default produces — but its Application band may hold up to 4 elements (UI Component, Application Interface, Application Service, Backend Component), at the `AD-L4` 4-per-cell budget.
 
 **Style.** Do not emit `<style>` on `<node>` placements. Undeclared style lets each rendering tool apply its layer-idiomatic colours. The only acceptable `<style>` emission is a neutral fill on a Grouping to distinguish it from contained elements.
 
@@ -498,7 +498,7 @@ The `source=` attribute cites the file path (and optional line number) of the or
 
 **Lifting sources (v1).** Durable Functions orchestrators (`[OrchestrationTrigger]` / `[Function]` pairs using `IDurableOrchestrationContext` or `TaskOrchestrationContext`) and Logic Apps definitions (`workflow.json`, `*.logicapp.json`, or Bicep `Microsoft.Logic/workflows`). Service Bus subscription chains are a plausible v2 source. GitHub Actions workflows continue to lift to the Implementation & Migration layer (Work Packages) — they describe deployment, not business flow.
 
-**UI routes are not lifted in v1.** §9.8 Service Realisation views that include a UI Application Component and Application Interface at the entry point for a user-driven Business Process are hand-authored by the architect. The Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path; Application Interface `<name>` = the `@page` route string. Other frontend stacks (Next.js App Router / Pages Router, React Router) follow the same convention but do not carry a v1-specific idiom callout. Full authoring rules in [../../skills/architecture-design/references/procedures/lifting-rules-process.md](../../skills/architecture-design/references/procedures/lifting-rules-process.md).
+**UI routes are not lifted in v1.** §9.3 Service Realization views (Process-rooted modality) that include a UI Application Component and Application Interface at the entry point for a user-driven Business Process are hand-authored by the architect. The Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path; Application Interface `<name>` = the `@page` route string. Other frontend stacks (Next.js App Router / Pages Router, React Router) follow the same convention but do not carry a v1-specific idiom callout. Full authoring rules in [../../skills/architecture-design/references/procedures/lifting-rules-process.md](../../skills/architecture-design/references/procedures/lifting-rules-process.md).
 
 **Drift.** A lifted element whose `source=` file no longer exists (or no longer defines the matching orchestrator / workflow) triggers `AD-DR-11`; an orchestrator / workflow in the repo that no Business Process references triggers `AD-DR-12`. Both are `warn` — the architect decides which side reconciles.
 
@@ -540,18 +540,18 @@ Artefact smells specific to `<view>` layout, derived from the §6.4a Layout stra
 
 ### Process-flow smells — `AD-B-*`
 
-Artefact smells specific to §9.7 Business Process Cooperation and §9.8 Service Realisation. All `[static]` — verifiable from the `.oef.xml` source alone.
+Artefact smells specific to §9.7 Business Process Cooperation and §9.3 Service Realization. All `[static]` — verifiable from the `.oef.xml` source alone.
 
 - **`AD-B-1` Missing trigger chain** — a Business Process Cooperation view with two or more Behaviour elements (Business Process / Event / Interaction) that are not linked by any Triggering or Flow relationship into one temporal chain. The diagram shows steps without ordering; the "in what order does the business do what" question is unanswered.
 - **`AD-B-2` Disconnected participant** — a Business Actor, Role, or Collaboration placed in a §9.7 view with no Assignment relationship to any Behaviour element in that view. The participant is visually present but plays no part in the flow.
 - **`AD-B-3` Orphan Business Object** — a Business Object, Contract, Product, or Data Object (realising a Business Object) in a §9.7 view with no Access relationship from any Behaviour element. The passive-structure element floats; cf. `AD-4` for the related active-structure direct-access case.
 - **`AD-B-4` Non-Business element in Business Process Cooperation** — an Application, Technology, Motivation, or Strategy element present in a §9.7 view. Tighter than `AD-7` for this view kind specifically — §9.7 is a single-layer view by construction.
 - **`AD-B-5` Chain without entry or exit** — a §9.7 temporal chain has no Business Event at its origin (no trigger) and no terminal Business Service or Business Event (no declared outcome). The process appears to start and end in the middle of the air.
-- **`AD-B-6` Service Realisation without realising Application Service** — a §9.8 view with a Business Process at the top but no Application Service realising it. The "how is this step implemented" question fails at the first hop.
-- **`AD-B-7` Service Realisation without realising Application Component** — a §9.8 view with an Application Service present but no Application Component realising that service. The Realisation spine breaks at the Application layer before reaching a deployable artefact.
-- **`AD-B-8` Orphan Business Process — §9.7 end** — a Business Process in a §9.7 view has no Realisation chain into any §9.8 or §9.3 view for the same feature. The macro view claims the process exists; the drill-down views do not realise it. Between-view invariant of §7.4.
-- **`AD-B-9` Orphan Application Service — §9.8 end** — an Application Service in a §9.8 view realises no Business Process present in any §9.7 view for the same feature. The drill-down claims to realise a process that the macro view does not know about. Symmetric to `AD-B-8`.
-- **`AD-B-10` User-driven process without UI entry point** — a §9.8 view for a Business Process that carries a Business Actor Assignment in the paired §9.7 view (per §4.1's user-driven definition) lacks a UI Application Component and Application Interface at its entry point. Full-stack agents reading the model cannot tell which UI surface the user interacts with.
+- **`AD-B-6` Service Realization without realising Application Service** — a §9.3 view in the Process-rooted modality (Business Process at the top) with no Application Service realising the Business Process. The "how is this step implemented" question fails at the first hop. Fires only when the §9.3 view contains a Business Process; the Service-rooted modality is unaffected.
+- **`AD-B-7` Service Realization without realising Application Component** — a §9.3 view with an Application Service present but no Application Component realising that service. The Realisation spine breaks at the Application layer before reaching a deployable artefact. Applies to both content modalities of §9.3 (Service-rooted and Process-rooted).
+- **`AD-B-8` Orphan Business Process — §9.7 end** — a Business Process in a §9.7 view has no Realisation chain into any §9.3 view (Process-rooted modality) for the same feature. The macro view claims the process exists; the drill-down views do not realise it. Between-view invariant of §7.4.
+- **`AD-B-9` Orphan Application Service — §9.3 end** — an Application Service in a §9.3 view (Process-rooted modality) realises no Business Process present in any §9.7 view for the same feature. The drill-down claims to realise a process that the macro view does not know about. Symmetric to `AD-B-8`.
+- **`AD-B-10` User-driven process without UI entry point** — a §9.3 view in the Process-rooted modality whose Business Process carries a Business Actor Assignment in the paired §9.7 view (per §4.1's user-driven definition) lacks a UI Application Component and Application Interface at its entry point. Full-stack agents reading the model cannot tell which UI surface the user interacts with.
 
 ### Drift smells — `AD-DR-*`
 
@@ -562,31 +562,35 @@ Runtime smells that require reading current code / IaC / workflow state against 
 
 ## 9. Diagram kinds supported in v1
 
-The skill supports a deliberately small set of ArchiMate diagram kinds. Each kind fixes the element palette and the concern, preventing layer soup.
+The skill supports seven ArchiMate diagram kinds. Each kind fixes the element palette and the concern, preventing layer soup. The §9 English label and the OEF `viewpoint=` attribute value are identical — every kind maps 1:1 to a canonical ArchiMate 3.2 Viewpoint per `ViewpointsEnum`.
 
 ### 9.1 Capability Map (Strategy + Business)
-Elements: Capability (primary), Business Function, Business Service (optional). Realisation and Composition relationships. Used by architects to answer "what do we do" before "how do we do it."
+**`viewpoint="Capability Map"`.** Elements: Capability (primary), Business Function, Business Service (optional). Realisation and Composition relationships. Used by architects to answer "what do we do" before "how do we do it."
 
 ### 9.2 Application Cooperation (Application)
-Elements: Application Component (primary), Application Service, Application Interface, Application Collaboration. Serving, Used-by, Realisation, Composition, Assignment. Used to show how software parts cooperate.
+**`viewpoint="Application Cooperation"`.** Elements: Application Component (primary), Application Service, Application Interface, Application Collaboration. Serving, Used-by, Realisation, Composition, Assignment. Used to show how software parts cooperate.
 
-### 9.3 Application-to-Business Realisation (Business + Application)
-Elements: Business Service (primary), Application Service realising it, Application Component realising the Application Service. Realisation relationships form the spine. Used to answer "which software realises which business service" at a single glance.
+### 9.3 Service Realization (Business + Application + Technology, optionally UI-aware)
+**`viewpoint="Service Realization"`.** Two content modalities under one canonical viewpoint:
 
-### 9.4 Technology Realisation (Application + Technology)
-Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material.
+- **Service-rooted modality.** Business Service (primary, at the top), Application Service realising it, Application Component realising the Application Service. Realisation relationships form the spine. Used to answer "which software realises which business service" at a single glance.
+- **Process-rooted UI-aware modality.** Business Process (primary, at the top); UI Application Component Realising the Business Process for user-driven steps; Application Interface Assigned to the UI Component (the route); Application Service Realising the Business Process via the backend call path; Backend Application Component Realising the Application Service; Technology Service / Node hosting both Components. Distinct from the Service-rooted modality (which starts from Business Service); the Process-rooted modality starts from a Business Process and includes the UI entry point, so full-stack readers can see both the front-end surface and the back-end stack in one diagram. Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path (e.g., `src/Client/Pages/Checkout.razor`); Application Interface `<name>` = the `@page` route string (e.g., `/checkout`). Other frontend stacks follow the same convention without a v1 callout.
 
-### 9.5 Migration View (Implementation & Migration + any layer)
-Elements: Plateau (primary — at least Baseline and Target), Gap, Work Package, Deliverable, Implementation Event. Elements from other layers appear *within* a Plateau to show state at that point in time.
+UI-awareness is a content rule, not a kind discriminator: when a §9.3 view contains a Business Process with a Business Actor Assignment in the paired §9.7 view (per §4.1's user-driven definition), the UI entry point is required (`AD-B-10`).
 
-### 9.6 Motivation View (Motivation only)
-Elements: Stakeholder, Driver, Assessment, Goal, Outcome, Requirement, Constraint, Principle. Influence and Realisation relationships. Linked to Core views via separate realisation arrows from Core elements to Motivation elements.
+Layout follows the default banded grid; the Application band may hold up to 4 elements (UI Component, Interface, Service, Backend Component) at the `AD-L4` 4-per-cell budget.
+
+### 9.4 Technology Usage (Application + Technology)
+**`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
+
+### 9.5 Migration (Implementation & Migration + any layer)
+**`viewpoint="Migration"`.** Elements: Plateau (primary — at least Baseline and Target), Gap, Work Package, Deliverable, Implementation Event. Elements from other layers appear *within* a Plateau to show state at that point in time.
+
+### 9.6 Motivation (Motivation only)
+**`viewpoint="Motivation"`.** Elements: Stakeholder, Driver, Assessment, Goal, Outcome, Requirement, Constraint, Principle. Influence and Realisation relationships. Linked to Core views via separate realisation arrows from Core elements to Motivation elements.
 
 ### 9.7 Business Process Cooperation (Business only)
-Elements: Business Process, Business Event, Business Interaction (primary, Behaviour); Business Actor, Business Role, Business Collaboration (Active structure, optional); Business Object, Contract, Product, Data Object (Passive structure, optional). Relationships: Triggering and Flow form the temporal chain; Assignment binds Actor / Role / Collaboration to Behaviour; Access binds Behaviour to Passive structure; Serving surfaces outward-facing Business Services. Used to answer "in what order does the business do what, and with whom". Layout is the process-flow exception in §6.4a — Behaviour left-to-right along the Triggering/Flow chain, Active structure above, Passive structure below. User-driven steps carry a Business Actor Assignment per §4.1; see §9.8 for the cross-layer drill-down that shows how each step is realised, including the UI surface.
-
-### 9.8 Service Realisation (Business + Application + Technology, UI-aware)
-Elements: Business Process (primary, at the top); UI Application Component Realising the Business Process for user-driven steps; Application Interface Assigned to the UI Component (the route); Application Service Realising the Business Process via the backend call path; Backend Application Component Realising the Application Service; Technology Service / Node hosting both Components. Relationships: Realisation forms the vertical spine; Assignment binds Interface → UI Component and Components → Nodes; Serving or Used-by represents UI → Backend-Service calls. Distinct from §9.3 Application-to-Business Realisation (which starts from Business Service); §9.8 starts from Business Process and includes the UI entry point, so full-stack readers can see both the front-end surface and the back-end stack in one diagram. Blazor idiom (v1): UI Application Component `<name>` = the Blazor page component's file path (e.g., `src/Client/Pages/Checkout.razor`); Application Interface `<name>` = the `@page` route string (e.g., `/checkout`). Other frontend stacks follow the same convention without a v1 callout. Layout is the default banded grid; the Application band may hold up to 4 elements (UI Component, Interface, Service, Backend Component), at the `AD-L4` 4-per-cell budget.
+**`viewpoint="Business Process Cooperation"`.** Elements: Business Process, Business Event, Business Interaction (primary, Behaviour); Business Actor, Business Role, Business Collaboration (Active structure, optional); Business Object, Contract, Product, Data Object (Passive structure, optional). Relationships: Triggering and Flow form the temporal chain; Assignment binds Actor / Role / Collaboration to Behaviour; Access binds Behaviour to Passive structure; Serving surfaces outward-facing Business Services. Used to answer "in what order does the business do what, and with whom". Layout is the process-flow exception in §6.4a — Behaviour left-to-right along the Triggering/Flow chain, Active structure above, Passive structure below. User-driven steps carry a Business Actor Assignment per §4.1; see §9.3's Process-rooted modality for the cross-layer drill-down that shows how each step is realised, including the UI surface.
 
 Diagram kinds not in this list (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF XML — the element and relationship vocabulary is unbounded — but the skill does not generate them as a first-class diagram kind in v1. An architect can model them directly in Archi and the skill's Review mode will still parse the result.
 
@@ -606,8 +610,8 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Extract output with forward-only layers carries the FORWARD-ONLY marker (`AD-14`).
 - [static] Extract output with lifted Business Process / Event / Interaction elements carries a per-element `LIFT-CANDIDATE` comment with `source=` and `confidence=` attributes (`AD-14-LC`).
 - [static] Business Process Cooperation (§9.7) views have a connected Triggering/Flow chain (`AD-B-1`); participants are Assigned to Behaviour (`AD-B-2`); Passive structure is Accessed by Behaviour (`AD-B-3`); only Business-layer elements are present (`AD-B-4`); and the chain has a declared entry Event and terminal outcome (`AD-B-5`).
-- [static] Service Realisation (§9.8) views show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`) to an Application Component (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.8 or §9.3 view for the same feature (`AD-B-8`), and each §9.8 Application Service realises a Business Process present in some §9.7 view for the same feature (`AD-B-9`).
-- [static] Service Realisation views for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
+- [static] Service Realization (§9.3) views in the Process-rooted modality show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`); §9.3 views in either modality show an Application Component realising the Application Service (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.3 view (Process-rooted modality) for the same feature (`AD-B-8`), and each §9.3 Application Service that realises a Business Process realises one present in some §9.7 view for the same feature (`AD-B-9`).
+- [static] §9.3 views in the Process-rooted modality for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
 - [static] Every element's `y` coordinate sits within the band of its ArchiMate layer per §6.4a (Strategy `[40,240]`, Business `[280,480]`, Application `[520,720]`, Technology `[760,960]`, Physical `[1000,1200]`) (`AD-L1`). Severity follows the §6.4a banding marker: `warn` when `propid-archi-model-banded=v1` is present on the model, `info` when absent (legacy file preserved across Extract refresh).
 - [static] No two `<node>` placements in the same view overlap — bounding-box intersection is zero for every pair at the same nesting depth (`AD-L2`).
 - [static] Every element's `w ≥ 120` and `h ≥ 55`; `w` is large enough that the `<name>` does not truncate at the default Archi font (heuristic: 7 px per character) (`AD-L3`).
@@ -636,4 +640,4 @@ Each item is tagged with a verification layer consistent with other reference do
 The `architecture-design` skill co-exists with two siblings in `souroldgeezer-design`. Each sibling's output is an Application Component in the architect's model — the sibling references document what that component looks like on its own terms.
 
 - `../ui-reference/responsive-design.md` — UI surface of a Blazor WebAssembly or HTML/CSS/JS Application Component.
-- `../api-reference/serverless-api-design.md` — HTTP API surface of an Azure Functions .NET Application Component, including Technology-Layer details (Cosmos DB, Blob Storage, Key Vault, managed identity) that appear as Nodes and System Software in ArchiMate Technology Realisation views.
+- `../api-reference/serverless-api-design.md` — HTTP API surface of an Azure Functions .NET Application Component, including Technology-Layer details (Cosmos DB, Blob Storage, Key Vault, managed identity) that appear as Nodes and System Software in ArchiMate Technology Usage views.

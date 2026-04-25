@@ -81,7 +81,7 @@ Role assignments (`Microsoft.Authorization/roleAssignments`) do not emit element
 - **Composition** — from plan Node to hosted Function App / App Service Node (serverfarm Composes Function App). From storage account Node to blob container / queue Artifact. From Cosmos Node to database → container Artifact chain.
 - **Assignment** — from Managed Identity Node to the Node that uses it (`identity: { type: 'UserAssigned', userAssignedIdentities: { ... } }` in a `Microsoft.Web/sites` resource emits Assignment from the identity Node to the site Node).
 - **Path** — between Nodes connected by a Private Endpoint or peered VNet.
-- **Used-by** — from an Application Component (.NET project) to the Technology Node that hosts its runtime dependencies (Cosmos, Storage, Service Bus) — the cross-layer relationship is the whole point of a Technology Realisation view (reference §9.4).
+- **Used-by** — from an Application Component (.NET project) to the Technology Node that hosts its runtime dependencies (Cosmos, Storage, Service Bus) — the cross-layer relationship is the whole point of a Technology Usage view (reference §9.4).
 
 ## Application-to-Technology linking
 

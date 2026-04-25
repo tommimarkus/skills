@@ -68,7 +68,7 @@ Workflows that produce a discrete, named artefact (a release tag, a signed conta
 | `actions/create-release` / `softprops/action-gh-release` | **Deliverable** — *GitHub Release* composed on the Work Package |
 | `docker/build-push-action` pushing to a registry | **Deliverable** — *container image* (name = pushed tag) composed on the Work Package |
 
-If Deliverables are noisy and the architect hasn't asked for them, the procedure omits them and leaves only Work Packages + Plateaus + Gaps + Implementation Events — the skeleton of a Migration View.
+If Deliverables are noisy and the architect hasn't asked for them, the procedure omits them and leaves only Work Packages + Plateaus + Gaps + Implementation Events — the skeleton of a Migration view.
 
 ## Naming conventions
 
@@ -159,4 +159,4 @@ Where no resource target is discoverable, omit the cross-layer link — the skil
 - Lift **Strategy** Course of Action from workflows. A workflow is a Work Package, not a Course of Action — Strategy is forward-only per reference §7.2.
 - Validate the workflow security posture. That is [`devsecops-audit`](../../../../../souroldgeezer-audit/skills/devsecops-audit/SKILL.md)'s scope, not this skill's.
 - Model **Ad-hoc** runs per `workflow_dispatch`. Manual dispatches are operational events, not architectural ones; they don't add Implementation Events to the ArchiMate model.
-- Track historical runs. The skill reads the workflow *definitions* to infer the Migration View shape; it does not read GitHub Actions run history.
+- Track historical runs. The skill reads the workflow *definitions* to infer the Migration view shape; it does not read GitHub Actions run history.

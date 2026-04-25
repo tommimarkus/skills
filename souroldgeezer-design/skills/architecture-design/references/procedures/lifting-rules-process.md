@@ -2,7 +2,7 @@
 
 Rules for lifting ArchiMate **Business Layer** Process, Event, and Interaction elements from backend workflow sources. Invoked by Extract mode when those sources are present. Every lifted element carries a per-element `LIFT-CANDIDATE` marker (reference §7.4) so the architect can accept, reject, or enrich each one independently.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §4.1 (Business Layer elements), §7.2 (partial forward-only posture for Business), §7.4 (the `LIFT-CANDIDATE` marker), and §9.7 / §9.8 (the process diagram kinds that consume the lifted elements).
+The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §4.1 (Business Layer elements), §7.2 (partial forward-only posture for Business), §7.4 (the `LIFT-CANDIDATE` marker), and §9.7 / §9.3 (the process diagram kinds that consume the lifted elements).
 
 ## Sources read
 
@@ -157,7 +157,7 @@ Other Business-layer elements (Actor, Role, Collaboration, Object, Contract, Pro
 
 ## UI lifting deferred — architect hand-authors
 
-UI routes are **not** lifted in v1. Reference §9.8 Service Realisation views that model a user-driven Business Process include a UI Application Component and Application Interface at the entry point; the architect authors these by hand.
+UI routes are **not** lifted in v1. Reference §9.3 Service Realization views in the Process-rooted modality that model a user-driven Business Process include a UI Application Component and Application Interface at the entry point; the architect authors these by hand.
 
 **Blazor idiom (v1).** For a Blazor page component at `src/Client/Pages/Checkout.razor` carrying `@page "/checkout"`:
 
@@ -176,11 +176,11 @@ UI routes are **not** lifted in v1. Reference §9.8 Service Realisation views th
               xsi:type="Realization"/>
 ```
 
-The `<name>` on the UI Application Component is the repo-relative file path so reverse Lookup can match a file symbol back to the Business Process by string equality (reference §9.8; SKILL.md "Lookup"). Architects preferring a human-readable name can place the file path in a `source=` custom property and use a friendlier `<name>` — the Lookup resolver consults both.
+The `<name>` on the UI Application Component is the repo-relative file path so reverse Lookup can match a file symbol back to the Business Process by string equality (reference §9.3; SKILL.md "Lookup"). Architects preferring a human-readable name can place the file path in a `source=` custom property and use a friendlier `<name>` — the Lookup resolver consults both.
 
 **Other frontend stacks.** Next.js App Router (`app/checkout/page.tsx` → UI Component named by the file path; Application Interface `<name>` = the route `/checkout`), Next.js Pages Router (`pages/checkout.tsx`), and plain React Router (the declarative `<Route path="/checkout" element={<Checkout/>}/>` — UI Component `<name>` = the component's file path) follow the same convention without a v1-specific idiom callout.
 
-**Architect ownership.** UI Application Components in §9.8 views always carry either a `LIFT-CANDIDATE` marker (if emitted by a future UI lifter) or no marker (architect-authored, the v1 default). There is no `FORWARD-ONLY` path for UI elements — they are not forward-only; they are simply not lifted automatically yet.
+**Architect ownership.** UI Application Components in §9.3 views (Process-rooted modality) always carry either a `LIFT-CANDIDATE` marker (if emitted by a future UI lifter) or no marker (architect-authored, the v1 default). There is no `FORWARD-ONLY` path for UI elements — they are not forward-only; they are simply not lifted automatically yet.
 
 ## Cross-layer linking
 
@@ -197,7 +197,7 @@ These links make the `AD-B-8` / `AD-B-9` between-view invariant checkable: a lif
 ## What this procedure does not do
 
 - Lift **Business Actor / Role / Collaboration / Object / Contract / Product / Service / Function.** These remain forward-only per reference §7.2. An Actor Assignment on a lifted Process is the architect's decision.
-- Lift **UI routes.** Blazor `@page`, Next.js `app/**/page.tsx`, React Router — none are parsed in v1; §9.8 UI elements are hand-authored.
+- Lift **UI routes.** Blazor `@page`, Next.js `app/**/page.tsx`, React Router — none are parsed in v1; §9.3 Process-rooted modality UI elements are hand-authored.
 - **Interpret business semantics.** A step named "ProcessPayment" in code does not become a Business Process named "Process Payment" in the lifted model without architect review — the `LIFT-CANDIDATE` marker is there because the mapping is structural, not semantic.
 - **Track orchestration history.** The procedure reads orchestrator / workflow *definitions*, not runtime execution history. Drift between the lifted shape and actual production runs is out of scope; `AD-DR-11` / `AD-DR-12` compare definitions only.
 - **Validate orchestrator correctness.** Missing `CallActivityAsync` return handling, unreachable code, non-idempotent activities — all are [`devsecops-audit`](../../../../../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) or framework-level concerns, not this procedure's.

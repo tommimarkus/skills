@@ -18,7 +18,7 @@ Three design choices drive everything else in this procedure:
 
 1. The element set for the view (already assigned to their ArchiMate layer via `xsi:type`, per reference §3–§4).
 2. The relationship set (already validated against Appendix B, per reference §5).
-3. The diagram kind (one of the eight supported in reference §9).
+3. The diagram kind (one of the seven supported in reference §9).
 4. Any prior view at the canonical path, parsed for architect-chosen placements (reference §6.4; project-assimilation rule).
 
 ## The banded grid
@@ -197,7 +197,7 @@ When the view's `viewpoint` attribute is `Business Process Cooperation` (referen
 
 **Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle are placed in identifier-ascending order, the remaining acyclic elements place normally around them, and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely); a dedicated cycle-specific smell is deferred.
 
-**No layout exception for §9.8 Service Realisation.** Service Realisation views are vertical stacks across layers — exactly what the default banded grid produces. No exception needed; see reference §9.8 for the palette and the `AD-L4` note on the Application band's 4-element budget (UI Component, Interface, Service, Backend Component).
+**No layout exception for §9.3 Service Realization (Process-rooted modality).** Service Realization views are vertical stacks across layers — exactly what the default banded grid produces. No exception needed; see reference §9.3 for the palette and the `AD-L4` note on the Application band's 4-element budget (UI Component, Interface, Service, Backend Component).
 
 ## Colour and stroke
 

@@ -71,9 +71,9 @@ When invoked, run the architecture-design skill and present results:
    §7.3 for Motivation / Strategy and the remaining Business subset (Actor,
    Role, Collaboration, Object, Contract, Product, Service, Function). Refuse
    Extract if the requested scope is entirely forward-only layers, and
-   suggest Build mode instead. UI routes are not lifted in v1 — §9.8 UI
-   Application Components are hand-authored by the architect per the Blazor
-   idiom in reference §9.8.
+   suggest Build mode instead. UI routes are not lifted in v1 — §9.3
+   Process-rooted modality UI Application Components are hand-authored by the
+   architect per the Blazor idiom in reference §9.3.
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
    walks reference §10 checklist and emits `AD-*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
    drift detection (OEF file + current code/IaC) invokes
@@ -93,7 +93,7 @@ When invoked, run the architecture-design skill and present results:
    `LIFT-CANDIDATE` marker (`AD-14-LC`); layer soup in a single diagram
    (`AD-1`); missing Realisation chain (`AD-6`); Active structure directly
    accessing passive structure (`AD-4`); Association overuse (`AD-5`);
-   Migration View without a Plateau axis (`AD-9`); Extract refused with no
+   Migration view without a Plateau axis (`AD-9`); Extract refused with no
    guidance about which mode to use instead; drift finding claiming a pass
    from static review alone; element emitted with an `xsi:type` not in the
    ArchiMate 3.2 catalog; bundled XSD file (the skill must reference The
@@ -104,9 +104,9 @@ When invoked, run the architecture-design skill and present results:
    budget (`AD-L4`), nested-plus-edge double representation (`AD-L7`), or
    off-grid coordinates (`AD-L8`); Business Process Cooperation view
    lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
-   layer elements (`AD-B-4`); Service Realisation view with a Business
+   layer elements (`AD-B-4`); §9.3 Service Realization view with a Business
    Process at top but no realising Application Service (`AD-B-6`) or no
-   Application Component (`AD-B-7`); Service Realisation view for a user-
+   Application Component (`AD-B-7`); §9.3 Service Realization view for a user-
    driven Business Process (carrying a Business Actor Assignment per
    reference §4.1) lacking a UI Application Component and Application
    Interface at the entry point (`AD-B-10`).

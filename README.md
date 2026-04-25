@@ -22,7 +22,7 @@ Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
   Interaction from Durable Functions + Logic Apps (as `LIFT-CANDIDATE`s the
   architect confirms); marks the rest of Business and all Motivation /
   Strategy as forward-only; supports macro Business Process Cooperation and
-  UI-aware Service Realisation diagram kinds; dispatches from the sibling
+  UI-aware Service Realization diagram kind (§9.3 Process-rooted modality); dispatches from the sibling
   skills' Review mode to flag drift between code and the architect's
   model. Each skill has a matching subagent.
 
@@ -196,7 +196,7 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
   the Business layer (Actor / Role / Collaboration / Object / Contract /
   Product / Service / Function), plus Motivation / Strategy / Physical,
   stay forward-only inside `FORWARD-ONLY — architect fills in` comment
-  blocks. UI entry points in Service Realisation views are hand-authored
+  blocks. UI entry points in §9.3 Service Realization views (Process-rooted modality) are hand-authored
   (Blazor idiom in v1). **Review** has two sub-behaviours: artefact review
   (ArchiMate 3.2 well-formedness + `AD-*` / `AD-B-*` smells) and drift
   detection (model vs current repo state, emitting `AD-DR-*` findings
@@ -240,16 +240,18 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
   coordinates; architect hand-edits survive because only elements
   without a prior position are placed algorithmically. Review restates
   the contract as the `AD-L*` smell codes.
-- **Eight supported diagram kinds** (reference §9): Capability Map,
-  Application Cooperation, Application-to-Business Realisation,
-  Technology Realisation, Migration View, Motivation View, Business
-  Process Cooperation (macro process-flow view over the Business layer —
-  steps, events, and their Triggering / Flow chain), Service Realisation
-  (drill-down from a Business Process through the UI Application Component
-  and Application Interface to the backend Application Service / Component
-  and Technology Node — the first UI-aware diagram kind in the skill).
-  Other ArchiMate diagram kinds are expressible in OEF XML (the element
-  and relationship vocabulary is unbounded) but not first-class in v1.
+- **Seven supported diagram kinds** (reference §9): Capability Map,
+  Application Cooperation, Service Realization (with optional UI-aware
+  Process-rooted modality — drill-down from a Business Process through
+  the UI Application Component and Application Interface to the backend
+  Application Service / Component and Technology Node), Technology Usage,
+  Migration, Motivation, Business Process Cooperation (macro process-flow
+  view over the Business layer — steps, events, and their Triggering /
+  Flow chain). The English labels are identical to the OEF `viewpoint=`
+  enum strings; every supported kind maps 1:1 to a canonical ArchiMate
+  3.2 Viewpoint. Other ArchiMate diagram kinds are expressible in OEF
+  XML (the element and relationship vocabulary is unbounded) but not
+  first-class in v1.
 - **OEF XML, tool-neutral.** Output is loadable by every major ArchiMate
   tool. The skill
   does not bundle The Open Group's XSD schemas — emitted files reference
