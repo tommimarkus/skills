@@ -45,6 +45,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L6` | §8 layout, §6.4a | Non-orthogonal routing — diagonal `<connection>` with no `<bendpoint>` between non-aligned endpoints |
 | `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view |
 | `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
+| `AD-L9` | §8 layout, §6.4a | Hierarchy not respected — Realization / Used-by / Serving relationship between same-layer elements drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Detected by Tier 1 phase 1 (cycle handling) + phase 3 (topological sort) failures. |
 
 ## Process-flow smells — `AD-B-*`
 
@@ -99,5 +100,7 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (overlap, truncated label) |
 | `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
 | `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
+| `AD-L9`, `AD-L11` | `warn` when model carries `propid-archi-model-banded=v2`; `info` for `v1` or no marker | Mechanical layout failures (hierarchy direction wrong, edge passes through node body) — must be fixable by re-running Tier 1; gated to `warn` only when the file claims §6.4a v0.8.0 conformance |
+| `AD-L10` | `info` regardless of marker | Polish — canvas not normalised at `(40, 40) ± 10 px` origin; architect may have hand-shifted |
 
 Severity can be overridden per finding when evidence warrants (e.g., `AD-DR-8` escalated to `warn` when the renamed project is the feature's primary Component and every other diagram also shows the old name).
