@@ -242,6 +242,23 @@ Every emitted file is a `<model>` element in the ArchiMate 3.0 namespace. The Op
 </model>
 ```
 
+### 6.1a Metadata (optional)
+
+OEF reserves the optional `<metadata>` block for cataloging metadata that lives outside the ArchiMate vocabulary. Schema-wise, `MetadataType`'s content is `<xs:any namespace="##other" processContents="strict" minOccurs="0" maxOccurs="unbounded"/>` — children **must come from a non-ArchiMate namespace**. The most common choice is Dublin Core (`http://purl.org/dc/elements/1.1/`):
+
+```xml
+<metadata>
+  <schema xmlns="http://purl.org/dc/elements/1.1/">Dublin Core</schema>
+  <schemaversion xmlns="http://purl.org/dc/elements/1.1/">1.1</schemaversion>
+  <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Checkout architecture</dc:title>
+  <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.7.0</dc:creator>
+</metadata>
+```
+
+The block sits between `<documentation>` and `<elements>` per the §6 child-element sequence (specifically after the optional `<properties>` block and before `<elements>`).
+
+**`xmllint --noout` does not catch a metadata-namespace violation** — it only checks XML well-formedness. The schema-level check is `xmllint --schema http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd <file>.oef.xml`, or import via Archi which validates against its bundled XSD on read. Build mode emits a Dublin Core `<metadata>` block by default; Extract preserves an existing block verbatim.
+
 ### 6.2 Elements
 
 Elements live under a top-level `<elements>` container. Each element carries an `identifier` (stable across re-extracts), a `xsi:type` (one of the ArchiMate 3.2 element names per §3–§4 of this reference), and a `<name>`. Optional `<documentation>` carries free-text description.
@@ -493,6 +510,7 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-14` Forward-only layer emitted without the marker** — Extract output that populated Business (Actor / Role / Collaboration / Object / Contract / Product / Service / Function) / Motivation / Strategy elements without the `FORWARD-ONLY` header block (§7.3).
 - **`AD-14-LC` Lift-candidate emitted without the marker** — Extract output that populated a Business Process, Business Event, or Business Interaction from a backend workflow source without the per-element `LIFT-CANDIDATE` comment (§7.4). Without the marker, the architect cannot distinguish a confirmed element from an unreviewed candidate, and reverse Lookup has no `source=` anchor.
 - **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
+- **`AD-16` Metadata children in the ArchiMate namespace** — `<metadata>` block populated with children from the ArchiMate namespace (`http://www.opengroup.org/xsd/archimate/3.0/`). OEF's `MetadataType` declares `<xs:any namespace="##other"/>`, requiring children from a non-ArchiMate namespace such as Dublin Core (`http://purl.org/dc/elements/1.1/`). See §6.1a. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
 
 ### Layout smells — `AD-L*`
 
@@ -566,6 +584,7 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).
 - [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
+- [static] Every emitted `<metadata>` block's children come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: every direct child of `<metadata>` carries an `xmlns="..."` declaration whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every behaviour element has an active structure assigned; every passive-structure element is accessed only through a behaviour (`AD-3`, `AD-4`).
 - [static] Realisation chains are complete for the scope of the diagram: Business Service has a realising Application Service; Application Service has a realising Application Component; Application Component is assigned to a Technology Node if the diagram reaches Technology (`AD-6`).
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
