@@ -225,6 +225,16 @@ Project assimilation:
 
 ### Artefact review
 
+**Banding-marker dispatch.** Severity of layout findings is conditional on the `propid-archi-model-banded` property:
+
+| Marker on file | AD-L1..L8 severity | AD-L9, L10, L11 severity |
+|---|---|---|
+| `propid-archi-model-banded=v2` (Sugiyama-v1 engine, 0.8.0+) | `warn` | `warn` |
+| `propid-archi-model-banded=v1` (legacy banded grid, pre-0.8.0) | `warn` | `info` |
+| (no marker) | `info` | `info` |
+
+The marker is the authoritative signal for the file's layout-conformance contract. Build emits `v2` on every new file in 0.8.0; Extract preserves existing markers and never auto-upgrades a `v1` file (the architect rebrands by re-running Build for the affected views).
+
 1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements.
 
 2. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
