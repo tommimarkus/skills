@@ -154,7 +154,7 @@ For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compu
 1. **Source attach point** = side-midpoint of source `<node>` facing the target. Decision rule: pick the side closest to target's centre, breaking ties by preference order: right > down > left > up.
 2. **Target attach point** = side-midpoint of target `<node>` facing the source. Same decision rule (mirror).
 3. **Path: BFS over a 10-px grid.** Each grid cell is `(x // 10, y // 10)`. Start cell = source attach point grid-aligned. Goal cell = target attach point grid-aligned.
-4. **Obstacle map.** For every `<node>` other than source and target, mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden.
+4. **Obstacle map.** For every `<node>` other than source, target, **and any ancestral container of source or target** (parent → grandparent → ... in the Step 5 nesting hierarchy), mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden. Ancestor exclusion lets the BFS path leave a nested element through its container's boundary; without it, a nested source / target would be trapped.
 5. **Cost function:** `cost = grid_step_count + bend_count × 5`. Each move along the same direction adds 1; each 90° turn adds the bend penalty (5 grid steps default).
 6. **Bend points:** every grid cell where the path direction changes becomes a `<bendpoint x="..." y="..."/>` child of `<connection>`. Convert grid-cell back to pixel by `x = cell_x × 10`.
 7. **Parallel edges in the same lane** (same source midpoint, same target midpoint) space 20 px apart in the perpendicular direction.
