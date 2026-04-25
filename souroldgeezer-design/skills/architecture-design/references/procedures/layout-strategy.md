@@ -119,10 +119,28 @@ When a `<name>` is long enough that the default `w` would truncate, enlarge `w` 
 
 **Bounding-box normalisation runs in Phase 6, not here** — Phase 4 leaves coordinates in their absolute aspect-column / layer space; Phase 6 shifts the entire view to `(40, 40)` origin once all coordinates are computed.
 
-### Step 5b — Multi-row sibling layout (preserved from pre-0.8.0)
+### Step 5 — Nest children into parents
 
-The Step 5b multi-row sibling layout from the pre-0.8.0 procedure is preserved in 0.8.0 as part of Phase 4's collision handling. Its rules apply unchanged when a new nested child must be placed in a parent that already contains a row of architect-positioned siblings — see the original procedure for the full algorithm (preserve `x`, fall back to bendpoint routing, grow `parent.w`).
+For every Composition, Aggregation, or Realization relationship `(parent, child)` where **both endpoints land in the same layer AND aspect column** (per Phase 2 layer assignment + Phase 3 aspect bias):
 
-### Step 5 — Nest children into parents (preserved from pre-0.8.0)
+- Place `child` as a nested `<node>` inside `parent`'s placement. Child `x = parent.x + 20`, `y = parent.y + 40 + Σ prior_children.h + 20 × prior_count`. Child `w ≤ parent.w − 40`, `h` unchanged.
+- Mark the relationship edge as implicit: add `<properties>` with `<property propertyDefinitionRef="propid-archi-arm"><value xml:lang="en">hide</value></property>` to the relationship, and **do not** emit a `<connection>` for it in this view. Archi's ARM will render the nesting as-is; tools without ARM still read the relationship in the model.
+- Grow the parent's `w`/`h` if needed to contain children: `parent.w = max(parent.w, max_child.x + max_child.w + 20 − parent.x)`, `parent.h = max(parent.h, last_child.y + last_child.h + 20 − parent.y)`.
 
-Phase 4's collision logic above runs before nesting. After collision-free placement, apply the nesting rule from the pre-0.8.0 procedure unchanged: for every Composition / Aggregation / Realization relationship `(parent, child)` where both endpoints land in the same layer AND aspect column, place `child` as a nested `<node>` inside `parent`'s placement (`x = parent.x + 20`, stacked vertically inside, `w ≤ parent.w − 40`); mark the relationship edge as ARM-hidden (`<property propertyDefinitionRef="propid-archi-arm">` value `hide`); grow parent dimensions to contain children. Nesting depth capped at 2.
+Rules:
+
+- Only nest when both endpoints share the same layer AND aspect column — cross-layer or cross-aspect nesting violates reference §2.1 / §2.3.
+- A child may be nested in at most one parent per view. If a child has two valid parents, nest in the one whose relationship is Composition; fall back to the first parent in identifier order.
+- Nesting depth is capped at 2 (parent → child → grandchild). Deeper chains render correctly but exceed the view budget quickly — flag as `AD-L4` risk.
+
+### Step 5b — Multi-row sibling layout (new child, existing siblings)
+
+Common Extract scenario: a refresh adds a new child to a parent that already contains a horizontal row of architect-positioned siblings (matched by Tier 0 Step 1). The default Phase 4 placement (centred on `parent.x`, stacked vertically below the last existing child) would put the new child on a second row beneath the first row of siblings. The parent→child Composition edge then routes (per Phase 5 orthogonal) along the shortest path, which visually passes through one or more existing sibling boxes — making the relationship look anchored on a sibling instead of on the parent.
+
+Apply this rule before falling through to Phase 4's default centred placement for a *new* nested child whose row would land below at least one existing sibling row in the same parent:
+
+1. **Prefer a non-colliding `x`.** Compute the candidate placement window inside the parent: `x ∈ [parent.x + 20, parent.x + parent.w − 20 − child.w]`. Scan the existing siblings on the row(s) above the new child's row and collect the union of their x-extents `[sibling.x, sibling.x + sibling.w]`. If the candidate window contains any `x` that does not overlap any sibling x-extent, place the new child at the smallest such `x` (deterministic). The Composition edge then drops vertically inside the parent's whitespace and never crosses an existing sibling box; emit it as a normal hidden ARM-managed edge per Step 5.
+2. **Fall back to bendpoint routing.** If no non-colliding `x` fits within the parent's interior — every horizontal pixel inside `parent.w` overlaps an existing sibling — keep the default centred placement and emit two bendpoints in Phase 5 to route the parent→child Composition edge west of the parent (see Phase 5 *Multi-row sibling clause*, added in Task 2.6). The edge is visible (not ARM-hidden); the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling.
+3. **Grow `parent.w` if necessary.** If the candidate window is empty because the parent is narrower than its sibling row, grow `parent.w` per Step 5's existing rule before re-evaluating clause 1.
+
+The rule only fires when (a) the new child is genuinely new (not preserved by Tier 0 Step 1) and (b) the parent already contains at least one existing sibling on a row above the new child's row. Single-row insertions (the new child fits on the existing row at the next free slot) are unchanged from Step 5.
