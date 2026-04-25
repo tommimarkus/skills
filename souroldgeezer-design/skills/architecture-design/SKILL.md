@@ -63,7 +63,7 @@ Review has two sub-behaviours, dispatched on inputs:
 
 ## Extensions
 
-The skill ships without framework extensions in v1. **Per-stack lifting rules live in `references/procedures/`, not in `extensions/`.** They are always loaded when Extract runs — the split is by *input source* (code / IaC / workflow), not by *target stack choice*.
+The skill ships without framework extensions in v1. **Per-stack lifting rules live in `references/procedures/`, not in `extensions/`.** They are consulted (read on demand) when Extract runs — the harness's Skill tool loads `SKILL.md` only; nested procedure files require an explicit `Read` tool call before they can inform the agent. The split between procedures is by *input source* (code / IaC / workflow), not by *target stack choice*.
 
 | Procedure | Applies to | Used by |
 |---|---|---|
@@ -168,7 +168,7 @@ Project assimilation:
    - Well-formedness per ArchiMate 3.2 Appendix B — never emit a relationship not found in the table for the given element-pair.
    - OEF XML serialisation per reference §6. Emit every element with its correct `xsi:type` from the ArchiMate 3.2 element catalog; emit every relationship with its correct `xsi:type` per ArchiMate 3.2 Appendix B.
 
-4. **Layout and naming** per reference §6.4–6.7. Invoke [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) to place every `<node>` on the banded grid contracted in §6.4a — fixed rows per layer (Strategy top, Physical bottom), fixed columns per aspect (Motivation left, Active structure, Behaviour, Passive structure, Implementation & Migration right), 10 px grid, deterministic sizes per element class, Composition / Aggregation / Realization nested over explicit edge when both endpoints share a cell, orthogonal connection routing. Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
+4. **Layout and naming** per reference §6.4–6.7. `Read` [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) before invoking it (the Skill tool loads `SKILL.md` only; nested files are not auto-injected). The procedure places every `<node>` on the banded grid contracted in §6.4a — fixed rows per layer (Strategy top, Physical bottom), fixed columns per aspect (Motivation left, Active structure, Behaviour, Passive structure, Implementation & Migration right), 10 px grid, deterministic sizes per element class, Composition / Aggregation / Realization nested over explicit edge when both endpoints share a cell, orthogonal connection routing. Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
 
 5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Emit the §6.4a banding marker on every new file: declare `<propertyDefinition identifier="propid-archi-model-banded" type="string"/>` once under `<propertyDefinitions>` at the model root, and emit `<property propertyDefinitionRef="propid-archi-model-banded"><value xml:lang="en">v1</value></property>` once under `<properties>` on the `<model>` element. The marker is the authoritative signal for AD-L1 severity in Review. Also emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views`; the `<properties>` element (carrying the banding marker's value) precedes `<metadata>` and `<elements>`, while `<propertyDefinitions>` (carrying the banding marker's definition) follows `<organizations>` and immediately precedes `<views>`. The two blocks are non-adjacent (`AD-17`).
 
@@ -189,11 +189,12 @@ Project assimilation:
 
 2. **Run the discovery pass (above).** Record what was found — solution surface, Bicep resources, workflows, existing diagram at the canonical path.
 
-3. **Invoke lifting procedures:**
-   - `references/procedures/lifting-rules-dotnet.md` → Application Layer elements + intra-Application relationships.
-   - `references/procedures/lifting-rules-bicep.md` → Technology Layer elements + Application-to-Technology Assignment / Realisation relationships.
-   - `references/procedures/lifting-rules-gha.md` → Implementation & Migration Layer elements.
-   - `references/procedures/layout-strategy.md` → view placements for any element not carrying an architect-authored position in the prior diagram at the canonical path (Step 1 of the procedure preserves hand edits; only new elements are placed algorithmically).
+3. **Read each applicable procedure file, then invoke it.** The Skill tool that loaded this `SKILL.md` does not auto-inject nested files; each procedure must be `Read` explicitly before its rules can inform the agent.
+   - `references/procedures/lifting-rules-dotnet.md` → Application Layer elements + intra-Application relationships (when .NET solution sources are present).
+   - `references/procedures/lifting-rules-bicep.md` → Technology Layer elements + Application-to-Technology Assignment / Realisation relationships (when Bicep is present).
+   - `references/procedures/lifting-rules-gha.md` → Implementation & Migration Layer elements (when `.github/workflows/*.yml` is present).
+   - `references/procedures/lifting-rules-process.md` → Business Process / Event / Interaction `LIFT-CANDIDATE` emission (when Durable Functions orchestrators or Logic Apps workflows are present).
+   - `references/procedures/layout-strategy.md` → view placements for any element not carrying an architect-authored position in the prior diagram at the canonical path (always; Step 1 of the procedure preserves hand edits, only new elements are placed algorithmically).
 
 4. **Emit forward-only stub blocks.** For Business, Motivation, and Strategy — even if the architect did not ask for them — emit a typed stub *only if the diagram kind requires them* (e.g., an Application-to-Business Realisation view without a Business Layer is incomplete). The stub carries the mandatory marker header (reference §7.3):
 
@@ -241,7 +242,7 @@ Project assimilation:
 
 ### Drift detection
 
-1. **Invoke `references/procedures/drift-detection.md`.** Re-run the discovery pass from project assimilation against the current code/IaC. Compare the discovered set to the diagram's element set.
+1. **`Read` and invoke `references/procedures/drift-detection.md`.** The Skill tool loads `SKILL.md` only; the drift procedure must be `Read` explicitly before its rules can inform the agent. Once read, re-run the discovery pass from project assimilation against the current code/IaC and compare the discovered set to the diagram's element set.
 
 2. **Report deltas as `AD-DR-*` findings** — elements added, elements removed, relationships changed. These findings carry `layer: runtime`.
 
