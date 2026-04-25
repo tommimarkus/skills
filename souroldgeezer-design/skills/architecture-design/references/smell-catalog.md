@@ -37,7 +37,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 
 | Code | Rubric | Description (one line; see rubric for full) |
 |---|---|---|
-| `AD-L1` | §8 layout, §6.4a | Layer-band violation — element's `y` falls outside the band prescribed for its ArchiMate layer. Severity is conditional on the §6.4a banding marker `propid-archi-model-banded=v1` (see severity-defaults table). |
+| `AD-L1` | §8 layout, §6.4a | Layer-ordering violation — element's `y` falls outside the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Phase 6 bbox normalisation. Severity is conditional on the §6.4a banding marker (see severity-defaults table). |
 | `AD-L2` | §8 layout, §6.4a | Node overlap — two placements at the same nesting depth whose bounding boxes intersect |
 | `AD-L3` | §8 layout, §6.4a | Undersize — `w < 120`, `h < 55`, or `w` too small to avoid label truncation |
 | `AD-L4` | §8 layout, §6.4a | View density over budget — `>20` elements, `>30` relationships, or nesting depth `>2` |
