@@ -87,3 +87,42 @@ After 4 passes, `cell_elements[layer, aspect, position]` is locked. Phase 4 read
 **Tiebreak in barycentric:** identifier ascending (preserves determinism).
 
 **Skip degenerate layers.** Layers with fewer than 2 elements skip the barycentric pass for that layer (no crossings possible).
+
+### Phase 4 — Coordinate assignment
+
+Operates **layer-by-layer top-to-bottom** (Strategy first, Physical last). Upper layers' coordinates are fixed before lower layers compute their medians, so the "median of in-edge source x-coordinates" is well-defined.
+
+For each layer in top-down order:
+
+1. **Compute `y` for the layer.** `y_layer_top = max(y_max_above + 60, 40)` where `y_max_above` = bottom of the lowest-placed element in the layer immediately above (or 0 if Strategy is the first populated layer). 60 px is the **layer gutter** (was 40 in pre-0.8.0).
+2. **Compute `x` for each element in the layer.** Iterate elements in the order locked by Phase 3:
+   - If the element has cross-layer incoming edges from already-placed upper layers, set `x = median of source x-coordinates`.
+   - Else, set `x = aspect-column default centre`. The aspect-column boundaries (preserved as the macro-grid anchor): Motivation x ∈ [40, 280], Active structure [300, 540], Behaviour [560, 800], Passive structure [820, 1060], Implementation & Migration [1080, 1320]. Default centre = `(start + end) / 2 - element.w / 2`.
+   - Round `x` to the nearest 10 px.
+   - **On collision** (proposed `(x, y)` overlaps an already-placed element in this layer): bump `x` right by `20 + element.w` (sibling gutter is 40 px; element width plus 40 px gives this offset). Repeat until no collision.
+3. **Compute `y` per element within the layer.** First element in the layer's first aspect column at `y_layer_top + 20` (top padding inside the layer band). Subsequent elements in the same aspect column at `y_prev + element.h + 40` (sibling gutter, was 20 in pre-0.8.0). Different aspect columns reset to `y_layer_top + 20`.
+
+**Default sizes** (per reference §6.4a, 0.8.0):
+
+| Element class | `w` | `h` |
+|---|---:|---:|
+| Structure (Component, Node, Device, System Software, Actor, Role, Interface, Artifact) | 160 | 64 |
+| Behaviour (Process, Function, Interaction, Service, Event) | 180 | 64 |
+| Motivation (Goal, Requirement, Constraint, Principle, Driver, Assessment, Stakeholder, Outcome, Value, Meaning) | 180 | 64 |
+| Strategy (Capability, Value Stream, Resource, Course of Action) | 180 | 64 |
+| Passive (Business Object, Data Object, Contract, Product) | 140 | 64 |
+| Implementation & Migration (Work Package, Deliverable, Implementation Event, Plateau, Gap) | 180 | 64 |
+| Grouping | computed; minimum 240 × 140 |
+| Junction | 14 × 14 |
+
+When a `<name>` is long enough that the default `w` would truncate, enlarge `w` in 20-px steps (assume 7 px per character at the default Archi font).
+
+**Bounding-box normalisation runs in Phase 6, not here** — Phase 4 leaves coordinates in their absolute aspect-column / layer space; Phase 6 shifts the entire view to `(40, 40)` origin once all coordinates are computed.
+
+### Step 5b — Multi-row sibling layout (preserved from pre-0.8.0)
+
+The Step 5b multi-row sibling layout from the pre-0.8.0 procedure is preserved in 0.8.0 as part of Phase 4's collision handling. Its rules apply unchanged when a new nested child must be placed in a parent that already contains a row of architect-positioned siblings — see the original procedure for the full algorithm (preserve `x`, fall back to bendpoint routing, grow `parent.w`).
+
+### Step 5 — Nest children into parents (preserved from pre-0.8.0)
+
+Phase 4's collision logic above runs before nesting. After collision-free placement, apply the nesting rule from the pre-0.8.0 procedure unchanged: for every Composition / Aggregation / Realization relationship `(parent, child)` where both endpoints land in the same layer AND aspect column, place `child` as a nested `<node>` inside `parent`'s placement (`x = parent.x + 20`, stacked vertically inside, `w ≤ parent.w − 40`); mark the relationship edge as ARM-hidden (`<property propertyDefinitionRef="propid-archi-arm">` value `hide`); grow parent dimensions to contain children. Nesting depth capped at 2.
