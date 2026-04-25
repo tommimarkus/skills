@@ -41,7 +41,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L2` | §8 layout, §6.4a | Node overlap — two placements at the same nesting depth whose bounding boxes intersect |
 | `AD-L3` | §8 layout, §6.4a | Undersize — `w < 120`, `h < 55`, or `w` too small to avoid label truncation |
 | `AD-L4` | §8 layout, §6.4a | View density over budget — `>20` elements, `>30` relationships, or nesting depth `>2` |
-| `AD-L5` | §8 layout, §6.4a | Excessive edge crossings — `crossings > node_count / 4` |
+| `AD-L5` | §8 layout, §6.4a | Excessive edge crossings — `crossings > node_count / 6` (was `node_count / 4`; threshold tightened in 0.8.0 because Sugiyama's 4-pass barycentric materially reduces crossings vs the prior 1-pass procedure) |
 | `AD-L6` | §8 layout, §6.4a | Non-orthogonal routing — diagonal `<connection>` with no `<bendpoint>` between non-aligned endpoints |
 | `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view |
 | `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
