@@ -465,13 +465,17 @@ then the diagram is out of scope for `architecture-design` Build mode and the ar
 
 Every Extract output that includes typed stubs for forward-only layers prefixes those sections with:
 
+```xml
+<!--
+==============================================================================
+FORWARD-ONLY — this layer was not extracted from source
+The architect must fill in: <layer name>
+The skill inferred suggestive placeholders from Application element labels
+==============================================================================
+-->
 ```
-' =============================================================================
-' FORWARD-ONLY — this layer was not extracted from source
-' The architect must fill in: <layer name>
-' The skill inferred suggestive placeholders from Application element labels
-' =============================================================================
-```
+
+Render as an XML comment in OEF output (the only output format the skill emits in v1; reference §6.10). The marker body must not contain `--` per XML well-formedness — use `=` for the rule line, not `-`. The `LIFT-CANDIDATE` marker (§7.4) is already XML-comment form and unchanged.
 
 The footer (§9 of SKILL.md) lists which layers were lifted vs stubbed so the architect's review focus is clear.
 

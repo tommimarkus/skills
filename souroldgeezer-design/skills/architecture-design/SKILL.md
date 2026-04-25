@@ -197,12 +197,14 @@ Project assimilation:
 
 4. **Emit forward-only stub blocks.** For Business, Motivation, and Strategy — even if the architect did not ask for them — emit a typed stub *only if the diagram kind requires them* (e.g., an Application-to-Business Realisation view without a Business Layer is incomplete). The stub carries the mandatory marker header (reference §7.3):
 
-   ```
-   ' =============================================================================
-   ' FORWARD-ONLY — this layer was not extracted from source
-   ' The architect must fill in: <layer name>
-   ' The skill inferred suggestive placeholders from Application element labels
-   ' =============================================================================
+   ```xml
+   <!--
+   ==============================================================================
+   FORWARD-ONLY — this layer was not extracted from source
+   The architect must fill in: <layer name>
+   The skill inferred suggestive placeholders from Application element labels
+   ==============================================================================
+   -->
    ```
 
    Placeholders are generated from Application Component names — e.g., an `Orders.Api` Component suggests a plausible Business Service label *Order Management*. The architect confirms or rewrites.
@@ -332,7 +334,7 @@ Runtime-verified drift: <n findings, or "drift detection not run">
 Output contains any of the following? Stop; fix before delivering:
 
 - **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate 3.2 Appendix B (Relationships Table).
-- **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2).
+- **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` XML-comment marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2). The marker is an XML comment (`<!-- ... -->`) per reference §7.3; the `'`-prefixed form is wrong (PlantUML / INI syntax) — OEF output is XML.
 - **Business Process, Event, or Interaction emitted by Extract mode without a `LIFT-CANDIDATE` marker** (or with a marker missing the required `source=` or `confidence=` attribute). Fix per `AD-14-LC`; these elements are *partially* forward-only — lifted from backend workflow sources per reference §7.4 and tagged so the architect can confirm each one.
 - **Motivation or Strategy elements emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`.
 - **Layer soup** — a single diagram containing Business, Application, Technology, Motivation, and Strategy elements without a clear concern. Fix per `AD-1`; pick one of the eight supported diagram kinds (reference §9).
