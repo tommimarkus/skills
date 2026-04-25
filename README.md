@@ -223,8 +223,10 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
   `GitHub Actions` for the Implementation & Migration Layer, `Durable
   Functions + Logic Apps` for the Business Layer's Process / Event /
   Interaction subset (the other Business elements stay forward-only),
-  plus a drift-detection procedure. They are always loaded during Extract
-  and Review; the split is by input source (code / IaC / workflow / backend
+  plus a drift-detection procedure. They are consulted (read on demand)
+  during Extract and Review; the harness's Skill tool loads `SKILL.md`
+  only, so each procedure file is `Read` explicitly when its rules
+  apply. The split is by input source (code / IaC / workflow / backend
   workflow), not by target stack choice, so this skill does not use the
   `extensions/` pattern the sibling skills do.
 - **Deterministic banded-grid layout.** A fifth procedure,
