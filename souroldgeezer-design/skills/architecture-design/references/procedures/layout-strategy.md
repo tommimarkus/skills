@@ -34,173 +34,18 @@ Inspect `<property propertyDefinitionRef="propid-archi-model-banded">` on the mo
 
 Build emits `v2` on every new file (no prior view at canonical path).
 
-### Step 2 — Assign each new element to a cell
+## Tier 1 — Sugiyama-v1 core engine
 
-Compute `cell(e) = (column(e), row(e))`:
+Run phases 1–6 in order. Each phase consumes the output of prior phases.
 
-- `column(e)` from the element's aspect per reference §2.3:
-  - Motivation / Strategy layers → Motivation column
-  - Active structure → Active structure column
-  - Behaviour → Behaviour column
-  - Passive structure → Passive structure column
-  - Implementation & Migration → Implementation & Migration column
-- `row(e)` from the element's layer:
-  - Strategy layer → Strategy row
-  - Business layer → Business row
-  - Application layer → Application row
-  - Technology layer → Technology row
-  - Physical layer → Physical row
-  - Motivation / Implementation & Migration elements → row of the element they Realise (or the row of their Realisation target); if none, default to Application row
+### Phase 1 — Cycle handling
 
-### Step 3 — Order elements within each cell
+Detect cycles in the same-layer relationship sub-graph for each ArchiMate layer:
 
-Sort by:
+1. Build a directed graph `G_layer` for each layer where vertices = elements in that layer, edges = Realisation / Composition / Used-by / Serving relationships whose source AND target both fall in this layer.
+2. Run a DFS-based cycle detection (Tarjan's algorithm, simplified): mark each vertex `unvisited` / `visiting` / `done`. A back-edge from a `visiting` vertex to another `visiting` vertex is a feedback edge.
+3. Mark feedback edges with an internal flag `is-feedback=true`. Do NOT reverse the edge — ArchiMate edge directions carry semantics. Phase 5 routes feedback edges last for crossing-minimisation purposes; otherwise they're treated normally.
 
-1. In-degree + out-degree descending (hub elements up).
-2. Identifier ascending (stable tiebreaker).
+**Cycles are uncommon in well-formed ArchiMate models.** Used-by, Realisation, and Composition typically form trees within a layer. Phase 1 is a no-op on most inputs — don't search exhaustively when no cycle exists. If the layer has fewer than 3 same-layer edges, skip the search.
 
-Record the ordered list `cell_elements[c, r]`.
-
-### Step 4 — One pass of barycentric reordering (crossing minimisation)
-
-For each adjacent pair of non-empty columns `(c, c+1)` — left to right — reorder elements in column `c+1` by the barycentre of their connected neighbours in column `c`:
-
-- For each element `e` in column `c+1`, compute `bary(e) = mean(index(n) for n in neighbours(e) where n in column c)`.
-- Re-sort `cell_elements[c+1, *]` by `bary(e)` ascending (elements with no cross-column neighbour keep their Step 3 order).
-
-One pass is enough — this is the coarse version of ELK's `LAYER_SWEEP`. A full sweep is out of scope; the determinism requirement forbids iterating until convergence.
-
-### Step 5 — Nest children into parents
-
-For every Composition, Aggregation, or Realization relationship `(parent, child)` where **both endpoints land in the same cell** (same column, same row):
-
-- Place `child` as a nested `<node>` inside `parent`'s placement. Child `x = parent.x + 20`, `y = parent.y + 40 + Σ prior_children.h + 20 × prior_count`. Child `w ≤ parent.w − 40`, `h` unchanged.
-- Mark the relationship edge as implicit: add `<properties>` with `<property propertyDefinitionRef="propid-archi-arm"><value xml:lang="en">hide</value></property>` to the relationship, and **do not** emit a `<connection>` for it in this view. Archi's ARM will render the nesting as-is; tools without ARM still read the relationship in the model.
-- Grow the parent's `w`/`h` if needed to contain children: `parent.w = max(parent.w, max_child.x + max_child.w + 20 − parent.x)`, `parent.h = max(parent.h, last_child.y + last_child.h + 20 − parent.y)`.
-
-Rules:
-
-- Only nest when both endpoints are in the same cell — cross-cell nesting crosses layer or aspect bands and violates reference §2.1 / §2.3.
-- A child may be nested in at most one parent per view. If a child has two valid parents, nest in the one whose relationship is Composition; fall back to the first parent in identifier order.
-- Nesting depth is capped at 2 (parent → child → grandchild). Deeper chains render correctly but exceed the view budget quickly — flag as `AD-L4` risk.
-
-### Step 5b — Multi-row sibling layout (new child, existing siblings)
-
-Common Extract scenario: a refresh adds a new child to a parent that already contains a horizontal row of architect-positioned siblings (matched by Step 1). The default Step 6 placement (centred on `parent.x`, stacked vertically below the last existing child) would put the new child on a second row beneath the first row of siblings. The parent→child Composition edge then routes (per Step 7 orthogonal) along the shortest path, which visually passes through one or more existing sibling boxes — making the relationship look anchored on a sibling instead of on the parent.
-
-Apply this rule before falling through to Step 6 for a *new* nested child whose row would land below at least one existing sibling row in the same parent:
-
-1. **Prefer a non-colliding `x`.** Compute the candidate placement window inside the parent: `x ∈ [parent.x + 20, parent.x + parent.w − 20 − child.w]`. Scan the existing siblings on the row(s) above the new child's row and collect the union of their x-extents `[sibling.x, sibling.x + sibling.w]`. If the candidate window contains any `x` that does not overlap any sibling x-extent, place the new child at the smallest such `x` (deterministic). The Composition edge then drops vertically inside the parent's whitespace and never crosses an existing sibling box; emit it as a normal hidden ARM-managed edge per Step 5.
-2. **Fall back to bendpoint routing.** If no non-colliding `x` fits within the parent's interior — every horizontal pixel inside `parent.w` overlaps an existing sibling — keep the default Step 6 centred placement and emit two bendpoints in Step 7 to route the parent→child Composition edge west of the parent (see Step 7 *Multi-row sibling clause*). The edge is visible (not ARM-hidden); the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling.
-3. **Grow `parent.w` if necessary.** If the candidate window is empty because the parent is narrower than its sibling row, grow `parent.w` per Step 5's existing rule before re-evaluating clause 1.
-
-The rule only fires when (a) the new child is genuinely new (not preserved by Step 1) and (b) the parent already contains at least one existing sibling on a row above the new child's row. Single-row insertions (the new child fits on the existing row at the next free slot) are unchanged from Step 5.
-
-### Step 6 — Compute concrete coordinates
-
-For each non-nested element in `cell_elements[c, r]` in order:
-
-- `x = column(c).x_start + (column.width − element.w) / 2` rounded to the nearest 10. This centres the element in its column.
-- `y = row(r).y_start + 20 + Σ prior_elements.h + 20 × prior_count`. This stacks elements vertically inside the row, 20-px gutter between.
-
-If the stack overflows the row (`y + h > row.y_end`), flag `AD-L4` (view-density over budget) and bleed into the next row by 40 px — do not overlap the next row's own elements.
-
-### Step 7 — Route edges
-
-Every `<connection>` that wasn't hidden by Step 5:
-
-- `routing` attribute omitted (OEF has no such attribute); rendering tools decide. Emit bend points as `<bendpoint x="..." y="..."/>` child elements, all coordinates on the 10-px grid.
-- Orthogonal routing only: from source midpoint, one horizontal-then-vertical (or vertical-then-horizontal) path to target midpoint. Choose the path that introduces fewer crossings with existing edges; tiebreak by path-length.
-- Parallel edges in the same lane space 20 px apart.
-- Connection source/target connect to the side of the element that faces the other endpoint (left, right, top, bottom midpoint). Do not connect to corners.
-
-**Multi-row sibling clause.** When Step 5b clause 2 fired (new nested child placed on a row below existing siblings, with no non-colliding `x` available inside the parent), the parent→child Composition edge needs explicit bends to clear the existing sibling row(s); the default shortest-path orthogonal route would visually cross one or more sibling boxes. Emit exactly two bendpoints to route the edge west of the parent:
-
-- **Bendpoint 1** at `(parent.x − 20, parent.y + parent.h / 2)` — exits the parent's left midpoint and steps 20 px west of `parent.x`. Round both coordinates to the nearest 10.
-- **Bendpoint 2** at `(parent.x − 20, child.y + child.h / 2)` — descends along the same vertical lane to the child's y-level.
-
-Connect from the parent's left midpoint to the child's left midpoint via these two bendpoints. The Composition edge is visible in this case (not ARM-hidden) — the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling. If two or more multi-row children share the same parent, space their bendpoint columns 20 px apart per the parallel-edges rule above (`parent.x − 20`, `parent.x − 40`, …); collisions with the parent's own sibling on the layer-row are out of scope of this clause and addressed by widening the parent or splitting the view.
-
-## View budget
-
-| Limit | Threshold | Smell |
-|---|---:|---|
-| Elements per view | 20 | `AD-L4` warn |
-| Relationships per view | 30 | `AD-L4` warn |
-| Nesting depth | 2 | `AD-L4` info |
-| Elements per cell | 4 | split the view or promote a cluster to Grouping |
-| Edge crossings per view | `node_count / 4` | `AD-L5` info |
-
-Over budget → prefer one of: split into two views (by feature or by aspect), promote a cluster to a Grouping element (reference §4.8; logical cluster, never a layer container), or move peripheral elements to a separate Motivation / Migration view.
-
-## Process-flow exception (Business Process Cooperation, §9.7)
-
-When the view's `viewpoint` attribute is `Business Process Cooperation` (reference §9.7), the Business row is laid out as a three-lane horizontal strip instead of the default banded cell. All other rows in the same view (Application, Technology, etc. — rarely present given §9.7 is a single-layer view, but legal when nested or contextualised) use the default banded grid.
-
-**Trigger.** `diagram_kind == "Business Process Cooperation"` — detected by the view's `viewpoint="Business Process Cooperation"` attribute, or by pre-flight input during Build.
-
-**Three lanes inside the Business band** (`y ∈ [280, 480]` per reference §6.4a):
-
-- **Behaviour lane** `y ∈ [360, 420]` — Business Process, Business Event, and Business Interaction elements placed left-to-right in the order produced by a topological sort of the view's Triggering and Flow relationships. Tiebreaks are resolved by identifier ascending (consistent with Step 3's tiebreak convention). `x` starts at the Behaviour column's `x_start = 560` and advances by `element.w + 40` per element; the strip may span into the Active-structure and Passive-structure columns as needed to accommodate the chain.
-- **Active lane** `y ∈ [280, 340]` — Business Actor, Business Role, and Business Collaboration elements placed directly above the Behaviour element they are Assigned to (same `x` midpoint as the Behaviour element).
-- **Passive lane** `y ∈ [440, 480]` — Business Object, Contract, Product, and Data Object elements placed directly below the Behaviour element that Accesses them (same `x` midpoint).
-
-**Steps preserved.** Step 1 (architect-positioned overrides are respected — on re-run, architect-authored `x`, `y`, `w`, `h` are reused verbatim), Step 5 (nesting of Composition / Aggregation / Realization inside the parent where applicable), Step 7 (orthogonal routing on the 10-px grid with bend points). View-budget caps (`AD-L4`: ≤ 20 elements and ≤ 30 relationships per view) are unchanged.
-
-**Steps replaced for the Business row only.** Steps 2–4 (cell assignment, within-cell vertical stacking, barycentric crossing-minimisation reorder) and Step 6 (default structure / behaviour / passive cell placement) are superseded by the lane rules above. The rest of the view — if any non-Business elements appear — follows the default banded grid.
-
-**Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle are placed in identifier-ascending order, the remaining acyclic elements place normally around them, and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely); a dedicated cycle-specific smell is deferred.
-
-**No layout exception for §9.3 Service Realization (Process-rooted modality).** Service Realization views are vertical stacks across layers — exactly what the default banded grid produces. No exception needed; see reference §9.3 for the palette and the `AD-L4` note on the Application band's 4-element budget (UI Component, Interface, Service, Backend Component).
-
-## Colour and stroke
-
-Do not emit `<style>` children on `<node>` placements. Leaving style undeclared lets each rendering tool apply its layer-idiomatic colours (yellow Business / turquoise Application / green Technology in Archi's default theme). Declaring custom colours on elements overrides the tool's theme without signal.
-
-Exception: a Grouping used for a logical cluster may carry a fill for visual distinction. Use a single neutral fill for every Grouping in the same view.
-
-## Worked placement
-
-Suppose an Application Cooperation view (reference §9.2) with three Application Components and one Application Service:
-
-- `C1` = Orders API (ApplicationComponent, out-degree 2)
-- `C2` = Payments API (ApplicationComponent, out-degree 1)
-- `C3` = Orders Core (ApplicationComponent, in-degree 2; Composition parent of C1 and C2)
-- `S1` = Place Order (ApplicationService; realised by C1)
-
-Cells: `C1, C2, C3 → (Active structure, Application)`, `S1 → (Behaviour, Application)`.
-
-Step 5 nests `C1` and `C2` inside `C3` (Composition, same cell).
-
-Step 6 on the non-nested elements:
-
-- `C3` at `x = 300 + (240 − 200) / 2 = 320`, `y = 520 + 20 = 540`, `w = 200` (grown to contain children), `h = 200` (grown).
-- `S1` at `x = 560 + (240 − 160) / 2 = 600`, `y = 520 + 20 = 540`, `w = 160`, `h = 60`.
-
-Nested children inside `C3`:
-
-- `C1` at `x = 320 + 20 = 340`, `y = 540 + 40 = 580`, `w = 140`, `h = 60`.
-- `C2` at `x = 340`, `y = 580 + 60 + 20 = 660`, `w = 140`, `h = 60`.
-
-Edges:
-
-- `C1 → S1` (Realization): orthogonal, out the right midpoint of C1 (`x=480, y=610`), right to `x=600`, up to `y=570` (right midpoint of S1 is `y=570`). Bend point `(600, 610)`.
-- Composition edges `C3 → C1` and `C3 → C2`: hidden by ARM marker (Step 5).
-
-Result: one view, four elements, one visible connection, zero crossings.
-
-## What this procedure does not solve
-
-- **Views with > 30 relationships** produce crossings even after Step 4 — the one-pass barycentric sweep cannot match a full iterative solver. Beyond the view budget, split the view; that is the correct answer.
-- **Non-tree nesting.** If two parents both want to contain the same child (e.g., Orders API is Composed by *both* Orders Core and Checkout Service), nesting picks one and the other Composition is drawn as an explicit edge. Pick the parent with higher out-degree in the current view; tiebreak by identifier.
-- **Hand-drawn aesthetic.** The grid is deliberately regular; architects who want organic placement should hand-edit after import. The procedure preserves hand edits on re-run (Step 1).
-- **Diagram kinds outside reference §9.** Product Map, Information Structure, Physical views are expressible in OEF but outside the skill's supported set in v1 — the procedure is not tuned for them.
-
-## Sources
-
-Paraphrased guidance; no prose, figures, or samples copied.
-
-- The Open Group ArchiMate® 3.2 Specification (C226, March 2023) — the ArchiMate Framework (horizontal layers, Motivation left of Core, Implementation & Migration right of Core) and Appendix B well-formedness are the structural anchors for cell assignment and the nest-in-same-cell rule. <https://publications.opengroup.org/c226>
-- Eero Hosiaisluoma, *ArchiMate® Cookbook — Patterns & Examples* — the Layered View convention (top-down by layer), the nesting-over-explicit-edge preference for Composition / Aggregation, and the "compact and readable" principle that drives the view budget. <http://www.hosiaisluoma.fi/ArchiMate-Cookbook.pdf>
-- Phillip Beauvoir, *Archi User Guide* — Container Elements and Automatic Relationship Management as the implementation-tool idiom that the nest + hide rule emits for. <https://www.archimatetool.com/downloads/archi/Archi%20User%20Guide.pdf>
-- Eclipse Layout Kernel, *Layered algorithm* — Sugiyama-style layered placement, orthogonal edge routing, and `LAYER_SWEEP` crossing minimisation inform the one-pass barycentric step and the default routing style. <https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-layered.html>
+After Phase 1, the same-layer sub-graph minus feedback edges is a DAG, ready for topological sort in Phase 3.
