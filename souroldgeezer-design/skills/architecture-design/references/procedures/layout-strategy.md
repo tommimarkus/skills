@@ -49,3 +49,21 @@ Detect cycles in the same-layer relationship sub-graph for each ArchiMate layer:
 **Cycles are uncommon in well-formed ArchiMate models.** Used-by, Realisation, and Composition typically form trees within a layer. Phase 1 is a no-op on most inputs — don't search exhaustively when no cycle exists. If the layer has fewer than 3 same-layer edges, skip the search.
 
 After Phase 1, the same-layer sub-graph minus feedback edges is a DAG, ready for topological sort in Phase 3.
+
+### Phase 2 — Layer assignment
+
+ArchiMate layer is given by the element's `xsi:type`:
+
+| Element types | Layer |
+|---|---|
+| `Resource`, `Capability`, `ValueStream`, `CourseOfAction` | Strategy |
+| `BusinessActor`, `BusinessRole`, ..., `BusinessObject`, `Contract`, `Product` | Business |
+| `ApplicationComponent`, `ApplicationCollaboration`, ..., `DataObject` | Application |
+| `Node`, `Device`, `SystemSoftware`, ..., `Artifact` | Technology |
+| `Equipment`, `Facility`, `DistributionNetwork`, `Material` | Physical |
+
+Motivation and Implementation & Migration columns span all five rows; their elements take the row of their Realisation target (or the row of the element they are assigned to). Default to Application row when no target.
+
+Composite types (`Location`, `Grouping`) inherit the row of their dominant child element class. A Grouping containing only Application Components gets the Application row.
+
+Output of Phase 2: each element has a `layer` ∈ {Strategy, Business, Application, Technology, Physical}.
