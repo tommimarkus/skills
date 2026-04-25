@@ -46,6 +46,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view |
 | `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
 | `AD-L9` | §8 layout, §6.4a | Hierarchy not respected — Realization / Used-by / Serving relationship between same-layer elements drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Detected by Tier 1 phase 1 (cycle handling) + phase 3 (topological sort) failures. |
+| `AD-L10` | §8 layout, §6.4a | Canvas not normalised — top-left of the used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px`. Tier 1 phase 6 (bbox normalisation) emits this naturally; smell catches non-normalised legacy or hand-shifted output. |
 
 ## Process-flow smells — `AD-B-*`
 
