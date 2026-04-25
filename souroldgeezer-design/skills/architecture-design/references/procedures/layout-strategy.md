@@ -191,3 +191,16 @@ Phase 6: `(min_x, min_y) = (320, 540)`. Shift by `(40 - 320, 40 - 540) = (-280, 
 - C3 at `(40, 40, 200, 200)`. C1 at `(60, 80, 160, 64)`. C2 at `(60, 164, 160, 64)`. S1 at `(320, 40, 180, 64)`. Bend at `(320, 112)`.
 
 Result: one view, four elements, one visible connection, zero crossings, origin-aligned canvas.
+
+### Phase 6 — Bounding-box normalisation
+
+After Phases 1–5 complete, compute the used-region bounding box and shift the entire view to canvas origin.
+
+1. **Compute bounds.** Iterate every `<node>`'s `(x, y, x + w, y + h)` and every `<bendpoint>`'s `(x, y)`. Record `min_x`, `min_y`, `max_x`, `max_y`.
+2. **Compute shift.** `dx = 40 - min_x`, `dy = 40 - min_y`. (`40` is the canvas inset — leaves a 4-cell margin on the top and left edges of the diagram.)
+3. **Apply shift.** For every `<node>`: `x += dx`, `y += dy`. For every `<bendpoint>`: `x += dx`, `y += dy`.
+4. **Round to grid.** All resulting `x`, `y` should already be on the 10-px grid (Phases 4 and 5 placed everything on grid, and `dx`/`dy` are differences of grid-aligned values), but defensive rounding (`x = round_to_10(x)`) catches any accumulated drift.
+
+After Phase 6, the diagram's used region's top-left is at `(40, 40)`; total view width is `max_x - min_x + 80` (40 px margin on each side). Archi opens the file with the diagram visible immediately — no scroll-to-find.
+
+**Skip Phase 6 only when:** the prior view at the canonical path was authored with `propid-archi-model-banded=v1` and Tier 0 preserved its coordinates verbatim (Phase 6 would shift the architect's hand-positions away from where they expected them).
