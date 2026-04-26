@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer",
-  "description": "Claude Code plugins by Sour Old Geezer — skills and subagents for code auditing, review, and development workflows.",
+  "description": "Claude Code and Codex plugins by Sour Old Geezer — skills for code auditing, review, and development workflows, with Claude Code subagents where supported.",
   "owner": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"

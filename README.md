@@ -1,9 +1,9 @@
 # souroldgeezer
 
-Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
+Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships two plugins:
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
-  test quality, with per-stack extensions and matching subagents.
+  test quality, with per-stack extensions and matching Claude Code subagents.
 - **souroldgeezer-design** — reference-driven design for modern web UIs,
   serverless HTTP APIs, and ArchiMate® architecture models. For UIs (build,
   review, lookup): enforces WCAG 2.2 AA, internationalization (LTR + RTL + text
@@ -24,9 +24,12 @@ Claude Code plugin marketplace by Sour Old Geezer. Currently ships two plugins:
   Strategy as forward-only; supports macro Business Process Cooperation and
   UI-aware Service Realization diagram kind (§9.3 Process-rooted modality); dispatches from the sibling
   skills' Review mode to flag drift between code and the architect's
-  model. Each skill has a matching subagent.
+  model. Each skill has a matching Claude Code subagent; Codex consumes the
+  bundled `skills/**/SKILL.md` workflows directly from the plugin.
 
 ## Install
+
+### Claude Code
 
 Add this marketplace and enable the plugins you want:
 
@@ -53,21 +56,48 @@ Or, for local development against a clone:
 }
 ```
 
+### Codex
+
+Codex can read the same Claude-style repo marketplace at
+`.claude-plugin/marketplace.json`. Add the marketplace, then open the plugin
+browser and install or enable the plugins you want:
+
+```
+codex plugin marketplace add tommimarkus/skills
+codex
+/plugins
+```
+
+For local development against a clone, pass the clone root as the marketplace
+source:
+
+```
+codex plugin marketplace add /absolute/path/to/skills
+codex
+/plugins
+```
+
+The repo intentionally does not duplicate the catalog under
+`.agents/plugins/marketplace.json`; the existing `.claude-plugin/marketplace.json`
+is the shared marketplace for both Claude Code and Codex.
+
 ## What's in `souroldgeezer-audit`
 
-Two audit skills, each with a matching one-shot subagent:
+Two audit skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Audits | Stack extensions |
 |---|---|---|
 | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | Pipelines, IaC, release artifacts, code-level security smells | [bicep](souroldgeezer-audit/skills/devsecops-audit/extensions/bicep.md), [dockerfile](souroldgeezer-audit/skills/devsecops-audit/extensions/dockerfile.md), [dotnet-security](souroldgeezer-audit/skills/devsecops-audit/extensions/dotnet-security.md), [github-actions](souroldgeezer-audit/skills/devsecops-audit/extensions/github-actions.md) |
 | [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | Unit, integration, and E2E test quality (dispatches on detected test type) | [dotnet-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/) on a shared [dotnet-core](souroldgeezer-audit/skills/test-quality-audit/extensions/dotnet-core.md); [nodejs-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/) on a shared [nodejs-core](souroldgeezer-audit/skills/test-quality-audit/extensions/nodejs-core.md); [nextjs-unit / integration / e2e](souroldgeezer-audit/skills/test-quality-audit/extensions/) on a shared [nextjs-core](souroldgeezer-audit/skills/test-quality-audit/extensions/nextjs-core.md) (strict superset of nodejs) |
 
-Subagents live alongside in [souroldgeezer-audit/agents/](souroldgeezer-audit/agents/)
-and invoke the same skills, making them usable as delegated one-shots.
+Claude Code subagents live alongside in [souroldgeezer-audit/agents/](souroldgeezer-audit/agents/)
+and invoke the same skills, making them usable as delegated one-shots. Codex
+installs the bundled skills through the plugin manifest; custom-agent parity is
+out of scope for this first Codex support pass.
 
 ## What's in `souroldgeezer-design`
 
-Three design skills, each with a matching one-shot subagent:
+Three design skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Covers | Stack extensions |
 |---|---|---|
@@ -76,7 +106,7 @@ Three design skills, each with a matching one-shot subagent:
 | [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate 3.2 layer discipline, relationship well-formedness, and Core-vs-extension defaults; serialised as **OEF XML** (ArchiMate Model Exchange File Format), loadable in ArchiMate-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only), Review (artefact + drift detection including process drift against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process) | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), plus the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau timeline / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-L*` / `AD-B-*` checks in Review |
 
 References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
-Matching subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md).
+Matching Claude Code subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest; custom-agent parity is out of scope for this first Codex support pass.
 
 The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechanism across the three skills: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review (drift detection) when a paired model is present, so code and architecture stay consistent across iterations.
 
@@ -301,13 +331,15 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
 ## Repository layout
 
 ```
-.claude-plugin/marketplace.json    # marketplace manifest (lists plugins)
+AGENTS.md                          # thin Codex-native pointer to CLAUDE.md
+.claude-plugin/marketplace.json    # shared Claude Code + Codex marketplace manifest
 souroldgeezer-audit/               # audit plugin
   .claude-plugin/plugin.json
+  .codex-plugin/plugin.json
   docs/                            # bundled rubrics
     security-reference/            # devsecops.md
     quality-reference/             # unit / integration / e2e-testing.md
-  agents/*.md                      # subagents (one per skill, same name)
+  agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
     extensions/                    # per-stack smell packs
@@ -315,11 +347,12 @@ souroldgeezer-audit/               # audit plugin
     config.yaml                    # optional, skill-specific
 souroldgeezer-design/              # design plugin
   .claude-plugin/plugin.json
+  .codex-plugin/plugin.json
   docs/
     ui-reference/                  # bundled reference (responsive-design.md)
     api-reference/                 # bundled reference (serverless-api-design.md)
     architecture-reference/        # bundled reference (architecture.md)
-  agents/*.md                      # subagents (one per skill, same name)
+  agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
@@ -329,14 +362,16 @@ undecided/                         # skills not yet assigned to a plugin — NOT
 ```
 
 See [CLAUDE.md](CLAUDE.md) for the full authoring conventions (shared skill
-architecture, subagent pairing rules, skill-specific notes).
+architecture, subagent pairing rules, skill-specific notes) and
+[AGENTS.md](AGENTS.md) for the thin Codex-native pointer.
 
 ## Attribution
 
 Developed with assistance from [Claude](https://www.anthropic.com/claude)
-(Anthropic) via [Claude Code](https://claude.com/claude-code). Per-commit
-co-authorship trailers are intentionally omitted — this repo-wide acknowledgement
-covers the contribution.
+(Anthropic) via [Claude Code](https://claude.com/claude-code), and
+[Codex](https://developers.openai.com/codex). Per-commit co-authorship trailers
+are intentionally omitted — this repo-wide acknowledgement covers the
+contribution.
 
 ## License
 

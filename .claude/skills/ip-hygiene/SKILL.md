@@ -1,6 +1,6 @@
 ---
 name: ip-hygiene
-description: Use when creating, modifying, renaming, moving, or deleting any skill-related or repo-documentation content in this repository — `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, plugin / marketplace manifests, or the `CLAUDE.md` / `README.md` sections that describe them. Runs a fast five-question triage; if any question hits, runs a copyright / trademark / licence check covering prose, code samples, figures, sample files, bundled assets, and structured spec tables (EU sui generis database right). Enforces ® / ™ on first-and-subsequent-significant mentions in public-visible files (README, CLAUDE.md, manifests, frontmatter descriptions), applies the adjective-only rule for product / standard marks, blocks verbatim reproduction of copyrighted content, requires source citation as part of the paraphrase remedy, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, surfaces pre-existing IP issues encountered during drive-by edits, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter*) authority. Internal to this repository; not distributed with the `souroldgeezer-*` plugins.
+description: Use when creating, modifying, renaming, moving, or deleting any skill-related or repo-documentation content in this repository — `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, Claude Code / Codex plugin manifests, marketplace manifests, or the `CLAUDE.md` / `AGENTS.md` / `README.md` sections that describe them. Runs a fast five-question triage; if any question hits, runs a copyright / trademark / licence check covering prose, code samples, figures, sample files, bundled assets, and structured spec tables (EU sui generis database right). Enforces ® / ™ on first-and-subsequent-significant mentions in public-visible files (README, AGENTS.md, CLAUDE.md, manifests, frontmatter descriptions), applies the adjective-only rule for product / standard marks, blocks verbatim reproduction of copyrighted content, requires source citation as part of the paraphrase remedy, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, surfaces pre-existing IP issues encountered during drive-by edits, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter*) authority. Internal to this repository; not distributed with the `souroldgeezer-*` plugins.
 ---
 
 # IP Hygiene
@@ -8,8 +8,8 @@ description: Use when creating, modifying, renaming, moving, or deleting any ski
 ## Overview
 
 This is a repo-internal skill. It encodes the copyright, trademark, and
-licence discipline the `souroldgeezer` repository applies when Claude
-authors or edits skill content. The substance is drawn from the audit
+licence discipline the `souroldgeezer` repository applies when authoring
+agents edit skill content. The substance is drawn from the audit
 work done during the `architecture-design` build — near-verbatim
 paraphrases of The Open Group ArchiMate® 3.2 Specification, ® on first
 mention in public-visible files, the reflex to bundle The Open Group's
@@ -22,7 +22,7 @@ Judgment-heavy by design. How verbatim is too verbatim, whether a use
 is nominative, which third-party assets may be referenced or must be
 by-URL-only, when a logo reproduction crosses from descriptive to
 derivative — none of these can be automated. The skill is the
-procedure Claude follows, not a validator.
+procedure the authoring agent follows, not a validator.
 
 **Not a substitute for legal review.** When a specific concern arises
 that the procedure doesn't anticipate — a vendor cease-and-desist,
@@ -39,9 +39,11 @@ Invoke on any create / modify / rename / move / delete touching:
 - `souroldgeezer-*/agents/<name>.md` — subagents.
 - `souroldgeezer-*/docs/<kind>-reference/*.md` — bundled reference
   prose (rubrics, playbooks, design references).
-- `souroldgeezer-*/.claude-plugin/plugin.json` and
+- `souroldgeezer-*/.claude-plugin/plugin.json`,
+  `souroldgeezer-*/.codex-plugin/plugin.json`, and
   `.claude-plugin/marketplace.json` — manifest descriptions.
-- `CLAUDE.md` and `README.md` sections that describe any of the above.
+- `CLAUDE.md`, `AGENTS.md`, and `README.md` sections that describe any
+  of the above.
 - `.claude/skills/<name>/**` — repo-internal skills, including this
   one.
 
@@ -52,15 +54,18 @@ updating a path in a build-only file — don't activate this skill.
 ### What counts as a "public-visible" file
 
 Trademark first-mention discipline applies to files that are visible
-*outside Claude's working context* — i.e. anything rendered for humans
-or exposed through an agent / skill picker:
+*outside the authoring agent's working context* — i.e. anything rendered
+for humans or exposed through an agent / skill picker:
 
 - `README.md`
+- `AGENTS.md`
 - `CLAUDE.md` (public in the repo even though addressed to Claude)
 - `.claude-plugin/marketplace.json` (top-level)
 - each `<plugin>/.claude-plugin/plugin.json`
+- each `<plugin>/.codex-plugin/plugin.json`
 - frontmatter `description:` fields of every `SKILL.md` and
-  `agents/*.md` (rendered in Claude Code's picker / skill-list UI)
+  `agents/*.md` (rendered in Claude Code's picker / skill-list UI;
+  Codex renders skill descriptions from `SKILL.md`)
 
 Internal files not in this list — extension prose, procedures, smell
 catalogs, reference `*.md` bodies — don't require ® on every mention.
@@ -368,8 +373,8 @@ industrial or commercial matters"*. The CJEU sharpens this in
 - **Repo's MIT licence** applies only to the repo's own content.
   Edits must not imply the MIT grant extends to any referenced
   third-party standard, schema, or software.
-- **AI-authored content status.** Material authored by Claude at
-  this repo's request is disclosed as such in
+- **AI-authored content status.** Material authored by Claude or
+  Codex at this repo's request is disclosed as such in
   [README.md](../../../README.md) § "Attribution". Under current US
   precedent (*Thaler v. Perlmutter*, D.D.C. 2023; USCO policy
   guidance 2023), purely AI-generated content is generally not
@@ -475,7 +480,7 @@ When a skill's Build mode *produces* new content — for example,
 `architecture-design` Build generating an OEF XML file from architect
 intent — the ip-hygiene check applies to the *skill-authoring edit*
 (you edited the skill to make it produce that shape), not to each
-downstream file Claude generates at runtime. Runtime output is the
+downstream file an authoring agent generates at runtime. Runtime output is the
 user's content; IP hygiene on their content is their concern, not
 the skill's.
 
@@ -891,8 +896,8 @@ Listed alphabetically within each group.
 
 ### Notes on using these sources
 
-- **URLs are for reference, not runtime fetch.** The Claude Code
-  sandbox in this repo does not have network access to most of
+- **URLs are for reference, not runtime fetch.** The Claude Code or Codex
+  sandbox in this repo may not have network access to most of
   these hosts; this list is authoritative documentation for *when*
   a claim needs primary-source verification (e.g. before committing
   a change that hinges on a specific interpretation). Fetch

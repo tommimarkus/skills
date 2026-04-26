@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and Codex when working with code in this repository.
 
 ## What this repo is
 
-A **Claude Code plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories. There is nothing to build, lint, or test — content is Markdown + YAML. Validation is structural (correct filenames, frontmatter, schema) and semantic (does the skill's described workflow still match its SKILL.md).
+A **Claude Code and Codex plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories and is intentionally shared by both runtimes; Codex can read this Claude-style repo marketplace directly, so do not duplicate it under `.agents/plugins/marketplace.json` unless a future design explicitly chooses to split catalogs. Each published plugin carries both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. There is nothing to build, lint, or test — content is Markdown + YAML + JSON. Validation is structural (correct filenames, frontmatter, schema, manifest sync via `jq`) and semantic (does the skill's described workflow still match its SKILL.md).
 
-## Keeping CLAUDE.md and README.md current (MUST)
+## Keeping CLAUDE.md, AGENTS.md, and README.md current (MUST)
 
-**Both CLAUDE.md and README.md MUST be kept up to date as the repo evolves.** They have different audiences and different triggers, but both are load-bearing — stale guidance in either causes downstream bugs. Treat drift in either as a blocking bug and fix it in the same commit as the change that introduced the drift.
+**CLAUDE.md, AGENTS.md, and README.md MUST be kept up to date as the repo evolves.** They have different audiences and different triggers, but all are load-bearing — stale guidance in any of them causes downstream bugs. Treat drift in these files as a blocking bug and fix it in the same commit as the change that introduced the drift.
 
 **CLAUDE.md audience:** Claude Code when authoring or editing skills in this repo. It is the first file Claude reads — stale guidance here causes stale reasoning everywhere else. Update CLAUDE.md whenever any of the following change:
 
@@ -22,36 +22,47 @@ A **Claude Code plugin marketplace**, not an application. The root `.claude-plug
 
 - A plugin is added, removed, or renamed (update the intro paragraph, add/remove the corresponding "What's in `<plugin>`" section, update the repository-layout example).
 - A skill is added or removed within a plugin (update the corresponding plugin's "What's in" table and its "How `<skill>` works" section).
-- Install commands or marketplace slugs change (update "Install").
+- Install commands or marketplace slugs change for Claude Code or Codex (update "Install").
 - Repository layout changes in a way a new reader would benefit from seeing (update "Repository layout").
 - The audience-facing behaviour of a skill changes — new mode, new output format, new reference path (update the skill's "How it works" section).
 
-Before finishing any task that changes repo structure or a skill's contract, re-read **both files** and diff them mentally against the change. If any section is now wrong or incomplete, amend it in the same commit.
+**AGENTS.md audience:** Codex and other AGENTS.md-aware tooling. It is intentionally a thin pointer to this file, not a copy. Update AGENTS.md when the Codex entrypoint rules change, such as marketplace location, Codex manifest requirements, structured-file tooling rules, or the boundary between bundled skills and custom agents. Do not duplicate the full policy there; keep canonical details in CLAUDE.md.
+
+Before finishing any task that changes repo structure or a skill's contract, re-read **all three files** and diff them mentally against the change. If any section is now wrong or incomplete, amend it in the same commit.
+
+## Structured-file tooling
+
+Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
+`yq` for YAML frontmatter, TOML, and XML inspection or validation. Avoid Python
+one-liners or `python3 -m json.tool` for structured JSON / YAML / TOML / XML
+checks unless `jq` or `yq` cannot express the check.
 
 ## Repo-internal skills
 
-The repo ships a small set of **internal** skills under `.claude/skills/` — scoped to this repository, auto-discovered by Claude Code when working here, and deliberately *not* bundled with the distributed `souroldgeezer-*` plugins. Internal skills encode how *we* author this repo; they are not capabilities shipped to downstream users.
+The repo ships a small set of **internal** skills under `.claude/skills/` — scoped to this repository, auto-discovered by Claude Code when working here, and deliberately *not* bundled with the distributed `souroldgeezer-*` plugins. Codex does not consume these as plugin content, but agents working in this repo should still follow them as repo authoring guidance when they apply. Internal skills encode how *we* author this repo; they are not capabilities shipped to downstream users.
 
 Current internal skills:
 
-- **`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md) — copyright, trademark, and licence check for any skill-related edit. Fast five-question triage, then copyright / trademark / licence check if triggered, with a concern→remedy mapping, an anti-drift fence-posts section recording deliberate non-changes, and an authoritative-sources appendix grouping EU + US + UK statute, directive, and case law. Invoke on any create / modify / rename / move / delete touching `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, the plugin / marketplace manifests, or the `CLAUDE.md` / `README.md` sections that describe those artefacts. Prevents verbatim reproduction of copyrighted spec prose / code / figures / samples, requires source citation as part of the paraphrase remedy, enforces ® / ™ on first-and-subsequent-significant public-visible mentions, applies the adjective-only rule for product / standard marks (corporate-name possessives outside scope), covers EU-only sui generis database right for structured spec tables, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter* D.C. Cir. 2025) authority.
+- **`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md) — copyright, trademark, and licence check for any skill-related edit. Fast five-question triage, then copyright / trademark / licence check if triggered, with a concern→remedy mapping, an anti-drift fence-posts section recording deliberate non-changes, and an authoritative-sources appendix grouping EU + US + UK statute, directive, and case law. Invoke on any create / modify / rename / move / delete touching `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, Claude Code / Codex plugin manifests, marketplace manifests, or the `CLAUDE.md` / `AGENTS.md` / `README.md` sections that describe those artefacts. Prevents verbatim reproduction of copyrighted spec prose / code / figures / samples, requires source citation as part of the paraphrase remedy, enforces ® / ™ on first-and-subsequent-significant public-visible mentions, applies the adjective-only rule for product / standard marks (corporate-name possessives outside scope), covers EU-only sui generis database right for structured spec tables, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter* D.C. Cir. 2025) authority.
 
-Add to this section when new internal skills are introduced. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `plugin.json`.
+Add to this section when new internal skills are introduced. Internal skills must not appear in `.claude-plugin/marketplace.json`, any plugin's `.claude-plugin/plugin.json`, or any plugin's `.codex-plugin/plugin.json`.
 
 ## Directory layout
 
 ```
-.claude-plugin/marketplace.json        ← marketplace manifest (lists plugins, owner, etc.)
+AGENTS.md                              ← thin Codex-native pointer to CLAUDE.md
+.claude-plugin/marketplace.json        ← shared Claude Code + Codex marketplace manifest
 <plugin-name>/
-  .claude-plugin/plugin.json           ← plugin manifest
+  .claude-plugin/plugin.json           ← Claude Code plugin manifest
+  .codex-plugin/plugin.json            ← Codex plugin manifest (points at ./skills/)
   docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
-  agents/<skill-name>.md               ← one subagent per skill, same name
+  agents/<skill-name>.md               ← one Claude Code subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
                      /extensions/      ← per-stack packs (see below)
                      /references/      ← smell catalog + reusable procedures (audit skills)
                      /config.yaml      ← optional, skill-specific (not a Claude Code standard)
 undecided/                             ← skills not yet assigned to a plugin (NOT in marketplace.json, NOT production-ready; do not reference from other skills)
-  agents/<name>.md                     ← matching subagents sit here too
+  agents/<name>.md                     ← matching Claude Code subagents sit here too
   <skill-name>/                        ← same shape as a plugin's skill dir
 ```
 
@@ -68,12 +79,13 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 
 Adding a new plugin:
 1. Create `<plugin-name>/.claude-plugin/plugin.json` (required: `name`, `version`, `description`; use `author: {name, email}` and `license: MIT` defaults from memory). Start at `0.1.0`.
-2. Add it to `marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`.
-3. Plugin `name`, `description`, and `version` in `plugin.json` and in `marketplace.json#plugins[]` must stay in sync — every bump updates both files in the same commit.
+2. Create `<plugin-name>/.codex-plugin/plugin.json` with the same `name`, `version`, `description`, `author`, and `license`; add `"skills": "./skills/"` and Codex `interface` metadata. Omit `apps` and `mcpServers` unless the plugin actually ships those surfaces.
+3. Add it to `.claude-plugin/marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`. This one marketplace is shared by Claude Code and Codex.
+4. Plugin `name`, `description`, and `version` in both plugin manifests and in `marketplace.json#plugins[]` must stay in sync — every bump updates all three files in the same commit.
 
 ## Plugin versioning (MUST)
 
-Plugins follow semver, with the repo-specific interpretation below. **The version bump lives in the same commit as the content change that required it** — never defer. Both `<plugin>/.claude-plugin/plugin.json` and the matching `marketplace.json#plugins[]` entry move together.
+Plugins follow semver, with the repo-specific interpretation below. **The version bump lives in the same commit as the content change that required it** — never defer. Both plugin manifests (`<plugin>/.claude-plugin/plugin.json`, `<plugin>/.codex-plugin/plugin.json`) and the matching `marketplace.json#plugins[]` entry move together.
 
 **What each bump kind means:**
 
@@ -86,11 +98,11 @@ Plugins follow semver, with the repo-specific interpretation below. **The versio
 - Any of the above that adds or removes a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace) → at least *minor*.
 - Any of the above that renames, removes, or breaks the contract of an existing top-level artefact → *major*.
 
-Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree.
+Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree, or adding/changing packaging metadata that does not alter shipped skill behaviour.
 
 **Sibling-file sync.** A plugin-version bump often implies updates in neighbouring files that must land in the same commit:
-- `plugin.json#version` and `marketplace.json#plugins[].version` — always both.
-- `plugin.json#description` and `marketplace.json#plugins[].description` — when the change alters the plugin's surface (new skill, new mode), update both descriptions.
+- `.claude-plugin/plugin.json#version`, `.codex-plugin/plugin.json#version`, and `marketplace.json#plugins[].version` — always all three.
+- `.claude-plugin/plugin.json#description`, `.codex-plugin/plugin.json#description`, and `marketplace.json#plugins[].description` — when the change alters the plugin's surface (new skill, new mode), update all three descriptions.
 - Frontmatter `description:` in any affected `SKILL.md` and matching `agents/<name>.md` — when the change alters what the skill does; required to stay in sync per the subagent pattern (see "Subagents" below).
 - `README.md` and `CLAUDE.md` — per the "Keeping CLAUDE.md and README.md current" rule above; the plugin bump and the documentation update are one commit.
 
@@ -113,7 +125,9 @@ Skills in this repo follow a recurring shape. Understand it before editing any S
 
 ## Subagents
 
-Every skill has a matching subagent at `<plugin>/agents/<skill-name>.md`. The subagent is a thin one-shot wrapper: it invokes the skill via the `Skill` tool, follows the skill's instructions, and presents results in the skill's required shape. Subagent frontmatter: `name`, `description` (mirror the skill's description for discoverability), `tools`, `model`. When editing a skill's invocation contract (output format, required footer fields), update the matching subagent.
+Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md`. The subagent is a thin one-shot wrapper: it invokes the skill via the `Skill` tool, follows the skill's instructions, and presents results in the skill's required shape. Subagent frontmatter: `name`, `description` (mirror the skill's description for discoverability), `tools`, `model`. When editing a skill's invocation contract (output format, required footer fields), update the matching subagent.
+
+Codex does not consume these `agents/*.md` files as part of the current plugin package. Codex installs the bundled skills through `<plugin>/.codex-plugin/plugin.json` with `"skills": "./skills/"`. Do not add Codex custom-agent parity casually; treat it as a separate design because Codex custom agents use a different configuration surface.
 
 ## Skill-specific notes
 
@@ -127,3 +141,4 @@ Every skill has a matching subagent at `<plugin>/agents/<skill-name>.md`. The su
 
 - `skills/<skill>/config.yaml` — skill-internal, not read by the Claude Code runtime. Safe to leave alone when editing plugin metadata.
 - `skills/<skill>/extensions/` and `skills/<skill>/references/` — skill-internal supporting files (docs allow arbitrary files alongside `SKILL.md`), not a Claude Code feature.
+- `.codex-plugin/plugin.json` — Codex packaging metadata, not read by the Claude Code runtime. Keep it synchronized with the Claude Code manifest and marketplace entry.

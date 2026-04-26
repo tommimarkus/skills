@@ -1,0 +1,28 @@
+# AGENTS.md
+
+This repository is a dual Claude Code + Codex plugin marketplace. For full
+authoring policy, read [CLAUDE.md](CLAUDE.md); it remains the canonical repo
+guide so we do not duplicate rules across agent entrypoints.
+
+Keep this file as a thin Codex-native pointer. When canonical policy changes,
+update [CLAUDE.md](CLAUDE.md) first and only adjust this file when Codex entry
+rules change.
+
+## Codex Quick Rules
+
+- Use the existing [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
+  as the shared marketplace. Do not add `.agents/plugins/marketplace.json`
+  unless a future design explicitly chooses to split catalogs.
+- Keep each plugin's `.codex-plugin/plugin.json`, `.claude-plugin/plugin.json`,
+  and shared marketplace entry synchronized on `name`, `version`, and
+  `description`.
+- Codex consumes bundled skills through `.codex-plugin/plugin.json` with
+  `"skills": "./skills/"`.
+- `agents/*.md` files are Claude Code subagents, not Codex custom agents.
+  Treat Codex custom-agent parity as a separate design.
+- Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
+  `yq` for YAML frontmatter, TOML, and XML.
+- Follow the repo-internal `ip-hygiene` guidance in
+  [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
+  when editing plugin manifests, skills, agents, bundled references, or
+  README / CLAUDE / AGENTS sections that describe them.
