@@ -1,37 +1,13 @@
 ---
 name: architecture-design
 description: >-
-  Use when building, extracting, reviewing, or looking up ArchiMate® architecture
-  models — enterprise, solution, or application architecture modelled in
-  ArchiMate 3.2 and serialised as OEF XML per The Open Group ArchiMate Model
-  Exchange File Format 3.2 (Appendix E of C226). Applies the bundled reference
-  at souroldgeezer-design/docs/architecture-reference/architecture.md, enforcing
-  The Open Group ArchiMate 3.2 (C226, March 2023) well-formedness rules
-  including Appendix B relationship constraints, core-vs-extension layer
-  discipline, and per-layer extractability (Application / Technology /
-  Implementation & Migration are liftable from .NET solutions, Bicep, host.json,
-  staticwebapp.config.json, and GitHub Actions workflows; Business / Motivation
-  / Strategy are emitted as forward-only stubs). Output is loadable in
-  ArchiMate-conformant tools. View layout uses the Sugiyama-v1 engine
-  (introduced in 0.8.0) — a deterministic three-tier procedure (Tier 0
-  architect-position preservation; Tier 1 cycle handling, layered ordering
-  with 4-pass barycentric crossing minimisation, median coordinate assignment,
-  Manhattan A* edge routing with obstacle avoidance, bbox normalisation; Tier 2
-  per-viewpoint specialisations for each of the seven §9 viewpoints) — for
-  cookbook-quality OEF in one shot, with zero runtime dependencies. Supports
-  four
-  modes — Build (intent → model), Extract (code/IaC → model), Review (artefact
-  review + drift detection against code/IaC), Lookup (narrow notation
-  question). Bridges to the sibling responsive-design and serverless-api-design
-  skills via the canonical path docs/architecture/<feature>.oef.xml, which
-  sibling skills consume for drift detection in their Review mode. Build
-  / Extract emit a complete process-view set — one §9.7 Business Process
-  Cooperation view per feature plus one §9.3 Service Realization
-  drill-down per orchestrator-level Business Process (top-level +
-  Composition-nested sub-orchestrators), with `propid-coop-view-exclude`
-  and `propid-drilldown-exclude` suppression properties for intentional
-  exclusions; under-coverage is findable in Review via `AD-B-11` /
-  `AD-B-12` / `AD-B-13`.
+  Use when building, extracting, reviewing, or looking up enterprise, solution,
+  or application architecture models in ArchiMate® 3.2 OEF XML, including
+  capability maps, application cooperation, service realization, technology
+  usage, migration, motivation, or business process cooperation views;
+  architecture drift checks against code, IaC, workflows, or process models; or
+  reverse lookup from a code symbol, UI file, API endpoint, or workflow to its
+  owning Business Process.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
