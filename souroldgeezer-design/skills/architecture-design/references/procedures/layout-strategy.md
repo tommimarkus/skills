@@ -311,3 +311,18 @@ Composition edges from Capability to sub-Capability are ARM-hidden (existing Tie
 3. Element x-position within column: centred — `x = column.x_start + (300 - element.w) / 2`, rounded to grid.
 
 Realization edges within a chain run vertically (no Phase 5 routing — they're the structural axis); cross-chain Realization edges route via Phase 5.
+
+### §9.6 Motivation — hierarchical tree
+
+**Override:** phases 3, 4.
+
+**Visual idiom:** vertical tree. Stakeholders at top; Drivers below; Goals / Outcomes / Requirements / Constraints / Principles cascading down via Realization and Influence edges.
+
+**Phase 3 (override).** Topological sort by Realization-chain depth from Stakeholders. Each element gets a `tree_depth = max(parent.tree_depth) + 1`; Stakeholders are depth 0. When an element has no incoming Realization (e.g. a free-floating Constraint), its depth = depth of its Influence target + 1.
+
+**Phase 4 (override).**
+1. Each `tree_depth` is a row, 60-px row gutter (default Tier 1 layer gutter, but applied to depth bands here).
+2. Within a row, elements ordered by identifier ascending; spaced horizontally with 60-px sibling gutter (relaxed from 40 px Tier 1 default — Motivation labels are long).
+3. Element `x` within row: distribute uniformly across the row's available width so the row's children are centred under their parent's `x_centre` when there is a single parent; for elements with multiple parents at depth `d-1`, place at the median `x_centre` of those parents.
+4. Influence edges (Motivation cross-cutting) drawn dashed via reference §5.2 convention; route via Phase 5 with the dashed-style preserved.
+5. Association edges (`Stakeholder` → `Driver` linkage) route via Phase 5 standard A*.
