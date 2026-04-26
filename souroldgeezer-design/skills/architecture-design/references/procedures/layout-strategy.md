@@ -259,3 +259,23 @@ Acceptance: §9.4 view from `/tmp/lfm/docs/architecture/lfm.oef.xml` rebuilds wi
 3. Application Services in the same view stay in the Behaviour aspect column to the right of the hub-spoke cluster — Tier 1 default applies for them. Application Interfaces follow their owning Service.
 
 When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
+
+### §9.5 Migration — horizontal Plateau timeline
+
+**Replaces:** phases 2, 3, 4. Phase 5 routes connecting arrows; phase 6 normalises.
+
+**Visual idiom:** Plateaus form columns left-to-right (Baseline → Transition → Target); Gaps drawn as horizontal arrows between Plateaus; Work Packages stacked below Gaps; Implementation Events as small diamonds at column boundaries.
+
+**Layer assignment (replaces phase 2).** Plateaus, Gaps, Work Packages, and Implementation Events get a column index instead of an ArchiMate layer. Plateaus get column index = chronological order (architect-supplied via `<documentation>` ordering hint, else identifier ascending). Gaps, Work Packages, Implementation Events get the column index of the Plateau they precede.
+
+**Ordering (replaces phase 3).** Within each column: Plateau at top, Implementation Events at column boundary (small diamonds, `14 × 14`), Work Packages stacked below Plateau in identifier order. Gaps drawn as edges from Plateau column N to Plateau column N+1.
+
+**Coordinate assignment (replaces phase 4).**
+1. Each column 300 px wide, 40-px gutter between columns. Column N starts at `x = 40 + N × 340` (pre-normalisation; Phase 6 shifts).
+2. Plateau at `(column.x_start + 60, 40, 180, 64)`.
+3. Implementation Events at column-right-edge (`x = column.x_start + 300 - 7`, the `14 × 14` diamond centred on the column boundary), Plateau-aligned `y = 40 + 25` (centred on Plateau row).
+4. Work Packages stacked below Plateau at `(column.x_start + 60, plateau.y + 84 + i × 84, 180, 64)` for the i-th Work Package in identifier order.
+
+**Phase 5** routes Gap edges between Plateau column N (right midpoint) and Plateau column N+1 (left midpoint) — straight horizontal where possible.
+
+**Phase 6** normalises the entire timeline to `(40, 40)` origin.
