@@ -204,3 +204,41 @@ After Phases 1–5 complete, compute the used-region bounding box and shift the 
 After Phase 6, the diagram's used region's top-left is at `(40, 40)`; total view width is `max_x - min_x + 80` (40 px margin on each side). Archi opens the file with the diagram visible immediately — no scroll-to-find.
 
 **Skip Phase 6 only when:** the prior view at the canonical path was authored with `propid-archi-model-banded=v1` and Tier 0 preserved its coordinates verbatim (Phase 6 would shift the architect's hand-positions away from where they expected them).
+
+## Tier 2 — Per-viewpoint specialisations
+
+Each specialisation overrides Tier 1 phases for its diagram kind. The override is bounded — phases 1, 2, 5, 6 always run unless the specialisation explicitly carves them out.
+
+Dispatch by the view's `viewpoint=` attribute:
+
+| `viewpoint=` | Specialisation | Replaces Tier 1 phases |
+|---|---|---|
+| `Capability Map` | §9.1 tile grid | 3, 4 |
+| `Application Cooperation` | §9.2 hub-and-spoke (when hub detected) | 3, 4 |
+| `Service Realization` | §9.3 vertical-stack | 3, 4 |
+| `Technology` | §9.4 hosting tower | 3, 4; carves phase 5 for hosting Assignment |
+| `Migration` | §9.5 Plateau timeline | 2, 3, 4 |
+| `Motivation` | §9.6 hierarchical tree | 3, 4 |
+| `Business Process Cooperation` | §9.7 process-flow lanes | 3, 4 |
+
+Each sub-section below documents one specialisation.
+
+### §9.4 Technology Usage — hosting tower
+
+**Override:** phases 3, 4. **Carves:** phase 5 for `Assignment` relationships.
+
+**Visual idiom:** Application Components stack directly above their hosting Technology Nodes; hosting Assignment edges drawn straight-vertical (the structural axis of the diagram); Communication Network / Path elements drawn as horizontal bars between Technology Nodes.
+
+**Phase 3 (override).** Order Application elements by their hosting Node's identifier (so Apps that share a Node cluster). Order Technology elements by `degree(out)` descending (Nodes that host many Apps centred).
+
+**Phase 4 (override).**
+1. Place Technology Nodes first in a horizontal row at `y_tech = 40 + total_app_height + 60` (pre-normalisation; Phase 6 normalises `(min_x, min_y)` back to `(40, 40)`). Tech Nodes spaced horizontally with 40 px gutter, ordered per Phase 3 step 2 (highest out-degree centred). Width per Tech Node = default 160 (or grown for label).
+2. Each Application Component placed at `(host_node.x + (host_node.w - app.w) / 2, y_tech - app.h - 60)`. The Application is centred horizontally above its host, with a 60 px vertical gap between Application bottom and Technology top. If multiple Apps share a Node, group horizontally above with 40 px sibling gutter.
+3. Communication Network / Path elements placed as horizontal bars between Tech-row Nodes at `y = y_tech + node.h / 2 - bar.h / 2`, spanning the gap between their two endpoints.
+4. Tech Nodes that no Application hosts (data-plane: Cosmos, Storage, Key Vault) and observability Nodes (Application Insights, Log Analytics) place to the right of the hosting tower in their own column, vertically stacked with 40 px sibling gutter.
+
+**Phase 5 carve-out.** Assignment relationships from Application Component to Technology Node (`Assignment` xsi:type, source = Application Component, target = Technology Node) skip the A* router. Draw straight-vertical: source bottom-midpoint to target top-midpoint. No bend points.
+
+All other relationships (Realization, Used-by, Serving) route via Phase 5's standard A*.
+
+Acceptance: §9.4 view from `/tmp/lfm/docs/architecture/lfm.oef.xml` rebuilds with apps directly above their hosts and vertical hosting edges; data-plane / observability cluster to the right of the hosting tower.
