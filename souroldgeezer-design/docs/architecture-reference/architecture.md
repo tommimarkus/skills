@@ -2,7 +2,7 @@
 
 ## 1. Context
 
-`architecture-design` answers *what the enterprise consists of* — which capability does this serve, which application service realises it, which technology node hosts it, which motivational driver justifies its existence. Its sole notation is ArchiMate.
+`architecture-design` answers *what the enterprise consists of* — which capability does this serve, which application service realises it, which technology node hosts it, which motivational driver justifies its existence. Its sole notation is the ArchiMate modeling language.
 
 This reference is the authoritative ground for the skill. It grounds in **The Open Group ArchiMate® 3.2 Specification, March 2023** (C226). It is opinionated about layer scope, element use, relationship well-formedness, the ArchiMate® Model Exchange File Format (OEF) serialisation used as the sole output, and which layers are round-trip-able with code versus forward-only.
 
@@ -27,7 +27,7 @@ Within a layer, elements are categorised by aspect:
 The core well-formedness rule follows: **active structure is *assigned to* behaviour; behaviour *accesses* passive structure; behaviour *realises* services; services *are used by* elements in a higher layer or the same layer.** A diagram that shows an Actor *accessing* a Business Object directly — without a Business Process or Business Function in between — is malformed at the reference level; see §4.3 and §8.
 
 ### 2.4 Core layers are the default; extensions are opt-in per diagram
-Business / Application / Technology is the default palette. A diagram claiming to model "architecture" should draw from these three unless the diagram kind is explicitly a motivation view, a strategy view, a migration view, or a physical view. This keeps diagrams legible and prevents the "everything everywhere" soup that ArchiMate's expressive range enables.
+Business / Application / Technology is the default palette. A diagram claiming to model "architecture" should draw from these three unless the diagram kind is explicitly a motivation view, a strategy view, a migration view, or a physical view. This keeps diagrams legible and prevents the "everything everywhere" soup that the expressive range of the ArchiMate notation enables.
 
 ### 2.5 Relationships have well-formedness constraints
 Not every relationship is valid between every pair of element types. ArchiMate 3.2 Appendix B (Relationships Table) is the authoritative source. The skill's Review mode cites this table; Build and Extract emit only relationships that are well-formed per the table. A diagram with invalid relationships (e.g., a Business Process *realising* a Technology Node) is a smell regardless of how expressive it looks.
@@ -204,7 +204,7 @@ ArchiMate 3.2 Chapter 12 and Appendix B enumerate the valid element-to-element r
 
 ### 5.4 Other
 
-- **Specialisation** — element is a specialised form of another. Solid line with open triangle (same notation as UML generalisation).
+- **Specialisation** — element is a specialised form of another. Solid line with open triangle (same notation as UML® generalisation).
 
 ### 5.5 Well-formedness rules (the short version)
 
@@ -578,7 +578,7 @@ Artefact smells specific to `<view>` layout, derived from the §6.4a Layout stra
 - **`AD-L1` Layer-ordering violation** — an element's `y` coordinate violates the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Tier 1 phase 6 bbox normalisation per §6.4a. An Application Component placed below an element in the Technology layer makes the diagram visually lie about what layer the element is in. *Severity is conditional on the §6.4a banding marker:* `warn` when the model carries `propid-archi-model-banded=v2` (Sugiyama-v1 engine, 0.8.0+) or `v1` (legacy banded grid, pre-0.8.0); `info` when the marker is absent (pre-§6.4a legacy file preserved across Extract refresh per §6.4a *Re-extract preserves architect positions*).
 - **`AD-L2` Node overlap** — two `<node>` placements at the same nesting depth in the same view whose bounding boxes intersect. Rendering tools render one on top of the other; the diagram is unreadable.
 - **`AD-L3` Undersize** — `w < 120` or `h < 55`, or `w` is smaller than the `<name>` length would need at the default font. Label truncates in Archi and in most other tools; the element becomes ambiguous.
-- **`AD-L4` View density** — view exceeds 20 elements or 30 relationships, or nesting depth exceeds 2. Readability drops sharply past these thresholds (ArchiMate Cookbook "compact and readable"); split the view or promote a cluster to a Grouping.
+- **`AD-L4` View density** — view exceeds 20 elements or 30 relationships, or nesting depth exceeds 2. Readability drops sharply past these thresholds (ArchiMate Cookbook, The Open Group, "compact and readable"); split the view or promote a cluster to a Grouping.
 - **`AD-L5` Excessive crossings** — edge-crossing count exceeds `node_count / 6` (threshold tightened in 0.8.0 from the pre-0.8.0 `node_count / 4` because Tier 1 phase 3's 4-pass barycentric crossing-minimisation materially reduces crossings vs the pre-0.8.0 1-pass procedure). Indicates either over-density (address via `AD-L4`) or poor placement (re-run Tier 1 phase 3).
 - **`AD-L6` Non-orthogonal routing** — a `<connection>` whose source and target don't share an x or y coordinate carries no `<bendpoint>`, so renderers draw a diagonal line. The diagram mixes routing styles and reads inconsistently.
 - **`AD-L7` Nested-plus-edge** — a `<node>` is visually nested inside its parent *and* a visible `<connection>` for the parent-child relationship is emitted in the same view. The relationship is represented twice; Archi's ARM handles this poorly. Either hide the edge (add the `propid-archi-arm` = `hide` property to the relationship) or draw the elements side-by-side.
