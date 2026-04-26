@@ -12,7 +12,14 @@ description: >-
   Implementation & Migration are liftable from .NET solutions, Bicep, host.json,
   staticwebapp.config.json, and GitHub Actions workflows; Business / Motivation
   / Strategy are emitted as forward-only stubs). Output is loadable in
-  ArchiMate-conformant tools. Supports four
+  ArchiMate-conformant tools. View layout uses the Sugiyama-v1 engine
+  (introduced in 0.8.0) — a deterministic three-tier procedure (Tier 0
+  architect-position preservation; Tier 1 cycle handling, layered ordering
+  with 4-pass barycentric crossing minimisation, median coordinate assignment,
+  Manhattan A* edge routing with obstacle avoidance, bbox normalisation; Tier 2
+  per-viewpoint specialisations for each of the seven §9 viewpoints) — for
+  cookbook-quality OEF in one shot, with zero runtime dependencies. Supports
+  four
   modes — Build (intent → model), Extract (code/IaC → model), Review (artefact
   review + drift detection against code/IaC), Lookup (narrow notation
   question). Bridges to the sibling responsive-design and serverless-api-design
@@ -48,10 +55,17 @@ When invoked, run the architecture-design skill and present results:
    validated against ArchiMate 3.2 Appendix B; `xsi:schemaLocation`
    referencing The Open Group's canonical schema URL (never bundled).
    Invoke [references/procedures/layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md)
-   to place every `<node>` on the banded grid contracted in reference §6.4a —
-   fixed rows per layer, fixed columns per aspect, 10-px grid, deterministic
-   sizes, Composition / Aggregation / Realization nested over explicit edge
-   when both endpoints share a cell, orthogonal routing. Cite reference
+   to apply the Sugiyama-v1 three-tier engine contracted in reference §6.4a —
+   Tier 0 preserves architect-positioned `<node>` placements verbatim; Tier 1
+   runs cycle handling → layer assignment → 4-pass barycentric ordering →
+   median coordinate assignment → Manhattan A* edge routing with
+   obstacle avoidance → bbox normalisation; Tier 2 applies the per-viewpoint
+   specialisation matching the §9 diagram kind (Capability Map tile grid /
+   Application Cooperation hub-and-spoke / Service Realization vertical
+   stack / Technology Usage hosting tower / Migration Plateau timeline /
+   Motivation tree / Business Process Cooperation lanes). On every Build,
+   emit the §6.4a banding marker `propid-archi-model-banded=v2` (with the
+   required `<name>` child on the `<propertyDefinition>`). Cite reference
    sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
    never duplicate reference prose; run the §10 self-check (`[static]` /
    `[runtime]` tags) before handing back.
@@ -98,11 +112,15 @@ When invoked, run the architecture-design skill and present results:
    from static review alone; element emitted with an `xsi:type` not in the
    ArchiMate 3.2 catalog; bundled XSD file (the skill must reference The
    Open Group's canonical schema URL, never copy the schema locally);
-   layout failures per reference §6.4a — node outside its layer band
-   (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures with
+   layout failures per reference §6.4a — node violating relative layer
+   ordering (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures with
    truncating labels (`AD-L3`), view over the 20-element / 30-relationship
-   budget (`AD-L4`), nested-plus-edge double representation (`AD-L7`), or
-   off-grid coordinates (`AD-L8`); Business Process Cooperation view
+   budget (`AD-L4`), edge crossings exceeding `n/6` (`AD-L5`), nested-plus-edge
+   double representation (`AD-L7`), off-grid coordinates (`AD-L8`),
+   hierarchy not respected — same-layer Realization / Used-by / Serving
+   drawn against topological direction (`AD-L9`), canvas not normalised at
+   `(40, 40) ± 10 px` origin (`AD-L10`), or `<connection>` Manhattan path
+   crossing a non-source / non-target node bbox (`AD-L11`); Business Process Cooperation view
    lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
    layer elements (`AD-B-4`); §9.3 Service Realization view with a Business
    Process at top but no realising Application Service (`AD-B-6`) or no
