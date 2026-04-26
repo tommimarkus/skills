@@ -326,3 +326,27 @@ Realization edges within a chain run vertically (no Phase 5 routing — they're 
 3. Element `x` within row: distribute uniformly across the row's available width so the row's children are centred under their parent's `x_centre` when there is a single parent; for elements with multiple parents at depth `d-1`, place at the median `x_centre` of those parents.
 4. Influence edges (Motivation cross-cutting) drawn dashed via reference §5.2 convention; route via Phase 5 with the dashed-style preserved.
 5. Association edges (`Stakeholder` → `Driver` linkage) route via Phase 5 standard A*.
+
+### §9.7 Business Process Cooperation — process-flow lanes
+
+**Override:** phases 3, 4. Phases 1, 2, 5, 6 still run.
+
+**Visual idiom:** three horizontal lanes inside the Business band — Active structure above, Behaviour middle, Passive structure below. Behaviour elements (Business Process / Event / Interaction) flow left-to-right along their Triggering / Flow chain.
+
+**Trigger.** `viewpoint="Business Process Cooperation"` — detected from the view's attribute, or from pre-flight input during Build.
+
+**Three lanes inside the Business band** (`y` content-defined per Tier 1 phase 4 layer rules; Phase 6 then normalises). The Business band's vertical extent splits into three lanes with 30 px gutter between lanes:
+
+- **Active lane** (top, `y_active`): Business Actor / Business Role / Business Collaboration elements. Each Active element places directly above the Behaviour element it is `Assignment`-linked to (same `x` midpoint as the Behaviour element).
+- **Behaviour lane** (middle, `y_beh`): Business Process / Business Event / Business Interaction elements. Placed left-to-right in the order produced by a topological sort of the view's Triggering and Flow relationships. Tiebreaks by identifier ascending. `x` starts at the left edge of the available canvas (40 px pre-Phase-6) and advances by `element.w + 40` per element. The Behaviour strip may span the full width of the canvas (no aspect-column boundary).
+- **Passive lane** (bottom, `y_passive`): Business Object / Contract / Product / Data Object elements. Each Passive element places directly below the Behaviour element that `Access`es it (same `x` midpoint). When multiple Behaviour elements access the same Passive object, place at the median of their `x` midpoints.
+
+**Phase 3 (override).** Topological sort the Behaviour elements by Triggering / Flow edges. For Active and Passive elements, use their Assignment / Access targets to determine order (mirror the Behaviour ordering above / below).
+
+**Phase 4 (override).** Compute lane y-coordinates: `y_active = y_band_top + 20`, `y_beh = y_active + 64 + 30` (60 px standard h + 30 px lane gutter), `y_passive = y_beh + 64 + 30`. Behaviour elements' x advance per the lane rule above; Active and Passive elements get x-coordinates mirroring their linked Behaviour element.
+
+**Phase 5** still runs. Triggering / Flow edges between adjacent Behaviour elements route as straight horizontal lines (no Manhattan detour because they're in the same lane). Assignment edges between Active and Behaviour, and Access edges between Behaviour and Passive, route via Phase 5's standard A* (typically straight-vertical given the lane layout).
+
+**Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle place in identifier-ascending order and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely).
+
+**No layout exception for §9.3 Service Realization with Process-rooted modality** — that is a §9.3 specialisation, not a §9.7 one. Don't conflate them.
