@@ -294,3 +294,20 @@ When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
 3. Course of Action / Resource elements (if present in scope) stay in their aspect columns to the right of the tile grid — Tier 1 default applies for them. Realization edges from Course of Action to Capabilities route via Phase 5.
 
 Composition edges from Capability to sub-Capability are ARM-hidden (existing Tier 1 Step 5 rule).
+
+### §9.3 Service Realization — vertical realization stack
+
+**Override:** phases 3, 4.
+
+**Visual idiom:** tall, narrow column per realization chain. Layer gutter relaxed further to 80 px (was 60 in Tier 1 default). Multi-chain views: side-by-side columns at 300 px width each.
+
+**Phase 3 (override).** Identify each realization chain: walk Realization edges from each top-of-stack element down to leaves. Each chain becomes one column. Order chains by topological depth (shorter chains left, longer right), then by identifier ascending tiebreak.
+
+**Process-rooted modality** (when the top of a chain is a Business Process with a Business Actor Assignment): the chain includes a UI Application Component + Application Interface as the entry point per reference §9.3 / §4.1. Place these UI elements at the top of the Application layer; Application Service and Backend Component below them in the same column. The Business Actor sits above the Business Process at the very top of the column.
+
+**Phase 4 (override).**
+1. Each chain column 300 px wide, 60-px gutter between columns. Column N starts at `x = 40 + N × 360` (pre-normalisation).
+2. Within a column, place chain elements top-down in their layer rows. Layer gutter inside a column: 80 px (relaxed from 60).
+3. Element x-position within column: centred — `x = column.x_start + (300 - element.w) / 2`, rounded to grid.
+
+Realization edges within a chain run vertically (no Phase 5 routing — they're the structural axis); cross-chain Realization edges route via Phase 5.
