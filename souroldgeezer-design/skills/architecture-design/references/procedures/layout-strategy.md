@@ -242,3 +242,20 @@ Each sub-section below documents one specialisation.
 All other relationships (Realization, Used-by, Serving) route via Phase 5's standard A*.
 
 Acceptance: §9.4 view from `/tmp/lfm/docs/architecture/lfm.oef.xml` rebuilds with apps directly above their hosts and vertical hosting edges; data-plane / observability cluster to the right of the hosting tower.
+
+### §9.2 Application Cooperation — hub-and-spoke (when applicable)
+
+**Override:** phases 3, 4 (only when hub detected).
+
+**Visual idiom:** when one Application Component dominates by degree (gateway pattern), place it centred and enlarged; dependents radiate around it. When no hub is present, default Tier 1 Sugiyama applies.
+
+**Hub detection.** Any Component whose `degree(in) + degree(out) > 2 × median_degree` is the hub. If multiple Components qualify, pick by highest degree, tiebreak by identifier ascending. If no Component qualifies (e.g. peer mesh of 3-4 Components), skip this specialisation — Tier 1 default runs.
+
+**Phase 3 (override, hub case).** Order = hub first, then dependents by `degree(in) + degree(out)` descending, identifier ascending tiebreak.
+
+**Phase 4 (override, hub case).**
+1. Place hub at the centre of the Application layer pre-normalisation, with `w = default_w × 1.2` (192 for an ApplicationComponent), `h = default_h × 1.2` (76). Phase 6 will shift to origin.
+2. Place dependents on a circle around the hub at radius `r = max(hub.w, hub.h) + 200`. Angular order = Phase 3 ordering, starting at angle 0 (right of hub) and going clockwise. Convert each angle to `(x, y) = (hub.cx + r·cos(θ) - dep.w/2, hub.cy + r·sin(θ) - dep.h/2)`. Round positions to 10-px grid. Skip the angular slot if it would collide with another already-placed dependent (advance to the next 30° slot).
+3. Application Services in the same view stay in the Behaviour aspect column to the right of the hub-spoke cluster — Tier 1 default applies for them. Application Interfaces follow their owning Service.
+
+When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
