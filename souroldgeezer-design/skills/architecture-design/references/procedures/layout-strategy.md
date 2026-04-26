@@ -279,3 +279,18 @@ When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
 **Phase 5** routes Gap edges between Plateau column N (right midpoint) and Plateau column N+1 (left midpoint) — straight horizontal where possible.
 
 **Phase 6** normalises the entire timeline to `(40, 40)` origin.
+
+### §9.1 Capability Map — tile grid
+
+**Override:** phases 3, 4.
+
+**Visual idiom:** uniform tiles in a row-major grid; sub-Capabilities composed inside parent Capabilities (existing nesting rule applies).
+
+**Phase 3 (override).** Order Capabilities: roots (no parent Capability) first, then leaves; identifier ascending tiebreak. Sub-Capabilities are nested via Composition (existing Tier 1 Step 5 nesting rule).
+
+**Phase 4 (override).**
+1. Tile size: `240 × 120` per top-level Capability (larger than the default Strategy size to accommodate sub-Capability nesting).
+2. Grid: `cols = ceil(sqrt(N_root))` columns; place tiles row-major. Tile at `(40 + col × (240 + 40), 40 + row × (120 + 40))` (40 px gutter both directions, pre-normalisation).
+3. Course of Action / Resource elements (if present in scope) stay in their aspect columns to the right of the tile grid — Tier 1 default applies for them. Realization edges from Course of Action to Capabilities route via Phase 5.
+
+Composition edges from Capability to sub-Capability are ARM-hidden (existing Tier 1 Step 5 rule).
