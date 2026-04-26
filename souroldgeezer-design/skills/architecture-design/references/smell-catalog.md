@@ -15,7 +15,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | Code | Rubric | Description (one line; see rubric for full) |
 |---|---|---|
 | `AD-1` | §8 | Layer soup — a single diagram mixing Business / Application / Technology / Motivation / Strategy without a clear concern |
-| `AD-2` | §8, §5, ArchiMate 3.2 Appendix B | Invalid relationship per the Relationships Table — e.g., Business Process *realising* a Technology Node |
+| `AD-2` | §8, §5, ArchiMate® 3.2 Appendix B | Invalid relationship per the Relationships Table — e.g., Business Process *realising* a Technology Node |
 | `AD-3` | §8, §2.3 | Double aspect — element stereotyped as both Active structure and Behaviour |
 | `AD-4` | §8, §2.3 | Active structure directly accessing passive structure without a Behaviour element in between |
 | `AD-5` | §8 | Association overuse — more than one Association per diagram, or Association used where a typed relationship fits |

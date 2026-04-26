@@ -1,6 +1,6 @@
-# Lifting rules — GitHub Actions to ArchiMate Implementation & Migration
+# Lifting rules — GitHub Actions to ArchiMate® Implementation & Migration
 
-Rules for lifting ArchiMate **Implementation & Migration Layer** elements from `.github/workflows/*.yml` files. Invoked by Extract mode.
+Rules for lifting ArchiMate® **Implementation & Migration Layer** elements from `.github/workflows/*.yml` files. Invoked by Extract mode.
 
 The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §4.7 (Implementation & Migration elements) and §7.1 (extractability per layer).
 

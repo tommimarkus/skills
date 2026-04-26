@@ -1,6 +1,6 @@
-# Lifting rules — .NET to ArchiMate Application Layer
+# Lifting rules — .NET to ArchiMate® Application Layer
 
-Rules for lifting ArchiMate **Application Layer** elements from a .NET solution (Azure Functions isolated-worker + Blazor WebAssembly — the stack the sibling design skills produce). Invoked by Extract mode.
+Rules for lifting ArchiMate® **Application Layer** elements from a .NET solution (Azure Functions isolated-worker + Blazor WebAssembly — the stack the sibling design skills produce). Invoked by Extract mode.
 
 The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §4.2 (Application Layer elements) and §7.1 (extractability per layer).
 

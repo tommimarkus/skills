@@ -26,7 +26,7 @@ Parse the XML and extract:
 - **View set**: each `<view>`'s `identifier`, `viewpoint`, and node/connection placements (for preserving layout).
 - **Forward-only markers**: XML comment blocks (`<!-- FORWARD-ONLY -->`) surrounding stub element sections.
 
-Record which layer each element belongs to based on its `xsi:type` (Business/Application/Technology by `xsi:type` prefix and ArchiMate 3.2 layer assignment per reference §3–§4).
+Record which layer each element belongs to based on its `xsi:type` (Business/Application/Technology by `xsi:type` prefix and ArchiMate® 3.2 layer assignment per reference §3–§4).
 
 ### Step 1 — Run the lifting procedures on current state
 

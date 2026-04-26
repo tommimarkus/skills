@@ -1,6 +1,6 @@
-# Lifting rules — Bicep to ArchiMate Technology Layer
+# Lifting rules — Bicep to ArchiMate® Technology Layer
 
-Rules for lifting ArchiMate **Technology Layer** elements from Bicep IaC (the dialect the sibling design skills produce). Invoked by Extract mode.
+Rules for lifting ArchiMate® **Technology Layer** elements from Bicep IaC (the dialect the sibling design skills produce). Invoked by Extract mode.
 
 The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §4.3 (Technology Layer elements) and §7.1 (extractability per layer).
 
