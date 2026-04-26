@@ -81,6 +81,27 @@ The repo intentionally does not duplicate the catalog under
 `.agents/plugins/marketplace.json`; the existing `.claude-plugin/marketplace.json`
 is the shared marketplace for both Claude Code and Codex.
 
+### Documentation Basis
+
+This packaging is cross-checked against both runtime doc sets. Claude Code's
+documented surfaces are `.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json`, `skills/`, and plugin-root `agents/`; Codex
+adds `.codex-plugin/plugin.json`, consumes the same bundled
+`skills/**/SKILL.md` workflows, reads optional per-skill
+`skills/<skill>/agents/openai.yaml` metadata, and supports project-scoped
+custom agents in `.codex/agents/*.toml`. Codex currently also documents support
+for reading a Claude-style repo marketplace at
+`.claude-plugin/marketplace.json`, which is why this repo keeps one shared
+catalog instead of adding `.agents/plugins/marketplace.json`.
+
+Primary references: Claude Code [plugin creation](https://code.claude.com/docs/en/plugins),
+[marketplace distribution](https://code.claude.com/docs/en/plugin-marketplaces),
+and [plugin reference](https://code.claude.com/docs/en/plugins-reference);
+Codex [plugins](https://developers.openai.com/codex/plugins),
+[plugin building](https://developers.openai.com/codex/plugins/build),
+[skills](https://developers.openai.com/codex/skills), and
+[subagents](https://developers.openai.com/codex/subagents).
+
 ## What's in `souroldgeezer-audit`
 
 Two audit skills, each with a matching one-shot Claude Code subagent:
@@ -92,8 +113,9 @@ Two audit skills, each with a matching one-shot Claude Code subagent:
 
 Claude Code subagents live alongside in [souroldgeezer-audit/agents/](souroldgeezer-audit/agents/)
 and invoke the same skills, making them usable as delegated one-shots. Codex
-installs the bundled skills through the plugin manifest; custom-agent parity is
-out of scope for this first Codex support pass.
+installs the bundled skills through the plugin manifest, reads per-skill
+metadata from each `skills/<name>/agents/openai.yaml`, and has matching
+project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
 ## What's in `souroldgeezer-design`
 
@@ -106,7 +128,7 @@ Three design skills, each with a matching one-shot Claude Code subagent:
 | [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate 3.2 layer discipline, relationship well-formedness, and Core-vs-extension defaults; serialised as **OEF XML** (ArchiMate Model Exchange File Format), loadable in ArchiMate-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only), Review (artefact + drift detection including process drift against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process) | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), plus the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau timeline / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-L*` / `AD-B-*` checks in Review |
 
 References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
-Matching Claude Code subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest; custom-agent parity is out of scope for this first Codex support pass.
+Matching Claude Code subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
 The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechanism across the three skills: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review (drift detection) when a paired model is present, so code and architecture stay consistent across iterations.
 
@@ -332,6 +354,7 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
 
 ```
 AGENTS.md                          # thin Codex-native pointer to CLAUDE.md
+.codex/agents/*.toml               # project-scoped Codex custom agents
 .claude-plugin/marketplace.json    # shared Claude Code + Codex marketplace manifest
 souroldgeezer-audit/               # audit plugin
   .claude-plugin/plugin.json
@@ -342,6 +365,7 @@ souroldgeezer-audit/               # audit plugin
   agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
+    agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # per-stack smell packs
     references/                    # smell catalog + reusable procedures
     config.yaml                    # optional, skill-specific
@@ -355,6 +379,7 @@ souroldgeezer-design/              # design plugin
   agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
+    agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
     references/                    # (architecture-design only) smell catalog + per-input-source lifting procedures
 undecided/                         # skills not yet assigned to a plugin — NOT production-ready;

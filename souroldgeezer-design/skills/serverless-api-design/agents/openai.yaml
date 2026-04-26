@@ -1,0 +1,6 @@
+interface:
+  display_name: "Serverless API Design"
+  short_description: "Build, review, or look up serverless API guidance."
+  default_prompt: "Design a serverless API for this feature."
+policy:
+  allow_implicit_invocation: true

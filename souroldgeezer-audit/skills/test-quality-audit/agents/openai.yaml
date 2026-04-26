@@ -1,0 +1,6 @@
+interface:
+  display_name: "Test Quality Audit"
+  short_description: "Audit unit, integration, and E2E test quality."
+  default_prompt: "Review these tests for quality smells."
+policy:
+  allow_implicit_invocation: true

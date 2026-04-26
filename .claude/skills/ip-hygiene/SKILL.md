@@ -1,6 +1,6 @@
 ---
 name: ip-hygiene
-description: Use when creating, modifying, renaming, moving, or deleting any skill-related or repo-documentation content in this repository — `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, Claude Code / Codex plugin manifests, marketplace manifests, or the `CLAUDE.md` / `AGENTS.md` / `README.md` sections that describe them. Runs a fast five-question triage; if any question hits, runs a copyright / trademark / licence check covering prose, code samples, figures, sample files, bundled assets, and structured spec tables (EU sui generis database right). Enforces ® / ™ on first-and-subsequent-significant mentions in public-visible files (README, AGENTS.md, CLAUDE.md, manifests, frontmatter descriptions), applies the adjective-only rule for product / standard marks, blocks verbatim reproduction of copyrighted content, requires source citation as part of the paraphrase remedy, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, surfaces pre-existing IP issues encountered during drive-by edits, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter*) authority. Internal to this repository; not distributed with the `souroldgeezer-*` plugins.
+description: Use when creating, modifying, renaming, moving, or deleting any skill-related or repo-documentation content in this repository — `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.codex/agents/**`, `.claude/skills/**`, Claude Code / Codex plugin manifests, marketplace manifests, or the `CLAUDE.md` / `AGENTS.md` / `README.md` sections that describe them. Runs a fast five-question triage; if any question hits, runs a copyright / trademark / licence check covering prose, code samples, figures, sample files, bundled assets, and structured spec tables (EU sui generis database right). Enforces ® / ™ on first-and-subsequent-significant mentions in public-visible files (README, AGENTS.md, CLAUDE.md, manifests, frontmatter descriptions, Codex `openai.yaml` interface copy), applies the adjective-only rule for product / standard marks, blocks verbatim reproduction of copyrighted content, requires source citation as part of the paraphrase remedy, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, surfaces pre-existing IP issues encountered during drive-by edits, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter*) authority. Internal to this repository; not distributed with the `souroldgeezer-*` plugins.
 ---
 
 # IP Hygiene
@@ -42,6 +42,10 @@ Invoke on any create / modify / rename / move / delete touching:
 - `souroldgeezer-*/.claude-plugin/plugin.json`,
   `souroldgeezer-*/.codex-plugin/plugin.json`, and
   `.claude-plugin/marketplace.json` — manifest descriptions.
+- `souroldgeezer-*/skills/<name>/agents/openai.yaml` — Codex
+  per-skill public-facing metadata.
+- `.codex/agents/*.toml` — project-scoped Codex custom-agent
+  wrappers.
 - `CLAUDE.md`, `AGENTS.md`, and `README.md` sections that describe any
   of the above.
 - `.claude/skills/<name>/**` — repo-internal skills, including this
@@ -63,6 +67,8 @@ for humans or exposed through an agent / skill picker:
 - `.claude-plugin/marketplace.json` (top-level)
 - each `<plugin>/.claude-plugin/plugin.json`
 - each `<plugin>/.codex-plugin/plugin.json`
+- each `<plugin>/skills/<name>/agents/openai.yaml`
+- each `.codex/agents/*.toml` `description`
 - frontmatter `description:` fields of every `SKILL.md` and
   `agents/*.md` (rendered in Claude Code's picker / skill-list UI;
   Codex renders skill descriptions from `SKILL.md`)

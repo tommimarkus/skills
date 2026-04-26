@@ -1,0 +1,6 @@
+interface:
+  display_name: "DevSecOps Audit"
+  short_description: "Audit pipeline, IaC, release, and security posture."
+  default_prompt: "Audit this repository's DevSecOps posture."
+policy:
+  allow_implicit_invocation: true

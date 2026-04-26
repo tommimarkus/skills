@@ -1,0 +1,6 @@
+interface:
+  display_name: "Responsive Design"
+  short_description: "Build, review, or look up responsive UI guidance."
+  default_prompt: "Review this UI against the responsive design reference."
+policy:
+  allow_implicit_invocation: true

@@ -6,6 +6,33 @@ This file provides guidance to Claude Code (claude.ai/code) and Codex when worki
 
 A **Claude Code and Codex plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories and is intentionally shared by both runtimes; Codex can read this Claude-style repo marketplace directly, so do not duplicate it under `.agents/plugins/marketplace.json` unless a future design explicitly chooses to split catalogs. Each published plugin carries both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. There is nothing to build, lint, or test — content is Markdown + YAML + JSON. Validation is structural (correct filenames, frontmatter, schema, manifest sync via `jq`) and semantic (does the skill's described workflow still match its SKILL.md).
 
+## Runtime documentation cross-checks
+
+When changing plugin packaging, marketplace wiring, install instructions, or
+agent / skill exposure rules, cross-check **both** official runtime doc sets.
+This is a cross-agent skills repo; a Codex-only or Claude-only reading is
+insufficient.
+
+- Claude Code sources: [Create plugins](https://code.claude.com/docs/en/plugins),
+  [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces),
+  and [Plugins reference](https://code.claude.com/docs/en/plugins-reference).
+  These are the authority for `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, Claude Code `skills/`, Claude Code
+  `agents/`, plugin source resolution, and marketplace strict-mode behaviour.
+- Codex sources: [Plugins overview](https://developers.openai.com/codex/plugins),
+  [Build plugins](https://developers.openai.com/codex/plugins/build), and
+  [Codex skills](https://developers.openai.com/codex/skills), plus
+  [Codex subagents](https://developers.openai.com/codex/subagents) when editing
+  `.codex/agents/*.toml`. These are the authority for
+  `.codex-plugin/plugin.json`, Codex `interface` metadata, Codex plugin
+  marketplace handling, per-skill `agents/openai.yaml` metadata, how Codex
+  activates bundled `skills/**/SKILL.md` workflows, and project-scoped custom
+  agents.
+- Repo rule: keep `.claude-plugin/marketplace.json` as the single shared
+  marketplace while Codex supports Claude-style marketplaces. Do not add
+  `.agents/plugins/marketplace.json` unless a future design explicitly chooses
+  split catalogs.
+
 ## Keeping CLAUDE.md, AGENTS.md, and README.md current (MUST)
 
 **CLAUDE.md, AGENTS.md, and README.md MUST be kept up to date as the repo evolves.** They have different audiences and different triggers, but all are load-bearing — stale guidance in any of them causes downstream bugs. Treat drift in these files as a blocking bug and fix it in the same commit as the change that introduced the drift.
@@ -51,6 +78,7 @@ Add to this section when new internal skills are introduced. Internal skills mus
 
 ```
 AGENTS.md                              ← thin Codex-native pointer to CLAUDE.md
+.codex/agents/*.toml                   ← project-scoped Codex custom agents
 .claude-plugin/marketplace.json        ← shared Claude Code + Codex marketplace manifest
 <plugin-name>/
   .claude-plugin/plugin.json           ← Claude Code plugin manifest
@@ -58,6 +86,7 @@ AGENTS.md                              ← thin Codex-native pointer to CLAUDE.m
   docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
   agents/<skill-name>.md               ← one Claude Code subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
+                     /agents/openai.yaml ← Codex per-skill UI metadata / invocation policy
                      /extensions/      ← per-stack packs (see below)
                      /references/      ← smell catalog + reusable procedures (audit skills)
                      /config.yaml      ← optional, skill-specific (not a Claude Code standard)
@@ -80,8 +109,9 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 Adding a new plugin:
 1. Create `<plugin-name>/.claude-plugin/plugin.json` (required: `name`, `version`, `description`; use `author: {name, email}` and `license: MIT` defaults from memory). Start at `0.1.0`.
 2. Create `<plugin-name>/.codex-plugin/plugin.json` with the same `name`, `version`, `description`, `author`, and `license`; add `"skills": "./skills/"` and Codex `interface` metadata. Omit `apps` and `mcpServers` unless the plugin actually ships those surfaces.
-3. Add it to `.claude-plugin/marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`. This one marketplace is shared by Claude Code and Codex.
-4. Plugin `name`, `description`, and `version` in both plugin manifests and in `marketplace.json#plugins[]` must stay in sync — every bump updates all three files in the same commit.
+3. For each bundled skill, add `skills/<skill>/agents/openai.yaml` with Codex per-skill UI metadata and invocation policy.
+4. Add it to `.claude-plugin/marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`. This one marketplace is shared by Claude Code and Codex.
+5. Plugin `name`, `description`, and `version` in both plugin manifests and in `marketplace.json#plugins[]` must stay in sync — every bump updates all three files in the same commit.
 
 ## Plugin versioning (MUST)
 
@@ -98,7 +128,7 @@ Plugins follow semver, with the repo-specific interpretation below. **The versio
 - Any of the above that adds or removes a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace) → at least *minor*.
 - Any of the above that renames, removes, or breaks the contract of an existing top-level artefact → *major*.
 
-Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree, or adding/changing packaging metadata that does not alter shipped skill behaviour.
+Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree, or changing packaging metadata that does not alter shipped skill behaviour and does not need to be picked up by installed-plugin update checks.
 
 **Sibling-file sync.** A plugin-version bump often implies updates in neighbouring files that must land in the same commit:
 - `.claude-plugin/plugin.json#version`, `.codex-plugin/plugin.json#version`, and `marketplace.json#plugins[].version` — always all three.
@@ -127,7 +157,7 @@ Skills in this repo follow a recurring shape. Understand it before editing any S
 
 Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md`. The subagent is a thin one-shot wrapper: it invokes the skill via the `Skill` tool, follows the skill's instructions, and presents results in the skill's required shape. Subagent frontmatter: `name`, `description` (mirror the skill's description for discoverability), `tools`, `model`. When editing a skill's invocation contract (output format, required footer fields), update the matching subagent.
 
-Codex does not consume these `agents/*.md` files as part of the current plugin package. Codex installs the bundled skills through `<plugin>/.codex-plugin/plugin.json` with `"skills": "./skills/"`. Do not add Codex custom-agent parity casually; treat it as a separate design because Codex custom agents use a different configuration surface.
+Codex does not consume these plugin-root `agents/*.md` files. Codex installable plugin parity is carried by the bundled skills plus `skills/<skill>/agents/openai.yaml` metadata. Project-scoped Codex custom-agent wrappers live in `.codex/agents/*.toml`; each wrapper should point back to the matching skill as the source of truth and should not duplicate the reference prose. When editing a skill's invocation contract, update all three surfaces together: `SKILL.md`, the Claude Code subagent, and the Codex custom-agent wrapper / `openai.yaml` metadata.
 
 ## Skill-specific notes
 
@@ -142,3 +172,5 @@ Codex does not consume these `agents/*.md` files as part of the current plugin p
 - `skills/<skill>/config.yaml` — skill-internal, not read by the Claude Code runtime. Safe to leave alone when editing plugin metadata.
 - `skills/<skill>/extensions/` and `skills/<skill>/references/` — skill-internal supporting files (docs allow arbitrary files alongside `SKILL.md`), not a Claude Code feature.
 - `.codex-plugin/plugin.json` — Codex packaging metadata, not read by the Claude Code runtime. Keep it synchronized with the Claude Code manifest and marketplace entry.
+- `skills/<skill>/agents/openai.yaml` — Codex per-skill UI metadata / invocation policy, not read by the Claude Code runtime.
+- `.codex/agents/*.toml` — project-scoped Codex custom agents, not plugin-bundled and not read by the Claude Code runtime.
