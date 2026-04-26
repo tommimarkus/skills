@@ -389,6 +389,40 @@ Coordinate emission is governed by a deterministic three-tier procedure introduc
 
 The property is declared once under `<propertyDefinitions>` at the model root and applied once via `<properties>` on the `<model>` element. Emit `<propertyDefinition>` and `<property>` in OEF child-element order per §6 — `<properties>` precedes `<metadata>` / `<elements>` / `<relationships>` / `<organizations>`; `<propertyDefinitions>` follows `<organizations>` and precedes `<views>`. The two blocks are non-adjacent in the file by design (`AD-17`).
 
+### 6.4b View-emission control properties
+
+Two property definitions used by the process-view emission contract (per [`references/procedures/process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md)) to give architects opt-out control over auto-emission. The skill emits these `<propertyDefinition>` declarations once per model under `<propertyDefinitions>` only when at least one element carries a matching `<property>` instance — never auto-injected on a legacy file.
+
+**`propid-coop-view-exclude`** — set on a Business Process to exclude it from the feature's §9.7 Business Process Cooperation view. Suppresses `AD-B-13`. Use cases: deprecated processes kept for documentation, planned-but-not-yet-implemented stubs, externally-owned processes referenced but not modelled.
+
+```xml
+<propertyDefinition identifier="propid-coop-view-exclude" type="string">
+  <name xml:lang="en">coop-view-exclude</name>
+</propertyDefinition>
+```
+
+Instance form on a Business Process element:
+
+```xml
+<property propertyDefinitionRef="propid-coop-view-exclude">
+  <value xml:lang="en">true</value>
+</property>
+```
+
+**`propid-drilldown-exclude`** — set on a Business Process to suppress emission of its own §9.3 Service Realization (Process-rooted modality) drill-down view. Suppresses `AD-B-12`. Use cases: thin sub-orchestrator helpers without independent realisation, processes the architect wants in cooperation overview but not as a stand-alone diagram.
+
+```xml
+<propertyDefinition identifier="propid-drilldown-exclude" type="string">
+  <name xml:lang="en">drilldown-exclude</name>
+</propertyDefinition>
+```
+
+Instance form mirrors the cooperation case (different `propertyDefinitionRef`).
+
+**Both follow the existing OEF property-definition pattern.** The `<name>` child is mandatory per the OEF schema (`PropertyDefinitionType` requires `<name>`); the self-closing form `<propertyDefinition .../>` fails Archi's import with `cvc-complex-type.2.4.b` and triggers `AD-17`. Same rule as `propid-archi-model-banded` in §6.4a.
+
+**Orthogonal concerns.** The two properties control different emission decisions and should not be conflated. `propid-coop-view-exclude` controls *inclusion in the §9.7 overview*; `propid-drilldown-exclude` controls *emission of a per-process §9.3 drill-down*. Setting one does not imply the other.
+
 ### 6.5 Organizations (folder structure)
 
 Optional. Tools like Archi present models in a folder tree. OEF exposes this via `<organizations>`:
@@ -567,6 +601,9 @@ Artefact smells specific to §9.7 Business Process Cooperation and §9.3 Service
 - **`AD-B-8` Orphan Business Process — §9.7 end** — a Business Process in a §9.7 view has no Realisation chain into any §9.3 view (Process-rooted modality) for the same feature. The macro view claims the process exists; the drill-down views do not realise it. Between-view invariant of §7.4.
 - **`AD-B-9` Orphan Application Service — §9.3 end** — an Application Service in a §9.3 view (Process-rooted modality) realises no Business Process present in any §9.7 view for the same feature. The drill-down claims to realise a process that the macro view does not know about. Symmetric to `AD-B-8`.
 - **`AD-B-10` User-driven process without UI entry point** — a §9.3 view in the Process-rooted modality whose Business Process carries a Business Actor Assignment in the paired §9.7 view (per §4.1's user-driven definition) lacks a UI Application Component and Application Interface at its entry point. Full-stack agents reading the model cannot tell which UI surface the user interacts with.
+- **`AD-B-11` Single-process cooperation view** — a `<view>` with `viewpoint="Business Process Cooperation"` containing exactly one `xsi:type="BusinessProcess"` element. By the spec definition of "cooperation" (≥ 2 cooperating elements), a single-process §9.7 is structurally wrong. Severity: `warn`. Action: either add the feature's other top-level processes (per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 1), or change the view's `viewpoint` to `"Service Realization"` for single-process focus. Reference: ArchiMate® 3.2 §14 (Viewpoints) + this reference §9.7.
+- **`AD-B-12` Sub-process without its own §9.3 drill-down** — a Business Process X with at least one incoming `xsi:type="Composition"` relationship from another Business Process Y, AND no `<view>` with `viewpoint="Service Realization"` rooted on X (rooted = X is the topmost element in the realisation stack, identifier match). Suppression: X carrying `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` (per §6.4b). Severity: `warn`. Action: emit a §9.3 view rooted on X, or set `propid-drilldown-exclude=true` if intentional. Reference: this reference §9.3 + [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 2.
+- **`AD-B-13` Top-level process missing from §9.7** — a Business Process X with **no** incoming `xsi:type="Composition"` relationship from any other Business Process (X is top-level), AND X is not present as a node in any `<view>` with `viewpoint="Business Process Cooperation"` in the same canonical file. Suppression: X carrying `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` (per §6.4b). Severity: `warn`. Action: add X as a node in the feature's §9.7 view, or set `propid-coop-view-exclude=true` if intentional (deprecated, planned, external). Reference: this reference §9.7 + [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 1.
 
 ### Drift smells — `AD-DR-*`
 
@@ -595,6 +632,8 @@ UI-awareness is a content rule, not a kind discriminator: when a §9.3 view cont
 
 Layout follows the default banded grid; the Application band may hold up to 4 elements (UI Component, Interface, Service, Backend Component) at the `AD-L4` 4-per-cell budget.
 
+**View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), every orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators) has its own §9.3 view rooted on it in the canonical feature file. Sub-processes without their own view trigger `AD-B-12` unless the architect sets `propid-drilldown-exclude=true` on the process (§6.4b). Activity-call steps (Triggering-chained, not Composition-nested) stay as nodes inside the parent's §9.3 — they are not orchestrator-level and do not get separate views.
+
 ### 9.4 Technology Usage (Application + Technology)
 **`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
 
@@ -606,6 +645,8 @@ Layout follows the default banded grid; the Application band may hold up to 4 el
 
 ### 9.7 Business Process Cooperation (Business only)
 **`viewpoint="Business Process Cooperation"`.** Elements: Business Process, Business Event, Business Interaction (primary, Behaviour); Business Actor, Business Role, Business Collaboration (Active structure, optional); Business Object, Contract, Product, Data Object (Passive structure, optional). Relationships: Triggering and Flow form the temporal chain; Assignment binds Actor / Role / Collaboration to Behaviour; Access binds Behaviour to Passive structure; Serving surfaces outward-facing Business Services. Used to answer "in what order does the business do what, and with whom". Layout is the process-flow exception in §6.4a — Behaviour left-to-right along the Triggering/Flow chain, Active structure above, Passive structure below. User-driven steps carry a Business Actor Assignment per §4.1; see §9.3's Process-rooted modality for the cross-layer drill-down that shows how each step is realised, including the UI surface.
+
+**View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), a feature has exactly one §9.7 view containing every top-level Business Process (root of its Composition tree — no incoming Composition from another Business Process). Top-level processes missing from the §9.7 trigger `AD-B-13` unless the architect sets `propid-coop-view-exclude=true` (§6.4b). A §9.7 view containing only one Business Process triggers `AD-B-11` (cooperation requires ≥ 2 cooperating elements per the spec definition).
 
 Diagram kinds not in this list (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF XML — the element and relationship vocabulary is unbounded — but the skill does not generate them as a first-class diagram kind in v1. An architect can model them directly in Archi and the skill's Review mode will still parse the result.
 
@@ -627,6 +668,9 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Business Process Cooperation (§9.7) views have a connected Triggering/Flow chain (`AD-B-1`); participants are Assigned to Behaviour (`AD-B-2`); Passive structure is Accessed by Behaviour (`AD-B-3`); only Business-layer elements are present (`AD-B-4`); and the chain has a declared entry Event and terminal outcome (`AD-B-5`).
 - [static] Service Realization (§9.3) views in the Process-rooted modality show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`); §9.3 views in either modality show an Application Component realising the Application Service (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.3 view (Process-rooted modality) for the same feature (`AD-B-8`), and each §9.3 Application Service that realises a Business Process realises one present in some §9.7 view for the same feature (`AD-B-9`).
 - [static] §9.3 views in the Process-rooted modality for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
+- [static] Every `<view>` with `viewpoint="Business Process Cooperation"` contains ≥ 2 Business Process elements (`AD-B-11`).
+- [static] Every Business Process with an incoming `xsi:type="Composition"` relationship from another Business Process has a `<view>` with `viewpoint="Service Realization"` rooted on it, unless `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-12`).
+- [static] Every Business Process with no incoming `xsi:type="Composition"` relationship from another Business Process is present as a node in some `<view>` with `viewpoint="Business Process Cooperation"` in the same canonical file, unless `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-13`).
 - [static] Every element's `y` coordinate respects the relative layer ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Tier 1 phase 6 bbox normalisation per §6.4a (`AD-L1`). Severity follows the §6.4a banding marker: `warn` when `propid-archi-model-banded=v2` or `v1` is present on the model, `info` when absent (legacy file preserved across Extract refresh).
 - [static] No two `<node>` placements in the same view overlap — bounding-box intersection is zero for every pair at the same nesting depth (`AD-L2`).
 - [static] Every element's `w ≥ 120` and `h ≥ 55`; `w` is large enough that the `<name>` does not truncate at the default Archi font (heuristic: 7 px per character) (`AD-L3`).

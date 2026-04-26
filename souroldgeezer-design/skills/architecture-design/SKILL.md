@@ -71,6 +71,7 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/lifting-rules-bicep.md` | Bicep IaC | Extract → ArchiMate Technology Layer (Nodes, System Software, Communication Network, Path, Artifact) |
 | `references/procedures/lifting-rules-gha.md` | GitHub Actions workflow files | Extract → ArchiMate Implementation & Migration Layer (Work Package, Deliverable, Implementation Event, Plateau) |
 | `references/procedures/lifting-rules-process.md` | Durable Functions orchestrators and Logic Apps workflow definitions (when present) | Extract → ArchiMate Business Layer (Business Process, Event, Interaction only) with per-element `LIFT-CANDIDATE` markers; reverse Lookup consumes the same `source=` attribute. UI route lifting is deferred — §9.3 Process-rooted modality UI Application Component and Application Interface are hand-authored by the architect per the Blazor idiom in reference §9.3 |
+| `references/procedures/process-view-emission.md` | Any feature whose model contains Business Process / Event / Interaction elements | Build step 3 (when diagram kind is §9.7 or §9.3 and pre-flight Q5 process scope is `all-processes-in-feature` or `multi-feature`) and Extract step 3 (whenever `lifting-rules-process.md` emitted any element) → emit one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down view per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators); Review restates its rules as `AD-B-11` / `AD-B-12` / `AD-B-13` checks |
 | `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → three-tier layout engine (Tier 0 architect-position preservation; Tier 1 Sugiyama-v1 core: cycle handling, layer assignment, 4-pass barycentric, median coordinate assignment, Manhattan A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisation per §9 diagram kind); Review restates its rules as `AD-L*` checks |
 
@@ -98,6 +99,12 @@ Before producing or reviewing a diagram, confirm the following. If the user hasn
 2. **Layer scope.** Which ArchiMate layers is the diagram working with? Default: Core Framework (Business + Application + Technology) unless the diagram kind implies Strategy (Capability Map), Motivation (Motivation), or Implementation & Migration (Migration). Crossing extensions into a Core view without cause triggers `AD-7`.
 3. **Extraction posture (Extract mode only).** Which input sources to read — .NET solution, Bicep, GHA workflows, `host.json` / `staticwebapp.config.json`, and Durable Functions orchestrators / Logic Apps workflow definitions (when present — these enable Business Process / Event / Interaction lifting per reference §7.4 with `LIFT-CANDIDATE` markers; UI routes are not lifted in v1). Default: all of the above when present. Fully forward-only layers (Motivation / Strategy / Physical) and the forward-only subset of Business (Actor / Role / Collaboration / Object / Contract / Product / Service / Function) are emitted as typed stubs per reference §7.
 4. **Feature name.** The `<feature>` slug that becomes the canonical filename. Default: derived from the user's prompt or the solution name.
+5. **Process scope (Build mode only, when diagram kind is §9.7 or §9.3).** Which Business Processes does this work cover?
+   - `single-process` — only the named process. Suppresses the fan-out contract; the skill emits exactly the one view the architect asked for.
+   - `all-processes-in-feature` *(default when prompt mentions "the feature" / "the project" without naming one process)* — applies the full process-view emission contract per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md).
+   - `multi-feature` — architect specifies the feature list explicitly; the contract applies per feature.
+
+   Default heuristic: if exactly one Business Process is named in the prompt, default to `single-process`; otherwise default to `all-processes-in-feature`. Extract mode does not ask this question — Extract operates on whatever is liftable in the current source-tree slice, and always applies the emission contract when [`lifting-rules-process.md`](references/procedures/lifting-rules-process.md) lifted any element.
 
 If any answer deviates from defaults (e.g., "include Physical Layer for this data-centre diagram"), state the deviation explicitly in the output footer.
 
@@ -167,6 +174,7 @@ Project assimilation:
    - Relationship types from reference §5.
    - Well-formedness per ArchiMate 3.2 Appendix B — never emit a relationship not found in the table for the given element-pair.
    - OEF XML serialisation per reference §6. Emit every element with its correct `xsi:type` from the ArchiMate 3.2 element catalog; emit every relationship with its correct `xsi:type` per ArchiMate 3.2 Appendix B.
+   - **If diagram kind is §9.7 or §9.3 and pre-flight Q5 process scope is `all-processes-in-feature` or `multi-feature`**, `Read` and apply [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md). The procedure emits the full §9.7 view + N × §9.3 views per the contract — one §9.7 cooperation view per feature, one §9.3 drill-down per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators). Step 4's layout invocation runs once per emitted view.
 
 4. **Layout and naming** per reference §6.4–6.7. `Read` [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) before invoking it (the Skill tool loads `SKILL.md` only; nested files are not auto-injected). The procedure runs the **three-tier layout engine** introduced in 0.8.0:
    - **Tier 0** preserves architect-positioned `<node>` placements verbatim from any prior view at the canonical path (existing rule).
@@ -206,6 +214,7 @@ Project assimilation:
    - `references/procedures/lifting-rules-bicep.md` → Technology Layer elements + Application-to-Technology Assignment / Realisation relationships (when Bicep is present).
    - `references/procedures/lifting-rules-gha.md` → Implementation & Migration Layer elements (when `.github/workflows/*.yml` is present).
    - `references/procedures/lifting-rules-process.md` → Business Process / Event / Interaction `LIFT-CANDIDATE` emission (when Durable Functions orchestrators or Logic Apps workflows are present).
+   - `references/procedures/process-view-emission.md` → §9.7 cooperation view + per-process §9.3 drill-down view emission (whenever `lifting-rules-process.md` emitted any element). Runs after `lifting-rules-process.md` (so it has elements to emit views for) and before `layout-strategy.md` (so layout sees the full view set).
    - `references/procedures/layout-strategy.md` → view placements for any element not carrying an architect-authored position in the prior diagram at the canonical path (always; Step 1 of the procedure preserves hand edits, only new elements are placed algorithmically).
 
 4. **Emit forward-only stub blocks.** For Business, Motivation, and Strategy — even if the architect did not ask for them — emit a typed stub *only if the diagram kind requires them* (e.g., a Service Realization view without a Business Layer is incomplete). The stub carries the mandatory marker header (reference §7.3):
@@ -285,7 +294,7 @@ The marker is the authoritative signal for the file's layout-conformance contrac
 
 1b. **Domain discovery — scan canonical paths.** Enumerate `docs/architecture/**/*.oef.xml`. Parse each file and filter views by diagram kind (§9.7 Business Process Cooperation or §9.3 Service Realization). Within filtered views, list each Business Process / Event / Interaction element with its `<name>`, owning view identifier, and the file path. If the question narrows to a feature area, filter by feature-file basename (e.g., "order-to-cash" → `docs/architecture/order-to-cash.oef.xml`). Return a ranked list — by feature proximity, then by number of incoming Triggering edges (entry-point processes first).
 
-1c. **Reverse lookup — backend path.** If the symbol is a backend orchestrator / workflow: (i) locate the symbol via `Grep` / `Glob`; (ii) find the enclosing Durable Functions orchestrator (`[Function]` on a function whose trigger parameter is `TaskOrchestrationContext` / `IDurableOrchestrationContext`) or Logic Apps workflow (`workflow.json`, `*.logicapp.json`, or Bicep `Microsoft.Logic/workflows`); (iii) search `docs/architecture/**/*.oef.xml` for a Business Process element whose preceding XML comment carries `LIFT-CANDIDATE source=<matching path>` — or whose `<name>` (case-insensitive, whitespace-trimmed) matches the orchestrator / workflow name — or whose `source=` custom property matches. Return the Business Process's `<name>`, owning view, and file path.
+1c. **Reverse lookup — backend path.** If the symbol is a backend orchestrator / workflow: (i) locate the symbol via `Grep` / `Glob`; (ii) find the enclosing Durable Functions orchestrator (`[Function]` on a function whose trigger parameter is `TaskOrchestrationContext` / `IDurableOrchestrationContext`) or Logic Apps workflow (`workflow.json`, `*.logicapp.json`, or Bicep `Microsoft.Logic/workflows`); (iii) search `docs/architecture/**/*.oef.xml` for a Business Process element whose preceding XML comment carries `LIFT-CANDIDATE source=<matching path>` — or whose `<name>` (case-insensitive, whitespace-trimmed) matches the orchestrator / workflow name — or whose `source=` custom property matches. Return the Business Process's `<name>`, owning view, and file path. If the matched Business Process has its own §9.3 view rooted on a sub-process, the §9.3 view's `<documentation>` block carries a `Parent process: <id-bp-...>` back-pointer (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 3) leading to the parent's §9.3 in one hop.
 
 1c. **Reverse lookup — UI path.** If the symbol is a UI file (Blazor `*.razor`, Next.js `app/**/page.tsx` or `pages/*.tsx`, or a React Router component file): search `docs/architecture/**/*.oef.xml` for a UI Application Component in a §9.3 view (Process-rooted modality) whose `<name>` equals the file's repo-relative path, or whose `source=` custom property matches the file path, or whose `<documentation>` contains the file's basename. If matched, walk the outgoing Realisation edge to the Business Process at the top of the §9.3 stack. Return its `<name>`, owning view, and file path.
 
@@ -348,6 +357,14 @@ Self-check: pass | <n failures> | n/a
 Project assimilation:
   <block per the Project assimilation section above>
 Forward-only layers stubbed: <list, or "none">
+Process-view emission:
+  Top-level Business Processes:    <n>
+  Sub-processes (Composition):     <m>
+  §9.7 cooperation views emitted:  <0 or 1>
+  §9.3 service-realization views:  <n + m - suppressed>
+  Suppressed by propid-coop-view-exclude:    <comma-separated identifiers, or "none">
+  Suppressed by propid-drilldown-exclude:    <comma-separated identifiers, or "none">
+  Over-budget views (AD-L4):       <comma-separated view identifiers, or "none">
 Runtime-verified drift: <n findings, or "drift detection not run">
 ```
 
@@ -366,6 +383,9 @@ Output contains any of the following? Stop; fix before delivering:
 - **§9.3 Service Realization view (Process-rooted modality) with a Business Process at top but no realising Application Service** (`AD-B-6`) or **no Application Component realising the Application Service** (`AD-B-7`).
 - **§9.3 Service Realization view for a user-driven Business Process** (one with a Business Actor Assignment per reference §4.1) **lacking a UI Application Component and Application Interface** at the entry point. Fix per `AD-B-10`; add the UI Component (for Blazor: `<name>` = the page component's file path) and the Application Interface (`<name>` = the `@page` route) with the appropriate Realisation / Assignment edges.
 - **Business Process in a §9.7 view with no Realisation into any §9.3 view (Process-rooted modality) for the same feature.** Fix per `AD-B-8`; either author the drill-down view or retract the process.
+- **§9.7 cooperation view with only one Business Process.** Fix per `AD-B-11`; cooperation requires ≥ 2 cooperating elements per the spec definition. Either add the feature's other top-level processes (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 1), or change the view's `viewpoint` to `"Service Realization"` for single-process focus.
+- **Sub-process without its own §9.3 drill-down view.** Fix per `AD-B-12`; emit a §9.3 view rooted on the sub-process (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 2), or set `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` on the process if intentional (reference §6.4b).
+- **Top-level process missing from the feature's §9.7 cooperation view.** Fix per `AD-B-13`; add the process as a node in the §9.7 view (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 1), or set `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` on the process if intentional (deprecated, planned, external; reference §6.4b).
 - **Missing Realisation chain** — a Business Service in scope with no Application Service realising it, or an Application Service with no Application Component. Fix per `AD-6`.
 - **Active structure directly accessing passive structure** — an Actor drawn accessing a Business Object without a Process / Function in between. Fix per `AD-4`.
 - **Association overuse** — more than one Association relationship in a single diagram. Fix per `AD-5`; pick a real relationship.

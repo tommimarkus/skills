@@ -256,6 +256,22 @@ The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechani
   L5 edge crossings exceed `n/6`, L6 non-orthogonal routing,
   L7 nested-plus-edge, L8 off-grid, L9 hierarchy not respected,
   L10 canvas not normalised, L11 edge-through-node).
+- **Process-view emission contract** (introduced in 0.9.0). Build and
+  Extract always emit a complete process-view set when Business Processes
+  are in scope: one §9.7 Business Process Cooperation view per feature
+  (containing every top-level process — root of its Composition tree)
+  plus one §9.3 Service Realization drill-down view per orchestrator-level
+  Business Process (top-level + Composition-nested sub-orchestrators per
+  [process-view-emission.md](souroldgeezer-design/skills/architecture-design/references/procedures/process-view-emission.md)).
+  Activity-call steps stay as nodes inside the parent's §9.3 — they are
+  not orchestrator-level. Architects can suppress emission per process
+  via two orthogonal properties (reference §6.4b):
+  `propid-coop-view-exclude` (skip §9.7 inclusion) for deprecated /
+  planned / external processes, and `propid-drilldown-exclude` (skip
+  §9.3 emission) for thin sub-orchestrator helpers. Under-coverage is
+  findable in Review via three new smells: `AD-B-11` (single-process
+  cooperation view), `AD-B-12` (sub-process without its own drill-down),
+  `AD-B-13` (top-level process missing from §9.7).
 - **Seven supported diagram kinds** (reference §9): Capability Map,
   Application Cooperation, Service Realization (with optional UI-aware
   Process-rooted modality — drill-down from a Business Process through

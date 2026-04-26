@@ -202,6 +202,10 @@ These links make the `AD-B-8` / `AD-B-9` between-view invariant checkable: a lif
 - **Track orchestration history.** The procedure reads orchestrator / workflow *definitions*, not runtime execution history. Drift between the lifted shape and actual production runs is out of scope; `AD-DR-11` / `AD-DR-12` compare definitions only.
 - **Validate orchestrator correctness.** Missing `CallActivityAsync` return handling, unreachable code, non-idempotent activities — all are [`devsecops-audit`](../../../../../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) or framework-level concerns, not this procedure's.
 
+## Cross-link to view emission
+
+This procedure lifts Business Layer **elements**. Per-feature **view emission** — the §9.7 cooperation view and the per-process §9.3 drill-down views — is governed by [`process-view-emission.md`](process-view-emission.md), invoked by the Extract workflow ([SKILL.md](../../SKILL.md) Extract step 3) after this procedure has produced the element set. The view-emission contract guarantees: one §9.7 per feature containing every top-level Business Process, and one §9.3 per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators). Suppression via `propid-coop-view-exclude` / `propid-drilldown-exclude` (reference §6.4b) is the architect's escape hatch for intentional under-coverage.
+
 ## Sources
 
 Paraphrased guidance; no code samples copied from the sources below.

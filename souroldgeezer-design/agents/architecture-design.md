@@ -24,7 +24,14 @@ description: >-
   review + drift detection against code/IaC), Lookup (narrow notation
   question). Bridges to the sibling responsive-design and serverless-api-design
   skills via the canonical path docs/architecture/<feature>.oef.xml, which
-  sibling skills consume for drift detection in their Review mode.
+  sibling skills consume for drift detection in their Review mode. Build
+  / Extract emit a complete process-view set — one §9.7 Business Process
+  Cooperation view per feature plus one §9.3 Service Realization
+  drill-down per orchestrator-level Business Process (top-level +
+  Composition-nested sub-orchestrators), with `propid-coop-view-exclude`
+  and `propid-drilldown-exclude` suppression properties for intentional
+  exclusions; under-coverage is findable in Review via `AD-B-11` /
+  `AD-B-12` / `AD-B-13`.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -127,11 +134,21 @@ When invoked, run the architecture-design skill and present results:
    Application Component (`AD-B-7`); §9.3 Service Realization view for a user-
    driven Business Process (carrying a Business Actor Assignment per
    reference §4.1) lacking a UI Application Component and Application
-   Interface at the entry point (`AD-B-10`).
+   Interface at the entry point (`AD-B-10`); §9.7 cooperation view
+   containing only one Business Process (`AD-B-11`); a sub-process
+   (Business Process composed under another Business Process) without
+   its own §9.3 drill-down view, unless `propid-drilldown-exclude=true`
+   is set (`AD-B-12`); a top-level Business Process missing from the
+   feature's §9.7 cooperation view, unless `propid-coop-view-exclude=true`
+   is set (`AD-B-13`).
 8. Always emit the footer disclosure: mode, reference path, canonical path,
    diagram kind, layers in scope, self-check result, project assimilation
    block (existing model reused; identifiers preserved; layers lifted vs
-   stubbed; drift summary), forward-only layers stubbed, and the explicit
-   note that live-deployment drift (IaC vs. deployed Azure state) requires
-   Azure Resource Graph / Defender for Cloud for ground truth — the skill
-   reads repository state only.
+   stubbed; drift summary), forward-only layers stubbed, the
+   process-view emission block (top-level Business Process count;
+   sub-process count; §9.7 / §9.3 view counts; suppressed identifiers
+   per `propid-coop-view-exclude` and `propid-drilldown-exclude`;
+   over-budget views) when Business Processes are in scope, and the
+   explicit note that live-deployment drift (IaC vs. deployed Azure
+   state) requires Azure Resource Graph / Defender for Cloud for
+   ground truth — the skill reads repository state only.
