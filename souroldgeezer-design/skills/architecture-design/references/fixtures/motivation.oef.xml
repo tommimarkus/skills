@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: §9.6 Motivation.
+  Architect intent: a checkout-conversion goal traced through Stakeholder → Driver → Goal → Outcome → Requirement → Constraint.
+  Used by render-validation in Phase 3 of architecture-design 0.8.0 implementation.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-motivation">
+
+  <name xml:lang="en">Fixture — Motivation (Checkout-conversion programme)</name>
+
+  <documentation xml:lang="en">Small fixture exercising §9.6 Motivation as a hierarchical tree: Stakeholder concerns flow into Drivers, Drivers motivate Goals, Goals are evidenced by Outcomes and operationalised as Requirements, with Constraints scoping the Requirements.</documentation>
+
+  <properties>
+    <property propertyDefinitionRef="propid-archi-model-banded">
+      <value xml:lang="en">v2</value>
+    </property>
+  </properties>
+
+  <metadata>
+    <schema>http://purl.org/dc/elements/1.1/</schema>
+    <schemaversion>1.1</schemaversion>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Fixture — Motivation (Checkout-conversion programme)</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.8.0-alpha.2 (fixture)</dc:creator>
+  </metadata>
+
+  <elements>
+    <element identifier="id-stake-product" xsi:type="Stakeholder">
+      <name xml:lang="en">Product Owner</name>
+    </element>
+    <element identifier="id-driver-conversion" xsi:type="Driver">
+      <name xml:lang="en">Reduce checkout abandonment</name>
+    </element>
+    <element identifier="id-goal-conversion" xsi:type="Goal">
+      <name xml:lang="en">Increase checkout conversion ≥ 60%</name>
+    </element>
+    <element identifier="id-outcome-q3" xsi:type="Outcome">
+      <name xml:lang="en">Q3 conversion 62%</name>
+    </element>
+    <element identifier="id-req-sso" xsi:type="Requirement">
+      <name xml:lang="en">SSO via Entra ID for returning customers</name>
+    </element>
+    <element identifier="id-req-onepage" xsi:type="Requirement">
+      <name xml:lang="en">One-page checkout form</name>
+    </element>
+    <element identifier="id-constraint-pcidss" xsi:type="Constraint">
+      <name xml:lang="en">PCI-DSS scope minimisation</name>
+    </element>
+    <element identifier="id-principle-tokenise" xsi:type="Principle">
+      <name xml:lang="en">Card data never traverses our backend</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-stake-driver" source="id-stake-product" target="id-driver-conversion" xsi:type="Association"/>
+    <relationship identifier="id-rel-driver-goal" source="id-driver-conversion" target="id-goal-conversion" xsi:type="Influence">
+      <properties>
+        <property propertyDefinitionRef="propid-strength"><value xml:lang="en">+</value></property>
+      </properties>
+    </relationship>
+    <relationship identifier="id-rel-goal-outcome" source="id-outcome-q3" target="id-goal-conversion" xsi:type="Realization"/>
+    <relationship identifier="id-rel-goal-req-sso" source="id-req-sso" target="id-goal-conversion" xsi:type="Realization"/>
+    <relationship identifier="id-rel-goal-req-onepage" source="id-req-onepage" target="id-goal-conversion" xsi:type="Realization"/>
+    <relationship identifier="id-rel-pcidss-req-sso" source="id-constraint-pcidss" target="id-req-sso" xsi:type="Influence">
+      <properties>
+        <property propertyDefinitionRef="propid-strength"><value xml:lang="en">−</value></property>
+      </properties>
+    </relationship>
+    <relationship identifier="id-rel-principle-pcidss" source="id-principle-tokenise" target="id-constraint-pcidss" xsi:type="Realization"/>
+  </relationships>
+
+  <organizations>
+    <item>
+      <label xml:lang="en">Motivation</label>
+      <item identifierRef="id-stake-product"/>
+      <item identifierRef="id-driver-conversion"/>
+      <item identifierRef="id-goal-conversion"/>
+      <item identifierRef="id-outcome-q3"/>
+      <item identifierRef="id-req-sso"/>
+      <item identifierRef="id-req-onepage"/>
+      <item identifierRef="id-constraint-pcidss"/>
+      <item identifierRef="id-principle-tokenise"/>
+    </item>
+  </organizations>
+
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-archi-model-banded" type="string">
+      <name xml:lang="en">archi-model-banded</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-strength" type="string">
+      <name xml:lang="en">strength</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-motivation"
+            xsi:type="Diagram"
+            viewpoint="Motivation">
+        <name xml:lang="en">Checkout-conversion — Motivation</name>
+        <documentation xml:lang="en">Hierarchical tree from Stakeholder concerns down through Drivers, Goals, Outcomes, Requirements, and the Constraint / Principle pair scoping them.</documentation>
+      </view>
+    </diagrams>
+  </views>
+</model>
