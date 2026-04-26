@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: §9.3 Service Realization (Process-rooted modality, user-driven).
+  Architect intent: a Customer places an order via a UI; the order is processed by an API.
+  Used by render-validation in Phase 3 of architecture-design 0.8.0 implementation.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-service-realization">
+
+  <name xml:lang="en">Fixture — Service Realization (Process-rooted)</name>
+
+  <documentation xml:lang="en">Small fixture exercising §9.3 Process-rooted modality: user-driven Business Process realised by an Application Service, exposed through a UI Application Interface and realised by a UI Application Component, with the API backing the Service running on a Function App Node.</documentation>
+
+  <properties>
+    <property propertyDefinitionRef="propid-archi-model-banded">
+      <value xml:lang="en">v2</value>
+    </property>
+  </properties>
+
+  <metadata>
+    <schema>http://purl.org/dc/elements/1.1/</schema>
+    <schemaversion>1.1</schemaversion>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Fixture — Service Realization (Process-rooted)</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.8.0-alpha.2 (fixture)</dc:creator>
+  </metadata>
+
+  <elements>
+    <element identifier="id-customer" xsi:type="BusinessActor">
+      <name xml:lang="en">Customer</name>
+    </element>
+    <element identifier="id-place-order-process" xsi:type="BusinessProcess">
+      <name xml:lang="en">Place Order</name>
+    </element>
+    <element identifier="id-place-order-page" xsi:type="ApplicationComponent">
+      <name xml:lang="en">app/Pages/Order/Place.razor</name>
+      <documentation xml:lang="en">UI Application Component (Blazor page) — the user entry point for the Place Order process.</documentation>
+    </element>
+    <element identifier="id-place-order-route" xsi:type="ApplicationInterface">
+      <name xml:lang="en">/order/place</name>
+      <documentation xml:lang="en">UI route exposed by the Place.razor page; the user interface surface of the Place Order Application Service.</documentation>
+    </element>
+    <element identifier="id-place-order-service" xsi:type="ApplicationService">
+      <name xml:lang="en">Place Order Service</name>
+    </element>
+    <element identifier="id-orders-api" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Orders API</name>
+      <documentation xml:lang="en">Backend Application Component (Azure Functions isolated-worker) realising the Place Order Service.</documentation>
+    </element>
+    <element identifier="id-funcapp" xsi:type="Node">
+      <name xml:lang="en">Azure Function App</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-customer-process" source="id-customer" target="id-place-order-process" xsi:type="Assignment"/>
+    <relationship identifier="id-rel-page-realises-service" source="id-place-order-page" target="id-place-order-service" xsi:type="Realization"/>
+    <relationship identifier="id-rel-page-exposes-route" source="id-place-order-page" target="id-place-order-route" xsi:type="Composition"/>
+    <relationship identifier="id-rel-route-realises-service" source="id-place-order-route" target="id-place-order-service" xsi:type="Realization"/>
+    <relationship identifier="id-rel-api-realises-service" source="id-orders-api" target="id-place-order-service" xsi:type="Realization"/>
+    <relationship identifier="id-rel-service-realises-process" source="id-place-order-service" target="id-place-order-process" xsi:type="Realization"/>
+    <relationship identifier="id-rel-funcapp-hosts-api" source="id-funcapp" target="id-orders-api" xsi:type="Assignment"/>
+  </relationships>
+
+  <organizations>
+    <item>
+      <label xml:lang="en">Business</label>
+      <item identifierRef="id-customer"/>
+      <item identifierRef="id-place-order-process"/>
+    </item>
+    <item>
+      <label xml:lang="en">Application</label>
+      <item identifierRef="id-place-order-page"/>
+      <item identifierRef="id-place-order-route"/>
+      <item identifierRef="id-place-order-service"/>
+      <item identifierRef="id-orders-api"/>
+    </item>
+    <item>
+      <label xml:lang="en">Technology</label>
+      <item identifierRef="id-funcapp"/>
+    </item>
+  </organizations>
+
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-archi-model-banded" type="string">
+      <name xml:lang="en">archi-model-banded</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-service-realization"
+            xsi:type="Diagram"
+            viewpoint="Service Realization">
+        <name xml:lang="en">Place Order — Service Realization (Process-rooted)</name>
+        <documentation xml:lang="en">Process-rooted modality: Customer (Business Actor) drives Place Order (Business Process), realised by Place Order Service (Application Service), exposed through /order/place (Application Interface) and realised by Place.razor (UI Application Component) and Orders API (Backend Application Component); Orders API hosted by Function App.</documentation>
+      </view>
+    </diagrams>
+  </views>
+</model>
