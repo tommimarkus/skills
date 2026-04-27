@@ -4,21 +4,25 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships two
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
   test quality, with per-stack extensions and matching Claude Code subagents.
-- **souroldgeezer-design** — reference-driven design for modern web UIs,
-  serverless HTTP APIs, and ArchiMate® architecture models. For UIs (build,
-  review, lookup): enforces WCAG 2.2 AA, internationalization (LTR + RTL + text
-  expansion), and Core Web Vitals, with a Blazor WebAssembly extension. For
-  serverless APIs (build, review, lookup): enforces security (Entra ID /
-  managed identities / Key Vault / data-plane RBAC), contract discipline
+- **souroldgeezer-design** — reference-driven design for sustainable software,
+  modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models. For
+  software design (build, extract, review, lookup): shapes code/module
+  boundaries, dependency direction, responsibility placement, semantic
+  coherence, coupling control, and evolutionary design, with a .NET™ extension.
+  For UIs (build, review, lookup): enforces W3C® WCAG™ 2.2 AA,
+  internationalization (LTR + RTL + text expansion), and Core Web Vitals, with
+  a Blazor™ WebAssembly extension. For serverless APIs (build, review,
+  lookup): enforces security (Microsoft® Entra ID™ / managed identities /
+  Azure® Key Vault™ / data-plane RBAC), contract discipline
   (OpenAPI™ 3.1, RFC 9457 problem+json), reliability (idempotency,
-  429 + Retry-After), and observability (structured logs, W3C traceparent),
-  with composable extensions for Azure Functions .NET, Cosmos DB, and Blob
-  Storage. For architecture (build, extract, review, lookup): enforces
+  429 + Retry-After), and observability (structured logs, W3C® traceparent),
+  with composable extensions for Azure® Functions™ on .NET™, Azure® Cosmos DB™,
+  and Azure® Blob Storage™. For architecture (build, extract, review, lookup): enforces
   ArchiMate® 3.2 layer discipline and Appendix B relationship well-formedness;
   serialises models as **OEF XML** per The Open Group ArchiMate® Model
   Exchange File Format 3.2 (loadable in ArchiMate®-conformant tools);
   lifts Application + Technology + Implementation & Migration layers from
-  .NET / Bicep / GitHub Actions and the Business layer's Process / Event /
+  .NET™ / Bicep™ / GitHub Actions™ and the Business layer's Process / Event /
   Interaction from Durable Functions + Logic Apps (as `LIFT-CANDIDATE`s the
   architect confirms); marks the rest of Business and all Motivation /
   Strategy as forward-only; supports macro Business Process Cooperation and
@@ -119,18 +123,19 @@ project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
 ## What's in `souroldgeezer-design`
 
-Three design skills, each with a matching one-shot Claude Code subagent:
+Four design skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Covers | Stack extensions |
 |---|---|---|
+| [software-design](souroldgeezer-design/skills/software-design/SKILL.md) | Sustainable software design for code/module changes - Build, Extract, Review, and Lookup across boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, lightweight tradeoffs, and socio-technical fit | [.NET™](souroldgeezer-design/skills/software-design/extensions/dotnet.md) (solution/project references, namespaces, assembly visibility, dependency injection, persistence model leakage, hosted services, and common .NET™ design ceremony) |
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
 | [serverless-api-design](souroldgeezer-design/skills/serverless-api-design/SKILL.md) | Modern serverless HTTP APIs — enforces security (Entra ID / managed identities / Key Vault / data-plane RBAC, `disableLocalAuth`, `allowSharedKeyAccess=false`), contract discipline (OpenAPI 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C traceparent, correlation ID, RU / request-charge visibility) as hard baselines | [azure-functions-dotnet](souroldgeezer-design/skills/serverless-api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/serverless-api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/serverless-api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
 | [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only), Review (professional readiness, artefact findings, and drift detection including process drift against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process) | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md) and the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau timeline / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `AD-B-*` checks in Review |
 
-References live at [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
-Matching Claude Code subagents are at [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
+References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
+Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
-The canonical path `docs/architecture/<feature>.oef.xml` is the coupling mechanism across the three skills: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review (drift detection) when a paired model is present, so code and architecture stay consistent across iterations.
+The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling mechanism for UI/API code-to-architecture drift: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review when a paired model is present.
 
 ## How the audits work
 
@@ -385,6 +390,7 @@ souroldgeezer-design/              # design plugin
   .claude-plugin/plugin.json
   .codex-plugin/plugin.json
   docs/
+    software-reference/            # bundled reference (software-design.md)
     ui-reference/                  # bundled reference (responsive-design.md)
     api-reference/                 # bundled reference (serverless-api-design.md)
     architecture-reference/        # bundled reference (architecture.md)
@@ -393,7 +399,7 @@ souroldgeezer-design/              # design plugin
     SKILL.md                       # workflow
     agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
-    references/                    # (architecture-design only) smell catalog + per-input-source lifting procedures
+    references/                    # smell catalogs + reusable procedures where needed
 undecided/                         # skills not yet assigned to a plugin — NOT production-ready;
                                    # do not reference from published skills
 ```

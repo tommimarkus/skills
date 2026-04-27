@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-design",
-  "version": "0.10.1",
-  "description": "Reference-driven design for modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models — build, review, extract, and look up responsive interfaces (W3C® WCAG™ 2.2 AA conformance, i18n, Core Web Vitals), serverless APIs (security, contract discipline, reliability, observability) across Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage™, and ArchiMate® 3.2 enterprise / solution architecture (serialised as OEF XML per The Open Group ArchiMate® Model Exchange File Format 3.2, loadable in ArchiMate®-conformant tools, with layered extract from .NET™ solutions, Bicep™ files, host.json, staticwebapp.config.json, and GitHub Actions™ workflows), with composable per-stack extensions, canonical-path drift detection across sibling skills, the Sugiyama-v1 layout engine for cookbook-quality OEF output (deterministic 3-tier procedure with per-viewpoint specialisations, zero runtime deps), architecture-design professional-readiness review for OEF model/view quality (model-valid, diagram-readable, review-ready), the architecture-design process-view emission contract (one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down per orchestrator-level Business Process), matching Claude Code subagents, and Codex skill metadata.",
+  "version": "0.11.0",
+  "description": "Reference-driven design for sustainable software design, modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models - build, extract, review, and look up code/module design (Lean waste discipline, information hiding, semantic coherence, coupling control, evolutionary design, .NET™ extension), responsive interfaces (W3C® WCAG™ 2.2 AA conformance, i18n, Core Web Vitals), serverless APIs (security, contract discipline, reliability, observability) across Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage™, and ArchiMate® 3.2 enterprise / solution architecture (serialised as OEF XML per The Open Group ArchiMate® Model Exchange File Format 3.2, loadable in ArchiMate®-conformant tools, with layered extract from .NET™ solutions, Bicep™ files, host.json, staticwebapp.config.json, and GitHub Actions™ workflows), with composable per-stack extensions, canonical-path drift detection across sibling skills, the Sugiyama-v1 layout engine for cookbook-quality OEF output, architecture-design professional-readiness review for OEF model/view quality (model-valid, diagram-readable, review-ready), matching Claude Code subagents, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"
@@ -10,8 +10,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Design",
-    "shortDescription": "Reference-driven UI, API, and architecture design.",
-    "longDescription": "Build, review, extract, and look up responsive UI, serverless API, and ArchiMate® architecture guidance with bundled references.",
+    "shortDescription": "Reference-driven software, UI, API, and architecture design.",
+    "longDescription": "Build, extract, review, and look up sustainable software design, responsive UI, serverless API, and ArchiMate® architecture guidance with bundled references.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
     "capabilities": [
@@ -19,6 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
+      "Review this module design for coupling and boundary risks.",
       "Review this UI against the responsive design reference.",
       "Design a serverless API for this feature.",
       "Review this ArchiMate® model for professional readiness."
