@@ -88,7 +88,7 @@ Before applying the rubric, detect which stacks are present in the audit target.
 | `*.csproj` or `*.sln` in the target; `xunit`, `nunit`, `mstest`, `Moq`, `NSubstitute`, `bunit`, `FluentAssertions`, `Microsoft.Playwright`, `Selenium.WebDriver` package refs | `extensions/dotnet-core.md` |
 | `package.json` with `jest`, `vitest`, `mocha`, `@jest/globals`, `vitest/globals`, `ava`, `sinon`, `testdouble`, `@testing-library/*`, `@playwright/test`, `cypress`, `webdriverio`, `puppeteer`, `supertest`, `msw`, `testcontainers`, `fast-check`, `@stryker-mutator/core` in dependencies or devDependencies; runner config files `jest.config.*` / `vitest.config.*` / `.mocharc.*` / `ava.config.*`; `import { test } from 'node:test'` in a source file | `extensions/nodejs-core.md` |
 | `package.json` with `"next"` in `dependencies`; OR `next.config.{js,ts,mjs,cjs}` at project root; OR `app/` directory with `layout.*` / `page.*` / `route.*`; OR `pages/` directory with `_app.*` / `_document.*`; OR `proxy.{ts,js}` (v16+) / `middleware.{ts,js}` (legacy) at repo or `src/` root; OR any `@next/*` scoped package | `extensions/nextjs-core.md` **in addition to** `extensions/nodejs-core.md` (strict superset — `nodejs-core.md` loads first) |
-| `pyproject.toml` or `setup.py` with `pytest` or `unittest` | *(future)* `extensions/python.md` |
+| `pyproject.toml` or `setup.py` with `pytest` or `unittest` | No extension currently shipped — proceed with the core rubric only and note the missing Python extension as a limitation. |
 
 Detection rules:
 

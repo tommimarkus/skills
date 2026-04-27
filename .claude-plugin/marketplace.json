@@ -11,14 +11,14 @@
     {
       "name": "souroldgeezer-audit",
       "source": "./souroldgeezer-audit",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions, matching Claude Code subagents, and Codex skill metadata."
     },
     {
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
-      "version": "0.10.0",
-      "description": "Reference-driven design for modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models — build, review, extract, and look up responsive interfaces (WCAG 2.2 AA, i18n, Core Web Vitals), serverless APIs (security, contract discipline, reliability, observability) across Azure Functions .NET, Cosmos DB, and Blob Storage, and ArchiMate® 3.2 enterprise / solution architecture (serialised as OEF XML per The Open Group ArchiMate® Model Exchange File Format 3.2, loadable in ArchiMate®-conformant tools, with layered extract from .NET solutions, Bicep, host.json, staticwebapp.config.json, and GitHub Actions workflows), with composable per-stack extensions, canonical-path drift detection across sibling skills, the Sugiyama-v1 layout engine for cookbook-quality OEF output (deterministic 3-tier procedure with per-viewpoint specialisations, zero runtime deps), architecture-design professional-readiness review for OEF model/view quality (model-valid, diagram-readable, review-ready), the architecture-design process-view emission contract (one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down per orchestrator-level Business Process), matching Claude Code subagents, and Codex skill metadata."
+      "version": "0.10.1",
+      "description": "Reference-driven design for modern web UIs, serverless HTTP APIs, and ArchiMate® architecture models — build, review, extract, and look up responsive interfaces (W3C® WCAG™ 2.2 AA conformance, i18n, Core Web Vitals), serverless APIs (security, contract discipline, reliability, observability) across Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage™, and ArchiMate® 3.2 enterprise / solution architecture (serialised as OEF XML per The Open Group ArchiMate® Model Exchange File Format 3.2, loadable in ArchiMate®-conformant tools, with layered extract from .NET™ solutions, Bicep™ files, host.json, staticwebapp.config.json, and GitHub Actions™ workflows), with composable per-stack extensions, canonical-path drift detection across sibling skills, the Sugiyama-v1 layout engine for cookbook-quality OEF output (deterministic 3-tier procedure with per-viewpoint specialisations, zero runtime deps), architecture-design professional-readiness review for OEF model/view quality (model-valid, diagram-readable, review-ready), the architecture-design process-view emission contract (one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down per orchestrator-level Business Process), matching Claude Code subagents, and Codex skill metadata."
     }
   ]
 }

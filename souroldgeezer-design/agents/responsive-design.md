@@ -2,11 +2,11 @@
 name: responsive-design
 description: >-
   Use when building, reviewing, or looking up modern responsive web UI —
-  components, pages, or features in HTML/CSS/JS and Blazor WASM. Applies the
+  components, pages, or features in HTML/CSS/JS and Blazor™ WASM. Applies the
   bundled reference at souroldgeezer-design/docs/ui-reference/responsive-design.md,
-  enforcing WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and
-  Core Web Vitals as hard baselines. Supports build, review, and lookup modes
-  with a Blazor-WASM extension.
+  enforcing W3C® WCAG™ 2.2 AA conformance, internationalization (LTR + RTL +
+  text expansion), and Core Web Vitals as hard baselines. Supports build,
+  review, and lookup modes with a Blazor™-WASM extension.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
