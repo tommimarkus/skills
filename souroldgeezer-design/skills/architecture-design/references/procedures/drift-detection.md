@@ -42,6 +42,7 @@ Compare Application Components, Services, Interfaces, and intra-Application rela
 |---|---|---|
 | Component in `*.csproj` / solution without a matching `<element xsi:type="ApplicationComponent">` in the model | `AD-DR-1` | `warn` |
 | `<element xsi:type="ApplicationComponent">` in the model without a matching `*.csproj` / solution project, and the element is not marked *planned* or *external* via a `<property>` or `<documentation>` | `AD-DR-2` | `warn` |
+| External Application Component inferred from HTTP clients, documentation, or CSP allowlists lacks an external trust-boundary Grouping | `AD-21` | `block` |
 | `<ProjectReference>` edge in solution without a matching `<relationship xsi:type="Serving|Composition|Realization">` in the model | `AD-DR-7` | `warn` |
 | `<relationship>` in the model between two Components without a `<ProjectReference>` edge between their projects | `AD-DR-7` | `warn` (may be legitimate architect intent — flag, don't block) |
 | `<name>` value in the model differs from the canonical project name | `AD-DR-8` | `info` (friendly-name rename is usually fine) |
@@ -57,6 +58,7 @@ Compare Technology Nodes, System Software, Communication Networks, Paths, Artifa
 | Bicep resource (compute / data / identity / secrets / network) without a matching `<element>` of the appropriate `xsi:type` in the model | `AD-DR-3` | `warn` |
 | `<element xsi:type="Node">` (etc.) in the model without a matching Bicep resource, and the element is not marked *planned* or *out-of-scope* | `AD-DR-4` | `warn` |
 | Application-to-Technology relationship implied by code + IaC combination (see [lifting-rules-bicep.md](lifting-rules-bicep.md) "Application-to-Technology linking") that is missing from the model | `AD-DR-7` | `warn` |
+| Bicep marks a data-plane resource as RBAC-only and role assignments imply Managed Identity access, but the model lacks the corresponding Access relationship | `AD-18` | `block` |
 | Node `xsi:type` changed (e.g., App Service hosting for a Component changed to Container App — which would shift System Software associations) | `AD-DR-9` | `info` |
 | `<name>` value in the model differs from the canonical Bicep `name` property | `AD-DR-8` | `info` |
 
@@ -70,6 +72,8 @@ Compare Work Packages, Plateaus, Gaps, Implementation Events, Deliverables.
 | `<element xsi:type="WorkPackage">` in the model without a matching workflow file, and the element is not marked *planned* or *decommissioned* | `AD-DR-6` | `warn` |
 | New `environment:` value in workflows (new Plateau) without a matching `<element xsi:type="Plateau">` in the model | `AD-DR-5` | `warn` |
 | `<element xsi:type="Plateau">` in the model without any deploy job targeting that environment | `AD-DR-6` | `info` |
+| Extracted or modelled Plateau has no supporting environment evidence | `AD-19` | `warn` |
+| Parallel environment Plateaus are connected by Triggering without migration intent in view documentation | `AD-20` | `block` |
 
 #### § Process (Business Layer, hybrid)
 

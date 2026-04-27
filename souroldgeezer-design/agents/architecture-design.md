@@ -45,17 +45,17 @@ When invoked, run the architecture-design skill and present results:
    Tier 0 preserves architect-positioned `<node>` placements verbatim; Tier 1
    runs cycle handling → layer assignment → 4-pass barycentric ordering →
    median coordinate assignment → Manhattan A* edge routing with
-   obstacle avoidance → bbox normalisation; Tier 2 applies the per-viewpoint
+   obstacle avoidance → post-layout connector intersection validation →
+   bbox normalisation; Tier 2 applies the per-viewpoint
    specialisation matching the §9 diagram kind (Capability Map tile grid /
    Application Cooperation hub-and-spoke / Service Realization vertical
    stack / Technology Usage hosting tower / Migration Plateau timeline /
-   Motivation tree / Business Process Cooperation lanes). On every Build,
-   emit the §6.4a banding marker `propid-archi-model-banded=v2` (with the
-   required `<name>` child on the `<propertyDefinition>`). Cite reference
+   Motivation tree / Business Process Cooperation lanes). Do not emit a
+   model-root layout marker or model-root `<properties>` block. Cite reference
    sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
    never duplicate reference prose; run the §10 self-check (`[static]` /
-   `[runtime]` tags) and professional-readiness curation before handing back.
-4. For extract mode: invoke the four lifting procedures in
+   `[visual]` / `[runtime]` tags) and professional-readiness curation before handing back.
+4. For extract mode: invoke the relevant lifting and emission procedures in
    [references/procedures/](../skills/architecture-design/references/procedures/)
    — `lifting-rules-dotnet.md` for the Application Layer, `lifting-rules-bicep.md`
    for the Technology Layer, `lifting-rules-gha.md` for Implementation &
@@ -63,7 +63,9 @@ When invoked, run the architecture-design skill and present results:
    Layer subset (Business Process / Event / Interaction from Durable Functions
    orchestrators and Logic Apps workflow definitions; each emitted with a
    per-element `LIFT-CANDIDATE` XML comment per reference §7.4, including
-   `source=` and `confidence=` attributes). For any element not carrying an
+   `source=` and `confidence=` attributes). After forward-only stubs exist,
+   run `seed-views.md` when Strategy / Motivation / Business Service stubs
+   need a visible canvas. For any element not carrying an
    architect-authored position in a prior diagram at the canonical path,
    invoke [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
    architect-authored positions are preserved verbatim (procedure Step 1).
@@ -82,7 +84,7 @@ When invoked, run the architecture-design skill and present results:
    [references/procedures/drift-detection.md](../skills/architecture-design/references/procedures/drift-detection.md)
    and emits `AD-DR-*` findings. Lead with `Professional readiness:
    model-valid | diagram-readable | review-ready` and top artifact blockers.
-   Include a `layer:` field (`static` / `runtime`) so the reader knows how to
+   Include a `layer:` field (`static` / `visual` / `runtime`) so the reader knows how to
    confirm. Follow with a short well-formedness + drift rollup. Only `static`
    findings are definitively pass / fail from source alone; `runtime` findings
    are source-aligned with drift re-check required.
@@ -104,6 +106,12 @@ When invoked, run the architecture-design skill and present results:
    from static review alone; element emitted with an `xsi:type` not in the
    ArchiMate® 3.2 catalog; bundled XSD file (the skill must reference The
    Open Group's canonical schema URL, never copy the schema locally);
+   invalid model-root children, including `<properties>` or the old layout
+   marker (`AD-17`); RBAC-only technology paths without visible Managed
+   Identity Access (`AD-18`); deployment Plateaus with no environment
+   evidence (`AD-19`); Plateau-to-Plateau Triggering without explicit
+   migration intent (`AD-20`); external Application Component outside an
+   external trust-boundary Grouping (`AD-21`);
    layout failures per reference §6.4a — node violating relative layer
    ordering (`AD-L1`), overlapping nodes (`AD-L2`), undersized figures with
    truncating labels (`AD-L3`), view over the 20-element / 30-relationship
@@ -111,8 +119,10 @@ When invoked, run the architecture-design skill and present results:
    double representation (`AD-L7`), off-grid coordinates (`AD-L8`),
    hierarchy not respected — same-layer Realization / Used-by / Serving
    drawn against topological direction (`AD-L9`), canvas not normalised at
-   `(40, 40) ± 10 px` origin (`AD-L10`), or `<connection>` Manhattan path
-   crossing a non-source / non-target node bbox (`AD-L11`); Business Process Cooperation view
+   `(40, 40) ± 10 px` origin (`AD-L10`), `<connection>` segment crossing an
+   unrelated node bbox (`AD-L11`, blocking), view-orphan nodes (`AD-L12`),
+   stacked connector lanes (`AD-L13`), wide empty layer gaps (`AD-L14`), or
+   local fan-out crisscross (`AD-L15`); Business Process Cooperation view
    lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
    layer elements (`AD-B-4`); §9.3 Service Realization view with a Business
    Process at top but no realising Application Service (`AD-B-6`) or no

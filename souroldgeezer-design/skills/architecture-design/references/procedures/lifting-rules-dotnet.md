@@ -77,6 +77,24 @@ Azure Functions bindings declared in function classes surface as Application Int
 | `auth` block with `identityProviders` | Application Service *Authentication* on the SWA Component, linked to the Technology Layer via a Used-by relationship to the identity provider (forward-only stub unless the provider is explicit) |
 | `navigationFallback` for SPA routing | Not lifted — client-side detail |
 
+### External services → Application Components + trust-boundary Grouping
+
+External Application Components are discovered when any of these signals are present:
+
+- Documentation or comments mark a dependency as `External`, `third-party`, or vendor-owned.
+- `AddHttpClient(...)`, typed clients, or configuration set a `BaseAddress` outside the local origin and outside known project-hosted endpoints from Bicep parameters.
+- `staticwebapp.config.json` CSP allowlists (`connect-src`, `img-src`, `script-src`, etc.) name third-party domains.
+- OAuth / API integration patterns identify providers such as identity, payment, email, telemetry, CDN, or product API vendors.
+
+Emit trust-boundary Groupings:
+
+| Detection | Emit |
+|---|---|
+| `*.csproj`-derived internal Components | `Grouping` named `{Project} (internal)` with Composition membership to internal Application Components |
+| External provider Components | One `Grouping` per provider, named `{Provider} (external)`, with Composition membership to that provider's Application Components |
+
+Application Cooperation views place Components visually inside their Grouping. Composition edges used only for the Grouping membership are hidden via the existing ARM hide property when nested. Review emits `AD-21` when an external Application Component is present without an external Grouping.
+
 ## Naming conventions
 
 - **Component identifier** — `id-<slug>` where `<slug>` is the project name lowercased with dots replaced by hyphens: `Orders.Api` → `id-orders-api`. Identifiers are stable across re-extracts per reference §6.6.
@@ -108,6 +126,12 @@ Lifted elements are emitted as OEF XML into the canonical file at `docs/architec
   <element identifier="id-blazor-client" xsi:type="ApplicationComponent">
     <name xml:lang="en">Blazor Client</name>
   </element>
+  <element identifier="id-group-orders-internal" xsi:type="Grouping">
+    <name xml:lang="en">Orders (internal)</name>
+  </element>
+  <element identifier="id-group-payment-external" xsi:type="Grouping">
+    <name xml:lang="en">Payment provider (external)</name>
+  </element>
 </elements>
 
 <relationships>
@@ -123,6 +147,9 @@ Lifted elements are emitted as OEF XML into the canonical file at `docs/architec
   <relationship identifier="id-rel-client-calls-api"
                 source="id-blazor-client" target="id-orders-api-if-post-orders"
                 xsi:type="Serving"/>
+  <relationship identifier="id-rel-group-internal-api"
+                source="id-group-orders-internal" target="id-orders-api"
+                xsi:type="Composition"/>
 </relationships>
 ```
 

@@ -13,12 +13,6 @@
 
   <documentation xml:lang="en">Small fixture exercising §9.3 Process-rooted modality: user-driven Business Process realised by an Application Service, exposed through a UI Application Interface and realised by a UI Application Component, with the API backing the Service running on a Function App Node.</documentation>
 
-  <properties>
-    <property propertyDefinitionRef="propid-archi-model-banded">
-      <value xml:lang="en">v2</value>
-    </property>
-  </properties>
-
   <metadata>
     <schema>http://purl.org/dc/elements/1.1/</schema>
     <schemaversion>1.1</schemaversion>
@@ -81,12 +75,6 @@
       <item identifierRef="id-funcapp"/>
     </item>
   </organizations>
-
-  <propertyDefinitions>
-    <propertyDefinition identifier="propid-archi-model-banded" type="string">
-      <name xml:lang="en">archi-model-banded</name>
-    </propertyDefinition>
-  </propertyDefinitions>
 
   <views>
     <diagrams>

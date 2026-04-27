@@ -25,8 +25,10 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships two
   .NET™ / Bicep™ / GitHub Actions™ and the Business layer's Process / Event /
   Interaction from Durable Functions + Logic Apps (as `LIFT-CANDIDATE`s the
   architect confirms); marks the rest of Business and all Motivation /
-  Strategy as forward-only; supports macro Business Process Cooperation and
-  UI-aware Service Realization diagram kind (§9.3 Process-rooted modality); dispatches from the sibling
+  Strategy as forward-only with seed views; shows Managed Identity / RBAC,
+  deployment topology, and external trust-boundary concerns when extractable;
+  supports macro Business Process Cooperation and UI-aware Service Realization
+  diagram kind (§9.3 Process-rooted modality); dispatches from the sibling
   skills' Review mode to flag drift between code and the architect's
   model. Each skill has a matching Claude Code subagent; Codex consumes the
   bundled `skills/**/SKILL.md` workflows directly from the plugin.
@@ -141,7 +143,7 @@ Four design skills, each with a matching one-shot Claude Code subagent:
 | [software-design](souroldgeezer-design/skills/software-design/SKILL.md) | Sustainable software design for code/module changes - Build, Extract, Review, and Lookup across boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, lightweight tradeoffs, and socio-technical fit | [.NET™](souroldgeezer-design/skills/software-design/extensions/dotnet.md) (solution/project references, namespaces, assembly visibility, dependency injection, persistence model leakage, hosted services, and common .NET™ design ceremony) |
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
 | [serverless-api-design](souroldgeezer-design/skills/serverless-api-design/SKILL.md) | Modern serverless HTTP APIs — enforces security (Entra ID / managed identities / Key Vault / data-plane RBAC, `disableLocalAuth`, `allowSharedKeyAccess=false`), contract discipline (OpenAPI 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C traceparent, correlation ID, RU / request-charge visibility) as hard baselines | [azure-functions-dotnet](souroldgeezer-design/skills/serverless-api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/serverless-api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/serverless-api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
-| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only), Review (professional readiness, artefact findings, and drift detection including process drift against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process) | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md) and the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau timeline / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `AD-B-*` checks in Review |
+| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (professional readiness, artefact findings, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process) | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-design/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md) and the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation, post-layout connector intersection pass; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau or deployment-topology layout / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `AD-B-*` checks in Review |
 
 References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
 Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
@@ -277,8 +279,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   process does this code symbol or UI component belong to") with a citation
   or a ranked list.
 - **Verification-layer tags.** Every §10 checklist item carries a tag —
-  `[static]` (readable from the `.oef.xml` source alone) or `[runtime]`
-  (requires reading the current code / IaC / workflow state). Drift
+  `[static]` (readable from the `.oef.xml` source alone), `[visual]`
+  (requires rendering when an Archi-compatible renderer is available), or
+  `[runtime]` (requires reading the current code / IaC / workflow state). Drift
   findings are always `[runtime]` against the repository; live-deployment
   drift (IaC vs. what's actually running in Azure) is out of scope and
   requires Azure Resource Graph / Defender for Cloud.
@@ -294,39 +297,45 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   `GitHub Actions` for the Implementation & Migration Layer, `Durable
   Functions + Logic Apps` for the Business Layer's Process / Event /
   Interaction subset (the other Business elements stay forward-only),
+  seed views for forward-only Strategy / Motivation stubs,
   plus professional-readiness and drift-detection procedures. They are consulted (read on demand)
   during Extract and Review; the harness's Skill tool loads `SKILL.md`
   only, so each procedure file is `Read` explicitly when its rules
   apply. The split is by input source (code / IaC / workflow / backend
   workflow), not by target stack choice, so this skill does not use the
   `extensions/` pattern the sibling skills do.
-- **Sugiyama-v1 layout engine** (introduced in 0.8.0). A fifth procedure,
+- **Sugiyama-v1 layout engine** (introduced in 0.8.0). The
   [layout-strategy.md](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md),
   governs `<view>` placement via a deterministic three-tier pipeline:
   **Tier 0** preserves architect-positioned `<node>` placements verbatim
   on every re-Extract. **Tier 1** (the Sugiyama core engine) runs six
-  phases — cycle handling, layer assignment per ArchiMate® layer
+  phases plus post-routing validation — cycle handling, layer assignment per ArchiMate® layer
   (Strategy → Physical), within-layer ordering with 4-pass barycentric
   crossing-minimisation, coordinate assignment via median heuristic,
-  Manhattan A* edge routing with obstacle avoidance, and bounding-box
+  Manhattan A* edge routing with obstacle avoidance, a post-layout connector
+  intersection pass that makes connector-through-unrelated-node a blocking
+  failure, and bounding-box
   normalisation to the canvas origin. **Tier 2** applies a per-viewpoint
   specialisation matching the §9 diagram kind — Capability Map tile
   grid, Application Cooperation hub-and-spoke (when one Component
   dominates by degree), Service Realization vertical-stack with
   Process-rooted modality, Technology Usage hosting tower, Migration
   Plateau timeline, Motivation hierarchical tree, Business Process
-  Cooperation three-lane flow. 10-px grid, default element sizes per
+  Cooperation three-lane flow, and deployment topology as sibling Plateaus
+  without Plateau-to-Plateau Triggering. 10-px grid, default element sizes per
   reference §6.4a, Composition / Aggregation / Realization nested over
   explicit edge when both endpoints share a layer-and-aspect cell,
   ≤ 20 elements / ≤ 30 relationships per view. Same inputs produce the
   same `x`, `y`, `w`, `h` on every run — re-extracts don't churn
   coordinates; architect hand-edits survive because only elements
   without a prior position are placed algorithmically. Review restates
-  the contract as the `AD-L*` smell codes (eleven in 0.8.0:
+  the contract as the `AD-L*` smell codes:
   L1 layer-ordering, L2 overlap, L3 label truncation, L4 view budget,
   L5 edge crossings exceed `n/6`, L6 non-orthogonal routing,
   L7 nested-plus-edge, L8 off-grid, L9 hierarchy not respected,
-  L10 canvas not normalised, L11 edge-through-node).
+  L10 canvas not normalised, L11 connector-through-node (blocking),
+  L12 view-orphan, L13 stacked connector lane, L14 wide empty layer gap,
+  L15 local fan-out crisscross).
 - **Process-view emission contract** (introduced in 0.9.0). Build and
   Extract always emit a complete process-view set when Business Processes
   are in scope: one §9.7 Business Process Cooperation view per feature
@@ -352,6 +361,12 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   service realization, and ambiguous labels. Project packaging stays with
   the consuming project: README rows, render galleries, screenshots, and
   CI publication checks are not architecture-design success criteria.
+- **Extracted security and boundary semantics.** Bicep lifting surfaces
+  Managed Identity / RBAC Access paths, diagnostic Flow edges, Key Vault
+  references, RBAC-only resource flags, and private endpoint Paths. .NET
+  lifting groups internal and external Application Components into
+  trust-boundary Groupings. GitHub Actions lifting distinguishes true
+  migration from parallel deployment topology.
 - **Seven supported diagram kinds** (reference §9): Capability Map,
   Application Cooperation, Service Realization (with optional UI-aware
   Process-rooted modality — drill-down from a Business Process through

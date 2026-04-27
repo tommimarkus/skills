@@ -14,12 +14,6 @@
 
   <documentation xml:lang="en">Lane-based process flow: Customer Actor drives entry; entry Event triggers Verify Customer → Charge Card → Ship Order; the Order Business Object is accessed by all three steps; exit Event marks completion.</documentation>
 
-  <properties>
-    <property propertyDefinitionRef="propid-archi-model-banded">
-      <value xml:lang="en">v2</value>
-    </property>
-  </properties>
-
   <metadata>
     <schema>http://purl.org/dc/elements/1.1/</schema>
     <schemaversion>1.1</schemaversion>
@@ -80,12 +74,6 @@
       <item identifierRef="id-bo-payment"/>
     </item>
   </organizations>
-
-  <propertyDefinitions>
-    <propertyDefinition identifier="propid-archi-model-banded" type="string">
-      <name xml:lang="en">archi-model-banded</name>
-    </propertyDefinition>
-  </propertyDefinitions>
 
   <views>
     <diagrams>

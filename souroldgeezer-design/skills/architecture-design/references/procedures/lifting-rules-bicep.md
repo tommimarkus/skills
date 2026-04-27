@@ -43,14 +43,15 @@ Out of scope: ARM JSON templates (if the project uses ARM directly rather than B
 | `Microsoft.ServiceBus/namespaces` | **Node** — *Service Bus namespace* |
 | `Microsoft.EventGrid/topics` / `Microsoft.EventGrid/systemTopics` | **Node** — *Event Grid (custom)* / *Event Grid (system)* |
 
-### Identity / secrets → Node
+### Identity / secrets → Node + Technology Service
 
 | Bicep resource | ArchiMate element |
 |---|---|
 | `Microsoft.KeyVault/vaults` | **Node** — *Key Vault* |
-| `Microsoft.ManagedIdentity/userAssignedIdentities` | **Node** — *Managed Identity*, labelled with identity name |
+| `Microsoft.ManagedIdentity/userAssignedIdentities` | **Node** — *User-assigned Managed Identity*, labelled with identity name; also emits a **Technology Service** representing the identity principal when it participates in Access relationships |
+| `identity: { type: 'SystemAssigned' }` on `Microsoft.Web/sites`, `Microsoft.App/containerApps`, or another supported resource | **Technology Service** — *{resource name} managed identity (system-assigned)*, composed on the owning resource Node |
 
-Role assignments (`Microsoft.Authorization/roleAssignments`) do not emit elements of their own; they are recorded as annotations on the Assignment relationship from the consuming Component to the resource Node.
+Role assignments do not emit elements of their own; they emit **Access** relationships from the Managed Identity Technology Service to the protected resource Node / Artifact. Record the role name or role GUID in relationship documentation and set the Access relationship name to `Read`, `Write`, or `ReadWrite`.
 
 ### Network → Communication Network + Path
 
@@ -79,9 +80,29 @@ Role assignments (`Microsoft.Authorization/roleAssignments`) do not emit element
 ## Relationships between Technology elements
 
 - **Composition** — from plan Node to hosted Function App / App Service Node (serverfarm Composes Function App). From storage account Node to blob container / queue Artifact. From Cosmos Node to database → container Artifact chain.
-- **Assignment** — from Managed Identity Node to the Node that uses it (`identity: { type: 'UserAssigned', userAssignedIdentities: { ... } }` in a `Microsoft.Web/sites` resource emits Assignment from the identity Node to the site Node).
+- **Composition** — from a resource Node to its system-assigned Managed Identity Technology Service.
+- **Assignment** — from a user-assigned Managed Identity Node / Technology Service to the Node that uses it (`identity: { type: 'UserAssigned', userAssignedIdentities: { ... } }` in a `Microsoft.Web/sites` resource emits Assignment from the identity to the site Node).
+- **Access** — from a Managed Identity Technology Service to the protected Cosmos, Storage, Key Vault, Service Bus, or other RBAC-scoped resource. `Microsoft.Authorization/roleAssignments` and `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments` are the primary source.
+- **Flow** — from a source resource Node to Log Analytics when `Microsoft.Insights/diagnosticSettings` sends logs / metrics to a workspace.
 - **Path** — between Nodes connected by a Private Endpoint or peered VNet.
 - **Used-by** — from an Application Component (.NET project) to the Technology Node that hosts its runtime dependencies (Cosmos, Storage, Service Bus) — the cross-layer relationship is the whole point of a Technology Usage view (reference §9.4).
+
+## Security relationship lifting
+
+Apply these mappings before Application-to-Technology links are finalised:
+
+| Bicep pattern | Emit |
+|---|---|
+| System-assigned identity on a resource | Technology Service named `{ResourceName} managed identity (system-assigned)`; Composition from the resource Node to that service |
+| User-assigned identity resource referenced by another resource | Managed Identity Node plus Technology Service; Assignment from identity to each resource that uses it |
+| `Microsoft.Authorization/roleAssignments` whose `principalId` resolves to a managed identity | Access from the identity service to the role scope resource; name `Read`, `Write`, or `ReadWrite` from role semantics |
+| Cosmos `databaseAccounts/sqlRoleAssignments` built-in Reader / Contributor GUIDs | Access from the identity service to the Cosmos account or database/container Artifact; name `Read` for Reader and `ReadWrite` for Contributor |
+| `Microsoft.Insights/diagnosticSettings` with `workspaceId` | Flow from the diagnostic source Node to the Log Analytics workspace Node |
+| App setting value matching `@Microsoft.KeyVault(SecretUri=...)` | Access from the consuming resource's identity service to a Key Vault Secret Artifact |
+| `disableLocalAuth: true`, `allowSharedKeyAccess: false`, `enableRbacAuthorization: true` | Property or documentation marker on the protected Node: `rbac-only=true` |
+| `publicNetworkAccess: 'Disabled'` with private endpoints | Communication Network / Path elements linking the consuming Node and protected resource |
+
+Review reports `AD-18` when a resource marked `rbac-only=true` is used by an Application Component but no Managed Identity Access path to that resource exists in the model.
 
 ## Application-to-Technology linking
 
@@ -137,6 +158,9 @@ Lifted elements are emitted as OEF XML into the canonical file at `docs/architec
   <element identifier="id-mi-orders" xsi:type="Node">
     <name xml:lang="en">Managed Identity — orders-api</name>
   </element>
+  <element identifier="id-mi-orders-service" xsi:type="TechnologyService">
+    <name xml:lang="en">orders-api managed identity</name>
+  </element>
 </elements>
 
 <relationships>
@@ -152,6 +176,11 @@ Lifted elements are emitted as OEF XML into the canonical file at `docs/architec
   <relationship identifier="id-rel-mi-funcapp"
                 source="id-mi-orders" target="id-funcapp-orders"
                 xsi:type="Assignment"/>
+  <relationship identifier="id-rel-mi-cosmos-access"
+                source="id-mi-orders-service" target="id-cosmos-main"
+                xsi:type="Access">
+    <name xml:lang="en">ReadWrite</name>
+  </relationship>
 
   <!-- ==== Application-to-Technology (cross-layer links) ==== -->
 

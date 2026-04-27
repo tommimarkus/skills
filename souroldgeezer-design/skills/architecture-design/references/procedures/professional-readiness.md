@@ -5,7 +5,7 @@ Use this procedure after Build / Extract has produced the candidate OEF view set
 ## Quality levels
 
 - **model-valid:** XML/OEF structure, element types, relationship types, and basic ArchiMate well-formedness are correct.
-- **diagram-readable:** `model-valid` plus readable layout, bounded density, fitting labels, meaningful grouping, and non-distracting routing.
+- **diagram-readable:** `model-valid` plus readable layout, bounded density, fitting labels, meaningful grouping, and connectors that avoid unrelated nodes.
 - **review-ready:** `diagram-readable` plus a clear architecture question per view, correct viewpoint semantics, curated content, and enough context for an architect to review the model without hidden verbal explanation.
 
 Default Build / Extract target: `diagram-readable`. Default Review target: assess whether the artifact reaches `review-ready`.
@@ -39,8 +39,10 @@ For each `<view>`:
 Use the lowest level justified by evidence:
 
 - Return `model-valid` when syntax and notation are sound but layout or communication is not dependable.
+- Return `model-valid` when any unresolved `AD-L11` finding exists. Connector-through-node is a blocking enterprise architecture readability failure, regardless of otherwise-valid XML.
+- Return `model-valid` when unresolved `AD-L12`, `AD-L13`, `AD-L14`, or `AD-L15` findings make layout communication unreliable.
 - Return `diagram-readable` when views can be read but still need curation, viewpoint sharpening, or decision context before formal review.
-- Return `review-ready` only when no unresolved `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-B-*`, `AD-6`, or `AD-2` finding blocks the review purpose.
+- Return `review-ready` only when no unresolved `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15`, `AD-B-*`, `AD-6`, or `AD-2` finding blocks the review purpose.
 
 Review output should lead with:
 
@@ -50,4 +52,3 @@ Top artifact blockers: <none | AD-Q*/AD-L*/AD-B*/AD-* codes with one-line reason
 ```
 
 Recommended next tasks must be modeling tasks, for example: sharpen the view question, split an inventory view, connect Motivation elements to affected architecture elements, clarify a realisation spine, add process handoffs, or rename code-shaped labels. Do not recommend README rows, render generation, galleries, screenshots, or project CI as architecture-design tasks.
-

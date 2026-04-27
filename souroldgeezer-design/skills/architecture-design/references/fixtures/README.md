@@ -28,6 +28,8 @@ ls /path/to/lfm/.cache/archi-views/<fixture>/
 | `motivation.oef.xml` | §9.6 Motivation | ~8 | Stakeholder → Driver → Goal → Outcome → Requirement → Constraint tree |
 | `business-process-cooperation.oef.xml` | §9.7 Business Process Cooperation | ~8 | Lane-based process flow with Triggering chain |
 | `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
+| `layout-quality-cases.md` | AD-L expectations | n/a | Geometry cases for connector-through-node, allowed ancestor exits, long routes, stacked lanes, wide gaps, and fan-out crisscross |
+| `lifting-quality-cases.md` | Extract expectations | n/a | Procedure cases for Bicep RBAC, deployment topology, forward-only seed views, and external trust boundaries |
 
 (§9.1, §9.2, §9.4, §9.5 are covered by `lfm-org/lfm/docs/architecture/lfm.oef.xml`.)
 
@@ -35,6 +37,6 @@ ls /path/to/lfm/.cache/archi-views/<fixture>/
 
 A fixture is "production-ready" when all three pass on the rendered PNG:
 
-1. **Mechanical (auto-checkable):** zero AD-L1 / L2 / L3 / L9 / L11 findings at severity `warn`; AD-L4 within budget; AD-L5 within `n/6` crossings; AD-L8 grid-aligned; AD-L10 normalised origin within tolerance.
+1. **Mechanical (auto-checkable):** zero blocking AD-L11 findings; zero unresolved AD-L1 / L2 / L3 / L9 / L12 / L13 / L14 / L15 findings before claiming `diagram-readable`; AD-L4 within budget; AD-L5 within `n/6` crossings; AD-L8 grid-aligned; AD-L10 normalised origin within tolerance.
 2. **Visual (human judgment):** matches the per-viewpoint idiom in `layout-strategy.md` Tier 2; reads at the quality bar of the [Hosiaisluoma ArchiMate examples gallery](https://www.hosiaisluoma.fi/blog/archimate-examples/).
 3. **Deterministic:** re-running Build on the same input produces byte-identical OEF.

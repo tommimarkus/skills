@@ -13,12 +13,6 @@
 
   <documentation xml:lang="en">Small fixture exercising §9.6 Motivation as a hierarchical tree: Stakeholder concerns flow into Drivers, Drivers motivate Goals, Goals are evidenced by Outcomes and operationalised as Requirements, with Constraints scoping the Requirements.</documentation>
 
-  <properties>
-    <property propertyDefinitionRef="propid-archi-model-banded">
-      <value xml:lang="en">v2</value>
-    </property>
-  </properties>
-
   <metadata>
     <schema>http://purl.org/dc/elements/1.1/</schema>
     <schemaversion>1.1</schemaversion>
@@ -86,9 +80,6 @@
   </organizations>
 
   <propertyDefinitions>
-    <propertyDefinition identifier="propid-archi-model-banded" type="string">
-      <name xml:lang="en">archi-model-banded</name>
-    </propertyDefinition>
     <propertyDefinition identifier="propid-strength" type="string">
       <name xml:lang="en">strength</name>
     </propertyDefinition>

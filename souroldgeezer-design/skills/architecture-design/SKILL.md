@@ -80,6 +80,7 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/lifting-rules-gha.md` | GitHub Actions workflow files | Extract → ArchiMate® Implementation & Migration Layer (Work Package, Deliverable, Implementation Event, Plateau) |
 | `references/procedures/lifting-rules-process.md` | Durable Functions orchestrators and Logic Apps workflow definitions (when present) | Extract → ArchiMate® Business Layer (Business Process, Event, Interaction only) with per-element `LIFT-CANDIDATE` markers; reverse Lookup consumes the same `source=` attribute. UI route lifting is deferred — §9.3 Process-rooted modality UI Application Component and Application Interface are hand-authored by the architect per the Blazor idiom in reference §9.3 |
 | `references/procedures/process-view-emission.md` | Any feature whose model contains Business Process / Event / Interaction elements | Build step 3 (when diagram kind is §9.7 or §9.3 and pre-flight Q5 process scope is `all-processes-in-feature` or `multi-feature`) and Extract step 3 (whenever `lifting-rules-process.md` emitted any element) → emit one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down view per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators); Review restates its rules as `AD-B-11` / `AD-B-12` / `AD-B-13` checks |
+| `references/procedures/seed-views.md` | Extract outputs with forward-only Strategy, Motivation, or Business Service stubs | Extract step 3/4 → emit FORWARD-ONLY Capability Map and Motivation seed views so architect-owned stubs are visible in the diagram canvas, not only in raw `<elements>` |
 | `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → three-tier layout engine (Tier 0 architect-position preservation; Tier 1 Sugiyama-v1 core: cycle handling, layer assignment, 4-pass barycentric, median coordinate assignment, Manhattan A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisation per §9 diagram kind); Review restates its rules as `AD-L*` checks |
 | `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
@@ -188,26 +189,19 @@ Project assimilation:
 
 4. **Layout and naming** per reference §6.4–6.7. `Read` [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) before invoking it (the Skill tool loads `SKILL.md` only; nested files are not auto-injected). The procedure runs the **three-tier layout engine** introduced in 0.8.0:
    - **Tier 0** preserves architect-positioned `<node>` placements verbatim from any prior view at the canonical path (existing rule).
-   - **Tier 1** runs the Sugiyama-v1 core engine — six phases: (1) cycle handling, (2) layer assignment, (3) within-layer ordering with 4-pass barycentric crossing minimisation, (4) coordinate assignment via median heuristic, (5) Manhattan A* edge routing with obstacle avoidance, (6) bounding-box normalisation to `(40, 40)` origin.
+   - **Tier 1** runs the Sugiyama-v1 core engine — six phases: (1) cycle handling, (2) layer assignment, (3) within-layer ordering with 4-pass barycentric crossing minimisation, (4) coordinate assignment via median heuristic, (5) Manhattan A* edge routing with obstacle avoidance plus post-layout connector intersection validation, (6) bounding-box normalisation to `(40, 40)` origin.
    - **Tier 2** applies the per-viewpoint specialisation matching the §9 diagram kind in scope (Capability Map / Application Cooperation / Service Realization / Technology Usage / Migration / Motivation / Business Process Cooperation).
    Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
    Then `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md): every emitted view must name the architecture question it answers, remove or group extraction noise, and be classified as `model-valid`, `diagram-readable`, or `review-ready`.
 
-5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Emit the §6.4a banding marker on every new file. Declare under `<propertyDefinitions>` at the model root:
+5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Do **not** emit `propid-archi-model-banded` or any other layout marker on the `<model>` element; model-root `<properties>` is invalid OEF and triggers `AD-17`. Emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views`. `<propertyDefinitions>` follows `<organizations>` and immediately precedes `<views>`.
 
-   ```xml
-   <propertyDefinition identifier="propid-archi-model-banded" type="string">
-     <name xml:lang="en">archi-model-banded</name>
-   </propertyDefinition>
-   ```
-
-   The `<name>` child is **required** by the OEF schema (`PropertyDefinitionType` mandates a `<name>` element); the self-closing form `<propertyDefinition .../>` fails Archi's import with `cvc-complex-type.2.4.b: The content of element 'propertyDefinition' is not complete`. The same `<name>`-required rule applies to every `<propertyDefinition>` (e.g. `propid-archi-arm`, `propid-strength`). Apply the marker via `<property propertyDefinitionRef="propid-archi-model-banded"><value xml:lang="en">v2</value></property>` once under `<properties>` on the `<model>` element. Build emits the §6.4a banding marker value `v2` on every new file in 0.8.0; legacy `v1` markers on existing files are preserved verbatim by Extract and never auto-upgraded. The marker is the authoritative signal for AD-L1 severity in Review. Also emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views`; the `<properties>` element (carrying the banding marker's value) precedes `<metadata>` and `<elements>`, while `<propertyDefinitions>` (carrying the banding marker's definition) follows `<organizations>` and immediately precedes `<views>`. The two blocks are non-adjacent (`AD-17`).
-
-6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. Each checklist item carries `[static]` or `[runtime]` verification-layer tags. Walk each item:
+6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
+   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, and local fan-out crisscross. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
-   State the achieved artifact quality level. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-B-*`, `AD-6`, or `AD-2` blocker remains unresolved.
+   State the achieved artifact quality level. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L15`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved.
 
 7. **Emit footer disclosure.**
 
@@ -227,6 +221,7 @@ Project assimilation:
    - `references/procedures/lifting-rules-gha.md` → Implementation & Migration Layer elements (when `.github/workflows/*.yml` is present).
    - `references/procedures/lifting-rules-process.md` → Business Process / Event / Interaction `LIFT-CANDIDATE` emission (when Durable Functions orchestrators or Logic Apps workflows are present).
    - `references/procedures/process-view-emission.md` → §9.7 cooperation view + per-process §9.3 drill-down view emission (whenever `lifting-rules-process.md` emitted any element). Runs after `lifting-rules-process.md` (so it has elements to emit views for) and before `layout-strategy.md` (so layout sees the full view set).
+   - `references/procedures/seed-views.md` → FORWARD-ONLY Capability Map and Motivation seed views whenever Extract emitted Strategy / Motivation / forward-only Business Service stubs. Runs after forward-only stubs exist and before `layout-strategy.md`.
    - `references/procedures/layout-strategy.md` → view placements for any element not carrying an architect-authored position in the prior diagram at the canonical path (always; Step 1 of the procedure preserves hand edits, only new elements are placed algorithmically).
    - `references/procedures/professional-readiness.md` → final curation pass over the generated view set. Preserve traceability in the model, but do not leave a view as a raw inventory dump; every view must answer a stated architecture question.
 
@@ -244,7 +239,7 @@ Project assimilation:
 
    Placeholders are generated from Application Component names — e.g., an `Orders.Api` Component suggests a plausible Business Service label *Order Management*. The architect confirms or rewrites.
 
-5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). The §6.4a banding marker (`propid-archi-model-banded=v1`) is preserved if present and **never auto-injected** on a legacy file — auto-injecting would assert §6.4a conformance over coordinates that pre-date the bands. Legacy files therefore stay unmarked and Review soft-grades AD-L1 to `info` per reference §8; architects who want full conformance run Build for the affected views, which writes a fresh marker.
+5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, valid element / relationship / view properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). If an existing file has a model-root `<properties>` block used for the old layout marker, omit it from newly-emitted output and report `AD-17` in Review. Layout conformance is checked directly from view geometry, not from a marker.
 
 6. **Self-check against reference §10 and the professional-readiness procedure** as in Build. State the achieved artifact quality level and any remaining modeling work required before the model can be called `review-ready`.
 
@@ -259,15 +254,7 @@ Project assimilation:
 
 ### Artefact review
 
-**Banding-marker dispatch.** Severity of layout findings is conditional on the `propid-archi-model-banded` property:
-
-| Marker on file | AD-L1..L8 severity | AD-L9, AD-L11 severity | AD-L10 severity |
-|---|---|---|---|
-| `propid-archi-model-banded=v2` (Sugiyama-v1 engine, 0.8.0+) | `warn` | `warn` | `info` |
-| `propid-archi-model-banded=v1` (legacy banded grid, pre-0.8.0) | `warn` | `info` | `info` |
-| (no marker) | `info` | `info` | `info` |
-
-The marker is the authoritative signal for the file's layout-conformance contract. Build emits `v2` on every new file in 0.8.0; Extract preserves existing markers and never auto-upgrades a `v1` file (the architect rebrands by re-running Build for the affected views).
+**Layout-severity dispatch.** Layout findings are evaluated from view geometry directly. There is no valid model-root layout marker. `AD-L11` is always `block`; `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15` are readability blockers for `diagram-readable` and `review-ready` even when their finding severity is `warn`.
 
 1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements.
 
@@ -417,13 +404,16 @@ Output contains any of the following? Stop; fix before delivering:
 - **Active structure directly accessing passive structure** — an Actor drawn accessing a Business Object without a Process / Function in between. Fix per `AD-4`.
 - **Association overuse** — more than one Association relationship in a single diagram. Fix per `AD-5`; pick a real relationship.
 - **Migration view without a Plateau axis.** Fix per `AD-9`.
+- **RBAC-only technology path without visible Managed Identity Access.** Fix per `AD-18`; add the Managed Identity Technology Service and Access relationship from identity to protected resource, or remove the RBAC-only claim.
+- **Fictitious or semantically wrong deployment Plateaus.** Fix per `AD-19` / `AD-20`; remove unevidenced environments and do not connect sibling environment Plateaus by Triggering unless the view documents true as-is / to-be migration intent.
+- **External Application Component without trust-boundary Grouping.** Fix per `AD-21`; aggregate external provider Components into an `{Provider} (external)` Grouping and internal Components into the project-internal Grouping when shown in Application Cooperation.
 - **Extract refused with no guidance.** Fix by suggesting the correct mode (Build) and naming the forward-only layers.
 - **Drift finding asserting a pass from static review alone.** Fix: restate as "source-aligned; drift re-check required against current code/IaC."
 - **Emitting elements with invalid `xsi:type`.** Every `<element>` and `<relationship>` must use an exact ArchiMate® 3.2 type name (reference §6.2 for elements, §6.3 for relationships). Misspellings (`Application_Component`, `app-component`, `ApplicationAPI`) break tool import.
 - **View `<node>` or `<connection>` emitted without `xsi:type`.** Fix per `AD-15`; OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — `<node>` must carry `xsi:type="Element"` (or `Container` / `Label`) and `<connection>` must carry `xsi:type="Relationship"` (or `Line`). Archi's XSD-validating import rejects bare elements with `cvc-type.2`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
 - **`<metadata>` block with catalog payload in the ArchiMate® namespace** — the catalog content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude. Fix per `AD-16`; the prelude legitimately inherits the ArchiMate® default namespace, but catalog payload elements must come from a non-ArchiMate® namespace (Dublin Core or similar). See reference §6.1a for the canonical block layout. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
-- **Model children out of OEF sequence.** Fix per `AD-17`; reference §6 states the mandatory order — `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views`. Most commonly hit when the §6.4a banding marker's `<properties>` and `<propertyDefinitions>` blocks are emitted adjacently rather than at the correct sequence positions. Archi rejects out-of-order with `cvc-complex-type.2.4.a`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
-- **Node placed in violation of relative layer ordering.** Fix per `AD-L1`; reference §6.4a defines the relative ordering (Strategy above Business above Application above Technology above Physical) — absolute y-bands are no longer specified in 0.8.0 (Phase 6 bbox normalisation makes them content-dependent). Severity follows the §6.4a banding marker — `warn` when `propid-archi-model-banded=v2`, `warn` when `v1`, `info` when absent.
+- **Model children invalid or out of OEF sequence.** Fix per `AD-17`; reference §6 states the mandatory order — `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views`. A model-root `<properties>` block is invalid OEF, including the old `propid-archi-model-banded` layout marker. Archi rejects invalid or out-of-order children with `cvc-complex-type.2.4.a`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
+- **Node placed in violation of relative layer ordering.** Fix per `AD-L1`; reference §6.4a defines the relative ordering (Strategy above Business above Application above Technology above Physical) — absolute y-bands are not specified (Phase 6 bbox normalisation makes them content-dependent).
 - **Two nodes overlapping** at the same nesting depth in the same view. Fix per `AD-L2`; re-run the layout procedure or widen the containing cell.
 - **Label truncation risk** (`w < 120`, `h < 55`, or `w` too small for the `<name>`). Fix per `AD-L3`; enlarge `w` in 20-px steps until the label fits at the default Archi font.
 - **View over budget** — >20 elements or >30 relationships in a single `<view>`. Fix per `AD-L4`; split the view, or promote a cluster to a Grouping (§4.8; logical, never a layer container).
@@ -431,7 +421,8 @@ Output contains any of the following? Stop; fix before delivering:
 - **Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10. Fix per `AD-L8`; re-snap to the 10-px grid.
 - **Hierarchy violation.** Fix per `AD-L9`; a Realization / Used-by / Serving edge between same-layer elements drawn against topological direction. Re-run Tier 1 phase 3 (within-layer ordering); if cycle present, phase 1 handles.
 - **Canvas not normalised at origin.** Fix per `AD-L10`; the used region's top-left should be at `(40, 40) ± 10 px`. Re-run Tier 1 phase 6 (bbox normalisation).
-- **Edge passes through a non-source / non-target node body.** Fix per `AD-L11`; Tier 1 phase 5 (Manhattan A* with obstacle avoidance) should prevent. Most often caused by adjacent-cell edges where the simpler shortest-path route was kept after a hand-edit.
+- **Connector passes through an unrelated node body.** Fix per `AD-L11`; Tier 1 phase 5 (Manhattan A* with obstacle avoidance) should prevent. Allowed intersections are only source, target, and required source/target ancestor containers. This is a blocking finding and professional readiness cannot exceed `model-valid`.
+- **View-orphan, stacked connector, wide gap, or fan-out crisscross layout failure.** Fix per `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15`; reroute, regroup, split, or compact the view before calling it `diagram-readable`.
 
 ## Complementary skills
 

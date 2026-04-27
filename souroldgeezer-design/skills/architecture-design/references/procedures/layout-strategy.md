@@ -2,7 +2,7 @@
 
 Procedure for producing `<view>` node placements that are readable, diff-stable, and round-trippable through ArchiMate® conformant tools. Invoked by Build (always) and Extract (when an existing diagram has no prior view placements for the elements being added). Review uses the same rules — restated as checks — to flag `AD-L*` smells.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L11`).
+The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L15`).
 
 **Determinism is the point.** Given the same element set, relationship set, diagram kind, and layer scope, the procedure must produce the same `x`, `y`, `w`, `h` values every run. Re-extracts don't churn coordinates; git diffs on `.oef.xml` stay narrow; architect hand-edits survive because identifiers are preserved (reference §6.6) and layout is recomputed only for elements without an architect-chosen position.
 
@@ -10,7 +10,7 @@ The reference is [../../../../docs/architecture-reference/architecture.md](../..
 
 The procedure is a deterministic three-tier pipeline:
 
-1. **Tier 0 — Pre-flight.** Preserve architect-positioned `<node>` placements verbatim. Identify the §6.4a banding marker (`propid-archi-model-banded` value `v1`, `v2`, or absent).
+1. **Tier 0 — Pre-flight.** Preserve architect-positioned `<node>` placements verbatim. Record which placements were preserved so later routing and validation can distinguish authored coordinates from newly-computed coordinates.
 2. **Tier 1 — Sugiyama-v1 core engine.** Six phases — cycle handling, layer assignment, within-layer ordering (4-pass barycentric crossing minimisation), coordinate assignment (median heuristic), Manhattan A* edge routing, bounding-box normalisation.
 3. **Tier 2 — Per-viewpoint specialisations.** One sub-procedure per §9 viewpoint that overrides Tier 1 phases for the diagram-kind in scope.
 
@@ -24,15 +24,9 @@ If a prior view exists at the canonical path and contains a `<node>` for this el
 
 Record the set of *new* elements (present in this run, absent from the prior view) — only these get algorithmic placement.
 
-### Step 2 — Read the banding marker
+### Step 2 — Reject model-root layout markers
 
-Inspect `<property propertyDefinitionRef="propid-archi-model-banded">` on the model root. Possible values:
-
-- `v2` — file was authored under the Sugiyama-v1 engine (this procedure). New elements use the full Tier 1 / Tier 2 pipeline; existing layout is consistent.
-- `v1` — legacy file from pre-0.8.0 banded-grid layout. Preserve all coordinates verbatim per Step 1 above; **never auto-inject the v2 marker** — auto-injection would assert §6.4a v2 conformance over coordinates that pre-date it. Architects rebrand a legacy file by re-running Build for the affected views, which writes a fresh `v2` marker.
-- (absent) — pre-§6.4a legacy. Same preservation behaviour as `v1`.
-
-Build emits `v2` on every new file (no prior view at canonical path).
+Do not read or write a model-root layout marker. The model root cannot carry `<properties>` in OEF files that import cleanly through Archi's schema-validating path. If an existing file contains a top-level `<properties>` block used only for `propid-archi-model-banded`, treat it as an `AD-17` schema finding during Review and omit it from newly-emitted output.
 
 ## Tier 1 — Sugiyama-v1 core engine
 
@@ -147,17 +141,18 @@ The rule only fires when (a) the new child is genuinely new (not preserved by Ti
 
 ### Phase 5 — Edge routing (Manhattan A* with obstacle avoidance)
 
-For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compute an orthogonal path that **avoids** the bounding boxes of all non-source / non-target nodes.
+For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compute an orthogonal path that **avoids** the bounding boxes of all unrelated nodes. A path may intersect only the source node, target node, and required ancestor containers of the source or target needed to leave nested structure. Crossing any other node body is a blocking `AD-L11` failure, not a cosmetic routing issue.
 
 **Algorithm:**
 
 1. **Source attach point** = side-midpoint of source `<node>` facing the target. Decision rule: pick the side closest to target's centre, breaking ties by preference order: right > down > left > up.
 2. **Target attach point** = side-midpoint of target `<node>` facing the source. Same decision rule (mirror).
 3. **Path: BFS over a 10-px grid.** Each grid cell is `(x // 10, y // 10)`. Start cell = source attach point grid-aligned. Goal cell = target attach point grid-aligned.
-4. **Obstacle map.** For every `<node>` other than source, target, **and any ancestral container of source or target** (parent → grandparent → ... in the Step 5 nesting hierarchy), mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden. Ancestor exclusion lets the BFS path leave a nested element through its container's boundary; without it, a nested source / target would be trapped.
+4. **Obstacle map.** For every `<node>` other than source, target, **and any ancestral container of source or target** (parent → grandparent → ... in the Step 5 nesting hierarchy), mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden. Ancestor exclusion is narrow: it exists only so the path can leave a nested source / target through its own containing boundary. Sibling nodes, children of unrelated containers, and nested children that are not ancestors of the source or target remain hard obstacles.
 5. **Cost function:** `cost = grid_step_count + bend_count × 5`. Each move along the same direction adds 1; each 90° turn adds the bend penalty (5 grid steps default).
 6. **Bend points:** every grid cell where the path direction changes becomes a `<bendpoint x="..." y="..."/>` child of `<connection>`. Convert grid-cell back to pixel by `x = cell_x × 10`.
-7. **Parallel edges in the same lane** (same source midpoint, same target midpoint) space 20 px apart in the perpendicular direction.
+7. **Parallel edges in the same lane** (same source midpoint, same target midpoint, or same target-side entry lane) space 20 px apart in the perpendicular direction.
+8. **Post-layout intersection pass.** After bendpoints are emitted and after every Tier 2 specialisation has run, inspect each connection segment against every node bounding box. Ignore source, target, and required source/target ancestor containers. If any other intersection remains, reroute with a different side-midpoint or explicit bend lane. If no clean route exists within the view budget, fail self-check with `AD-L11` and cap professional readiness at `model-valid`.
 
 **Multi-row sibling clause** (referenced by Step 5b clause 2). When Step 5b falls back to bendpoint routing for a new nested child placed below existing siblings, Phase 5 emits **two bendpoints** to route the parent→child Composition edge west of the parent's left edge: bendpoint 1 at `(parent.x − 20, parent.y + parent.h / 2)` (round to grid) and bendpoint 2 at `(parent.x − 20, child.y + child.h / 2)` (round to grid). The edge attaches to the parent's left midpoint and the child's left midpoint.
 
@@ -203,7 +198,7 @@ After Phases 1–5 complete, compute the used-region bounding box and shift the 
 
 After Phase 6, the diagram's used region's top-left is at `(40, 40)`; total view width is `max_x - min_x + 80` (40 px margin on each side). Archi opens the file with the diagram visible immediately — no scroll-to-find.
 
-**Skip Phase 6 only when:** the prior view at the canonical path was authored with `propid-archi-model-banded=v1` and Tier 0 preserved its coordinates verbatim (Phase 6 would shift the architect's hand-positions away from where they expected them).
+**Skip Phase 6 only when:** every placement in the view came from Tier 0 preservation and shifting the canvas would churn architect-authored coordinates. New or mixed views still normalise after routing so new bendpoints and nodes stay on a predictable grid.
 
 ## Tier 2 — Per-viewpoint specialisations
 
@@ -260,13 +255,13 @@ Acceptance: §9.4 view from `/tmp/lfm/docs/architecture/lfm.oef.xml` rebuilds wi
 
 When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
 
-### §9.5 Migration — horizontal Plateau timeline
+### §9.5 Migration / Deployment Topology — Plateau layout
 
 **Replaces:** phases 2, 3, 4. Phase 5 routes connecting arrows; phase 6 normalises.
 
-**Visual idiom:** Plateaus form columns left-to-right (Baseline → Transition → Target); Gaps drawn as horizontal arrows between Plateaus; Work Packages stacked below Gaps; Implementation Events as small diamonds at column boundaries.
+**Visual idiom:** true Migration views form columns left-to-right (Baseline → Transition → Target), with Gaps drawn as horizontal arrows between Plateaus. Deployment Topology views place sibling environment Plateaus in a row or compact grid with no Plateau-to-Plateau Triggering; Work Packages Realize the sibling Plateaus from below.
 
-**Layer assignment (replaces phase 2).** Plateaus, Gaps, Work Packages, and Implementation Events get a column index instead of an ArchiMate layer. Plateaus get column index = chronological order (architect-supplied via `<documentation>` ordering hint, else identifier ascending). Gaps, Work Packages, Implementation Events get the column index of the Plateau they precede.
+**Layer assignment (replaces phase 2).** Plateaus, Gaps, Work Packages, and Implementation Events get a column index instead of an ArchiMate layer. In a true Migration view, Plateaus get column index = chronological order (architect-supplied via `<documentation>` ordering hint, else identifier ascending). Gaps, Work Packages, and Implementation Events get the column index of the Plateau they precede. In a Deployment Topology view, Plateaus get sibling indexes by environment order (`development` / `test` / `staging` / `production`, then identifier ascending); no Gap is emitted unless explicit migration intent exists.
 
 **Ordering (replaces phase 3).** Within each column: Plateau at top, Implementation Events at column boundary (small diamonds, `14 × 14`), Work Packages stacked below Plateau in identifier order. Gaps drawn as edges from Plateau column N to Plateau column N+1.
 
@@ -276,7 +271,7 @@ When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
 3. Implementation Events at column-right-edge (`x = column.x_start + 300 - 7`, the `14 × 14` diamond centred on the column boundary), Plateau-aligned `y = 40 + 25` (centred on Plateau row).
 4. Work Packages stacked below Plateau at `(column.x_start + 60, plateau.y + 84 + i × 84, 180, 64)` for the i-th Work Package in identifier order.
 
-**Phase 5** routes Gap edges between Plateau column N (right midpoint) and Plateau column N+1 (left midpoint) — straight horizontal where possible.
+**Phase 5** routes Gap edges between Plateau column N (right midpoint) and Plateau column N+1 (left midpoint) in true Migration views — straight horizontal where possible. Deployment Topology views do not route Plateau-to-Plateau Triggering; Work Package Realization edges route upward into each sibling Plateau with lane spacing.
 
 **Phase 6** normalises the entire timeline to `(40, 40)` origin.
 
@@ -350,3 +345,11 @@ Realization edges within a chain run vertically (no Phase 5 routing — they're 
 **Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle place in identifier-ascending order and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely).
 
 **No layout exception for §9.3 Service Realization with Process-rooted modality** — that is a §9.3 specialisation, not a §9.7 one. Don't conflate them.
+
+## Render inspection hook
+
+Static geometry checks are mandatory and catch the `AD-L*` failures above. When the consuming project provides an Archi or ArchiMate-conformant renderer, Build and Extract add a final render-and-inspect loop:
+
+1. Render every emitted view.
+2. Reject connector-through-node (`AD-L11`), view-orphan (`AD-L12`), stacked connector (`AD-L13`), wide empty layer gap (`AD-L14`), and local fan-out crisscross (`AD-L15`) failures even when the XML is otherwise valid.
+3. If the renderer is unavailable, disclose that render inspection was not run; do not weaken the static `AD-L*` checks.

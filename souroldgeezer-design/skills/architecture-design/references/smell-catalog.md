@@ -30,6 +30,12 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-14` | §8, §7.3 | Forward-only layer (Business Actor / Role / Collaboration / Object / Contract / Product / Service / Function / Motivation / Strategy) emitted by Extract without the `FORWARD-ONLY — architect fills in` marker block |
 | `AD-14-LC` | §8, §7.4 | Business Process / Event / Interaction emitted by Extract without the per-element `LIFT-CANDIDATE — architect confirms: source=..., confidence=...` XML comment (missing marker or missing required `source=` / `confidence=` attribute) |
 | `AD-15` | §8, §6.4 | View `<node>` or `<connection>` emitted without an `xsi:type` (abstract complexType violates OEF schema) |
+| `AD-16` | §8, §6.1a | Metadata catalog payload emitted in the ArchiMate namespace instead of a non-ArchiMate catalog namespace |
+| `AD-17` | §8, §6 | Invalid top-level `<model>` child or child sequence, including model-root `<properties>` |
+| `AD-18` | §8, §7.1 | Invisible RBAC — RBAC-only technology resource is served/used without a Managed Identity Access path |
+| `AD-19` | §8, §9.5 | Fictitious plateaus — Extract emitted deployment Plateaus with no workflow/IaC/environment evidence |
+| `AD-20` | §8, §9.5 | Plateau triggering without migration intent — parallel deployment Plateaus connected as if one becomes the next |
+| `AD-21` | §8, §9.2 | Unbounded external component — external Application Component is not aggregated into an external trust-boundary Grouping |
 
 ## Professional artifact quality smells — `AD-Q*`
 
@@ -54,7 +60,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 
 | Code | Rubric | Description (one line; see rubric for full) |
 |---|---|---|
-| `AD-L1` | §8 layout, §6.4a | Layer-ordering violation — element's `y` falls outside the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Phase 6 bbox normalisation. Severity is conditional on the §6.4a banding marker (see severity-defaults table). |
+| `AD-L1` | §8 layout, §6.4a | Layer-ordering violation — element's `y` falls outside the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Phase 6 bbox normalisation |
 | `AD-L2` | §8 layout, §6.4a | Node overlap — two placements at the same nesting depth whose bounding boxes intersect |
 | `AD-L3` | §8 layout, §6.4a | Undersize — `w < 120`, `h < 55`, or `w` too small to avoid label truncation |
 | `AD-L4` | §8 layout, §6.4a | View density over budget — `>20` elements, `>30` relationships, or nesting depth `>2` |
@@ -64,7 +70,11 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
 | `AD-L9` | §8 layout, §6.4a | Hierarchy not respected — Realization / Used-by / Serving relationship between same-layer elements drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Detected by Tier 1 phase 1 (cycle handling) + phase 3 (topological sort) failures. |
 | `AD-L10` | §8 layout, §6.4a | Canvas not normalised — top-left of the used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px`. Tier 1 phase 6 (bbox normalisation) emits this naturally; smell catches non-normalised legacy or hand-shifted output. |
-| `AD-L11` | §8 layout, §6.4a | Edge-through-node — a `<connection>` Manhattan path crosses the bounding box of a `<node>` that is neither the source nor the target. Tier 1 phase 5 (Manhattan A* with obstacle avoidance) prevents; smell catches violations. |
+| `AD-L11` | §8 layout, §6.4a | Connector-through-node — a `<connection>` segment crosses a node that is neither source, target, nor required source/target ancestor container |
+| `AD-L12` | §8 layout, §6.4a | View-orphan element — non-legend node has no same-view connection |
+| `AD-L13` | §8 layout, §6.4a | Stacked connector lane — visible connectors share a lane closely enough to overlap arrowheads or labels |
+| `AD-L14` | §8 layout, §6.4a | Wide empty layer gap — excessive vertical whitespace separates occupied layer bands |
+| `AD-L15` | §8 layout, §6.4a | Local fan-out crisscross — high-degree local edges cross each other or a non-endpoint sibling |
 
 ## Process-flow smells — `AD-B-*`
 
@@ -109,22 +119,23 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 
 | Code range | Default severity | Rationale |
 |---|---|---|
-| `AD-1`, `AD-2`, `AD-14`, `AD-14-LC` | `block` | Hard ArchiMate 3.2 violations (layer discipline, Appendix B well-formedness, forward-only / lift-candidate marker discipline) |
-| `AD-3`, `AD-4`, `AD-6`, `AD-9` | `block` | Aspect / Realisation / Migration-axis discipline; rendering the diagram incoherent |
-| `AD-5`, `AD-7`, `AD-8`, `AD-10`, `AD-12`, `AD-13` | `warn` | Legible but imprecise; diagram reads but makes a claim the model doesn't support |
+| `AD-1`, `AD-2`, `AD-14`, `AD-14-LC`, `AD-15`, `AD-16`, `AD-17` | `block` | Hard ArchiMate 3.2 / OEF violations (layer discipline, Appendix B well-formedness, marker discipline, schema-import discipline) |
+| `AD-3`, `AD-4`, `AD-6`, `AD-9`, `AD-18`, `AD-20`, `AD-21` | `block` | Aspect / Realisation / Migration-axis / security-boundary discipline; rendering the diagram incoherent or misleading |
+| `AD-5`, `AD-7`, `AD-8`, `AD-10`, `AD-12`, `AD-13`, `AD-19` | `warn` | Legible but imprecise; diagram reads but makes a claim the model doesn't support |
 | `AD-Q1`, `AD-Q2`, `AD-Q8`, `AD-Q9` | `warn` | Professional-readiness blockers — the model may be valid, but the view does not yet carry its intended architecture message |
 | `AD-Q3`, `AD-Q4`, `AD-Q5`, `AD-Q6`, `AD-Q7`, `AD-Q10` | `info` by default; escalate to `warn` when the affected view is claimed as `review-ready` | Quality degradations; severity depends on whether the artefact is a draft or presented for review |
 | `AD-B-4` | `block` | Layer soup in a §9.7 view (view-kind-specific tightening of `AD-1` / `AD-7`) |
 | `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10`, `AD-B-11`, `AD-B-12`, `AD-B-13` | `warn` | Process diagram is legible but has missing participants, missing realisation, or a broken between-view invariant |
 | `AD-DR-11`, `AD-DR-12` | `warn` | Real process drift between the model and backend workflow sources; architect decides which side reconciles |
-| `AD-11` | `info` | Cosmetic |
+| `AD-11` | `info` | Cosmetic unless it obscures a required trust-boundary Grouping; use `AD-21` for missing external trust boundaries |
 | `AD-DR-1` through `AD-DR-7` | `warn` | Real drift; architect decides whether the diagram or the code is the source of truth |
 | `AD-DR-8`, `AD-DR-9`, `AD-DR-10` | `info` | Drift likely, but plausible architect-chosen divergence (friendly labels, planned Plateau transitions, forward-only ownership) |
-| `AD-L1` | `warn` when model carries `propid-archi-model-banded=v1` or `v2`; `info` when marker absent | Structural layout failure when the model claims §6.4a conformance and breaks it; soft-graded on legacy files preserved across Extract refresh per reference §6.4a *Banding marker* |
+| `AD-L1` | `warn` | Structural layout failure against the §6.4a contract |
 | `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (overlap, truncated label) |
 | `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
 | `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
-| `AD-L9`, `AD-L11` | `warn` when model carries `propid-archi-model-banded=v2`; `info` for `v1` or no marker | Mechanical layout failures (hierarchy direction wrong, edge passes through node body) — must be fixable by re-running Tier 1; gated to `warn` only when the file claims §6.4a v0.8.0 conformance |
-| `AD-L10` | `info` regardless of marker | Polish — canvas not normalised at `(40, 40) ± 10 px` origin; architect may have hand-shifted |
+| `AD-L9`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15` | `warn` | Mechanical layout/readability failures that should be fixed before diagram-readable or review-ready output |
+| `AD-L11` | `block` | Connector crossing an unrelated node body creates false visual semantics; professional readiness cannot exceed `model-valid` |
+| `AD-L10` | `info` | Polish — canvas not normalised at `(40, 40) ± 10 px` origin; architect may have hand-shifted |
 
 Severity can be overridden per finding when evidence warrants (e.g., `AD-DR-8` escalated to `warn` when the renamed project is the feature's primary Component and every other diagram also shows the old name).

@@ -35,7 +35,7 @@ Each distinct `environment:` value across all deploy jobs becomes a **Plateau**.
 | `prod` / `production` | *Production* |
 | Any other value | Preserved verbatim as the Plateau label |
 
-If no `environment:` field is used anywhere, the workflow is still a Work Package but with a single **Plateau** labelled *Target* (the canonical unknown-environment default).
+If no `environment:` field is used anywhere, the workflow is still a Work Package but with a single **Plateau** labelled *Production* when IaC tags or parameters show production, otherwise *Target* (the canonical unknown-environment default). Do **not** emit Development / Staging / Production as a trio unless the workflow or IaC actually contains those environments.
 
 ### Deploy jobs → Implementation Event
 
@@ -49,14 +49,16 @@ Each successful deploy job run is a candidate **Implementation Event** — a sta
 
 ### Plateau transitions → Gap
 
-If the workflow defines a sequence — e.g., job `deploy-dev` then `deploy-staging` (`needs: deploy-dev`) then `deploy-prod` — the transitions between Plateaus become **Gaps**:
+Plateau-to-Plateau transitions represent architectural migration only when there is explicit as-is / to-be migration intent in the architect prompt or existing view documentation. Normal multi-environment deployment is parallel topology, not migration. If a workflow defines a sequence such as `deploy-dev` then `deploy-staging` then `deploy-prod`, model that sequence as deployment control in documentation on the Work Package / Implementation Events, not as Plateau Triggering.
+
+Extract never creates Gaps from workflow sequencing alone. Only emit **Gaps** for true migration:
 
 | Detection | ArchiMate element |
 |---|---|
-| Two deploy jobs with `needs:` dependency targeting different environments | **Gap** between the source Plateau and the target Plateau |
-| Manual-approval gate on a Plateau-advancing job | Gap annotated `gate: manual-approval` |
+| Architect-supplied as-is / to-be migration intent, with two Plateau states | **Gap** between the source Plateau and the target Plateau |
+| Manual-approval gate on a Plateau-advancing migration step | Gap annotated `gate: manual-approval` |
 
-If the architect's existing diagram already labels Gaps with specific migration themes (e.g., *Feature rollout*, *Decommission legacy*), Extract preserves those labels and only adds a Gap if one is genuinely new.
+If the architect's existing diagram already labels Gaps with specific migration themes (e.g., *Feature rollout*, *Decommission legacy*), Extract preserves those labels and only adds a Gap if one is genuinely new. Review emits `AD-20` when Plateaus that look like parallel environments are connected by Triggering without migration intent, and `AD-19` when a Plateau has no environment evidence in workflow or IaC.
 
 ### Deliverables (optional)
 
@@ -68,7 +70,7 @@ Workflows that produce a discrete, named artefact (a release tag, a signed conta
 | `actions/create-release` / `softprops/action-gh-release` | **Deliverable** — *GitHub Release* composed on the Work Package |
 | `docker/build-push-action` pushing to a registry | **Deliverable** — *container image* (name = pushed tag) composed on the Work Package |
 
-If Deliverables are noisy and the architect hasn't asked for them, the procedure omits them and leaves only Work Packages + Plateaus + Gaps + Implementation Events — the skeleton of a Migration view.
+If Deliverables are noisy and the architect hasn't asked for them, the procedure omits them and leaves only Work Packages + Plateaus + Implementation Events for Deployment Topology, or Work Packages + Plateaus + Gaps + Implementation Events for explicit Migration.
 
 ## Naming conventions
 
@@ -107,41 +109,25 @@ Lifted elements are emitted as OEF XML into the canonical file at `docs/architec
   <element identifier="id-event-deploy-prod" xsi:type="ImplementationEvent">
     <name xml:lang="en">Deploy to Production (gated)</name>
   </element>
-  <element identifier="id-gap-dev-to-staging" xsi:type="Gap">
-    <name xml:lang="en">Dev → Staging</name>
-  </element>
-  <element identifier="id-gap-staging-to-prod" xsi:type="Gap">
-    <name xml:lang="en">Staging → Prod</name>
-  </element>
 </elements>
 
 <relationships>
   <relationship identifier="id-rel-wp-to-event-dev"
                 source="id-wp-deploy" target="id-event-deploy-dev"
                 xsi:type="Triggering"/>
-  <relationship identifier="id-rel-event-dev-to-plateau-dev"
-                source="id-event-deploy-dev" target="id-plateau-dev"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-plateau-dev-to-gap-dev-staging"
-                source="id-plateau-dev" target="id-gap-dev-to-staging"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-gap-dev-staging-to-event-staging"
-                source="id-gap-dev-to-staging" target="id-event-deploy-staging"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-event-staging-to-plateau-staging"
-                source="id-event-deploy-staging" target="id-plateau-staging"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-plateau-staging-to-gap-staging-prod"
-                source="id-plateau-staging" target="id-gap-staging-to-prod"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-gap-staging-prod-to-event-prod"
-                source="id-gap-staging-to-prod" target="id-event-deploy-prod"
-                xsi:type="Triggering"/>
-  <relationship identifier="id-rel-event-prod-to-plateau-prod"
-                source="id-event-deploy-prod" target="id-plateau-prod"
-                xsi:type="Triggering"/>
+  <relationship identifier="id-rel-wp-realizes-dev"
+                source="id-wp-deploy" target="id-plateau-dev"
+                xsi:type="Realization"/>
+  <relationship identifier="id-rel-wp-realizes-staging"
+                source="id-wp-deploy" target="id-plateau-staging"
+                xsi:type="Realization"/>
+  <relationship identifier="id-rel-wp-realizes-prod"
+                source="id-wp-deploy" target="id-plateau-prod"
+                xsi:type="Realization"/>
 </relationships>
 ```
+
+The fragment above is the Deployment Topology pattern: the environments are sibling Plateaus, and the workflow Realizes each target state. Plateau-to-Plateau Triggering is reserved for architect-authored as-is / to-be migration.
 
 ## Cross-layer linking
 
