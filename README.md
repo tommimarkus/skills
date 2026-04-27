@@ -81,6 +81,17 @@ codex
 /plugins
 ```
 
+After changing a local marketplace plugin, start a fresh Codex session and
+reinstall the changed plugin from `/plugins` if the session still loads an old
+materialized copy. `codex plugin marketplace upgrade <name>` currently refreshes
+Git-backed marketplaces, but reports that a local marketplace is not Git-backed;
+do not treat it as the local-cache refresh path. Verify the installed copy under
+`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/` and confirm the
+expected `skills/` directories are present.
+
+Keep `.codex-plugin/plugin.json#interface.defaultPrompt` to three or fewer
+entries. Codex warns and ignores extra starter prompts.
+
 The repo intentionally does not duplicate the catalog under
 `.agents/plugins/marketplace.json`; the existing `.claude-plugin/marketplace.json`
 is the shared marketplace for both Claude Code and Codex.

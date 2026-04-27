@@ -32,6 +32,13 @@ insufficient.
   marketplace while Codex supports Claude-style marketplaces. Do not add
   `.agents/plugins/marketplace.json` unless a future design explicitly chooses
   split catalogs.
+- Codex local marketplace refresh note: `codex plugin marketplace upgrade <name>`
+  refreshes Git-backed marketplaces, but the CLI reports that a local
+  marketplace is not Git-backed. After local plugin source changes, refresh the
+  changed plugin through the plugin browser, restart Codex, and verify the
+  materialized cache path and bundled `skills/` directories.
+- Keep `.codex-plugin/plugin.json#interface.defaultPrompt` to at most three
+  entries; Codex warns and ignores extra starter prompts.
 
 ## Keeping CLAUDE.md, AGENTS.md, and README.md current (MUST)
 
@@ -110,7 +117,7 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 
 Adding a new plugin:
 1. Create `<plugin-name>/.claude-plugin/plugin.json` (required: `name`, `version`, `description`; use `author: {name, email}` and `license: MIT` defaults from memory). Start at `0.1.0`.
-2. Create `<plugin-name>/.codex-plugin/plugin.json` with the same `name`, `version`, `description`, `author`, and `license`; add `"skills": "./skills/"` and Codex `interface` metadata. Omit `apps` and `mcpServers` unless the plugin actually ships those surfaces.
+2. Create `<plugin-name>/.codex-plugin/plugin.json` with the same `name`, `version`, `description`, `author`, and `license`; add `"skills": "./skills/"` and Codex `interface` metadata. Keep `interface.defaultPrompt` to three or fewer entries. Omit `apps` and `mcpServers` unless the plugin actually ships those surfaces.
 3. For each bundled skill, add `skills/<skill>/agents/openai.yaml` with Codex per-skill UI metadata and invocation policy.
 4. Add it to `.claude-plugin/marketplace.json` under `plugins[]` with `name`, `source: ./<plugin-name>`, `version`, `description`. This one marketplace is shared by Claude Code and Codex.
 5. Plugin `name`, `description`, and `version` in both plugin manifests and in `marketplace.json#plugins[]` must stay in sync — every bump updates all three files in the same commit.

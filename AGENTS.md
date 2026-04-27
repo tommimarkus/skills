@@ -22,6 +22,12 @@ rules change.
   `description`.
 - Codex consumes bundled skills through `.codex-plugin/plugin.json` with
   `"skills": "./skills/"`.
+- For local Codex marketplace development, refresh changed installed plugins
+  through the plugin browser and restart Codex; `codex plugin marketplace
+  upgrade <name>` is for Git-backed marketplaces and does not refresh local
+  clone sources. Verify the materialized cache contains the expected version and
+  `skills/` directories.
+- Keep Codex `interface.defaultPrompt` arrays to three or fewer entries.
 - `agents/*.md` files are Claude Code subagents. Project-scoped Codex custom
   agents live in `.codex/agents/*.toml`; plugin-bundled Codex skill metadata
   lives in `skills/<skill>/agents/openai.yaml`.
