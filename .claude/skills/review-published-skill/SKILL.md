@@ -28,8 +28,15 @@ published runtime metadata.
 
 ## Review Workflow
 
-1. Identify the changed files with `git status --short` and, when needed,
-   `git diff --name-only`.
+1. Identify the changed files:
+   - Start with `git status --short` for dirty working-tree, staged, and
+     untracked changes.
+   - If the working tree is clean but the branch is ahead, behind, or under
+     review, inspect the branch scope with `git status -sb` and a base diff
+     such as `git diff --name-status <upstream-or-base>...HEAD` (for example
+     `origin/main...HEAD` when `origin/main` is the review base).
+   - Use `git diff --name-only` only after choosing the correct comparison
+     scope.
 2. Run the `ip-hygiene` procedure for any changed skill, agent, reference,
    manifest, marketplace, or repo-doc surface before judging content quality.
 3. Read `references/skill-quality-metrics.md` and apply its hard gates and
