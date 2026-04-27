@@ -31,3 +31,8 @@ rules change.
   [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
   when editing plugin manifests, skills, agents, bundled references, or
   README / CLAUDE / AGENTS sections that describe them.
+- Before finishing any change to a published plugin skill or its related
+  agent, runtime metadata, bundled reference, extension, manifest, marketplace
+  entry, or repo docs, follow the repo-internal `review-published-skill`
+  guidance in
+  [.claude/skills/review-published-skill/SKILL.md](.claude/skills/review-published-skill/SKILL.md).
