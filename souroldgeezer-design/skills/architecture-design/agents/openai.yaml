@@ -1,6 +1,6 @@
 interface:
   display_name: "Architecture Design"
-  short_description: "Build, extract, review, or look up architecture guidance."
-  default_prompt: "Extract an architecture model from this repository."
+  short_description: "Build, extract, review, or look up ArchiMate® architecture guidance."
+  default_prompt: "Review this architecture model for professional readiness."
 policy:
   allow_implicit_invocation: true

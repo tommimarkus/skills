@@ -31,6 +31,23 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-14-LC` | §8, §7.4 | Business Process / Event / Interaction emitted by Extract without the per-element `LIFT-CANDIDATE — architect confirms: source=..., confidence=...` XML comment (missing marker or missing required `source=` / `confidence=` attribute) |
 | `AD-15` | §8, §6.4 | View `<node>` or `<connection>` emitted without an `xsi:type` (abstract complexType violates OEF schema) |
 
+## Professional artifact quality smells — `AD-Q*`
+
+Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §2.8, §8 *Professional artefact quality smells*, §9 professional gates, and §10.
+
+| Code | Rubric | Description (one line; see rubric for full) |
+|---|---|---|
+| `AD-Q1` | §2.8, §8 AD-Q, §10 | Inventory view — discovered elements are listed but the view does not answer an architecture question |
+| `AD-Q2` | §8 AD-Q, §9 | Viewpoint mismatch — selected viewpoint does not match the concern being communicated |
+| `AD-Q3` | §8 AD-Q, §10 | Unreviewable density — technically laid out but too crowded for practical review |
+| `AD-Q4` | §8 AD-Q, §10 | Weak visual hierarchy — all nodes / relationships appear equally important, hiding the architecture point |
+| `AD-Q5` | §8 AD-Q, §10 | Extraction leakage — implementation trivia appears in a conceptual or stakeholder-facing view |
+| `AD-Q6` | §8 AD-Q, §10 | Relationship noise — mechanically complete relationships obscure the main dependency, realisation, or process path |
+| `AD-Q7` | §8 AD-Q, §9.6, §10 | Orphaned decision context — motivation elements are not connected to affected architecture elements or decisions |
+| `AD-Q8` | §8 AD-Q, §9.7, §10 | Process thinness — process view omits handoffs, responsibilities, trigger / flow, or value outcome |
+| `AD-Q9` | §8 AD-Q, §9.3, §10 | Service Realization thinness — services are named but the realization chain is not auditable |
+| `AD-Q10` | §8 AD-Q, §10 | Label ambiguity — labels are too generic, duplicated, or code-shaped for the intended audience |
+
 ## Layout smells — `AD-L*`
 
 Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout smells*; structural contract: §6.4a; algorithm: [procedures/layout-strategy.md](procedures/layout-strategy.md).
@@ -65,6 +82,9 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Proces
 | `AD-B-8` | §8 AD-B, §9.7, §9.3, §7.4 | Orphan Business Process (§9.7 end) — Business Process in a §9.7 view has no Realisation chain into any §9.3 view (Process-rooted modality) for the same feature |
 | `AD-B-9` | §8 AD-B, §9.3, §9.7, §7.4 | Orphan Application Service (§9.3 end) — Application Service in a §9.3 view (Process-rooted modality) realises no Business Process present in any §9.7 view for the same feature |
 | `AD-B-10` | §8 AD-B, §9.3, §4.1 | User-driven process without UI entry point — §9.3 view (Process-rooted modality) for a Business Process carrying a Business Actor Assignment lacks a UI Application Component and Application Interface |
+| `AD-B-11` | §8 AD-B, §9.7 | Single-process cooperation view — Business Process Cooperation view contains exactly one Business Process |
+| `AD-B-12` | §8 AD-B, §9.3, §7.4 | Sub-process without its own §9.3 drill-down view, unless `propid-drilldown-exclude=true` is set |
+| `AD-B-13` | §8 AD-B, §9.7, §7.4 | Top-level Business Process missing from the feature's §9.7 cooperation view, unless `propid-coop-view-exclude=true` is set |
 
 ## Drift smells — `AD-DR-*`
 
@@ -92,8 +112,10 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-1`, `AD-2`, `AD-14`, `AD-14-LC` | `block` | Hard ArchiMate 3.2 violations (layer discipline, Appendix B well-formedness, forward-only / lift-candidate marker discipline) |
 | `AD-3`, `AD-4`, `AD-6`, `AD-9` | `block` | Aspect / Realisation / Migration-axis discipline; rendering the diagram incoherent |
 | `AD-5`, `AD-7`, `AD-8`, `AD-10`, `AD-12`, `AD-13` | `warn` | Legible but imprecise; diagram reads but makes a claim the model doesn't support |
+| `AD-Q1`, `AD-Q2`, `AD-Q8`, `AD-Q9` | `warn` | Professional-readiness blockers — the model may be valid, but the view does not yet carry its intended architecture message |
+| `AD-Q3`, `AD-Q4`, `AD-Q5`, `AD-Q6`, `AD-Q7`, `AD-Q10` | `info` by default; escalate to `warn` when the affected view is claimed as `review-ready` | Quality degradations; severity depends on whether the artefact is a draft or presented for review |
 | `AD-B-4` | `block` | Layer soup in a §9.7 view (view-kind-specific tightening of `AD-1` / `AD-7`) |
-| `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10` | `warn` | Process diagram is legible but has missing participants, missing realisation, or a broken between-view invariant |
+| `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10`, `AD-B-11`, `AD-B-12`, `AD-B-13` | `warn` | Process diagram is legible but has missing participants, missing realisation, or a broken between-view invariant |
 | `AD-DR-11`, `AD-DR-12` | `warn` | Real process drift between the model and backend workflow sources; architect decides which side reconciles |
 | `AD-11` | `info` | Cosmetic |
 | `AD-DR-1` through `AD-DR-7` | `warn` | Real drift; architect decides whether the diagram or the code is the source of truth |

@@ -27,6 +27,7 @@ ls /path/to/lfm/.cache/archi-views/<fixture>/
 | `service-realization.oef.xml` | §9.3 Service Realization | ~7 | Process-rooted modality (user-driven): Business Actor → Process → App Service → UI App Component + Interface, with backend App Component on a Tech Node |
 | `motivation.oef.xml` | §9.6 Motivation | ~8 | Stakeholder → Driver → Goal → Outcome → Requirement → Constraint tree |
 | `business-process-cooperation.oef.xml` | §9.7 Business Process Cooperation | ~8 | Lane-based process flow with Triggering chain |
+| `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
 
 (§9.1, §9.2, §9.4, §9.5 are covered by `lfm-org/lfm/docs/architecture/lfm.oef.xml`.)
 

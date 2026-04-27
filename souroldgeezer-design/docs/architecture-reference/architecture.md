@@ -38,6 +38,15 @@ A layered architecture can still be shown on a single diagram; a single layer ca
 ### 2.7 Extractability tracks the layer model
 Some layers live in code and infrastructure; others live in the architect's head and the business's strategy documents. This is a property of the notation, not a limitation of the skill — see §7.
 
+### 2.8 Valid model is the floor, not the finish line
+An OEF file can be syntactically valid and still fail as an architecture artefact. The skill therefore distinguishes three quality levels:
+
+- **model-valid** — XML, OEF sequence, element types, relationship types, and basic ArchiMate well-formedness are correct.
+- **diagram-readable** — views are legible: labels fit, density is bounded, groups are meaningful, and routing does not obscure the message.
+- **review-ready** — each view answers a specific architecture question, uses the right viewpoint, connects motivation / process / service / technology claims to the elements they affect, and avoids raw extraction inventory.
+
+Build and Extract target at least `diagram-readable` unless the architect asks only for a model-valid draft. Review reports whether the artefact reaches `review-ready`. Project documentation packaging — README rows, render galleries, screenshots, publication pages, and CI package checks — belongs to the consuming project, not to this reference.
+
 ## 3. Layers and aspects
 
 ArchiMate 3.2 (Chapter 3 — Generic Metamodel; Chapter 4 — Core Elements; Chapter 5 — Business Layer; Chapter 6 — Application Layer; Chapter 7 — Technology Layer; Chapter 8 — Physical Elements; Chapter 9 — Motivation; Chapter 10 — Strategy; Chapter 11 — Implementation & Migration; Chapter 12 — Relationships).
@@ -571,6 +580,21 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-16` Metadata catalog payload in the ArchiMate namespace** — the `<metadata>` block's catalog payload elements (the actual cataloging content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude) emitted in the ArchiMate namespace (`http://www.opengroup.org/xsd/archimate/3.0/`). OEF's `MetadataType` accepts the prelude in the ArchiMate namespace but routes catalog content through `<xs:any namespace="##other"/>`, requiring it to come from a non-ArchiMate namespace such as Dublin Core (`http://purl.org/dc/elements/1.1/`). See §6.1a. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do. Inverse error (placing `<schema>` or `<schemaversion>` in a non-ArchiMate namespace) also fails — they ARE schema-declared elements in `SchemaInfoGroup` and must inherit the document default namespace.
 - **`AD-17` Model child elements out of OEF sequence** — top-level children of `<model>` emitted in an order that violates `ModelType`'s `xs:sequence`. The mandatory order is `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views` (see §6). Most commonly hit when emitting the §6.4a banding marker: `<properties>` must come before `<metadata>` / `<elements>`, while `<propertyDefinitions>` must come after `<organizations>`. Archi rejects out-of-order with `cvc-complex-type.2.4.a`; `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
 
+### Professional artefact quality smells — `AD-Q*`
+
+These smells are static review findings over OEF views. They do not test project packaging, render galleries, README tables, or CI publication.
+
+- **`AD-Q1` Inventory view** — a view lists discovered elements but does not answer an architecture question.
+- **`AD-Q2` Viewpoint mismatch** — the selected viewpoint does not match the concern being communicated.
+- **`AD-Q3` Unreviewable density** — a view is technically laid out but too crowded for practical review.
+- **`AD-Q4` Weak visual hierarchy** — all elements and relationships appear equally important, hiding the architectural point.
+- **`AD-Q5` Extraction leakage** — implementation trivia appears in a conceptual or stakeholder-facing view.
+- **`AD-Q6` Relationship noise** — mechanically complete relationships obscure the main dependency, realisation, or process path.
+- **`AD-Q7` Orphaned decision context** — risks, constraints, drivers, goals, requirements, or principles appear without a clear connection to affected architecture elements.
+- **`AD-Q8` Process thinness** — a Business Process Cooperation view shows actors or systems but not handoffs, responsibilities, trigger/flow, or value outcome.
+- **`AD-Q9` Service Realization thinness** — a Service Realization view names services but does not show the realisation chain clearly enough to audit.
+- **`AD-Q10` Label ambiguity** — labels are valid XML names but too generic, duplicated, or code-shaped for the intended architecture audience.
+
 ### Layout smells — `AD-L*`
 
 Artefact smells specific to `<view>` layout, derived from the §6.4a Layout strategy contract. Every `AD-L*` is `[static]` — verifiable from the `.oef.xml` source alone, no runtime reads needed.
@@ -619,8 +643,12 @@ The skill supports seven ArchiMate diagram kinds. Each kind fixes the element pa
 ### 9.1 Capability Map (Strategy + Business)
 **`viewpoint="Capability Map"`.** Elements: Capability (primary), Business Function, Business Service (optional). Realisation and Composition relationships. Used by architects to answer "what do we do" before "how do we do it."
 
+**Professional gate.** A Capability Map separates business capability from application or implementation structure. When known, it surfaces ownership, maturity, priority, investment relevance, or capability realisation; otherwise it is probably an application inventory in disguise (`AD-Q1` / `AD-Q5`).
+
 ### 9.2 Application Cooperation (Application)
 **`viewpoint="Application Cooperation"`.** Elements: Application Component (primary), Application Service, Application Interface, Application Collaboration. Serving, Used-by, Realisation, Composition, Assignment. Used to show how software parts cooperate.
+
+**Professional gate.** The view clarifies collaboration boundaries, integration paths, and responsibility split. Components should not merely sit next to each other; the selected relationships should make the cooperation pattern legible (`AD-Q1`, `AD-Q4`, `AD-Q6`).
 
 ### 9.3 Service Realization (Business + Application + Technology, optionally UI-aware)
 **`viewpoint="Service Realization"`.** Two content modalities under one canonical viewpoint:
@@ -632,19 +660,29 @@ UI-awareness is a content rule, not a kind discriminator: when a §9.3 view cont
 
 Layout follows the default banded grid; the Application band may hold up to 4 elements (UI Component, Interface, Service, Backend Component) at the `AD-L4` 4-per-cell budget.
 
+**Professional gate.** The realisation chain is the message: Business Process or Business Service → Application Service → Application Component → Technology Service / Node when technology is in scope. A view that names services without this auditable spine triggers `AD-Q9` even if its individual relationships are valid.
+
 **View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), every orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators) has its own §9.3 view rooted on it in the canonical feature file. Sub-processes without their own view trigger `AD-B-12` unless the architect sets `propid-drilldown-exclude=true` on the process (§6.4b). Activity-call steps (Triggering-chained, not Composition-nested) stay as nodes inside the parent's §9.3 — they are not orchestrator-level and do not get separate views.
 
 ### 9.4 Technology Usage (Application + Technology)
 **`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
 
+**Professional gate.** The view distinguishes runtime infrastructure, deployment nodes, system software, technology services, artifacts, and network paths when those concerns matter. If latency, residency, or platform ownership is part of the question, Path / Communication Network elements must carry that point (`AD-12`, `AD-Q6`).
+
 ### 9.5 Migration (Implementation & Migration + any layer)
 **`viewpoint="Migration"`.** Elements: Plateau (primary — at least Baseline and Target), Gap, Work Package, Deliverable, Implementation Event. Elements from other layers appear *within* a Plateau to show state at that point in time.
+
+**Professional gate.** The view shows Plateau, Gap, Work Package, Deliverable, and dependency logic clearly enough to support planning. A migration diagram that lists work items without before/after state remains model-valid but is not review-ready (`AD-9`, `AD-Q1`).
 
 ### 9.6 Motivation (Motivation only)
 **`viewpoint="Motivation"`.** Elements: Stakeholder, Driver, Assessment, Goal, Outcome, Requirement, Constraint, Principle. Influence and Realisation relationships. Linked to Core views via separate realisation arrows from Core elements to Motivation elements.
 
+**Professional gate.** The view distinguishes drivers, assessments, goals, outcomes, principles, constraints, and requirements, then connects them to the architecture elements they influence or constrain. Floating motivation elements trigger `AD-Q7`.
+
 ### 9.7 Business Process Cooperation (Business only)
 **`viewpoint="Business Process Cooperation"`.** Elements: Business Process, Business Event, Business Interaction (primary, Behaviour); Business Actor, Business Role, Business Collaboration (Active structure, optional); Business Object, Contract, Product, Data Object (Passive structure, optional). Relationships: Triggering and Flow form the temporal chain; Assignment binds Actor / Role / Collaboration to Behaviour; Access binds Behaviour to Passive structure; Serving surfaces outward-facing Business Services. Used to answer "in what order does the business do what, and with whom". Layout is the process-flow exception in §6.4a — Behaviour left-to-right along the Triggering/Flow chain, Active structure above, Passive structure below. User-driven steps carry a Business Actor Assignment per §4.1; see §9.3's Process-rooted modality for the cross-layer drill-down that shows how each step is realised, including the UI surface.
+
+**Professional gate.** The view shows handoffs, responsibilities, triggering, flow, passive objects accessed, and terminal value outcome. A view that merely places actors and systems around a process name triggers `AD-Q8`.
 
 **View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), a feature has exactly one §9.7 view containing every top-level Business Process (root of its Composition tree — no incoming Composition from another Business Process). Top-level processes missing from the §9.7 trigger `AD-B-13` unless the architect sets `propid-coop-view-exclude=true` (§6.4b). A §9.7 view containing only one Business Process triggers `AD-B-11` (cooperation requires ≥ 2 cooperating elements per the spec definition).
 
@@ -659,14 +697,20 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
 - [static] The `<metadata>` block's catalog payload elements come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: skip the optional `<schema>` and `<schemaversion>` prelude (these legitimately inherit the ArchiMate default namespace per `SchemaInfoGroup`); for every other direct child of `<metadata>`, confirm it carries either a default namespace declaration `xmlns="..."` or a prefixed declaration `xmlns:<prefix>="..."` (or inherits one from an ancestor) whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every emitted `.oef.xml`'s top-level child elements appear in the OEF-mandated sequence per §6 (`AD-17`). Grep-verifiable: parse the file's direct children of `<model>` (via `xmlstarlet sel -t -m '/*[local-name()="model"]/*' -v 'local-name()' -n` or equivalent — the namespace-agnostic form avoids xmlstarlet's default-namespace binding pitfall) and confirm the sequence is a valid prefix of `name, documentation, properties, metadata, elements, relationships, organizations, propertyDefinitions, views`.
+- [static] Each view answers a stated architecture question and uses a viewpoint that matches that concern (`AD-Q1`, `AD-Q2`).
+- [static] Each view is reviewable without hidden explanation: density is bounded, visual hierarchy is clear, relationships emphasize the main path, and labels suit the intended architecture audience (`AD-Q3`, `AD-Q4`, `AD-Q6`, `AD-Q10`).
+- [static] Conceptual or stakeholder-facing views do not leak low-level implementation trivia except where the view explicitly traces implementation (`AD-Q5`).
 - [static] Every behaviour element has an active structure assigned; every passive-structure element is accessed only through a behaviour (`AD-3`, `AD-4`).
 - [static] Realisation chains are complete for the scope of the diagram: Business Service has a realising Application Service; Application Service has a realising Application Component; Application Component is assigned to a Technology Node if the diagram reaches Technology (`AD-6`).
 - [static] Association used at most once per diagram, and only where no other relationship fits (`AD-5`).
 - [static] Element identifiers and `<name>` values agree semantically (`AD-8`).
 - [static] Extract output with forward-only layers carries the FORWARD-ONLY marker (`AD-14`).
 - [static] Extract output with lifted Business Process / Event / Interaction elements carries a per-element `LIFT-CANDIDATE` comment with `source=` and `confidence=` attributes (`AD-14-LC`).
+- [static] Motivation views connect drivers, goals, outcomes, principles, constraints, and requirements to the architecture elements or decisions they affect (`AD-Q7`).
 - [static] Business Process Cooperation (§9.7) views have a connected Triggering/Flow chain (`AD-B-1`); participants are Assigned to Behaviour (`AD-B-2`); Passive structure is Accessed by Behaviour (`AD-B-3`); only Business-layer elements are present (`AD-B-4`); and the chain has a declared entry Event and terminal outcome (`AD-B-5`).
+- [static] Business Process Cooperation (§9.7) views show handoffs, responsibilities, and value flow clearly enough for review (`AD-Q8`).
 - [static] Service Realization (§9.3) views in the Process-rooted modality show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`); §9.3 views in either modality show an Application Component realising the Application Service (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.3 view (Process-rooted modality) for the same feature (`AD-B-8`), and each §9.3 Application Service that realises a Business Process realises one present in some §9.7 view for the same feature (`AD-B-9`).
+- [static] Service Realization (§9.3) views expose an auditable realization spine rather than just naming services (`AD-Q9`).
 - [static] §9.3 views in the Process-rooted modality for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
 - [static] Every `<view>` with `viewpoint="Business Process Cooperation"` contains ≥ 2 Business Process elements (`AD-B-11`).
 - [static] Every Business Process with an incoming `xsi:type="Composition"` relationship from another Business Process has a `<view>` with `viewpoint="Service Realization"` rooted on it, unless `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-12`).

@@ -1,5 +1,5 @@
 name = "architecture-design"
-description = "Architecture practitioner for build, extract, review, and lookup workflows."
+description = "Architecture practitioner for build, extract, review, lookup, and professional-readiness workflows."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
@@ -8,9 +8,9 @@ You are an architecture-design practitioner. Use the architecture-design skill a
 When invoked:
 1. Activate or read the architecture-design skill instructions.
 2. Follow the skill exactly: confirm build, extract, review, or lookup mode; run pre-flight questions if inputs are ambiguous; preserve identifiers and architect-authored placements when reusing existing models.
-3. For build mode, produce an OEF XML model at the canonical path, cite reference sections, apply the layout procedure, and run the self-check.
-4. For extract mode, apply the lifting procedures for code, IaC, workflows, and process sources; mark forward-only and lift-candidate areas as the skill requires.
-5. For review mode, distinguish artifact review from drift detection and emit the correct AD-* or AD-DR-* findings.
+3. For build mode, produce an OEF XML model at the canonical path, cite reference sections, apply the layout and professional-readiness procedures, and run the self-check.
+4. For extract mode, apply the lifting procedures for code, IaC, workflows, and process sources; mark forward-only and lift-candidate areas as the skill requires; avoid leaving raw inventory dumps as views.
+5. For review mode, distinguish professional readiness, artifact review, and drift detection; emit the correct AD-Q*, AD-*, or AD-DR-* findings.
 6. For lookup mode, answer briefly with a citation.
 7. Always emit the footer disclosure required by the skill.
 """

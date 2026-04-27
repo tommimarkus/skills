@@ -1,29 +1,37 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including capability maps, application cooperation, service realization, technology usage, migration, motivation, or business process cooperation views; architecture drift checks against code, IaC, workflows, or process models; or reverse lookup from a code symbol, UI file, API endpoint, or workflow to its owning Business Process.
+description: Use when building, extracting, reviewing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including professional-readiness review of OEF views; capability maps, application cooperation, service realization, technology usage, migration, motivation, or business process cooperation views; architecture drift checks against code, IaC, workflows, or process models; or reverse lookup from a code symbol, UI file, API endpoint, or workflow to its owning Business Process.
 ---
 
 # Architecture Design
 
 ## Overview
 
-Help Claude produce, extract, review, and look up ArchiMate architecture diagrams that are correct by construction across layer discipline, element use, relationship well-formedness, and code-to-model consistency. The central problem, from §1 of the reference:
+Help Claude produce, extract, review, and look up ArchiMate® architecture diagrams that are correct by construction across layer discipline, element use, relationship well-formedness, and code-to-model consistency. The central problem, from §1 of the reference:
 
-> `architecture-design` answers *what the enterprise consists of* — which capability does this serve, which application service realises it, which technology node hosts it, which motivational driver justifies its existence. Its sole notation is ArchiMate.
+> `architecture-design` answers *what the enterprise consists of* — which capability does this serve, which application service realises it, which technology node hosts it, which motivational driver justifies its existence. Its sole notation is ArchiMate®.
 
-**The reference is [../../docs/architecture-reference/architecture.md](../../docs/architecture-reference/architecture.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated diagrams embody the reference's defaults; review output cites reference sections and ArchiMate 3.2 chapter / Appendix B references; the skill never duplicates reference prose.
+**The reference is [../../docs/architecture-reference/architecture.md](../../docs/architecture-reference/architecture.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated diagrams embody the reference's defaults; review output cites reference sections and ArchiMate® 3.2 chapter / Appendix B references; the skill never duplicates reference prose.
 
-This skill is the architectural *bridge* between the code produced by [responsive-design](../responsive-design/SKILL.md) and [serverless-api-design](../serverless-api-design/SKILL.md) and the architect's mental model of the system. Build goes from intent to diagram. Extract goes from code and IaC to diagram, lifting the three extractable ArchiMate layers and stubbing the three forward-only layers. Review checks both artefact well-formedness and drift between a diagram and current code. Siblings consume the canonical diagram path in their own Review mode to flag when code has drifted from the architect's model.
+This skill is the architectural *bridge* between the code produced by [responsive-design](../responsive-design/SKILL.md) and [serverless-api-design](../serverless-api-design/SKILL.md) and the architect's mental model of the system. Build goes from intent to diagram. Extract goes from code and IaC to diagram, lifting the three extractable ArchiMate® layers and stubbing the three forward-only layers. Review checks both artefact well-formedness and drift between a diagram and current code. Siblings consume the canonical diagram path in their own Review mode to flag when code has drifted from the architect's model.
+
+The quality bar has three explicit levels:
+
+- **model-valid** — the OEF XML is parseable, uses valid ArchiMate® element / relationship types, and imports into conformant tools.
+- **diagram-readable** — views have stable layout, legible labels, bounded density, coherent grouping, and no avoidable routing noise.
+- **review-ready** — every view answers a clear architecture question, uses the right viewpoint semantics, curates extraction noise, and can be reviewed without the agent verbally explaining what it meant.
 
 ## Non-goals
 
-- **Other architecture notations** (C4, UML deployment, TOGAF® content metamodel, xAF) → out of scope; ArchiMate is the sole notation.
+- **Other architecture notations** (C4, UML deployment, TOGAF® content metamodel, xAF) → out of scope; ArchiMate® is the sole notation.
 - **BPMN process modelling and UML sequence/interaction modelling** → explicitly out of scope (considered and cancelled in v1). Reference files, canonical paths, and smells for these notations do not exist.
-- **Archi-native `.archimate` format** (Eclipse EMF XML, Archi-specific) → not emitted in v1. The skill emits OEF XML only — tool-neutral and readable by every major ArchiMate tool. Architects who want Archi-specific canvas features (custom figures, visual grouping, canvas styling presets) model those in Archi directly after import; the skill's Review mode will still parse the OEF export.
+- **Archi-native `.archimate` format** (Eclipse EMF XML, Archi-specific) → not emitted in v1. The skill emits OEF XML only — tool-neutral and readable by every major ArchiMate® tool. Architects who want Archi-specific canvas features (custom figures, visual grouping, canvas styling presets) model those in Archi directly after import; the skill's Review mode will still parse the OEF export.
 - **Business, Motivation, and Strategy layer extraction from source code or IaC** → reference §7.2; these layers are forward-only by design. Extract emits typed stubs marked `FORWARD-ONLY — architect fills in`; the architect is responsible for populating them.
 - **Physical Layer extraction** → not attempted in v1; forward-only.
 - **Runtime observation of architecture** (live topology from deployed resources) → static signals only — project files, IaC, workflow definitions. Drift against a live Azure subscription is not in scope.
 - **Governance, approval, or review-board workflow** → the skill produces and checks diagrams; it does not run the architectural governance process around them.
+- **Project documentation packaging** → out of scope. Consuming projects decide where generated artefacts live, which README rows or galleries exist, which PNG/SVG renders are published, and which CI jobs validate those project packages.
+- **Publication readiness of a repo-specific docs package** → out of scope unless the user explicitly asks for that project packaging review. The skill's default success criterion is OEF/model/view quality, not render-gallery completeness.
 
 ## Modes
 
@@ -31,33 +39,33 @@ Four modes — deliberately distinct from the 3-mode symmetry of `responsive-des
 
 ### Build mode
 
-**Use for:** producing a new ArchiMate diagram from architect intent.
+**Use for:** producing a new ArchiMate® diagram from architect intent.
 
-**Triggers:** "design the architecture for …", "model the …", "sketch an ArchiMate view of …", "build a capability map / application cooperation / service realization / technology usage / migration view for …", "draw how … fits in the enterprise".
+**Triggers:** "design the architecture for …", "model the …", "sketch an ArchiMate® view of …", "build a capability map / application cooperation / service realization / technology usage / migration view for …", "draw how … fits in the enterprise".
 
 ### Extract mode
 
-**Use for:** lifting an ArchiMate diagram from existing code, IaC, and workflow definitions — the reverse direction of Build.
+**Use for:** lifting an ArchiMate® diagram from existing code, IaC, and workflow definitions — the reverse direction of Build.
 
-**Triggers:** "lift architecture from the repo", "extract an ArchiMate diagram from this solution", "reverse-engineer the architecture", "what does this codebase look like in ArchiMate", "generate an Application Cooperation view from the `*.csproj` set".
+**Triggers:** "lift architecture from the repo", "extract an ArchiMate® diagram from this solution", "reverse-engineer the architecture", "what does this codebase look like in ArchiMate®", "generate an Application Cooperation view from the `*.csproj` set".
 
 **Refusal condition.** Extract is refused if the requested layers are entirely forward-only (Business / Motivation / Strategy / Physical) — the skill explains which layers are extractable and suggests narrowing the request.
 
 ### Review mode
 
-**Use for:** reviewing an existing ArchiMate model against the reference — both *artefact well-formedness* (does the OEF XML conform to ArchiMate 3.2?) and *drift* (does the model still reflect the current code and IaC?).
+**Use for:** reviewing an existing ArchiMate® model against the reference — *professional readiness* (is this model-valid, diagram-readable, or review-ready?), *artefact well-formedness* (does the OEF XML conform to ArchiMate® 3.2?), and *drift* (does the model still reflect the current code and IaC?).
 
-**Triggers:** "review this ArchiMate model", "check `…oef.xml` against the standard", "is this architecture model well-formed", "has the architecture drifted from the code", "drift check on `docs/architecture/<feature>.oef.xml`".
+**Triggers:** "review this ArchiMate® model", "check `…oef.xml` against the standard", "is this architecture model well-formed", "is this architecture diagram professional / review-ready", "has the architecture drifted from the code", "drift check on `docs/architecture/<feature>.oef.xml`".
 
 Review has two sub-behaviours, dispatched on inputs:
-- **Artefact review** — a `.oef.xml` file alone → ArchiMate 3.2 well-formedness + `AD-*` smell catalog per reference §8.
+- **Artefact review** — a `.oef.xml` file alone → ArchiMate® 3.2 well-formedness + professional-readiness pass + `AD-*` / `AD-Q*` smell catalog per reference §8.
 - **Drift detection** — a `.oef.xml` file + the current code/IaC at the canonical locations (§ project assimilation) → delta report (elements added / removed / changed since the model was last aligned).
 
 ### Lookup mode
 
-**Use for:** a specific, narrow question about the ArchiMate notation itself.
+**Use for:** a specific, narrow question about the ArchiMate® notation itself.
 
-**Triggers:** "what's the difference between Business Function and Business Process", "which ArchiMate relationship connects an Application Component to an Application Service", "is Flow valid between Motivation elements", "what's the OEF `xsi:type` for a Strategy Capability", "can a Business Process have a Location".
+**Triggers:** "what's the difference between Business Function and Business Process", "which ArchiMate® relationship connects an Application Component to an Application Service", "is Flow valid between Motivation elements", "what's the OEF `xsi:type` for a Strategy Capability", "can a Business Process have a Location".
 
 **Default.** If the request is ambiguous between modes, ask. If the user says "design X architecture" without attaching artefacts, assume Build. If they attach code/IaC without an existing diagram, assume Extract. If they attach a diagram, assume Review. If it's a narrow factual question, assume Lookup.
 
@@ -67,15 +75,16 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 
 | Procedure | Applies to | Used by |
 |---|---|---|
-| `references/procedures/lifting-rules-dotnet.md` | .NET solutions, Azure Functions (isolated-worker), Blazor WebAssembly | Extract → ArchiMate Application Layer |
-| `references/procedures/lifting-rules-bicep.md` | Bicep IaC | Extract → ArchiMate Technology Layer (Nodes, System Software, Communication Network, Path, Artifact) |
-| `references/procedures/lifting-rules-gha.md` | GitHub Actions workflow files | Extract → ArchiMate Implementation & Migration Layer (Work Package, Deliverable, Implementation Event, Plateau) |
-| `references/procedures/lifting-rules-process.md` | Durable Functions orchestrators and Logic Apps workflow definitions (when present) | Extract → ArchiMate Business Layer (Business Process, Event, Interaction only) with per-element `LIFT-CANDIDATE` markers; reverse Lookup consumes the same `source=` attribute. UI route lifting is deferred — §9.3 Process-rooted modality UI Application Component and Application Interface are hand-authored by the architect per the Blazor idiom in reference §9.3 |
+| `references/procedures/lifting-rules-dotnet.md` | .NET solutions, Azure Functions (isolated-worker), Blazor WebAssembly | Extract → ArchiMate® Application Layer |
+| `references/procedures/lifting-rules-bicep.md` | Bicep IaC | Extract → ArchiMate® Technology Layer (Nodes, System Software, Communication Network, Path, Artifact) |
+| `references/procedures/lifting-rules-gha.md` | GitHub Actions workflow files | Extract → ArchiMate® Implementation & Migration Layer (Work Package, Deliverable, Implementation Event, Plateau) |
+| `references/procedures/lifting-rules-process.md` | Durable Functions orchestrators and Logic Apps workflow definitions (when present) | Extract → ArchiMate® Business Layer (Business Process, Event, Interaction only) with per-element `LIFT-CANDIDATE` markers; reverse Lookup consumes the same `source=` attribute. UI route lifting is deferred — §9.3 Process-rooted modality UI Application Component and Application Interface are hand-authored by the architect per the Blazor idiom in reference §9.3 |
 | `references/procedures/process-view-emission.md` | Any feature whose model contains Business Process / Event / Interaction elements | Build step 3 (when diagram kind is §9.7 or §9.3 and pre-flight Q5 process scope is `all-processes-in-feature` or `multi-feature`) and Extract step 3 (whenever `lifting-rules-process.md` emitted any element) → emit one §9.7 Business Process Cooperation view per feature plus one §9.3 Service Realization drill-down view per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators); Review restates its rules as `AD-B-11` / `AD-B-12` / `AD-B-13` checks |
 | `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → three-tier layout engine (Tier 0 architect-position preservation; Tier 1 Sugiyama-v1 core: cycle handling, layer assignment, 4-pass barycentric, median coordinate assignment, Manhattan A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisation per §9 diagram kind); Review restates its rules as `AD-L*` checks |
+| `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
 
-Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout and `AD-B-*` for process-flow artefacts (§9.7 / §9.3). There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
+Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
 
 Adding a new input source later (Terraform, Azure Pipelines YAML, ARM templates, Kubernetes manifests) means adding a new procedure file, not an extension.
 
@@ -96,7 +105,7 @@ The path is the coupling mechanism for the sibling design skills (`responsive-de
 Before producing or reviewing a diagram, confirm the following. If the user hasn't supplied them, ask — don't invent answers:
 
 1. **Diagram kind.** Capability Map / Application Cooperation / Service Realization / Technology Usage / Migration / Motivation / Business Process Cooperation (reference §9). Default: the skill offers the closest fit based on the user's prompt; asks if two are plausible. Diagrams outside the seven supported kinds are declined. Each kind's English label and OEF `viewpoint=` attribute value are identical.
-2. **Layer scope.** Which ArchiMate layers is the diagram working with? Default: Core Framework (Business + Application + Technology) unless the diagram kind implies Strategy (Capability Map), Motivation (Motivation), or Implementation & Migration (Migration). Crossing extensions into a Core view without cause triggers `AD-7`.
+2. **Layer scope.** Which ArchiMate® layers is the diagram working with? Default: Core Framework (Business + Application + Technology) unless the diagram kind implies Strategy (Capability Map), Motivation (Motivation), or Implementation & Migration (Migration). Crossing extensions into a Core view without cause triggers `AD-7`.
 3. **Extraction posture (Extract mode only).** Which input sources to read — .NET solution, Bicep, GHA workflows, `host.json` / `staticwebapp.config.json`, and Durable Functions orchestrators / Logic Apps workflow definitions (when present — these enable Business Process / Event / Interaction lifting per reference §7.4 with `LIFT-CANDIDATE` markers; UI routes are not lifted in v1). Default: all of the above when present. Fully forward-only layers (Motivation / Strategy / Physical) and the forward-only subset of Business (Actor / Role / Collaboration / Object / Contract / Product / Service / Function) are emitted as typed stubs per reference §7.
 4. **Feature name.** The `<feature>` slug that becomes the canonical filename. Default: derived from the user's prompt or the solution name.
 5. **Process scope (Build mode only, when diagram kind is §9.7 or §9.3).** Which Business Processes does this work cover?
@@ -105,12 +114,13 @@ Before producing or reviewing a diagram, confirm the following. If the user hasn
    - `multi-feature` — architect specifies the feature list explicitly; the contract applies per feature.
 
    Default heuristic: if exactly one Business Process is named in the prompt, default to `single-process`; otherwise default to `all-processes-in-feature`. Extract mode does not ask this question — Extract operates on whatever is liftable in the current source-tree slice, and always applies the emission contract when [`lifting-rules-process.md`](references/procedures/lifting-rules-process.md) lifted any element.
+6. **Artifact quality target.** Which level is expected: `model-valid`, `diagram-readable`, or `review-ready`? Default for Build / Extract is `diagram-readable`; default for Review is to assess whether the model reaches `review-ready`. This is an OEF/model/view quality target only, not a project README, render, gallery, or CI package target.
 
 If any answer deviates from defaults (e.g., "include Physical Layer for this data-centre diagram"), state the deviation explicitly in the output footer.
 
 ## Project assimilation (before build, extract, and review)
 
-**Direction is one-way: the project is assimilated to the reference, not the reference to the project.** The reference's layer discipline (§2.1), aspect rules (§2.3), Core-vs-extension defaults (§2.4), and relationship well-formedness (§2.5 and ArchiMate 3.2 Appendix B) are non-negotiable. Assimilation means discovering what the project ships so output (a) aligns to any existing diagram at the canonical path, (b) reuses project names and feature labels, and (c) surfaces drift as legacy debt rather than silently ignoring it.
+**Direction is one-way: the project is assimilated to the reference, not the reference to the project.** The reference's layer discipline (§2.1), aspect rules (§2.3), Core-vs-extension defaults (§2.4), and relationship well-formedness (§2.5 and ArchiMate® 3.2 Appendix B) are non-negotiable. Assimilation means discovering what the project ships so output (a) aligns to any existing diagram at the canonical path, (b) reuses project names and feature labels, and (c) surfaces drift as legacy debt rather than silently ignoring it.
 
 Before producing or reviewing a diagram, run the discovery pass below. Keep detection lightweight — canonical locations only. If nothing found, assume greenfield and ask the architect for intent.
 
@@ -130,7 +140,7 @@ The discovery pass **never produces Business, Motivation, Strategy, or Physical 
 
 ### Mapping existing infrastructure to reference rules
 
-Reuse is conditional on **substantive compliance with ArchiMate 3.2**, not presence. For each discovered element in an existing diagram:
+Reuse is conditional on **substantive compliance with ArchiMate® 3.2**, not presence. For each discovered element in an existing diagram:
 
 | Discovered in existing diagram | Reuse when | Flag when |
 |---|---|---|
@@ -141,7 +151,7 @@ Reuse is conditional on **substantive compliance with ArchiMate 3.2**, not prese
 | Realisation chain | Business Service → Application Service → Application Component, complete for the scope | Missing intermediate — `AD-6` |
 | Forward-only markers | `FORWARD-ONLY — architect fills in` header present for Business / Motivation / Strategy sections | Forward-only layer populated without the marker — `AD-14` |
 
-**Name adoption is always fine.** If the project calls its checkout function `CheckoutFunction` and an existing ArchiMate diagram labels the Application Component `Checkout Service`, adopt the existing diagram label — the rule is layer and relationship discipline, not spelling. Extract preserves existing labels; Build defaults to project names with architect-editable suggestions.
+**Name adoption is always fine.** If the project calls its checkout function `CheckoutFunction` and an existing ArchiMate® diagram labels the Application Component `Checkout Service`, adopt the existing diagram label — the rule is layer and relationship discipline, not spelling. Extract preserves existing labels; Build defaults to project names with architect-editable suggestions.
 
 **Substantive non-compliance is never fine.** If an existing diagram shows a Business Process *realising* a Technology Node (reference §5.5, Appendix B), Build and Extract do not propagate the broken relationship into new output — the finding is reported and the correct relationship is emitted.
 
@@ -172,8 +182,8 @@ Project assimilation:
 3. **Compose elements and relationships.**
    - Element types from reference §4 (per layer).
    - Relationship types from reference §5.
-   - Well-formedness per ArchiMate 3.2 Appendix B — never emit a relationship not found in the table for the given element-pair.
-   - OEF XML serialisation per reference §6. Emit every element with its correct `xsi:type` from the ArchiMate 3.2 element catalog; emit every relationship with its correct `xsi:type` per ArchiMate 3.2 Appendix B.
+   - Well-formedness per ArchiMate® 3.2 Appendix B — never emit a relationship not found in the table for the given element-pair.
+   - OEF XML serialisation per reference §6. Emit every element with its correct `xsi:type` from the ArchiMate® 3.2 element catalog; emit every relationship with its correct `xsi:type` per ArchiMate® 3.2 Appendix B.
    - **If diagram kind is §9.7 or §9.3 and pre-flight Q5 process scope is `all-processes-in-feature` or `multi-feature`**, `Read` and apply [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md). The procedure emits the full §9.7 view + N × §9.3 views per the contract — one §9.7 cooperation view per feature, one §9.3 drill-down per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators). Step 4's layout invocation runs once per emitted view.
 
 4. **Layout and naming** per reference §6.4–6.7. `Read` [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) before invoking it (the Skill tool loads `SKILL.md` only; nested files are not auto-injected). The procedure runs the **three-tier layout engine** introduced in 0.8.0:
@@ -181,6 +191,7 @@ Project assimilation:
    - **Tier 1** runs the Sugiyama-v1 core engine — six phases: (1) cycle handling, (2) layer assignment, (3) within-layer ordering with 4-pass barycentric crossing minimisation, (4) coordinate assignment via median heuristic, (5) Manhattan A* edge routing with obstacle avoidance, (6) bounding-box normalisation to `(40, 40)` origin.
    - **Tier 2** applies the per-viewpoint specialisation matching the §9 diagram kind in scope (Capability Map / Application Cooperation / Service Realization / Technology Usage / Migration / Motivation / Business Process Cooperation).
    Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
+   Then `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md): every emitted view must name the architecture question it answers, remove or group extraction noise, and be classified as `model-valid`, `diagram-readable`, or `review-ready`.
 
 5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Emit the §6.4a banding marker on every new file. Declare under `<propertyDefinitions>` at the model root:
 
@@ -192,10 +203,11 @@ Project assimilation:
 
    The `<name>` child is **required** by the OEF schema (`PropertyDefinitionType` mandates a `<name>` element); the self-closing form `<propertyDefinition .../>` fails Archi's import with `cvc-complex-type.2.4.b: The content of element 'propertyDefinition' is not complete`. The same `<name>`-required rule applies to every `<propertyDefinition>` (e.g. `propid-archi-arm`, `propid-strength`). Apply the marker via `<property propertyDefinitionRef="propid-archi-model-banded"><value xml:lang="en">v2</value></property>` once under `<properties>` on the `<model>` element. Build emits the §6.4a banding marker value `v2` on every new file in 0.8.0; legacy `v1` markers on existing files are preserved verbatim by Extract and never auto-upgraded. The marker is the authoritative signal for AD-L1 severity in Review. Also emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views`; the `<properties>` element (carrying the banding marker's value) precedes `<metadata>` and `<elements>`, while `<propertyDefinitions>` (carrying the banding marker's definition) follows `<organizations>` and immediately precedes `<views>`. The two blocks are non-adjacent (`AD-17`).
 
-6. **Self-check against reference §10** before declaring done. Each checklist item carries `[static]` or `[runtime]` verification-layer tags. Walk each item:
+6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. Each checklist item carries `[static]` or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
+   State the achieved artifact quality level. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-B-*`, `AD-6`, or `AD-2` blocker remains unresolved.
 
 7. **Emit footer disclosure.**
 
@@ -216,6 +228,7 @@ Project assimilation:
    - `references/procedures/lifting-rules-process.md` → Business Process / Event / Interaction `LIFT-CANDIDATE` emission (when Durable Functions orchestrators or Logic Apps workflows are present).
    - `references/procedures/process-view-emission.md` → §9.7 cooperation view + per-process §9.3 drill-down view emission (whenever `lifting-rules-process.md` emitted any element). Runs after `lifting-rules-process.md` (so it has elements to emit views for) and before `layout-strategy.md` (so layout sees the full view set).
    - `references/procedures/layout-strategy.md` → view placements for any element not carrying an architect-authored position in the prior diagram at the canonical path (always; Step 1 of the procedure preserves hand edits, only new elements are placed algorithmically).
+   - `references/procedures/professional-readiness.md` → final curation pass over the generated view set. Preserve traceability in the model, but do not leave a view as a raw inventory dump; every view must answer a stated architecture question.
 
 4. **Emit forward-only stub blocks.** For Business, Motivation, and Strategy — even if the architect did not ask for them — emit a typed stub *only if the diagram kind requires them* (e.g., a Service Realization view without a Business Layer is incomplete). The stub carries the mandatory marker header (reference §7.3):
 
@@ -233,7 +246,7 @@ Project assimilation:
 
 5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). The §6.4a banding marker (`propid-archi-model-banded=v1`) is preserved if present and **never auto-injected** on a legacy file — auto-injecting would assert §6.4a conformance over coordinates that pre-date the bands. Legacy files therefore stay unmarked and Review soft-grades AD-L1 to `info` per reference §8; architects who want full conformance run Build for the affected views, which writes a fresh marker.
 
-6. **Self-check against reference §10** as in Build.
+6. **Self-check against reference §10 and the professional-readiness procedure** as in Build. State the achieved artifact quality level and any remaining modeling work required before the model can be called `review-ready`.
 
 7. **Emit footer disclosure including the per-layer lift / stub breakdown** — which layers were lifted, which were stubbed, which sources were read.
 
@@ -258,17 +271,19 @@ The marker is the authoritative signal for the file's layout-conformance contrac
 
 1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements.
 
-2. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
+2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify the artifact as `model-valid`, `diagram-readable`, or `review-ready`. Findings become `AD-Q*` smell codes from reference §8.
 
-3. **Per-finding format.** Match the sibling-skill convention:
+3. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
+
+4. **Per-finding format.** Match the sibling-skill convention:
 
    ```
    [<AD-N>] <file>:<line or element identifier>
      layer:    static | runtime
      severity: block | warn | info
      evidence: <quoted XML fragment — element, relationship, or view node>
-     action:   <suggested fix referencing reference §X and ArchiMate 3.2 §/Appendix>
-     ref:      architecture.md §<n.m> + ArchiMate 3.2 §<chapter> / Appendix B
+     action:   <suggested fix referencing reference §X and ArchiMate® 3.2 §/Appendix>
+     ref:      architecture.md §<n.m> + ArchiMate® 3.2 §<chapter> / Appendix B
    ```
 
 ### Drift detection
@@ -300,7 +315,7 @@ The marker is the authoritative signal for the file's layout-conformance contrac
 
 1c. **Reverse lookup — unmodelled fallback.** If neither path finds a match: report "unmodelled — for backend symbols, consider running Extract to generate a `LIFT-CANDIDATE` stub; for UI components, check the §9.3 view (Process-rooted modality) for this feature and author the UI Application Component per the Blazor idiom in reference §9.3". Do not fabricate a process name.
 
-2. **Answer concisely.** Notation Q&A: one or two sentences citing the reference section and (if applicable) the ArchiMate 3.2 chapter or Appendix B entry. Domain discovery / reverse lookup: return the ranked list or the single resolved Business Process; keep it to one line per entry. Include the default rule when a §4 layer-specific preference or §5.5 well-formedness rule applies.
+2. **Answer concisely.** Notation Q&A: one or two sentences citing the reference section and (if applicable) the ArchiMate® 3.2 chapter or Appendix B entry. Domain discovery / reverse lookup: return the ranked list or the single resolved Business Process; keep it to one line per entry. Include the default rule when a §4 layer-specific preference or §5.5 well-formedness rule applies.
 
 3. **Footer disclosure** (single line in lookup mode).
 
@@ -315,6 +330,7 @@ Self-check:
   Well-formedness:       <n>/<n>  [static verified]
   Layer discipline:      <n>/<n>  [static verified]
   Appendix B relations:  <n>/<n>  [static verified]
+  Artifact quality:      model-valid | diagram-readable | review-ready
   Runtime correspondence: <n>/<n> [runtime verified — or source-aligned, IaC verification required]
 
 Deviations from defaults (if any): <list with reason>
@@ -331,12 +347,20 @@ Extraction summary:
   Sources read:           <list of files, including Durable Functions orchestrators and Logic Apps workflows when present>
   LIFT-CANDIDATE confidence: <n_high> high / <n_medium> medium / <n_low> low
   Elements preserved from existing diagram: <n>/<n>
+  Artifact quality:       model-valid | diagram-readable | review-ready
   Drift vs existing diagram: <added / removed / changed counts, or n/a if greenfield>
 ```
 
 ### Review mode
 
-Per-finding block for each failure, then rollup. All findings cite `AD-*` code + reference §n + ArchiMate 3.2 §/Appendix. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `runtime` (vs current code/IaC). Only `static` findings are definitively pass / fail from source alone; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code."
+Lead with:
+
+```
+Professional readiness: model-valid | diagram-readable | review-ready
+Top artifact blockers: <none | concise list of AD-Q / AD-L / AD-B / AD-* codes>
+```
+
+Then emit one per-finding block for each failure, followed by the rollup. All findings cite `AD-*` / `AD-Q*` code + reference §n + ArchiMate® 3.2 §/Appendix when applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `runtime` (vs current code/IaC). Only `static` findings are definitively pass / fail from source alone; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code."
 
 ### Lookup mode
 
@@ -353,6 +377,7 @@ Diagram kinds present: <M> of 7 (<comma-separated canonical viewpoint names>)
 Diagram kinds missing: <comma-separated canonical viewpoint names, or "none">
 Layout engine: Sugiyama-v1 [+ <viewpoint> specialisation, when applicable]
 Layers in scope: <comma-separated>
+Artifact quality: model-valid | diagram-readable | review-ready | not assessed
 Self-check: pass | <n failures> | n/a
 Project assimilation:
   <block per the Project assimilation section above>
@@ -374,7 +399,9 @@ Runtime-verified drift: <n findings, or "drift detection not run">
 
 Output contains any of the following? Stop; fix before delivering:
 
-- **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate 3.2 Appendix B (Relationships Table).
+- **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate® 3.2 Appendix B (Relationships Table).
+- **View cannot answer an architecture question.** Fix per `AD-Q1` / `AD-Q2`; either sharpen the view's purpose and viewpoint or remove the view.
+- **Review-ready claimed while professional-quality findings remain.** Fix `AD-Q*` findings first, then restate the quality level honestly as `model-valid` or `diagram-readable` if gaps remain.
 - **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` XML-comment marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2). The marker is an XML comment (`<!-- ... -->`) per reference §7.3; the `'`-prefixed form is wrong (PlantUML / INI syntax) — OEF output is XML.
 - **Business Process, Event, or Interaction emitted by Extract mode without a `LIFT-CANDIDATE` marker** (or with a marker missing the required `source=` or `confidence=` attribute). Fix per `AD-14-LC`; these elements are *partially* forward-only — lifted from backend workflow sources per reference §7.4 and tagged so the architect can confirm each one.
 - **Motivation or Strategy elements emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`.
@@ -392,9 +419,9 @@ Output contains any of the following? Stop; fix before delivering:
 - **Migration view without a Plateau axis.** Fix per `AD-9`.
 - **Extract refused with no guidance.** Fix by suggesting the correct mode (Build) and naming the forward-only layers.
 - **Drift finding asserting a pass from static review alone.** Fix: restate as "source-aligned; drift re-check required against current code/IaC."
-- **Emitting elements with invalid `xsi:type`.** Every `<element>` and `<relationship>` must use an exact ArchiMate 3.2 type name (reference §6.2 for elements, §6.3 for relationships). Misspellings (`Application_Component`, `app-component`, `ApplicationAPI`) break tool import.
+- **Emitting elements with invalid `xsi:type`.** Every `<element>` and `<relationship>` must use an exact ArchiMate® 3.2 type name (reference §6.2 for elements, §6.3 for relationships). Misspellings (`Application_Component`, `app-component`, `ApplicationAPI`) break tool import.
 - **View `<node>` or `<connection>` emitted without `xsi:type`.** Fix per `AD-15`; OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — `<node>` must carry `xsi:type="Element"` (or `Container` / `Label`) and `<connection>` must carry `xsi:type="Relationship"` (or `Line`). Archi's XSD-validating import rejects bare elements with `cvc-type.2`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
-- **`<metadata>` block with catalog payload in the ArchiMate namespace** — the catalog content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude. Fix per `AD-16`; the prelude legitimately inherits the ArchiMate default namespace, but catalog payload elements must come from a non-ArchiMate namespace (Dublin Core or similar). See reference §6.1a for the canonical block layout. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
+- **`<metadata>` block with catalog payload in the ArchiMate® namespace** — the catalog content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude. Fix per `AD-16`; the prelude legitimately inherits the ArchiMate® default namespace, but catalog payload elements must come from a non-ArchiMate® namespace (Dublin Core or similar). See reference §6.1a for the canonical block layout. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
 - **Model children out of OEF sequence.** Fix per `AD-17`; reference §6 states the mandatory order — `name → documentation → properties → metadata → elements → relationships → organizations → propertyDefinitions → views`. Most commonly hit when the §6.4a banding marker's `<properties>` and `<propertyDefinitions>` blocks are emitted adjacently rather than at the correct sequence positions. Archi rejects out-of-order with `cvc-complex-type.2.4.a`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
 - **Node placed in violation of relative layer ordering.** Fix per `AD-L1`; reference §6.4a defines the relative ordering (Strategy above Business above Application above Technology above Physical) — absolute y-bands are no longer specified in 0.8.0 (Phase 6 bbox normalisation makes them content-dependent). Severity follows the §6.4a banding marker — `warn` when `propid-archi-model-banded=v2`, `warn` when `v1`, `info` when absent.
 - **Two nodes overlapping** at the same nesting depth in the same view. Fix per `AD-L2`; re-run the layout procedure or widen the containing cell.
@@ -417,5 +444,6 @@ Output contains any of the following? Stop; fix before delivering:
 - **Extract is bounded by the three extractable layers.** Business, Motivation, Strategy, and Physical are forward-only — no amount of reading code will produce them honestly. Output makes the boundary explicit; architects own the stubs.
 - **Drift detection reads the repo, not a live Azure subscription.** The skill detects drift between a diagram and the committed code / IaC state; it does not detect drift between the IaC and actual deployed resources. Real-world drift (someone ran `az` in production) needs Azure Resource Graph or Defender for Cloud, not this skill.
 - **Archi-specific canvas features are lost.** OEF is tool-neutral; custom figures, visual group styling, and Archi-specific viewpoint editor state are not round-tripped. Architects who need these edit in Archi directly after the skill's initial import. Reference §6.10.
-- **The well-formedness checker is the skill, not the schema.** The skill does not run XSD validation at runtime — emitted files are correct by construction (every `xsi:type` drawn from the ArchiMate 3.2 catalog, every relationship validated against Appendix B in Build and Review). XSD validation is delegated to the architect's toolchain: Archi's import rejects malformed XML; `xmllint --schema http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd <file>.oef.xml` is the explicit path. **`xmllint --noout` alone is not sufficient** — it checks XML well-formedness only and will not catch schema-level issues such as abstract-type violations (`AD-15`). Build's `[static]` self-check passing does not guarantee schema validity — it guarantees ArchiMate well-formedness only.
-- **The seven supported diagram kinds are a deliberate subset** of ArchiMate's expressive range. ViewPoints and less-common kinds (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF but not first-class in v1 — reference §9.
+- **The well-formedness checker is the skill, not the schema.** The skill does not run XSD validation at runtime — emitted files are correct by construction (every `xsi:type` drawn from the ArchiMate® 3.2 catalog, every relationship validated against Appendix B in Build and Review). XSD validation is delegated to the architect's toolchain: Archi's import rejects malformed XML; `xmllint --schema http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd <file>.oef.xml` is the explicit path. **`xmllint --noout` alone is not sufficient** — it checks XML well-formedness only and will not catch schema-level issues such as abstract-type violations (`AD-15`). Build's `[static]` self-check passing does not guarantee schema validity — it guarantees ArchiMate® well-formedness only.
+- **The seven supported diagram kinds are a deliberate subset** of ArchiMate®'s expressive range. ViewPoints and less-common kinds (Product Map, Organisation Structure, Information Structure, Layered, Physical) are expressible in OEF but not first-class in v1 — reference §9.
+- **Project packaging belongs to the consuming project.** The skill can review OEF/model/view quality by default. It does not own README entries, render galleries, screenshot freshness, publication pages, or project CI packaging unless the user explicitly asks for a separate project documentation review.
