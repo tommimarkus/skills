@@ -239,7 +239,7 @@ Project assimilation:
 
    Placeholders are generated from Application Component names — e.g., an `Orders.Api` Component suggests a plausible Business Service label *Order Management*. The architect confirms or rewrites.
 
-5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, valid element / relationship / view properties, view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). If an existing file has a model-root `<properties>` block used for the old layout marker, omit it from newly-emitted output and report `AD-17` in Review. Layout conformance is checked directly from view geometry, not from a marker.
+5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, valid element / relationship / view properties, stable view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). Do not preserve old connection bendpoints when a relationship is replaced, its source/target endpoints are inverted, or the preserved route now crosses unrelated nodes; reroute and report `AD-L11` if no clean route exists. If an existing file has a model-root `<properties>` block used for the old layout marker, omit it from newly-emitted output and report `AD-17` in Review. Layout conformance is checked directly from view geometry, not from a marker.
 
 6. **Self-check against reference §10 and the professional-readiness procedure** as in Build. State the achieved artifact quality level and any remaining modeling work required before the model can be called `review-ready`.
 
@@ -421,7 +421,7 @@ Output contains any of the following? Stop; fix before delivering:
 - **Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10. Fix per `AD-L8`; re-snap to the 10-px grid.
 - **Hierarchy violation.** Fix per `AD-L9`; a Realization / Used-by / Serving edge between same-layer elements drawn against topological direction. Re-run Tier 1 phase 3 (within-layer ordering); if cycle present, phase 1 handles.
 - **Canvas not normalised at origin.** Fix per `AD-L10`; the used region's top-left should be at `(40, 40) ± 10 px`. Re-run Tier 1 phase 6 (bbox normalisation).
-- **Connector passes through an unrelated node body.** Fix per `AD-L11`; Tier 1 phase 5 (Manhattan A* with obstacle avoidance) should prevent. Allowed intersections are only source, target, and required source/target ancestor containers. This is a blocking finding and professional readiness cannot exceed `model-valid`.
+- **Connector passes through an unrelated node body.** Fix per `AD-L11`; Tier 1 phase 5 (Manhattan A* with obstacle avoidance) should prevent. Allowed intersections are only source, target, and required source/target ancestor containers. Stale bendpoints after relationship replacement or source/target inversion are not safe to preserve. This is a blocking finding and professional readiness cannot exceed `model-valid`.
 - **View-orphan, stacked connector, wide gap, or fan-out crisscross layout failure.** Fix per `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15`; reroute, regroup, split, or compact the view before calling it `diagram-readable`.
 
 ## Complementary skills

@@ -37,6 +37,13 @@ Regression cases for Review-mode `AD-L*` geometry checks. These are small source
 - Connections: Managed Identity Access edges and diagnostic Flow edges.
 - Expected: Access/Flow edges use separate lanes; no stacked target arrowheads (`AD-L13`) and no connector crossing resource nodes (`AD-L11`).
 
+## Stale bendpoint reuse after relationship replacement
+
+- View: Technology Usage or Technology Security.
+- Prior route: Function App -> Application Insights Flow, with bendpoints chosen for that source/target direction.
+- Refresh: relationship is replaced with Application Insights -> Function App Serving, or MI Access edges are replaced by resource -> Function App Serving edges.
+- Expected: old bendpoints are discarded unless the new route still clears every unrelated and nested child node rectangle. If the preserved route crosses Cosmos, Storage, Key Vault, managed identity, or runtime child boxes, report `AD-L11 block` and readiness max `model-valid`.
+
 ## AD-L12 through AD-L15 readability checks
 
 - `AD-L12`: any non-legend node with zero same-view connections.
