@@ -37,10 +37,16 @@ published plugin surface:
 - Bundled references or examples reproduce third-party copyrighted expression,
   structured spec tables, diagrams, sample files, or assets without a valid
   licence and citation path.
+- A changed skill removes required outputs, weakens coverage of the user tasks
+  it claims to handle, adds generic advice without changing decisions or
+  failure detection, or makes the workflow materially harder to run without a
+  clear compensating benefit.
 
 ## Scorecard
 
-Rate each metric as `pass`, `warn`, `fail`, or `not assessed`.
+The scorecard is the task-value check: each metric captures one concrete way a
+skill should improve, or at least preserve, user outcomes. Rate each metric as
+`pass`, `warn`, `fail`, or `not assessed`.
 
 ### 1. Trigger Quality
 
@@ -61,24 +67,7 @@ should-not-trigger cases, with repeated runs when practical. A should-trigger
 query should usually invoke the skill; a should-not-trigger near miss should
 usually not invoke it.
 
-### 2. Task-Value Lift
-
-The skill should make agent outputs measurably better than no skill or the
-previous skill version.
-
-Evidence to prefer:
-
-- Realistic task evals with prompts, expected outputs, optional input files,
-  and assertion results.
-- A baseline comparison against no skill or a previous snapshot.
-- Human review notes for qualities that assertions cannot capture.
-- Clear pass-rate, time, and token deltas when those data are available.
-
-Warn if the skill mostly restates generic best practices the base agent already
-handles well. Fail if the changed skill reduces correctness, omits required
-outputs, or makes the agent slower without visible quality improvement.
-
-### 3. Context Efficiency
+### 2. Context Efficiency
 
 The skill should spend context only on instructions the agent would otherwise
 miss.
@@ -96,7 +85,7 @@ Warn on duplicated reference material or menus of equal-looking options. Fail
 when the main skill body becomes a reference dump or hides required procedures
 in unmentioned files.
 
-### 4. Agentic Operability
+### 3. Agentic Operability
 
 The skill should be easy for an agent to execute in a real workspace.
 
@@ -114,7 +103,7 @@ Warn when instructions are vague or require hidden human knowledge. Fail when
 the agent must guess destructive behavior, production targets, or script
 arguments.
 
-### 5. Degree-of-Freedom Calibration
+### 4. Degree-of-Freedom Calibration
 
 Match specificity to task fragility.
 
@@ -130,7 +119,7 @@ Warn when the skill offers many choices without a default. Fail when a fragile
 operation is left to ad hoc reasoning or a flexible creative task is overfit to
 one narrow example.
 
-### 6. Runtime Portability and Parity
+### 5. Runtime Portability and Parity
 
 Published skills in this repo must remain coherent across both supported
 runtime surfaces.
@@ -148,7 +137,7 @@ Evidence to prefer:
 Warn on harmless wording drift. Fail on stale invocation contracts, missing
 metadata, or manifest mismatch.
 
-### 7. Release Hygiene
+### 6. Release Hygiene
 
 The repository should remain installable, auditable, and easy to update.
 
@@ -165,7 +154,7 @@ Warn when docs are technically true but incomplete. Fail when installed-plugin
 users would not receive a required update or would receive inconsistent
 metadata.
 
-### 8. IP and Source Hygiene
+### 7. IP and Source Hygiene
 
 The skill should encode reusable know-how without copying protected expression
 or redistributing assets improperly.

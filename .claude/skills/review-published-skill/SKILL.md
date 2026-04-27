@@ -1,6 +1,6 @@
 ---
 name: review-published-skill
-description: Use when reviewing a modified published plugin skill, matching subagent, bundled reference, extension, manifest, marketplace entry, runtime metadata, repo-internal .claude/skills authoring skill, or related repo documentation before commit or release. Checks trigger quality, task-value lift, progressive disclosure, validation evidence, cross-runtime packaging parity, semver and docs drift, and IP-hygiene handoff.
+description: Use when reviewing a modified published plugin skill, matching subagent, bundled reference, extension, manifest, marketplace entry, runtime metadata, repo-internal .claude/skills authoring skill, or related repo documentation before commit or release. Checks trigger quality, user-value regressions, progressive disclosure, validation evidence, cross-runtime packaging parity, semver and docs drift, and IP-hygiene handoff.
 ---
 
 # Published Skill Review
@@ -89,7 +89,6 @@ Lead with findings. Order by severity and use file references.
 ## Skill Metrics
 
 - Trigger quality: pass|warn|fail|not assessed
-- Task-value lift: pass|warn|fail|not assessed
 - Context efficiency: pass|warn|fail|not assessed
 - Agentic operability: pass|warn|fail|not assessed
 - Degree-of-freedom calibration: pass|warn|fail|not assessed
@@ -111,4 +110,4 @@ Reference: .claude/skills/review-published-skill/references/skill-quality-metric
 ```
 
 If there are no findings, say so explicitly and still list unverified runtime
-or eval evidence as residual risk.
+or behavior evidence as residual risk.
