@@ -22,6 +22,8 @@ Checks:
   AD-L3   node size is large enough for baseline label readability
   AD-L11  connections do not cross unrelated node bodies
   AD-L11  connection source/target nodes still match relationship endpoints
+  AD-L13  visible connections do not stack on the same endpoint lane
+  AD-L15  local fan-out connectors do not crisscross
 
 Dependencies: xmllint, yq (Mike Farah), jq.
 EOF
@@ -152,23 +154,51 @@ for file in "$@"; do
           end
         end;
 
-    def route_segments($nodes; $connection):
+    def route_points($nodes; $connection):
       (node_by_id($nodes; $connection.source)) as $source_node
       | (node_by_id($nodes; $connection.target)) as $target_node
       | if $source_node == null or $target_node == null then []
         else
           ($connection.bendpoints[0]? // center($target_node)) as $source_toward
           | ($connection.bendpoints[-1]? // center($source_node)) as $target_toward
-          | ([attach_point($source_node; $source_toward)] + $connection.bendpoints + [attach_point($target_node; $target_toward)]) as $points
-          | [
-              range(0; (($points | length) - 1)) as $i
-              | {
-                  x1: $points[$i].x,
-                  y1: $points[$i].y,
-                  x2: $points[$i + 1].x,
-                  y2: $points[$i + 1].y
-                }
-            ]
+          | [attach_point($source_node; $source_toward)] + $connection.bendpoints + [attach_point($target_node; $target_toward)]
+        end;
+
+    def route_segments($nodes; $connection):
+      (route_points($nodes; $connection)) as $points
+      | [
+          range(0; (($points | length) - 1)) as $i
+          | {
+              x1: $points[$i].x,
+              y1: $points[$i].y,
+              x2: $points[$i + 1].x,
+              y2: $points[$i + 1].y
+            }
+        ];
+
+    def endpoint_records($nodes; $connection):
+      (route_points($nodes; $connection)) as $points
+      | if ($points | length) < 2 then []
+        else [
+          {
+            connection: $connection.id,
+            node: $connection.source,
+            role: "source",
+            x: $points[0].x,
+            y: $points[0].y,
+            lane_axis: (if $points[0].y == $points[1].y then "h" elif $points[0].x == $points[1].x then "v" else "diagonal" end),
+            lane_value: (if $points[0].y == $points[1].y then $points[0].y elif $points[0].x == $points[1].x then $points[0].x else null end)
+          },
+          {
+            connection: $connection.id,
+            node: $connection.target,
+            role: "target",
+            x: $points[-1].x,
+            y: $points[-1].y,
+            lane_axis: (if $points[-1].y == $points[-2].y then "h" elif $points[-1].x == $points[-2].x then "v" else "diagonal" end),
+            lane_value: (if $points[-1].y == $points[-2].y then $points[-1].y elif $points[-1].x == $points[-2].x then $points[-1].x else null end)
+          }
+        ]
         end;
 
     def rect_intersects($a; $b):
@@ -193,6 +223,22 @@ for file in "$@"; do
         and (([$segment.y1, $segment.y2] | min) < ($node.y + $node.h))
         and (([$segment.y1, $segment.y2] | max) > $node.y)
       );
+
+    def segment_cross_point($a; $b):
+      if $a.y1 == $a.y2 and $b.x1 == $b.x2 then
+        {x: $b.x1, y: $a.y1}
+        | select(.x >= ([$a.x1, $a.x2] | min) and .x <= ([$a.x1, $a.x2] | max))
+        | select(.y >= ([$b.y1, $b.y2] | min) and .y <= ([$b.y1, $b.y2] | max))
+      elif $a.x1 == $a.x2 and $b.y1 == $b.y2 then
+        {x: $a.x1, y: $b.y1}
+        | select(.x >= ([$b.x1, $b.x2] | min) and .x <= ([$b.x1, $b.x2] | max))
+        | select(.y >= ([$a.y1, $a.y2] | min) and .y <= ([$a.y1, $a.y2] | max))
+      else empty
+      end;
+
+    def point_is_endpoint($point; $segment):
+      ($point.x == $segment.x1 and $point.y == $segment.y1)
+      or ($point.x == $segment.x2 and $point.y == $segment.y2);
 
     def finding($code; $severity; $view; $connection; $node; $evidence; $action):
       "[\($code)] \($file):view=\($view) layer=static severity=\($severity)"
@@ -323,6 +369,53 @@ for file in "$@"; do
               action: "reroute connector around unrelated node body before claiming diagram-readable"
             }
         ]
+      + [
+          ($connections | map(endpoint_records($nodes; .)[]) ) as $endpoints
+          | range(0; ($endpoints | length)) as $i
+          | range($i + 1; ($endpoints | length)) as $j
+          | $endpoints[$i] as $a
+          | $endpoints[$j] as $b
+          | select(
+              $a.connection != $b.connection
+              and $a.node == $b.node
+              and $a.role == $b.role
+              and $a.lane_axis != "diagonal"
+              and $a.lane_axis == $b.lane_axis
+              and (($a.lane_value - $b.lane_value) | absnum) < 20
+              and (($a.x - $b.x) | absnum) < 20
+              and (($a.y - $b.y) | absnum) < 20
+            )
+          | {
+              code: "AD-L13",
+              severity: "warn",
+              connection: $a.connection,
+              node: $a.node,
+              evidence: "other_connection=\($b.connection) role=\($a.role) endpoint=(\($a.x),\($a.y)) lane=\($a.lane_axis):\($a.lane_value)",
+              action: "space parallel endpoint lanes by at least 20 px so arrowheads and labels do not stack"
+            }
+        ]
+      + [
+          $nodes[] as $fanout_node
+          | ($connections | map(select(.source == $fanout_node.id or .target == $fanout_node.id))) as $fanout
+          | select(($fanout | length) >= 3)
+          | range(0; ($fanout | length)) as $i
+          | range($i + 1; ($fanout | length)) as $j
+          | $fanout[$i] as $a
+          | $fanout[$j] as $b
+          | route_segments($nodes; $a)[] as $segment_a
+          | route_segments($nodes; $b)[] as $segment_b
+          | segment_cross_point($segment_a; $segment_b) as $point
+          | select((point_is_endpoint($point; $segment_a) or point_is_endpoint($point; $segment_b)) | not)
+          | {
+              code: "AD-L15",
+              severity: "warn",
+              connection: $a.id,
+              node: $fanout_node.id,
+              evidence: "other_connection=\($b.id) crossing=(\($point.x),\($point.y))",
+              action: "reroute fan-out lanes or reorder siblings so same-source/target connectors do not cross"
+            }
+        ]
+      | unique_by(.code, .connection, .node, .evidence)
       | .[]
       | finding(.code; .severity; $view_id; .connection; .node; .evidence; .action);
 

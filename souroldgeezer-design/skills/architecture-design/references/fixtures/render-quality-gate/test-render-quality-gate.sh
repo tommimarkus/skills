@@ -45,4 +45,26 @@ require_finding "$bendpoint_fixture" "$bendpoint_output" 'view=id-view-bendpoint
 require_finding "$bendpoint_fixture" "$bendpoint_output" 'min_x=80'
 require_finding "$bendpoint_fixture" "$bendpoint_output" 'min_y=80'
 
-echo "render-quality gate negative fixtures produced expected AD-L10 and AD-L11 findings"
+stacked_fixture="$script_dir/stacked-connector-lane.oef.xml"
+if stacked_output="$("$gate" "$stacked_fixture" 2>&1)"; then
+  echo "expected render-quality gate to fail for $stacked_fixture" >&2
+  exit 1
+fi
+
+require_finding "$stacked_fixture" "$stacked_output" 'AD-L13'
+require_finding "$stacked_fixture" "$stacked_output" 'view=id-view-stacked-connector-lane'
+require_finding "$stacked_fixture" "$stacked_output" 'connection=id-conn-source-a-to-target'
+require_finding "$stacked_fixture" "$stacked_output" 'node=id-node-target'
+
+fanout_fixture="$script_dir/fanout-crisscross.oef.xml"
+if fanout_output="$("$gate" "$fanout_fixture" 2>&1)"; then
+  echo "expected render-quality gate to fail for $fanout_fixture" >&2
+  exit 1
+fi
+
+require_finding "$fanout_fixture" "$fanout_output" 'AD-L15'
+require_finding "$fanout_fixture" "$fanout_output" 'view=id-view-fanout-crisscross'
+require_finding "$fanout_fixture" "$fanout_output" 'connection=id-conn-source-to-top'
+require_finding "$fanout_fixture" "$fanout_output" 'node=id-node-source'
+
+echo "render-quality gate negative fixtures produced expected AD-L10, AD-L11, AD-L13, and AD-L15 findings"

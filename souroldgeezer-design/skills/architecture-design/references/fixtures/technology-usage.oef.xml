@@ -113,7 +113,8 @@
         <connection identifier="id-conn-artifact-real-api" relationshipRef="id-rel-artifact-real-api" source="id-viewnode-art-orders-api-zip" target="id-viewnode-app-orders-api" xsi:type="Relationship">
           <bendpoint x="340" y="390"/>
           <bendpoint x="340" y="160"/>
-          <bendpoint x="520" y="160"/>
+          <bendpoint x="660" y="160"/>
+          <bendpoint x="660" y="80"/>
         </connection>
         <connection identifier="id-conn-mi-serves-funcapp" relationshipRef="id-rel-mi-serves-funcapp" source="id-viewnode-tech-managed-identity" target="id-viewnode-function-app" xsi:type="Relationship">
           <bendpoint x="880" y="150"/>
