@@ -22,6 +22,7 @@ Checks:
   AD-L3   node size is large enough for baseline label readability
   AD-L11  connections do not cross unrelated node bodies
   AD-L11  connection source/target nodes still match relationship endpoints
+  AD-L11  first/last bendpoints do not sit inside endpoint node bodies
   AD-L13  visible connections do not stack on the same endpoint lane
   AD-L15  local fan-out connectors do not crisscross
 
@@ -224,6 +225,12 @@ for file in "$@"; do
         and (([$segment.y1, $segment.y2] | max) > $node.y)
       );
 
+    def point_inside_node($point; $node):
+      ($point.x > $node.x)
+      and ($point.x < ($node.x + $node.w))
+      and ($point.y > $node.y)
+      and ($point.y < ($node.y + $node.h));
+
     def segment_cross_point($a; $b):
       if $a.y1 == $a.y2 and $b.x1 == $b.x2 then
         {x: $b.x1, y: $a.y1}
@@ -352,6 +359,35 @@ for file in "$@"; do
               node: $connection.source,
               evidence: "relationship=\($connection.relationship) expects=\($relationship.source)->\($relationship.target) connection_nodes=\($source_node.element)->\($target_node.element)",
               action: "discard stale connection endpoints and reroute against the current relationship source and target"
+            }
+        ]
+      + [
+          $connections[] as $connection
+          | node_by_id($nodes; $connection.source) as $source_node
+          | node_by_id($nodes; $connection.target) as $target_node
+          | [
+              {
+                role: "source",
+                endpoint: $connection.source,
+                node: $source_node,
+                bendpoint: $connection.bendpoints[0]?
+              },
+              {
+                role: "target",
+                endpoint: $connection.target,
+                node: $target_node,
+                bendpoint: $connection.bendpoints[-1]?
+              }
+            ][] as $endpoint
+          | select($endpoint.node != null and $endpoint.bendpoint != null)
+          | select(point_inside_node($endpoint.bendpoint; $endpoint.node))
+          | {
+              code: "AD-L11",
+              severity: "block",
+              connection: $connection.id,
+              node: $endpoint.endpoint,
+              evidence: "endpoint=\($endpoint.role) bendpoint=(\($endpoint.bendpoint.x),\($endpoint.bendpoint.y)) bbox=(\($endpoint.node.x),\($endpoint.node.y),\($endpoint.node.x + $endpoint.node.w),\($endpoint.node.y + $endpoint.node.h))",
+              action: "move first/last bendpoint outside the endpoint node body and enter through a clean side lane"
             }
         ]
       + [

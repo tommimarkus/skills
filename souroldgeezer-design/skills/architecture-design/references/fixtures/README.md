@@ -61,7 +61,9 @@ that can render as cropped PNGs but must fail from the source geometry:
 `cropped-but-failing.oef.xml` fails `AD-L10` and `AD-L11`;
 `bendpoint-origin-drift.oef.xml` fails `AD-L10` with the actual min x/y coming
 from bendpoints rather than node boxes; `stacked-connector-lane.oef.xml` fails
-`AD-L13`; and `fanout-crisscross.oef.xml` fails `AD-L15`.
+`AD-L13`; `fanout-crisscross.oef.xml` fails `AD-L15`; and
+`endpoint-bendpoint-inside.oef.xml` fails the endpoint-bendpoint `AD-L11`
+subcase.
 
 ## Fixtures
 
@@ -79,6 +81,7 @@ from bendpoints rather than node boxes; `stacked-connector-lane.oef.xml` fails
 | `render-quality-gate/bendpoint-origin-drift.oef.xml` | Negative render-quality fixture | n/a | Cropped-render case proving `AD-L10` bounds include bendpoints |
 | `render-quality-gate/stacked-connector-lane.oef.xml` | Negative render-quality fixture | n/a | Explicit endpoint-lane case that fails source-geometry `AD-L13` |
 | `render-quality-gate/fanout-crisscross.oef.xml` | Negative render-quality fixture | n/a | Local fan-out crossing case that fails source-geometry `AD-L15` |
+| `render-quality-gate/endpoint-bendpoint-inside.oef.xml` | Negative render-quality fixture | n/a | Process-view route case that fails endpoint-bendpoint `AD-L11` |
 | `../scripts/validate-oef-layout.sh` | Static layout gate | n/a | Emits Review-style `AD-L*` findings for source OEF geometry |
 | `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
 | `layout-quality-cases.md` | AD-L expectations | n/a | Geometry cases for connector-through-node, allowed ancestor exits, long routes, stacked lanes, wide gaps, and fan-out crisscross |

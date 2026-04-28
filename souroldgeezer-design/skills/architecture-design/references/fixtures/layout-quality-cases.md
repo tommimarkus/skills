@@ -14,7 +14,9 @@ well-formed OEF whose PNG can be cropped to plausible bounds while the source
 still fails `AD-L10` and `AD-L11`; `render-quality-gate/bendpoint-origin-drift.oef.xml`
 proves `AD-L10` computes the used-region origin from nodes and bendpoints
 together; `render-quality-gate/stacked-connector-lane.oef.xml` proves
-`AD-L13`; and `render-quality-gate/fanout-crisscross.oef.xml` proves `AD-L15`.
+`AD-L13`; `render-quality-gate/fanout-crisscross.oef.xml` proves `AD-L15`;
+and `render-quality-gate/endpoint-bendpoint-inside.oef.xml` proves the
+endpoint-bendpoint `AD-L11` subcase.
 Run `render-quality-gate/test-render-quality-gate.sh`; it must emit the
 expected view id, connection id, node id, endpoint-lane, crossing, and actual
 min x/y evidence.
@@ -66,6 +68,13 @@ min x/y evidence.
 - Prior route: Function App -> Application Insights Flow, with bendpoints chosen for that source/target direction.
 - Refresh: relationship is replaced with Application Insights -> Function App Serving, or MI Access edges are replaced by resource -> Function App Serving edges.
 - Expected: old bendpoints are discarded unless the new route still clears every unrelated and nested child node rectangle. If the preserved route crosses Cosmos, Storage, Key Vault, managed identity, or runtime child boxes, report `AD-L11 block` and readiness max `model-valid`.
+
+## Endpoint bendpoint inside endpoint box
+
+- View: Business Process Cooperation or Service Realization.
+- Nodes: Actor / Process / Application Service route with no unrelated-node crossing.
+- Connection: the first bendpoint is inside the source box, or the last bendpoint is inside the target box.
+- Expected: `AD-L11 block` with view id, connection id, endpoint node id, offending bendpoint coordinates, and endpoint bounding box; readiness max `model-valid`.
 
 ## AD-L12 through AD-L15 readability checks
 

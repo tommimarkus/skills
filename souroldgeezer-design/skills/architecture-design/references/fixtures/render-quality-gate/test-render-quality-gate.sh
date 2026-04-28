@@ -67,4 +67,16 @@ require_finding "$fanout_fixture" "$fanout_output" 'view=id-view-fanout-crisscro
 require_finding "$fanout_fixture" "$fanout_output" 'connection=id-conn-source-to-top'
 require_finding "$fanout_fixture" "$fanout_output" 'node=id-node-source'
 
+endpoint_fixture="$script_dir/endpoint-bendpoint-inside.oef.xml"
+if endpoint_output="$("$gate" "$endpoint_fixture" 2>&1)"; then
+  echo "expected render-quality gate to fail for $endpoint_fixture" >&2
+  exit 1
+fi
+
+require_finding "$endpoint_fixture" "$endpoint_output" 'AD-L11'
+require_finding "$endpoint_fixture" "$endpoint_output" 'view=id-view-endpoint-bendpoint-inside'
+require_finding "$endpoint_fixture" "$endpoint_output" 'connection=id-conn-operator-approve'
+require_finding "$endpoint_fixture" "$endpoint_output" 'node=id-node-approve'
+require_finding "$endpoint_fixture" "$endpoint_output" 'bendpoint=(450,70)'
+
 echo "render-quality gate negative fixtures produced expected AD-L10, AD-L11, AD-L13, and AD-L15 findings"
