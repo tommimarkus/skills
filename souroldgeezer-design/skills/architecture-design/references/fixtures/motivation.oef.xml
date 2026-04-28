@@ -103,13 +103,13 @@
         <connection identifier="id-conn-stake-driver" relationshipRef="id-rel-stake-driver" source="id-node-stake-product" target="id-node-driver-conversion" xsi:type="Relationship"/>
         <connection identifier="id-conn-driver-goal" relationshipRef="id-rel-driver-goal" source="id-node-driver-conversion" target="id-node-goal-conversion" xsi:type="Relationship"/>
         <connection identifier="id-conn-outcome-goal" relationshipRef="id-rel-goal-outcome" source="id-node-outcome-q3" target="id-node-goal-conversion" xsi:type="Relationship">
-          <bendpoint x="160" y="455"/>
-          <bendpoint x="470" y="455"/>
+          <bendpoint x="160" y="450"/>
+          <bendpoint x="470" y="450"/>
         </connection>
         <connection identifier="id-conn-req-sso-goal" relationshipRef="id-rel-goal-req-sso" source="id-node-req-sso" target="id-node-goal-conversion" xsi:type="Relationship"/>
         <connection identifier="id-conn-req-onepage-goal" relationshipRef="id-rel-goal-req-onepage" source="id-node-req-onepage" target="id-node-goal-conversion" xsi:type="Relationship">
-          <bendpoint x="825" y="455"/>
-          <bendpoint x="470" y="455"/>
+          <bendpoint x="820" y="450"/>
+          <bendpoint x="470" y="450"/>
         </connection>
         <connection identifier="id-conn-pcidss-req-sso" relationshipRef="id-rel-pcidss-req-sso" source="id-node-constraint-pcidss" target="id-node-req-sso" xsi:type="Relationship"/>
         <connection identifier="id-conn-principle-pcidss" relationshipRef="id-rel-principle-pcidss" source="id-node-principle-tokenise" target="id-node-constraint-pcidss" xsi:type="Relationship"/>

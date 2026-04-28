@@ -17,9 +17,10 @@ Validate every *.oef.xml fixture in this directory:
   2. Identifier attributes are unique across the OEF file.
   3. Every view has materialized Element nodes with x/y/w/h geometry.
   4. Every view has Relationship connections with source/target endpoints.
-  5. Rendering produces nonblank PNGs larger than Archi's 100x100 empty-view
+  5. Source geometry passes the AD-L render-quality gate.
+  6. Rendering produces nonblank PNGs larger than Archi's 100x100 empty-view
      placeholder.
-  6. The fixture set covers all seven architecture-design supported viewpoints.
+  7. The fixture set covers all seven architecture-design supported viewpoints.
 
 Options:
   --render-script PATH       Path to an archi-render.sh-compatible script.
@@ -107,6 +108,9 @@ command -v xmllint  >/dev/null 2>&1 || die "xmllint not in PATH"
 command -v yq       >/dev/null 2>&1 || die "yq not in PATH"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+layout_gate="$script_dir/../scripts/validate-oef-layout.sh"
+
+[[ -x "$layout_gate" ]] || die "layout gate is not executable: $layout_gate"
 
 tmp_root=""
 if [[ -z "$render_cache_root" || -z "$render_output_root" ]]; then
@@ -233,6 +237,7 @@ for fixture in "${fixtures[@]}"; do
   xmllint --noout "$fixture"
   check_unique_identifiers "$fixture" || die "duplicate identifier attribute in $fixture"
   check_geometry "$fixture" || die "missing materialized view geometry in $fixture"
+  "$layout_gate" "$fixture"
   record_viewpoints "$fixture"
 
   render_args=(--quiet --cache-root "$render_cache_root" --output-root "$render_output_root")

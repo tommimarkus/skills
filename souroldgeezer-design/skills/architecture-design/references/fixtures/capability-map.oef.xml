@@ -100,8 +100,8 @@
         <connection identifier="id-conn-revenue-real-payment" relationshipRef="id-rel-revenue-real-payment" source="id-node-func-revenue-ops" target="id-node-cap-payment-readiness" xsi:type="Relationship"/>
         <connection identifier="id-conn-fulfil-real-control" relationshipRef="id-rel-fulfil-real-control" source="id-node-func-fulfilment-ops" target="id-node-cap-fulfilment-control" xsi:type="Relationship"/>
         <connection identifier="id-conn-service-real-growth" relationshipRef="id-rel-service-real-growth" source="id-node-bsvc-guided-purchase" target="id-node-cap-customer-growth" xsi:type="Relationship">
-          <bendpoint x="640" y="540"/>
-          <bendpoint x="640" y="350"/>
+          <bendpoint x="1120" y="540"/>
+          <bendpoint x="1120" y="350"/>
         </connection>
       </view>
     </diagrams>

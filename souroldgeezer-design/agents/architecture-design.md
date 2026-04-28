@@ -31,8 +31,11 @@ When invoked, run the architecture-design skill and present results:
    Preserve existing element identifiers, `<name>` values, documentation,
    properties, and view placements across Extract re-runs.
    Run [professional-readiness.md](../skills/architecture-design/references/procedures/professional-readiness.md)
-   before returning Build / Extract output or Review findings; classify the
-   artifact as `model-valid`, `diagram-readable`, or `review-ready`.
+   before returning Build / Extract output or Review findings; run
+   [validate-oef-layout.sh](../skills/architecture-design/references/scripts/validate-oef-layout.sh)
+   when a local OEF path is available so cropped renders do not hide
+   source-geometry `AD-L*` failures; classify the artifact as `model-valid`,
+   `diagram-readable`, or `review-ready`.
 3. For build mode: produce an OEF XML model at the canonical path that
    embodies the reference's decision defaults — Core Framework palette
    unless the diagram kind requires an extension; every `<element>` and
@@ -57,8 +60,9 @@ When invoked, run the architecture-design skill and present results:
    views. Do not emit a
    model-root layout marker or model-root `<properties>` block. Cite reference
    sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
-   never duplicate reference prose; run the §10 self-check (`[static]` /
-   `[visual]` / `[runtime]` tags) and professional-readiness curation before handing back.
+   never duplicate reference prose; run the source-geometry gate, the §10
+   self-check (`[static]` / `[visual]` / `[runtime]` tags), and
+   professional-readiness curation before handing back.
 4. For extract mode: invoke the relevant lifting and emission procedures in
    [references/procedures/](../skills/architecture-design/references/procedures/)
    — `lifting-rules-dotnet.md` for the Application Layer, `lifting-rules-bicep.md`
@@ -86,7 +90,8 @@ When invoked, run the architecture-design skill and present results:
    the model, but use the professional-readiness pass to avoid leaving raw
    inventory dumps as views.
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
-   walks reference §10 checklist and emits `AD-*` / `AD-Q*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
+   runs the source-geometry gate, walks reference §10 checklist, and emits
+   `AD-*` / `AD-Q*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
    drift detection (OEF file + current code/IaC) invokes
    [references/procedures/drift-detection.md](../skills/architecture-design/references/procedures/drift-detection.md)
    and emits `AD-DR-*` findings. Lead with `Professional readiness:

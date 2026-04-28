@@ -101,11 +101,11 @@
         <connection identifier="id-conn-customer-assign-verify" relationshipRef="id-rel-customer-assign-verify" source="id-node-customer" target="id-node-process-verify" xsi:type="Relationship"/>
         <connection identifier="id-conn-verify-access-order" relationshipRef="id-rel-verify-access-order" source="id-node-process-verify" target="id-node-bo-order" xsi:type="Relationship"/>
         <connection identifier="id-conn-charge-access-payment" relationshipRef="id-rel-charge-access-payment" source="id-node-process-charge" target="id-node-bo-payment" xsi:type="Relationship">
-          <bendpoint x="685" y="350"/>
+          <bendpoint x="680" y="350"/>
           <bendpoint x="970" y="350"/>
         </connection>
         <connection identifier="id-conn-ship-access-order" relationshipRef="id-rel-ship-access-order" source="id-node-process-ship" target="id-node-bo-order" xsi:type="Relationship">
-          <bendpoint x="965" y="370"/>
+          <bendpoint x="960" y="370"/>
           <bendpoint x="550" y="370"/>
         </connection>
       </view>

@@ -711,7 +711,13 @@ Diagram kinds not in this list (Product Map, Organisation Structure, Information
 
 ## 10. Review checklist
 
-Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[visual]` (requires rendering and inspecting diagram output), `[runtime]` (requires reading the current code / IaC at the canonical paths).
+Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[visual]` (requires rendering and inspecting diagram output), `[runtime]` (requires reading the current code / IaC at the canonical paths). When a local OEF path is available, run the bundled source-geometry gate before render inspection:
+
+```bash
+souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh docs/architecture/<feature>.oef.xml
+```
+
+The gate emits Review-style `AD-L*` findings with the view id and affected connection or node id. It is required because renderers may crop PNG exports to content bounds, hiding off-origin source coordinates that still fail `AD-L10`.
 
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).

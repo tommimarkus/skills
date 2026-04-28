@@ -93,7 +93,7 @@
         <connection identifier="id-conn-observability-real-telemetry" relationshipRef="id-rel-observability-real-telemetry" source="id-node-wp-observability" target="id-node-deliv-telemetry" xsi:type="Relationship"/>
         <connection identifier="id-conn-baseline-triggers-gap" relationshipRef="id-rel-baseline-triggers-gap" source="id-node-plat-baseline" target="id-node-gap-release-hardening" xsi:type="Relationship"/>
         <connection identifier="id-conn-gap-triggers-event" relationshipRef="id-rel-gap-triggers-event" source="id-node-gap-release-hardening" target="id-node-event-production-cutover" xsi:type="Relationship">
-          <bendpoint x="475" y="350"/>
+          <bendpoint x="480" y="350"/>
           <bendpoint x="780" y="350"/>
         </connection>
         <connection identifier="id-conn-event-triggers-target" relationshipRef="id-rel-event-triggers-target" source="id-node-event-production-cutover" target="id-node-plat-target" xsi:type="Relationship">

@@ -37,12 +37,28 @@ the fixture set is considered valid:
 
 The gate discovers all OEF fixtures in this directory, passes explicit cache and
 output roots through to `archi-render.sh`, verifies materialized view geometry,
-renders every diagram, and fails if any PNG is Archi's blank 100 x 100
-placeholder. It also fails when the fixture set does not cover all seven
-supported viewpoint values: Capability Map, Application Cooperation, Service
-Realization, Technology Usage, Migration, Motivation, and Business Process
-Cooperation. If no cache or output root is supplied, the validator creates a
-temporary root under `${TMPDIR:-/tmp}`.
+runs [`../scripts/validate-oef-layout.sh`](../scripts/validate-oef-layout.sh)
+for source-geometry `AD-L*` findings, renders every diagram, and fails if any
+PNG is Archi's blank 100 x 100 placeholder. It also fails when the fixture set
+does not cover all seven supported viewpoint values: Capability Map,
+Application Cooperation, Service Realization, Technology Usage, Migration,
+Motivation, and Business Process Cooperation. If no cache or output root is
+supplied, the validator creates a temporary root under `${TMPDIR:-/tmp}`.
+
+## Static render-quality gate
+
+Run the source-geometry gate directly when a renderer is unavailable or before
+rendering a project model:
+
+```bash
+../scripts/validate-oef-layout.sh /path/to/docs/architecture/<feature>.oef.xml
+```
+
+It emits Review-style findings with the view id, smell code, and affected
+connection or node id, then exits nonzero when any `AD-L*` finding is present.
+The negative fixture in `render-quality-gate/cropped-but-failing.oef.xml` is
+well-formed OEF that can render as a cropped PNG but must fail `AD-L10` and
+`AD-L11` from the source geometry.
 
 ## Fixtures
 
@@ -56,6 +72,8 @@ temporary root under `${TMPDIR:-/tmp}`.
 | `motivation.oef.xml` | §9.6 Motivation | ~8 | Stakeholder → Driver → Goal → Outcome → Requirement → Constraint tree |
 | `business-process-cooperation.oef.xml` | §9.7 Business Process Cooperation | ~8 | Lane-based process flow with Triggering chain |
 | `validate-render-fixtures.sh` | Render gate | n/a | Discovers and validates every committed OEF fixture in this directory |
+| `render-quality-gate/cropped-but-failing.oef.xml` | Negative render-quality fixture | n/a | Cropped-render case that fails source-geometry `AD-L10` / `AD-L11` |
+| `../scripts/validate-oef-layout.sh` | Static layout gate | n/a | Emits Review-style `AD-L*` findings for source OEF geometry |
 | `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
 | `layout-quality-cases.md` | AD-L expectations | n/a | Geometry cases for connector-through-node, allowed ancestor exits, long routes, stacked lanes, wide gaps, and fan-out crisscross |
 | `lifting-quality-cases.md` | Extract expectations | n/a | Procedure cases for Bicep RBAC, deployment topology, forward-only seed views, and external trust boundaries |

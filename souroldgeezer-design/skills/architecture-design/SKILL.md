@@ -91,6 +91,7 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → three-tier layout engine (Tier 0 architect-position preservation; Tier 1 Sugiyama-v1 core: cycle handling, layer assignment, 4-pass barycentric, median coordinate assignment, Manhattan A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisation per §9 diagram kind); Review restates its rules as `AD-L*` checks |
 | `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
+| `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, and `AD-L11`; complements render inspection because cropped PNG exports can hide off-origin source geometry |
 
 Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
 
@@ -203,9 +204,9 @@ Project assimilation:
 
 5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Do **not** emit `propid-archi-model-banded` or any other layout marker on the `<model>` element; model-root `<properties>` is invalid OEF and triggers `AD-17`. Emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views`. `<propertyDefinitions>` follows `<organizations>` and immediately precedes `<views>`.
 
-6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
+6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. When the OEF exists as a local file, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) against it before visual render inspection; treat every emitted line as a source-geometry `AD-L*` finding and fix blocking / warning layout findings before claiming `diagram-readable`. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
-   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect all outputs for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, and local fan-out crisscross. Do not sample. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings.
+   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect all outputs for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, and local fan-out crisscross. Do not sample. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings from the source-geometry gate.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
    State the achieved artifact quality level. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L15`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved.
@@ -263,7 +264,7 @@ Project assimilation:
 
 **Layout-severity dispatch.** Layout findings are evaluated from view geometry directly. There is no valid model-root layout marker. `AD-L11` is always `block`; `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15` are readability blockers for `diagram-readable` and `review-ready` even when their finding severity is `warn`.
 
-1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements. If a view has no materialized element nodes, missing `x` / `y` / `w` / `h`, no relationship connections for its visual story, or duplicate `identifier` attributes in the OEF file, cap the artefact at `model-valid` and report it before judging layout polish.
+1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements. If a local file path is available, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) and include its `AD-L*` findings directly in the Review output; this catches `AD-L10` origin drift even when a renderer crops the PNG to plausible bounds. If a view has no materialized element nodes, missing `x` / `y` / `w` / `h`, no relationship connections for its visual story, or duplicate `identifier` attributes in the OEF file, cap the artefact at `model-valid` and report it before judging layout polish.
 
 2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify the artifact as `model-valid`, `diagram-readable`, or `review-ready`. Findings become `AD-Q*` smell codes from reference §8.
 
@@ -374,6 +375,7 @@ Layers in scope: <comma-separated>
 Artifact quality: model-valid | diagram-readable | review-ready | not assessed
 Self-check: pass | <n failures> | n/a
 Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
+Source geometry gate: not run | passed | failed <n> findings
 Project assimilation:
   <block per the Project assimilation section above>
 Forward-only layers stubbed: <list, or "none">

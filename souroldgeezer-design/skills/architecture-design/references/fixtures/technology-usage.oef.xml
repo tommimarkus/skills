@@ -96,10 +96,10 @@
             viewpoint="Technology Usage">
         <name xml:lang="en">Checkout Runtime — Technology Usage</name>
         <documentation xml:lang="en">Hosting-tower view: Checkout Web App and Orders API sit above their hosting Nodes. The Function App contains its runtime and deployable artifact; managed identity, data stores, key vault, and observability services sit in a right-side dependency column.</documentation>
-        <node identifier="id-viewnode-app-web" elementRef="id-app-web" xsi:type="Element" x="60" y="40" w="240" h="80"/>
+        <node identifier="id-viewnode-app-web" elementRef="id-app-web" xsi:type="Element" x="40" y="40" w="240" h="80"/>
         <node identifier="id-viewnode-app-orders-api" elementRef="id-app-orders-api" xsi:type="Element" x="400" y="40" w="240" h="80"/>
         <node identifier="id-viewnode-tech-managed-identity" elementRef="id-tech-managed-identity" xsi:type="Element" x="760" y="40" w="240" h="80"/>
-        <node identifier="id-viewnode-static-web-apps" elementRef="id-node-static-web-apps" xsi:type="Element" x="60" y="210" w="240" h="90"/>
+        <node identifier="id-viewnode-static-web-apps" elementRef="id-node-static-web-apps" xsi:type="Element" x="40" y="210" w="240" h="90"/>
         <node identifier="id-viewnode-function-app" elementRef="id-node-function-app" xsi:type="Element" x="360" y="190" w="320" h="270">
           <node identifier="id-viewnode-sysw-functions-worker" elementRef="id-sysw-functions-worker" xsi:type="Element" x="390" y="250" w="260" h="70"/>
           <node identifier="id-viewnode-art-orders-api-zip" elementRef="id-art-orders-api-zip" xsi:type="Element" x="390" y="350" w="260" h="70"/>
@@ -111,6 +111,8 @@
         <connection identifier="id-conn-swa-assign-web" relationshipRef="id-rel-swa-assign-web" source="id-viewnode-static-web-apps" target="id-viewnode-app-web" xsi:type="Relationship"/>
         <connection identifier="id-conn-funcapp-assign-api" relationshipRef="id-rel-funcapp-assign-api" source="id-viewnode-function-app" target="id-viewnode-app-orders-api" xsi:type="Relationship"/>
         <connection identifier="id-conn-artifact-real-api" relationshipRef="id-rel-artifact-real-api" source="id-viewnode-art-orders-api-zip" target="id-viewnode-app-orders-api" xsi:type="Relationship">
+          <bendpoint x="340" y="390"/>
+          <bendpoint x="340" y="160"/>
           <bendpoint x="520" y="160"/>
         </connection>
         <connection identifier="id-conn-mi-serves-funcapp" relationshipRef="id-rel-mi-serves-funcapp" source="id-viewnode-tech-managed-identity" target="id-viewnode-function-app" xsi:type="Relationship">
