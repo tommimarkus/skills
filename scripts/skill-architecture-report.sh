@@ -125,6 +125,48 @@ add_finding() {
     "$(field_safe "$verify")" >> "$report_tmp"
 }
 
+support_is_advertised() {
+  local file="$1"
+  local target="$2"
+
+  if grep -Fq "($target)" "$file" ||
+      grep -Fq "($target#" "$file" ||
+      grep -Fq "($target/)" "$file" ||
+      grep -Fq "($target/#" "$file"; then
+    return 0
+  fi
+
+  awk -v target="$target" '
+    function path_char(ch) {
+      return ch ~ /[[:alnum:]_.\/-]/
+    }
+    function target_on_line(line, target,    pos, rest, offset, before, after, after2) {
+      offset = 0
+      rest = line
+      while ((pos = index(rest, target)) > 0) {
+        before = (offset + pos == 1) ? "" : substr(line, offset + pos - 1, 1)
+        after = substr(line, offset + pos + length(target), 1)
+        after2 = substr(line, offset + pos + length(target) + 1, 1)
+        if (!path_char(before) && (!path_char(after) || (after == "/" && !path_char(after2)))) {
+          return 1
+        }
+        offset += pos
+        rest = substr(line, offset + 1)
+      }
+      return 0
+    }
+    {
+      lower = tolower($0)
+      has_cue = lower ~ /(read|load|use|consult|open|see|follow|run|verify|validate|inspect|cite|apply|emit|copy|rerun|re-run|scan)/
+      has_negative = lower ~ /(do not|never|ignore|obsolete|deprecated|deleted|remove|historical)/
+      if (!has_negative && target_on_line($0, target) && (has_cue || $0 ~ /^[[:space:]]*\|/)) {
+        found = 1
+      }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$file"
+}
+
 skill_scope() {
   local rel="$1"
   case "$rel" in
@@ -254,9 +296,18 @@ scan_skill() {
       local support_bucket
       support_rel_from_repo="$(relpath "$support")"
       support_rel_from_skill="${support_rel_from_repo#"$skill_dir"/}"
-      if grep -Fq "$support_rel_from_skill" "$file"; then
-        continue
-      fi
+
+      case "$support_rel_from_skill" in
+        */README.md)
+          support_bucket="${support_rel_from_skill%/README.md}"
+          if support_is_advertised "$file" "$support_rel_from_skill" ||
+              support_is_advertised "$file" "$support_bucket"; then
+            continue
+          fi
+          printf '%s|%s\n' "$support_bucket" "$support_rel_from_skill" >> "$unadvertised_tmp"
+          continue
+          ;;
+      esac
 
       support_bucket="$support_rel_from_skill"
       case "$support_rel_from_skill" in
@@ -264,6 +315,10 @@ scan_skill() {
           support_bucket="${support_rel_from_skill%/*}"
           ;;
       esac
+      if support_is_advertised "$file" "$support_rel_from_skill" ||
+          support_is_advertised "$file" "$support_bucket"; then
+        continue
+      fi
       printf '%s|%s\n' "$support_bucket" "$support_rel_from_skill" >> "$unadvertised_tmp"
     done
 

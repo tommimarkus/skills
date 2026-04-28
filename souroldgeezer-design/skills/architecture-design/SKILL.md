@@ -151,7 +151,9 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, `AD-L11`, `AD-L13`, and `AD-L15`; complements render inspection because cropped PNG exports can hide off-origin source geometry and explicit connector lanes can hide stacked-arrow / fan-out defects |
 | `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → render every OEF view to PNG through Archi's headless CLI. Archi is a weak dependency with no fallback renderer; missing Archi / `DISPLAY` / tool prerequisites must be reported as "render inspection not run" |
 
-Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
+Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. Use [`references/smell-catalog.md`](references/smell-catalog.md) as the compact code-to-reference index when emitting or interpreting findings. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
+
+Regression fixtures live under `references/fixtures`. Read [`references/fixtures/README.md`](references/fixtures/README.md) before validating the full fixture corpus or fixture acceptance bar. Read `references/fixtures/render-quality-gate` only when changing the static layout gate, `AD-L*` source-geometry checks, or the negative cropped-render regression cases.
 
 Adding a new input source later (Terraform, Azure Pipelines YAML, ARM templates, Kubernetes manifests) means adding a new procedure file, not an extension.
 
@@ -440,138 +442,34 @@ failure, and "Visual render inspection: not run".
 
 2. **Answer concisely.** Notation Q&A: one or two sentences citing the reference section and (if applicable) the ArchiMate® 3.2 chapter or Appendix B entry. Domain discovery / reverse lookup: return the ranked list or the single resolved Business Process; keep it to one line per entry. Include the default rule when a §4 layer-specific preference or §5.5 well-formedness rule applies.
 
-3. **Footer disclosure** (single line in lookup mode).
-
 ## Output format
 
-### Build mode
+Every mode returns the mode result, evidence, quality level, change classification,
+verification state, and footer fields needed by downstream agents. Read
+[references/output-format.md](references/output-format.md) before emitting a final
+Build, Extract, Review, or Lookup response, and copy the relevant skeleton rather
+than inventing a new shape.
 
-```
-<OEF XML document>
+Minimum footer fields for all modes:
 
-Self-check:
-  Well-formedness:       <n>/<n>  [static verified]
-  Layer discipline:      <n>/<n>  [static verified]
-  Appendix B relations:  <n>/<n>  [static verified]
-  Artifact quality:      model-valid | diagram-readable | review-ready
-  Runtime correspondence: <n>/<n> [runtime verified — or source-aligned, IaC verification required]
-
-Deviations from defaults (if any): <list with reason>
-```
-
-### Extract mode
-
-```
-<OEF XML document with FORWARD-ONLY comment blocks around fully-stubbed element sections, and LIFT-CANDIDATE XML comments preceding each Business Process / Event / Interaction emitted from backend workflow sources>
-
-Extraction summary:
-  Layers lifted:          Application (<n>), Technology (<n>), Implementation & Migration (<n>), Business-Process (<n_lift_candidates>)
-  Layers stubbed (forward-only): Motivation, Strategy; Business-other (Actor / Role / Collaboration / Object / Contract / Product / Service / Function)
-  Sources read:           <list of files, including Durable Functions orchestrators and Logic Apps workflows when present>
-  LIFT-CANDIDATE confidence: <n_high> high / <n_medium> medium / <n_low> low
-  Elements preserved from existing diagram: <n>/<n>
-  Artifact quality:       model-valid | diagram-readable | review-ready
-  Drift vs existing diagram: <added / removed / changed counts, or n/a if greenfield>
-```
-
-### Review mode
-
-Lead with:
-
-```
-Professional readiness: model-valid | diagram-readable | review-ready
-Top artifact blockers: <none | concise list of AD-Q / AD-L / AD-B / AD-* codes>
-Change classification: semantic model change yes|no; view geometry change yes|no; documentation/render inventory change yes|no
-```
-
-Then emit one per-finding block for each failure, followed by the rollup. All findings cite `AD-*` / `AD-Q*` code + reference §n + ArchiMate® 3.2 §/Appendix when applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `visual` (render inspection), `runtime` (vs current code/IaC). Only `static` and completed `visual` findings are definitively pass / fail from their evidence; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code." The rollup states whether architecture semantics changed.
-
-### Lookup mode
-
-Two to four lines of prose + one footer line.
-
-### Footer (all modes)
-
-```
-Mode: build | extract | review | lookup
-Reference: souroldgeezer-design/docs/architecture-reference/architecture.md
-Canonical path: docs/architecture/<feature>.oef.xml
-Diagram kind: <reference §9 kind name — primary kind in scope this run>
-Diagram kinds present: <M> of 7 (<comma-separated canonical viewpoint names>)
-Diagram kinds missing: <comma-separated canonical viewpoint names, or "none">
-Layout engine: Sugiyama-v1 [+ <viewpoint> specialisation, when applicable]
-Layers in scope: <comma-separated>
-Artifact quality: model-valid | diagram-readable | review-ready | not assessed
-Change classification:
-  Semantic model change: yes | no
-  View geometry change: yes | no
-  Documentation/render inventory change: yes | no
-  Notes: <relationship ids hidden from specific views, committed render/docs artifacts updated, or "none">
-Self-check: pass | <n failures> | n/a
-Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
-Render artifacts: not requested | not run (<blocker>) | <output directory and PNG count>
-Source geometry gate: not run | passed | failed <n> findings
-Project assimilation:
-  <block per the Project assimilation section above>
-Forward-only layers stubbed: <list, or "none">
-Process-view emission:
-  Top-level Business Processes:    <n>
-  Sub-processes (Composition):     <m>
-  §9.7 cooperation views emitted:  <0 or 1>
-  §9.3 service-realization views:  <distinct story views emitted> (<processes covered> processes; <same-story consolidations> consolidations)
-  Suppressed by propid-coop-view-exclude:    <comma-separated identifiers, or "none">
-  Suppressed by propid-drilldown-exclude:    <comma-separated identifiers, or "none">
-  Over-budget views (AD-L4):       <comma-separated view identifiers, or "none">
-Runtime-verified drift: <n findings, or "drift detection not run">
-```
+- Mode.
+- Reference path.
+- Canonical OEF path.
+- Primary diagram kind and all diagram kinds present/missing.
+- Artifact quality: `model-valid`, `diagram-readable`, `review-ready`, or `not assessed`.
+- Change classification: semantic model, view geometry, documentation/render inventory.
+- Self-check, source-geometry gate, visual render inspection, render artifacts, and runtime drift state.
+- Project assimilation and forward-only / process-view emission disclosure when applicable.
 
 `Diagram kinds present` / `Diagram kinds missing` are computed by scanning the produced or parsed OEF for every `<view>` `viewpoint=` attribute and matching against the seven canonical strings in reference §9.1–§9.7 (Capability Map · Application Cooperation · Service Realization · Technology Usage · Migration · Motivation · Business Process Cooperation). The `M of 7` count is the file-wide coverage; `Diagram kind:` above remains the primary kind in scope for the current run (the one the architect asked for in pre-flight, or the kind being reviewed). For a single-kind file, `Diagram kinds present: 1 of 7` and the `Diagram kind:` line agree.
 
-## Red flags — stop and re-run
+## Red flags
 
-Output contains any of the following? Stop; fix before delivering:
-
-- **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate® 3.2 Appendix B (Relationships Table).
-- **View cannot answer an architecture question.** Fix per `AD-Q1` / `AD-Q2`; either sharpen the view's purpose and viewpoint or remove the view.
-- **Generated view has no materialized geometry.** Add concrete `<node xsi:type="Element">` placements and `<connection xsi:type="Relationship">` routing for every emitted view; element / relationship definitions alone are not a professional diagram.
-- **Duplicate OEF `identifier` values.** Fix per `AD-17`; every model element, relationship, view node, and view connection identifier shares one XML ID space.
-- **Review-ready claimed while professional-quality findings remain.** Fix `AD-Q*` findings first, then restate the quality level honestly as `model-valid` or `diagram-readable` if gaps remain.
-- **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` XML-comment marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2). The marker is an XML comment (`<!-- ... -->`) per reference §7.3; the `'`-prefixed form is wrong (PlantUML / INI syntax) — OEF output is XML.
-- **Business Process, Event, or Interaction emitted by Extract mode without a `LIFT-CANDIDATE` marker** (or with a marker missing the required `source=` or `confidence=` attribute). Fix per `AD-14-LC`; these elements are *partially* forward-only — lifted from backend workflow sources per reference §7.4 and tagged so the architect can confirm each one.
-- **Motivation or Strategy elements emitted by Extract mode without a `FORWARD-ONLY` marker.** Fix per `AD-14`.
-- **Layer soup** — a single diagram containing Business, Application, Technology, Motivation, and Strategy elements without a clear concern. Fix per `AD-1`; pick one of the seven supported diagram kinds (reference §9).
-- **Business Process Cooperation view lacking a Triggering or Flow chain** through its Behaviour elements, or containing non-Business-layer elements. Fix per `AD-B-1` / `AD-B-4`.
-- **§9.3 Service Realization view (Process-rooted modality) with a Business Process at top but no realising Application Service** (`AD-B-6`) or **no Application Component realising the Application Service** (`AD-B-7`).
-- **§9.3 Service Realization view for a user-driven Business Process** (one with a Business Actor Assignment per reference §4.1) **lacking a UI Application Component and Application Interface** at the entry point. Fix per `AD-B-10`; add the UI Component (for Blazor: `<name>` = the page component's file path) and the Application Interface (`<name>` = the `@page` route) with the appropriate Realisation / Assignment edges.
-- **Business Process in a §9.7 view with no Realisation into any §9.3 view (Process-rooted modality) for the same feature.** Fix per `AD-B-8`; either author the drill-down view or retract the process.
-- **§9.7 cooperation view with only one Business Process.** Fix per `AD-B-11`; cooperation requires ≥ 2 cooperating elements per the spec definition. Either add the feature's other top-level processes (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 1), or change the view's `viewpoint` to `"Service Realization"` for single-process focus.
-- **Sub-process without its own §9.3 drill-down view.** Fix per `AD-B-12`; emit a §9.3 view rooted on the sub-process (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 2), or set `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` on the process if intentional (reference §6.4b).
-- **Top-level process missing from the feature's §9.7 cooperation view.** Fix per `AD-B-13`; add the process as a node in the §9.7 view (per [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md) §2 rule 1), or set `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` on the process if intentional (deprecated, planned, external; reference §6.4b).
-- **Missing Realisation chain** — a Business Service in scope with no Application Service realising it, or an Application Service with no Application Component. Fix per `AD-6`.
-- **Active structure directly accessing passive structure** — an Actor drawn accessing a Business Object without a Process / Function in between. Fix per `AD-4`.
-- **Association overuse** — more than one Association relationship in a single diagram. Fix per `AD-5`; pick a real relationship.
-- **Migration view without a Plateau axis.** Fix per `AD-9`.
-- **RBAC-only technology path without visible Managed Identity Access.** Fix per `AD-18`; add the Managed Identity Technology Service and Access relationship from identity to protected resource, or remove the RBAC-only claim.
-- **Fictitious or semantically wrong deployment Plateaus.** Fix per `AD-19` / `AD-20`; remove unevidenced environments and do not connect sibling environment Plateaus by Triggering unless the view documents true as-is / to-be migration intent.
-- **External Application Component without trust-boundary Grouping.** Fix per `AD-21`; aggregate external provider Components into an `{Provider} (external)` Grouping and internal Components into the project-internal Grouping when shown in Application Cooperation.
-- **Extract refused with no guidance.** Fix by suggesting the correct mode (Build) and naming the forward-only layers.
-- **Drift finding asserting a pass from static review alone.** Fix: restate as "source-aligned; drift re-check required against current code/IaC."
-- **Emitting elements with invalid `xsi:type`.** Every `<element>` and `<relationship>` must use an exact ArchiMate® 3.2 type name (reference §6.2 for elements, §6.3 for relationships). Misspellings (`Application_Component`, `app-component`, `ApplicationAPI`) break tool import.
-- **View `<node>` or `<connection>` emitted without `xsi:type`.** Fix per `AD-15`; OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — `<node>` must carry `xsi:type="Element"` (or `Container` / `Label`) and `<connection>` must carry `xsi:type="Relationship"` (or `Line`). Archi's XSD-validating import rejects bare elements with `cvc-type.2`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
-- **`<metadata>` block with catalog payload in the ArchiMate® namespace** — the catalog content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude. Fix per `AD-16`; the prelude legitimately inherits the ArchiMate® default namespace, but catalog payload elements must come from a non-ArchiMate® namespace (Dublin Core or similar). See reference §6.1a for the canonical block layout. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
-- **Model children invalid or out of OEF sequence.** Fix per `AD-17`; reference §6 states the mandatory order — `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views`. A model-root `<properties>` block is invalid OEF, including the old `propid-archi-model-banded` layout marker. Archi rejects invalid or out-of-order children with `cvc-complex-type.2.4.a`. `xmllint --noout` does *not* catch this — use `xmllint --schema <url>` or open in Archi.
-- **Node placed in violation of relative layer ordering.** Fix per `AD-L1`; reference §6.4a defines the relative ordering (Strategy above Business above Application above Technology above Physical) — absolute y-bands are not specified (Phase 6 bbox normalisation makes them content-dependent).
-- **Two nodes overlapping** at the same nesting depth in the same view. Fix per `AD-L2`; re-run the layout procedure or widen the containing cell.
-- **Label truncation risk** (`w < 120`, `h < 55`, or `w` too small for the `<name>`). Fix per `AD-L3`; enlarge `w` in 20-px steps until the label fits at the default Archi font.
-- **View over budget** — >20 elements or >30 relationships in a single `<view>`. Fix per `AD-L4`; split the view, or promote a cluster to a Grouping (§4.8; logical, never a layer container).
-- **Nested-plus-edge** — a child node visually nested inside a parent *and* the parent–child `<connection>` also drawn in the same view. Fix per `AD-L7`; hide the edge via the `propid-archi-arm` = `hide` property on the relationship, or draw the two elements side-by-side (un-nest).
-- **Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10. Fix per `AD-L8`; re-snap to the 10-px grid.
-- **Hierarchy violation.** Fix per `AD-L9`; a Realization / Used-by / Serving edge between same-layer elements drawn against topological direction. Re-run Tier 1 phase 3 (within-layer ordering); if cycle present, phase 1 handles.
-- **Canvas not normalised at origin.** Fix per `AD-L10`; the used region's top-left should be at `(40, 40) ± 10 px`. Re-run Tier 1 phase 6 (bbox normalisation).
-- **Connector passes through an unrelated node body, or first / last bendpoint sits inside the endpoint box.** Fix per `AD-L11`; Tier 1 phase 5 (Manhattan A* with obstacle avoidance) should prevent. Allowed intersections are only source, target, and required source/target ancestor containers, and endpoint bendpoints must stay outside those endpoint bodies so the rendered connector enters through a side lane. Stale bendpoints after relationship replacement or source/target inversion are not safe to preserve. This is a blocking finding and professional readiness cannot exceed `model-valid`.
-- **View-orphan, stacked connector, wide gap, or fan-out crisscross layout failure.** Fix per `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15`; reroute, regroup, split, or compact the view before calling it `diagram-readable`.
-- **Long bus route, duplicate visible story path, misleading boundary crossing, or ambiguous nested ownership.** Fix per `AD-L16` / `AD-L17` / `AD-L18` / `AD-L19`; shorten/reroute, hide duplicated view connections while preserving model relationships, split the view, or replace ambiguous nesting with explicit side-by-side relationships before calling it `diagram-readable`.
-- **Duplicate Service Realization drill-downs for the same realization story.** Fix per `AD-B-14`; consolidate into one process-rooted §9.3 view unless the process changes application, data, technology, security, deployment, UI-entry, or business semantics materially.
+Read [references/red-flags.md](references/red-flags.md) when output contains an
+`AD-*`, `AD-Q*`, `AD-L*`, or `AD-B-*` finding, when an emitted OEF fails import,
+or before claiming `diagram-readable` / `review-ready` after a failed check.
+Those red flags are stop conditions: fix them or explicitly lower the claimed
+quality level before delivering.
 
 ## Complementary skills
 

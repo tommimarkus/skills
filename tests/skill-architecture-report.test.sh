@@ -21,6 +21,17 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local file="$1"
+  local unexpected="$2"
+  if grep -Fq -- "$unexpected" "$file"; then
+    printf 'Did not expect to find: %s\n' "$unexpected" >&2
+    printf 'Actual output:\n' >&2
+    sed -n '1,220p' "$file" >&2
+    fail "found unexpected output"
+  fi
+}
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -65,6 +76,10 @@ MD
 
 cat > "$fixture/example-plugin/skills/noisy-skill/references/extra.md" <<'MD'
 # Extra Procedure
+MD
+
+cat > "$fixture/example-plugin/skills/noisy-skill/references/README.md" <<'MD'
+# Maintainer Notes
 MD
 
 cat > "$fixture/example-plugin/skills/noisy-skill/scripts/helper.sh" <<'SH'
@@ -140,6 +155,7 @@ assert_contains "$output" "SAC-RUNTIME-MISSING-OPENAI (high)"
 assert_contains "$output" "SAC-DOC-MISSING-ENTRYPOINT (low)"
 assert_contains "$output" "Path: \`example-plugin/skills/noisy-skill/SKILL.md\`"
 assert_contains "$output" "Path: \`example-plugin/skills/noisy-skill/references/extra.md\`"
+assert_contains "$output" "references/README.md"
 assert_contains "$output" "Claude impact:"
 assert_contains "$output" "Codex impact:"
 assert_contains "$output" "Next action:"
@@ -156,7 +172,10 @@ fi
 assert_contains "$tmpdir/bad.err" "Error:"
 
 clean_fixture="$tmpdir/clean-repo"
-mkdir -p "$clean_fixture/example-plugin/skills/clean-skill/agents"
+mkdir -p \
+  "$clean_fixture/example-plugin/skills/clean-skill/agents" \
+  "$clean_fixture/example-plugin/skills/clean-skill/references/group" \
+  "$clean_fixture/example-plugin/skills/clean-skill/references/table"
 touch "$clean_fixture/AGENTS.md" "$clean_fixture/CLAUDE.md"
 
 cat > "$clean_fixture/example-plugin/skills/clean-skill/SKILL.md" <<'MD'
@@ -173,12 +192,29 @@ Inputs: fixture files.
 Output: a short report.
 Stop when validation is complete.
 Rerun the report after changing this skill.
+Read references/group when grouped support behavior is under test.
+
+| Support | Loaded when |
+|---|---|
+| `references/table/entry.md` | Table support behavior is under test |
 MD
 
 cat > "$clean_fixture/example-plugin/skills/clean-skill/agents/openai.yaml" <<'YAML'
 name: clean-skill
 description: Use when validating a clean fixture skill.
 YAML
+
+cat > "$clean_fixture/example-plugin/skills/clean-skill/references/group/one.md" <<'MD'
+# Grouped Support
+MD
+
+cat > "$clean_fixture/example-plugin/skills/clean-skill/references/group/README.md" <<'MD'
+# Grouped Support Index
+MD
+
+cat > "$clean_fixture/example-plugin/skills/clean-skill/references/table/entry.md" <<'MD'
+# Table Support
+MD
 
 clean_out="$tmpdir/clean-report.md"
 "$report_script" "$clean_fixture" > "$clean_out"
