@@ -55,10 +55,10 @@
     <relationship identifier="id-rel-charge-ship" source="id-process-charge" target="id-process-ship" xsi:type="Triggering"/>
     <relationship identifier="id-rel-ship-event" source="id-process-ship" target="id-event-shipped" xsi:type="Triggering"/>
     <relationship identifier="id-rel-customer-assign-verify" source="id-customer" target="id-process-verify" xsi:type="Assignment"/>
-    <relationship identifier="id-rel-verify-access-order" source="id-process-verify" target="id-bo-order" xsi:type="Access"><name xml:lang="en">Read</name></relationship>
-    <relationship identifier="id-rel-charge-access-payment" source="id-process-charge" target="id-bo-payment" xsi:type="Access"><name xml:lang="en">Write</name></relationship>
-    <relationship identifier="id-rel-charge-access-order" source="id-process-charge" target="id-bo-order" xsi:type="Access"><name xml:lang="en">ReadWrite</name></relationship>
-    <relationship identifier="id-rel-ship-access-order" source="id-process-ship" target="id-bo-order" xsi:type="Access"><name xml:lang="en">Write</name></relationship>
+    <relationship identifier="id-rel-verify-access-order" source="id-process-verify" target="id-bo-order" xsi:type="Access"/>
+    <relationship identifier="id-rel-charge-access-payment" source="id-process-charge" target="id-bo-payment" xsi:type="Access"/>
+    <relationship identifier="id-rel-charge-access-order" source="id-process-charge" target="id-bo-order" xsi:type="Access"/>
+    <relationship identifier="id-rel-ship-access-order" source="id-process-ship" target="id-bo-order" xsi:type="Access"/>
   </relationships>
 
   <organizations>
@@ -82,6 +82,32 @@
             viewpoint="Business Process Cooperation">
         <name xml:lang="en">Order fulfilment — Business Process Cooperation</name>
         <documentation xml:lang="en">Three-lane process flow: Customer Actor in the Active lane (above); the Triggering chain Order Submitted → Verify Customer → Charge Card → Ship Order → Order Shipped runs left-to-right in the Behaviour lane (middle); Order and Payment Business Objects accessed from the Passive lane (below).</documentation>
+        <node identifier="id-node-customer" elementRef="id-customer" xsi:type="Element" x="300" y="40" w="190" h="80"/>
+        <node identifier="id-node-event-submitted" elementRef="id-event-submitted" xsi:type="Element" x="40" y="220" w="200" h="70"/>
+        <node identifier="id-node-process-verify" elementRef="id-process-verify" xsi:type="Element" x="300" y="220" w="210" h="70"/>
+        <node identifier="id-node-process-charge" elementRef="id-process-charge" xsi:type="Element" x="580" y="220" w="210" h="70"/>
+        <node identifier="id-node-process-ship" elementRef="id-process-ship" xsi:type="Element" x="860" y="220" w="210" h="70"/>
+        <node identifier="id-node-event-shipped" elementRef="id-event-shipped" xsi:type="Element" x="1140" y="220" w="200" h="70"/>
+        <node identifier="id-node-bo-order" elementRef="id-bo-order" xsi:type="Element" x="300" y="410" w="500" h="80"/>
+        <node identifier="id-node-bo-payment" elementRef="id-bo-payment" xsi:type="Element" x="860" y="410" w="220" h="80"/>
+        <connection identifier="id-conn-customer-submit" relationshipRef="id-rel-customer-submit" source="id-node-customer" target="id-node-event-submitted" xsi:type="Relationship">
+          <bendpoint x="140" y="80"/>
+          <bendpoint x="140" y="190"/>
+        </connection>
+        <connection identifier="id-conn-event-verify" relationshipRef="id-rel-event-verify" source="id-node-event-submitted" target="id-node-process-verify" xsi:type="Relationship"/>
+        <connection identifier="id-conn-verify-charge" relationshipRef="id-rel-verify-charge" source="id-node-process-verify" target="id-node-process-charge" xsi:type="Relationship"/>
+        <connection identifier="id-conn-charge-ship" relationshipRef="id-rel-charge-ship" source="id-node-process-charge" target="id-node-process-ship" xsi:type="Relationship"/>
+        <connection identifier="id-conn-ship-event" relationshipRef="id-rel-ship-event" source="id-node-process-ship" target="id-node-event-shipped" xsi:type="Relationship"/>
+        <connection identifier="id-conn-customer-assign-verify" relationshipRef="id-rel-customer-assign-verify" source="id-node-customer" target="id-node-process-verify" xsi:type="Relationship"/>
+        <connection identifier="id-conn-verify-access-order" relationshipRef="id-rel-verify-access-order" source="id-node-process-verify" target="id-node-bo-order" xsi:type="Relationship"/>
+        <connection identifier="id-conn-charge-access-payment" relationshipRef="id-rel-charge-access-payment" source="id-node-process-charge" target="id-node-bo-payment" xsi:type="Relationship">
+          <bendpoint x="685" y="350"/>
+          <bendpoint x="970" y="350"/>
+        </connection>
+        <connection identifier="id-conn-ship-access-order" relationshipRef="id-rel-ship-access-order" source="id-node-process-ship" target="id-node-bo-order" xsi:type="Relationship">
+          <bendpoint x="965" y="370"/>
+          <bendpoint x="550" y="370"/>
+        </connection>
       </view>
     </diagrams>
   </views>

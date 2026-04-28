@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: §9.4 Technology Usage.
+  Architect intent: checkout web and API components use Azure hosting, runtime, managed identity,
+  data-plane services, and observability infrastructure.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-technology-usage">
+
+  <name xml:lang="en">Fixture — Technology Usage (Checkout runtime)</name>
+
+  <documentation xml:lang="en">Technology Usage fixture: Application Components sit above their hosting Nodes, with Function runtime and deployment Artifact inside the Function App and a data-plane / observability column to the right.</documentation>
+
+  <metadata>
+    <schema>http://purl.org/dc/elements/1.1/</schema>
+    <schemaversion>1.1</schemaversion>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Fixture — Technology Usage (Checkout runtime)</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.12.1 (fixture)</dc:creator>
+  </metadata>
+
+  <elements>
+    <element identifier="id-app-web" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Checkout Web App</name>
+    </element>
+    <element identifier="id-app-orders-api" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Orders API</name>
+    </element>
+    <element identifier="id-node-static-web-apps" xsi:type="Node">
+      <name xml:lang="en">Azure Static Web Apps</name>
+    </element>
+    <element identifier="id-node-function-app" xsi:type="Node">
+      <name xml:lang="en">Azure Function App</name>
+    </element>
+    <element identifier="id-sysw-functions-worker" xsi:type="SystemSoftware">
+      <name xml:lang="en">.NET isolated worker</name>
+    </element>
+    <element identifier="id-art-orders-api-zip" xsi:type="Artifact">
+      <name xml:lang="en">Orders.Api.zip</name>
+    </element>
+    <element identifier="id-tech-managed-identity" xsi:type="TechnologyService">
+      <name xml:lang="en">Managed Identity</name>
+    </element>
+    <element identifier="id-node-cosmos" xsi:type="Node">
+      <name xml:lang="en">Azure Cosmos DB</name>
+    </element>
+    <element identifier="id-node-storage" xsi:type="Node">
+      <name xml:lang="en">Azure Storage Account</name>
+    </element>
+    <element identifier="id-node-keyvault" xsi:type="Node">
+      <name xml:lang="en">Azure Key Vault</name>
+    </element>
+    <element identifier="id-node-app-insights" xsi:type="Node">
+      <name xml:lang="en">Application Insights</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-swa-assign-web" source="id-node-static-web-apps" target="id-app-web" xsi:type="Assignment"/>
+    <relationship identifier="id-rel-funcapp-assign-api" source="id-node-function-app" target="id-app-orders-api" xsi:type="Assignment"/>
+    <relationship identifier="id-rel-funcapp-comp-worker" source="id-node-function-app" target="id-sysw-functions-worker" xsi:type="Composition"/>
+    <relationship identifier="id-rel-funcapp-comp-artifact" source="id-node-function-app" target="id-art-orders-api-zip" xsi:type="Composition"/>
+    <relationship identifier="id-rel-artifact-real-api" source="id-art-orders-api-zip" target="id-app-orders-api" xsi:type="Realization"/>
+    <relationship identifier="id-rel-mi-serves-funcapp" source="id-tech-managed-identity" target="id-node-function-app" xsi:type="Serving"/>
+    <relationship identifier="id-rel-cosmos-serves-funcapp" source="id-node-cosmos" target="id-node-function-app" xsi:type="Serving"/>
+    <relationship identifier="id-rel-storage-serves-funcapp" source="id-node-storage" target="id-node-function-app" xsi:type="Serving"/>
+    <relationship identifier="id-rel-keyvault-serves-funcapp" source="id-node-keyvault" target="id-node-function-app" xsi:type="Serving"/>
+    <relationship identifier="id-rel-ai-serves-funcapp" source="id-node-app-insights" target="id-node-function-app" xsi:type="Serving"/>
+  </relationships>
+
+  <organizations>
+    <item>
+      <label xml:lang="en">Application</label>
+      <item identifierRef="id-app-web"/>
+      <item identifierRef="id-app-orders-api"/>
+    </item>
+    <item>
+      <label xml:lang="en">Technology</label>
+      <item identifierRef="id-node-static-web-apps"/>
+      <item identifierRef="id-node-function-app"/>
+      <item identifierRef="id-sysw-functions-worker"/>
+      <item identifierRef="id-art-orders-api-zip"/>
+      <item identifierRef="id-tech-managed-identity"/>
+      <item identifierRef="id-node-cosmos"/>
+      <item identifierRef="id-node-storage"/>
+      <item identifierRef="id-node-keyvault"/>
+      <item identifierRef="id-node-app-insights"/>
+    </item>
+  </organizations>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-technology-usage"
+            xsi:type="Diagram"
+            viewpoint="Technology Usage">
+        <name xml:lang="en">Checkout Runtime — Technology Usage</name>
+        <documentation xml:lang="en">Hosting-tower view: Checkout Web App and Orders API sit above their hosting Nodes. The Function App contains its runtime and deployable artifact; managed identity, data stores, key vault, and observability services sit in a right-side dependency column.</documentation>
+        <node identifier="id-viewnode-app-web" elementRef="id-app-web" xsi:type="Element" x="60" y="40" w="240" h="80"/>
+        <node identifier="id-viewnode-app-orders-api" elementRef="id-app-orders-api" xsi:type="Element" x="400" y="40" w="240" h="80"/>
+        <node identifier="id-viewnode-tech-managed-identity" elementRef="id-tech-managed-identity" xsi:type="Element" x="760" y="40" w="240" h="80"/>
+        <node identifier="id-viewnode-static-web-apps" elementRef="id-node-static-web-apps" xsi:type="Element" x="60" y="210" w="240" h="90"/>
+        <node identifier="id-viewnode-function-app" elementRef="id-node-function-app" xsi:type="Element" x="360" y="190" w="320" h="270">
+          <node identifier="id-viewnode-sysw-functions-worker" elementRef="id-sysw-functions-worker" xsi:type="Element" x="390" y="250" w="260" h="70"/>
+          <node identifier="id-viewnode-art-orders-api-zip" elementRef="id-art-orders-api-zip" xsi:type="Element" x="390" y="350" w="260" h="70"/>
+        </node>
+        <node identifier="id-viewnode-cosmos" elementRef="id-node-cosmos" xsi:type="Element" x="760" y="190" w="260" h="70"/>
+        <node identifier="id-viewnode-storage" elementRef="id-node-storage" xsi:type="Element" x="760" y="290" w="260" h="70"/>
+        <node identifier="id-viewnode-keyvault" elementRef="id-node-keyvault" xsi:type="Element" x="760" y="390" w="260" h="70"/>
+        <node identifier="id-viewnode-app-insights" elementRef="id-node-app-insights" xsi:type="Element" x="1080" y="290" w="260" h="70"/>
+        <connection identifier="id-conn-swa-assign-web" relationshipRef="id-rel-swa-assign-web" source="id-viewnode-static-web-apps" target="id-viewnode-app-web" xsi:type="Relationship"/>
+        <connection identifier="id-conn-funcapp-assign-api" relationshipRef="id-rel-funcapp-assign-api" source="id-viewnode-function-app" target="id-viewnode-app-orders-api" xsi:type="Relationship"/>
+        <connection identifier="id-conn-artifact-real-api" relationshipRef="id-rel-artifact-real-api" source="id-viewnode-art-orders-api-zip" target="id-viewnode-app-orders-api" xsi:type="Relationship">
+          <bendpoint x="520" y="160"/>
+        </connection>
+        <connection identifier="id-conn-mi-serves-funcapp" relationshipRef="id-rel-mi-serves-funcapp" source="id-viewnode-tech-managed-identity" target="id-viewnode-function-app" xsi:type="Relationship">
+          <bendpoint x="880" y="150"/>
+          <bendpoint x="690" y="150"/>
+        </connection>
+        <connection identifier="id-conn-cosmos-serves-funcapp" relationshipRef="id-rel-cosmos-serves-funcapp" source="id-viewnode-cosmos" target="id-viewnode-function-app" xsi:type="Relationship"/>
+        <connection identifier="id-conn-storage-serves-funcapp" relationshipRef="id-rel-storage-serves-funcapp" source="id-viewnode-storage" target="id-viewnode-function-app" xsi:type="Relationship"/>
+        <connection identifier="id-conn-keyvault-serves-funcapp" relationshipRef="id-rel-keyvault-serves-funcapp" source="id-viewnode-keyvault" target="id-viewnode-function-app" xsi:type="Relationship"/>
+        <connection identifier="id-conn-ai-serves-funcapp" relationshipRef="id-rel-ai-serves-funcapp" source="id-viewnode-app-insights" target="id-viewnode-function-app" xsi:type="Relationship">
+          <bendpoint x="1210" y="500"/>
+          <bendpoint x="520" y="500"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

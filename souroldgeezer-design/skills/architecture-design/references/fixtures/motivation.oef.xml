@@ -92,6 +92,27 @@
             viewpoint="Motivation">
         <name xml:lang="en">Checkout-conversion — Motivation</name>
         <documentation xml:lang="en">Hierarchical tree from Stakeholder concerns down through Drivers, Goals, Outcomes, Requirements, and the Constraint / Principle pair scoping them.</documentation>
+        <node identifier="id-node-stake-product" elementRef="id-stake-product" xsi:type="Element" x="360" y="40" w="220" h="70"/>
+        <node identifier="id-node-driver-conversion" elementRef="id-driver-conversion" xsi:type="Element" x="330" y="180" w="280" h="80"/>
+        <node identifier="id-node-goal-conversion" elementRef="id-goal-conversion" xsi:type="Element" x="320" y="330" w="300" h="80"/>
+        <node identifier="id-node-outcome-q3" elementRef="id-outcome-q3" xsi:type="Element" x="40" y="500" w="230" h="70"/>
+        <node identifier="id-node-req-sso" elementRef="id-req-sso" xsi:type="Element" x="320" y="500" w="320" h="80"/>
+        <node identifier="id-node-req-onepage" elementRef="id-req-onepage" xsi:type="Element" x="700" y="500" w="250" h="70"/>
+        <node identifier="id-node-constraint-pcidss" elementRef="id-constraint-pcidss" xsi:type="Element" x="340" y="660" w="280" h="70"/>
+        <node identifier="id-node-principle-tokenise" elementRef="id-principle-tokenise" xsi:type="Element" x="300" y="810" w="360" h="80"/>
+        <connection identifier="id-conn-stake-driver" relationshipRef="id-rel-stake-driver" source="id-node-stake-product" target="id-node-driver-conversion" xsi:type="Relationship"/>
+        <connection identifier="id-conn-driver-goal" relationshipRef="id-rel-driver-goal" source="id-node-driver-conversion" target="id-node-goal-conversion" xsi:type="Relationship"/>
+        <connection identifier="id-conn-outcome-goal" relationshipRef="id-rel-goal-outcome" source="id-node-outcome-q3" target="id-node-goal-conversion" xsi:type="Relationship">
+          <bendpoint x="160" y="455"/>
+          <bendpoint x="470" y="455"/>
+        </connection>
+        <connection identifier="id-conn-req-sso-goal" relationshipRef="id-rel-goal-req-sso" source="id-node-req-sso" target="id-node-goal-conversion" xsi:type="Relationship"/>
+        <connection identifier="id-conn-req-onepage-goal" relationshipRef="id-rel-goal-req-onepage" source="id-node-req-onepage" target="id-node-goal-conversion" xsi:type="Relationship">
+          <bendpoint x="825" y="455"/>
+          <bendpoint x="470" y="455"/>
+        </connection>
+        <connection identifier="id-conn-pcidss-req-sso" relationshipRef="id-rel-pcidss-req-sso" source="id-node-constraint-pcidss" target="id-node-req-sso" xsi:type="Relationship"/>
+        <connection identifier="id-conn-principle-pcidss" relationshipRef="id-rel-principle-pcidss" source="id-node-principle-tokenise" target="id-node-constraint-pcidss" xsi:type="Relationship"/>
       </view>
     </diagrams>
   </views>

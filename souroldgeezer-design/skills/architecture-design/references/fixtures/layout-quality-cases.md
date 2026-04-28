@@ -9,6 +9,19 @@ Regression cases for Review-mode `AD-L*` geometry checks. These are small source
 - Connection: source → target with a straight segment from source right midpoint to target left midpoint.
 - Expected: `AD-L11 block`; readiness max `model-valid`.
 
+## Materialized view geometry
+
+- View: any fixture intended for render validation.
+- Nodes: at least one non-legend `<node xsi:type="Element">` with `elementRef`, `x`, `y`, `w`, and `h`.
+- Connections: each relationship that is part of the fixture's visual story has a `<connection xsi:type="Relationship">`; long or non-aligned routes use bendpoints instead of diagonal shortcuts.
+- Expected: Archi renders a nonblank PNG larger than the 100 x 100 empty-view placeholder; missing view geometry is a fixture defect, not an acceptable generated test diagram.
+
+## Supported viewpoint coverage
+
+- View: committed `*.oef.xml` fixture set.
+- Viewpoints: Capability Map, Application Cooperation, Service Realization, Technology Usage, Migration, Motivation, and Business Process Cooperation.
+- Expected: the render gate fails when any supported §9 viewpoint is missing from the fixture corpus.
+
 ## Allowed ancestor-container exit
 
 - View: Service Realization.
