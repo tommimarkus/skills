@@ -1,6 +1,6 @@
 interface:
   display_name: "Software Design"
-  short_description: "Sustainable code and module design guidance."
-  default_prompt: "Use $software-design to review this code for sustainable software design."
+  short_description: "Sustainable code, script, and module design guidance."
+  default_prompt: "Use $software-design to review this code or shell script for sustainable design."
 policy:
   allow_implicit_invocation: true

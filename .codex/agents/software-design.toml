@@ -1,5 +1,5 @@
 name = "software-design"
-description = "Software design practitioner for build, extract, review, and lookup workflows."
+description = "Software and script design practitioner for build, extract, review, and lookup workflows."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

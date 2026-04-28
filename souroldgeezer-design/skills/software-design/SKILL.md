@@ -1,6 +1,6 @@
 ---
 name: software-design
-description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™ project/design guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills.
+description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™ / shell-script project guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills.
 ---
 
 # Software Design
@@ -94,8 +94,9 @@ Load extensions only when source signals match.
 | Extension | Applies to | Loaded when target matches |
 |---|---|---|
 | [extensions/dotnet.md](extensions/dotnet.md) | .NET solution and project design | `.sln`, `.slnx`, `.csproj`, `.cs`, `Directory.Build.*`, `global.json`, `InternalsVisibleTo`, `IServiceCollection`, `DbContext`, `BackgroundService`, or package references commonly used in .NET applications |
+| [extensions/shell-script.md](extensions/shell-script.md) | Bash and zsh shell-script design | `.sh`, `.bash`, `.zsh`, executable files with `bash`, `zsh`, or `sh` shebangs, `BASH_SOURCE`, `ZSH_VERSION`, `setopt`, `emulate`, `autoload`, `source`, `trap`, shell completion/bootstrap files, or Linux/macOS/WSL portability requirements |
 
-Unknown stacks proceed with the core reference only. The .NET extension adds stack-specific evidence and smell codes in the `dotnet.SD-*` namespace; it never overrides core rules.
+Unknown stacks proceed with the core reference only. The .NET extension adds stack-specific evidence and smell codes in the `dotnet.SD-*` namespace; the shell-script extension adds Bash/zsh and Linux/macOS/WSL portability evidence and smell codes in the `shell.SD-*` namespace. Extensions never override core rules.
 
 ## Pre-Flight
 
@@ -135,7 +136,7 @@ Reuse compliant infrastructure and names. Flag non-compliant design as legacy de
 3. Choose the smallest design primitive or pattern from reference sections 4 and 5.
 4. Define responsibilities and dependency direction. Prefer hiding volatile decisions behind the boundary that owns them.
 5. Name deferred decisions and rejected abstractions. This is mandatory when common abstractions are tempting but unjustified.
-6. Pick the cheapest validation step: a narrow implementation spike, characterization test, design review with a domain expert, dependency-graph check, or runtime measurement.
+6. Pick the cheapest validation step: a narrow implementation spike, characterization test, design review with a domain expert, dependency-graph check, or runtime measurement. Include any validation step that a loaded extension marks as mandatory when that validator is available.
 7. Emit the Build output contract and footer.
 
 ## Extract Workflow
