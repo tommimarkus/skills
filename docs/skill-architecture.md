@@ -73,11 +73,38 @@ On-demand knowledge lives behind explicit load conditions:
 
 Use progressive disclosure deliberately:
 
-- Put the decision to load a document in `SKILL.md`.
+- Put the decision to load a document in `SKILL.md` with the exact relative path
+  and a "read this when..." condition.
 - Give each reference a narrow reason to exist.
 - Split heavy material by task path or target platform.
 - Keep source anchors as links and paraphrase in original wording.
 - Preserve a stable finding-code namespace when references define review rules.
+- Do not assume Claude or Codex will infer an overlay from folder naming alone.
+  If an extension matters, the core workflow must name when to load it.
+
+For extension overlays, `SKILL.md` owns selection:
+
+- List each extension path from the core workflow or a one-hop load map.
+- State the trigger signal: file type, framework, runtime, task mode, failure
+  mode, or user wording.
+- Say whether the extension adds rules, replaces a step, supplies examples, or
+  provides validation commands.
+- Require the agent to read the extension before applying extension-specific
+  rules.
+- Keep extension files narrow enough that loading one does not pull unrelated
+  platform or model guidance into context.
+- If a model/runtime-specific extension exists, state the eval or pressure
+  scenario that justified the split and the command or prompt set used to retest
+  whether it can merge back into the generic core.
+
+This is a runtime contract, not just documentation style. Codex exposes skill
+metadata first, then loads the skill body after selection; optional
+`agents/openai.yaml` can influence UI metadata, invocation policy, and tool
+dependencies. Claude Code keeps skill names and descriptions available for
+selection, then loads the full skill when invoked; supporting files are read
+only when the skill points to them and the task needs them. In both runtimes,
+references and extensions must be visible from `SKILL.md` with enough context
+for a fresh agent to choose the right file without exploring the tree.
 
 ### 4. Deterministic machinery
 
@@ -94,66 +121,57 @@ or important enough to rerun after every change. Prose should explain why a
 rule matters and how to interpret edge cases; scripts should calculate what can
 be calculated.
 
-## Model-Family Guidance
+## Model-Family Calibration
 
-### Claude Opus, Sonnet, and Haiku
+Use a generic core with specialized extensions. The generic core is the default
+contract. Specialized model or runtime extensions are narrow overlays, not
+parallel skills and not a reason to duplicate the core workflow.
 
-Claude-family skills generally benefit from clear, direct, contextual, ordered
-instructions. Use natural language that states the task boundary, then the
-steps, then the stopping rules.
+First learn what works well for each target runtime and model tier. Then express
+the instruction in generalized language when one shape meets the quality bar
+across Claude Opus, Claude Sonnet, Claude Haiku, Codex GPT, and Codex GPT-mini.
 
-Do:
+The generic core should usually prefer:
 
-- Put the decision context before detailed procedure.
-- Use "evaluate", "inspect", "verify", and "reason through" when the agent must
-  make a judgment from evidence.
-- Reserve aggressive trigger words such as "CRITICAL" and "MUST" for genuinely
-  mandatory safety, legality, destructive-action, or correctness gates.
-- Prefer concrete mode names and examples over emphatic prose.
+- Clear task ownership and near-miss boundaries before procedure.
+- Ordered steps that change decisions.
+- Conditions before actions.
+- Explicit ask, stop, continue, and validation rules.
+- Fixed output contracts for repeatable comparison.
+- Deterministic helpers for structural, repetitive, or high-risk checks.
+- Plain active language with hard mandatory terms reserved for hard gates.
 
-Avoid:
+Use specialized extensions only when the generic core fails pressure scenarios
+or fresh-agent tests for a specific family or tier, and the difference cannot be
+solved with clearer general wording, deterministic machinery, or a narrower task
+boundary.
 
-- Escalating every instruction into mandatory language.
-- Asking the model to "think" when the observable requirement is inspection,
-  verification, comparison, or explanation.
-- Burying the decisive constraint in the middle of a long reference.
+Calibrate potential extensions against likely model differences:
 
-### Codex GPT and GPT-mini
+- Stronger reasoning models such as Opus, Sonnet, and Codex GPT can tolerate
+  more evidence synthesis, but still need explicit boundaries, stop conditions,
+  and verification commands.
+- Faster or smaller models such as Haiku and GPT-mini need fewer modes, tighter
+  defaults, shorter references, concrete accepted/rejected target examples, and
+  deterministic pre-checks for high-variance judgments.
+- Runtime trigger surfaces differ. Claude and Codex metadata should still
+  describe the same capability, but the exact field length, default prompt, and
+  agent/subagent packaging constraints may require runtime-specific metadata.
 
-Codex-family skills need front-loaded, boundary-aware triggers, concise
-workflow, explicit stop conditions, and deterministic helpers. Do not restate
-generic coding-agent behavior such as "read files first" or "run tests" unless
-the skill needs a repo-specific version of that behavior.
+Create a model or runtime extension only when the evidence says to split:
 
-Do:
+- The same eval prompt passes for one family or tier and fails for another.
+- A smaller model loses actionability without extra rails.
+- A runtime metadata limit or packaging rule forces different wording.
+- A deterministic helper is needed for one runtime path but not the other.
+- General wording causes over-triggering, under-triggering, or degraded output
+  for a specific target after at least one rewrite attempt.
 
-- Start with the exact work the skill owns and nearby work it does not own.
-- State whether the agent should ask, continue with defaults, or stop when
-  inputs are missing.
-- Put validation commands and expected report shape close to the workflow that
-  uses them.
-- Use scripts for repeatable checks and keep their rerun commands visible.
-- Name unsupported runtimes, file types, or target scopes.
-
-Avoid:
-
-- Long motivational introductions.
-- Repeating generic repository hygiene that the base agent already follows.
-- Leaving pass/fail criteria implicit.
-
-### Small and fast models
-
-Small and fast models need less freedom and more concrete rails:
-
-- Required inputs and acceptable defaults.
-- A small number of modes.
-- A fixed output shape.
-- Exact ask-vs-continue rules.
-- Concrete examples of accepted and rejected targets.
-- Short references, or references split into narrow sections.
-
-If a small model must make a high-variance judgment, either add a deterministic
-pre-check, narrow the task, or require escalation to a stronger model / human.
+When an extension is justified, keep the common rule in the generic core and
+make the extension as small as possible. State the load condition, the evidence
+that justified the split, and how to rerun the comparison. Remove or merge the
+extension back into the core when later evals show the generalized instruction
+meets the same standard.
 
 ## Craft Scorecard
 
@@ -283,8 +301,10 @@ Before finishing a skill change, inspect for these common regressions:
 Use these as anchors for current authoring and validation decisions. Link to
 them; do not copy their prose into repo guidance.
 
-- Anthropic Claude Skills overview:
-  <https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview>
+- Anthropic Agent Skills overview:
+  <https://docs.claude.com/en/docs/agents-and-tools/agent-skills>
+- Claude Code skills:
+  <https://code.claude.com/docs/en/skills>
 - Anthropic Claude Skills best practices:
   <https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices>
 - Claude Code plugin creation:
@@ -297,6 +317,8 @@ them; do not copy their prose into repo guidance.
   <https://developers.openai.com/codex/skills>
 - OpenAI Codex plugins:
   <https://developers.openai.com/codex/plugins>
+- OpenAI Codex plugin build guide:
+  <https://developers.openai.com/codex/plugins/build>
 - OpenAI Codex subagents:
   <https://developers.openai.com/codex/subagents>
 - OpenAI prompt guidance:
