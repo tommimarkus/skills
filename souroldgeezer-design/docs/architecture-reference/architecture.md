@@ -8,7 +8,7 @@ This reference is the authoritative ground for the skill. It grounds in **The Op
 
 **Notation conformance.** The skill emits ArchiMate 3.2 models as **OEF XML** (The Open Group ArchiMate® Model Exchange File Format 3.2, Appendix E of C226). Files are loadable by Archi, BiZZdesign Enterprise Studio, Sparx Enterprise Architect, Orbus iServer, Avolution ABACUS, HOPEX, and every mainstream ArchiMate tool. The skill does not bundle The Open Group's XSD schemas; emitted files reference the canonical schema URL (`xsi:schemaLocation`) so downstream validators fetch it from The Open Group directly. Validation beyond the skill's own well-formedness checks is pushed to the architect's toolchain — open the file in Archi or run `xmllint --schema <schema-url> <file>.oef.xml`.
 
-**Scope.** ArchiMate Core Framework (Business, Application, Technology layers) plus the Physical, Strategy, Motivation, and Implementation & Migration extensions. Composite elements (Location, Grouping) are in scope. ViewPoints are out of scope as a first-class construct in v1 — the reference instead documents a small set of diagram kinds that cover the concrete use cases (capability map, application cooperation, service realization, technology usage, migration). See §9.
+**Scope.** ArchiMate Core Framework (Business, Application, Technology layers) plus the Physical, Strategy, Motivation, and Implementation & Migration extensions. Composite elements (Location, Grouping) are in scope. ViewPoints are out of scope as a first-class construct in v1 — the reference instead documents a small set of diagram kinds that cover the concrete use cases (capability map, application cooperation, service realization, technology usage, migration, motivation, business process cooperation). See §9.
 
 ## 2. Principles
 
@@ -438,6 +438,24 @@ Instance form mirrors the cooperation case (different `propertyDefinitionRef`).
 
 **Orthogonal concerns.** The two properties control different emission decisions and should not be conflated. `propid-coop-view-exclude` controls *inclusion in the §9.7 overview*; `propid-drilldown-exclude` controls *emission of a per-process §9.3 drill-down*. Setting one does not imply the other.
 
+### 6.4c Change classification and view-specific curation
+
+OEF work mixes three kinds of change. Reviews must keep them separate:
+
+- **Semantic model change** — add, remove, rename, or retarget model
+  `<element>` or `<relationship>` entries.
+- **View geometry change** — move, resize, nest, reroute, or change visible
+  `<node>` / `<connection>` entries inside a view without changing the model.
+- **Documentation/render inventory change** — update view documentation,
+  provenance notes, README/gallery rows, or committed render snapshots.
+
+View-specific relationship curation is a view geometry change when the
+relationship remains under `<relationships>` but its visible `<connection>` is
+omitted or hidden in one view because drawing it would repeat the same story.
+The view documentation or final summary should name the relationship id and the
+reason for omission. Deleting the relationship from the model is a semantic
+change and must be reported as such.
+
 ### 6.5 Organizations (folder structure)
 
 Optional. Tools like Archi present models in a folder tree. OEF exposes this via `<organizations>`:
@@ -626,6 +644,10 @@ Artefact smells specific to `<view>` layout, derived from the §6.4a Layout stra
 - **`AD-L13` Stacked connector lane** — two or more visible connections share the same source-side or target-side lane closely enough that arrowheads or labels overlap. Parallel edges in the same lane must be spaced at least 20 px apart per §6.4a.
 - **`AD-L14` Wide empty layer gap** — the vertical gap between occupied layer bands exceeds 100 px after normalisation without a containing Grouping, title block, or documented whitespace purpose. The view reads as sparse or disconnected.
 - **`AD-L15` Local fan-out crisscross** — three or more visible connections from the same source or to the same target cross each other or cross a non-endpoint sibling node. Re-order siblings, group the fan-out, or route lanes explicitly.
+- **`AD-L16` Long peripheral bus route** — a bottom or side route spans most of the view and dominates the reading path while carrying only a local relationship. Shorten the route, move the endpoint closer, split the view, or document why the bus route is intentional. Severity is `info` by default, escalating to `warn` when it obscures the main path.
+- **`AD-L17` Duplicate visible story path** — two or more visible relationships, lanes, or duplicated nodes tell the same architecture story in one view. Keep the model relationship, but hide or omit the redundant view connection per §6.4c and document the curation choice.
+- **`AD-L18` Misleading boundary crossing** — a connector crosses a Grouping, container, trust-boundary, or deployment-boundary edge in a way that implies traffic, ownership, or deployment scope not supported by the model. Reroute around the boundary, split the view, or add explicit boundary semantics.
+- **`AD-L19` Ambiguous nested ownership** — a node is visually nested where the model lacks Composition / Aggregation / Realization / Assignment or documentation that justifies the ownership, trust, or deployment implication. Either add the correct model relationship, un-nest the node, or document the intended non-semantic grouping.
 
 ### Process-flow smells — `AD-B-*`
 
@@ -644,6 +666,7 @@ Artefact smells specific to §9.7 Business Process Cooperation and §9.3 Service
 - **`AD-B-11` Single-process cooperation view** — a `<view>` with `viewpoint="Business Process Cooperation"` containing exactly one `xsi:type="BusinessProcess"` element. By the spec definition of "cooperation" (≥ 2 cooperating elements), a single-process §9.7 is structurally wrong. Severity: `warn`. Action: either add the feature's other top-level processes (per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 1), or change the view's `viewpoint` to `"Service Realization"` for single-process focus. Reference: ArchiMate® 3.2 §14 (Viewpoints) + this reference §9.7.
 - **`AD-B-12` Sub-process without its own §9.3 drill-down** — a Business Process X with at least one incoming `xsi:type="Composition"` relationship from another Business Process Y, AND no `<view>` with `viewpoint="Service Realization"` rooted on X (rooted = X is the topmost element in the realisation stack, identifier match). Suppression: X carrying `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` (per §6.4b). Severity: `warn`. Action: emit a §9.3 view rooted on X, or set `propid-drilldown-exclude=true` if intentional. Reference: this reference §9.3 + [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 2.
 - **`AD-B-13` Top-level process missing from §9.7** — a Business Process X with **no** incoming `xsi:type="Composition"` relationship from any other Business Process (X is top-level), AND X is not present as a node in any `<view>` with `viewpoint="Business Process Cooperation"` in the same canonical file. Suppression: X carrying `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` (per §6.4b). Severity: `warn`. Action: add X as a node in the feature's §9.7 view, or set `propid-coop-view-exclude=true` if intentional (deprecated, planned, external). Reference: this reference §9.7 + [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2 rule 1.
+- **`AD-B-14` Duplicate realization drill-down** — two or more §9.3 Service Realization views have the same Application Service, Application Component, Technology hosting, data-plane, managed-identity / RBAC, trust-boundary, deployment, and UI-entry story, with only the Business Process root changed. Severity: `warn`. Action: consolidate into one process-rooted §9.3 view that lists all member processes, unless the differing process introduces materially different application, data, technology, security, deployment, UI-entry, or business behaviour. Reference: this reference §9.3 + [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md) §2.
 
 ### Drift smells — `AD-DR-*`
 
@@ -678,7 +701,7 @@ Layout follows the default banded grid; the Application band may hold up to 4 el
 
 **Professional gate.** The realisation chain is the message: Business Process or Business Service → Application Service → Application Component → Technology Service / Node when technology is in scope. A view that names services without this auditable spine triggers `AD-Q9` even if its individual relationships are valid.
 
-**View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), every orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators) has its own §9.3 view rooted on it in the canonical feature file. Sub-processes without their own view trigger `AD-B-12` unless the architect sets `propid-drilldown-exclude=true` on the process (§6.4b). Activity-call steps (Triggering-chained, not Composition-nested) stay as nodes inside the parent's §9.3 — they are not orchestrator-level and do not get separate views.
+**View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), orchestrator-level Business Processes (top-level + Composition-nested sub-orchestrators) get §9.3 coverage in the canonical feature file. Processes with the same realization-story fingerprint share one process-rooted §9.3 view; processes with materially different application, data, technology, security, deployment, UI-entry, or business behaviour keep separate views. Sub-processes without §9.3 coverage trigger `AD-B-12` unless the architect sets `propid-drilldown-exclude=true` on the process (§6.4b). Duplicate same-story drill-downs trigger `AD-B-14`. Activity-call steps (Triggering-chained, not Composition-nested) stay as nodes inside the parent's §9.3 — they are not orchestrator-level and do not get separate views.
 
 ### 9.4 Technology Usage (Application + Technology)
 **`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
@@ -732,6 +755,7 @@ diffs are all clean for the requested quality level.
 - [static] Every OEF `identifier` attribute is unique across the file; view-node and view-connection identifiers do not reuse model element or relationship identifiers (`AD-17`).
 - [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
 - [static] Every generated view is materialized with Element node geometry (`elementRef`, `x`, `y`, `w`, `h`) and Relationship connections for the relationships that carry the view's visual story.
+- [static] OEF edits are classified as semantic model changes, view geometry changes, and/or documentation/render inventory changes per §6.4c. View-specific hidden or omitted connections keep the model relationship intact and document the relationship id plus reason.
 - [static] The `<metadata>` block's catalog payload elements come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: skip the optional `<schema>` and `<schemaversion>` prelude (these legitimately inherit the ArchiMate default namespace per `SchemaInfoGroup`); for every other direct child of `<metadata>`, confirm it carries either a default namespace declaration `xmlns="..."` or a prefixed declaration `xmlns:<prefix>="..."` (or inherits one from an ancestor) whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every emitted `.oef.xml`'s top-level child elements appear in the OEF-mandated sequence per §6 (`AD-17`). Grep-verifiable: parse the file's direct children of `<model>` (via `xmlstarlet sel -t -m '/*[local-name()="model"]/*' -v 'local-name()' -n` or equivalent — the namespace-agnostic form avoids xmlstarlet's default-namespace binding pitfall) and confirm the sequence is a valid prefix of `name, documentation, metadata, elements, relationships, organizations, propertyDefinitions, views`; any model-root `properties` child is invalid.
 - [static] Each view answers a stated architecture question and uses a viewpoint that matches that concern (`AD-Q1`, `AD-Q2`).
@@ -749,6 +773,7 @@ diffs are all clean for the requested quality level.
 - [static] Service Realization (§9.3) views in the Process-rooted modality show a Realisation chain from Business Process through at least one Application Service (`AD-B-6`); §9.3 views in either modality show an Application Component realising the Application Service (`AD-B-7`). Between-view invariant: each §9.7 Business Process has a realising chain in a §9.3 view (Process-rooted modality) for the same feature (`AD-B-8`), and each §9.3 Application Service that realises a Business Process realises one present in some §9.7 view for the same feature (`AD-B-9`).
 - [static] Service Realization (§9.3) views expose an auditable realization spine rather than just naming services (`AD-Q9`).
 - [static] §9.3 views in the Process-rooted modality for user-driven Business Processes (carrying a Business Actor Assignment per §4.1) include a UI Application Component and Application Interface at the entry point (`AD-B-10`).
+- [static] Same-story Service Realization (§9.3) views are consolidated unless the differing Business Process materially changes application, data, technology, security, deployment, UI-entry, or business behaviour (`AD-B-14`).
 - [static] Every `<view>` with `viewpoint="Business Process Cooperation"` contains ≥ 2 Business Process elements (`AD-B-11`).
 - [static] Every Business Process with an incoming `xsi:type="Composition"` relationship from another Business Process has a `<view>` with `viewpoint="Service Realization"` rooted on it, unless `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-12`).
 - [static] Every Business Process with no incoming `xsi:type="Composition"` relationship from another Business Process is present as a node in some `<view>` with `viewpoint="Business Process Cooperation"` in the same canonical file, unless `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-13`).
@@ -767,7 +792,11 @@ diffs are all clean for the requested quality level.
 - [static] Parallel or near-parallel connectors are lane-spaced so arrowheads and labels do not stack (`AD-L13`).
 - [static] Inter-layer whitespace is compact enough that occupied bands read as one diagram, not disconnected islands (`AD-L14`).
 - [static] Local fan-out connectors do not crisscross or route across non-endpoint sibling nodes (`AD-L15`).
-- [visual] When an Archi or ArchiMate-conformant renderer is available in the current project, render every view and inspect all outputs before claiming `diagram-readable` or `review-ready`; do not sample. Reject views with connector-through-node, stacked arrows, orphan elements, excessive empty bands, or fan-out crisscross even if the XML is otherwise model-valid. If no renderer is available, disclose that render inspection was not run.
+- [static] Long peripheral bus routes do not dominate the view unless intentionally documented (`AD-L16`).
+- [static] A view does not draw duplicate visible paths for the same architecture story (`AD-L17`).
+- [static] Connectors do not cross Grouping, trust-boundary, or deployment-boundary boxes in visually misleading ways (`AD-L18`).
+- [static] Nested placement does not imply unsupported ownership, composition, trust, or deployment scope (`AD-L19`).
+- [visual] When an Archi or ArchiMate-conformant renderer is available in the current project, render every view and inspect all outputs before claiming `diagram-readable` or `review-ready`; do not sample. Reject views with connector-through-node, stacked arrows, orphan elements, excessive empty bands, fan-out crisscross, dominating bus routes, duplicate visible story paths, misleading boundary crossings, or ambiguous nested ownership even if the XML is otherwise model-valid. If no renderer is available, disclose that render inspection was not run.
 - [runtime] Application Components in this diagram correspond to real projects in the solution (for .NET: `*.csproj`); components that have no project are flagged as *planned* or *external*.
 - [runtime] Technology Nodes in this diagram correspond to IaC resources (for Azure: Bicep). Nodes that have no IaC are flagged as *planned* or *out-of-scope*.
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.

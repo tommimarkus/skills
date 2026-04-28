@@ -2,7 +2,7 @@
 
 Procedure for producing `<view>` node placements that are readable, diff-stable, and round-trippable through ArchiMate® conformant tools. Invoked by Build (always) and Extract (when an existing diagram has no prior view placements for the elements being added). Review uses the same rules — restated as checks — to flag `AD-L*` smells.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L15`).
+The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L19`).
 
 **Determinism is the point.** Given the same element set, relationship set, diagram kind, and layer scope, the procedure must produce the same `x`, `y`, `w`, `h` values every run. Re-extracts don't churn coordinates; git diffs on `.oef.xml` stay narrow; architect hand-edits survive because identifiers are preserved (reference §6.6) and layout is recomputed only for elements without an architect-chosen position.
 
@@ -146,6 +146,10 @@ Rules:
 - Only nest when both endpoints share the same layer AND aspect column — cross-layer or cross-aspect nesting violates reference §2.1 / §2.3.
 - A child may be nested in at most one parent per view. If a child has two valid parents, nest in the one whose relationship is Composition; fall back to the first parent in identifier order.
 - Nesting depth is capped at 2 (parent → child → grandchild). Deeper chains render correctly but exceed the view budget quickly — flag as `AD-L4` risk.
+- Do not nest merely for visual convenience. If the model relationship or view
+  documentation does not support the ownership, trust, composition, or
+  deployment implication, keep the nodes side-by-side; otherwise Review emits
+  `AD-L19`.
 
 ### Step 5b — Multi-row sibling layout (new child, existing siblings)
 
@@ -172,7 +176,20 @@ For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compu
 5. **Cost function:** `cost = grid_step_count + bend_count × 5`. Each move along the same direction adds 1; each 90° turn adds the bend penalty (5 grid steps default).
 6. **Bend points:** every grid cell where the path direction changes becomes a `<bendpoint x="..." y="..."/>` child of `<connection>`. Convert grid-cell back to pixel by `x = cell_x × 10`.
 7. **Parallel edges in the same lane** (same source midpoint, same target midpoint, or same target-side entry lane) space 20 px apart in the perpendicular direction.
-8. **Post-layout intersection pass.** After bendpoints are emitted and after every Tier 2 specialisation has run, inspect each connection segment against every node bounding box, including nested child boxes. Reconstruct each route as the rendered polyline from the inferred source-side attach point through the ordered `<bendpoint>` list to the inferred target-side attach point; when an imported file does not make the attach side inferable, use the source/target centre as a conservative fallback. Ignore source, target, and required source/target ancestor containers for segment intersections, but reject the route if the first bendpoint is inside the source rectangle or the last bendpoint is inside the target rectangle. If any other intersection remains, reroute with a different side-midpoint or explicit bend lane. If no clean route exists within the view budget, fail self-check with `AD-L11` and cap professional readiness at `model-valid`.
+8. **Avoid visual-story duplication.** When a relationship is already expressed
+   by nesting, a shared process-rooted realization spine, or another visible
+   lane in the same view, keep the model relationship but omit or hide the
+   redundant view connection per reference §6.4c. Otherwise Review emits
+   `AD-L17`.
+9. **Keep routes local.** A side or bottom bus route that spans most of the
+   view should be a last resort. Prefer moving endpoints closer, splitting the
+   view, or adding a short explicit bend lane. If the long route remains,
+   document the reason so `AD-L16` stays informational.
+10. **Respect boundaries.** A connector may leave a source or target container
+    through required ancestor boundaries, but it must not cross unrelated
+    Grouping, trust-boundary, or deployment-boundary boxes in a way that
+    changes the visual meaning. Reroute or split before accepting `AD-L18`.
+11. **Post-layout intersection pass.** After bendpoints are emitted and after every Tier 2 specialisation has run, inspect each connection segment against every node bounding box, including nested child boxes. Reconstruct each route as the rendered polyline from the inferred source-side attach point through the ordered `<bendpoint>` list to the inferred target-side attach point; when an imported file does not make the attach side inferable, use the source/target centre as a conservative fallback. Ignore source, target, and required source/target ancestor containers for segment intersections, but reject the route if the first bendpoint is inside the source rectangle or the last bendpoint is inside the target rectangle. If any other intersection remains, reroute with a different side-midpoint or explicit bend lane. If no clean route exists within the view budget, fail self-check with `AD-L11` and cap professional readiness at `model-valid`.
 
 **Multi-row sibling clause** (referenced by Step 5b clause 2). When Step 5b falls back to bendpoint routing for a new nested child placed below existing siblings, Phase 5 emits **two bendpoints** to route the parent→child Composition edge west of the parent's left edge: bendpoint 1 at `(parent.x − 20, parent.y + parent.h / 2)` (round to grid) and bendpoint 2 at `(parent.x − 20, child.y + child.h / 2)` (round to grid). The edge attaches to the parent's left midpoint and the child's left midpoint.
 

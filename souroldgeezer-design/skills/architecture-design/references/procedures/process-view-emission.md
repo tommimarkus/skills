@@ -1,8 +1,10 @@
 # Process-view emission contract
 
-Rules for emitting the §9.7 Business Process Cooperation view + N × §9.3 Service Realization (Process-rooted modality) views from a Business Layer element set. Single source of truth — invoked by Build mode step 3 and Extract mode step 3.
+Rules for emitting the §9.7 Business Process Cooperation view + process-rooted
+§9.3 Service Realization views from a Business Layer element set. Single source
+of truth — invoked by Build mode step 3 and Extract mode step 3.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §9.3 (Service Realization), §9.7 (Business Process Cooperation), §10 self-check items for `AD-B-11` / `AD-B-12` / `AD-B-13`, and §6.4b (suppression property definitions).
+The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md). This procedure cites §9.3 (Service Realization), §9.7 (Business Process Cooperation), §10 self-check items for `AD-B-11` / `AD-B-12` / `AD-B-13` / `AD-B-14`, and §6.4b (suppression property definitions).
 
 ## When this procedure runs
 
@@ -26,9 +28,10 @@ A complete set of `<view>` blocks under `<views>/<diagrams>` in the canonical fi
 ### 1. View identifiers and naming
 
 - **§9.7 cooperation view** — identifier `id-view-bpc-<feature-slug>`, `<name xml:lang="en">Business Process Cooperation — <Feature title></name>`. One per feature.
-- **§9.3 service-realization view** — identifier `id-view-sr-<process-slug>`, `<name xml:lang="en">Service Realization — <Process name></name>`. One per orchestrator-level Business Process.
+- **§9.3 service-realization view, single process** — identifier `id-view-sr-<process-slug>`, `<name xml:lang="en">Service Realization — <Process name></name>`.
+- **§9.3 service-realization view, shared story** — identifier `id-view-sr-shared-<first-process-slug>-<last-process-slug>`, `<name xml:lang="en">Service Realization — Shared <Feature title> realization</name>`.
 
-`<process-slug>` is the lowercase-hyphens normalisation of the Business Process element's `<name>` (or, if available, derived from the lifting `LIFT-CANDIDATE source=` path's basename for stable cross-extracts).
+`<process-slug>` is the lowercase-hyphens normalisation of the Business Process element's `<name>` (or, if available, derived from the lifting `LIFT-CANDIDATE source=` path's basename for stable cross-extracts). For shared-story views, sort member process slugs ascending before computing the identifier.
 
 ## 2. Rules
 
@@ -48,26 +51,57 @@ The §9.7 view does **not** contain sub-processes (those are Composition-nested 
 
 If after applying suppression the §9.7 view would contain zero or one Business Process, omit emission entirely (zero) or emit but accept that `AD-B-11` will fire on Review (one). Do **not** silently fabricate processes to pad the view.
 
-### Rule 2 — §9.3 contents (one per orchestrator-level process)
+### Rule 2 — §9.3 contents (one per distinct realization story)
 
-For every Business Process X that is **orchestrator-level** (= top-level OR Composition-nested under another Business Process) and not carrying `propid-drilldown-exclude=true` (§6.4b suppression), emit a §9.3 view rooted on X with:
+For every Business Process X that is **orchestrator-level** (= top-level OR Composition-nested under another Business Process) and not carrying `propid-drilldown-exclude=true` (§6.4b suppression), assign X to a realization-story group before emitting §9.3 views.
 
-- The Business Process X at the top.
-- The Application Service that Realises X (if any in the model). Multiple Application Services possible.
+Two or more processes share the same realization story when their materialized
+§9.3 drill-down would have the same fingerprint:
+
+- same Application Service set realising the process group;
+- same Application Component set realising those services;
+- same UI-entry posture (all user-driven with the same UI Application Component
+  + Application Interface pattern, or all system-driven with no UI entry point);
+- same Technology Node / System Software / Artifact hosting chain when
+  Technology is in scope;
+- same data-plane, managed-identity / RBAC, external trust-boundary, and
+  deployment-environment elements when those are present in the model; and
+- no process-specific Business Object, Actor Assignment, Triggering / Flow
+  handoff, security boundary, deployment path, or view documentation that would
+  change the architecture question the §9.3 view answers.
+
+Emit one §9.3 view per distinct fingerprint. For a singleton group, root the
+view on X. For a shared group, root the view on the sorted set of Business
+Processes and show those processes together at the top of the realization
+spine, then draw the shared Application / Technology chain once. Do not emit
+near-identical per-process copies.
+
+Each §9.3 view contains:
+
+- The Business Process X at the top for a singleton view, or the grouped
+  Business Processes at the top for a shared-story view.
+- The Application Service that Realises X or the process group (if any in the model). Multiple Application Services possible.
 - The Application Component(s) Realising those Application Service(s).
 - The Technology Node(s) the Application Component(s) are Assigned to.
 - For **user-driven** processes (carrying a Business Actor Assignment per reference §4.1) — the architect-authored UI Application Component and Application Interface at the entry point (per existing reference §9.3 Process-rooted UI-aware modality and `AD-B-10`).
-- Composition-nested sub-processes of X appear *inside* the view as nested boxes per existing §9.3 layout (the sub-process also has its own standalone §9.3 view; the two representations together give the architect both the parent's drill-down view and a navigable sub-process drill-down).
+- Composition-nested sub-processes of X appear *inside* the view as nested boxes per existing §9.3 layout (the sub-process also has its own singleton or shared §9.3 view unless suppressed; the two representations together give the architect both the parent's drill-down view and a navigable sub-process drill-down).
 
 Layout follows the existing Tier 2 §9.3 specialisation in [`layout-strategy.md`](layout-strategy.md) — vertical realisation stack, no change.
 
+**Review smell.** If an existing model contains two or more §9.3 Service
+Realization views with identical fingerprints and no material process-specific
+difference, Review emits `AD-B-14` and recommends consolidation. Separate views
+are justified when the process changes application, data, technology, security,
+deployment, UI-entry, or business semantics materially.
+
 ### Rule 3 — Cross-reference back-pointers in `<documentation>`
 
-Every emitted §9.3 view's `<documentation>` block carries the back-pointer block at the top:
+Every emitted §9.3 view's `<documentation>` block carries the back-pointer block at the top. Shared-story views also list their member processes:
 
 ```
 Parent process: id-bp-<parent-slug>     [omit when this process is top-level]
 Cooperation view: id-view-bpc-<feature-slug>
+Member processes: id-bp-<slug-a>, id-bp-<slug-b>     [shared-story views only]
 ```
 
 Reverse Lookup ([SKILL.md](../../SKILL.md) "Lookup mode workflow" step 1c reverse-lookup-backend-path) uses these back-pointers to walk a Composition hierarchy in one parse instead of file-globbing.
@@ -76,7 +110,7 @@ If the architect has authored a `<documentation>` block on the view, append the 
 
 ### Rule 4 — Layout invocation
 
-Each emitted §9.7 / §9.3 view runs the existing [`layout-strategy.md`](layout-strategy.md) Tier 2 specialisation matching its `viewpoint=` attribute. No change to the layout engine — multi-process §9.7 views were already supported by the 3-lane process-flow specialisation; per-process §9.3 views were already supported by the vertical realisation stack specialisation.
+Each emitted §9.7 / §9.3 view runs the existing [`layout-strategy.md`](layout-strategy.md) Tier 2 specialisation matching its `viewpoint=` attribute. No change to the layout engine — multi-process §9.7 views were already supported by the 3-lane process-flow specialisation; singleton and shared-story §9.3 views use the vertical realisation stack specialisation.
 
 ### Rule 5 — Existing model preservation
 
@@ -85,7 +119,7 @@ If the canonical file already contains §9.7 or §9.3 views:
 - Existing view identifiers, names, properties, and `<node>` placements are preserved verbatim.
 - Architect-edited view contents (extra Actors / Objects added by hand) are preserved.
 - Top-level processes missing from an existing §9.7 view are added; processes removed from the model are removed from the view (drift surface — listed in the footer).
-- Per-process §9.3 views are added when missing for an orchestrator-level process (and not suppressed via `propid-drilldown-exclude`); removed when their root process is removed from the model.
+- §9.3 views are added when missing for an orchestrator-level process story (and not suppressed via `propid-drilldown-exclude`); near-identical per-process copies are consolidated when their fingerprint matches; removed when their root process group is removed from the model.
 
 ### Rule 6 — Budget cap, no auto-split
 
@@ -108,7 +142,7 @@ Both are defined in reference §6.4b. The two `<propertyDefinition>` declaration
 
 ### Example A — small feature, 2 top-level processes, 1 sub-process
 
-A feature `checkout` with two top-level orchestrators (`PlaceOrder`, `CancelOrder`) and one sub-orchestrator (`ValidateOrder`, Composition-nested under `PlaceOrder`). Expected emission: 1 × §9.7 + 3 × §9.3.
+A feature `checkout` with two top-level orchestrators (`PlaceOrder`, `CancelOrder`) and one sub-orchestrator (`ValidateOrder`, Composition-nested under `PlaceOrder`). Expected emission when all three have materially different realization stories: 1 × §9.7 + 3 × §9.3.
 
 ```xml
 <views>
@@ -143,6 +177,15 @@ Cooperation view: id-view-bpc-checkout</documentation>
 ```
 
 The §9.7 view contains the two top-level processes (`PlaceOrder`, `CancelOrder`) but **not** the sub-process (`ValidateOrder`). The sub-process appears nested inside `id-view-sr-place-order` (its parent's §9.3) and as the root of its own §9.3 view (`id-view-sr-validate-order`) — reachable from both directions.
+
+### Example A2 — shared realization story
+
+Two top-level processes (`PlaceOrder`, `CancelOrder`) both realise the same
+Application Service through the same Application Component, hosting chain,
+data-plane resources, trust boundary, deployment environment, and UI-entry
+posture. Expected emission: 1 × §9.7 + 1 × shared §9.3 view. The shared view
+lists both Business Processes at the top and draws the common Application /
+Technology chain once.
 
 ### Example B — single-process suppression
 
@@ -179,6 +222,9 @@ The §9.7 view contains only `id-bp-place-order`. The legacy process still has i
 - **Emit UI Application Components for §9.3.** Hand-authored per existing reference §9.3 Process-rooted modality (UI route lifting deferred in v1).
 - **Auto-split a feature when its §9.7 overflows AD-L4.** Surface AD-L4 as a finding; architect splits.
 - **Apply layout.** Delegated to [`layout-strategy.md`](layout-strategy.md). This procedure produces the view skeleton (identifier, name, content references); the layout procedure applies coordinates.
+- **Invent consolidation across materially different process stories.** If
+  security, data, deployment, UI-entry, technology, or business semantics
+  differ, emit separate §9.3 views and explain why they were kept separate.
 
 ## Sources
 

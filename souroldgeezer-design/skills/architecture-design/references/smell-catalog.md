@@ -75,6 +75,10 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L13` | §8 layout, §6.4a | Stacked connector lane — visible connectors share a lane closely enough to overlap arrowheads or labels |
 | `AD-L14` | §8 layout, §6.4a | Wide empty layer gap — excessive vertical whitespace separates occupied layer bands |
 | `AD-L15` | §8 layout, §6.4a | Local fan-out crisscross — high-degree local edges cross each other or a non-endpoint sibling |
+| `AD-L16` | §8 layout, §6.4a | Long peripheral bus route — a side or bottom route dominates the view instead of serving a local relationship |
+| `AD-L17` | §8 layout, §6.4a | Duplicate visible story path — two or more visible connections or lanes tell the same architecture story in one view |
+| `AD-L18` | §8 layout, §6.4a | Misleading boundary crossing — a connector crosses a Grouping or container boundary in a way that implies the wrong trust, ownership, or deployment boundary |
+| `AD-L19` | §8 layout, §6.4a | Ambiguous nested ownership — nested placement implies composition, aggregation, trust, or deployment ownership not supported by model relationships or documentation |
 
 ## Process-flow smells — `AD-B-*`
 
@@ -95,6 +99,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Proces
 | `AD-B-11` | §8 AD-B, §9.7 | Single-process cooperation view — Business Process Cooperation view contains exactly one Business Process |
 | `AD-B-12` | §8 AD-B, §9.3, §7.4 | Sub-process without its own §9.3 drill-down view, unless `propid-drilldown-exclude=true` is set |
 | `AD-B-13` | §8 AD-B, §9.7, §7.4 | Top-level Business Process missing from the feature's §9.7 cooperation view, unless `propid-coop-view-exclude=true` is set |
+| `AD-B-14` | §8 AD-B, §9.3, §7.4 | Duplicate realization drill-down — multiple §9.3 Service Realization views carry the same Application / Technology / data / security / deployment story with only the process root changed |
 
 ## Drift smells — `AD-DR-*`
 
@@ -125,7 +130,7 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-Q1`, `AD-Q2`, `AD-Q8`, `AD-Q9` | `warn` | Professional-readiness blockers — the model may be valid, but the view does not yet carry its intended architecture message |
 | `AD-Q3`, `AD-Q4`, `AD-Q5`, `AD-Q6`, `AD-Q7`, `AD-Q10` | `info` by default; escalate to `warn` when the affected view is claimed as `review-ready` | Quality degradations; severity depends on whether the artefact is a draft or presented for review |
 | `AD-B-4` | `block` | Layer soup in a §9.7 view (view-kind-specific tightening of `AD-1` / `AD-7`) |
-| `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10`, `AD-B-11`, `AD-B-12`, `AD-B-13` | `warn` | Process diagram is legible but has missing participants, missing realisation, or a broken between-view invariant |
+| `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10`, `AD-B-11`, `AD-B-12`, `AD-B-13`, `AD-B-14` | `warn` | Process diagram is legible but has missing participants, missing realisation, duplicate realization views, or a broken between-view invariant |
 | `AD-DR-11`, `AD-DR-12` | `warn` | Real process drift between the model and backend workflow sources; architect decides which side reconciles |
 | `AD-11` | `info` | Cosmetic unless it obscures a required trust-boundary Grouping; use `AD-21` for missing external trust boundaries |
 | `AD-DR-1` through `AD-DR-7` | `warn` | Real drift; architect decides whether the diagram or the code is the source of truth |
@@ -134,8 +139,8 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (overlap, truncated label) |
 | `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
 | `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
-| `AD-L9`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15` | `warn` | Mechanical layout/readability failures that should be fixed before diagram-readable or review-ready output |
+| `AD-L9`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15`, `AD-L17`, `AD-L18`, `AD-L19` | `warn` | Mechanical layout/readability failures that should be fixed before diagram-readable or review-ready output |
 | `AD-L11` | `block` | Connector crossing an unrelated node body creates false visual semantics; professional readiness cannot exceed `model-valid` |
-| `AD-L10` | `info` | Polish — canvas not normalised at `(40, 40) ± 10 px` origin; architect may have hand-shifted |
+| `AD-L10`, `AD-L16` | `info` by default; escalate to `warn` when the route obscures the view's main path | Polish unless it dominates the architecture message; architect may have hand-shifted or intentionally routed around a large group |
 
 Severity can be overridden per finding when evidence warrants (e.g., `AD-DR-8` escalated to `warn` when the renamed project is the feature's primary Component and every other diagram also shows the old name).

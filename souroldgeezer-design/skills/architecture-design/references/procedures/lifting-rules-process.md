@@ -204,7 +204,7 @@ These links make the `AD-B-8` / `AD-B-9` between-view invariant checkable: a lif
 
 ## Cross-link to view emission
 
-This procedure lifts Business Layer **elements**. Per-feature **view emission** — the §9.7 cooperation view and the per-process §9.3 drill-down views — is governed by [`process-view-emission.md`](process-view-emission.md), invoked by the Extract workflow ([SKILL.md](../../SKILL.md) Extract step 3) after this procedure has produced the element set. The view-emission contract guarantees: one §9.7 per feature containing every top-level Business Process, and one §9.3 per orchestrator-level Business Process (top-level + Composition-nested sub-orchestrators). Suppression via `propid-coop-view-exclude` / `propid-drilldown-exclude` (reference §6.4b) is the architect's escape hatch for intentional under-coverage.
+This procedure lifts Business Layer **elements**. Per-feature **view emission** — the §9.7 cooperation view and §9.3 Service Realization coverage — is governed by [`process-view-emission.md`](process-view-emission.md), invoked by the Extract workflow ([SKILL.md](../../SKILL.md) Extract step 3) after this procedure has produced the element set. The view-emission contract guarantees: one §9.7 per feature containing every top-level Business Process, plus §9.3 coverage per distinct realization story; same-story processes share one process-rooted §9.3 view, while materially different application, data, technology, security, deployment, UI-entry, or business stories keep separate views. Suppression via `propid-coop-view-exclude` / `propid-drilldown-exclude` (reference §6.4b) is the architect's escape hatch for intentional under-coverage.
 
 ## Sources
 

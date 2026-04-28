@@ -3,7 +3,7 @@ name: architecture-design
 description: >-
   Use when building, extracting, reviewing, or looking up enterprise, solution,
   or application architecture models in ArchiMate® 3.2 OEF XML, including
-  professional-readiness review of OEF views; capability maps, application
+  change classification and professional-readiness review of OEF views; capability maps, application
   cooperation, service realization, technology usage, migration, motivation, or
   business process cooperation views; architecture drift checks against code,
   IaC, workflows, or process models; or reverse lookup from a code symbol, UI
@@ -36,6 +36,10 @@ When invoked, run the architecture-design skill and present results:
    when a local OEF path is available so cropped renders do not hide
    source-geometry `AD-L*` failures; classify the artifact as `model-valid`,
    `diagram-readable`, or `review-ready`.
+   For OEF edits, state the change classification before and after the change:
+   semantic model change, view geometry change, and documentation/render
+   inventory change. Treat view-specific relationship hiding as geometry when
+   the model relationship remains and the view documentation names the reason.
    For explicit render-polish requests, run the skill's Review → Extract →
    Build → Lookup → render/compare loop until the documented stop condition is
    met.
@@ -99,6 +103,9 @@ When invoked, run the architecture-design skill and present results:
    [references/procedures/drift-detection.md](../skills/architecture-design/references/procedures/drift-detection.md)
    and emits `AD-DR-*` findings. Lead with `Professional readiness:
    model-valid | diagram-readable | review-ready` and top artifact blockers.
+   When a diff or edit request is in scope, include `Change classification:
+   semantic model change yes/no; view geometry change yes/no;
+   documentation/render inventory change yes/no`.
    Include a `layer:` field (`static` / `visual` / `runtime`) so the reader knows how to
    confirm. Follow with a short well-formedness + drift rollup. Only `static`
    findings are definitively pass / fail from source alone; `runtime` findings
@@ -141,7 +148,9 @@ When invoked, run the architecture-design skill and present results:
    `(40, 40) ± 10 px` origin (`AD-L10`), `<connection>` segment crossing an
    unrelated node bbox (`AD-L11`, blocking), view-orphan nodes (`AD-L12`),
    stacked connector lanes (`AD-L13`), wide empty layer gaps (`AD-L14`), or
-   local fan-out crisscross (`AD-L15`); Business Process Cooperation view
+   local fan-out crisscross (`AD-L15`), long peripheral bus route (`AD-L16`),
+   duplicate visible story path (`AD-L17`), misleading boundary crossing
+   (`AD-L18`), or ambiguous nested ownership (`AD-L19`); Business Process Cooperation view
    lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
    layer elements (`AD-B-4`); §9.3 Service Realization view with a Business
    Process at top but no realising Application Service (`AD-B-6`) or no
@@ -154,11 +163,13 @@ When invoked, run the architecture-design skill and present results:
    its own §9.3 drill-down view, unless `propid-drilldown-exclude=true`
    is set (`AD-B-12`); a top-level Business Process missing from the
    feature's §9.7 cooperation view, unless `propid-coop-view-exclude=true`
-   is set (`AD-B-13`).
+   is set (`AD-B-13`); duplicate same-story §9.3 Service Realization
+   drill-downs that should be consolidated (`AD-B-14`).
 8. Always emit the footer disclosure: mode, reference path, canonical path,
-   diagram kind, layers in scope, self-check result, project assimilation
-   block (existing model reused; identifiers preserved; layers lifted vs
-   stubbed; drift summary), forward-only layers stubbed, visual render
+   diagram kind, layers in scope, self-check result, change classification
+   (semantic model / view geometry / documentation-render inventory), project
+   assimilation block (existing model reused; identifiers preserved; layers
+   lifted vs stubbed; drift summary), forward-only layers stubbed, visual render
    inspection result (`not run`, `passed n/n views`, or `failed n/n views`),
    the
    process-view emission block (top-level Business Process count;
