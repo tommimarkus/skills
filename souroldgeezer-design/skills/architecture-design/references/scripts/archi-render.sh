@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2026 LFM contributors
-# SPDX-License-Identifier: AGPL-3.0-or-later
-#
 # Render every view in an ArchiMate OEF XML file as a PNG using Archi's
 # headless CLI (HTML report mode — the only Archi CLI path that produces
 # view images as a side-effect).
@@ -17,7 +14,7 @@ IFS=$'\n\t'
 
 usage() {
   cat <<'EOF'
-Usage: scripts/archi-render.sh [OPTIONS] [OEF_FILE]
+Usage: archi-render.sh [OPTIONS] OEF_FILE
 
 Render every view in an ArchiMate OEF XML file as a PNG via Archi's CLI.
 
@@ -35,16 +32,18 @@ Options:
   -h, --help              Show this help.
 
 Arguments:
-  OEF_FILE       Path to an OEF XML file. Default: docs/architecture/lfm.oef.xml
-                 Relative paths resolve against the repository root.
+  OEF_FILE       Path to an OEF XML file. Required unless ARCHI_RENDER_OEF_FILE
+                 or a config file value supplies it. Relative paths resolve
+                 against the caller's git repository root, or the current
+                 directory when the caller is outside a git repository.
 
 Environment:
   ARCHI_BIN                 Path to Archi executable.
                             Default: $HOME/.local/bin/Archi.
   ARCHI_RENDER_CACHE_ROOT   Root for transient workdirs and failure logs.
                             Default: .cache/archi.
-  ARCHI_RENDER_CONFIG       Config file path. Relative paths resolve against the
-                            repository root.
+  ARCHI_RENDER_CONFIG       Config file path. Relative paths resolve like
+                            OEF_FILE.
   ARCHI_RENDER_OEF_FILE     Default OEF file when OEF_FILE is omitted.
   ARCHI_RENDER_OUTPUT_ROOT  Root for rendered PNG output.
                             Default: .cache/archi-views.
@@ -192,15 +191,11 @@ command -v realpath >/dev/null 2>&1 || die "realpath not in PATH"
 
 # ---- path resolution ----------------------------------------------------
 
-script="$(realpath "$0")"
-script_dir="$(dirname "$script")"
-
-repo_root="$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null)" \
-  || die "$script_dir is not inside a git working tree"
+repo_root="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null || pwd -P)"
 
 archi_bin="${ARCHI_BIN:-$HOME/.local/bin/Archi}"
 cache_root="${ARCHI_RENDER_CACHE_ROOT:-.cache/archi}"
-oef_rel="${ARCHI_RENDER_OEF_FILE:-docs/architecture/lfm.oef.xml}"
+oef_rel="${ARCHI_RENDER_OEF_FILE:-}"
 output_root="${ARCHI_RENDER_OUTPUT_ROOT:-.cache/archi-views}"
 
 [[ -n "$cli_archi_bin" ]] && archi_bin="$cli_archi_bin"
@@ -215,7 +210,7 @@ fi
 
 [[ -n "$archi_bin" ]] || die "Archi binary path cannot be empty"
 [[ -n "$cache_root" ]] || die "cache root cannot be empty"
-[[ -n "$oef_rel" ]] || die "OEF file path cannot be empty"
+[[ -n "$oef_rel" ]] || die "OEF file path cannot be empty (pass OEF_FILE or set ARCHI_RENDER_OEF_FILE)"
 [[ -n "$output_root" ]] || die "output root cannot be empty"
 
 archi_bin="$(resolve_repo_path "$archi_bin")"

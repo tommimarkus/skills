@@ -456,6 +456,30 @@ The view documentation or final summary should name the relationship id and the
 reason for omission. Deleting the relationship from the model is a semantic
 change and must be reported as such.
 
+### 6.4d Render artifacts and weak renderer dependency
+
+The OEF XML file is the architecture source artifact. Rendered PNGs are
+deployment / publication artifacts derived from the OEF so humans can inspect
+views in README pages, release packages, review comments, or documentation
+sites without opening an ArchiMate® modeling tool.
+
+Render artifacts do not change the architecture model by themselves:
+
+- regenerating PNGs, gallery rows, README previews, or provenance notes is a
+  documentation/render inventory change;
+- moving nodes, resizing nodes, or rerouting connections before rendering is a
+  view geometry change;
+- changing `<elements>` or `<relationships>` is a semantic model change.
+
+Rendering is optional and has one supported implementation:
+[`archi-render.sh`](../../skills/architecture-design/references/scripts/archi-render.sh).
+The script uses Archi's headless CLI and therefore requires Archi, `DISPLAY`,
+`xmllint`, `git`, `mktemp`, and `realpath`. These are weak dependencies for the
+skill. If they are absent, Review reports render inspection as not run with the
+exact blocker. The skill does not use fallback renderers, screenshots of other
+tools, hand-drawn substitutes, or generated images as evidence for visual
+render inspection.
+
 ### 6.5 Organizations (folder structure)
 
 Optional. Tools like Archi present models in a folder tree. OEF exposes this via `<organizations>`:
@@ -796,7 +820,14 @@ diffs are all clean for the requested quality level.
 - [static] A view does not draw duplicate visible paths for the same architecture story (`AD-L17`).
 - [static] Connectors do not cross Grouping, trust-boundary, or deployment-boundary boxes in visually misleading ways (`AD-L18`).
 - [static] Nested placement does not imply unsupported ownership, composition, trust, or deployment scope (`AD-L19`).
-- [visual] When an Archi or ArchiMate-conformant renderer is available in the current project, render every view and inspect all outputs before claiming `diagram-readable` or `review-ready`; do not sample. Reject views with connector-through-node, stacked arrows, orphan elements, excessive empty bands, fan-out crisscross, dominating bus routes, duplicate visible story paths, misleading boundary crossings, or ambiguous nested ownership even if the XML is otherwise model-valid. If no renderer is available, disclose that render inspection was not run.
+- [visual] When the user requests renders or visual inspection, run
+  `archi-render.sh` and inspect every emitted PNG before claiming visual render
+  quality; do not sample. Reject views with connector-through-node, stacked
+  arrows, orphan elements, excessive empty bands, fan-out crisscross,
+  dominating bus routes, duplicate visible story paths, misleading boundary
+  crossings, or ambiguous nested ownership even if the XML is otherwise
+  model-valid. If Archi, `DISPLAY`, or another script prerequisite is missing,
+  disclose that render inspection was not run. Do not use a fallback renderer.
 - [runtime] Application Components in this diagram correspond to real projects in the solution (for .NET: `*.csproj`); components that have no project are flagged as *planned* or *external*.
 - [runtime] Technology Nodes in this diagram correspond to IaC resources (for Azure: Bicep). Nodes that have no IaC are flagged as *planned* or *out-of-scope*.
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.

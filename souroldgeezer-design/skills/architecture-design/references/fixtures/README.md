@@ -8,18 +8,18 @@ Small ArchiMate® OEF XML files exercising all seven supported §9 viewpoints at
 2. Tier 0 finds no prior view at the canonical path, so all elements get algorithmic placement.
 3. Tier 1 (Phases 1-6) + Tier 2 (per-viewpoint specialisation) compute coordinates.
 4. The skill writes the resulting OEF, including `<node>` and `<connection>` geometry in the `<view>`.
-5. `archi-render.sh` (in a consuming project, dev-time only) renders the OEF to PNG.
+5. The bundled `../scripts/archi-render.sh` renders the OEF to PNG when Archi
+   and an X display are available.
 6. Visual inspection checks that the PNG is nonblank, spacious, consistently routed, and at the per-viewpoint acceptance bar (see spec §6.2 of `docs/superpowers/specs/2026-04-25-architecture-design-pro-quality-design.md`).
 
 ## Render
 
 ```bash
-# From a project with archi-render.sh installed (e.g. lfm-org/lfm)
-cd /path/to/lfm
-./scripts/archi-render.sh \
+cd /path/to/skills
+souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh \
   --cache-root /tmp/archi-fixture-cache \
   --output-root /tmp/archi-fixture-views \
-  /path/to/architecture-design/references/fixtures/<fixture>.oef.xml
+  souroldgeezer-design/skills/architecture-design/references/fixtures/<fixture>.oef.xml
 ls /tmp/archi-fixture-views/<fixture>/
 ```
 
@@ -30,7 +30,7 @@ the fixture set is considered valid:
 
 ```bash
 ./validate-render-fixtures.sh \
-  --render-script /path/to/lfm/scripts/archi-render.sh \
+  --render-script ../scripts/archi-render.sh \
   --render-cache-root /tmp/archi-fixture-cache \
   --render-output-root /tmp/archi-fixture-views
 ```

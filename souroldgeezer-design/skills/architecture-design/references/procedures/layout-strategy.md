@@ -273,7 +273,7 @@ Each sub-section below documents one specialisation.
 
 All other relationships (Realization, Used-by, Serving) route via Phase 5's standard A*.
 
-Acceptance: §9.4 view from `/tmp/lfm/docs/architecture/lfm.oef.xml` rebuilds with apps directly above their hosts and vertical hosting edges; data-plane / observability cluster to the right of the hosting tower.
+Acceptance: a representative §9.4 Technology Usage view rebuilds with applications directly above their hosts and vertical hosting edges; data-plane / observability cluster to the right of the hosting tower.
 
 ### §9.2 Application Cooperation — hub-and-spoke (when applicable)
 

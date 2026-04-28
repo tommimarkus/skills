@@ -1,7 +1,7 @@
 ---
 name: architecture-design
 description: >-
-  Use when building, extracting, reviewing, or looking up enterprise, solution,
+  Use when building, extracting, reviewing, rendering, or looking up enterprise, solution,
   or application architecture models in ArchiMate® 3.2 OEF XML, including
   change classification and professional-readiness review of OEF views; capability maps, application
   cooperation, service realization, technology usage, migration, motivation, or
@@ -43,6 +43,11 @@ When invoked, run the architecture-design skill and present results:
    For explicit render-polish requests, run the skill's Review → Extract →
    Build → Lookup → render/compare loop until the documented stop condition is
    met.
+   For render requests, use
+   [archi-render.sh](../skills/architecture-design/references/scripts/archi-render.sh)
+   after the source-geometry gate. Archi is a weak dependency with no fallback:
+   if Archi, `DISPLAY`, or another script prerequisite is missing, report
+   visual render inspection as not run with the exact blocker.
 3. For build mode: produce an OEF XML model at the canonical path that
    embodies the reference's decision defaults — Core Framework palette
    unless the diagram kind requires an extension; every `<element>` and
@@ -99,6 +104,8 @@ When invoked, run the architecture-design skill and present results:
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
    runs the source-geometry gate, walks reference §10 checklist, and emits
    `AD-*` / `AD-Q*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
+   render requests run `archi-render.sh` and inspect every emitted PNG when
+   Archi is available, with no fallback renderer;
    drift detection (OEF file + current code/IaC) invokes
    [references/procedures/drift-detection.md](../skills/architecture-design/references/procedures/drift-detection.md)
    and emits `AD-DR-*` findings. Lead with `Professional readiness:
@@ -171,6 +178,8 @@ When invoked, run the architecture-design skill and present results:
    assimilation block (existing model reused; identifiers preserved; layers
    lifted vs stubbed; drift summary), forward-only layers stubbed, visual render
    inspection result (`not run`, `passed n/n views`, or `failed n/n views`),
+   render artifact status (`not requested`, `not run`, or output directory /
+   PNG count),
    the
    process-view emission block (top-level Business Process count;
    sub-process count; §9.7 / §9.3 view counts; suppressed identifiers

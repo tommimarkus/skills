@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including change classification and professional-readiness review of OEF views; capability maps, application cooperation, service realization, technology usage, migration, motivation, or business process cooperation views; architecture drift checks against code, IaC, workflows, or process models; or reverse lookup from a code symbol, UI file, API endpoint, or workflow to its owning Business Process.
+description: Use when building, extracting, reviewing, rendering, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including change classification and professional-readiness review of OEF views; capability maps, application cooperation, service realization, technology usage, migration, motivation, or business process cooperation views; architecture drift checks against code, IaC, workflows, or process models; or reverse lookup from a code symbol, UI file, API endpoint, or workflow to its owning Business Process.
 ---
 
 # Architecture Design
@@ -44,7 +44,7 @@ relationship id and reason in the view documentation or final summary.
 - **Physical Layer extraction** → not attempted in v1; forward-only.
 - **Runtime observation of architecture** (live topology from deployed resources) → static signals only — project files, IaC, workflow definitions. Drift against a live Azure subscription is not in scope.
 - **Governance, approval, or review-board workflow** → the skill produces and checks diagrams; it does not run the architectural governance process around them.
-- **Project documentation packaging** → out of scope. Consuming projects decide where generated artefacts live, which README rows or galleries exist, which PNG/SVG renders are published, and which CI jobs validate those project packages.
+- **Project documentation packaging** → out of scope. Consuming projects decide where generated artefacts live, which README rows or galleries exist, which PNG/SVG renders are published, and which CI jobs validate those project packages. When the user explicitly requests renders, this skill can produce PNG deployment artefacts from OEF via the bundled Archi script, but it does not design the consuming project's publication package unless asked.
 - **Publication readiness of a repo-specific docs package** → out of scope unless the user explicitly asks for that project packaging review. The skill's default success criterion is OEF/model/view quality, not render-gallery completeness.
 
 ## Modes
@@ -67,12 +67,13 @@ Four modes — deliberately distinct from the 3-mode symmetry of `responsive-des
 
 ### Review mode
 
-**Use for:** reviewing an existing ArchiMate® model against the reference — *professional readiness* (is this model-valid, diagram-readable, or review-ready?), *artefact well-formedness* (does the OEF XML conform to ArchiMate® 3.2?), and *drift* (does the model still reflect the current code and IaC?).
+**Use for:** reviewing an existing ArchiMate® model against the reference — *professional readiness* (is this model-valid, diagram-readable, or review-ready?), *artefact well-formedness* (does the OEF XML conform to ArchiMate® 3.2?), *render artefacts* (when the user requests PNGs or visual inspection), and *drift* (does the model still reflect the current code and IaC?).
 
-**Triggers:** "review this ArchiMate® model", "check `…oef.xml` against the standard", "is this architecture model well-formed", "is this architecture diagram professional / review-ready", "has the architecture drifted from the code", "drift check on `docs/architecture/<feature>.oef.xml`".
+**Triggers:** "review this ArchiMate® model", "check `…oef.xml` against the standard", "is this architecture model well-formed", "is this architecture diagram professional / review-ready", "render this architecture model", "generate PNGs for this OEF", "refresh the architecture renders", "has the architecture drifted from the code", "drift check on `docs/architecture/<feature>.oef.xml`".
 
-Review has two sub-behaviours, dispatched on inputs:
+Review has three sub-behaviours, dispatched on inputs:
 - **Artefact review** — a `.oef.xml` file alone → ArchiMate® 3.2 well-formedness + professional-readiness pass + `AD-*` / `AD-Q*` smell catalog per reference §8.
+- **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed and an X display is available. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
 - **Drift detection** — a `.oef.xml` file + the current code/IaC at the canonical locations (§ project assimilation) → delta report (elements added / removed / changed since the model was last aligned).
 
 ### Lookup mode
@@ -112,13 +113,18 @@ separate and records which mode supplied each decision.
    from a symbol or workflow to the owning Business Process. Lookup does not
    mutate the model.
 5. **Render and compare all artifacts.** Re-run the source-geometry gate,
-   regenerate every requested PNG/SVG render, inspect every output rather than
-   sampling, and compare source plus render snapshots against the committed
-   baseline. If the user explicitly asked for rendered diagrams, or the
-   consuming project already commits render snapshots/galleries for the
-   architecture package, updating those project render artifacts is in scope.
-   Otherwise, report render commands and output locations without committing
-   project packaging changes.
+   regenerate every requested PNG render with
+   [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh),
+   inspect every output rather than sampling, and compare source plus render
+   snapshots against the committed baseline. `archi-render.sh` requires Archi
+   and an X display; this is a weak dependency with no fallback support. If
+   Archi, `DISPLAY`, or another script prerequisite is missing, report render
+   inspection as not run with the exact blocker and continue only with static
+   source-geometry evidence. If the user explicitly asked for rendered
+   diagrams, or the consuming project already commits render snapshots/galleries
+   for the architecture package, updating those project render artifacts is in
+   scope. Otherwise, report render commands and output locations without
+   committing project packaging changes.
 
 **Stop condition:** stop only when the source-geometry gate passes, every
 rendered view passes visual inspection, no unresolved blocker/warn `AD-L*`,
@@ -143,6 +149,7 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → three-tier layout engine (Tier 0 architect-position preservation; Tier 1 Sugiyama-v1 core: cycle handling, layer assignment, 4-pass barycentric, median coordinate assignment, Manhattan A* edge routing, bbox normalisation; Tier 2 per-viewpoint specialisation per §9 diagram kind); Review restates its rules as `AD-L*` checks |
 | `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
 | `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, `AD-L11`, `AD-L13`, and `AD-L15`; complements render inspection because cropped PNG exports can hide off-origin source geometry and explicit connector lanes can hide stacked-arrow / fan-out defects |
+| `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → render every OEF view to PNG through Archi's headless CLI. Archi is a weak dependency with no fallback renderer; missing Archi / `DISPLAY` / tool prerequisites must be reported as "render inspection not run" |
 
 Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
 
@@ -159,6 +166,30 @@ docs/architecture/<feature>.oef.xml
 The path is the coupling mechanism for the sibling design skills (`responsive-design` and `serverless-api-design`). Their Review mode checks this path, and if a matching diagram exists, dispatches to `architecture-design` Review for drift detection.
 
 `<feature>` is a short snake-case or kebab-case identifier — `checkout`, `order-to-cash`, `auth`, `ingestion-pipeline`. One file per feature; the file may contain multiple views inside its `<views>/<diagrams>` block (Capability Map, Application Cooperation, Technology Usage, etc. for the same feature). The skill suggests the filename; the architect can override.
+
+## Render artifacts
+
+Rendered PNGs are **deployment / publication artifacts derived from OEF**, not
+the architecture source of truth. OEF XML remains the model; PNGs exist so
+humans and documentation packages can inspect the views without opening an
+ArchiMate® tool.
+
+When the user asks to render, refresh renders, inspect rendered views, or
+produce PNGs:
+
+1. Run the source-geometry gate first when a local OEF path exists.
+2. Invoke [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh)
+   with the requested OEF path and any caller-supplied `--archi-bin`,
+   `--cache-root`, `--config`, or `--output-root` settings.
+3. Treat Archi as a weak dependency. The script has no fallback support and the
+   skill must not invent one; if Archi, `DISPLAY`, `xmllint`, or another
+   prerequisite is missing, disclose the exact failure and keep visual render
+   inspection at `not run`.
+4. If rendering succeeds, inspect every emitted PNG before claiming visual
+   quality; do not sample views.
+5. Classify changed PNGs, README rows, galleries, or provenance text as
+   `documentation/render inventory change`. Do not mark a render-only refresh as
+   a semantic model change unless `<elements>` or `<relationships>` changed.
 
 ## Pre-flight (build & extract & review)
 
@@ -189,6 +220,12 @@ Before producing or reviewing a diagram, confirm the following. If the user hasn
    the footer. Hiding an existing relationship from one view is a view geometry
    change, not a semantic model change, when the relationship remains under
    `<relationships>` and the omission reason is documented.
+8. **Render request.** Did the user ask for PNG renders, visual render
+   inspection, or render snapshot refresh? Default: no. When yes, use
+   `references/scripts/archi-render.sh`; ask only for missing paths or explicit
+   output location when the default `docs/architecture/<feature>.oef.xml` /
+   `.cache/archi-views` convention is insufficient. Do not substitute another
+   renderer if Archi is unavailable.
 
 If any answer deviates from defaults (e.g., "include Physical Layer for this data-centre diagram"), state the deviation explicitly in the output footer.
 
@@ -277,7 +314,15 @@ Project assimilation:
 
 6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. When the OEF exists as a local file, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) against it before visual render inspection; treat every emitted line as a source-geometry `AD-L*` finding and fix blocking / warning layout findings before claiming `diagram-readable`. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
-   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect all outputs for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, local fan-out crisscross, long peripheral bus routes, duplicate visible story paths, misleading boundary crossings, and ambiguous nested ownership. Do not sample. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings from the source-geometry gate.
+   - `[visual]` — when rendering is requested and Archi is available, run
+     [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh),
+     then inspect all emitted PNGs for connector-through-node, stacked connector
+     lanes, orphan nodes, wide empty layer gaps, local fan-out crisscross, long
+     peripheral bus routes, duplicate visible story paths, misleading boundary
+     crossings, and ambiguous nested ownership. Do not sample. If Archi or
+     another script prerequisite is unavailable, disclose "render inspection not
+     run" with the blocker; do not weaken static `AD-L*` findings from the
+     source-geometry gate.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
    State the achieved artifact quality level and whether architecture semantics changed. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L19`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved.
@@ -329,9 +374,12 @@ Project assimilation:
 0. **Dispatch.** Confirm Review mode. Run pre-flight. Identify sub-behaviour:
    - Artefact review (diagram file alone, or diagram + architect asks "is this well-formed").
    - Drift detection (diagram + code/IaC at canonical locations, or architect asks "has this drifted").
-   If both apply, run artefact review first, then drift detection. When a diff
-   or edit request is in scope, classify the observed changes as semantic
-   model, view geometry, and/or documentation/render inventory.
+   - Render request (diagram + user asks for PNGs, render refresh, or visual
+     inspection).
+   If multiple apply, run artefact review first, render second, then drift
+   detection. When a diff or edit request is in scope, classify the observed
+   changes as semantic model, view geometry, and/or documentation/render
+   inventory.
 
 ### Artefact review
 
@@ -342,6 +390,13 @@ Project assimilation:
 2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify the artifact as `model-valid`, `diagram-readable`, or `review-ready`. Findings become `AD-Q*` smell codes from reference §8.
 
 3. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
+
+3a. **Render on request.** If the user requested renders or visual inspection,
+run `references/scripts/archi-render.sh` after static checks. Pass through
+caller-provided `--archi-bin`, `--cache-root`, `--config`, and `--output-root`
+when supplied. A missing Archi executable, missing `DISPLAY`, malformed XML, or
+script exit code is not a fallback opportunity; report the exact command,
+failure, and "Visual render inspection: not run".
 
 4. **Per-finding format.** Match the sibling-skill convention:
 
@@ -454,6 +509,7 @@ Change classification:
   Notes: <relationship ids hidden from specific views, committed render/docs artifacts updated, or "none">
 Self-check: pass | <n failures> | n/a
 Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
+Render artifacts: not requested | not run (<blocker>) | <output directory and PNG count>
 Source geometry gate: not run | passed | failed <n> findings
 Project assimilation:
   <block per the Project assimilation section above>
