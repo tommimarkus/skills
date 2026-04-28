@@ -99,6 +99,12 @@ The repo intentionally does not duplicate the catalog under
 `.agents/plugins/marketplace.json`; the existing `.claude-plugin/marketplace.json`
 is the shared marketplace for both Claude Code and Codex.
 
+Skill authoring and review guidance lives in
+[docs/skill-architecture.md](docs/skill-architecture.md). Use it as the
+canonical craft standard for trigger metadata, `SKILL.md` workflow shape,
+on-demand references, deterministic machinery, runtime parity, report contracts,
+and iterative improvement checks.
+
 ### Documentation Basis
 
 This packaging is cross-checked against both runtime doc sets. Claude Code's
@@ -425,6 +431,8 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
 
 ```
 AGENTS.md                          # thin Codex-native pointer to CLAUDE.md
+docs/skill-architecture.md         # canonical skill architecture craft standard
+scripts/skill-architecture-report.sh  # advisory craft-standard report for agent iteration
 .codex/agents/*.toml               # project-scoped Codex custom agents
 .claude-plugin/marketplace.json    # shared Claude Code + Codex marketplace manifest
 souroldgeezer-audit/               # audit plugin

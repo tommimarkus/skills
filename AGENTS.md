@@ -40,5 +40,6 @@ rules change.
 - Before finishing any change to a published plugin skill or its related
   agent, runtime metadata, bundled reference, extension, manifest, marketplace
   entry, repo-internal `.claude/skills/**` authoring skill, or repo docs,
-  follow the repo-internal `review-published-skill` guidance in
-  [.claude/skills/review-published-skill/SKILL.md](.claude/skills/review-published-skill/SKILL.md).
+  apply the skill architecture craft standard in
+  [docs/skill-architecture.md](docs/skill-architecture.md) and run
+  `scripts/skill-architecture-report.sh` when it is available.
