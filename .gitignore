@@ -2,3 +2,4 @@ docs/superpowers/
 .worktrees/
 .superpowers/
 .codex/rules/default.rules
+.codex/config.toml
