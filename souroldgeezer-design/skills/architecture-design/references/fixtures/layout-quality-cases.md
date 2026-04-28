@@ -9,12 +9,12 @@ Regression cases for Review-mode `AD-L*` geometry checks. These are small source
 - Connection: source → target with a straight segment from source right midpoint to target left midpoint.
 - Expected: `AD-L11 block`; readiness max `model-valid`.
 
-Executable regression: `render-quality-gate/cropped-but-failing.oef.xml` is a
+Executable regressions: `render-quality-gate/cropped-but-failing.oef.xml` is a
 well-formed OEF whose PNG can be cropped to plausible bounds while the source
-still fails `AD-L10` and `AD-L11`. Run
-`../scripts/validate-oef-layout.sh render-quality-gate/cropped-but-failing.oef.xml`
-from this directory; it must emit the view id, `id-conn-source-to-target`, and
-`id-node-middle`.
+still fails `AD-L10` and `AD-L11`; `render-quality-gate/bendpoint-origin-drift.oef.xml`
+proves `AD-L10` computes the used-region origin from nodes and bendpoints
+together. Run `render-quality-gate/test-render-quality-gate.sh`; it must emit
+the expected view id, connection id, node id, and actual min x/y evidence.
 
 ## Materialized view geometry
 
