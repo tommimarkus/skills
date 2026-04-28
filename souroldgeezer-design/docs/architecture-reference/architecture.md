@@ -719,6 +719,14 @@ souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-
 
 The gate emits Review-style `AD-L*` findings with the view id and affected connection or node id. It is required because renderers may crop PNG exports to content bounds, hiding off-origin source coordinates that still fail `AD-L10`.
 
+For explicit "render polish" requests against an existing canonical OEF, run
+the mode-composition loop from `architecture-design/SKILL.md`: Review current
+source and renders, Extract only to re-check source truth, Build the minimal
+layout/model patch, Lookup bounded notation or coverage questions, then
+regenerate and compare every requested render snapshot. The loop stops only
+when source geometry, rendered output, drift state, and committed source/render
+diffs are all clean for the requested quality level.
+
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).
 - [static] Every OEF `identifier` attribute is unique across the file; view-node and view-connection identifiers do not reuse model element or relationship identifiers (`AD-17`).

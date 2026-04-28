@@ -76,6 +76,50 @@ Review has two sub-behaviours, dispatched on inputs:
 
 **Default.** If the request is ambiguous between modes, ask. If the user says "design X architecture" without attaching artefacts, assume Build. If they attach code/IaC without an existing diagram, assume Extract. If they attach a diagram, assume Review. If it's a narrow factual question, assume Lookup.
 
+## Render polish / all-modes iteration
+
+Use this loop when the user asks to polish an existing canonical OEF until the
+rendered diagrams are visually pristine, or otherwise explicitly asks to
+iterate across all modes for render quality. This is a mode-composition
+workflow, not a fifth mode: each pass keeps the four mode responsibilities
+separate and records which mode supplied each decision.
+
+**Sequence per iteration:**
+
+`Review -> Extract -> Build -> Lookup -> render/compare`.
+
+1. **Review** the current OEF first. Run the artefact review path, including
+   [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh),
+   then render every view when a renderer is available. Record `AD-Q*`,
+   `AD-L*`, `AD-B-*`, and visual render findings by view id.
+2. **Extract** only for source truth. Re-run the discovery pass and applicable
+   lifting / drift procedures so layout patches do not fight current code,
+   IaC, workflow, or process-model facts. Do not use Extract to invent
+   forward-only Business / Motivation / Strategy content.
+3. **Build** the minimal layout/model patch. Apply the layout strategy and
+   professional-readiness procedure to the affected views, preserving existing
+   identifiers and architect-authored placements unless the Review findings
+   prove they are the defect.
+4. **Lookup** only for bounded questions and coverage scans: notation
+   validity, relationship choices, diagram-kind coverage, and reverse lookup
+   from a symbol or workflow to the owning Business Process. Lookup does not
+   mutate the model.
+5. **Render and compare all artifacts.** Re-run the source-geometry gate,
+   regenerate every requested PNG/SVG render, inspect every output rather than
+   sampling, and compare source plus render snapshots against the committed
+   baseline. If the user explicitly asked for rendered diagrams, or the
+   consuming project already commits render snapshots/galleries for the
+   architecture package, updating those project render artifacts is in scope.
+   Otherwise, report render commands and output locations without committing
+   project packaging changes.
+
+**Stop condition:** stop only when the source-geometry gate passes, every
+rendered view passes visual inspection, no unresolved blocker/warn `AD-L*`,
+`AD-B-*`, or `AD-Q*` finding caps the requested quality level, drift findings
+are either resolved or explicitly documented as architect-owned, and the final
+source/render snapshot diff contains only intentional changes. If any condition
+fails, start the next iteration from Review with the newly generated OEF.
+
 ## Extensions
 
 The skill ships without framework extensions in v1. **Per-stack lifting rules live in `references/procedures/`, not in `extensions/`.** They are consulted (read on demand) when Extract runs — the harness's Skill tool loads `SKILL.md` only; nested procedure files require an explicit `Read` tool call before they can inform the agent. The split between procedures is by *input source* (code / IaC / workflow), not by *target stack choice*.

@@ -36,6 +36,9 @@ When invoked, run the architecture-design skill and present results:
    when a local OEF path is available so cropped renders do not hide
    source-geometry `AD-L*` failures; classify the artifact as `model-valid`,
    `diagram-readable`, or `review-ready`.
+   For explicit render-polish requests, run the skill's Review → Extract →
+   Build → Lookup → render/compare loop until the documented stop condition is
+   met.
 3. For build mode: produce an OEF XML model at the canonical path that
    embodies the reference's decision defaults — Core Framework palette
    unless the diagram kind requires an extension; every `<element>` and
