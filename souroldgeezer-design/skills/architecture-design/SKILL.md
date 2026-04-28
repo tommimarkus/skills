@@ -21,6 +21,13 @@ The quality bar has three explicit levels:
 - **diagram-readable** — views have stable layout, legible labels, bounded density, coherent grouping, and no avoidable routing noise.
 - **review-ready** — every view answers a clear architecture question, uses the right viewpoint semantics, curates extraction noise, and can be reviewed without the agent verbally explaining what it meant.
 
+Every Build and Extract output must be a **materialized diagram**, not just a
+model inventory: each `<view>` emitted by the skill carries concrete
+`<node xsi:type="Element">` placements with `elementRef`, `x`, `y`, `w`, and
+`h`, plus `<connection xsi:type="Relationship">` entries for the visual
+relationships that carry the view's story. An element/relationship-only OEF can
+be `model-valid`, but it is not `diagram-readable`.
+
 ## Non-goals
 
 - **Other architecture notations** (C4, UML deployment, TOGAF® content metamodel, xAF) → out of scope; ArchiMate® is the sole notation.
@@ -192,13 +199,13 @@ Project assimilation:
    - **Tier 1** runs the Sugiyama-v1 core engine — six phases: (1) cycle handling, (2) layer assignment, (3) within-layer ordering with 4-pass barycentric crossing minimisation, (4) coordinate assignment via median heuristic, (5) Manhattan A* edge routing with obstacle avoidance plus post-layout connector intersection validation, (6) bounding-box normalisation to `(40, 40)` origin.
    - **Tier 2** applies the per-viewpoint specialisation matching the §9 diagram kind in scope (Capability Map / Application Cooperation / Service Realization / Technology Usage / Migration / Motivation / Business Process Cooperation).
    Identifiers are `id-<slug>` in lowercase-with-hyphens per §6.6; `<name>` values follow the element-type conventions in §6.7.
-   Then `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md): every emitted view must name the architecture question it answers, remove or group extraction noise, and be classified as `model-valid`, `diagram-readable`, or `review-ready`.
+   Then `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md): every emitted view must name the architecture question it answers, remove or group extraction noise, and be classified as `model-valid`, `diagram-readable`, or `review-ready`. Before leaving this step, materialize every view with `<node>` and `<connection>` geometry; never leave a generated view as element / relationship definitions only.
 
 5. **Write the canonical file.** Default location `docs/architecture/<feature>.oef.xml`. If an architect has named a specific path, honour that. Do **not** emit `propid-archi-model-banded` or any other layout marker on the `<model>` element; model-root `<properties>` is invalid OEF and triggers `AD-17`. Emit a default Dublin Core `<metadata>` block per reference §6.1a, with `dc:title` set to the feature name and `dc:creator` set to `architecture-design <plugin-version>` (read the live version from `souroldgeezer-design/.claude-plugin/plugin.json`); namespace constraint per `MetadataType`'s `<xs:any namespace="##other"/>` is non-negotiable (`AD-16`). **Emit all top-level `<model>` children in OEF sequence per reference §6** — `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views`. `<propertyDefinitions>` follows `<organizations>` and immediately precedes `<views>`.
 
 6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
-   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, and local fan-out crisscross. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings.
+   - `[visual]` — when an Archi-compatible renderer is available in the current project, render every view and inspect all outputs for connector-through-node, stacked connector lanes, orphan nodes, wide empty layer gaps, and local fan-out crisscross. Do not sample. If unavailable, disclose "render inspection not run"; do not weaken static `AD-L*` findings.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
    State the achieved artifact quality level. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L15`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved.
@@ -256,7 +263,7 @@ Project assimilation:
 
 **Layout-severity dispatch.** Layout findings are evaluated from view geometry directly. There is no valid model-root layout marker. `AD-L11` is always `block`; `AD-L12` / `AD-L13` / `AD-L14` / `AD-L15` are readability blockers for `diagram-readable` and `review-ready` even when their finding severity is `warn`.
 
-1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements.
+1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements. If a view has no materialized element nodes, missing `x` / `y` / `w` / `h`, no relationship connections for its visual story, or duplicate `identifier` attributes in the OEF file, cap the artefact at `model-valid` and report it before judging layout polish.
 
 2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify the artifact as `model-valid`, `diagram-readable`, or `review-ready`. Findings become `AD-Q*` smell codes from reference §8.
 
@@ -347,7 +354,7 @@ Professional readiness: model-valid | diagram-readable | review-ready
 Top artifact blockers: <none | concise list of AD-Q / AD-L / AD-B / AD-* codes>
 ```
 
-Then emit one per-finding block for each failure, followed by the rollup. All findings cite `AD-*` / `AD-Q*` code + reference §n + ArchiMate® 3.2 §/Appendix when applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `runtime` (vs current code/IaC). Only `static` findings are definitively pass / fail from source alone; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code."
+Then emit one per-finding block for each failure, followed by the rollup. All findings cite `AD-*` / `AD-Q*` code + reference §n + ArchiMate® 3.2 §/Appendix when applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `visual` (render inspection), `runtime` (vs current code/IaC). Only `static` and completed `visual` findings are definitively pass / fail from their evidence; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code."
 
 ### Lookup mode
 
@@ -366,6 +373,7 @@ Layout engine: Sugiyama-v1 [+ <viewpoint> specialisation, when applicable]
 Layers in scope: <comma-separated>
 Artifact quality: model-valid | diagram-readable | review-ready | not assessed
 Self-check: pass | <n failures> | n/a
+Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
 Project assimilation:
   <block per the Project assimilation section above>
 Forward-only layers stubbed: <list, or "none">
@@ -388,6 +396,8 @@ Output contains any of the following? Stop; fix before delivering:
 
 - **Invalid relationship per Appendix B.** Fix per `AD-2`; consult ArchiMate® 3.2 Appendix B (Relationships Table).
 - **View cannot answer an architecture question.** Fix per `AD-Q1` / `AD-Q2`; either sharpen the view's purpose and viewpoint or remove the view.
+- **Generated view has no materialized geometry.** Add concrete `<node xsi:type="Element">` placements and `<connection xsi:type="Relationship">` routing for every emitted view; element / relationship definitions alone are not a professional diagram.
+- **Duplicate OEF `identifier` values.** Fix per `AD-17`; every model element, relationship, view node, and view connection identifier shares one XML ID space.
 - **Review-ready claimed while professional-quality findings remain.** Fix `AD-Q*` findings first, then restate the quality level honestly as `model-valid` or `diagram-readable` if gaps remain.
 - **Business Actor, Role, Collaboration, Object, Contract, Product, Service, or Function emitted by Extract mode without a `FORWARD-ONLY` XML-comment marker.** Fix per `AD-14`; these elements are forward-only by design (reference §7.2). The marker is an XML comment (`<!-- ... -->`) per reference §7.3; the `'`-prefixed form is wrong (PlantUML / INI syntax) — OEF output is XML.
 - **Business Process, Event, or Interaction emitted by Extract mode without a `LIFT-CANDIDATE` marker** (or with a marker missing the required `source=` or `confidence=` attribute). Fix per `AD-14-LC`; these elements are *partially* forward-only — lifted from backend workflow sources per reference §7.4 and tagged so the architect can confirm each one.

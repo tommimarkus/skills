@@ -50,7 +50,11 @@ When invoked, run the architecture-design skill and present results:
    specialisation matching the §9 diagram kind (Capability Map tile grid /
    Application Cooperation hub-and-spoke / Service Realization vertical
    stack / Technology Usage hosting tower / Migration Plateau timeline /
-   Motivation tree / Business Process Cooperation lanes). Do not emit a
+   Motivation tree / Business Process Cooperation lanes). Materialize every
+   generated view with Element node geometry (`elementRef`, `x`, `y`, `w`,
+   `h`) and Relationship connections whose endpoints reference view-node
+   identifiers; never leave Build output as a model inventory with empty
+   views. Do not emit a
    model-root layout marker or model-root `<properties>` block. Cite reference
    sections the output draws from (`§4.2`, `§5`, `§6.4a`, `§9.3`, etc.);
    never duplicate reference prose; run the §10 self-check (`[static]` /
@@ -69,6 +73,9 @@ When invoked, run the architecture-design skill and present results:
    architect-authored position in a prior diagram at the canonical path,
    invoke [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
    architect-authored positions are preserved verbatim (procedure Step 1).
+   Materialize every generated seed or lifted view with concrete Element nodes
+   and Relationship connections before returning it; a raw inventory dump is
+   not a diagram-readable Extract result.
    Emit `FORWARD-ONLY — architect fills in` XML comment blocks per reference
    §7.3 for Motivation / Strategy and the remaining Business subset (Actor,
    Role, Collaboration, Object, Contract, Product, Service, Function). Refuse
@@ -94,6 +101,10 @@ When invoked, run the architecture-design skill and present results:
    Appendix B (`AD-2`); view cannot answer an architecture question or uses
    the wrong viewpoint for its concern (`AD-Q1` / `AD-Q2`); `review-ready`
    claimed while unresolved `AD-Q*` professional-quality findings remain;
+   a generated view has no materialized Element node geometry or lacks the
+   Relationship connections that carry its story; duplicate OEF identifiers
+   across model elements, relationships, views, view nodes, or view
+   connections (`AD-17`);
    Business (Actor / Role / Collaboration / Object /
    Contract / Product / Service / Function) / Motivation / Strategy element
    emitted by Extract without the `FORWARD-ONLY` marker (`AD-14`); Business
@@ -139,7 +150,9 @@ When invoked, run the architecture-design skill and present results:
 8. Always emit the footer disclosure: mode, reference path, canonical path,
    diagram kind, layers in scope, self-check result, project assimilation
    block (existing model reused; identifiers preserved; layers lifted vs
-   stubbed; drift summary), forward-only layers stubbed, the
+   stubbed; drift summary), forward-only layers stubbed, visual render
+   inspection result (`not run`, `passed n/n views`, or `failed n/n views`),
+   the
    process-view emission block (top-level Business Process count;
    sub-process count; §9.7 / §9.3 view counts; suppressed identifiers
    per `propid-coop-view-exclude` and `propid-drilldown-exclude`;

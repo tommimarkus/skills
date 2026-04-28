@@ -31,7 +31,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-14-LC` | §8, §7.4 | Business Process / Event / Interaction emitted by Extract without the per-element `LIFT-CANDIDATE — architect confirms: source=..., confidence=...` XML comment (missing marker or missing required `source=` / `confidence=` attribute) |
 | `AD-15` | §8, §6.4 | View `<node>` or `<connection>` emitted without an `xsi:type` (abstract complexType violates OEF schema) |
 | `AD-16` | §8, §6.1a | Metadata catalog payload emitted in the ArchiMate namespace instead of a non-ArchiMate catalog namespace |
-| `AD-17` | §8, §6 | Invalid top-level `<model>` child or child sequence, including model-root `<properties>` |
+| `AD-17` | §8, §6 | Invalid top-level `<model>` child, child sequence, model-root `<properties>`, or duplicate OEF `identifier` |
 | `AD-18` | §8, §7.1 | Invisible RBAC — RBAC-only technology resource is served/used without a Managed Identity Access path |
 | `AD-19` | §8, §9.5 | Fictitious plateaus — Extract emitted deployment Plateaus with no workflow/IaC/environment evidence |
 | `AD-20` | §8, §9.5 | Plateau triggering without migration intent — parallel deployment Plateaus connected as if one becomes the next |

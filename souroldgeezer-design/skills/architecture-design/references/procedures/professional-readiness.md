@@ -21,6 +21,12 @@ For each `<view>`:
 5. **Find the main path.** A professional view has a dominant chain: capability realisation, service realisation, process trigger/flow, technology hosting, migration plateau/gap, or motivation-to-requirement trace. If relationship completeness hides that path, emit `AD-Q6`.
 6. **Check hierarchy.** Important nodes and relationships should read first. If everything has equal visual weight, equal density, or equal naming prominence, emit `AD-Q4`.
 7. **Check labels.** Prefer domain-facing names in stakeholder and architecture-review views. Code-facing names are acceptable in implementation drill-downs and traceability notes. Generic, duplicated, or code-shaped labels in the wrong view trigger `AD-Q10`.
+8. **Check renderability.** A professional view must be materialized in OEF:
+   non-legend element nodes have `elementRef`, `x`, `y`, `w`, and `h`, and
+   the relationships that carry the visual story have relationship
+   connections with concrete source/target view nodes. A view with only model
+   elements and relationships, or one that renders as Archi's empty placeholder,
+   is capped at `model-valid` until geometry is emitted.
 
 ## Viewpoint gates
 
@@ -39,6 +45,7 @@ For each `<view>`:
 Use the lowest level justified by evidence:
 
 - Return `model-valid` when syntax and notation are sound but layout or communication is not dependable.
+- Return `model-valid` when a generated view lacks materialized node or connection geometry.
 - Return `model-valid` when any unresolved `AD-L11` finding exists. Connector-through-node is a blocking enterprise architecture readability failure, regardless of otherwise-valid XML.
 - Return `model-valid` when unresolved `AD-L12`, `AD-L13`, `AD-L14`, or `AD-L15` findings make layout communication unreliable.
 - Return `diagram-readable` when views can be read but still need curation, viewpoint sharpening, or decision context before formal review.

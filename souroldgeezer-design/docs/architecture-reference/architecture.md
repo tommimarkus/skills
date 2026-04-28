@@ -334,7 +334,7 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
   <diagrams>
     <view identifier="id-view-tech"
           xsi:type="Diagram"
-          viewpoint="Technology">
+          viewpoint="Technology Usage">
       <name xml:lang="en">Checkout — Technology Usage</name>
 
       <node xsi:type="Element" identifier="id-n-api" elementRef="id-orders-api"
@@ -358,6 +358,18 @@ Diagrams are expressed under `<views>/<diagrams>`. Each `<view>` is a specific A
 **Viewpoint attribute.** Every §9 diagram kind has a canonical ArchiMate 3.2 Viewpoint enum value drawn from `ViewpointsEnum` in `archimate3_View.xsd`; the skill emits the exact enum string. The §9 English label and `viewpoint=` attribute value are identical (see §9 for the seven canonical strings). The XSD types `viewpoint` as `xs:union` of `xs:string` and `ViewpointsEnum`, so custom strings are schema-valid; the skill does not use them — every supported kind has a canonical match.
 
 **Element identity is shared across views.** Placing an element in three diagrams creates three `<node>` entries — three placements with their own coordinates — but the element itself appears once in `<elements>`. This is the model-vs-view separation at the heart of OEF: an Application Component is *one* thing, and every view that shows it shows the same thing.
+
+Generated views are materialized. Build and Extract do not emit valid-looking
+`<elements>` / `<relationships>` inventories with empty `<view>` placeholders.
+Each generated view contains Element nodes with `elementRef`, `x`, `y`, `w`,
+and `h`, plus Relationship connections whose `source` and `target` point at
+the view-node identifiers. A blank `100 × 100` placeholder is importable
+model inventory, not a diagram-readable architecture view.
+
+Identifier uniqueness is global. OEF `identifier` attributes share one XML ID
+space across model elements, model relationships, views, view nodes, view
+connections, property definitions, and organization items. A view node must
+never reuse the model element identifier it references.
 
 ### 6.4a Layout strategy
 
@@ -574,7 +586,7 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-14-LC` Lift-candidate emitted without the marker** — Extract output that populated a Business Process, Business Event, or Business Interaction from a backend workflow source without the per-element `LIFT-CANDIDATE` comment (§7.4). Without the marker, the architect cannot distinguish a confirmed element from an unreviewed candidate, and reverse Lookup has no `source=` anchor.
 - **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
 - **`AD-16` Metadata catalog payload in the ArchiMate namespace** — the `<metadata>` block's catalog payload elements (the actual cataloging content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude) emitted in the ArchiMate namespace (`http://www.opengroup.org/xsd/archimate/3.0/`). OEF's `MetadataType` accepts the prelude in the ArchiMate namespace but routes catalog content through `<xs:any namespace="##other"/>`, requiring it to come from a non-ArchiMate namespace such as Dublin Core (`http://purl.org/dc/elements/1.1/`). See §6.1a. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do. Inverse error (placing `<schema>` or `<schemaversion>` in a non-ArchiMate namespace) also fails — they ARE schema-declared elements in `SchemaInfoGroup` and must inherit the document default namespace.
-- **`AD-17` Invalid model child element or sequence** — top-level children of `<model>` emitted in an order that violates `ModelType`'s `xs:sequence`, or top-level children that the schema does not permit at all. The mandatory order is `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views` (see §6). A model-root `<properties>` block is invalid, even when used only to carry a layout marker. Archi rejects invalid children or out-of-order children with `cvc-complex-type.2.4.a`; `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
+- **`AD-17` Invalid model child element, sequence, or XML ID space** — top-level children of `<model>` emitted in an order that violates `ModelType`'s `xs:sequence`, top-level children that the schema does not permit at all, or duplicate `identifier` values in the OEF file. The mandatory order is `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views` (see §6). A model-root `<properties>` block is invalid, even when used only to carry a layout marker. Archi rejects invalid children, out-of-order children, or duplicate XML IDs during schema-validating import; `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
 - **`AD-18` Invisible RBAC** — a Technology Node marked RBAC-only (`disableLocalAuth=true`, `allowSharedKeyAccess=false`, `enableRbacAuthorization=true`, or equivalent) has a Serving / Used-by path from an Application Component but no Access relationship from the corresponding Managed Identity to the protected resource. The data path is drawn without its authorization path.
 - **`AD-19` Fictitious plateaus** — Extract emits deployment Plateaus that have no supporting GitHub environment, `jobs.*.environment`, matrix environment, environment-tagged Bicep parameter set, or environment-specific deploy job.
 - **`AD-20` Plateau triggering without migration intent** — Plateaus that represent parallel deployment environments are connected by Triggering / Gap relationships even though the view documentation does not state an explicit as-is / to-be migration. Parallel environments coexist; they do not become one another.
@@ -699,11 +711,13 @@ Diagram kinds not in this list (Product Map, Organisation Structure, Information
 
 ## 10. Review checklist
 
-Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[runtime]` (requires reading the current code / IaC at the canonical paths).
+Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[visual]` (requires rendering and inspecting diagram output), `[runtime]` (requires reading the current code / IaC at the canonical paths).
 
 - [static] Diagram declares its kind (§9) implicitly via element palette; no layer soup (`AD-1`, `AD-7`).
 - [static] Every relationship is valid per ArchiMate 3.2 Appendix B (`AD-2`).
+- [static] Every OEF `identifier` attribute is unique across the file; view-node and view-connection identifiers do not reuse model element or relationship identifiers (`AD-17`).
 - [static] Every view `<node>` carries `xsi:type` (one of `Element` / `Container` / `Label`); every view `<connection>` carries `xsi:type` (one of `Relationship` / `Line`) (`AD-15`). Grep-verifiable: every `<node ` and `<connection ` inside `<views>` has an `xsi:type=` attribute.
+- [static] Every generated view is materialized with Element node geometry (`elementRef`, `x`, `y`, `w`, `h`) and Relationship connections for the relationships that carry the view's visual story.
 - [static] The `<metadata>` block's catalog payload elements come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: skip the optional `<schema>` and `<schemaversion>` prelude (these legitimately inherit the ArchiMate default namespace per `SchemaInfoGroup`); for every other direct child of `<metadata>`, confirm it carries either a default namespace declaration `xmlns="..."` or a prefixed declaration `xmlns:<prefix>="..."` (or inherits one from an ancestor) whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every emitted `.oef.xml`'s top-level child elements appear in the OEF-mandated sequence per §6 (`AD-17`). Grep-verifiable: parse the file's direct children of `<model>` (via `xmlstarlet sel -t -m '/*[local-name()="model"]/*' -v 'local-name()' -n` or equivalent — the namespace-agnostic form avoids xmlstarlet's default-namespace binding pitfall) and confirm the sequence is a valid prefix of `name, documentation, metadata, elements, relationships, organizations, propertyDefinitions, views`; any model-root `properties` child is invalid.
 - [static] Each view answers a stated architecture question and uses a viewpoint that matches that concern (`AD-Q1`, `AD-Q2`).
@@ -739,7 +753,7 @@ Each item is tagged with a verification layer consistent with other reference do
 - [static] Parallel or near-parallel connectors are lane-spaced so arrowheads and labels do not stack (`AD-L13`).
 - [static] Inter-layer whitespace is compact enough that occupied bands read as one diagram, not disconnected islands (`AD-L14`).
 - [static] Local fan-out connectors do not crisscross or route across non-endpoint sibling nodes (`AD-L15`).
-- [visual] When an Archi or ArchiMate-conformant renderer is available in the current project, render every view and inspect the output before claiming `diagram-readable` or `review-ready`. Reject views with connector-through-node, stacked arrows, orphan elements, excessive empty bands, or fan-out crisscross even if the XML is otherwise model-valid. If no renderer is available, disclose that render inspection was not run.
+- [visual] When an Archi or ArchiMate-conformant renderer is available in the current project, render every view and inspect all outputs before claiming `diagram-readable` or `review-ready`; do not sample. Reject views with connector-through-node, stacked arrows, orphan elements, excessive empty bands, or fan-out crisscross even if the XML is otherwise model-valid. If no renderer is available, disclose that render inspection was not run.
 - [runtime] Application Components in this diagram correspond to real projects in the solution (for .NET: `*.csproj`); components that have no project are flagged as *planned* or *external*.
 - [runtime] Technology Nodes in this diagram correspond to IaC resources (for Azure: Bicep). Nodes that have no IaC are flagged as *planned* or *out-of-scope*.
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.

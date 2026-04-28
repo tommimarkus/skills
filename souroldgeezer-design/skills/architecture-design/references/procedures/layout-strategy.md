@@ -16,6 +16,24 @@ The procedure is a deterministic three-tier pipeline:
 
 Run Tier 0 → Tier 1 → Tier 2 in order. Tier 2 may short-circuit Tier 1 phases (see each specialisation's "Replaces phases" line).
 
+## Materialized view contract
+
+The layout procedure emits renderable OEF views, not abstract model fragments.
+Every generated `<view>` must contain:
+
+- at least one non-legend `<node xsi:type="Element">` with `elementRef`, `x`,
+  `y`, `w`, and `h`;
+- a `<connection xsi:type="Relationship">` for each relationship that carries
+  the view's visual story, with `source` and `target` pointing at view-node
+  identifiers;
+- bendpoints on long or non-aligned routes, rather than diagonal shortcuts; and
+- identifiers that are unique across the entire OEF file, including model
+  elements, relationships, views, view nodes, and view connections.
+
+An OEF file with valid `<elements>` and `<relationships>` but empty views is a
+model inventory. It may import, but it fails the layout contract and cannot be
+classified above `model-valid`.
+
 ## Tier 0 — Pre-flight
 
 ### Step 1 — Preserve architect positions
@@ -213,7 +231,7 @@ Dispatch by the view's `viewpoint=` attribute:
 | `Capability Map` | §9.1 tile grid | 3, 4 |
 | `Application Cooperation` | §9.2 hub-and-spoke (when hub detected) | 3, 4 |
 | `Service Realization` | §9.3 vertical-stack | 3, 4 |
-| `Technology` | §9.4 hosting tower | 3, 4; carves phase 5 for hosting Assignment |
+| `Technology Usage` | §9.4 hosting tower | 3, 4; carves phase 5 for hosting Assignment |
 | `Migration` | §9.5 Plateau timeline | 2, 3, 4 |
 | `Motivation` | §9.6 hierarchical tree | 3, 4 |
 | `Business Process Cooperation` | §9.7 process-flow lanes | 3, 4 |
