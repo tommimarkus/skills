@@ -53,6 +53,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §2.8, §8 
 | `AD-Q8` | §8 AD-Q, §9.7, §10 | Process thinness — process view omits handoffs, responsibilities, trigger / flow, or value outcome |
 | `AD-Q9` | §8 AD-Q, §9.3, §10 | Service Realization thinness — services are named but the realization chain is not auditable |
 | `AD-Q10` | §8 AD-Q, §10 | Label ambiguity — labels are too generic, duplicated, or code-shaped for the intended audience |
+| `AD-Q11` | §8 AD-Q, §2.9, §6.4b | Authority override contradicted by content — view claims `architect-approved` / `stakeholder-validated` authority while still containing `FORWARD-ONLY` or unconfirmed `LIFT-CANDIDATE` content |
 
 ## Layout smells — `AD-L*`
 
@@ -129,6 +130,7 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-5`, `AD-7`, `AD-8`, `AD-10`, `AD-12`, `AD-13`, `AD-19` | `warn` | Legible but imprecise; diagram reads but makes a claim the model doesn't support |
 | `AD-Q1`, `AD-Q2`, `AD-Q8`, `AD-Q9` | `warn` | Professional-readiness blockers — the model may be valid, but the view does not yet carry its intended architecture message |
 | `AD-Q3`, `AD-Q4`, `AD-Q5`, `AD-Q6`, `AD-Q7`, `AD-Q10` | `info` by default; escalate to `warn` when the affected view is claimed as `review-ready` | Quality degradations; severity depends on whether the artefact is a draft or presented for review |
+| `AD-Q11` | `warn` by default; escalate to `block` when the affected view is in a stakeholder-facing report | Authority override contradicts visible `FORWARD-ONLY` / `LIFT-CANDIDATE` content; the override claims endorsement that the view itself shows as missing |
 | `AD-B-4` | `block` | Layer soup in a §9.7 view (view-kind-specific tightening of `AD-1` / `AD-7`) |
 | `AD-B-1`, `AD-B-2`, `AD-B-3`, `AD-B-5`, `AD-B-6`, `AD-B-7`, `AD-B-8`, `AD-B-9`, `AD-B-10`, `AD-B-11`, `AD-B-12`, `AD-B-13`, `AD-B-14` | `warn` | Process diagram is legible but has missing participants, missing realisation, duplicate realization views, or a broken between-view invariant |
 | `AD-DR-11`, `AD-DR-12` | `warn` | Real process drift between the model and backend workflow sources; architect decides which side reconciles |

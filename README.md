@@ -150,7 +150,7 @@ Four design skills, each with a matching one-shot Claude Code subagent:
 | [software-design](souroldgeezer-design/skills/software-design/SKILL.md) | Sustainable software design for code/module/script changes - Build, Extract, Review, and Lookup across boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, lightweight tradeoffs, and socio-technical fit | [.NET™](souroldgeezer-design/skills/software-design/extensions/dotnet.md) (solution/project references, namespaces, assembly visibility, dependency injection, persistence model leakage, hosted services, and common .NET™ design ceremony); [shell-script](souroldgeezer-design/skills/software-design/extensions/shell-script.md) (Bash/zsh interpreter boundaries, sourced modules, shell option/trap state, Linux® / macOS™ / Windows Subsystem for Linux™ compatibility, and `devsecops-audit` Quick validation when available) |
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
 | [serverless-api-design](souroldgeezer-design/skills/serverless-api-design/SKILL.md) | Modern serverless HTTP APIs — enforces security (Entra ID / managed identities / Key Vault / data-plane RBAC, `disableLocalAuth`, `allowSharedKeyAccess=false`), contract discipline (OpenAPI 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C traceparent, correlation ID, RU / request-charge visibility) as hard baselines | [azure-functions-dotnet](souroldgeezer-design/skills/serverless-api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/serverless-api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/serverless-api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
-| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, materialized OEF view geometry, change classification (semantic model / view geometry / documentation-render inventory), and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (professional readiness, executable source-geometry `AD-L*` gate, optional PNG render artefacts, visual render inspection, artefact findings, duplicate realization view detection, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process), plus an explicit Review → Extract → Build → Lookup → render/compare iteration loop for user-requested render polishing | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-design/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md), the executable [source-geometry gate](souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh), optional [render script](souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh), and the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation, post-layout connector intersection pass; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau or deployment-topology layout / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `AD-B-*` checks in Review |
+| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, materialized OEF view geometry, change classification (semantic model / view geometry / documentation-render inventory), and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (per-view readiness matrix with Readiness + Authority axes, executable source-geometry `AD-L*` gate, optional PNG render artefacts with render gate when visual quality is requested, visual render inspection, artefact findings, duplicate realization view detection, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process), plus an explicit Review → Extract → Build → Lookup → render/compare iteration loop for user-requested render polishing | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-design/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md), the executable [source-geometry gate](souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh), optional [render script](souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh), and the deterministic [Sugiyama-v1 three-tier layout engine](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md) introduced in 0.8.0 (Tier 0 architect-position preservation; Tier 1 cycle handling, layered ordering, A* edge routing, bbox normalisation, post-layout connector intersection pass; Tier 2 per-viewpoint specialisations: hosting tower / hub-and-spoke / Plateau or deployment-topology layout / tile grid / Process-rooted realisation stack / Motivation tree / process-flow lanes) invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `AD-B-*` checks in Review |
 
 References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/serverless-api-design.md](souroldgeezer-design/docs/api-reference/serverless-api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
 Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
@@ -285,6 +285,26 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   exist in this feature area"), or a reverse-lookup question ("which
   process does this code symbol or UI component belong to") with a citation
   or a ranked list.
+- **Per-view readiness matrix** (introduced in 0.18.0). Quality is classified
+  per `<view>` first; the artifact rollup is the worst-view minimum (capped at
+  `model-valid` by any unresolved model-level blocker). Build, Extract, and
+  Review emit a per-view matrix carrying Readiness (`model-valid` /
+  `diagram-readable` / `review-ready`) and Authority (`lifted-from-source` /
+  `forward-only-or-inferred` / `architect-approved` / `stakeholder-validated`).
+  The matrix surfaces the per-view bottleneck so iterations can target the
+  view that's holding the rollup back.
+- **Authority dimension** (introduced in 0.18.0). Visual readiness measures
+  whether the view is a polished diagram; **authority** measures who or what
+  backs the architecture content shown. Defaults derived from view content
+  (`lifted-from-source` when every element resolves to a current source;
+  `forward-only-or-inferred` when any element is a `FORWARD-ONLY` stub or an
+  unconfirmed `LIFT-CANDIDATE`); architect overrides via the view-level
+  `propid-authority` property (reference §6.4b) for `architect-approved` or
+  `stakeholder-validated`. A polished forward-only view is honestly
+  `review-ready` for visual quality and `forward-only-or-inferred` for
+  authority — both are reported. `AD-Q11` catches override-vs-content
+  contradictions (claimed `architect-approved` while the view still contains
+  unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content).
 - **Verification-layer tags.** Every §10 checklist item carries a tag —
   `[static]` (readable from the `.oef.xml` source alone), `[visual]`
   (requires the optional bundled render script when requested), or
@@ -299,6 +319,32 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   the output paths, and inspects every PNG. The renderer executable is a weak
   dependency with no fallback renderer — missing renderer, `DISPLAY`, or script prerequisites are
   reported as `visual render inspection: not run`.
+- **Render gate** (introduced in 0.18.0). When the user has explicitly
+  requested visual quality (render request, render-polish loop, or `[visual]`
+  self-check requested in pre-flight) and render did not run, the changed
+  views in this run cap at `model-valid` until render runs. Unchanged views
+  inherit their prior classification. When the user has not requested visual
+  quality, the gate does not engage — the source-geometry gate plus
+  `[static]` `AD-L*` checks remain the visual proxy. This preserves CI
+  portability for installations without Archi while making "no render, no
+  done" enforceable when visual quality is the architect's stated goal.
+- **Render-contract discovery** (introduced in 0.18.0; disclosure-only). The
+  project assimilation discovery pass detects committed render artifacts
+  under `docs/architecture/**/*.png`, gallery sections in
+  `README.md` / `docs/architecture/README.md`, and repo render commands in
+  `Makefile` / `package.json` / workflows. The footer's `Project assimilation:`
+  block lists what was found, and when the OEF changed, notes that those
+  project artefacts may need refresh — the architect decides whether to
+  update them in this run. The skill does not auto-update committed renders
+  or gallery prose unless the user explicitly asks or the explicit
+  render-polish loop is in scope.
+- **Skill self-check** (introduced in 0.18.0). Build / Extract / Review step 0
+  invokes
+  [self-check.md](souroldgeezer-design/skills/architecture-design/references/procedures/self-check.md)
+  to verify required reference files, procedures, and scripts are present and
+  runnable. Missing tooling produces a degraded-mode footer entry naming the
+  blocker; affected verifications are reported as "not run" rather than
+  silently skipped, so a missing procedure doesn't masquerade as a clean check.
 - **Change classification.** OEF work reports whether it changed architecture
   semantics, view geometry, or documentation/render inventory. View-specific
   relationship hiding is allowed when the model relationship remains intact,
@@ -383,18 +429,21 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   cooperation view), `AD-B-12` (sub-process without its own drill-down),
   `AD-B-13` (top-level process missing from §9.7), and `AD-B-14`
   (duplicate realization drill-down).
-- **Professional-readiness gate** (introduced in 0.10.0). Build and
-  Extract target at least `diagram-readable`; Review reports whether the
-  OEF/model/view set is `model-valid`, `diagram-readable`, or
-  `review-ready`. The `AD-Q*` smells cover inventory views, viewpoint
-  mismatch, unreviewable density, weak hierarchy, extraction leakage,
-  relationship noise, orphaned decision context, thin process views, thin
-  service realization, and ambiguous labels. A generated view without
-  materialized node/connection geometry is capped at `model-valid`; when a
-  renderer is available, every view must be rendered and inspected before the
-  skill claims `diagram-readable` or `review-ready`. Project packaging stays
-  with the consuming project: README rows, render galleries, screenshots, and
-  CI publication checks are not architecture-design success criteria.
+- **Professional-readiness gate** (introduced in 0.10.0; per-view in 0.18.0).
+  Build and Extract target at least `diagram-readable`; Review reports
+  whether each `<view>` is `model-valid`, `diagram-readable`, or
+  `review-ready`, then derives the artifact rollup as the worst-view minimum.
+  The `AD-Q*` smells cover inventory views, viewpoint mismatch, unreviewable
+  density, weak hierarchy, extraction leakage, relationship noise, orphaned
+  decision context, thin process views, thin service realization, ambiguous
+  labels, and authority override contradictions (`AD-Q11`, 0.18.0). A
+  generated view without materialized node/connection geometry is capped at
+  `model-valid`; when a renderer is available, every view must be rendered
+  and inspected before the skill claims `diagram-readable` or `review-ready`.
+  Project packaging stays with the consuming project: README rows, render
+  galleries, screenshots, and CI publication checks are not architecture-design
+  success criteria — they are surfaced via the disclosure-only render-contract
+  discovery (0.18.0) for the architect to act on.
 - **Extracted security and boundary semantics.** Bicep lifting surfaces
   Managed Identity / RBAC Access paths, diagnostic Flow edges, Key Vault
   references, RBAC-only resource flags, and private endpoint Paths. .NET

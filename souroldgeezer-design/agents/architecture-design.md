@@ -21,7 +21,14 @@ professional OEF/view readiness, and code-to-model consistency — using the ref
 When invoked, run the architecture-design skill and present results:
 
 1. Invoke the `architecture-design` skill using the Skill tool.
-2. Follow the skill instructions exactly — confirm mode (build / extract /
+2. Run the skill self-check
+   ([self-check.md](../skills/architecture-design/references/procedures/self-check.md))
+   first — verify that the bundled reference, every required procedure, and the
+   `validate-oef-layout.sh` / `archi-render.sh` scripts are present and runnable;
+   record the outcome for the footer. Missing tooling produces a degraded-mode
+   note in the footer; the affected verification is reported as "not run" with
+   the exact blocker rather than silently skipped. Then follow the skill
+   instructions exactly — confirm mode (build / extract /
    review / lookup), run the pre-flight questions if inputs are ambiguous
    (diagram kind from reference §9, layer scope, extraction posture for
    Extract mode, feature name for the canonical filename). Run the project
@@ -34,8 +41,18 @@ When invoked, run the architecture-design skill and present results:
    before returning Build / Extract output or Review findings; run
    [validate-oef-layout.sh](../skills/architecture-design/references/scripts/validate-oef-layout.sh)
    when a local OEF path is available so cropped renders do not hide
-   source-geometry `AD-L*` failures; classify the artifact as `model-valid`,
-   `diagram-readable`, or `review-ready`.
+   source-geometry `AD-L*` failures; classify each `<view>` as `model-valid`,
+   `diagram-readable`, or `review-ready`, then derive the artifact rollup as
+   the worst-view minimum (capped at `model-valid` by any unresolved
+   model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`). Also
+   derive each view's authority axis (`lifted-from-source` /
+   `forward-only-or-inferred` / `architect-approved` / `stakeholder-validated`)
+   per the reference §2.9 / §6.4b rules; emit `AD-Q11` when a view's
+   `propid-authority` override claims `architect-approved` or
+   `stakeholder-validated` while the view still contains unresolved
+   `FORWARD-ONLY` or `LIFT-CANDIDATE` content. When the user has explicitly
+   requested visual quality and render did not run, apply the render gate per
+   the same procedure: cap changed views at `model-valid` until render runs.
    For OEF edits, state the change classification before and after the change:
    semantic model change, view geometry change, and documentation/render
    inventory change. Treat view-specific relationship hiding as geometry when
@@ -108,8 +125,10 @@ When invoked, run the architecture-design skill and present results:
    Archi is available, with no fallback renderer;
    drift detection (OEF file + current code/IaC) invokes
    [references/procedures/drift-detection.md](../skills/architecture-design/references/procedures/drift-detection.md)
-   and emits `AD-DR-*` findings. Lead with `Professional readiness:
-   model-valid | diagram-readable | review-ready` and top artifact blockers.
+   and emits `AD-DR-*` findings. Lead with the per-view readiness matrix
+   (required when more than one materialized view exists), then
+   `Professional readiness: model-valid | diagram-readable | review-ready`
+   (worst-view minimum) and top artifact blockers.
    When a diff or edit request is in scope, include `Change classification:
    semantic model change yes/no; view geometry change yes/no;
    documentation/render inventory change yes/no`.
@@ -187,6 +206,13 @@ When invoked, run the architecture-design skill and present results:
    over-budget views) when Business Processes are in scope, and the
    explicit note that live-deployment drift (IaC vs. deployed Azure
    state) requires Azure Resource Graph / Defender for Cloud for
-   ground truth — the skill reads repository state only. Include the artifact
-   quality level in the footer; do not include README/render/gallery package
-   checks unless the user explicitly asked for a project documentation review.
+   ground truth — the skill reads repository state only. Include the per-view
+   readiness matrix (when more than one materialized view) carrying both
+   Readiness and Authority columns, the artifact-rollup quality level, the
+   skill self-check (reference files / procedures / scripts present, weak
+   dependencies runnable), the render gate state, and any `Render contracts
+   detected:` block under `Project assimilation:` (committed PNGs / gallery
+   sections / repo render commands; OEF-changed refresh note when applicable).
+   Do not auto-update README rows, render galleries, or committed PNGs unless
+   the user explicitly asked for a project documentation review or invoked the
+   render-polish loop.

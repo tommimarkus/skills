@@ -192,6 +192,16 @@ produce PNGs:
 5. Classify changed PNGs, README rows, galleries, or provenance text as
    `documentation/render inventory change`. Do not mark a render-only refresh as
    a semantic model change unless `<elements>` or `<relationships>` changed.
+6. **Render gate** (per [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md)
+   §Quality verdict — *Render gate*). When the user has requested visual
+   quality and render did not run, cap changed views at `model-valid` until
+   render runs. Unchanged views inherit their prior classification.
+7. **Render contracts disclosure** (per "Project assimilation" §Discovery pass
+   step 8). When the current run produces an OEF change and the discovery pass
+   detected committed render artifacts or gallery sections, the footer notes
+   that those project artefacts may need refresh. The skill does not
+   automatically update committed renders or gallery prose unless the user
+   explicitly asks (Non-goals) or the explicit render-polish loop is in scope.
 
 ## Pre-flight (build & extract & review)
 
@@ -247,6 +257,12 @@ Before producing or reviewing a diagram, run the discovery pass below. Keep dete
 6. **GitHub Actions workflows.** Grep `.github/workflows/*.yml` for deploy / release jobs — each becomes a Work Package; environments become Plateaus; successful deploys become Implementation Events.
 7. **Solution topology signals** — project reference graph (`<ProjectReference>` in `.csproj`) maps to Used-by / Composition / Realisation relationships within the Application Layer.
 
+8. **Repo render contracts (disclosure-only).** Detect — but do not unilaterally update — committed render artifacts and gallery conventions:
+   - Committed PNG / SVG renders under `docs/architecture/**/*.png`, `docs/architecture/**/*.svg`, `docs/diagrams/**/*.png`, or sibling render-output directories the architect has chosen (look for filenames matching `<feature>*.png` next to `<feature>.oef.xml`).
+   - README architecture-gallery sections — grep `README.md`, `docs/README.md`, or `docs/architecture/README.md` for headings or tables naming the canonical OEF feature(s) currently in scope.
+   - Repo render commands — grep `package.json` `scripts`, `Makefile`, `Justfile`, `.github/workflows/*.yml`, or `azure-pipelines*.yml` for invocations of `archi-render.sh`, `archi`, `archi-cli`, or equivalent renderer commands.
+   Report what was found in the `Project assimilation:` footer block under a `Render contracts detected:` sub-block with three keys: `committed renders`, `gallery sections`, `render commands`. When the current run produces an OEF change and committed renders or gallery sections are detected, the footer notes "OEF changed; <n> committed renders / <m> gallery sections may need refresh — architect decides whether to update them in this run." This is disclosure, not auto-update; updating committed render artifacts and gallery prose is in scope only when the user explicitly asks (per the *Non-goals* section) or the user has invoked the explicit render-polish loop.
+
 ### Forward-only layers in discovery
 
 The discovery pass **never produces Business, Motivation, Strategy, or Physical elements from source code.** These layers are reference-§7.2 forward-only. If an existing diagram at the canonical path contains them, the skill reads them verbatim and preserves them across Extract re-runs; the architect owns their content.
@@ -272,21 +288,11 @@ Reuse is conditional on **substantive compliance with ArchiMate® 3.2**, not pre
 
 All mode footers gain a `Project assimilation:` block listing: existing diagram reused, element labels preserved, and any drift or well-formedness issues flagged. Example:
 
-```
-Project assimilation:
-  Existing model: docs/architecture/checkout.oef.xml (last modified 2026-04-12)
-    elements preserved: 11/11, identifiers preserved: 11/11, view layouts preserved: 3/3
-  Layers extracted (Extract mode):
-    Application:  from Orders.Api.csproj, Orders.Core.csproj, Blazor.Client.csproj — 3 components
-    Technology:   from infra/main.bicep — 1 Function App + 1 Cosmos account + 1 Storage account + 1 Key Vault + 1 Managed Identity
-    Impl & Migr:  from .github/workflows/deploy.yml — 1 Work Package, 3 Plateaus (dev/staging/prod)
-  Forward-only layers: Business, Motivation, Strategy — typed stubs emitted; architect fills in
-  Drift vs existing diagram: 1 element added (Cosmos account), 1 removed (Table Storage account)
-```
+See [`references/output-format.md`](references/output-format.md) §Project assimilation block for the canonical example, including the `Render contracts detected:` sub-block and the OEF-changed refresh note.
 
 ## Build mode workflow
 
-0. **Dispatch.** Confirm Build mode. Run the pre-flight above. Announce the diagram kind, layer scope, and change classification.
+0. **Dispatch.** Confirm Build mode. `Read` and run [`references/procedures/self-check.md`](references/procedures/self-check.md) to verify required reference files, procedures, and scripts are present and runnable; record the self-check outcome for the footer. Run the pre-flight above. Announce the diagram kind, layer scope, and change classification.
 
 1. **Principles scan.** Read reference [§2 Principles](../../docs/architecture-reference/architecture.md#2-principles). Output must not violate: §2.1 layer separation, §2.3 aspect rules, §2.4 Core-vs-extension discipline, §2.5 relationship well-formedness.
 
@@ -325,15 +331,21 @@ Project assimilation:
      another script prerequisite is unavailable, disclose "render inspection not
      run" with the blocker; do not weaken static `AD-L*` findings from the
      source-geometry gate.
+     **Render gate.** When the user has requested visual quality (explicit
+     render request, render-polish loop, or `[visual]` self-check requested in
+     pre-flight) and render did not run, cap changed views at `model-valid` per
+     [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md)
+     §Quality verdict — *Render gate*. Unchanged views inherit their prior
+     classification. The footer reports the gate state.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
    If any `[static]` item fails, fix before delivering.
-   State the achieved artifact quality level and whether architecture semantics changed. Do not claim `review-ready` if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L19`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved.
+   Classify quality **per `<view>` first** per [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) §Quality verdict, then derive the artifact rollup as the worst-view minimum. For each view also derive **authority** (§Authority levels in the same procedure): `lifted-from-source` by default when every element resolves to a current source; `forward-only-or-inferred` when any element comes from a `FORWARD-ONLY` block or unconfirmed `LIFT-CANDIDATE`; `architect-approved` or `stakeholder-validated` only when the view's `propid-authority` property (reference §6.4b) is set. Authority does not gate readiness — both axes are reported independently. Emit the per-view readiness matrix (with Authority column) in the self-check block when the artifact contains more than one materialized view; single-view artifacts may use a single-row matrix. State whether architecture semantics changed. Do not claim `review-ready` for a view if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L19`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved for that view, and do not claim `review-ready` for the artifact rollup if any model-level blocker (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`) remains unresolved. Emit `AD-Q11` for any view whose `propid-authority` override claims `architect-approved` or `stakeholder-validated` while still containing unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content.
 
 7. **Emit footer disclosure.**
 
 ## Extract mode workflow
 
-0. **Dispatch.** Confirm Extract mode. Run the pre-flight above. Confirm which layers to extract (default: all three extractable — Application / Technology / Implementation & Migration) and state the change classification.
+0. **Dispatch.** Confirm Extract mode. `Read` and run [`references/procedures/self-check.md`](references/procedures/self-check.md) to verify required reference files, procedures, and scripts are present and runnable; record the self-check outcome for the footer. Run the pre-flight above. Confirm which layers to extract (default: all three extractable — Application / Technology / Implementation & Migration) and state the change classification.
 
 1. **Refuse if scope is entirely forward-only.** If the architect has asked for Business / Motivation / Strategy / Physical only, refuse with:
    - the reference §7.2 explanation of why these layers are forward-only;
@@ -367,13 +379,13 @@ Project assimilation:
 
 5. **Preserve existing model content.** If `docs/architecture/<feature>.oef.xml` exists, merge rather than overwrite: existing element identifiers, `<name>` values, `<documentation>`, valid element / relationship / view properties, stable view placements, and forward-only content are preserved; extracted elements are added, missing elements are removed (surfaced as drift findings in the footer). Do not preserve old connection bendpoints when a relationship is replaced, its source/target endpoints are inverted, the preserved route now crosses unrelated nodes, or the first / last preserved bendpoint sits inside the source / target node body; reroute and report `AD-L11` if no clean route exists. If preserving a model relationship but suppressing its visible connection in one view, record it as a view geometry change and document the relationship id plus rationale. If an existing file has a model-root `<properties>` block used for the old layout marker, omit it from newly-emitted output and report `AD-17` in Review. Layout conformance is checked directly from view geometry, not from a marker.
 
-6. **Self-check against reference §10 and the professional-readiness procedure** as in Build. State the achieved artifact quality level and any remaining modeling work required before the model can be called `review-ready`.
+6. **Self-check against reference §10 and the professional-readiness procedure** as in Build, including the per-view readiness matrix from [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) §Quality verdict. State the per-view classifications and the artifact rollup (worst-view minimum), plus any remaining modeling work required before the model can be called `review-ready`.
 
 7. **Emit footer disclosure including the per-layer lift / stub breakdown** — which layers were lifted, which were stubbed, which sources were read, and the change classification.
 
 ## Review mode workflow
 
-0. **Dispatch.** Confirm Review mode. Run pre-flight. Identify sub-behaviour:
+0. **Dispatch.** Confirm Review mode. `Read` and run [`references/procedures/self-check.md`](references/procedures/self-check.md) to verify required reference files, procedures, and scripts are present and runnable; record the self-check outcome for the footer. A missing `architecture.md`, `smell-catalog.md`, `validate-oef-layout.sh`, or applicable procedure must be reported as "not run (blocker)" in affected findings rather than silently skipped. Run pre-flight. Identify sub-behaviour:
    - Artefact review (diagram file alone, or diagram + architect asks "is this well-formed").
    - Drift detection (diagram + code/IaC at canonical locations, or architect asks "has this drifted").
    - Render request (diagram + user asks for PNGs, render refresh, or visual
@@ -389,7 +401,7 @@ Project assimilation:
 
 1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements. If a local file path is available, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) and include its `AD-L*` findings directly in the Review output; this catches `AD-L10` origin drift, `AD-L11` endpoint bendpoints inside endpoint boxes, `AD-L13` stacked lanes, and `AD-L15` local fan-out crossings even when a renderer crops the PNG to plausible bounds. If a view has no materialized element nodes, missing `x` / `y` / `w` / `h`, no relationship connections for its visual story, or duplicate `identifier` attributes in the OEF file, cap the artefact at `model-valid` and report it before judging layout polish.
 
-2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify the artifact as `model-valid`, `diagram-readable`, or `review-ready`. Findings become `AD-Q*` smell codes from reference §8.
+2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify each `<view>` as `model-valid`, `diagram-readable`, or `review-ready`, then derive the artifact rollup as the worst-view minimum (capped at `model-valid` by any unresolved model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`). Emit the per-view readiness matrix as the lead block of the Review output ([`references/output-format.md`](references/output-format.md) §Review mode). Findings become `AD-Q*` smell codes from reference §8.
 
 3. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
 
@@ -398,7 +410,10 @@ run `references/scripts/archi-render.sh` after static checks. Pass through
 caller-provided `--archi-bin`, `--cache-root`, `--config`, and `--output-root`
 when supplied. A missing Archi executable, missing `DISPLAY`, malformed XML, or
 script exit code is not a fallback opportunity; report the exact command,
-failure, and "Visual render inspection: not run".
+failure, and "Visual render inspection: not run". Apply the render gate from
+[`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md)
+§Quality verdict — *Render gate*: when render did not run and visual quality
+was requested, cap changed views at `model-valid` for this Review.
 
 4. **Per-finding format.** Match the sibling-skill convention:
 
@@ -456,9 +471,9 @@ Minimum footer fields for all modes:
 - Reference path.
 - Canonical OEF path.
 - Primary diagram kind and all diagram kinds present/missing.
-- Artifact quality: `model-valid`, `diagram-readable`, `review-ready`, or `not assessed`.
+- Per-view readiness matrix (when more than one materialized view) carrying Readiness (`model-valid` / `diagram-readable` / `review-ready`) and Authority (`lifted-from-source` / `forward-only-or-inferred` / `architect-approved` / `stakeholder-validated`) per view; artifact-rollup quality is the worst-view readiness minimum.
 - Change classification: semantic model, view geometry, documentation/render inventory.
-- Self-check, source-geometry gate, visual render inspection, render artifacts, and runtime drift state.
+- Self-check (skill tooling — reference files, procedures, and scripts present/missing, weak-dependency status), self-check (run — §10 checklist pass/fail), source-geometry gate, visual render inspection, render artifacts, and runtime drift state.
 - Project assimilation and forward-only / process-view emission disclosure when applicable.
 
 `Diagram kinds present` / `Diagram kinds missing` are computed by scanning the produced or parsed OEF for every `<view>` `viewpoint=` attribute and matching against the seven canonical strings in reference §9.1–§9.7 (Capability Map · Application Cooperation · Service Realization · Technology Usage · Migration · Motivation · Business Process Cooperation). The `M of 7` count is the file-wide coverage; `Diagram kind:` above remains the primary kind in scope for the current run (the one the architect asked for in pre-flight, or the kind being reviewed). For a single-kind file, `Diagram kinds present: 1 of 7` and the `Diagram kind:` line agree.

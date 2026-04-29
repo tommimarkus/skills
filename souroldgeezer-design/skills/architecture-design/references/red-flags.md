@@ -27,3 +27,4 @@ Output contains any of the following? Stop; fix before delivering:
 - **Connector passes through an unrelated node, or endpoint bendpoint sits inside the endpoint box.** Fix `AD-L11`; readiness cannot exceed `model-valid`.
 - **View-orphan, stacked connector, wide gap, fan-out crisscross, long bus route, duplicate visible story path, misleading boundary crossing, or ambiguous nested ownership.** Fix `AD-L12` through `AD-L19`.
 - **Duplicate Service Realization drill-downs for the same realization story.** Fix `AD-B-14`; consolidate unless the process changes application, data, technology, security, deployment, UI-entry, or business semantics materially.
+- **Authority override contradicted by content.** Fix `AD-Q11`; either resolve the underlying `FORWARD-ONLY` / `LIFT-CANDIDATE` content (architect fills in or confirms the lift) or remove the `propid-authority` override until the content is genuinely backed.

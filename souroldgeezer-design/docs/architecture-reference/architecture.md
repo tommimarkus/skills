@@ -47,6 +47,24 @@ An OEF file can be syntactically valid and still fail as an architecture artefac
 
 Build and Extract target at least `diagram-readable` unless the architect asks only for a model-valid draft. Review reports whether the artefact reaches `review-ready`. Project documentation packaging — README rows, render galleries, screenshots, publication pages, and CI package checks — belongs to the consuming project, not to this reference.
 
+### 2.9 Visual readiness is not authority
+Readiness from §2.8 measures *visual and notational quality*: did the architect produce a legible, well-formed view? It does not measure *who endorses the architecture content shown*. A forward-only Motivation view can be `review-ready` (clean layout, fitting labels, viewpoint matches concern) while remaining architecturally a stub: no stakeholder has signed off on the drivers, goals, or requirements drawn. Treating polish as endorsement is a category error — and one that is easy to make once a forward-only stub looks finished.
+
+The skill therefore reports two orthogonal axes for every view:
+
+- **Readiness** (§2.8) — `model-valid` / `diagram-readable` / `review-ready`. Verifiable from the OEF and (when requested) the rendered output.
+- **Authority** — who or what backs the architecture content the view shows:
+  - `lifted-from-source` — every element in the view was extracted from current code, IaC, or workflow definitions (Application / Technology / Implementation & Migration layers; lifted Business Process / Event / Interaction with `LIFT-CANDIDATE` markers confirmed by the architect).
+  - `forward-only-or-inferred` — view contains at least one element drawn from a `FORWARD-ONLY` block, or at least one unconfirmed `LIFT-CANDIDATE` marker. The architect has not yet validated the inferred content.
+  - `architect-approved` — architect has reviewed and approved the view's content. Asserted by the architect via the `propid-authority` view property (§6.4b) set to `architect-approved`.
+  - `stakeholder-validated` — domain stakeholder (named in the view's `<documentation>`) has signed off on the architecture claims the view makes. Asserted via the `propid-authority` view property set to `stakeholder-validated`.
+
+**Default authority** is derived from view content: `lifted-from-source` when every element resolves to a current source, `forward-only-or-inferred` when any element comes from a forward-only stub or unconfirmed lift candidate. The architect overrides via the `propid-authority` view property when stakeholder review or architect approval has occurred outside the model.
+
+**Authority does not gate readiness.** A view with `forward-only-or-inferred` authority can still be `review-ready` (the visual artefact is fit for review), and a view with `architect-approved` authority can still be `model-valid` (the content is endorsed but the layout is not yet polished). Outputs report both axes per view; the architect reads them together when deciding whether the diagram is fit for the next consumer.
+
+The professional-readiness procedure derives the default authority and emits `AD-Q11` when a view claims `architect-approved` or `stakeholder-validated` authority while the view still contains unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content (the override contradicts visible evidence). The smell catalog entry sits next to the other `AD-Q*` codes in §8.
+
 ## 3. Layers and aspects
 
 ArchiMate 3.2 (Chapter 3 — Generic Metamodel; Chapter 4 — Core Elements; Chapter 5 — Business Layer; Chapter 6 — Application Layer; Chapter 7 — Technology Layer; Chapter 8 — Physical Elements; Chapter 9 — Motivation; Chapter 10 — Strategy; Chapter 11 — Implementation & Migration; Chapter 12 — Relationships).
@@ -438,6 +456,31 @@ Instance form mirrors the cooperation case (different `propertyDefinitionRef`).
 
 **Orthogonal concerns.** The two properties control different emission decisions and should not be conflated. `propid-coop-view-exclude` controls *inclusion in the §9.7 overview*; `propid-drilldown-exclude` controls *emission of a per-process §9.3 drill-down*. Setting one does not imply the other.
 
+**`propid-authority`** — set on a `<view>` to assert architect or stakeholder endorsement of the architecture content the view shows. Per §2.9, default authority is derived from view content (`lifted-from-source` when every element resolves to a current source; `forward-only-or-inferred` when any element is a forward-only stub or unconfirmed lift candidate). This property overrides the default with `architect-approved` or `stakeholder-validated`. The override is loadbearing: a polished forward-only view can be `review-ready` for visual quality while still requiring architect or stakeholder sign-off on the architecture content — that sign-off is captured here, not inferred from layout polish.
+
+```xml
+<propertyDefinition identifier="propid-authority" type="string">
+  <name xml:lang="en">authority</name>
+</propertyDefinition>
+```
+
+Instance form on a `<view>`:
+
+```xml
+<view identifier="id-view-mot-checkout" xsi:type="Diagram" viewpoint="Motivation">
+  <name xml:lang="en">Motivation — Checkout</name>
+  <documentation>Stakeholder: Head of Checkout (signed off 2026-04-15)</documentation>
+  <properties>
+    <property propertyDefinitionRef="propid-authority">
+      <value xml:lang="en">stakeholder-validated</value>
+    </property>
+  </properties>
+  <!-- nodes / connections -->
+</view>
+```
+
+Permitted values: `lifted-from-source` (rarely set explicitly — that is the default for fully-lifted views), `forward-only-or-inferred` (rarely set explicitly — that is the default for views containing forward-only or lift-candidate content), `architect-approved`, `stakeholder-validated`. The skill emits `AD-Q11` when the override claims `architect-approved` or `stakeholder-validated` while the view still contains unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content.
+
 ### 6.4c Change classification and view-specific curation
 
 OEF work mixes three kinds of change. Reviews must keep them separate:
@@ -479,6 +522,30 @@ skill. If they are absent, Review reports render inspection as not run with the
 exact blocker. The skill does not use fallback renderers, screenshots of other
 tools, hand-drawn substitutes, or generated images as evidence for visual
 render inspection.
+
+**Render gate.** When the user has explicitly requested visual quality —
+explicit render request, render-polish loop, or `[visual]` self-check requested
+in pre-flight — and render did not run (Archi missing, `DISPLAY` unavailable,
+script blocker), the changed views in this run cap at `model-valid` for the
+readiness axis. Unchanged views inherit their prior classification when one
+exists. The render gate is reported in the footer (`Render gate:` line in
+`output-format.md`). When the user has not requested visual quality, the render
+gate does not apply: the source-geometry gate (`validate-oef-layout.sh`) plus
+the `[static]` `AD-L*` checks remain the visual-quality proxy and per-view
+readiness derives from those alone. This preserves CI portability for
+installations without Archi while making "no render, no done" enforceable when
+visual quality is the architect's stated goal.
+
+**Render contracts (disclosure).** When the consuming repo commits render
+artifacts (`docs/architecture/**/*.png`, gallery sections, repo render command
+invocations), the discovery pass detects them and the footer's `Project
+assimilation:` block lists them under `Render contracts detected:`. When the
+current run produces an OEF change and committed renders or gallery sections
+are detected, the footer notes that those project artefacts may need refresh —
+the architect decides whether to update them in this run. Auto-updating
+committed render artifacts and gallery prose remains out of scope unless the
+user explicitly asks (per the *Non-goals* in `architecture-design/SKILL.md`) or
+the user has invoked the explicit render-polish loop.
 
 ### 6.5 Organizations (folder structure)
 
@@ -648,6 +715,7 @@ These smells are static review findings over OEF views. They do not test project
 - **`AD-Q8` Process thinness** — a Business Process Cooperation view shows actors or systems but not handoffs, responsibilities, trigger/flow, or value outcome.
 - **`AD-Q9` Service Realization thinness** — a Service Realization view names services but does not show the realisation chain clearly enough to audit.
 - **`AD-Q10` Label ambiguity** — labels are valid XML names but too generic, duplicated, or code-shaped for the intended architecture audience.
+- **`AD-Q11` Authority override contradicted by content** — a view carries `<property propertyDefinitionRef="propid-authority"><value xml:lang="en">architect-approved</value></property>` or `stakeholder-validated` (per §6.4b) while still containing at least one element drawn from a `FORWARD-ONLY — architect fills in` block, or at least one `LIFT-CANDIDATE` marker without architect confirmation. The override claims human endorsement of architecture content the view itself shows as unconfirmed. Severity: `warn` by default; escalate to `block` when the view is in a stakeholder-facing report. Action: either resolve the underlying `FORWARD-ONLY` / `LIFT-CANDIDATE` content (architect fills in or confirms the lift), or remove the authority override until the content is genuinely backed.
 
 ### Layout smells — `AD-L*`
 
@@ -758,7 +826,11 @@ Diagram kinds not in this list (Product Map, Organisation Structure, Information
 
 ## 10. Review checklist
 
-Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[visual]` (requires rendering and inspecting diagram output), `[runtime]` (requires reading the current code / IaC at the canonical paths). When a local OEF path is available, run the bundled source-geometry gate before render inspection:
+Each item is tagged with a verification layer consistent with other reference docs: `[static]` (can be verified from the diagram source alone), `[visual]` (requires rendering and inspecting diagram output), `[runtime]` (requires reading the current code / IaC at the canonical paths).
+
+**Per-view classification.** Quality is classified per `<view>` first; the artifact rollup is the worst-view minimum. The procedure for assigning a view's level (`model-valid` / `diagram-readable` / `review-ready`), the cross-view smell attribution rule (`AD-B-8`, `AD-B-9`, `AD-B-13`, `AD-B-14`, `AD-DR-*` cap every view they touch), and the model-level blocker list (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16` cap the artifact regardless of per-view scores) live in `architecture-design/references/procedures/professional-readiness.md` §Quality verdict. The output skeleton emits a per-view readiness matrix when more than one materialized view exists.
+
+When a local OEF path is available, run the bundled source-geometry gate before render inspection:
 
 ```bash
 souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh docs/architecture/<feature>.oef.xml
@@ -783,6 +855,7 @@ diffs are all clean for the requested quality level.
 - [static] The `<metadata>` block's catalog payload elements come from a non-ArchiMate namespace (`AD-16`). Grep-verifiable: skip the optional `<schema>` and `<schemaversion>` prelude (these legitimately inherit the ArchiMate default namespace per `SchemaInfoGroup`); for every other direct child of `<metadata>`, confirm it carries either a default namespace declaration `xmlns="..."` or a prefixed declaration `xmlns:<prefix>="..."` (or inherits one from an ancestor) whose URI is not `http://www.opengroup.org/xsd/archimate/3.0/`.
 - [static] Every emitted `.oef.xml`'s top-level child elements appear in the OEF-mandated sequence per §6 (`AD-17`). Grep-verifiable: parse the file's direct children of `<model>` (via `xmlstarlet sel -t -m '/*[local-name()="model"]/*' -v 'local-name()' -n` or equivalent — the namespace-agnostic form avoids xmlstarlet's default-namespace binding pitfall) and confirm the sequence is a valid prefix of `name, documentation, metadata, elements, relationships, organizations, propertyDefinitions, views`; any model-root `properties` child is invalid.
 - [static] Each view answers a stated architecture question and uses a viewpoint that matches that concern (`AD-Q1`, `AD-Q2`).
+- [static] Each view's authority axis (per §2.9) is reported alongside its readiness axis: default `lifted-from-source` when every element resolves to a current source; default `forward-only-or-inferred` when any element is from a `FORWARD-ONLY` block or unconfirmed `LIFT-CANDIDATE`; `architect-approved` or `stakeholder-validated` only when the view's `propid-authority` property is set explicitly. A view carrying `architect-approved` or `stakeholder-validated` while still containing unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content triggers `AD-Q11`.
 - [static] Each view is reviewable without hidden explanation: density is bounded, visual hierarchy is clear, relationships emphasize the main path, and labels suit the intended architecture audience (`AD-Q3`, `AD-Q4`, `AD-Q6`, `AD-Q10`).
 - [static] Conceptual or stakeholder-facing views do not leak low-level implementation trivia except where the view explicitly traces implementation (`AD-Q5`).
 - [static] Every behaviour element has an active structure assigned; every passive-structure element is accessed only through a behaviour (`AD-3`, `AD-4`).
