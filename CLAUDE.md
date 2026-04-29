@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) and Codex when worki
 
 ## What this repo is
 
-A **Claude Code and Codex plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories and is intentionally shared by both runtimes; Codex can read this Claude-style repo marketplace directly, so do not duplicate it under `.agents/plugins/marketplace.json` unless a future design explicitly chooses to split catalogs. Each published plugin carries both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. There is nothing to build, lint, or test — content is Markdown + YAML + JSON. Validation is structural (correct filenames, frontmatter, schema, manifest sync via `jq`) and semantic (does the skill's described workflow still match its SKILL.md).
+A **Claude Code and Codex plugin marketplace**, not an application. The root `.claude-plugin/marketplace.json` registers one or more plugin subdirectories and is intentionally shared by both runtimes; Codex can read this Claude-style repo marketplace directly, so do not duplicate it under `.agents/plugins/marketplace.json` unless a future design explicitly chooses to split catalogs. Each published plugin carries both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. Published content is mostly Markdown + YAML + JSON. There is no plugin build, but the repo now has a small `uv`-managed Python tooling surface for the skill architecture report. Validation is structural (correct filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the skill's described workflow still match its SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
 
 ## Runtime documentation cross-checks
 
@@ -71,6 +71,40 @@ Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
 one-liners or `python3 -m json.tool` for structured JSON / YAML / TOML / XML
 checks unless `jq` or `yq` cannot express the check.
 
+## Repo-local Python tooling
+
+The public skill architecture validation command remains
+`scripts/skill-architecture-report.sh [repo-root]`. It is a thin wrapper around
+the Python engine at `scripts/skill_architecture_report.py` and must be run
+through `uv`. The command is tool-first: use its deterministic findings and
+JSON output to keep skill workflows thin, and reserve LLM judgment for explicit
+manual prompts the tool cannot decide. Use the repo-local project files
+(`pyproject.toml`, `uv.lock`) and a local `.venv/` created with `uv venv`; do
+not commit `.venv/`.
+
+Primary checks:
+
+```bash
+bash scripts/skill-architecture-report.sh --help
+uv run python scripts/skill_architecture_report.py .
+uv run python scripts/skill_architecture_report.py --format json --strict .
+uv run python -m unittest tests.skill_architecture_report_test
+git diff --check
+```
+
+Report-engine coverage is ledger-backed. Add new cases one at a time to
+`tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####`
+IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`),
+and a unique intent. The unittest suite rejects duplicate IDs, duplicate
+intents, and duplicate fixture/expectation fingerprints before executing the
+case fixtures. The report's primary replacement claim is empirical: the
+`Replacement Calibration` section runs the local gold ledger and reports how
+many skill-only findings the tool detects automatically. Keep at least 500
+gold-finding cases and `>=90%` automated replacement recall; catalog coverage is
+secondary metadata, not the success criterion. When cases are bulk-generated,
+update `tests/generate_skill_architecture_report_ledger.py` and regenerate the
+JSONL ledger in the same change.
+
 ## Repo-internal skills
 
 The repo ships a small set of **internal** skills under `.claude/skills/` — scoped to this repository, auto-discovered by Claude Code when working here, and deliberately *not* bundled with the distributed `souroldgeezer-*` plugins. Codex does not consume these as plugin content, but agents working in this repo should still follow them as repo authoring guidance when they apply. Internal skills encode how *we* author this repo; they are not capabilities shipped to downstream users.
@@ -94,7 +128,12 @@ Add to this section when new internal skills are introduced. Internal skills mus
 ```
 AGENTS.md                              ← thin Codex-native pointer to CLAUDE.md
 docs/skill-architecture.md             ← canonical skill architecture craft standard
-scripts/skill-architecture-report.sh   ← advisory craft-standard report for agent iteration
+scripts/skill-architecture-report.sh   ← craft-standard validation wrapper for agent iteration
+scripts/skill_architecture_report.py   ← Python validation engine and JSON/Markdown reporter
+tests/skill_architecture_report_test.py ← unittest coverage for report fixtures and wrapper smoke
+tests/skill_architecture_report_ledger.jsonl ← one-case-per-line report-engine test ledger
+tests/generate_skill_architecture_report_ledger.py ← deterministic 500+ case ledger generator
+pyproject.toml / uv.lock               ← uv-managed repo-local tooling project
 .codex/agents/*.toml                   ← project-scoped Codex custom agents
 .claude-plugin/marketplace.json        ← shared Claude Code + Codex marketplace manifest
 <plugin-name>/

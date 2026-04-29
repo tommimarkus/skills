@@ -33,6 +33,19 @@ rules change.
   lives in `skills/<skill>/agents/openai.yaml`.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
+- For skill architecture report tooling, use the repo-local `uv` project:
+  `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
+  `uv run python scripts/skill_architecture_report.py --format json --strict .`,
+  plus `uv run python -m unittest tests.skill_architecture_report_test`. Do
+  not commit `.venv/`.
+- Add report-engine cases one by one in
+  `tests/skill_architecture_report_ledger.jsonl`; keep `SAC-T#####` IDs
+  contiguous and let the unittest ledger checks reject duplicate intent or
+  duplicate fixture fingerprints. The strict report also checks the empirical
+  replacement bar: at least 500 local gold-finding cases and `>=90%` automated
+  recall. If cases are bulk-generated, update
+  `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL
+  ledger in the same change.
 - Follow the repo-internal `ip-hygiene` guidance in
   [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
   when editing plugin manifests, skills, agents, bundled references, or

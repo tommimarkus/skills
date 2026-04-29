@@ -11,8 +11,10 @@ deterministic validation, context discipline, stop conditions, output contracts,
 rerun guidance, and an improvement loop that can detect both progress and
 degradation.
 
-Use this document for judgment. Use `scripts/skill-architecture-report.sh` for
-repeatable detection and report formatting when that script is available.
+Use this document for judgment only after deterministic validation is exhausted.
+Use `scripts/skill-architecture-report.sh` for repeatable detection and report
+formatting when that script is available; skill workflows should stay thin by
+delegating structural validation to the tool.
 
 ## Four Authoring Surfaces
 
@@ -197,9 +199,11 @@ Review skills against these dimensions:
 
 ## Advisory Report Contract
 
-`scripts/skill-architecture-report.sh` should produce reports for an AI-agent
-reader. The report is not just a human lint log; it should tell the next agent
-what to fix, why it matters, and how to verify the fix.
+`scripts/skill-architecture-report.sh` should validate everything that can be
+validated deterministically or with bounded heuristics. Its Markdown report is
+for an AI-agent reader; its JSON output is for thin skill workflows and future
+automation. The report is not just a human lint log; it should tell the next
+agent what to fix, why it matters, and how to verify the fix.
 
 Each finding should include:
 
@@ -216,6 +220,27 @@ Each finding should include:
 Reports should group targets by skill or repo surface so an agent can fix a
 coherent area without mixing unrelated ownership. The final section must be
 `Next Iteration` with the top 3-5 fixes, ordered by expected skill-quality lift.
+
+Coverage reporting must be hard to game. Rule weights are derived from severity,
+not chosen per catalog entry. Current fixed weights are `blocker=13`, `high=8`,
+`medium=5`, and `low=3`. The report should show deterministic, heuristic,
+manual-prompt, uncovered, and total weighted coverage, plus per-report-group
+coverage with an `80%` minimum floor. Manual prompts count only when they are
+explicit prompts an agent can run; uncovered items remain visible coverage debt.
+
+The replacement claim is empirical, not catalog arithmetic. The report should
+run a local gold ledger of skill-only findings and publish:
+
+- ledger case count,
+- skill-only gold finding count,
+- tool-detected gold finding count,
+- manual-only or missed finding count,
+- automated replacement recall.
+
+The minimum bar is 500 local gold-finding cases and `>=90%` automated
+replacement recall. Report-engine tests should grow through a ledger of one
+case per line, with contiguous IDs, ordered complexity, unique intent, a
+`gold_issue` record, and duplicate fingerprint checks before execution.
 
 Recommended severity meanings:
 

@@ -432,7 +432,12 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
 ```
 AGENTS.md                          # thin Codex-native pointer to CLAUDE.md
 docs/skill-architecture.md         # canonical skill architecture craft standard
-scripts/skill-architecture-report.sh  # advisory craft-standard report for agent iteration
+scripts/skill-architecture-report.sh  # craft-standard validation wrapper for agent iteration
+scripts/skill_architecture_report.py  # Python validation engine and JSON/Markdown reporter
+tests/skill_architecture_report_test.py  # unittest fixtures and wrapper smoke coverage
+tests/skill_architecture_report_ledger.jsonl  # one-case-per-line report-engine ledger
+tests/generate_skill_architecture_report_ledger.py  # deterministic 500+ case ledger generator
+pyproject.toml / uv.lock           # uv-managed repo-local tooling project
 .codex/agents/*.toml               # project-scoped Codex custom agents
 .claude-plugin/marketplace.json    # shared Claude Code + Codex marketplace manifest
 souroldgeezer-audit/               # audit plugin

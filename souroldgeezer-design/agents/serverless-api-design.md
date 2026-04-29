@@ -1,20 +1,6 @@
 ---
 name: serverless-api-design
-description: >-
-  Use when building, reviewing, or looking up modern serverless HTTP APIs —
-  endpoints, services, or features built on Azure® Functions™ (.NET™) with
-  Azure® Cosmos DB™ and/or Azure® Blob Storage™ data layers. Applies the
-  bundled reference at souroldgeezer-design/docs/api-reference/serverless-api-design.md,
-  enforcing security (Microsoft® Entra ID™ / managed identities / Azure® Key Vault™ /
-  data-plane RBAC, disableLocalAuth on Azure® Cosmos DB™ and
-  allowSharedKeyAccess=false on Azure® Blob Storage™), contract discipline
-  (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110
-  conditional requests via ETag), reliability (idempotency on mutations, safe
-  retries, 429 + Retry-After, poison / dead-letter), and observability
-  (structured logs, W3C® traceparent, correlation ID, per-request RU /
-  request-charge visibility) as hard baselines. Supports build, review, and
-  lookup modes with composable extensions for Azure® Functions™ on .NET™, Azure®
-  Cosmos DB™, and Azure® Blob Storage™.
+description: Use when building, reviewing, or looking up modern serverless HTTP APIs — endpoints, services, or features built on Azure® Functions™ (.NET™) with Azure® Cosmos DB™ and/or Azure® Blob Storage™ data layers. Applies the bundled reference at souroldgeezer-design/docs/api-reference/serverless-api-design.md, enforcing security (Microsoft® Entra ID™ / managed identities / Azure® Key Vault™ / data-plane RBAC, `disableLocalAuth` on Azure® Cosmos DB™ and `allowSharedKeyAccess=false` on Azure® Blob Storage™), contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 conditional requests via ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C® traceparent, correlation ID, per-request RU / request-charge visibility) as hard baselines. Supports build, review, and lookup modes with a matching subagent and composable extensions for Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage™.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

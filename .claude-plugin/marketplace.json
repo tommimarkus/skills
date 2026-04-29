@@ -11,13 +11,13 @@
     {
       "name": "souroldgeezer-audit",
       "source": "./souroldgeezer-audit",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions, matching Claude Code subagents, and Codex skill metadata."
     },
     {
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
-      "version": "0.17.0",
+      "version": "0.17.1",
       "description": "Reference-driven design skills for sustainable software, responsive web UI, serverless HTTP APIs, and ArchiMate® architecture models. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, Azure® Functions™ API design with Azure® Cosmos DB™ / Azure® Blob Storage™ data layers, and ArchiMate® 3.2 OEF build/extract/review/render/lookup. Includes canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, deployment topology, trust boundaries, source-geometry layout checks, optional PNG render artifacts from the bundled render script, change classification, professional-readiness levels, matching Claude Code subagents, and Codex skill metadata."
     }
   ]

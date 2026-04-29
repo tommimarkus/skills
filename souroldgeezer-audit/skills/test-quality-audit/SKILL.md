@@ -39,7 +39,7 @@ The skill selects the rubric in [§ 0b (Rubric selection)](#0b-select-the-rubric
 
 Each document is the canonical rubric for its test type. This skill is the *workflow* for applying the selected rubric.
 
-**Read `references/smell-catalog.md`** for the compact code list used in reports. The unit rubric uses `HC-*`, `LC-*`, `POS-*`; the integration rubric uses `I-HC-A*`, `I-HC-B*`, `I-LC-*`, `I-POS-*`; the E2E rubric uses `E-HC-F*`, `E-HC-A*`, `E-HC-P*`, `E-HC-S*`, `E-LC-*`, `E-POS-*`. Audit findings cite smells by code, not by restating them.
+**Read `references/smell-catalog.md`** for the compact code list used in reports. The unit rubric uses `HC-*`, `LC-*`, `POS-*`; the integration rubric uses `I-HC-A*`, `I-HC-B*`, `I-LC-*`, `I-POS-*`; the E2E rubric uses `E-HC-F*`, `E-HC-A*`, `E-HC-P*`, `E-HC-S*`, `E-LC-*`, `E-POS-*`. Audit findings cite smells by code, not by restating them. Inputs: inspect the specified test file, PR diff, module, suite, or repository slice plus manifests, runner config, and optional coverage, mutation, or test-result artifacts; ask when the target or rubric lane is ambiguous.
 
 ## Audit Mode
 

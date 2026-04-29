@@ -16,6 +16,12 @@ Use the detailed reference at
 any triage question hits, when a remedy is unclear, or when source authority is
 needed for a consequential change.
 
+## Inputs
+
+Inspect the current diff, the touched files, and any source material or licence
+claims referenced by the edit. When the diff is unavailable, ask for the
+changed paths or inspect the working tree before triage.
+
 ## Applies To
 
 Invoke for create, modify, rename, move, or delete operations touching:
