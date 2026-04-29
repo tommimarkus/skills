@@ -5,3 +5,4 @@ __pycache__/
 .superpowers/
 .codex/rules/default.rules
 .codex/config.toml
+.mcp.json
