@@ -5,9 +5,9 @@ description: >-
   design for code changes, modules, scripts, libraries, services, refactors, or
   existing codebases, especially when the task needs boundary placement,
   dependency direction, responsibility assignment, semantic coherence, coupling
-  control, evolutionary design, or .NET™, shell-script, or Python-tooling project guidance without
-  duplicating UI, API, architecture-model, security, or test-quality specialist
-  skills.
+  control, evolutionary design, or .NET™, shell-script, or Python-tooling
+  project guidance without duplicating UI, API, architecture-model, security,
+  or test-quality specialist skills.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
