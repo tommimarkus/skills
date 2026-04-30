@@ -15,8 +15,9 @@ still fails `AD-L10` and `AD-L11`; `render-quality-gate/bendpoint-origin-drift.o
 proves `AD-L10` computes the used-region origin from nodes and bendpoints
 together; `render-quality-gate/stacked-connector-lane.oef.xml` proves
 `AD-L13`; `render-quality-gate/fanout-crisscross.oef.xml` proves `AD-L15`;
-and `render-quality-gate/endpoint-bendpoint-inside.oef.xml` proves the
-endpoint-bendpoint `AD-L11` subcase.
+`render-quality-gate/endpoint-bendpoint-inside.oef.xml` proves the
+endpoint-bendpoint `AD-L11` subcase; and
+`render-quality-gate/hidden-realization-negative.oef.xml` proves `AD-L20`.
 Run `render-quality-gate/test-render-quality-gate.sh`; it must emit the
 expected view id, connection id, node id, endpoint-lane, crossing, and actual
 min x/y evidence.
@@ -69,6 +70,13 @@ min x/y evidence.
 - Refresh: relationship is replaced with Application Insights -> Function App Serving, or MI Access edges are replaced by resource -> Function App Serving edges.
 - Expected: old bendpoints are discarded unless the new route still clears every unrelated and nested child node rectangle. If the preserved route crosses Cosmos, Storage, Key Vault, managed identity, or runtime child boxes, report `AD-L11 block` and readiness max `model-valid`.
 
+Contract fixture:
+`layout-backend-contract/locked-node-route-repair-request.yml` demonstrates a
+route-only repair with all nodes locked and stale bendpoints crossing a locked
+Key Vault node. `layout-backend-contract/locked-node-route-repair-result.yml`
+preserves every locked node coordinate, discards the stale route, reroutes
+below the obstacle, and reports `movedLockedNodes: 0`.
+
 ## Endpoint bendpoint inside endpoint box
 
 - View: Business Process Cooperation or Service Realization.
@@ -82,3 +90,13 @@ min x/y evidence.
 - `AD-L13`: three resource Nodes all entering the same target midpoint with overlapping arrowheads.
 - `AD-L14`: occupied layer rows separated by more than 100 px of unused vertical space without documentation.
 - `AD-L15`: three or more fan-out edges from one source crossing each other or a non-endpoint sibling.
+
+## AD-L20 hidden realization spine
+
+- View: Service Realization.
+- Nodes: Application Service and Application Component are both visible.
+- Relationship: the Component Realization relationship exists in the model but
+  carries `propid-archi-arm=hide`, and the view emits no visible connection for
+  the spine.
+- Expected: `AD-L20 warn`; the view cannot be `review-ready` until the
+  Realization spine is visible or documented as non-spine redundancy.

@@ -75,7 +75,7 @@ Role assignments do not emit elements of their own; they emit **Access** relatio
 | Bicep resource | ArchiMate handling |
 |---|---|
 | `Microsoft.ApiManagement/service` | **Node** — *API Management service* |
-| `Microsoft.ApiManagement/service/apis` | Not a Technology element — surfaces the Application Interface that the APIM exposes to consumers; emits an **Application Interface** on the corresponding Application Component (linked via [lifting-rules-dotnet.md](lifting-rules-dotnet.md)) with APIM as the **Used-by** intermediary |
+| `Microsoft.ApiManagement/service/apis` | Not a Technology element — surfaces the Application Interface that the APIM exposes to consumers; emits an **Application Interface** on the corresponding Application Component (linked via [lifting-rules-dotnet.md](lifting-rules-dotnet.md)) with APIM as the **Serving** intermediary |
 
 ## Relationships between Technology elements
 
@@ -85,7 +85,7 @@ Role assignments do not emit elements of their own; they emit **Access** relatio
 - **Access** — from a Managed Identity Technology Service to the protected Cosmos, Storage, Key Vault, Service Bus, or other RBAC-scoped resource. `Microsoft.Authorization/roleAssignments` and `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments` are the primary source.
 - **Flow** — from a source resource Node to Log Analytics when `Microsoft.Insights/diagnosticSettings` sends logs / metrics to a workspace.
 - **Path** — between Nodes connected by a Private Endpoint or peered VNet.
-- **Used-by** — from an Application Component (.NET project) to the Technology Node that hosts its runtime dependencies (Cosmos, Storage, Service Bus) — the cross-layer relationship is the whole point of a Technology Usage view (reference §9.4).
+- **Serving** — from the Technology Node or Service that provides runtime capability (Cosmos, Storage, Service Bus) to the Application Component (.NET project) that consumes it — the cross-layer relationship is the whole point of a Technology Usage view (reference §9.4).
 
 ## Security relationship lifting
 
@@ -112,10 +112,10 @@ The lifting procedure assumes the Application Layer has already been lifted by [
 |---|---|
 | `.csproj` Azure Functions Component + a `Microsoft.Web/sites` resource in the same deployment | **Assignment** from the Function App Node to the Component (the Node hosts the Component) |
 | `.csproj` Blazor WASM standalone + `Microsoft.Web/staticSites` | **Assignment** from the Static Web App Node to the Blazor Component |
-| Component using `CosmosClient` / `Microsoft.Azure.Cosmos` + `Microsoft.DocumentDB/databaseAccounts` | **Used-by** from the Component to the Cosmos Node |
-| Component using `BlobServiceClient` / `Azure.Storage.Blobs` + `Microsoft.Storage/storageAccounts` | **Used-by** from the Component to the Storage Node |
-| Component using `SecretClient` / `Azure.Security.KeyVault.Secrets` + `Microsoft.KeyVault/vaults` | **Used-by** from the Component to the Key Vault Node |
-| Component using `ServiceBusClient` + `Microsoft.ServiceBus/namespaces` | **Used-by** from the Component to the Service Bus Node |
+| Component using `CosmosClient` / `Microsoft.Azure.Cosmos` + `Microsoft.DocumentDB/databaseAccounts` | **Serving** from the Cosmos Node to the Component |
+| Component using `BlobServiceClient` / `Azure.Storage.Blobs` + `Microsoft.Storage/storageAccounts` | **Serving** from the Storage Node to the Component |
+| Component using `SecretClient` / `Azure.Security.KeyVault.Secrets` + `Microsoft.KeyVault/vaults` | **Serving** from the Key Vault Node to the Component |
+| Component using `ServiceBusClient` + `Microsoft.ServiceBus/namespaces` | **Serving** from the Service Bus Node to the Component |
 
 Where the code evidence is absent, the relationship is not emitted — the skill does not invent links from IaC alone, because an IaC resource may exist to serve many Components or future Components.
 

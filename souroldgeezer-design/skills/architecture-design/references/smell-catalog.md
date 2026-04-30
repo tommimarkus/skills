@@ -65,12 +65,12 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L2` | §8 layout, §6.4a | Node overlap — two placements at the same nesting depth whose bounding boxes intersect |
 | `AD-L3` | §8 layout, §6.4a | Undersize — `w < 120`, `h < 55`, or `w` too small to avoid label truncation |
 | `AD-L4` | §8 layout, §6.4a | View density over budget — `>20` elements, `>30` relationships, or nesting depth `>2` |
-| `AD-L5` | §8 layout, §6.4a | Excessive edge crossings — `crossings > node_count / 6` (was `node_count / 4`; threshold tightened in 0.8.0 because Sugiyama's 4-pass barycentric materially reduces crossings vs the prior 1-pass procedure) |
+| `AD-L5` | §8 layout, §6.4a | Excessive edge crossings — `crossings > node_count / 6` (heuristic threshold for the fallback's 4-pass barycentric ordering) |
 | `AD-L6` | §8 layout, §6.4a | Non-orthogonal routing — diagonal `<connection>` with no `<bendpoint>` between non-aligned endpoints |
-| `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view |
+| `AD-L7` | §8 layout, §6.4a | Nested-plus-edge — child nested in parent *and* the parent-child `<connection>` drawn in the same view; hide-by-nesting is not the default for main Realization spines |
 | `AD-L8` | §8 layout, §6.4a | Off-grid — `x`, `y`, `w`, `h`, or `<bendpoint>` not a multiple of 10 |
-| `AD-L9` | §8 layout, §6.4a | Hierarchy not respected — Realization / Used-by / Serving relationship between same-layer elements drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Detected by Tier 1 phase 1 (cycle handling) + phase 3 (topological sort) failures. |
-| `AD-L10` | §8 layout, §6.4a | Canvas not normalised — top-left of the used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px`. Tier 1 phase 6 (bbox normalisation) emits this naturally; smell catches non-normalised legacy or hand-shifted output. |
+| `AD-L9` | §8 layout, §6.4a | Hierarchy not respected — Realization / Serving relationship between same-layer elements drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Detected by fallback cycle handling and ordering failures. |
+| `AD-L10` | §8 layout, §6.4a | Canvas not normalised — top-left of the used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px` for generated or mixed geometry |
 | `AD-L11` | §8 layout, §6.4a | Connector-through-node — a `<connection>` segment crosses a node that is neither source, target, nor required source/target ancestor container |
 | `AD-L12` | §8 layout, §6.4a | View-orphan element — non-legend node has no same-view connection |
 | `AD-L13` | §8 layout, §6.4a | Stacked connector lane — visible connectors share a lane closely enough to overlap arrowheads or labels |
@@ -80,6 +80,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8 *Layout
 | `AD-L17` | §8 layout, §6.4a | Duplicate visible story path — two or more visible connections or lanes tell the same architecture story in one view |
 | `AD-L18` | §8 layout, §6.4a | Misleading boundary crossing — a connector crosses a Grouping or container boundary in a way that implies the wrong trust, ownership, or deployment boundary |
 | `AD-L19` | §8 layout, §6.4a | Ambiguous nested ownership — nested placement implies composition, aggregation, trust, or deployment ownership not supported by model relationships or documentation |
+| `AD-L20` | §8 layout, §6.4a, §9.3 | Hidden realization spine — Service Realization view hides a visible Realization relationship whose endpoints are present in the view |
 
 ## Process-flow smells — `AD-B-*`
 
@@ -141,7 +142,7 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-L2`, `AD-L3` | `warn` | Structural layout failures — diagram is misleading or unreadable (overlap, truncated label) |
 | `AD-L4`, `AD-L7` | `warn` | Readability / representation failures — over-budget view, or a relationship drawn twice |
 | `AD-L5`, `AD-L6`, `AD-L8` | `info` | Polish — crossings above heuristic threshold, mixed routing style, off-grid coordinates |
-| `AD-L9`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15`, `AD-L17`, `AD-L18`, `AD-L19` | `warn` | Mechanical layout/readability failures that should be fixed before diagram-readable or review-ready output |
+| `AD-L9`, `AD-L12`, `AD-L13`, `AD-L14`, `AD-L15`, `AD-L17`, `AD-L18`, `AD-L19`, `AD-L20` | `warn` | Mechanical layout/readability failures that should be fixed before diagram-readable or review-ready output |
 | `AD-L11` | `block` | Connector crossing an unrelated node body creates false visual semantics; professional readiness cannot exceed `model-valid` |
 | `AD-L10`, `AD-L16` | `info` by default; escalate to `warn` when the route obscures the view's main path | Polish unless it dominates the architecture message; architect may have hand-shifted or intentionally routed around a large group |
 

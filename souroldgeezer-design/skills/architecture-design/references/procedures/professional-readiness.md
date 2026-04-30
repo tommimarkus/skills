@@ -4,6 +4,11 @@ Use this procedure after Build / Extract has produced the candidate OEF view set
 
 The procedure reports two orthogonal axes per view: **readiness** (visual and notational quality, classified per `<view>` and rolled up to the artifact) and **authority** (who or what backs the architecture content). Authority does not gate readiness — a forward-only view can be `review-ready` for visual quality while remaining `forward-only-or-inferred` for content authority. Both axes are emitted in the per-view matrix; the architect reads them together when deciding whether the diagram is fit for the next consumer. See reference §2.8 (readiness) and §2.9 (authority).
 
+A view is judged by final OEF materialization and visual/semantic quality, not
+by the layout backend used. Fallback geometry, future backend geometry, and
+hand-authored coordinates all pass through the same readiness and `AD-L*`
+checks.
+
 ## Quality levels
 
 - **model-valid:** XML/OEF structure, element types, relationship types, and basic ArchiMate well-formedness are correct.
@@ -67,9 +72,9 @@ For each `<view>`, use the lowest level justified by evidence:
 - Return `model-valid` when syntax and notation are sound but layout or communication is not dependable.
 - Return `model-valid` when a generated view lacks materialized node or connection geometry.
 - Return `model-valid` when any unresolved `AD-L11` finding exists *for this view*. Connector-through-node is a blocking enterprise architecture readability failure, regardless of otherwise-valid XML.
-- Return `model-valid` when unresolved `AD-L12` through `AD-L19` findings make this view's layout communication unreliable.
+- Return `model-valid` when unresolved `AD-L12` through `AD-L20` findings make this view's layout communication unreliable.
 - Return `diagram-readable` when this view can be read but still needs curation, viewpoint sharpening, or decision context before formal review.
-- Return `review-ready` only when no unresolved `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L19`, `AD-B-*`, `AD-6`, or `AD-2` finding blocks this view's review purpose.
+- Return `review-ready` only when no unresolved `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L20`, `AD-B-*`, `AD-6`, or `AD-2` finding blocks this view's review purpose.
 
 Cross-view smells (`AD-B-8`, `AD-B-9`, `AD-B-13`, `AD-B-14`, `AD-DR-*`) are attributed to *every* view they cap — a missing §9.7 cooperation view caps the orphan §9.3 view and any other §9.3 in the same realization story; a duplicate `AD-B-14` caps every view that shares the duplicated fingerprint.
 

@@ -79,4 +79,15 @@ require_finding "$endpoint_fixture" "$endpoint_output" 'connection=id-conn-opera
 require_finding "$endpoint_fixture" "$endpoint_output" 'node=id-node-approve'
 require_finding "$endpoint_fixture" "$endpoint_output" 'bendpoint=(450,70)'
 
-echo "render-quality gate negative fixtures produced expected AD-L10, AD-L11, AD-L13, and AD-L15 findings"
+hidden_realization_fixture="$script_dir/hidden-realization-negative.oef.xml"
+if hidden_realization_output="$("$gate" "$hidden_realization_fixture" 2>&1)"; then
+  echo "expected render-quality gate to fail for $hidden_realization_fixture" >&2
+  exit 1
+fi
+
+require_finding "$hidden_realization_fixture" "$hidden_realization_output" 'AD-L20'
+require_finding "$hidden_realization_fixture" "$hidden_realization_output" 'view=id-view-hidden-realization'
+require_finding "$hidden_realization_fixture" "$hidden_realization_output" 'relationship=id-rel-api-realizes-service'
+require_finding "$hidden_realization_fixture" "$hidden_realization_output" 'hidden_realization'
+
+echo "render-quality gate negative fixtures produced expected AD-L10, AD-L11, AD-L13, AD-L15, and AD-L20 findings"

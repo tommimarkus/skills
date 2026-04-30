@@ -13,7 +13,7 @@ This reference is the authoritative ground for the skill. It grounds in **The Op
 ## 2. Principles
 
 ### 2.1 Layer separation is a rule, not a recommendation
-ArchiMate's layers encode *different concerns*, not *different styles*. A Business Process cannot "host" an Application Component; an Application Service cannot "realise" a Business Goal. Mixing layers within a single box or labelling a box with two stereotypes is a smell. When two concerns interact, they interact through a relationship that crosses the layer boundary (Realisation, Serving, Used-by, Assignment), not through a merged element.
+ArchiMate's layers encode *different concerns*, not *different styles*. A Business Process cannot "host" an Application Component; an Application Service cannot "realise" a Business Goal. Mixing layers within a single box or labelling a box with two stereotypes is a smell. When two concerns interact, they interact through a relationship that crosses the layer boundary (Realisation, Serving, Access, Assignment), not through a merged element.
 
 ### 2.2 Element ≠ box
 Every ArchiMate diagram is a projection of a model. The same element may appear in multiple views with different relationships surfaced in each. Drawing the same Application Service twice in the same diagram without clearly indicating that the two boxes are the same element is a smell — prefer grouping or single-instance placement.
@@ -219,7 +219,6 @@ ArchiMate 3.2 Chapter 12 and Appendix B enumerate the valid element-to-element r
 ### 5.2 Dependency
 
 - **Serving** — element provides its behaviour/functionality to another. Arrow: open arrowhead at the served element.
-- **Used-by** (deprecated alias in newer writing; prefer Serving or Access depending on what is being expressed).
 - **Access** — behaviour reads, writes, or manipulates a passive-structure element. Dashed line with direction indicating read/write/read-write.
 - **Influence** — element positively or negatively affects the realisation of a Motivation element. Dashed line with open arrowhead and `+` or `−` label.
 - **Association** — unspecified relationship (last resort — if you reach for Association, you haven't picked the right one yet).
@@ -391,30 +390,45 @@ never reuse the model element identifier it references.
 
 ### 6.4a Layout strategy
 
-Coordinate emission is governed by a deterministic three-tier procedure introduced in 0.8.0. The full algorithm, worked example, and edge-case handling live in [../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md); what follows is the structural contract that Review mode checks and architects can read off without loading the procedure.
+Coordinate emission is governed by a backend-neutral, viewpoint-constrained
+procedure. The orchestration lives in
+[../../skills/architecture-design/references/procedures/layout-strategy.md](../../skills/architecture-design/references/procedures/layout-strategy.md);
+the backend request/result contract, viewpoint policies, routing/glossing rules,
+and deterministic fallback live in sibling procedure files. What follows is the
+structural contract that Review mode checks and architects can read off without
+loading every procedure.
 
-**Three tiers.**
-- **Tier 0** preserves architect-positioned `<node>` placements verbatim from any prior view at the canonical path. Re-Extract never churns hand-edited coordinates.
-- **Tier 1** runs the Sugiyama-v1 core engine: cycle handling → layer assignment → within-layer ordering (4-pass barycentric) → coordinate assignment (median heuristic) → Manhattan A* edge routing (obstacle-avoiding) → bounding-box normalisation (used region shifted to `(40, 40)` origin).
-- **Tier 2** applies the per-viewpoint specialisation matching the §9 diagram kind. Most specialisations override only Tier 1 phases 3–4 (within-layer ordering + coordinate assignment); §9.5 Migration replaces phases 2–4; §9.4 Technology Usage carves phase 5 for hosting Assignment edges; §9.7 Business Process Cooperation runs the existing process-flow lane procedure.
+**Geometry pipeline.**
+- Preserve architect-positioned `<node>` placements verbatim from any prior view
+  at the canonical path. Re-Extract never churns hand-edited coordinates unless
+  the user explicitly requests global reflow or the preserved geometry fails a
+  blocking gate.
+- Build a normalized layout request with nodes, edges, hierarchy, prior
+  geometry, locks, semantic bands, ports, and edge priorities.
+- Select the viewpoint-specific visual grammar for the §9 diagram kind.
+- Use a suitable geometry backend when available, or the fallback deterministic
+  layered layout for small generated directed views.
+- Assign ports, route high-priority edges first, repair invalid routes without
+  moving locked nodes, and gloss routes.
+- Validate final OEF geometry with the same `AD-L*` checks regardless of backend.
 
 **Grid.** 10 px. Every `x`, `y`, `w`, `h`, and `<bendpoint>` is a multiple of 10. Archi's default snap-to-grid is 10 px.
 
-**Layer ordering — semantic, not absolute.** Strategy first (top), Business, Application, Technology, Physical last (bottom). After Tier 1 phase 6 normalisation, the first populated layer's row starts at `y = 40`; absolute y-values are content-dependent (bands grow with content), so the AD-L1 smell is a **relative** ordering check, not an absolute-band check.
+**Layer ordering — semantic, not absolute.** Strategy first (top), Business, Application, Technology, Physical last (bottom). After generated or mixed-view normalization, the first populated layer's row starts at `y = 40`; absolute y-values are content-dependent (bands grow with content), so the AD-L1 smell is a **relative** ordering check, not an absolute-band check.
 
 **Aspect bias — preserved.** Within each layer, the five-aspect arrangement (Motivation left, Active structure, Behaviour, Passive structure, Implementation & Migration right) biases x-direction. Phase 4 places nodes with no cross-layer incoming edges at the centre of their aspect column.
 
 **Default sizes.** Structure (Component, Node, Actor, Role, Interface, Artifact) = `160 × 64` (was `140 × 60`). Behaviour (Process, Function, Service, Event) = `180 × 64` (was `160 × 60`). Motivation / Strategy = `180 × 64`. Passive (Data Object, Business Object, Contract, Product) = `140 × 64`. Implementation & Migration = `180 × 64`. Junction = `14 × 14`. Grouping = computed from children, minimum `240 × 140`. Minimum for any element: `120 × 55`.
 
-**Gutters.** 40 px between siblings (was 20). 60 px between layers (was 40). 80 px between layers in §9.3 Service Realization specialisation (Tier 2).
+**Gutters.** 40 px between siblings (was 20). 60 px between generic fallback layers (was 40). 80 px between layers in the §9.3 Service Realization policy.
 
-**Nesting over explicit edge.** Composition, Aggregation, and Realization relationships between two elements in the same cell render as a nested `<node>` placement; the corresponding `<connection>` is suppressed in that view via `<property propertyDefinitionRef="propid-archi-arm"><value xml:lang="en">hide</value></property>` on the relationship. Existing rule, preserved.
+**Nesting over explicit edge.** Composition and Aggregation relationships between two elements in the same cell may render as nested `<node>` placement; the corresponding `<connection>` is suppressed in that view only when the model relationship remains and the view or summary documents the curation reason. Assignment may be represented through nesting only in viewpoint-specific cases such as hosting. Main Realization spines are visible by default and are not replaced by nesting.
 
-**Edge routing.** Orthogonal only (right-angle bends). Manhattan path-finding around node-body obstacles (Tier 1 phase 5, A*). Bend points emitted as `<bendpoint>` children of `<connection>`. Connections attach to side-midpoints, never corners. First and last bendpoints sit outside the source / target node bodies so renderers enter through a clean side lane. Parallel edges in the same lane space 20 px apart. Re-Extract may preserve prior connection bendpoints only when the relationship reference and source/target endpoints are unchanged and the preserved route still clears the `AD-L11` intersection and endpoint-bendpoint checks; relationship replacement or source/target inversion requires rerouting.
+**Edge routing.** Orthogonal only (right-angle bends). Routing assigns ports before pathfinding, routes high-priority edges first, avoids unrelated node bodies, spaces parallel lanes, and glosses redundant bendpoints after routing. A fallback router may use direction-aware Dijkstra/A* when bend penalties are non-uniform; plain BFS is valid only for uniform-cost movement with no bend optimization. Bend points are emitted as `<bendpoint>` children of `<connection>`. First and last bendpoints sit outside the source / target node bodies so renderers enter through a clean side lane. Re-Extract may preserve prior connection bendpoints only when the relationship reference and source/target endpoints are unchanged and the preserved route still clears the `AD-L11` intersection and endpoint-bendpoint checks; relationship replacement or source/target inversion requires rerouting.
 
 **View budget.** A view is compact when it carries at most 20 elements and 30 relationships; nesting depth capped at 2.
 
-**Process-flow exception (§9.7).** Existing reference §9.7 process-flow lanes preserved verbatim — Tier 2 specialisation that replaces Tier 1 phases 3–4 with the existing three-lane horizontal strip rule (Active above, Behaviour middle, Passive below).
+**Viewpoint policies.** Capability Map uses a tile/decomposition map; Application Cooperation uses cluster/hub/integration layout; Service Realization uses a visible realization spine; Technology Usage uses a hosting/deployment stack; Migration uses Plateau/timeline layout; Motivation uses an influence/traceability tree; Business Process Cooperation uses flow/swimlane/handoff lanes.
 
 **Style.** Do not emit `<style>` on `<node>` placements. Undeclared style lets each rendering tool apply its layer-idiomatic colours (yellow Business / turquoise Application / green Technology in Archi's default theme). The only acceptable `<style>` emission is a neutral fill on a Grouping to distinguish it from contained elements.
 
@@ -617,7 +631,7 @@ then the diagram is out of scope for `architecture-design` Build mode and the ar
 
 | Layer | Extractable from | Notes |
 |---|---|---|
-| **Application** | `*.sln`, `*.csproj`, `host.json`, `staticwebapp.config.json`, `package.json`, NuGet references | Each project becomes an Application Component; inter-project references become Used-by or Composition; `host.json` triggers and bindings become Application Interfaces |
+| **Application** | `*.sln`, `*.csproj`, `host.json`, `staticwebapp.config.json`, `package.json`, NuGet references | Each project becomes an Application Component; inter-project references become Serving or Composition; `host.json` triggers and bindings become Application Interfaces |
 | **Technology** | Bicep, `host.json`, `staticwebapp.config.json`, `azure.yaml`, IaC of all dialects the skill supports | Bicep `Microsoft.Web/sites`, `Microsoft.Storage/storageAccounts`, `Microsoft.DocumentDB/databaseAccounts`, `Microsoft.KeyVault/vaults` become Technology Nodes; dependsOn and SKU become Composition and properties of the Node; network `Microsoft.Network/virtualNetworks` and `privateEndpoints` become Communication Network and Path |
 | **Physical** | Not extracted in v1 | Forward-only |
 | **Implementation & Migration** | `.github/workflows/*.yml`, `azure-pipelines.yml` | Deploy jobs become Work Packages; environments (Dev/Staging/Prod) become Plateaus; the movement between environments becomes Gap closure |
@@ -696,7 +710,7 @@ Codes are used in the skill's smell catalog and the Review mode output:
 - **`AD-15` View-placement `xsi:type` missing** — view `<node>` emitted without `xsi:type` (one of `Element` / `Container` / `Label`), or view `<connection>` emitted without `xsi:type` (one of `Relationship` / `Line`). OEF's `ViewNodeType` and `ConnectionType` are abstract complexTypes — every instance must disambiguate via `xsi:type`. Archi's XSD-validating import rejects bare elements with `cvc-type.2: The type definition cannot be abstract`. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` does.
 - **`AD-16` Metadata catalog payload in the ArchiMate namespace** — the `<metadata>` block's catalog payload elements (the actual cataloging content beyond the optional `<schema>` / `<schemaversion>` SchemaInfoGroup prelude) emitted in the ArchiMate namespace (`http://www.opengroup.org/xsd/archimate/3.0/`). OEF's `MetadataType` accepts the prelude in the ArchiMate namespace but routes catalog content through `<xs:any namespace="##other"/>`, requiring it to come from a non-ArchiMate namespace such as Dublin Core (`http://purl.org/dc/elements/1.1/`). See §6.1a. `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do. Inverse error (placing `<schema>` or `<schemaversion>` in a non-ArchiMate namespace) also fails — they ARE schema-declared elements in `SchemaInfoGroup` and must inherit the document default namespace.
 - **`AD-17` Invalid model child element, sequence, or XML ID space** — top-level children of `<model>` emitted in an order that violates `ModelType`'s `xs:sequence`, top-level children that the schema does not permit at all, or duplicate `identifier` values in the OEF file. The mandatory order is `name → documentation → metadata → elements → relationships → organizations → propertyDefinitions → views` (see §6). A model-root `<properties>` block is invalid, even when used only to carry a layout marker. Archi rejects invalid children, out-of-order children, or duplicate XML IDs during schema-validating import; `xmllint --noout` does *not* catch this; `xmllint --schema <url>` and Archi import do.
-- **`AD-18` Invisible RBAC** — a Technology Node marked RBAC-only (`disableLocalAuth=true`, `allowSharedKeyAccess=false`, `enableRbacAuthorization=true`, or equivalent) has a Serving / Used-by path from an Application Component but no Access relationship from the corresponding Managed Identity to the protected resource. The data path is drawn without its authorization path.
+- **`AD-18` Invisible RBAC** — a Technology Node marked RBAC-only (`disableLocalAuth=true`, `allowSharedKeyAccess=false`, `enableRbacAuthorization=true`, or equivalent) serves an Application Component but has no Access relationship from the corresponding Managed Identity to the protected resource. The data path is drawn without its authorization path.
 - **`AD-19` Fictitious plateaus** — Extract emits deployment Plateaus that have no supporting GitHub environment, `jobs.*.environment`, matrix environment, environment-tagged Bicep parameter set, or environment-specific deploy job.
 - **`AD-20` Plateau triggering without migration intent** — Plateaus that represent parallel deployment environments are connected by Triggering / Gap relationships even though the view documentation does not state an explicit as-is / to-be migration. Parallel environments coexist; they do not become one another.
 - **`AD-21` Unbounded external component** — an Application Component marked external / third-party, inferred from non-local HTTP base addresses, or discovered from CSP allowlists is not aggregated into an external trust-boundary Grouping in Application Cooperation views.
@@ -721,16 +735,16 @@ These smells are static review findings over OEF views. They do not test project
 
 Artefact smells specific to `<view>` layout, derived from the §6.4a Layout strategy contract. Every `AD-L*` is `[static]` — verifiable from the `.oef.xml` source alone, no runtime reads needed.
 
-- **`AD-L1` Layer-ordering violation** — an element's `y` coordinate violates the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Tier 1 phase 6 bbox normalisation per §6.4a. An Application Component placed below an element in the Technology layer makes the diagram visually lie about what layer the element is in.
+- **`AD-L1` Layer-ordering violation** — an element's `y` coordinate violates the relative ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after generated or mixed-view normalization per §6.4a. An Application Component placed below an element in the Technology layer makes the diagram visually lie about what layer the element is in.
 - **`AD-L2` Node overlap** — two `<node>` placements at the same nesting depth in the same view whose bounding boxes intersect. Rendering tools render one on top of the other; the diagram is unreadable.
 - **`AD-L3` Undersize** — `w < 120` or `h < 55`, or `w` is smaller than the `<name>` length would need at the default font. Label truncates in Archi and in most other tools; the element becomes ambiguous.
 - **`AD-L4` View density** — view exceeds 20 elements or 30 relationships, or nesting depth exceeds 2. Readability drops sharply past these thresholds (ArchiMate Cookbook, The Open Group, "compact and readable"); split the view or promote a cluster to a Grouping.
-- **`AD-L5` Excessive crossings** — edge-crossing count exceeds `node_count / 6` (threshold tightened in 0.8.0 from the pre-0.8.0 `node_count / 4` because Tier 1 phase 3's 4-pass barycentric crossing-minimisation materially reduces crossings vs the pre-0.8.0 1-pass procedure). Indicates either over-density (address via `AD-L4`) or poor placement (re-run Tier 1 phase 3).
+- **`AD-L5` Excessive crossings** — edge-crossing count exceeds `node_count / 6` (heuristic threshold for fallback or backend output). Indicates either over-density (address via `AD-L4`) or poor placement/routing.
 - **`AD-L6` Non-orthogonal routing** — a `<connection>` whose source and target don't share an x or y coordinate carries no `<bendpoint>`, so renderers draw a diagonal line. The diagram mixes routing styles and reads inconsistently.
-- **`AD-L7` Nested-plus-edge** — a `<node>` is visually nested inside its parent *and* a visible `<connection>` for the parent-child relationship is emitted in the same view. The relationship is represented twice; Archi's ARM handles this poorly. Either hide the edge (add the `propid-archi-arm` = `hide` property to the relationship) or draw the elements side-by-side.
+- **`AD-L7` Nested-plus-edge** — a `<node>` is visually nested inside its parent *and* a visible `<connection>` for the parent-child relationship is emitted in the same view. The relationship is represented twice. Either hide the edge when the viewpoint policy permits hide-by-nesting, or draw the elements side-by-side. Do not apply hide-by-nesting to the main Service Realization spine.
 - **`AD-L8` Off-grid coordinates** — any `x`, `y`, `w`, `h`, or `<bendpoint>` coordinate that is not a multiple of 10. Diagrams drift visually on re-open / re-snap; git diffs churn on unrelated edits.
-- **`AD-L9` Hierarchy not respected** — a Realization / Used-by / Serving relationship between same-layer elements is drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). Tier 1 phase 3's topological sort plus phase 1's cycle handling prevents this; the smell catches violations introduced by hand-edit or by a pre-Tier-1 procedure run.
-- **`AD-L10` Canvas not normalised** — the top-left of the view's used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px`. Tier 1 phase 6 (bbox normalisation) emits a normalised canvas naturally; the smell catches non-normalised legacy or hand-shifted output.
+- **`AD-L9` Hierarchy not respected** — a Realization / Serving relationship between same-layer elements is drawn against topological direction (e.g. realised-by-edge points up the layer when the realised element is below). The fallback ordering pass prevents this for generated views; the smell catches violations introduced by hand-edit or by a backend/fallback failure.
+- **`AD-L10` Canvas not normalised** — the top-left of the view's used region (smallest `x` / `y` over all `<node>` placements + `<bendpoint>`s) is not at `(40, 40) ± 10 px` for generated or mixed geometry. The smell catches non-normalised legacy or generated output; fully architect-authored views may intentionally preserve their prior origin.
 - **`AD-L11` Connector through unrelated node / endpoint body** — a `<connection>` segment crosses the bounding box of a `<node>` that is neither the source, target, nor a required ancestor/container of the source or target needed to exit nested structure, or the first / last bendpoint sits inside the source / target node body. This includes stale bendpoints reused after a relationship is replaced or its source/target endpoints are inverted. This is a blocking layout smell: it visually implies ownership, flow, or relationship semantics that do not exist, or causes rendered anchors to enter through an element body instead of a side lane. Build / Extract must reroute with deterministic bendpoints or fail self-check; Review cannot classify the artefact above `model-valid` while this smell is present.
 - **`AD-L12` View-orphan element** — a `<node>` appears in a view with no incoming or outgoing `<connection>` to another node in the same view and is not explicitly documented as a legend, note, or intentional placeholder. The element floats without a readable architecture claim.
 - **`AD-L13` Stacked connector lane** — two or more visible connections share the same source-side or target-side lane closely enough that arrowheads or labels overlap. Parallel edges in the same lane must be spaced at least 20 px apart per §6.4a.
@@ -739,7 +753,8 @@ Artefact smells specific to `<view>` layout, derived from the §6.4a Layout stra
 - **`AD-L16` Long peripheral bus route** — a bottom or side route spans most of the view and dominates the reading path while carrying only a local relationship. Shorten the route, move the endpoint closer, split the view, or document why the bus route is intentional. Severity is `info` by default, escalating to `warn` when it obscures the main path.
 - **`AD-L17` Duplicate visible story path** — two or more visible relationships, lanes, or duplicated nodes tell the same architecture story in one view. Keep the model relationship, but hide or omit the redundant view connection per §6.4c and document the curation choice.
 - **`AD-L18` Misleading boundary crossing** — a connector crosses a Grouping, container, trust-boundary, or deployment-boundary edge in a way that implies traffic, ownership, or deployment scope not supported by the model. Reroute around the boundary, split the view, or add explicit boundary semantics.
-- **`AD-L19` Ambiguous nested ownership** — a node is visually nested where the model lacks Composition / Aggregation / Realization / Assignment or documentation that justifies the ownership, trust, or deployment implication. Either add the correct model relationship, un-nest the node, or document the intended non-semantic grouping.
+- **`AD-L19` Ambiguous nested ownership** — a node is visually nested where the model lacks Composition / Aggregation / viewpoint-specific Assignment or documentation that justifies the ownership, trust, or deployment implication. Either add the correct model relationship, un-nest the node, or document the intended non-semantic grouping.
+- **`AD-L20` Hidden realization spine** — a Service Realization view hides a Realization relationship whose source and target nodes are both present in the view. Keep the main Realization chain visible unless the relationship is explicitly documented as non-spine redundancy.
 
 ### Process-flow smells — `AD-B-*`
 
@@ -777,7 +792,7 @@ The skill supports seven ArchiMate diagram kinds. Each kind fixes the element pa
 **Professional gate.** A Capability Map separates business capability from application or implementation structure. When known, it surfaces ownership, maturity, priority, investment relevance, or capability realisation; otherwise it is probably an application inventory in disguise (`AD-Q1` / `AD-Q5`).
 
 ### 9.2 Application Cooperation (Application)
-**`viewpoint="Application Cooperation"`.** Elements: Application Component (primary), Application Service, Application Interface, Application Collaboration. Serving, Used-by, Realisation, Composition, Assignment. Used to show how software parts cooperate.
+**`viewpoint="Application Cooperation"`.** Elements: Application Component (primary), Application Service, Application Interface, Application Collaboration. Serving, Realisation, Composition, Assignment. Used to show how software parts cooperate.
 
 **Professional gate.** The view clarifies collaboration boundaries, integration paths, and responsibility split. Components should not merely sit next to each other; the selected relationships should make the cooperation pattern legible (`AD-Q1`, `AD-Q4`, `AD-Q6`).
 
@@ -796,7 +811,7 @@ Layout follows the default banded grid; the Application band may hold up to 4 el
 **View emission contract.** Per [`process-view-emission.md`](../../skills/architecture-design/references/procedures/process-view-emission.md), orchestrator-level Business Processes (top-level + Composition-nested sub-orchestrators) get §9.3 coverage in the canonical feature file. Processes with the same realization-story fingerprint share one process-rooted §9.3 view; processes with materially different application, data, technology, security, deployment, UI-entry, or business behaviour keep separate views. Sub-processes without §9.3 coverage trigger `AD-B-12` unless the architect sets `propid-drilldown-exclude=true` on the process (§6.4b). Duplicate same-story drill-downs trigger `AD-B-14`. Activity-call steps (Triggering-chained, not Composition-nested) stay as nodes inside the parent's §9.3 — they are not orchestrator-level and do not get separate views.
 
 ### 9.4 Technology Usage (Application + Technology)
-**`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Used-by, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
+**`viewpoint="Technology Usage"`.** Elements: Application Component, Technology Service, Node, System Software, Artifact. Serving, Realisation, Assignment, Composition. Path and Communication Network when networking is material. Matches the canonical ArchiMate Technology Usage Viewpoint (how applications use technology infrastructure); distinct from the bare Technology Viewpoint which is technology-only.
 
 **Professional gate.** The view distinguishes runtime infrastructure, deployment nodes, system software, technology services, artifacts, and network paths when those concerns matter. If latency, residency, or platform ownership is part of the question, Path / Communication Network elements must carry that point (`AD-12`, `AD-Q6`).
 
@@ -874,7 +889,7 @@ diffs are all clean for the requested quality level.
 - [static] Every `<view>` with `viewpoint="Business Process Cooperation"` contains ≥ 2 Business Process elements (`AD-B-11`).
 - [static] Every Business Process with an incoming `xsi:type="Composition"` relationship from another Business Process has a `<view>` with `viewpoint="Service Realization"` rooted on it, unless `<property propertyDefinitionRef="propid-drilldown-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-12`).
 - [static] Every Business Process with no incoming `xsi:type="Composition"` relationship from another Business Process is present as a node in some `<view>` with `viewpoint="Business Process Cooperation"` in the same canonical file, unless `<property propertyDefinitionRef="propid-coop-view-exclude"><value xml:lang="en">true</value></property>` is set on the process (`AD-B-13`).
-- [static] Every element's `y` coordinate respects the relative layer ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after Tier 1 phase 6 bbox normalisation per §6.4a (`AD-L1`).
+- [static] Every element's `y` coordinate respects the relative layer ordering of its ArchiMate layer (Strategy above Business above Application above Technology above Physical) after generated or mixed-view normalization per §6.4a (`AD-L1`).
 - [static] No two `<node>` placements in the same view overlap — bounding-box intersection is zero for every pair at the same nesting depth (`AD-L2`).
 - [static] Every element's `w ≥ 120` and `h ≥ 55`; `w` is large enough that the `<name>` does not truncate at the default Archi font (heuristic: 7 px per character) (`AD-L3`).
 - [static] Each view carries at most 20 elements and 30 relationships; nesting depth ≤ 2 (`AD-L4`).
@@ -882,8 +897,8 @@ diffs are all clean for the requested quality level.
 - [static] Every `<connection>` in the view uses orthogonal routing: bend points are present whenever source and target do not share an x or y coordinate (`AD-L6`).
 - [static] No element is simultaneously nested inside a parent and connected to that parent by a visible `<connection>` — the parent-child relationship is represented once, not twice (`AD-L7`).
 - [static] Every `x`, `y`, `w`, `h`, and `<bendpoint>` coordinate is a multiple of 10 (`AD-L8`).
-- [static] Every Realization / Used-by / Serving relationship between same-layer elements respects topological direction (`AD-L9`).
-- [static] The view's used-region top-left is at `(40, 40) ± 10 px` after Tier 1 phase 6 bbox normalisation (`AD-L10`).
+- [static] Every Realization / Serving relationship between same-layer elements respects topological direction (`AD-L9`).
+- [static] The view's used-region top-left is at `(40, 40) ± 10 px` for generated or mixed geometry after normalization (`AD-L10`).
 - [static] Every `<connection>` segment avoids `<node>` bounding boxes other than the source, target, and required source/target ancestor containers, and the first / last bendpoint is outside the source / target node body (`AD-L11`); preserved bendpoints are revalidated after relationship replacement or source/target inversion.
 - [static] Every non-legend `<node>` in a view participates in at least one same-view connection (`AD-L12`).
 - [static] Parallel or near-parallel connectors are lane-spaced so arrowheads and labels do not stack (`AD-L13`).
@@ -893,6 +908,7 @@ diffs are all clean for the requested quality level.
 - [static] A view does not draw duplicate visible paths for the same architecture story (`AD-L17`).
 - [static] Connectors do not cross Grouping, trust-boundary, or deployment-boundary boxes in visually misleading ways (`AD-L18`).
 - [static] Nested placement does not imply unsupported ownership, composition, trust, or deployment scope (`AD-L19`).
+- [static] Service Realization views do not hide visible Realization spine edges when both endpoints are present in the view (`AD-L20`).
 - [visual] When the user requests renders or visual inspection, run
   `archi-render.sh` and inspect every emitted PNG before claiming visual render
   quality; do not sample. Reject views with connector-through-node, stacked

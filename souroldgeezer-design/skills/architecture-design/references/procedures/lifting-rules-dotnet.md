@@ -37,12 +37,12 @@ Out of scope: `local.settings.json`, user secrets, bin / obj output.
 
 | Source project type | Target project type | ArchiMate relationship |
 |---|---|---|
-| App / Function App / Blazor WASM | Library | **Used-by** (or **Serving**, architect preference) |
-| Function App | Function App | **Serving** (consumer → provider) |
-| Library | Library | **Composition** if the reference is "A composes B" in its readme/intent; else **Used-by** |
+| App / Function App / Blazor WASM | Library | **Serving** from referenced library/provider to referencing app/consumer, unless Composition better reflects ownership |
+| Function App | Function App | **Serving** from provider Function App to consumer Function App |
+| Library | Library | **Composition** if the reference is "A composes B" in its readme/intent; else **Serving** from referenced library/provider to referencing library/consumer |
 | App | DTO / Contract-only library | **Realisation** — the app realises the contract |
 
-The skill defaults to **Used-by** when intent is ambiguous; the architect overrides.
+The skill defaults to **Serving** when intent is ambiguous; the architect overrides.
 
 ### Azure Functions bindings → Application Interfaces and relationships
 
@@ -50,13 +50,13 @@ Azure Functions bindings declared in function classes surface as Application Int
 
 | Binding attribute | Interface type on Component | Relationship emitted |
 |---|---|---|
-| `[HttpTrigger]` | **Application Interface** — type *HTTP endpoint*, label = route template | Exposes Application Service; Used-by external Actor (forward-only Business Layer stub) |
+| `[HttpTrigger]` | **Application Interface** — type *HTTP endpoint*, label = route template | Exposes Application Service; Serving from the interface/service to an external Actor (forward-only Business Layer stub) |
 | `[TimerTrigger]` | **Application Interface** — type *Timer*, label = cron expression | Triggered-by Business Event (forward-only stub — Timer is behaviour trigger) |
-| `[CosmosDBTrigger]` / `[CosmosDBInput]` / `[CosmosDBOutput]` | (binding, not an Interface) | **Access** to Data Object + **Used-by** to the Cosmos Technology Node |
-| `[BlobTrigger]` / `[BlobInput]` / `[BlobOutput]` | (binding, not an Interface) | **Access** to Data Object + **Used-by** to the Storage Technology Node |
+| `[CosmosDBTrigger]` / `[CosmosDBInput]` / `[CosmosDBOutput]` | (binding, not an Interface) | **Access** to Data Object + **Serving** from the Cosmos Technology Node to the Component |
+| `[BlobTrigger]` / `[BlobInput]` / `[BlobOutput]` | (binding, not an Interface) | **Access** to Data Object + **Serving** from the Storage Technology Node to the Component |
 | `[EventGridTrigger]` | **Application Interface** — type *Event subscription* | Triggered-by Application Event / Business Event (stub) |
-| `[ServiceBusTrigger]` / `[ServiceBusOutput]` | (binding) | **Flow** to/from Application Event; **Used-by** to the Service Bus Technology Node |
-| `[QueueTrigger]` / `[QueueOutput]` | (binding) | **Flow** to/from Application Event; **Used-by** to the Storage Queue Technology Node |
+| `[ServiceBusTrigger]` / `[ServiceBusOutput]` | (binding) | **Flow** to/from Application Event; **Serving** from the Service Bus Technology Node to the Component |
+| `[QueueTrigger]` / `[QueueOutput]` | (binding) | **Flow** to/from Application Event; **Serving** from the Storage Queue Technology Node to the Component |
 | `[DurableClient]` | (runtime wiring) | No direct element; flags the Component as *Durable orchestration host* |
 | `[OrchestrationTrigger]` | **Application Function** — durable orchestrator | Composition to the containing Component |
 | `[ActivityTrigger]` | **Application Function** — activity | Composition to the containing Component; Called-by the orchestrator Function |
@@ -67,14 +67,14 @@ Azure Functions bindings declared in function classes surface as Application Int
 |---|---|
 | Routable component (`@page` directive) in a Blazor project | **Application Service** on the Blazor Component — alias = route, label = route path |
 | `@rendermode InteractiveWebAssembly` / `InteractiveServer` / `InteractiveAuto` on a component | Noted as a property of the containing Application Service (interaction style); does not create a separate ArchiMate element |
-| `HttpClient.GetFromJsonAsync(...)` against a named service URL that resolves to another Component's Application Interface | **Used-by** relationship from Blazor Component to the target Component |
+| `HttpClient.GetFromJsonAsync(...)` against a named service URL that resolves to another Component's Application Interface | **Serving** relationship from the target Component / Interface to the Blazor consumer Component |
 
 ### Static Web App routing → Application Interfaces
 
 | `staticwebapp.config.json` fragment | Maps to |
 |---|---|
 | `routes[]` entry with `"allowedRoles": ["authenticated"]` | **Application Interface** on the hosting SWA Component; labelled by the `route` value |
-| `auth` block with `identityProviders` | Application Service *Authentication* on the SWA Component, linked to the Technology Layer via a Used-by relationship to the identity provider (forward-only stub unless the provider is explicit) |
+| `auth` block with `identityProviders` | Application Service *Authentication* on the SWA Component, linked to the Technology Layer via a Serving relationship from the identity provider to the service (forward-only stub unless the provider is explicit) |
 | `navigationFallback` for SPA routing | Not lifted — client-side detail |
 
 ### External services → Application Components + trust-boundary Grouping

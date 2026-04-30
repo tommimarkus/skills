@@ -1,0 +1,37 @@
+layoutResult:
+  nodes:
+    - id: "view-node-orders-api"
+      x: 40
+      y: 40
+      width: 160
+      height: 64
+    - id: "view-node-cosmos"
+      x: 440
+      y: 40
+      width: 160
+      height: 64
+    - id: "view-node-key-vault"
+      x: 240
+      y: 40
+      width: 160
+      height: 64
+
+  edges:
+    - id: "view-connection-cosmos-serves-orders"
+      sourcePort: "south"
+      targetPort: "south"
+      bendpoints:
+        - { x: 520, y: 140 }
+        - { x: 120, y: 140 }
+
+  hiddenEdges: []
+
+  metrics:
+    nodeOverlaps: 0
+    connectorNodeIntersections: 0
+    crossings: 0
+    maxBends: 2
+    movedLockedNodes: 0
+
+  warnings:
+    - "discarded stale prior bendpoints that crossed the locked Key Vault node"

@@ -86,7 +86,10 @@ Each §9.3 view contains:
 - For **user-driven** processes (carrying a Business Actor Assignment per reference §4.1) — the architect-authored UI Application Component and Application Interface at the entry point (per existing reference §9.3 Process-rooted UI-aware modality and `AD-B-10`).
 - Composition-nested sub-processes of X appear *inside* the view as nested boxes per existing §9.3 layout (the sub-process also has its own singleton or shared §9.3 view unless suppressed; the two representations together give the architect both the parent's drill-down view and a navigable sub-process drill-down).
 
-Layout follows the existing Tier 2 §9.3 specialisation in [`layout-strategy.md`](layout-strategy.md) — vertical realisation stack, no change.
+Layout follows the Service Realization policy in
+[`layout-policies-by-viewpoint.md`](layout-policies-by-viewpoint.md), invoked
+through [`layout-strategy.md`](layout-strategy.md). The §9.3 view keeps the
+main Realization spine visible.
 
 **Review smell.** If an existing model contains two or more §9.3 Service
 Realization views with identical fingerprints and no material process-specific
@@ -110,7 +113,10 @@ If the architect has authored a `<documentation>` block on the view, append the 
 
 ### Rule 4 — Layout invocation
 
-Each emitted §9.7 / §9.3 view runs the existing [`layout-strategy.md`](layout-strategy.md) Tier 2 specialisation matching its `viewpoint=` attribute. No change to the layout engine — multi-process §9.7 views were already supported by the 3-lane process-flow specialisation; singleton and shared-story §9.3 views use the vertical realisation stack specialisation.
+Each emitted §9.7 / §9.3 view runs [`layout-strategy.md`](layout-strategy.md),
+which selects the matching viewpoint policy and then backend or fallback
+geometry. Multi-process §9.7 views use the process-flow lane policy; singleton
+and shared-story §9.3 views use the visible realization-spine policy.
 
 ### Rule 5 — Existing model preservation
 
@@ -127,7 +133,7 @@ If a §9.7 view would exceed the `AD-L4` budget (>20 elements or >30 relationshi
 
 ### Rule 7 — Determinism
 
-A re-Extract of the same code produces byte-identical output: same view identifiers (per Rule 1's slug rule), same view contents, same Tier 0 architect-position preservation (per [`layout-strategy.md`](layout-strategy.md)).
+A re-Extract of the same code produces byte-identical output: same view identifiers (per Rule 1's slug rule), same view contents, same architect-position preservation (per [`layout-strategy.md`](layout-strategy.md)).
 
 ### Rule 8 — Suppression properties
 
@@ -157,7 +163,7 @@ A feature `checkout` with two top-level orchestrators (`PlaceOrder`, `CancelOrde
     <view identifier="id-view-sr-place-order" xsi:type="Diagram" viewpoint="Service Realization">
       <name xml:lang="en">Service Realization — Place Order</name>
       <documentation>Cooperation view: id-view-bpc-checkout</documentation>
-      <!-- node placements per Tier 2 §9.3 vertical realisation stack -->
+      <!-- node placements per §9.3 visible realization-spine policy -->
     </view>
 
     <view identifier="id-view-sr-cancel-order" xsi:type="Diagram" viewpoint="Service Realization">

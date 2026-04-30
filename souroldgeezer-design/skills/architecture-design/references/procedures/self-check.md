@@ -19,7 +19,11 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
 | `references/red-flags.md` | All modes — stop-condition list before delivering |
 | `references/output-format.md` | All modes — per-view readiness matrix, footer skeleton |
 | `references/procedures/professional-readiness.md` | Build / Extract final pass; Review artefact pass — readiness verdict; authority derivation; `AD-Q*` emission |
-| `references/procedures/layout-strategy.md` | Build / Extract — Sugiyama-v1 three-tier engine; `AD-L*` source for source-geometry gate |
+| `references/procedures/layout-strategy.md` | Build / Extract — backend-neutral geometry orchestration and readiness handoff |
+| `references/procedures/layout-backend-contract.md` | Build / Extract — normalized geometry request/result contract for backends and fallback |
+| `references/procedures/layout-policies-by-viewpoint.md` | Build / Extract — viewpoint-specific visual grammar and backend selection policy |
+| `references/procedures/routing-and-glossing.md` | Build / Extract and route repair — port-aware routing, route-only repair, and post-route glossing |
+| `references/procedures/layout-fallback.md` | Build / Extract when no suitable backend is available — deterministic fallback layout |
 | `references/procedures/process-view-emission.md` | Build / Extract when Business Layer in scope — §9.7 / §9.3 view emission contract |
 | `references/procedures/seed-views.md` | Extract when forward-only stubs emitted — Capability Map / Motivation seed views |
 | `references/procedures/lifting-rules-dotnet.md` | Extract when .NET sources present — Application Layer lifting |

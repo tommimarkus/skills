@@ -73,16 +73,13 @@ When invoked, run the architecture-design skill and present results:
    validated against ArchiMate® 3.2 Appendix B; `xsi:schemaLocation`
    referencing The Open Group's canonical schema URL (never bundled).
    Invoke [references/procedures/layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md)
-   to apply the Sugiyama-v1 three-tier engine contracted in reference §6.4a —
-   Tier 0 preserves architect-positioned `<node>` placements verbatim; Tier 1
-   runs cycle handling → layer assignment → 4-pass barycentric ordering →
-   median coordinate assignment → Manhattan A* edge routing with
-   obstacle avoidance → post-layout connector intersection validation →
-   bbox normalisation; Tier 2 applies the per-viewpoint
-   specialisation matching the §9 diagram kind (Capability Map tile grid /
-   Application Cooperation hub-and-spoke / Service Realization vertical
-   stack / Technology Usage hosting tower / Migration Plateau timeline /
-   Motivation tree / Business Process Cooperation lanes). Materialize every
+   to apply the backend-neutral geometry policy contracted in reference §6.4a:
+   preserve architect-authored geometry; build the normalized layout request
+   from `layout-backend-contract.md`; select the viewpoint grammar from
+   `layout-policies-by-viewpoint.md`; choose a backend or the
+   deterministic fallback in `layout-fallback.md`; route and gloss with
+   `routing-and-glossing.md`; then validate final OEF geometry before claiming
+   `diagram-readable` or `review-ready`. Materialize every
    generated view with Element node geometry (`elementRef`, `x`, `y`, `w`,
    `h`) and Relationship connections whose endpoints reference view-node
    identifiers; never leave Build output as a model inventory with empty
@@ -105,7 +102,9 @@ When invoked, run the architecture-design skill and present results:
    need a visible canvas. For any element not carrying an
    architect-authored position in a prior diagram at the canonical path,
    invoke [layout-strategy.md](../skills/architecture-design/references/procedures/layout-strategy.md);
-   architect-authored positions are preserved verbatim (procedure Step 1).
+   architect-authored positions are preserved verbatim unless the user
+   explicitly requests global reflow or the existing geometry fails a blocking
+   validation gate.
    Materialize every generated seed or lifted view with concrete Element nodes
    and Relationship connections before returning it; a raw inventory dump is
    not a diagram-readable Extract result.
@@ -169,14 +168,15 @@ When invoked, run the architecture-design skill and present results:
    truncating labels (`AD-L3`), view over the 20-element / 30-relationship
    budget (`AD-L4`), edge crossings exceeding `n/6` (`AD-L5`), nested-plus-edge
    double representation (`AD-L7`), off-grid coordinates (`AD-L8`),
-   hierarchy not respected — same-layer Realization / Used-by / Serving
+   hierarchy not respected — same-layer Realization / Serving
    drawn against topological direction (`AD-L9`), canvas not normalised at
    `(40, 40) ± 10 px` origin (`AD-L10`), `<connection>` segment crossing an
    unrelated node bbox (`AD-L11`, blocking), view-orphan nodes (`AD-L12`),
    stacked connector lanes (`AD-L13`), wide empty layer gaps (`AD-L14`), or
    local fan-out crisscross (`AD-L15`), long peripheral bus route (`AD-L16`),
    duplicate visible story path (`AD-L17`), misleading boundary crossing
-   (`AD-L18`), or ambiguous nested ownership (`AD-L19`); Business Process Cooperation view
+   (`AD-L18`), ambiguous nested ownership (`AD-L19`), or hidden Service
+   Realization spine (`AD-L20`); Business Process Cooperation view
    lacking a Triggering/Flow chain (`AD-B-1`) or containing non-Business-
    layer elements (`AD-B-4`); §9.3 Service Realization view with a Business
    Process at top but no realising Application Service (`AD-B-6`) or no

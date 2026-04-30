@@ -76,7 +76,7 @@ Canonical path: docs/architecture/<feature>.oef.xml
 Diagram kind: <reference §9 kind name — primary kind in scope this run>
 Diagram kinds present: <M> of 7 (<comma-separated canonical viewpoint names>)
 Diagram kinds missing: <comma-separated canonical viewpoint names, or "none">
-Layout engine: Sugiyama-v1 [+ <viewpoint> specialisation, when applicable]
+Layout policy: backend-neutral viewpoint policy [+ fallback/backend, when applicable]
 Layers in scope: <comma-separated>
 Per-view readiness: <comma-separated `<view-id>=<readiness>:<authority>` triples, or "single-view artifact: see Artifact quality below">
 Artifact quality: model-valid | diagram-readable | review-ready | not assessed (worst-view minimum)

@@ -1,24 +1,41 @@
-# Layout strategy — Sugiyama-v1 engine for OEF XML views
+# Layout strategy - viewpoint-constrained OEF geometry policy
 
-Procedure for producing `<view>` node placements that are readable, diff-stable, and round-trippable through ArchiMate® conformant tools. Invoked by Build (always) and Extract (when an existing diagram has no prior view placements for the elements being added). Review uses the same rules — restated as checks — to flag `AD-L*` smells.
+Procedure for producing `<view>` node placements that are readable,
+diff-stable, and round-trippable through ArchiMate® conformant tools. Invoked
+by Build and Extract after the semantic model is known. Review uses the same
+contract, restated as `AD-L*` and `AD-Q*` checks, to judge final OEF quality.
 
-The reference is [../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md); the structural rules this procedure operationalises live in §6.4a *Layout strategy*. Layout smell codes are defined in [../smell-catalog.md](../smell-catalog.md) (`AD-L1..AD-L19`).
+The reference is
+[../../../../docs/architecture-reference/architecture.md](../../../../docs/architecture-reference/architecture.md).
+The structural rules this procedure operationalises live in §6.4a *Layout
+strategy*. Layout smell codes are defined in
+[../smell-catalog.md](../smell-catalog.md).
 
-**Determinism is the point.** Given the same element set, relationship set, diagram kind, and layer scope, the procedure must produce the same `x`, `y`, `w`, `h` values every run. Re-extracts don't churn coordinates; git diffs on `.oef.xml` stay narrow; architect hand-edits survive because identifiers are preserved (reference §6.6) and layout is recomputed only for elements without an architect-chosen position.
+## Purpose
 
-## The three tiers
+The skill produces a semantic layout request. A backend, existing
+architect-authored geometry, or the bundled fallback procedure produces
+coordinates and bendpoints. The skill then validates and serialises the final
+geometry as OEF XML.
 
-The procedure is a deterministic three-tier pipeline:
+Professional readiness is based on the final OEF materialisation and
+visual/semantic quality, not on which backend produced the geometry.
 
-1. **Tier 0 — Pre-flight.** Preserve architect-positioned `<node>` placements verbatim. Record which placements were preserved so later routing and validation can distinguish authored coordinates from newly-computed coordinates.
-2. **Tier 1 — Sugiyama-v1 core engine.** Six phases — cycle handling, layer assignment, within-layer ordering (4-pass barycentric crossing minimisation), coordinate assignment (median heuristic), Manhattan A* edge routing, bounding-box normalisation.
-3. **Tier 2 — Per-viewpoint specialisations.** One sub-procedure per §9 viewpoint that overrides Tier 1 phases for the diagram-kind in scope.
+## Non-goals
 
-Run Tier 0 → Tier 1 → Tier 2 in order. Tier 2 may short-circuit Tier 1 phases (see each specialisation's "Replaces phases" line).
+- Do not make one concrete graph-layout algorithm the theory of the skill.
+- Do not add ELK, libavoid, Graphviz, maxGraph, yFiles, PCB routers, or other
+  layout/runtime dependencies in this procedure.
+- Do not weaken the materialized-view contract when a backend is unavailable.
+- Do not use a geometry backend to invent ArchiMate model elements, remove
+  relationships, change relationship direction, or reinterpret viewpoint
+  semantics.
+- Do not use PCB or diagram-editor routing tools directly as an ArchiMate
+  semantic authority. Their concepts can inspire route repair; the OEF quality
+  gate remains the authority.
 
 ## Materialized view contract
 
-The layout procedure emits renderable OEF views, not abstract model fragments.
 Every generated `<view>` must contain:
 
 - at least one non-legend `<node xsi:type="Element">` with `elementRef`, `x`,
@@ -34,359 +51,148 @@ An OEF file with valid `<elements>` and `<relationships>` but empty views is a
 model inventory. It may import, but it fails the layout contract and cannot be
 classified above `model-valid`.
 
-## Tier 0 — Pre-flight
+## Core principle: semantic policy, backend-neutral geometry
 
-### Step 1 — Preserve architect positions
+The architecture-design skill owns semantic policy:
 
-If a prior view exists at the canonical path and contains a `<node>` for this element (matched by `elementRef`), reuse its `x`, `y`, `w`, `h` verbatim. Do not recompute. The architect's hand-edit is authoritative.
+- supported ArchiMate® 3.2 viewpoints and layer/aspect discipline;
+- which visual grammar fits each viewpoint;
+- which relationships must remain visible;
+- which curation/hiding choices are semantically safe;
+- which geometry is locked because an architect authored it; and
+- which `AD-L*`, `AD-Q*`, and OEF checks decide readiness.
 
-Record the set of *new* elements (present in this run, absent from the prior view) — only these get algorithmic placement.
+Geometry backends own placement and routing mechanics only. A backend consumes
+the normalized request described in
+[layout-backend-contract.md](layout-backend-contract.md) and returns node
+coordinates, ports, bendpoints, and metrics. Backend output is never trusted
+without the final validation handoff.
 
-Connection bendpoints are not preserved by node identity alone. Reuse prior bendpoints only when the prior and current `<connection>` have the same `relationshipRef`, source node, and target node, and the route passes the `AD-L11` post-layout intersection check below. If a relationship was replaced, its source/target was inverted, or an Extract refresh changed the relationship kind, discard the old bendpoints and reroute. Stale bendpoints after relationship replacement are a common way to route a valid relationship through unrelated resource boxes.
+## Pipeline
 
-### Step 2 — Reject model-root layout markers
+1. **Preserve existing architect-authored geometry.** Reuse prior `<node>`
+   placements matched by `elementRef` unless the user explicitly requests global
+   reflow. Reuse prior bendpoints only when the relationship reference,
+   source node, target node, and `AD-L11` route validation still pass.
+2. **Build the normalized layout request.** Include nodes, edges, hierarchy,
+   prior coordinates, locks, viewpoint, semantic bands, edge priority, route
+   constraints, and generated-vs-authored flags per
+   [layout-backend-contract.md](layout-backend-contract.md).
+3. **Choose the viewpoint-specific layout policy.** Dispatch by the OEF
+   `viewpoint=` value and apply the visual grammar in
+   [layout-policies-by-viewpoint.md](layout-policies-by-viewpoint.md).
+4. **Select a layout backend or fallback.** Prefer a mature layered,
+   orthogonal, tile, timeline, hosting-stack, cluster, swimlane, or tree backend
+   when one is available and matches the viewpoint policy. Otherwise use
+   [layout-fallback.md](layout-fallback.md).
+5. **Assign ports and route edges.** Apply
+   [routing-and-glossing.md](routing-and-glossing.md): assign candidate ports,
+   reserve lanes for high-priority edges, route high-priority paths first, and
+   repair routes without moving locked nodes.
+6. **Gloss routes.** Remove redundant bendpoints, simplify tiny zigzags, align
+   parallel lanes, separate coincident lanes, and rerun post-route validation.
+7. **Normalize generated or mixed views.** Shift new and mixed generated views
+   to the `(40, 40)` used-region origin. Do not shift a fully preserved
+   architect-authored view solely for cosmetic origin alignment.
+8. **Validate with `AD-L*` checks.** Run the source-geometry gate when a local
+   OEF path exists. A backend result that fails `AD-L*` is not
+   `diagram-readable`.
 
-Do not read or write a model-root layout marker. The model root cannot carry `<properties>` in OEF files that import cleanly through Archi's schema-validating path. If an existing file contains a top-level `<properties>` block used only for `propid-archi-model-banded`, treat it as an `AD-17` schema finding during Review and omit it from newly-emitted output.
+## Backend selection
 
-## Tier 1 — Sugiyama-v1 core engine
-
-Run phases 1–6 in order. Each phase consumes the output of prior phases.
-
-### Phase 1 — Cycle handling
-
-Detect cycles in the same-layer relationship sub-graph for each ArchiMate layer:
-
-1. Build a directed graph `G_layer` for each layer where vertices = elements in that layer, edges = Realisation / Composition / Used-by / Serving relationships whose source AND target both fall in this layer.
-2. Run a DFS-based cycle detection (Tarjan's algorithm, simplified): mark each vertex `unvisited` / `visiting` / `done`. A back-edge from a `visiting` vertex to another `visiting` vertex is a feedback edge.
-3. Mark feedback edges with an internal flag `is-feedback=true`. Do NOT reverse the edge — ArchiMate edge directions carry semantics. Phase 5 routes feedback edges last for crossing-minimisation purposes; otherwise they're treated normally.
-
-**Cycles are uncommon in well-formed ArchiMate models.** Used-by, Realisation, and Composition typically form trees within a layer. Phase 1 is a no-op on most inputs — don't search exhaustively when no cycle exists. If the layer has fewer than 3 same-layer edges, skip the search.
-
-After Phase 1, the same-layer sub-graph minus feedback edges is a DAG, ready for topological sort in Phase 3.
-
-### Phase 2 — Layer assignment
-
-ArchiMate layer is given by the element's `xsi:type`:
-
-| Element types | Layer |
+| Situation | Preferred policy |
 |---|---|
-| `Resource`, `Capability`, `ValueStream`, `CourseOfAction` | Strategy |
-| `BusinessActor`, `BusinessRole`, ..., `BusinessObject`, `Contract`, `Product` | Business |
-| `ApplicationComponent`, `ApplicationCollaboration`, ..., `DataObject` | Application |
-| `Node`, `Device`, `SystemSoftware`, ..., `Artifact` | Technology |
-| `Equipment`, `Facility`, `DistributionNetwork`, `Material` | Physical |
-
-Motivation and Implementation & Migration columns span all five rows; their elements take the row of their Realisation target (or the row of the element they are assigned to). Default to Application row when no target.
-
-Composite types (`Location`, `Grouping`) inherit the row of their dominant child element class. A Grouping containing only Application Components gets the Application row.
-
-Output of Phase 2: each element has a `layer` ∈ {Strategy, Business, Application, Technology, Physical}.
-
-### Phase 3 — Within-layer ordering
-
-For each layer in top-to-bottom order (Strategy first):
-
-1. **Topological sort.** Compute the topological order of the same-layer DAG (post-Phase 1 cycle handling). Ties broken by aspect column (Active < Behaviour < Passive < Motivation < Implementation & Migration), then identifier ascending.
-2. **Aspect bias.** Within the topological order, group by aspect column — elements in the same aspect cluster together. This preserves the §2.3 default reading direction.
-
-Then run **4 passes** of barycentric crossing-minimisation between adjacent layers (current procedure had 1 pass):
-
-- **Pass 1 (top-down):** for each layer L from top to top+1, ..., top+(N-1): for each element `e` in layer L+1, compute `bary(e) = mean(index(n) for n in neighbours(e) where n in layer L)`. Re-sort layer L+1 by `bary(e)` ascending. Elements with no neighbours in layer L keep their Phase 3 step-1 order.
-- **Pass 2 (bottom-up):** symmetric, layer L compared against layer L-1.
-- **Pass 3 (top-down):** same as Pass 1 — refines convergence.
-- **Pass 4 (bottom-up):** same as Pass 2.
-
-After 4 passes, `cell_elements[layer, aspect, position]` is locked. Phase 4 reads this for coordinate computation.
-
-**Tiebreak in barycentric:** identifier ascending (preserves determinism).
-
-**Skip degenerate layers.** Layers with fewer than 2 elements skip the barycentric pass for that layer (no crossings possible).
-
-### Phase 4 — Coordinate assignment
-
-Operates **layer-by-layer top-to-bottom** (Strategy first, Physical last). Upper layers' coordinates are fixed before lower layers compute their medians, so the "median of in-edge source x-coordinates" is well-defined.
-
-For each layer in top-down order:
-
-1. **Compute `y` for the layer.** `y_layer_top = max(y_max_above + 60, 40)` where `y_max_above` = bottom of the lowest-placed element in the layer immediately above (or 0 if Strategy is the first populated layer). 60 px is the **layer gutter** (was 40 in pre-0.8.0).
-2. **Compute `x` for each element in the layer.** Iterate elements in the order locked by Phase 3:
-   - If the element has cross-layer incoming edges from already-placed upper layers, set `x = median of source x-coordinates`.
-   - Else, set `x = aspect-column default centre`. The aspect-column boundaries (preserved as the macro-grid anchor): Motivation x ∈ [40, 280], Active structure [300, 540], Behaviour [560, 800], Passive structure [820, 1060], Implementation & Migration [1080, 1320]. Default centre = `(start + end) / 2 - element.w / 2`.
-   - Round `x` to the nearest 10 px.
-   - **On collision** (proposed `(x, y)` overlaps an already-placed element in this layer): bump `x` right by `20 + element.w` (sibling gutter is 40 px; element width plus 40 px gives this offset). Repeat until no collision.
-3. **Compute `y` per element within the layer.** First element in the layer's first aspect column at `y_layer_top + 20` (top padding inside the layer band). Subsequent elements in the same aspect column at `y_prev + element.h + 40` (sibling gutter, was 20 in pre-0.8.0). Different aspect columns reset to `y_layer_top + 20`.
-
-**Default sizes** (per reference §6.4a, 0.8.0):
-
-| Element class | `w` | `h` |
-|---|---:|---:|
-| Structure (Component, Node, Device, System Software, Actor, Role, Interface, Artifact) | 160 | 64 |
-| Behaviour (Process, Function, Interaction, Service, Event) | 180 | 64 |
-| Motivation (Goal, Requirement, Constraint, Principle, Driver, Assessment, Stakeholder, Outcome, Value, Meaning) | 180 | 64 |
-| Strategy (Capability, Value Stream, Resource, Course of Action) | 180 | 64 |
-| Passive (Business Object, Data Object, Contract, Product) | 140 | 64 |
-| Implementation & Migration (Work Package, Deliverable, Implementation Event, Plateau, Gap) | 180 | 64 |
-| Grouping | computed; minimum 240 × 140 |
-| Junction | 14 × 14 |
-
-When a `<name>` is long enough that the default `w` would truncate, enlarge `w` in 20-px steps (assume 7 px per character at the default Archi font).
-
-**Bounding-box normalisation runs in Phase 6, not here** — Phase 4 leaves coordinates in their absolute aspect-column / layer space; Phase 6 shifts the entire view to `(40, 40)` origin once all coordinates are computed.
-
-### Step 5 — Nest children into parents
-
-For every Composition, Aggregation, or Realization relationship `(parent, child)` where **both endpoints land in the same layer AND aspect column** (per Phase 2 layer assignment + Phase 3 aspect bias):
-
-- Place `child` as a nested `<node>` inside `parent`'s placement. Child `x = parent.x + 20`, `y = parent.y + 40 + Σ prior_children.h + 20 × prior_count`. Child `w ≤ parent.w − 40`, `h` unchanged.
-- Mark the relationship edge as implicit: add `<properties>` with `<property propertyDefinitionRef="propid-archi-arm"><value xml:lang="en">hide</value></property>` to the relationship, and **do not** emit a `<connection>` for it in this view. Archi's ARM will render the nesting as-is; tools without ARM still read the relationship in the model.
-- Grow the parent's `w`/`h` if needed to contain children: `parent.w = max(parent.w, max_child.x + max_child.w + 20 − parent.x)`, `parent.h = max(parent.h, last_child.y + last_child.h + 20 − parent.y)`.
-
-Rules:
-
-- Only nest when both endpoints share the same layer AND aspect column — cross-layer or cross-aspect nesting violates reference §2.1 / §2.3.
-- A child may be nested in at most one parent per view. If a child has two valid parents, nest in the one whose relationship is Composition; fall back to the first parent in identifier order.
-- Nesting depth is capped at 2 (parent → child → grandchild). Deeper chains render correctly but exceed the view budget quickly — flag as `AD-L4` risk.
-- Do not nest merely for visual convenience. If the model relationship or view
-  documentation does not support the ownership, trust, composition, or
-  deployment implication, keep the nodes side-by-side; otherwise Review emits
-  `AD-L19`.
-
-### Step 5b — Multi-row sibling layout (new child, existing siblings)
-
-Common Extract scenario: a refresh adds a new child to a parent that already contains a horizontal row of architect-positioned siblings (matched by Tier 0 Step 1). The default Phase 4 placement (centred on `parent.x`, stacked vertically below the last existing child) would put the new child on a second row beneath the first row of siblings. The parent→child Composition edge then routes (per Phase 5 orthogonal) along the shortest path, which visually passes through one or more existing sibling boxes — making the relationship look anchored on a sibling instead of on the parent.
-
-Apply this rule before falling through to Phase 4's default centred placement for a *new* nested child whose row would land below at least one existing sibling row in the same parent:
-
-1. **Prefer a non-colliding `x`.** Compute the candidate placement window inside the parent: `x ∈ [parent.x + 20, parent.x + parent.w − 20 − child.w]`. Scan the existing siblings on the row(s) above the new child's row and collect the union of their x-extents `[sibling.x, sibling.x + sibling.w]`. If the candidate window contains any `x` that does not overlap any sibling x-extent, place the new child at the smallest such `x` (deterministic). The Composition edge then drops vertically inside the parent's whitespace and never crosses an existing sibling box; emit it as a normal hidden ARM-managed edge per Step 5.
-2. **Fall back to bendpoint routing.** If no non-colliding `x` fits within the parent's interior — every horizontal pixel inside `parent.w` overlaps an existing sibling — keep the default centred placement and emit two bendpoints in Phase 5 to route the parent→child Composition edge west of the parent (see Phase 5 *Multi-row sibling clause*, added in Task 2.6). The edge is visible (not ARM-hidden); the AD-L7 nest-and-hide rule does not apply when an explicit bend is needed to clear a sibling.
-3. **Grow `parent.w` if necessary.** If the candidate window is empty because the parent is narrower than its sibling row, grow `parent.w` per Step 5's existing rule before re-evaluating clause 1.
-
-The rule only fires when (a) the new child is genuinely new (not preserved by Tier 0 Step 1) and (b) the parent already contains at least one existing sibling on a row above the new child's row. Single-row insertions (the new child fits on the existing row at the next free slot) are unchanged from Step 5.
-
-### Phase 5 — Edge routing (Manhattan A* with obstacle avoidance)
-
-For every `<connection>` not hidden by Tier 0 nesting (existing ARM rule), compute an orthogonal path that **avoids** the bounding boxes of all unrelated nodes. A path may intersect only the source node, target node, and required ancestor containers of the source or target needed to leave nested structure, and its first and last bendpoints must remain outside the endpoint rectangles. Crossing any other node body, or placing an endpoint-adjacent bendpoint inside the source / target body, is a blocking `AD-L11` failure, not a cosmetic routing issue.
-
-**Algorithm:**
-
-1. **Source attach point** = side-midpoint of source `<node>` facing the target. Decision rule: pick the side closest to target's centre, breaking ties by preference order: right > down > left > up.
-2. **Target attach point** = side-midpoint of target `<node>` facing the source. Same decision rule (mirror).
-3. **Path: BFS over a 10-px grid.** Each grid cell is `(x // 10, y // 10)`. Start cell = source attach point grid-aligned. Goal cell = target attach point grid-aligned.
-4. **Obstacle map.** For every `<node>` other than source, target, **and any ancestral container of source or target** (parent → grandparent → ... in the Step 5 nesting hierarchy), mark all grid cells inside `(x, y, x + w, y + h)` AND a 10-px halo around it as forbidden. Ancestor exclusion is narrow: it exists only so the path can leave a nested source / target through its own containing boundary. Sibling nodes, children of unrelated containers, and nested children that are not ancestors of the source or target remain hard obstacles.
-5. **Cost function:** `cost = grid_step_count + bend_count × 5`. Each move along the same direction adds 1; each 90° turn adds the bend penalty (5 grid steps default).
-6. **Bend points:** every grid cell where the path direction changes becomes a `<bendpoint x="..." y="..."/>` child of `<connection>`. Convert grid-cell back to pixel by `x = cell_x × 10`.
-7. **Parallel edges in the same lane** (same source midpoint, same target midpoint, or same target-side entry lane) space 20 px apart in the perpendicular direction.
-8. **Avoid visual-story duplication.** When a relationship is already expressed
-   by nesting, a shared process-rooted realization spine, or another visible
-   lane in the same view, keep the model relationship but omit or hide the
-   redundant view connection per reference §6.4c. Otherwise Review emits
-   `AD-L17`.
-9. **Keep routes local.** A side or bottom bus route that spans most of the
-   view should be a last resort. Prefer moving endpoints closer, splitting the
-   view, or adding a short explicit bend lane. If the long route remains,
-   document the reason so `AD-L16` stays informational.
-10. **Respect boundaries.** A connector may leave a source or target container
-    through required ancestor boundaries, but it must not cross unrelated
-    Grouping, trust-boundary, or deployment-boundary boxes in a way that
-    changes the visual meaning. Reroute or split before accepting `AD-L18`.
-11. **Post-layout intersection pass.** After bendpoints are emitted and after every Tier 2 specialisation has run, inspect each connection segment against every node bounding box, including nested child boxes. Reconstruct each route as the rendered polyline from the inferred source-side attach point through the ordered `<bendpoint>` list to the inferred target-side attach point; when an imported file does not make the attach side inferable, use the source/target centre as a conservative fallback. Ignore source, target, and required source/target ancestor containers for segment intersections, but reject the route if the first bendpoint is inside the source rectangle or the last bendpoint is inside the target rectangle. If any other intersection remains, reroute with a different side-midpoint or explicit bend lane. If no clean route exists within the view budget, fail self-check with `AD-L11` and cap professional readiness at `model-valid`.
-
-**Multi-row sibling clause** (referenced by Step 5b clause 2). When Step 5b falls back to bendpoint routing for a new nested child placed below existing siblings, Phase 5 emits **two bendpoints** to route the parent→child Composition edge west of the parent's left edge: bendpoint 1 at `(parent.x − 20, parent.y + parent.h / 2)` (round to grid) and bendpoint 2 at `(parent.x − 20, child.y + child.h / 2)` (round to grid). The edge attaches to the parent's left midpoint and the child's left midpoint.
-
-**Specialisation hook for §9.4 Technology Usage:** hosting Assignment edges (`Assignment` relationships from Application Component to Technology Node) skip the A* and draw straight-vertical from source bottom-midpoint to target top-midpoint. Tier 2 §9.4 specialisation enables this carve-out.
-
-**Feedback edges** (marked by Phase 1) route last so other edges' lanes are placed first. No semantic difference; just a layering trick to reduce crossings on common paths.
-
-**Worked example.** Application Cooperation view (reference §9.2) with three Application Components and one Application Service:
-
-- `C1` = Orders API (ApplicationComponent, out-degree 2)
-- `C2` = Payments API (ApplicationComponent, out-degree 1)
-- `C3` = Orders Core (ApplicationComponent, in-degree 2; Composition parent of C1 and C2)
-- `S1` = Place Order (ApplicationService; realised by C1)
-
-Phase 2: all elements → Application layer.
-
-Phase 3: topological order (C3 → C1 → C2 → S1). Aspect grouping: C1, C2, C3 → Active structure column; S1 → Behaviour column.
-
-Phase 4 placements (single Application layer, `y_layer_top = 40` after Phase 6 normalisation; pre-normalisation values shown):
-
-- C3 at `(320, 540, 200, 200)` (grown to contain children).
-- C1 at `(340, 580, 160, 64)` (nested inside C3).
-- C2 at `(340, 664, 160, 64)` (nested inside C3, below C1, sibling gutter 40 px applies between non-nested but C1/C2 are nested — use the inner stacking rule of `+ element.h + 20` for nested children).
-- S1 at `(600, 540, 180, 64)`.
-
-Phase 5: only edge to route is `C1 → S1` (Realization). Composition edges C3 → C1, C3 → C2 are ARM-hidden by Step 5 nesting.
-
-Source: C1 right midpoint = `(500, 612)`. Target: S1 left midpoint = `(600, 572)`. BFS path: right from `(500, 612)` to `(600, 612)` (10 grid steps), up to `(600, 572)` (4 grid steps). One bend at `(600, 612)`. Total cost = 14 + 5 = 19.
-
-Phase 6: `(min_x, min_y) = (320, 540)`. Shift by `(40 - 320, 40 - 540) = (-280, -500)`. After shift:
-- C3 at `(40, 40, 200, 200)`. C1 at `(60, 80, 160, 64)`. C2 at `(60, 164, 160, 64)`. S1 at `(320, 40, 180, 64)`. Bend at `(320, 112)`.
-
-Result: one view, four elements, one visible connection, zero crossings, origin-aligned canvas.
-
-### Phase 6 — Bounding-box normalisation
-
-After Phases 1–5 complete, compute the used-region bounding box and shift the entire view to canvas origin.
-
-1. **Compute bounds.** Iterate every `<node>`'s `(x, y, x + w, y + h)` and every `<bendpoint>`'s `(x, y)`. Record `min_x`, `min_y`, `max_x`, `max_y`.
-2. **Compute shift.** `dx = 40 - min_x`, `dy = 40 - min_y`. (`40` is the canvas inset — leaves a 4-cell margin on the top and left edges of the diagram.)
-3. **Apply shift.** For every `<node>`: `x += dx`, `y += dy`. For every `<bendpoint>`: `x += dx`, `y += dy`.
-4. **Round to grid.** All resulting `x`, `y` should already be on the 10-px grid (Phases 4 and 5 placed everything on grid, and `dx`/`dy` are differences of grid-aligned values), but defensive rounding (`x = round_to_10(x)`) catches any accumulated drift.
-
-After Phase 6, the diagram's used region's top-left is at `(40, 40)`; total view width is `max_x - min_x + 80` (40 px margin on each side). Archi opens the file with the diagram visible immediately — no scroll-to-find.
-
-**Skip Phase 6 only when:** every placement in the view came from Tier 0 preservation and shifting the canvas would churn architect-authored coordinates. New or mixed views still normalise after routing so new bendpoints and nodes stay on a predictable grid.
-
-## Tier 2 — Per-viewpoint specialisations
-
-Each specialisation overrides Tier 1 phases for its diagram kind. The override is bounded — phases 1, 2, 5, 6 always run unless the specialisation explicitly carves them out.
-
-Dispatch by the view's `viewpoint=` attribute:
-
-| `viewpoint=` | Specialisation | Replaces Tier 1 phases |
-|---|---|---|
-| `Capability Map` | §9.1 tile grid | 3, 4 |
-| `Application Cooperation` | §9.2 hub-and-spoke (when hub detected) | 3, 4 |
-| `Service Realization` | §9.3 vertical-stack | 3, 4 |
-| `Technology Usage` | §9.4 hosting tower | 3, 4; carves phase 5 for hosting Assignment |
-| `Migration` | §9.5 Plateau timeline | 2, 3, 4 |
-| `Motivation` | §9.6 hierarchical tree | 3, 4 |
-| `Business Process Cooperation` | §9.7 process-flow lanes | 3, 4 |
-
-Each sub-section below documents one specialisation.
-
-### §9.4 Technology Usage — hosting tower
-
-**Override:** phases 3, 4. **Carves:** phase 5 for `Assignment` relationships.
-
-**Visual idiom:** Application Components stack directly above their hosting Technology Nodes; hosting Assignment edges drawn straight-vertical (the structural axis of the diagram); Communication Network / Path elements drawn as horizontal bars between Technology Nodes.
-
-**Phase 3 (override).** Order Application elements by their hosting Node's identifier (so Apps that share a Node cluster). Order Technology elements by `degree(out)` descending (Nodes that host many Apps centred).
-
-**Phase 4 (override).**
-1. Place Technology Nodes first in a horizontal row at `y_tech = 40 + total_app_height + 60` (pre-normalisation; Phase 6 normalises `(min_x, min_y)` back to `(40, 40)`). Tech Nodes spaced horizontally with 40 px gutter, ordered per Phase 3 step 2 (highest out-degree centred). Width per Tech Node = default 160 (or grown for label).
-2. Each Application Component placed at `(host_node.x + (host_node.w - app.w) / 2, y_tech - app.h - 60)`. The Application is centred horizontally above its host, with a 60 px vertical gap between Application bottom and Technology top. If multiple Apps share a Node, group horizontally above with 40 px sibling gutter.
-3. Communication Network / Path elements placed as horizontal bars between Tech-row Nodes at `y = y_tech + node.h / 2 - bar.h / 2`, spanning the gap between their two endpoints.
-4. Tech Nodes that no Application hosts (data-plane: Cosmos, Storage, Key Vault) and observability Nodes (Application Insights, Log Analytics) place to the right of the hosting tower in their own column, vertically stacked with 40 px sibling gutter.
-
-**Phase 5 carve-out.** Assignment relationships from Application Component to Technology Node (`Assignment` xsi:type, source = Application Component, target = Technology Node) skip the A* router. Draw straight-vertical: source bottom-midpoint to target top-midpoint. No bend points.
-
-All other relationships (Realization, Used-by, Serving) route via Phase 5's standard A*.
-
-Acceptance: a representative §9.4 Technology Usage view rebuilds with applications directly above their hosts and vertical hosting edges; data-plane / observability cluster to the right of the hosting tower.
-
-### §9.2 Application Cooperation — hub-and-spoke (when applicable)
-
-**Override:** phases 3, 4 (only when hub detected).
-
-**Visual idiom:** when one Application Component dominates by degree (gateway pattern), place it centred and enlarged; dependents radiate around it. When no hub is present, default Tier 1 Sugiyama applies.
-
-**Hub detection.** Any Component whose `degree(in) + degree(out) > 2 × median_degree` is the hub. If multiple Components qualify, pick by highest degree, tiebreak by identifier ascending. If no Component qualifies (e.g. peer mesh of 3-4 Components), skip this specialisation — Tier 1 default runs.
-
-**Phase 3 (override, hub case).** Order = hub first, then dependents by `degree(in) + degree(out)` descending, identifier ascending tiebreak.
-
-**Phase 4 (override, hub case).**
-1. Place hub at the centre of the Application layer pre-normalisation, with `w = default_w × 1.2` (192 for an ApplicationComponent), `h = default_h × 1.2` (76). Phase 6 will shift to origin.
-2. Place dependents on a circle around the hub at radius `r = max(hub.w, hub.h) + 200`. Angular order = Phase 3 ordering, starting at angle 0 (right of hub) and going clockwise. Convert each angle to `(x, y) = (hub.cx + r·cos(θ) - dep.w/2, hub.cy + r·sin(θ) - dep.h/2)`. Round positions to 10-px grid. Skip the angular slot if it would collide with another already-placed dependent (advance to the next 30° slot).
-3. Application Services in the same view stay in the Behaviour aspect column to the right of the hub-spoke cluster — Tier 1 default applies for them. Application Interfaces follow their owning Service.
-
-When the hub case doesn't apply, Tier 1 phases 3–4 run unchanged.
-
-### §9.5 Migration / Deployment Topology — Plateau layout
-
-**Replaces:** phases 2, 3, 4. Phase 5 routes connecting arrows; phase 6 normalises.
-
-**Visual idiom:** true Migration views form columns left-to-right (Baseline → Transition → Target), with Gaps drawn as horizontal arrows between Plateaus. Deployment Topology views place sibling environment Plateaus in a row or compact grid with no Plateau-to-Plateau Triggering; Work Packages Realize the sibling Plateaus from below.
-
-**Layer assignment (replaces phase 2).** Plateaus, Gaps, Work Packages, and Implementation Events get a column index instead of an ArchiMate layer. In a true Migration view, Plateaus get column index = chronological order (architect-supplied via `<documentation>` ordering hint, else identifier ascending). Gaps, Work Packages, and Implementation Events get the column index of the Plateau they precede. In a Deployment Topology view, Plateaus get sibling indexes by environment order (`development` / `test` / `staging` / `production`, then identifier ascending); no Gap is emitted unless explicit migration intent exists.
-
-**Ordering (replaces phase 3).** Within each column: Plateau at top, Implementation Events at column boundary (small diamonds, `14 × 14`), Work Packages stacked below Plateau in identifier order. Gaps drawn as edges from Plateau column N to Plateau column N+1.
-
-**Coordinate assignment (replaces phase 4).**
-1. Each column 300 px wide, 40-px gutter between columns. Column N starts at `x = 40 + N × 340` (pre-normalisation; Phase 6 shifts).
-2. Plateau at `(column.x_start + 60, 40, 180, 64)`.
-3. Implementation Events at column-right-edge (`x = column.x_start + 300 - 7`, the `14 × 14` diamond centred on the column boundary), Plateau-aligned `y = 40 + 25` (centred on Plateau row).
-4. Work Packages stacked below Plateau at `(column.x_start + 60, plateau.y + 84 + i × 84, 180, 64)` for the i-th Work Package in identifier order.
-
-**Phase 5** routes Gap edges between Plateau column N (right midpoint) and Plateau column N+1 (left midpoint) in true Migration views — straight horizontal where possible. Deployment Topology views do not route Plateau-to-Plateau Triggering; Work Package Realization edges route upward into each sibling Plateau with lane spacing.
-
-**Phase 6** normalises the entire timeline to `(40, 40)` origin.
-
-### §9.1 Capability Map — tile grid
-
-**Override:** phases 3, 4.
-
-**Visual idiom:** uniform tiles in a row-major grid; sub-Capabilities composed inside parent Capabilities (existing nesting rule applies).
-
-**Phase 3 (override).** Order Capabilities: roots (no parent Capability) first, then leaves; identifier ascending tiebreak. Sub-Capabilities are nested via Composition (existing Tier 1 Step 5 nesting rule).
-
-**Phase 4 (override).**
-1. Tile size: `240 × 120` per top-level Capability (larger than the default Strategy size to accommodate sub-Capability nesting).
-2. Grid: `cols = ceil(sqrt(N_root))` columns; place tiles row-major. Tile at `(40 + col × (240 + 40), 40 + row × (120 + 40))` (40 px gutter both directions, pre-normalisation).
-3. Course of Action / Resource elements (if present in scope) stay in their aspect columns to the right of the tile grid — Tier 1 default applies for them. Realization edges from Course of Action to Capabilities route via Phase 5.
-
-Composition edges from Capability to sub-Capability are ARM-hidden (existing Tier 1 Step 5 rule).
-
-### §9.3 Service Realization — vertical realization stack
-
-**Override:** phases 3, 4.
-
-**Visual idiom:** tall, narrow column per realization chain. Layer gutter relaxed further to 80 px (was 60 in Tier 1 default). Multi-chain views: side-by-side columns at 300 px width each.
-
-**Phase 3 (override).** Identify each realization chain: walk Realization edges from each top-of-stack element down to leaves. Each chain becomes one column. Order chains by topological depth (shorter chains left, longer right), then by identifier ascending tiebreak.
-
-**Process-rooted modality** (when the top of a chain is a Business Process with a Business Actor Assignment): the chain includes a UI Application Component + Application Interface as the entry point per reference §9.3 / §4.1. Place these UI elements at the top of the Application layer; Application Service and Backend Component below them in the same column. The Business Actor sits above the Business Process at the very top of the column.
-
-**Phase 4 (override).**
-1. Each chain column 300 px wide, 60-px gutter between columns. Column N starts at `x = 40 + N × 360` (pre-normalisation).
-2. Within a column, place chain elements top-down in their layer rows. Layer gutter inside a column: 80 px (relaxed from 60).
-3. Element x-position within column: centred — `x = column.x_start + (300 - element.w) / 2`, rounded to grid.
-
-Realization edges within a chain run vertically (no Phase 5 routing — they're the structural axis); cross-chain Realization edges route via Phase 5.
-
-### §9.6 Motivation — hierarchical tree
-
-**Override:** phases 3, 4.
-
-**Visual idiom:** vertical tree. Stakeholders at top; Drivers below; Goals / Outcomes / Requirements / Constraints / Principles cascading down via Realization and Influence edges.
-
-**Phase 3 (override).** Topological sort by Realization-chain depth from Stakeholders. Each element gets a `tree_depth = max(parent.tree_depth) + 1`; Stakeholders are depth 0. When an element has no incoming Realization (e.g. a free-floating Constraint), its depth = depth of its Influence target + 1.
-
-**Phase 4 (override).**
-1. Each `tree_depth` is a row, 60-px row gutter (default Tier 1 layer gutter, but applied to depth bands here).
-2. Within a row, elements ordered by identifier ascending; spaced horizontally with 60-px sibling gutter (relaxed from 40 px Tier 1 default — Motivation labels are long).
-3. Element `x` within row: distribute uniformly across the row's available width so the row's children are centred under their parent's `x_centre` when there is a single parent; for elements with multiple parents at depth `d-1`, place at the median `x_centre` of those parents.
-4. Influence edges (Motivation cross-cutting) drawn dashed via reference §5.2 convention; route via Phase 5 with the dashed-style preserved.
-5. Association edges (`Stakeholder` → `Driver` linkage) route via Phase 5 standard A*.
-
-### §9.7 Business Process Cooperation — process-flow lanes
-
-**Override:** phases 3, 4. Phases 1, 2, 5, 6 still run.
-
-**Visual idiom:** three horizontal lanes inside the Business band — Active structure above, Behaviour middle, Passive structure below. Behaviour elements (Business Process / Event / Interaction) flow left-to-right along their Triggering / Flow chain.
-
-**Trigger.** `viewpoint="Business Process Cooperation"` — detected from the view's attribute, or from pre-flight input during Build.
-
-**Three lanes inside the Business band** (`y` content-defined per Tier 1 phase 4 layer rules; Phase 6 then normalises). The Business band's vertical extent splits into three lanes with 30 px gutter between lanes:
-
-- **Active lane** (top, `y_active`): Business Actor / Business Role / Business Collaboration elements. Each Active element places directly above the Behaviour element it is `Assignment`-linked to (same `x` midpoint as the Behaviour element).
-- **Behaviour lane** (middle, `y_beh`): Business Process / Business Event / Business Interaction elements. Placed left-to-right in the order produced by a topological sort of the view's Triggering and Flow relationships. Tiebreaks by identifier ascending. `x` starts at the left edge of the available canvas (40 px pre-Phase-6) and advances by `element.w + 40` per element. The Behaviour strip may span the full width of the canvas (no aspect-column boundary).
-- **Passive lane** (bottom, `y_passive`): Business Object / Contract / Product / Data Object elements. Each Passive element places directly below the Behaviour element that `Access`es it (same `x` midpoint). When multiple Behaviour elements access the same Passive object, place at the median of their `x` midpoints.
-
-**Phase 3 (override).** Topological sort the Behaviour elements by Triggering / Flow edges. For Active and Passive elements, use their Assignment / Access targets to determine order (mirror the Behaviour ordering above / below).
-
-**Phase 4 (override).** Compute lane y-coordinates: `y_active = y_band_top + 20`, `y_beh = y_active + 64 + 30` (60 px standard h + 30 px lane gutter), `y_passive = y_beh + 64 + 30`. Behaviour elements' x advance per the lane rule above; Active and Passive elements get x-coordinates mirroring their linked Behaviour element.
-
-**Phase 5** still runs. Triggering / Flow edges between adjacent Behaviour elements route as straight horizontal lines (no Manhattan detour because they're in the same lane). Assignment edges between Active and Behaviour, and Access edges between Behaviour and Passive, route via Phase 5's standard A* (typically straight-vertical given the lane layout).
-
-**Cycle handling.** If the Triggering / Flow subgraph over Behaviour elements contains a cycle, the topological sort degrades gracefully: elements inside the cycle place in identifier-ascending order and the layout procedure emits a warning. `AD-B-1` already covers the most common failure mode (missing chain entirely).
-
-**No layout exception for §9.3 Service Realization with Process-rooted modality** — that is a §9.3 specialisation, not a §9.7 one. Don't conflate them.
-
-## Render inspection hook
-
-Static geometry checks are mandatory and catch the `AD-L*` failures above. When the consuming project provides an Archi or ArchiMate-conformant renderer, Build and Extract add a final render-and-inspect loop:
-
-1. Render every emitted view.
-2. Reject connector-through-node (`AD-L11`), view-orphan (`AD-L12`), stacked connector (`AD-L13`), wide empty layer gap (`AD-L14`), and local fan-out crisscross (`AD-L15`) failures even when the XML is otherwise valid.
-3. If the renderer is unavailable, disclose that render inspection was not run; do not weaken the static `AD-L*` checks.
+| New generated Service Realization view | Layered/orthogonal backend when available; fallback deterministic layered layout otherwise |
+| Existing architect-edited view | Preserve node geometry; route-only repair and gloss generated or invalid routes |
+| Capability Map | Capability tile/decomposition map; never generic layered layout as the primary policy |
+| Application Cooperation | Clustered dependency/integration layout; hub-and-spoke only when a hub criterion is met |
+| Service Realization | Layered realization spine with the main Realization chain visible |
+| Technology Usage | Hosting/deployment stack with applications aligned over hosts |
+| Migration | Plateau/timeline layout; do not infer migration from ordinary dev/stage/prod deployment |
+| Motivation | Influence/traceability tree |
+| Business Process Cooperation | Flow, swimlane, and handoff layout |
+| Small generic directed view with no better policy | Fallback deterministic layered layout |
+
+Potential future backends: ELK/elkjs for layered and port-aware layout,
+libavoid-style routers for object-avoiding connector repair, Graphviz `dot` for
+simple directed fallback, and maxGraph for interactive-editor integration. None
+are mandatory for this skill version.
+
+## Fallback
+
+The bundled fallback is
+[fallback deterministic layered layout](layout-fallback.md). It preserves the
+deterministic conventions introduced in the earlier layered-layout procedure:
+architect-position preservation, ArchiMate layer/aspect bands, 4-pass
+barycentric ordering, median coordinate assignment, deterministic tiebreaks,
+10-px grid, default element sizes, bounding-box normalization, and post-layout
+`AD-L*` checks.
+
+The fallback is adequate for small generated directed views. It is not a full
+modern graph-layout engine. When a supported backend is available, prefer that
+backend for complex generated views and preserve/repair mode for
+architect-edited views.
+
+## Relationship curation and hiding
+
+Relationship curation is a view concern, not a model change. A relationship may
+be omitted or hidden in one view only when the model relationship remains and
+the view documentation or final summary names the relationship id and reason.
+
+Default hide-by-nesting is limited to:
+
+- `Composition`; and
+- `Aggregation`, when the part-whole semantics are clear.
+
+`Assignment` may be represented through nesting only in viewpoint-specific
+cases where the visual grammar supports it, such as hosting or internal
+behaviour ownership.
+
+Do not use nesting or redundancy rules to replace:
+
+- `Serving`;
+- `Access`;
+- `Flow`;
+- `Triggering`; or
+- the main `Realization` spine in Service Realization or realization-chain
+  views.
+
+`Realization` often carries the architectural argument. Keep it visible by
+default. Hide it only when a viewpoint policy explicitly marks the specific
+relationship as non-spine redundancy and the view remains auditable without
+verbal explanation.
+
+## Readiness impact
+
+Readiness follows the final OEF, not the backend name.
+
+- Missing materialized node or relationship geometry caps the affected view at
+  `model-valid`.
+- Unresolved connector-through-node (`AD-L11`) caps the affected view at
+  `model-valid`.
+- Invalid nesting/hiding, hidden main Realization spines, route congestion,
+  wide gaps, fan-out crisscross, duplicate visible story paths, or misleading
+  boundaries cap the view at `diagram-readable` or `model-valid` per
+  [professional-readiness.md](professional-readiness.md).
+- Backend output accepted without the OEF/source-geometry validation handoff is
+  itself a review finding.
+
+## Compatibility with existing validation smells
+
+This refactor keeps the existing `AD-L*` contract and makes it backend-neutral:
+
+- `AD-L1` through `AD-L6` still cover layer ordering, overlap, sizing,
+  density, crossings, and orthogonality.
+- `AD-L7` still catches double representation through nesting plus visible
+  edge, but hide-by-nesting no longer applies to the main Realization spine by
+  default.
+- `AD-L8` through `AD-L11` still cover grid, hierarchy, origin, and
+  connector-through-node failures.
+- `AD-L12` through `AD-L19` still cover orphan nodes, stacked lanes, gaps,
+  fan-out crisscross, long routes, duplicate story paths, misleading boundary
+  crossings, and unsupported nesting.
+- `AD-L20` covers hidden Service Realization spine edges when a visible
+  Realization chain is required.
+
+The fallback, any future backend, and hand-authored geometry all pass through
+the same final checks.

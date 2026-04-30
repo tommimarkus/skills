@@ -1,12 +1,12 @@
 # architecture-design fixtures
 
-Small ArchiMate® OEF XML files exercising all seven supported §9 viewpoints at representative scale (7-15 elements, 6-20 relationships). Fixtures are regression targets for the Sugiyama-v1 layout engine: each fixture carries a materialized view with nodes, relationships, bendpoints, and spacing that should render as a professional-quality diagram. The rendered PNG output is the validation artefact.
+Small ArchiMate® OEF XML files exercising all seven supported §9 viewpoints at representative scale (7-15 elements, 6-20 relationships). Fixtures are regression targets for the backend-neutral layout policy, deterministic fallback, routing/glossing rules, and source-geometry gate: each fixture carries a materialized view with nodes, relationships, bendpoints, and spacing that should render as a professional-quality diagram. The rendered PNG output is the validation artefact when Archi is available.
 
 ## How fixtures are used
 
 1. Build mode invokes the skill with the fixture's element / relationship set as architect intent.
-2. Tier 0 finds no prior view at the canonical path, so all elements get algorithmic placement.
-3. Tier 1 (Phases 1-6) + Tier 2 (per-viewpoint specialisation) compute coordinates.
+2. The layout strategy finds no prior view at the canonical path, so all elements get generated placement.
+3. The matching viewpoint policy plus backend or deterministic fallback computes coordinates, then routing/glossing assigns ports and bendpoints.
 4. The skill writes the resulting OEF, including `<node>` and `<connection>` geometry in the `<view>`.
 5. The bundled `../scripts/archi-render.sh` renders the OEF to PNG when Archi
    and an X display are available.
@@ -63,7 +63,8 @@ that can render as cropped PNGs but must fail from the source geometry:
 from bendpoints rather than node boxes; `stacked-connector-lane.oef.xml` fails
 `AD-L13`; `fanout-crisscross.oef.xml` fails `AD-L15`; and
 `endpoint-bendpoint-inside.oef.xml` fails the endpoint-bendpoint `AD-L11`
-subcase.
+subcase; and `hidden-realization-negative.oef.xml` fails `AD-L20` when a
+Service Realization view hides a Realization spine whose endpoints are visible.
 
 ## Fixtures
 
@@ -82,6 +83,11 @@ subcase.
 | `render-quality-gate/stacked-connector-lane.oef.xml` | Negative render-quality fixture | n/a | Explicit endpoint-lane case that fails source-geometry `AD-L13` |
 | `render-quality-gate/fanout-crisscross.oef.xml` | Negative render-quality fixture | n/a | Local fan-out crossing case that fails source-geometry `AD-L15` |
 | `render-quality-gate/endpoint-bendpoint-inside.oef.xml` | Negative render-quality fixture | n/a | Process-view route case that fails endpoint-bendpoint `AD-L11` |
+| `render-quality-gate/hidden-realization-negative.oef.xml` | Negative render-quality fixture | n/a | Service Realization case that fails hidden-spine `AD-L20` |
+| `layout-backend-contract/service-realization-request.yml` | Backend contract fixture | n/a | Normalized request with locked architect geometry and visible Realization spine constraints |
+| `layout-backend-contract/service-realization-result.yml` | Backend contract fixture | n/a | Expected backend/fallback result preserving locked geometry and reporting zero moved locked nodes |
+| `layout-backend-contract/locked-node-route-repair-request.yml` | Backend contract fixture | n/a | Route-only repair request with locked nodes and stale bendpoints crossing an obstacle |
+| `layout-backend-contract/locked-node-route-repair-result.yml` | Backend contract fixture | n/a | Expected repair result rerouting the edge while preserving all locked node coordinates |
 | `../scripts/validate-oef-layout.sh` | Static layout gate | n/a | Emits Review-style `AD-L*` findings for source OEF geometry |
 | `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
 | `layout-quality-cases.md` | AD-L expectations | n/a | Geometry cases for connector-through-node, allowed ancestor exits, long routes, stacked lanes, wide gaps, and fan-out crisscross |
@@ -92,5 +98,5 @@ subcase.
 A fixture is "production-ready" when all three pass on the rendered PNG:
 
 1. **Mechanical (auto-checkable):** PNG dimensions are larger than Archi's blank 100 x 100 placeholder; zero blocking AD-L11 findings; zero unresolved AD-L1 / L2 / L3 / L9 / L12 / L13 / L14 / L15 findings before claiming `diagram-readable`; AD-L4 within budget; AD-L5 within `n/6` crossings; AD-L8 grid-aligned; AD-L10 normalised origin within tolerance.
-2. **Visual (human judgment):** matches the per-viewpoint idiom in `layout-strategy.md` Tier 2; routes use consistent orthogonal lanes; labels do not collide with routes or other labels; gutters leave the view readable rather than merely non-overlapping; reads at the quality bar of the [Hosiaisluoma ArchiMate examples gallery](https://www.hosiaisluoma.fi/blog/archimate-examples/).
+2. **Visual (human judgment):** matches the per-viewpoint idiom in `layout-policies-by-viewpoint.md`; routes use consistent orthogonal lanes, ports, and lane spacing; labels do not collide with routes or other labels; gutters leave the view readable rather than merely non-overlapping; reads at the quality bar of the [Hosiaisluoma ArchiMate examples gallery](https://www.hosiaisluoma.fi/blog/archimate-examples/).
 3. **Deterministic:** re-running Build on the same input produces byte-identical OEF.

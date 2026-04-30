@@ -25,6 +25,7 @@ Checks:
   AD-L11  first/last bendpoints do not sit inside endpoint node bodies
   AD-L13  visible connections do not stack on the same endpoint lane
   AD-L15  local fan-out connectors do not crisscross
+  AD-L20  Service Realization views do not hide visible Realization spines
 
 Dependencies: xmllint, yq (Mike Farah), jq.
 EOF
@@ -111,10 +112,22 @@ for file in "$@"; do
     def element_records:
       [(.model.elements.element | as_array)[]? | {id: ."+@identifier", name: (.name | text_value)}];
 
+    def arm_hidden:
+      any((.properties.property | as_array)[]?;
+        ."+@propertyDefinitionRef" == "propid-archi-arm"
+        and ((.value | text_value | ascii_downcase) == "hide")
+      );
+
     def relationship_records:
       [
         (.model.relationships.relationship | as_array)[]?
-        | {id: ."+@identifier", source: ."+@source", target: ."+@target"}
+        | {
+            id: ."+@identifier",
+            source: ."+@source",
+            target: ."+@target",
+            type: ."+@xsi:type",
+            hidden: arm_hidden
+          }
       ];
 
     def element_name($elements; $id):
@@ -449,6 +462,21 @@ for file in "$@"; do
               node: $fanout_node.id,
               evidence: "other_connection=\($b.id) crossing=(\($point.x),\($point.y))",
               action: "reroute fan-out lanes or reorder siblings so same-source/target connectors do not cross"
+            }
+        ]
+      + [
+          $relationships[] as $relationship
+          | select($view."+@viewpoint" == "Service Realization")
+          | select($relationship.type == "Realization" and $relationship.hidden)
+          | ([ $nodes[] | select(.element == $relationship.source or .element == $relationship.target) ] | length) as $visible_endpoint_count
+          | select($visible_endpoint_count == 2)
+          | {
+              code: "AD-L20",
+              severity: "warn",
+              connection: null,
+              node: null,
+              evidence: "relationship=\($relationship.id) hidden_realization endpoints_visible=\($visible_endpoint_count)",
+              action: "emit a visible connection for the Service Realization spine unless the relationship is documented as non-spine redundancy"
             }
         ]
       | unique_by(.code, .connection, .node, .evidence)
