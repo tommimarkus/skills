@@ -1,6 +1,6 @@
 ---
 name: software-design
-description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™ / shell-script project guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills.
+description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python-tooling project guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills.
 ---
 
 # Software Design
@@ -95,8 +95,9 @@ Load extensions only when source signals match.
 |---|---|---|
 | [extensions/dotnet.md](extensions/dotnet.md) | .NET solution and project design | `.sln`, `.slnx`, `.csproj`, `.cs`, `Directory.Build.*`, `global.json`, `InternalsVisibleTo`, `IServiceCollection`, `DbContext`, `BackgroundService`, or package references commonly used in .NET applications |
 | [extensions/shell-script.md](extensions/shell-script.md) | Bash and zsh shell-script design | `.sh`, `.bash`, `.zsh`, executable files with `bash`, `zsh`, or `sh` shebangs, `BASH_SOURCE`, `ZSH_VERSION`, `setopt`, `emulate`, `autoload`, `source`, `trap`, shell completion/bootstrap files, or Linux/macOS/WSL portability requirements |
+| [extensions/python.md](extensions/python.md) | Repo-internal Python tooling design | `.py` files under `scripts/`, `tools/`, `bin/`, `dev/`, `tasks/`, `hack/`, or `ci/`; `#!/usr/bin/env python*` shebangs; `[project.scripts]` / `console_scripts` entries; PEP 723 `# /// script` inline metadata; or files invoked from `Makefile`, `justfile`, `tox.ini`, `noxfile.py`, or `.github/workflows/**`. Skip when the file or project imports `django`, `flask`, `fastapi`, `starlette`, `aiohttp`, `litestar`, `sanic`, `bottle`, `pyramid`, `tornado`, or `quart`. |
 
-Unknown stacks proceed with the core reference only. The .NET extension adds stack-specific evidence and smell codes in the `dotnet.SD-*` namespace; the shell-script extension adds Bash/zsh and Linux/macOS/WSL portability evidence and smell codes in the `shell.SD-*` namespace. Extensions never override core rules.
+Unknown stacks proceed with the core reference only. The .NET extension adds stack-specific evidence and smell codes in the `dotnet.SD-*` namespace; the shell-script extension adds Bash/zsh and Linux/macOS/WSL portability evidence and smell codes in the `shell.SD-*` namespace; the Python tooling extension adds repo-internal-script evidence and smell codes in the `python.SD-*` namespace. Extensions never override core rules.
 
 ## Pre-Flight
 

@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-design",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Reference-driven design skills for sustainable software, responsive web UI, serverless HTTP APIs, and ArchiMate® architecture models. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, Azure® Functions™ API design with Azure® Cosmos DB™ / Azure® Blob Storage™ data layers, and ArchiMate® 3.2 OEF build/extract/review/render/lookup. Includes canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, deployment topology, trust boundaries, source-geometry layout checks, optional PNG render artifacts from the bundled render script with a render gate when visual quality is explicitly requested, change classification, per-view readiness matrix with orthogonal Readiness and Authority axes, render-contract disclosure, skill self-check, matching Claude Code subagents, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
