@@ -755,8 +755,27 @@ def load_skill(repo_root: Path, rel: str) -> SkillFile:
     )
 
 
+IGNORED_PATH_PARTS = {
+    ".cache",
+    ".git",
+    ".gradle",
+    ".mypy_cache",
+    ".nox",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    ".worktrees",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+    "target",
+}
+
+
 def path_is_ignored(path: Path) -> bool:
-    return any(part in {".git", "node_modules", ".worktrees", ".venv"} for part in path.parts)
+    return any(part in IGNORED_PATH_PARTS for part in path.parts)
 
 
 def find_skill_files(repo_root: Path) -> list[str]:

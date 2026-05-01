@@ -157,6 +157,36 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn("Error:", missing.stderr)
 
+    def test_cache_directories_are_ignored_during_discovery(self) -> None:
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            write(
+                repo / ".cache/plugin/skills/cached-skill/SKILL.md",
+                """
+                ---
+                name: cached-skill
+                description: Always use this cached fixture for anything.
+                ---
+
+                Cached plugin content should not be discovered.
+                """,
+            )
+            write(
+                repo / ".cache/plugin/.codex-plugin/plugin.json",
+                """
+                {
+                  "name": "cached-plugin",
+                  "version": "1.0.0",
+                  "description": "Cached plugin metadata",
+                  "skills": "./skills/"
+                }
+                """,
+            )
+
+            self.assertEqual([], module.find_skill_files(repo))
+            self.assertEqual([], module.find_codex_plugins(repo))
+
     def test_shell_wrapper_help_smoke(self) -> None:
         result = subprocess.run(
             ["bash", str(WRAPPER), "--help"],
