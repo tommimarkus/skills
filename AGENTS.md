@@ -31,6 +31,12 @@ rules change.
 - `agents/*.md` files are Claude Code subagents. Project-scoped Codex custom
   agents live in `.codex/agents/*.toml`; plugin-bundled Codex skill metadata
   lives in `skills/<skill>/agents/openai.yaml`.
+- When the user explicitly asks to handle, triage, resume, implement, close, or
+  process GitHub™ issues end to end, use the repo-internal
+  [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md)
+  workflow as the source of truth; Codex can invoke the thin
+  [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml)
+  wrapper for that workflow.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
 - Use SDKMAN for Java version management. The architecture-design layout
