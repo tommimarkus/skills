@@ -212,6 +212,25 @@ class ArchLayoutCliTest {
         assertTrue(Files.exists(materialized));
     }
 
+    @Test
+    void realisticNestedElkFixturesCompleteSourceGateLoop() throws Exception {
+        assertRealisticNestedFixturePassesSourceGate(
+                "application-cooperation-compound-trust-boundaries",
+                "id-view-realistic-application-cooperation",
+                "id-node-external-identity-interface",
+                "id-node-external-identity-provider");
+        assertRealisticNestedFixturePassesSourceGate(
+                "technology-usage-hosting-stack",
+                "id-view-realistic-technology-usage",
+                "id-node-function-runtime",
+                "id-node-function-app");
+        assertRealisticNestedFixturePassesSourceGate(
+                "service-realization-ui-container",
+                "id-view-realistic-service-realization",
+                "id-node-ui-route-signup",
+                "id-node-ui-component");
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }
@@ -241,6 +260,53 @@ class ArchLayoutCliTest {
                 "--snap-grid", "10"));
         assertTrue(Files.exists(materialized));
         assertEquals("100", elementById(parseXml(materialized), "id-node-app-payments").getAttribute("x"));
+    }
+
+    private void assertRealisticNestedFixturePassesSourceGate(
+            String fixtureName,
+            String viewId,
+            String nestedNodeId,
+            String parentNodeId) throws Exception {
+        Path result = tempDir.resolve(fixtureName + ".result.json");
+        Path materialized = tempDir.resolve(fixtureName + ".oef.xml");
+
+        assertEquals(0, cli().execute(
+                "layout-elk",
+                "--request", fixture("layout-elk-realistic/" + fixtureName + ".request.json").toString(),
+                "--result", result.toString()));
+        assertEquals(0, cli().execute("validate-result", "--result", result.toString()));
+
+        assertEquals(0, cli().execute(
+                "materialize-oef",
+                "--oef", fixture("layout-elk-realistic/" + fixtureName + ".oef.xml").toString(),
+                "--view", viewId,
+                "--result", result.toString(),
+                "--out", materialized.toString(),
+                "--snap-grid", "10",
+                "--run-source-gate"));
+
+        Document document = parseXml(materialized);
+        assertEquals(parentNodeId, ((Element) elementById(document, nestedNodeId).getParentNode()).getAttribute("identifier"));
+        assertTenPixelGrid(document);
+    }
+
+    private static void assertTenPixelGrid(Document document) {
+        NodeList all = document.getElementsByTagNameNS("*", "*");
+        for (int index = 0; index < all.getLength(); index++) {
+            Node node = all.item(index);
+            if (node instanceof Element element && ("node".equals(element.getLocalName()) || "bendpoint".equals(element.getLocalName()))) {
+                assertMultipleOfTen(element, "x");
+                assertMultipleOfTen(element, "y");
+                assertMultipleOfTen(element, "w");
+                assertMultipleOfTen(element, "h");
+            }
+        }
+    }
+
+    private static void assertMultipleOfTen(Element element, String attribute) {
+        if (element.hasAttribute(attribute)) {
+            assertEquals(0, Integer.parseInt(element.getAttribute(attribute)) % 10, element.getAttribute("identifier") + " " + attribute);
+        }
     }
 
     private static Document parseXml(Path path) throws Exception {
