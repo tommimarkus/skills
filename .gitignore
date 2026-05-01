@@ -1,6 +1,7 @@
 docs/superpowers/
 .worktrees/
 .venv/
+.cache/uv/
 __pycache__/
 .superpowers/
 .codex/rules/default.rules
