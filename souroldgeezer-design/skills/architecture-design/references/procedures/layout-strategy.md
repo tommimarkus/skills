@@ -86,7 +86,9 @@ without the final validation handoff.
    `generated-layout-recreate` on Application Cooperation, Service Realization,
    and Technology Usage views, build the normalized request, run
    `arch-layout.sh validate-request`, run `arch-layout.sh layout-elk`, run
-   `arch-layout.sh validate-result`, and run `arch-layout.sh materialize-oef`
+   `arch-layout.sh validate-result` for schema/contract validity, run
+   `arch-layout.sh validate-result --strict` with any requested quality metric
+   thresholds before claiming diagram-readable output, and run `arch-layout.sh materialize-oef`
    unless a command is unavailable, validation fails, or the view has explicit
    locked geometry. For unsupported viewpoints, do not silently hand-author geometry as
    if a backend ran; select the viewpoint-specific policy or fallback and record

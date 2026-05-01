@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -28,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.23.0"));
+        assertTrue(out.toString().contains("arch-layout 0.24.0"));
     }
 
     @Test
@@ -42,6 +43,35 @@ class ArchLayoutCliTest {
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-missing-node-geometry.result.json").toString()));
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-missing-backend.result.json").toString()));
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-edge-without-route-status.result.json").toString()));
+    }
+
+    @Test
+    void validateResultStrictFailsWarningStateWhileNonStrictKeepsSchemaMode() {
+        Path warningResult = fixture("materialize-oef/warning.result.json");
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        assertEquals(0, cli().execute("validate-result", "--result", warningResult.toString()));
+        assertEquals(1, new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(err))
+                .execute("validate-result", "--result", warningResult.toString(), "--strict"));
+        assertTrue(err.toString().contains("layoutResult validation state is warning"));
+    }
+
+    @Test
+    void validateResultStrictCanGateOnMetricThresholds() throws Exception {
+        ObjectNode result = (ObjectNode) JsonFiles.read(fixture("layout-contract/valid-service-realization.result.json")).deepCopy();
+        ((ObjectNode) result.path("metrics")).put("connectorNodeIntersections", 1);
+        Path resultPath = tempDir.resolve("quality-warning.result.json");
+        JsonFiles.write(resultPath, result);
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        assertEquals(0, cli().execute("validate-result", "--result", resultPath.toString(), "--strict"));
+        assertEquals(1, new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(err))
+                .execute(
+                        "validate-result",
+                        "--result", resultPath.toString(),
+                        "--strict",
+                        "--max-connector-node-intersections", "0"));
+        assertTrue(err.toString().contains("connectorNodeIntersections=1 exceeds 0"));
     }
 
     @Test

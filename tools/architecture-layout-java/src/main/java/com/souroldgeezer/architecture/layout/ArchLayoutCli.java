@@ -16,7 +16,9 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Spec;
 
 @Command(
         name = "arch-layout",
@@ -82,18 +84,57 @@ public final class ArchLayoutCli implements Callable<Integer> {
 
     @Command(name = "validate-result", description = "Validate a layout result JSON file.")
     static final class ValidateResultCommand implements Callable<Integer> {
+        @Spec
+        CommandSpec spec;
+
         @Option(names = "--result", required = true)
         Path resultPath;
+        @Option(names = "--strict", description = "Fail when validation.state is not valid.")
+        boolean strict;
+        @Option(names = "--max-node-overlaps", description = "Fail when metrics.nodeOverlaps exceeds this value.")
+        int maxNodeOverlaps = -1;
+        @Option(names = "--max-connector-node-intersections", description = "Fail when metrics.connectorNodeIntersections exceeds this value.")
+        int maxConnectorNodeIntersections = -1;
+        @Option(names = "--max-connector-crossings", description = "Fail when metrics.connectorCrossings exceeds this value.")
+        int maxConnectorCrossings = -1;
 
         @Override
         public Integer call() throws IOException {
-            ValidationResult result = new LayoutSchemaValidator().validateResult(resultPath);
+            JsonNode layoutResult = JsonFiles.read(resultPath);
+            ValidationResult result = new LayoutSchemaValidator().validateResult(layoutResult);
             if (result.ok()) {
+                String state = layoutResult.path("validation").path("state").asText();
+                if (strict && !"valid".equals(state)) {
+                    spec.commandLine().getErr().println("layoutResult validation state is " + state + ": " + resultPath);
+                    return 1;
+                }
+                if (!passesMetricThreshold(layoutResult, "nodeOverlaps", maxNodeOverlaps)
+                        || !passesMetricThreshold(layoutResult, "connectorNodeIntersections", maxConnectorNodeIntersections)
+                        || !passesMetricThreshold(layoutResult, "connectorCrossings", maxConnectorCrossings)) {
+                    return 1;
+                }
                 System.out.println("valid layoutResult: " + resultPath);
                 return 0;
             }
-            result.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutResult: " + diagnostic));
+            result.diagnostics().forEach(diagnostic -> spec.commandLine().getErr().println("invalid layoutResult: " + diagnostic));
             return 1;
+        }
+
+        private boolean passesMetricThreshold(JsonNode layoutResult, String metric, int maxAllowed) {
+            if (maxAllowed < 0) {
+                return true;
+            }
+            JsonNode value = layoutResult.path("metrics").path(metric);
+            if (!value.canConvertToInt()) {
+                spec.commandLine().getErr().println("layoutResult metric " + metric + " is missing or not integer: " + resultPath);
+                return false;
+            }
+            int actual = value.asInt();
+            if (actual > maxAllowed) {
+                spec.commandLine().getErr().println("layoutResult metric " + metric + "=" + actual + " exceeds " + maxAllowed + ": " + resultPath);
+                return false;
+            }
+            return true;
         }
     }
 

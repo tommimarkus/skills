@@ -42,8 +42,10 @@ Generated-layout execution for eligible viewpoints:
 references/scripts/arch-layout.sh layout-elk --request <layout-request.json> --result <layout-result.json>
 ```
 
-`layout-elk` is the generated-layout command. `validate-request` and
-`validate-result` are schema/contract gates. `validate-png` is a rendered-image
+`layout-elk` is the generated-layout command. `validate-request` and plain
+`validate-result` are schema/contract gates. `validate-result --strict` is the
+layout-result quality gate: it fails when `validation.state` is not `valid` and
+can enforce explicit metric ceilings. `validate-png` is a rendered-image
 invariant gate and does not generate or repair OEF geometry.
 
 ## Node fields
@@ -158,6 +160,18 @@ Validate a result before OEF materialization:
 
 ```bash
 references/scripts/arch-layout.sh validate-result --result <layout-result.json>
+```
+
+Gate a result for diagram-readiness quality when backend warnings or defect
+metrics must block the handoff:
+
+```bash
+references/scripts/arch-layout.sh validate-result \
+  --result <layout-result.json> \
+  --strict \
+  --max-node-overlaps 0 \
+  --max-connector-node-intersections 0 \
+  --max-connector-crossings 0
 ```
 
 Materialize a validated result into a specific OEF view:

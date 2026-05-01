@@ -415,8 +415,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   visible story path, L18 misleading boundary crossing, L19 ambiguous
   nested ownership, and L20 hidden realization spine).
   The packaged Java™ runtime adds concrete `validate-request`,
-  `validate-result`, `layout-elk`, `route-repair`, `global-polish`, and
-  `materialize-oef`
+  `validate-result` schema checks, `validate-result --strict` result-quality
+  gates, `layout-elk`, `route-repair`, `global-polish`, `materialize-oef`, and
+  `validate-png`
   commands over that backend-neutral contract, but it does not ship the
   deferred interactive debugger, relationship-matrix provenance proof,
   mainstream-tool compatibility proof, or multi-evidence recovery loop.
