@@ -417,19 +417,22 @@ All patterns are case-sensitive ripgrep expressions applied to `.cs` files in th
 
 ### Cross-reference matching
 
-For each enumerated symbol, the audit agent searches the test project tree (`tests/**/*.cs` except `obj/`, `bin/`, `TestResults/`, `StrykerOutput/`) for at least one of:
+For each enumerated symbol, the audit agent searches the test project tree (`tests/**/*.cs` except `obj/`, `bin/`, `TestResults/`, `StrykerOutput/`) for at least one of the matches below.
+
+When a test-artifact extension is also loaded, include its test files in the cross-reference if they exercise this .NET SUT's public boundary. For Robot Framework, also search `**/*.robot` and `**/*.resource` files, excluding generated outputs and vendored dependencies. A Robot test can satisfy a .NET gap when it calls the route, command, or public adapter and asserts the required contract. Count that as external contract coverage; do not require a C# test unless the gap is specifically source-level and not observable from Robot.
 
 - **`Gap-API`** — the symbol name appears as an identifier in any test method name (`public void CancelOrderAsync_...`) or test body (`sut.CancelOrderAsync(...)`, `new CancelOrderAsync...`). Word-boundary match: `\bCancelOrderAsync\b`.
-- **`Gap-Route`** — the route template appears as a string literal in any test body. Match the exact template after normalising case: `"orders/{id}"` or `"orders"`. Also match the Functions name from `[Function("...")]` as a string literal.
+- **`Gap-Route`** — the route template appears as a string literal in any test body. Match the exact template after normalising case: `"orders/{id}"` or `"orders"`. Also match the Functions name from `[Function("...")]` as a string literal. In Robot tests, count RequestsLibrary / custom API-library calls that use the same route and assert status plus body/header/auth/domain outcome.
 - **`Gap-Migration`** — the migration class name appears as an identifier in any test body, or the migration file name appears as a path literal.
-- **`Gap-Throw`** — both the exception type (e.g. `InvalidOperationException`) *and* the containing method name appear in the same test method body. If either is missing, the throw site is a probable gap.
-- **`Gap-Validate`** — the input type's property name (e.g. `CustomerId`) appears in a test body that also references the input type (e.g. `new CreateOrderRequest { CustomerId = null }`).
+- **`Gap-Throw`** — both the exception type (e.g. `InvalidOperationException`) *and* the containing method name appear in the same test method body. If either is missing, the throw site is a probable gap. Robot tests may cover this only when they assert the public error contract produced by that throw site; they do not cover private throw-site details.
+- **`Gap-Validate`** — the input type's property name (e.g. `CustomerId`) appears in a test body that also references the input type (e.g. `new CreateOrderRequest { CustomerId = null }`). In Robot API tests, count payloads that include or omit the field and assert the expected validation status / problem code.
 
 ### Known indirect-coverage patterns (carve-outs)
 
 These patterns suppress a false-positive `Gap-API` entry:
 
 - A service method `Foo.BarAsync(...)` is covered indirectly when a Functions endpoint `Foo.BarFunction` that wraps it has a test, and the service type is registered in DI under the Functions project. Search DI registrations (`services.AddScoped<Foo>()` / `services.AddSingleton<Foo>()`) in the Functions project to establish wrapping; if a test exercises the wrapping endpoint, the service method is *indirectly covered* — record as "indirectly covered via `FooFunction`" and suppress the `Gap-API` entry.
+- A Robot Framework API, CLI, or browser test can cover a route, function, validation rule, or public adapter when it exercises the .NET public boundary and asserts the relevant contract. Record as "externally covered via Robot `<suite>/<test>`" and suppress only the matching public-boundary gap. Do not suppress unit-seam, private throw-site, or mutation-target findings from Robot evidence alone.
 - A `MigrationRunner.RunAsync` test in `tests/Lfm.Api.Tests/` that exercises the runner with seed data covers every migration transitively if the test explicitly asserts post-state for each migration class. Search for the pattern and suppress `Gap-Migration` entries for the covered classes.
 
 ### Confidence annotations

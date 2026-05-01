@@ -31,12 +31,15 @@ Everything lives in `<stack>.md`. Use when the stack's smells and procedures fit
 
 One `<stack>-core.md` file shared across all rubrics plus up to three `<stack>-unit.md` / `<stack>-integration.md` / `<stack>-e2e.md` files carrying only the content that is exclusive to one rubric. Use when a stack has enough rubric-neutral content (smells marked `Applies to: unit, integration`, procedures that apply under multiple rubrics) that a strict by-rubric split would force duplicating content across files.
 
-Currently the .NET extension uses this shape:
+The shipped core + addon extensions use this shape:
 
 - `dotnet-core.md` — detection signals, test-type dispatch, test-double taxonomy, rubric-neutral smells (`dotnet.HC-*`, `dotnet.LC-*`, `dotnet.POS-*`), carve-outs, SUT surface enumeration, determinism verification, and the Stryker mutation tool declaration. Always loaded when .NET is detected.
 - `dotnet-unit.md` — `Applies to: unit` smells only (`dotnet.HC-4`, `dotnet.LC-1`, `dotnet.LC-3`, `dotnet.LC-5`). Loaded when step 0b selects the unit rubric.
 - `dotnet-integration.md` — `dotnet.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration. Loaded when step 0b selects the integration rubric.
 - `dotnet-e2e.md` — E2E sub-lane refinements and `dotnet.E-*` smells / positive signals (Playwright idioms — accessible-name locators, web-first assertions, per-test `IBrowserContext`, axe-builder wiring, Web Vitals performance assertions; cloud-runner / bUnit routing notes). Loaded when step 0b selects the E2E rubric.
+- `nodejs-core.md` / `nodejs-unit.md` / `nodejs-integration.md` / `nodejs-e2e.md` — Node.js / TypeScript detection, test-double taxonomy, route/schema/migration enumeration, determinism verification, Stryker JS mutation, and rubric-specific Jest / Vitest / Mocha / Testing Library / Playwright / Cypress / WebdriverIO patterns.
+- `nextjs-core.md` / `nextjs-unit.md` / `nextjs-integration.md` / `nextjs-e2e.md` — Next.js-specific overlays loaded after `nodejs-core.md`.
+- `robotframework-core.md` / `robotframework-unit.md` / `robotframework-integration.md` / `robotframework-e2e.md` — Robot Framework detection, keyword/library boundary classification, keyword-layer SUT enumeration, determinism verification, Robot-level mutation skip, and rubric-specific keyword/API/browser/mobile patterns.
 
 **Loading rule for core + addon extensions:** always load the `-core.md` file (it owns detection and test-type dispatch). After step 0b selects the rubric(s), load the addon that matches each selected rubric. Load multiple addons for mixed-rubric audit targets.
 
@@ -64,6 +67,16 @@ Every extension file must include these sections, in this order:
 Extension codes are namespaced as `<ext>.HC-N`, `<ext>.LC-N`, `<ext>.POS-N` for unit-rubric smells, and `<ext>.I-HC-A-N`, `<ext>.I-HC-B-N`, `<ext>.I-LC-N`, `<ext>.I-POS-N` for integration-rubric smells, where `<ext>` is the extension filename without `.md`. Example: `dotnet.HC-1` is the first high-confidence .NET unit-rubric smell; `dotnet.I-HC-A1` is the first high-confidence .NET integration-rubric smell in sub-lane A.
 
 Core codes stay unnamespaced (`HC-1`, `LC-3`, `POS-2`, `I-HC-A1`, `I-HC-B5`, `I-LC-4`, `I-POS-7`).
+
+## Cross-extension composition
+
+Extensions may represent different layers of the same audit target. Do not make them compete for a single winner:
+
+- **Test-artifact extensions** own file syntax, runner behavior, and test-layer idioms. Robot Framework is a test-artifact extension because `.robot` / `.resource` files, keywords, tags, templates, and Robot result artifacts have their own semantics.
+- **SUT-stack extensions** own product-code surface enumeration, language-specific mutation tools, and source-level gaps. .NET, Node.js / TypeScript, and Next.js are SUT-stack extensions when Robot, Cucumber, or another external runner drives their public boundary.
+- **Platform-superset extensions** extend a base stack and may carve out base-stack findings only for exact platform boundaries. Next.js is the current example.
+
+A finding from one layer should not force a fix that makes another layer fail on the same root cause. If a Robot API test covers a .NET route with a stable status / body / auth / domain assertion, the .NET `Gap-Route` check should count that as coverage; it should not require a C# test unless the gap is specifically source-level. If two extensions identify the same issue, report one owner and cite the other as evidence.
 
 ### Applies-to field
 
