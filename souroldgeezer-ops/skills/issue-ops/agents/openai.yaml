@@ -1,0 +1,6 @@
+interface:
+  display_name: "Issue Ops"
+  short_description: "Operate issue and work-item lifecycles."
+  default_prompt: "Use issue-ops to handle this issue or work-item lifecycle."
+policy:
+  allow_implicit_invocation: true

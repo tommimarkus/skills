@@ -88,7 +88,7 @@ Create `souroldgeezer-ops/.codex-plugin/plugin.json` with exactly:
     "defaultPrompt": [
       "Use issue-ops to triage this issue queue.",
       "Use issue-ops to resume this issue lifecycle.",
-      "Use issue-ops to handle this GitHub issue end to end."
+      "Use issue-ops to handle this GitHub™ issue end to end."
     ]
   }
 }
@@ -158,7 +158,7 @@ Create `souroldgeezer-ops/skills/issue-ops/SKILL.md` with exactly:
 ```markdown
 ---
 name: issue-ops
-description: Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more issues or work items end to end; loads provider extensions such as GitHub only after the tracker is identified.
+description: Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more issues or work items end to end; loads provider extensions such as GitHub™ only after the tracker is identified.
 ---
 
 # Issue Ops
@@ -188,10 +188,17 @@ Use a narrower mode only when the user asks for it:
 - `implement-only`: implement a clearly selected issue without queue work.
 - `resume`: recover an interrupted lifecycle from live tracker and git state.
 
-Provider extensions may add integration modes such as GitHub PR-mode or
-direct-main mode. Provider modes add mechanics; they do not replace the core
-authority, ask-vs-continue, escalation, ledger, verification, or completion
-contracts.
+Provider extensions may add review, direct integration, or other
+provider-specific integration modes. Provider modes add mechanics; they do not
+replace the core authority, ask-vs-continue, escalation, ledger, verification,
+or completion contracts.
+
+## Evidence Contract
+
+Before acting, inspect the user's requested scope, issue or work-item
+identifiers or URLs, repository identity and remotes, repo guidance, current
+git branch, status, and worktrees, available provider tooling and auth, linked
+work, and existing lifecycle markers.
 
 ## Provider Selection
 
@@ -199,8 +206,8 @@ Identify the issue tracker from the issue URL, repository remote, configured
 tooling, issue identifier, or explicit user wording.
 
 - For GitHub repositories, issue URLs, or GitHub issue numbers, read
-  `extensions/github.md` before resolving provider state or writing lifecycle
-  comments.
+  [extensions/github.md](extensions/github.md) before resolving provider state
+  or writing lifecycle comments.
 - If no provider can be identified, ask one concise question naming the missing
   tracker or repository.
 - If a provider is identified but no matching extension exists, stop and report
@@ -212,7 +219,10 @@ For one invocation:
 
 - Complete at most 10 issues or work items.
 - Inspect at most 25 issues or work items.
-- Inspect each item at most once.
+- During initial queue triage, inspect each item at most once.
+
+Active items are no longer in initial triage. Re-read active items whenever the
+workflow reaches integration, closure, or final lifecycle status writes.
 
 For broad queues, sort by trivial priority signals first, then age. Trivial
 signals include existing priority or severity markers, obvious bug, regression,
@@ -251,10 +261,15 @@ For each item:
    package metadata, CI workflows, and touched files.
 8. Run item-level verification.
 9. Auto-fix only deterministic formatter, generated-file, or lint failures.
-10. Integrate only through the selected strategy after live state is still safe.
-11. Rerun required verification after integration when the strategy changes the
+10. Refresh live provider state, comments, lifecycle markers, linked work, and
+    git state before integration; escalate if safety changed.
+11. Integrate only through the selected strategy after live state is still safe.
+12. Rerun required verification after integration when the strategy changes the
     base branch or merge result.
-12. Update lifecycle status, close or complete the item when allowed, and clean
+13. Before closure or final lifecycle writes, refresh live provider state,
+    comments, and lifecycle markers again when those writes are separate from
+    integration.
+14. Update lifecycle status, close or complete the item when allowed, and clean
     up only work areas owned by this run.
 
 ## Ask Vs Continue
@@ -318,9 +333,16 @@ End with a concise report:
 - escalated count and item identifiers with gate names;
 - skipped count and item identifiers with reasons;
 - remaining count when a queue was bounded;
+- provider extensions loaded;
+- provider tooling route and MCP availability when applicable;
+- integration strategy;
+- lifecycle marker state;
 - verification summary;
 - global blocker when the run stopped early;
 - lifecycle ledger path when a ledger entry was written.
+
+These fields are the output footer/disclosure contract. Preserve them in
+wrappers, delegated agents, and provider-specific completion reports.
 
 Do not write a separate local summary file.
 ```
@@ -345,7 +367,7 @@ Create `souroldgeezer-ops/agents/issue-ops.md` with exactly:
 ```markdown
 ---
 name: issue-ops
-description: Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more issues or work items end to end; loads provider extensions such as GitHub only after the tracker is identified.
+description: Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more issues or work items end to end; loads provider extensions such as GitHub™ only after the tracker is identified.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -363,8 +385,12 @@ When invoked:
    standalone CI debugging, security posture review, design review, or general
    project-management advice.
 4. Preserve the skill's completion output contract: completed, escalated,
-   skipped, remaining, verification summary, global blocker when present, and
-   lifecycle ledger path when written.
+   skipped, remaining, provider extensions loaded, provider tooling route and
+   MCP availability when applicable, integration strategy, lifecycle marker
+   state, verification summary, global blocker when present, and lifecycle
+   ledger path when written.
+5. Preserve the skill's output footer/disclosure contract in any delegated or
+   provider-specific completion report.
 ```
 
 - [ ] **Step 5: Create the project-scoped Codex wrapper**
@@ -383,7 +409,8 @@ When invoked:
 1. Activate or read the issue-ops skill instructions.
 2. Identify the tracker, load the provider extension, resolve live tracker and git state, classify the requested mode, and use the skill's ask-vs-continue and escalation rules.
 3. Do not hijack incidental issue mentions, ordinary pull-request review, standalone CI debugging, security posture review, design review, or general project-management advice.
-4. Preserve the skill's completion output contract: completed, escalated, skipped, remaining, verification summary, global blocker when present, and lifecycle ledger path when written.
+4. Preserve the skill's completion output contract: completed, escalated, skipped, remaining, provider extensions loaded, provider tooling route and MCP availability when applicable, integration strategy, lifecycle marker state, verification summary, global blocker when present, and lifecycle ledger path when written.
+5. Preserve the skill's output footer/disclosure contract in any delegated or provider-specific completion report, including loaded extensions, MCP availability, reference paths, and relevant verification or risk disclosure.
 """
 ```
 
@@ -578,6 +605,11 @@ Escalate the affected issue on:
   asks the reporter to do work, or exposes sensitive detail.
 
 ## Completion
+
+Before completion or closure, re-read issue state, comments, lifecycle markers,
+linked PR state, and branch/check state. Escalate instead of closing when late
+comments, another actor marker, issue or PR state changes, branch drift, or
+check changes alter integration or closure safety.
 
 On completion, update the lifecycle marker before closing the issue. If a PR is
 created or reused, report the PR URL or number in the final chat output. If the
