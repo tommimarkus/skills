@@ -79,7 +79,12 @@ When invoked, run the architecture-design skill and present results:
    `layout-fallback.md`; route and gloss with
    `routing-and-glossing.md`; validate request/result schemas from
    `references/schemas/`; then validate final OEF geometry before claiming
-   `diagram-readable` or `review-ready`. Materialize every
+   `diagram-readable` or `review-ready`. Infer layout intent for
+   recreate/regenerate/reflow requests. Use `layout-elk` for eligible generated
+   Application Cooperation, Service Realization, and Technology Usage views
+   unless blocked; report viewpoint policy or fallback for unsupported
+   viewpoints; and include the per-view layout backend report in final output.
+   Materialize every
    generated view with Element node geometry (`elementRef`, `x`, `y`, `w`,
    `h`) and Relationship connections whose endpoints reference view-node
    identifiers; never leave Build output as a model inventory with empty

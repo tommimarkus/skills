@@ -82,14 +82,17 @@ without the final validation handoff.
 3. **Choose the viewpoint-specific layout policy.** Dispatch by the OEF
    `viewpoint=` value and apply the visual grammar in
    [layout-policies-by-viewpoint.md](layout-policies-by-viewpoint.md).
-4. **Select a layout backend or fallback.** For generated Service Realization,
-   Application Cooperation, and Technology Usage requests, the packaged Java™
-   runtime exposes `arch-layout.sh layout-elk` as the shipped layered/orthogonal
-   path. For architect-edited diagrams, prefer `route-repair`; when route-only
-   repair cannot clean the view without damaging the mental map, use
-   `global-polish`. Capability Map, Migration, Motivation, and Business Process
-   Cooperation still require viewpoint-specific policy or
-   [layout-fallback.md](layout-fallback.md) rather than generic layered layout.
+4. **Select a layout backend or fallback and record the decision.** For
+   `generated-layout-recreate` on Application Cooperation, Service Realization,
+   and Technology Usage views, build the normalized request, run
+   `arch-layout.sh validate-request`, run `arch-layout.sh layout-elk`, run
+   `arch-layout.sh validate-result`, and materialize the result unless the
+   command is unavailable, validation fails, or the view has explicit locked
+   geometry. For unsupported viewpoints, do not silently hand-author geometry as
+   if a backend ran; select the viewpoint-specific policy or fallback and record
+   the fallback reason. For architect-edited diagrams under
+   `preserve-authored`, prefer `route-repair`; when route-only repair cannot
+   clean the view without damaging the mental map, use `global-polish`.
 5. **Assign ports and route edges.** Apply
    [routing-and-glossing.md](routing-and-glossing.md): assign candidate ports,
    reserve lanes for high-priority edges, route high-priority paths first, and
@@ -102,6 +105,29 @@ without the final validation handoff.
 8. **Validate with `AD-L*` checks.** Run the source-geometry gate when a local
    OEF path exists. A backend result that fails `AD-L*` is not
    `diagram-readable`.
+
+## Layout decision record
+
+Every Build / Extract run that emits or changes view geometry records one row
+per view before final delivery:
+
+| Field | Required value |
+|---|---|
+| View id | OEF `<view identifier>` |
+| Viewpoint | Exact OEF `viewpoint=` value |
+| Layout intent | `preserve-authored`, `route-repair-only`, `generated-layout-recreate`, or `global-reflow` |
+| Eligibility | `layout-elk eligible`, `route-repair eligible`, `global-polish eligible`, `viewpoint-policy only`, or `blocked` |
+| Selected geometry path | `layout-elk`, `route-repair`, `global-polish`, `deterministic-fallback`, `viewpoint-policy`, or `preserved-authored` |
+| Request validation | `passed`, `failed`, or `not run` with reason |
+| Result validation | `passed`, `failed`, or `not run` with reason |
+| OEF materialization | `materialized`, `not changed`, or `blocked` |
+| PNG validation | `not requested`, `validate-png passed`, `validate-png failed`, or `not run` with reason |
+| Notes | Exact blocker, fallback reason, locked-geometry reason, or unsupported-viewpoint policy |
+
+This record distinguishes layout generation from render validation.
+`arch-layout.sh validate-png` validates rendered PNG invariants only; it is
+never evidence that `arch-layout.sh layout-elk`, `route-repair`, or
+`global-polish` generated OEF geometry.
 
 ## Backend selection
 

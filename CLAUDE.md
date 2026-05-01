@@ -237,6 +237,17 @@ Codex does not consume these plugin-root `agents/*.md` files. Codex installable 
   Interactive layout debugging, full relationship-matrix source provenance,
   mainstream-tool compatibility proof, and multi-evidence recovery remain
   deferred backlog, not shipped behaviour.
+- **`architecture-design` layout intent and backend disclosure** (0.22.0):
+  recreate, regenerate, generated-layout, and global reflow requests must state
+  the selected layout intent and report backend/fallback use per view. Eligible
+  generated Application Cooperation, Service Realization, and Technology Usage
+  views use `layout-elk` unless explicitly blocked. Capability Map, Migration,
+  Motivation, and Business Process Cooperation views report the
+  viewpoint-specific policy or fallback instead of implying the `layout-elk`
+  backend ran.
+  Final output distinguishes geometry generation/repair commands
+  (`layout-elk`, `route-repair`, `global-polish`) from `validate-png`, which is
+  only a rendered-image validation gate.
 
 ## Things that are not standard Claude Code
 
