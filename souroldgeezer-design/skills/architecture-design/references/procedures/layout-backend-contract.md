@@ -154,7 +154,18 @@ and `AD-L*` checks.
   route count, max bends, average bends, moved locked nodes, and displaced
   generated nodes.
 - `warnings`: backend limits, degraded fallback decisions, or constraints the
-  backend could not satisfy.
+  backend could not satisfy. Geometry warnings carry stable machine-readable
+  evidence, not only prose:
+  - `LAYOUT_CONNECTOR_NODE_INTERSECTION` includes `edgeId`, intersected
+    `nodeId`, `segment` (`x1`, `y1`, `x2`, `y2`), `nodeBounds`, and
+    `relationship` (`unrelated` for blocking node-body crossings).
+  - `LAYOUT_NODE_OVERLAP` includes ordered `nodeIds` and matching
+    `nodeBounds` rectangles.
+  - locked-node movement/restoration warnings include `nodeId`, `requested`,
+    and `produced` coordinates.
+  Use this evidence to decide the OEF repair action: reroute the named edge
+  around the reported rectangle, separate the overlapping node rectangles, or
+  preserve/restore the requested locked-node coordinate before materialization.
 
 Validate a result before OEF materialization:
 

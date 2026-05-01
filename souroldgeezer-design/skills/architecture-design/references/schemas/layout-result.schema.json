@@ -64,7 +64,29 @@
           "code": { "type": "string" },
           "severity": { "enum": ["info", "warning", "error"] },
           "message": { "type": "string" },
-          "subjectIds": { "type": "array", "items": { "type": "string" } }
+          "subjectIds": { "type": "array", "items": { "type": "string" } },
+          "edgeId": { "type": "string" },
+          "nodeId": { "type": "string" },
+          "nodeIds": { "type": "array", "items": { "type": "string" } },
+          "relationship": { "type": "string" },
+          "segment": {
+            "type": "object",
+            "required": ["x1", "y1", "x2", "y2"],
+            "properties": {
+              "x1": { "type": "integer" },
+              "y1": { "type": "integer" },
+              "x2": { "type": "integer" },
+              "y2": { "type": "integer" }
+            }
+          },
+          "nodeBounds": {
+            "oneOf": [
+              { "$ref": "#/$defs/rectangle" },
+              { "type": "array", "items": { "$ref": "#/$defs/rectangle" } }
+            ]
+          },
+          "requested": { "$ref": "#/$defs/point" },
+          "produced": { "$ref": "#/$defs/point" }
         }
       }
     },
@@ -74,6 +96,26 @@
       "required": ["state"],
       "properties": {
         "state": { "enum": ["valid", "warning", "invalid"] }
+      }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" }
+      }
+    },
+    "rectangle": {
+      "type": "object",
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "w": { "type": "integer" },
+        "h": { "type": "integer" }
       }
     }
   }

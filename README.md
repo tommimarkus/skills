@@ -320,8 +320,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   produces generated-layout results for supported directed viewpoints,
   repairs stale or invalid routes while preserving locked node geometry,
   applies bounded global polish when route-only repair is insufficient,
-  materializes layout results back into OEF view geometry, and validates
-  rendered PNG invariants. Source lives outside the shipped skill
+  emits machine-readable warning evidence for route intersections, overlaps,
+  and locked-node movement, materializes layout results back into OEF view
+  geometry, and validates rendered PNG invariants. Source lives outside the shipped skill
   runtime under `tools/architecture-layout-java/`; release packaging uses
   [package-arch-layout.sh](souroldgeezer-design/skills/architecture-design/references/scripts/package-arch-layout.sh)
   so only the JAR, shell launchers, schemas, procedures, and fixtures are
@@ -416,8 +417,8 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   nested ownership, and L20 hidden realization spine).
   The packaged Java™ runtime adds concrete `validate-request`,
   `validate-result` schema checks, `validate-result --strict` result-quality
-  gates, `layout-elk`, `route-repair`, `global-polish`, `materialize-oef`, and
-  `validate-png`
+  gates, geometry-rich `LAYOUT_*` warning evidence, `layout-elk`,
+  `route-repair`, `global-polish`, `materialize-oef`, and `validate-png`
   commands over that backend-neutral contract, but it does not ship the
   deferred interactive debugger, relationship-matrix provenance proof,
   mainstream-tool compatibility proof, or multi-evidence recovery loop.

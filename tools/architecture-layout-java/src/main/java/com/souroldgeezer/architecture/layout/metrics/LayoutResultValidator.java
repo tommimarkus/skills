@@ -2,6 +2,7 @@ package com.souroldgeezer.architecture.layout.metrics;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.JsonFiles;
 import com.souroldgeezer.architecture.layout.WarningFactory;
 import java.util.HashSet;
@@ -31,18 +32,43 @@ public final class LayoutResultValidator {
             }
         }
         metrics.firstConnectorNodeIntersection(result)
-                .ifPresent(edgeId -> warnings.add(WarningFactory.warning(
+                .ifPresent(intersection -> {
+                    ObjectNode warning = WarningFactory.warning(
                         "LAYOUT_CONNECTOR_NODE_INTERSECTION",
                         "warning",
                         "Route crosses an unrelated node body.",
-                        List.of(edgeId))));
-        LayoutMetrics computed = metrics.compute(request, result);
-        if (computed.lockedNodeDisplacement() > 0) {
-            warnings.add(WarningFactory.warning(
+                        List.of(intersection.edgeId()));
+                    warning.put("edgeId", intersection.edgeId());
+                    warning.put("nodeId", intersection.nodeId());
+                    warning.set("segment", WarningFactory.segment(intersection.segment()));
+                    warning.set("nodeBounds", WarningFactory.rectangle(intersection.nodeBounds()));
+                    warning.put("relationship", intersection.relationship());
+                    warnings.add(warning);
+                });
+        metrics.nodeOverlaps(result).forEach(overlap -> {
+            ObjectNode warning = WarningFactory.warning(
+                    "LAYOUT_NODE_OVERLAP",
+                    "warning",
+                    "Node rectangles overlap.",
+                    List.of(overlap.firstId(), overlap.secondId()));
+            ArrayNode overlapNodeIds = warning.putArray("nodeIds");
+            overlapNodeIds.add(overlap.firstId());
+            overlapNodeIds.add(overlap.secondId());
+            ArrayNode nodeBounds = warning.putArray("nodeBounds");
+            nodeBounds.add(WarningFactory.rectangle(overlap.firstBounds()));
+            nodeBounds.add(WarningFactory.rectangle(overlap.secondBounds()));
+            warnings.add(warning);
+        });
+        for (LayoutMetricsCalculator.LockedNodeDisplacement displacement : metrics.lockedNodeDisplacements(request, result)) {
+            ObjectNode warning = WarningFactory.warning(
                     "LAYOUT_LOCKED_NODE_MOVED",
                     "error",
                     "A locked node moved during layout.",
-                    List.of()));
+                    List.of(displacement.nodeId()));
+            warning.put("nodeId", displacement.nodeId());
+            warning.set("requested", WarningFactory.point(displacement.requested()));
+            warning.set("produced", WarningFactory.point(displacement.produced()));
+            warnings.add(warning);
         }
         return warnings;
     }

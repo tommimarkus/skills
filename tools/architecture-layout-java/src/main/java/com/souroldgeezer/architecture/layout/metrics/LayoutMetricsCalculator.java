@@ -100,16 +100,7 @@ public final class LayoutMetricsCalculator {
     }
 
     private static int countOverlaps(Map<String, Rectangle> nodes) {
-        List<Rectangle> rectangles = new ArrayList<>(nodes.values());
-        int overlaps = 0;
-        for (int i = 0; i < rectangles.size(); i++) {
-            for (int j = i + 1; j < rectangles.size(); j++) {
-                if (rectangles.get(i).intersects(rectangles.get(j))) {
-                    overlaps++;
-                }
-            }
-        }
-        return overlaps;
+        return nodeOverlaps(nodes).size();
     }
 
     private static int countConnectorNodeIntersections(Map<String, Rectangle> nodes, List<EdgeRoute> routes) {
@@ -188,13 +179,20 @@ public final class LayoutMetricsCalculator {
         return bendpoints;
     }
 
-    public Optional<String> firstConnectorNodeIntersection(JsonNode result) {
+    public Optional<ConnectorNodeIntersection> firstConnectorNodeIntersection(JsonNode result) {
         Map<String, Rectangle> nodes = nodeGeometry(result);
         for (EdgeRoute edgeRoute : edgeRoutes(result)) {
             for (Segment segment : edgeRoute.route().segments()) {
                 for (Map.Entry<String, Rectangle> node : nodes.entrySet()) {
                     if (!node.getKey().equals(edgeRoute.source()) && !node.getKey().equals(edgeRoute.target()) && segment.intersects(node.getValue())) {
-                        return Optional.of(edgeRoute.id());
+                        return Optional.of(new ConnectorNodeIntersection(
+                                edgeRoute.id(),
+                                edgeRoute.source(),
+                                edgeRoute.target(),
+                                node.getKey(),
+                                segment,
+                                node.getValue(),
+                                "unrelated"));
                     }
                 }
             }
@@ -202,7 +200,52 @@ public final class LayoutMetricsCalculator {
         return Optional.empty();
     }
 
+    public List<NodeOverlap> nodeOverlaps(JsonNode result) {
+        return nodeOverlaps(nodeGeometry(result));
+    }
+
+    private static List<NodeOverlap> nodeOverlaps(Map<String, Rectangle> nodes) {
+        List<Map.Entry<String, Rectangle>> entries = new ArrayList<>(nodes.entrySet());
+        List<NodeOverlap> overlaps = new ArrayList<>();
+        for (int i = 0; i < entries.size(); i++) {
+            for (int j = i + 1; j < entries.size(); j++) {
+                Map.Entry<String, Rectangle> first = entries.get(i);
+                Map.Entry<String, Rectangle> second = entries.get(j);
+                if (first.getValue().intersects(second.getValue())) {
+                    overlaps.add(new NodeOverlap(first.getKey(), first.getValue(), second.getKey(), second.getValue()));
+                }
+            }
+        }
+        return overlaps;
+    }
+
+    public List<LockedNodeDisplacement> lockedNodeDisplacements(JsonNode request, JsonNode result) {
+        Map<String, Rectangle> current = nodeGeometry(result);
+        List<LockedNodeDisplacement> displacements = new ArrayList<>();
+        for (JsonNode node : request.path("nodes")) {
+            String id = node.path("id").asText();
+            if (!node.path("locked").asBoolean(false) || !node.has("x") || !node.has("y") || !current.containsKey(id)) {
+                continue;
+            }
+            Rectangle produced = current.get(id);
+            Point requested = new Point(node.path("x").asInt(), node.path("y").asInt());
+            if (produced.x() != requested.x() || produced.y() != requested.y()) {
+                displacements.add(new LockedNodeDisplacement(id, requested, new Point(produced.x(), produced.y())));
+            }
+        }
+        return displacements;
+    }
+
     public record EdgeRoute(String id, String source, String target, Route route) {
+    }
+
+    public record ConnectorNodeIntersection(String edgeId, String sourceId, String targetId, String nodeId, Segment segment, Rectangle nodeBounds, String relationship) {
+    }
+
+    public record NodeOverlap(String firstId, Rectangle firstBounds, String secondId, Rectangle secondBounds) {
+    }
+
+    public record LockedNodeDisplacement(String nodeId, Point requested, Point produced) {
     }
 
     private record Displacement(int locked, int movable) {

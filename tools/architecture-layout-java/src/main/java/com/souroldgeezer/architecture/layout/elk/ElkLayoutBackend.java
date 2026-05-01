@@ -113,11 +113,15 @@ public final class ElkLayoutBackend {
             int y = round(absoluteY(node));
             if (requestNode.path("locked").asBoolean(false) && requestNode.has("x") && requestNode.has("y")
                     && (x != requestNode.path("x").asInt() || y != requestNode.path("y").asInt())) {
-                warnings.add(WarningFactory.warning(
+                ObjectNode warning = WarningFactory.warning(
                         "LAYOUT_LOCKED_NODE_RESTORED",
                         "warning",
                         "ELK moved a locked node; the packaged runtime restored the request coordinate and capped readiness.",
-                        List.of(id)));
+                        List.of(id));
+                warning.put("nodeId", id);
+                warning.set("requested", WarningFactory.point(new Point(requestNode.path("x").asInt(), requestNode.path("y").asInt())));
+                warning.set("produced", WarningFactory.point(new Point(x, y)));
+                warnings.add(warning);
                 x = requestNode.path("x").asInt();
                 y = requestNode.path("y").asInt();
             }

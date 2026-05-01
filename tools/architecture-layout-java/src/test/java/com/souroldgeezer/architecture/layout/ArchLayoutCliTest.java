@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.24.0"));
+        assertTrue(out.toString().contains("arch-layout 0.25.0"));
     }
 
     @Test
@@ -130,6 +130,81 @@ class ArchLayoutCliTest {
     }
 
     @Test
+    void connectorNodeIntersectionWarningsCarryMachineReadableGeometryEvidence() throws Exception {
+        Path lockedInvalid = tempDir.resolve("locked-invalid.json");
+
+        assertEquals(0, cli().execute("route-repair", "--request", fixture("route-repair/locked-route-invalid.request.json").toString(), "--result", lockedInvalid.toString()));
+
+        JsonNode warning = warning(JsonFiles.read(lockedInvalid), "LAYOUT_CONNECTOR_NODE_INTERSECTION");
+        assertEquals("locked", warning.path("edgeId").asText());
+        assertEquals("obstacle", warning.path("nodeId").asText());
+        assertEquals("unrelated", warning.path("relationship").asText());
+        assertEquals(140, warning.path("segment").path("x1").asInt());
+        assertEquals(110, warning.path("segment").path("y1").asInt());
+        assertEquals(420, warning.path("segment").path("x2").asInt());
+        assertEquals(110, warning.path("segment").path("y2").asInt());
+        assertEquals(220, warning.path("nodeBounds").path("x").asInt());
+        assertEquals(60, warning.path("nodeBounds").path("y").asInt());
+        assertEquals(100, warning.path("nodeBounds").path("w").asInt());
+        assertEquals(100, warning.path("nodeBounds").path("h").asInt());
+    }
+
+    @Test
+    void overlapWarningsCarryBothNodeIdsAndRectangles() throws Exception {
+        Path request = tempDir.resolve("overlap.request.json");
+        Path result = tempDir.resolve("overlap.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "overlap-evidence",
+                  "archimateTarget": "3.2",
+                  "mode": "route-repair",
+                  "view": {
+                    "id": "view",
+                    "name": "Overlap Evidence",
+                    "viewpoint": "Application Cooperation",
+                    "direction": "RIGHT",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "first", "width": 120, "height": 70, "x": 40, "y": 40 },
+                    { "id": "second", "width": 100, "height": 60, "x": 100, "y": 70 }
+                  ],
+                  "edges": [],
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("route-repair", "--request", request.toString(), "--result", result.toString()));
+
+        JsonNode warning = warning(JsonFiles.read(result), "LAYOUT_NODE_OVERLAP");
+        assertEquals("first", warning.path("nodeIds").get(0).asText());
+        assertEquals("second", warning.path("nodeIds").get(1).asText());
+        assertEquals(40, warning.path("nodeBounds").get(0).path("x").asInt());
+        assertEquals(40, warning.path("nodeBounds").get(0).path("y").asInt());
+        assertEquals(120, warning.path("nodeBounds").get(0).path("w").asInt());
+        assertEquals(70, warning.path("nodeBounds").get(0).path("h").asInt());
+        assertEquals(100, warning.path("nodeBounds").get(1).path("x").asInt());
+        assertEquals(70, warning.path("nodeBounds").get(1).path("y").asInt());
+        assertEquals(100, warning.path("nodeBounds").get(1).path("w").asInt());
+        assertEquals(60, warning.path("nodeBounds").get(1).path("h").asInt());
+    }
+
+    @Test
+    void lockedNodeWarningsCarryRequestedAndProducedCoordinates() throws Exception {
+        Path resultPath = tempDir.resolve("locked.json");
+
+        assertEquals(0, cli().execute("layout-elk", "--request", fixture("layout-elk-java/locked-node-warning.request.json").toString(), "--result", resultPath.toString()));
+
+        JsonNode warning = warning(JsonFiles.read(resultPath), "LAYOUT_LOCKED_NODE_RESTORED");
+        assertEquals("locked", warning.path("nodeId").asText());
+        assertEquals(300, warning.path("requested").path("x").asInt());
+        assertEquals(300, warning.path("requested").path("y").asInt());
+        assertTrue(warning.path("produced").has("x"));
+        assertTrue(warning.path("produced").has("y"));
+    }
+
+    @Test
     void globalPolishImprovesWhenSafeAndReturnsOriginalWhenNoImprovementExists() throws Exception {
         Path improved = tempDir.resolve("polished.json");
         Path unchanged = tempDir.resolve("unchanged.json");
@@ -227,6 +302,15 @@ class ArchLayoutCliTest {
             }
         }
         throw new AssertionError("Missing node " + id);
+    }
+
+    private static JsonNode warning(JsonNode result, String code) {
+        for (JsonNode warning : result.path("warnings")) {
+            if (code.equals(warning.path("code").asText())) {
+                return warning;
+            }
+        }
+        throw new AssertionError("Missing warning " + code + " in " + result.path("warnings"));
     }
 
     private void assertCanMaterialize(String resultFixture) throws Exception {

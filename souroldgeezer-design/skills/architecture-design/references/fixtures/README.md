@@ -80,6 +80,11 @@ without requiring Archi:
 ../scripts/arch-layout.sh validate-png --image rendered-png/valid-diagram.png --result /tmp/rendered-png-result.json
 ```
 
+Runtime warning fixtures and tests assert machine-readable geometry evidence:
+connector-node warnings name the edge, intersected node, route segment, node
+bounds, and relationship; overlap warnings carry both node ids and rectangles;
+locked-node warnings carry requested and produced coordinates.
+
 ImageMagick may be useful when manually creating or inspecting PNG fixtures,
 but runtime acceptance uses Java™ ImageIO through `validate-png`.
 
