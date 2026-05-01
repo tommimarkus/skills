@@ -1,6 +1,6 @@
 # souroldgeezer
 
-Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships two plugins:
+Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships three plugins:
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
   test quality, with per-stack extensions and matching Claude Code subagents.
@@ -33,6 +33,10 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships two
   skills' Review mode to flag drift between code and the architect's
   model. Each skill has a matching Claude Code subagent; Codex consumes the
   bundled `skills/**/SKILL.md` workflows directly from the plugin.
+- **souroldgeezer-ops** — operations workflows for issue and work-item
+  lifecycle handling, with a tracker-agnostic `issue-ops` core and a GitHub™
+  provider extension for GitHub™ issue state, lifecycle comments, PR-mode,
+  direct-main mode, and closure mechanics.
 
 ## Install
 
@@ -44,6 +48,7 @@ Add this marketplace and enable the plugins you want:
 /plugin marketplace add tommimarkus/skills
 /plugin install souroldgeezer-audit@souroldgeezer
 /plugin install souroldgeezer-design@souroldgeezer
+/plugin install souroldgeezer-ops@souroldgeezer
 ```
 
 Or, for local development against a clone:
@@ -58,7 +63,8 @@ Or, for local development against a clone:
   },
   "enabledPlugins": {
     "souroldgeezer-audit@souroldgeezer": true,
-    "souroldgeezer-design@souroldgeezer": true
+    "souroldgeezer-design@souroldgeezer": true,
+    "souroldgeezer-ops@souroldgeezer": true
   }
 }
 ```
@@ -156,6 +162,22 @@ References live at [souroldgeezer-design/docs/software-reference/software-design
 Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/serverless-api-design.md](souroldgeezer-design/agents/serverless-api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
 The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling mechanism for UI/API code-to-architecture drift: `responsive-design` and `serverless-api-design` auto-dispatch to `architecture-design` Review when a paired model is present.
+
+## What's in `souroldgeezer-ops`
+
+One operations skill with a matching one-shot Claude Code subagent:
+
+| Skill | Operates | Provider extensions |
+|---|---|---|
+| [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md) | Explicit issue and work-item lifecycle requests: triage, plan, implement, resume, close, queue processing, lifecycle state, escalation, verification, integration, and completion reporting | [github](souroldgeezer-ops/skills/issue-ops/extensions/github.md) for GitHub™ issue state, lifecycle comments, labels/projects/milestones context, GitHub™ MCP / `gh` / REST routing, PR-mode, direct-main mode, linked pull requests, and issue closure |
+
+The core skill is tracker-agnostic. Provider mechanics live in extensions and
+load only after the tracker is identified.
+
+Matching Claude Code subagent: [souroldgeezer-ops/agents/issue-ops.md](souroldgeezer-ops/agents/issue-ops.md).
+Codex installs the bundled skill through the plugin manifest, reads per-skill
+metadata from [souroldgeezer-ops/skills/issue-ops/agents/openai.yaml](souroldgeezer-ops/skills/issue-ops/agents/openai.yaml),
+and has a matching project-scoped wrapper in [.codex/agents/issue-ops.toml](.codex/agents/issue-ops.toml).
 
 ## How the audits work
 
@@ -538,6 +560,14 @@ souroldgeezer-design/              # design plugin
     agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
     references/                    # smell catalogs + reusable procedures where needed
+souroldgeezer-ops/                 # operations plugin
+  .claude-plugin/plugin.json
+  .codex-plugin/plugin.json
+  agents/*.md                      # Claude Code subagents (one per skill, same name)
+  skills/<name>/
+    SKILL.md                       # tracker-agnostic workflow
+    agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
+    extensions/                    # provider-specific mechanics
 undecided/                         # skills not yet assigned to a plugin — NOT production-ready;
                                    # do not reference from published skills
 ```
