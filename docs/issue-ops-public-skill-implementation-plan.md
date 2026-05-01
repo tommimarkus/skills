@@ -685,6 +685,17 @@ If this overlay conflicts with the public core on repo-specific behavior, this
 overlay wins only inside this repository. If the public core or GitHub extension
 changes a general lifecycle contract, update this overlay in the same change.
 
+## Evidence Contract
+
+Before acting, inspect these inputs and use them as the evidence basis for the
+run: explicit issue scope from the user request, live GitHub issue state, latest
+comments, linked PRs, lifecycle markers, repo identity and remotes, git branch
+status and worktrees, repo guidance, and likely touched surfaces.
+
+Evidence: the lifecycle marker and completion output must name the live issue
+state, inspected repo or git state, verification commands, and repo-local gates
+that materially shaped the disposition.
+
 ## Repo Defaults
 
 Default mode remains `full-cycle` unless the user explicitly asks for
@@ -694,6 +705,11 @@ Use direct-main mode for clearly actionable repo-maintenance issues when live
 GitHub state, git state, branch protection, permissions, and verification are
 safe. Use PR-mode when the issue, branch policy, review state, or user request
 requires review before merge.
+
+For active issues, re-read live GitHub state, latest comments, lifecycle
+markers, linked PRs, repo remotes, branch status, and worktrees before
+direct-main integration, PR update or merge, issue closure, or final lifecycle
+marker writes.
 
 Use these dedicated worktrees unless they are dirty or occupied:
 
@@ -714,6 +730,22 @@ Use the repo-local ledger as recovery hints only:
 
 Never commit the ledger. Never store secrets, tokens, raw logs, full issue
 bodies, or sensitive excerpts in it.
+
+## Ask Vs Continue
+
+Continue when the public `issue-ops` core, GitHub extension, this overlay, live
+GitHub state, and git state make the issue scope, integration path, and
+verification path clear.
+
+Ask the user only for global blockers that stop the run, such as unusable auth,
+missing push permission, missing required verification tooling, or an unusable
+base branch.
+
+For issue-local ambiguity, do not guess and do not ask immediately during queue
+processing. Escalate the issue with a lifecycle marker, record the evidence,
+and continue the queue where possible. Issue-local ambiguity includes missing
+acceptance criteria, conflicting comments, duplicate precedence, uncertain
+skill contract, unsafe existing PR state, or stale lifecycle ownership.
 
 ## Repo-Specific Gates
 
@@ -756,6 +788,15 @@ Keep these surfaces synchronized when touched by an issue:
 Use the public `issue-ops` completion output. Also name any repo-local gates
 used, such as `ip-hygiene` or `skill-architecture-report`, in the verification
 summary.
+
+## Verification And Rerun
+
+Run the public `issue-ops` and GitHub-extension verification selected for the
+touched files. For this repository, run `scripts/skill-architecture-report.sh .`
+when skill, plugin, agent, runtime metadata, marketplace, internal authoring
+skill, or repo-guidance surfaces are touched.
+
+Rerun validation after fixing validation findings before completion.
 ```
 
 - [ ] **Step 3: Update the repo-specific Codex wrapper**
@@ -776,7 +817,7 @@ When invoked:
 3. Proceed only for explicit GitHub issue lifecycle requests; do not hijack incidental issue mentions, ordinary PR review, standalone CI debugging, or general GitHub questions.
 4. Default to full-cycle handling unless the user explicitly narrows the mode.
 5. Resolve live GitHub and git state before acting.
-6. Follow the overlay's repo-specific gates for `ip-hygiene`, skill architecture validation, isolated `.worktrees/` worktrees, direct-main handling, lifecycle state, and cleanup.
+6. Follow the overlay's evidence contract, ask-vs-continue rules, repo-specific gates, and rerun guidance.
 7. Preserve the public issue-ops completion output and include repo-local verification gates used.
 """
 ```
