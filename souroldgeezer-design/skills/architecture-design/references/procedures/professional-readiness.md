@@ -9,6 +9,12 @@ by the layout backend used. Fallback geometry, future backend geometry, and
 hand-authored coordinates all pass through the same readiness and `AD-L*`
 checks.
 
+When the packaged layout runtime is used, readiness also consumes its contract
+and runtime diagnostics: schema validation failure caps the affected run at
+`model-valid`; route-repair and global-polish controlled failures cap the
+affected view until repaired; blank, tiny, cropped, or over-tolerance PNG
+validation failures cap visual-quality claims for the rendered view.
+
 ## Quality levels
 
 - **model-valid:** XML/OEF structure, element types, relationship types, and basic ArchiMate well-formedness are correct.
@@ -71,7 +77,18 @@ For each `<view>`, use the lowest level justified by evidence:
 
 - Return `model-valid` when syntax and notation are sound but layout or communication is not dependable.
 - Return `model-valid` when a generated view lacks materialized node or connection geometry.
+- Return `model-valid` when `layoutRequest` or `layoutResult` schema validation
+  fails before OEF materialization.
 - Return `model-valid` when any unresolved `AD-L11` finding exists *for this view*. Connector-through-node is a blocking enterprise architecture readability failure, regardless of otherwise-valid XML.
+- Return `model-valid` when route repair reports `LAYOUT_NO_ROUTE` or
+  `LAYOUT_LOCKED_ROUTE_INVALID` and the OEF still depends on that route for its
+  visual story.
+- Return `model-valid` when global polish returns
+  `LAYOUT_GLOBAL_POLISH_NO_IMPROVEMENT` for a view whose stated target requires
+  the unresolved defect to be fixed.
+- Return `model-valid` for changed rendered views when `validate-png` reports
+  blank, tiny, cropped-to-edge, dimension mismatch, or baseline drift above the
+  accepted tolerance.
 - Return `model-valid` when unresolved `AD-L12` through `AD-L20` findings make this view's layout communication unreliable.
 - Return `diagram-readable` when this view can be read but still needs curation, viewpoint sharpening, or decision context before formal review.
 - Return `review-ready` only when no unresolved `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L20`, `AD-B-*`, `AD-6`, or `AD-2` finding blocks this view's review purpose.

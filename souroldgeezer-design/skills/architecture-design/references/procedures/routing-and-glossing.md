@@ -86,6 +86,17 @@ For existing architect-edited views:
 7. Escalate to user-visible finding rather than moving locked geometry without
    an explicit global reflow request.
 
+The shipped Java™ runtime exposes this as a route-preserving command:
+
+```bash
+references/scripts/arch-layout.sh route-repair --request <layout-request.json> --result <layout-result.json>
+```
+
+Use it only after validating the request contract. The command preserves all
+node coordinates, preserves valid locked routes, flags invalid locked routes,
+and emits route status plus warning codes instead of silently moving locked
+geometry.
+
 ## Rip-up and reroute
 
 When routes conflict:
@@ -128,3 +139,7 @@ readability problem, not an electrical manufacturability problem.
 After route assignment and glossing, run the source-geometry gate and
 professional-readiness pass. Backend route metrics are useful diagnostics, but
 only final OEF source geometry decides `diagram-readable` or `review-ready`.
+If `route-repair` reports `LAYOUT_LOCKED_ROUTE_INVALID`,
+`LAYOUT_CONNECTOR_NODE_INTERSECTION`, or `LAYOUT_NO_ROUTE`, cap the affected
+view until the OEF connection geometry is repaired or the architect explicitly
+accepts the degraded visual story.

@@ -1,13 +1,7 @@
 ---
 name: architecture-design
 description: >-
-  Use when building, extracting, reviewing, rendering, or looking up enterprise, solution,
-  or application architecture models in ArchiMate® 3.2 OEF XML, including
-  change classification and professional-readiness review of OEF views; capability maps, application
-  cooperation, service realization, technology usage, migration, motivation, or
-  business process cooperation views; architecture drift checks against code,
-  IaC, workflows, or process models; or reverse lookup from a code symbol, UI
-  file, API endpoint, or workflow to its owning Business Process.
+  Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, route repair, global polish, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -24,7 +18,7 @@ When invoked, run the architecture-design skill and present results:
 2. Run the skill self-check
    ([self-check.md](../skills/architecture-design/references/procedures/self-check.md))
    first — verify that the bundled reference, every required procedure, and the
-   `validate-oef-layout.sh` / `archi-render.sh` scripts are present and runnable;
+   `validate-oef-layout.sh` / `archi-render.sh` / `arch-layout.sh` scripts are present and runnable;
    record the outcome for the footer. Missing tooling produces a degraded-mode
    note in the footer; the affected verification is reported as "not run" with
    the exact blocker rather than silently skipped. Then follow the skill
@@ -64,7 +58,11 @@ When invoked, run the architecture-design skill and present results:
    [archi-render.sh](../skills/architecture-design/references/scripts/archi-render.sh)
    after the source-geometry gate. Archi is a weak dependency with no fallback:
    if Archi, `DISPLAY`, or another script prerequisite is missing, report
-   visual render inspection as not run with the exact blocker.
+   visual render inspection as not run with the exact blocker. When PNGs are
+   produced, validate them with
+   [arch-layout.sh](../skills/architecture-design/references/scripts/arch-layout.sh)
+   `validate-png` per
+   [rendered-png-validation.md](../skills/architecture-design/references/procedures/rendered-png-validation.md).
 3. For build mode: produce an OEF XML model at the canonical path that
    embodies the reference's decision defaults — Core Framework palette
    unless the diagram kind requires an extension; every `<element>` and
@@ -76,9 +74,11 @@ When invoked, run the architecture-design skill and present results:
    to apply the backend-neutral geometry policy contracted in reference §6.4a:
    preserve architect-authored geometry; build the normalized layout request
    from `layout-backend-contract.md`; select the viewpoint grammar from
-   `layout-policies-by-viewpoint.md`; choose a backend or the
-   deterministic fallback in `layout-fallback.md`; route and gloss with
-   `routing-and-glossing.md`; then validate final OEF geometry before claiming
+   `layout-policies-by-viewpoint.md`; choose `arch-layout.sh layout-elk`,
+   `route-repair`, `global-polish`, or the deterministic fallback in
+   `layout-fallback.md`; route and gloss with
+   `routing-and-glossing.md`; validate request/result schemas from
+   `references/schemas/`; then validate final OEF geometry before claiming
    `diagram-readable` or `review-ready`. Materialize every
    generated view with Element node geometry (`elementRef`, `x`, `y`, `w`,
    `h`) and Relationship connections whose endpoints reference view-node

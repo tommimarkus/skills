@@ -25,6 +25,9 @@ Output contains any of the following? Stop; fix before delivering:
 - **Model children invalid or out of OEF sequence.** Fix `AD-17`; child order is `name -> documentation -> metadata -> elements -> relationships -> organizations -> propertyDefinitions -> views`, and model-root `<properties>` is invalid.
 - **Layer-ordering, overlap, undersize, view-budget, nested-plus-edge, off-grid, hierarchy, or canvas-origin layout defects.** Fix `AD-L1` through `AD-L10` before claiming `diagram-readable`.
 - **Connector passes through an unrelated node, or endpoint bendpoint sits inside the endpoint box.** Fix `AD-L11`; readiness cannot exceed `model-valid`.
+- **Layout request/result schema validation failed.** Fix the JSON contract or the OEF-to-layout handoff before materializing geometry.
+- **Route repair reports no route or invalid locked route.** Fix the route or disclose the readiness cap; do not silently move locked nodes.
+- **Rendered PNG validator reports blank, tiny, cropped, or over-tolerance drift.** Re-render or repair geometry before claiming visual quality.
 - **View-orphan, stacked connector, wide gap, fan-out crisscross, long bus route, duplicate visible story path, misleading boundary crossing, ambiguous nested ownership, or hidden Service Realization spine.** Fix `AD-L12` through `AD-L20`.
 - **Duplicate Service Realization drill-downs for the same realization story.** Fix `AD-B-14`; consolidate unless the process changes application, data, technology, security, deployment, UI-entry, or business semantics materially.
 - **Authority override contradicted by content.** Fix `AD-Q11`; either resolve the underlying `FORWARD-ONLY` / `LIFT-CANDIDATE` content (architect fills in or confirms the lift) or remove the `propid-authority` override until the content is genuinely backed.

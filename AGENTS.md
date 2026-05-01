@@ -33,6 +33,9 @@ rules change.
   lives in `skills/<skill>/agents/openai.yaml`.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
+- Use SDKMAN for Java version management. The architecture-design layout
+  runtime source lives under `tools/architecture-layout-java/` and targets
+  Java 21.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,

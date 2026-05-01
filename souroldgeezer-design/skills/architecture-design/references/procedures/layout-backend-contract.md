@@ -1,8 +1,10 @@
 # Layout backend contract
 
 Backend-neutral contract for architecture-design view geometry. This file
-defines what a geometry backend or fallback procedure consumes and returns; it
-does not require or implement a specific engine.
+defines what a geometry backend or fallback procedure consumes and returns. The
+packaged Java™ runtime validates this contract through Draft 2020-12 schemas at
+`references/schemas/layout-request.schema.json` and
+`references/schemas/layout-result.schema.json`.
 
 The skill builds this request after it has selected ArchiMate® elements,
 relationships, viewpoint, and curation policy. A backend may place nodes and
@@ -10,12 +12,14 @@ route edges, but it cannot change architecture semantics.
 
 ## Request fields
 
-`layoutRequest` contains:
+`layoutRequest` contains the fields encoded by
+`layout-request.schema.json`:
 
+- `schemaVersion`: contract version.
+- `requestId`: stable run/request identifier for traceability.
 - `archimateTarget`: notation version emitted by the skill, currently `3.2`.
-- `viewpoint`: exact OEF `viewpoint=` string.
-- `direction`: preferred flow, such as `top-down`, `left-right`, `timeline`,
-  `tile`, `hosting-stack`, or `tree`.
+- `mode`: `generated-layout`, `route-repair`, or `global-polish`.
+- `view`: exact OEF view identity, `viewpoint=`, direction, and quality target.
 - `preserveExistingGeometry`: whether prior architect geometry is authoritative.
 - `nodes`: visible view-node candidates.
 - `edges`: visible connection candidates.
@@ -24,7 +28,13 @@ route edges, but it cannot change architecture semantics.
 - `priorGeometry`: prior coordinates and bendpoints when available.
 - `semanticBands`: viewpoint/layer/aspect bands the backend should respect.
 - `constraints`: routing, obstacle, lane, and reflow limits.
-- `qualityTarget`: `model-valid`, `diagram-readable`, or `review-ready`.
+- `constraints`: routing, obstacle, lane, and reflow limits.
+
+Validate a request before backend execution:
+
+```bash
+references/scripts/arch-layout.sh validate-request --request <layout-request.json>
+```
 
 ## Node fields
 
@@ -119,11 +129,13 @@ and `AD-L*` checks.
 
 ## Backend result fields
 
-`layoutResult` returns:
+`layoutResult` returns the fields encoded by
+`layout-result.schema.json`:
 
-- `nodes`: node id plus `x`, `y`, `width`, and `height`.
+- `backend`: backend name, version, mode, and deterministic flag.
+- `nodeGeometry`: node id plus `x`, `y`, `w`, and `h`.
 - `edges`: connection id plus `sourcePort`, `targetPort`, `bendpoints`, and
-  optional route diagnostics.
+  route status.
 - `hiddenEdges`: relationship ids omitted or hidden from the view and the
   policy reason.
 - `metrics`: node overlaps, connector-node intersections, crossing count,
@@ -131,6 +143,12 @@ and `AD-L*` checks.
   generated nodes.
 - `warnings`: backend limits, degraded fallback decisions, or constraints the
   backend could not satisfy.
+
+Validate a result before OEF materialization:
+
+```bash
+references/scripts/arch-layout.sh validate-result --result <layout-result.json>
+```
 
 ## Validation handoff
 

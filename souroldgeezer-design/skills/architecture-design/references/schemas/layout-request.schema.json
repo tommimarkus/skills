@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://souroldgeezer.dev/schemas/architecture/layout-request.schema.json",
+  "title": "Architecture layout request",
+  "type": "object",
+  "required": ["schemaVersion", "requestId", "archimateTarget", "mode", "view", "nodes", "edges", "constraints"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "requestId": { "type": "string", "minLength": 1 },
+    "archimateTarget": { "const": "3.2" },
+    "mode": { "enum": ["generated-layout", "route-repair", "global-polish"] },
+    "view": {
+      "type": "object",
+      "required": ["id", "name", "viewpoint", "direction", "qualityTarget"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "viewpoint": { "type": "string", "minLength": 1 },
+        "direction": { "enum": ["DOWN", "RIGHT", "LEFT", "UP"] },
+        "qualityTarget": { "enum": ["diagram-readable", "review-ready"] }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "width", "height"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "x": { "type": "integer" },
+          "y": { "type": "integer" },
+          "locked": { "type": "boolean" },
+          "generated": { "type": "boolean" },
+          "inferred": { "type": "boolean" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source", "target"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "visible": { "type": "boolean" },
+          "priority": { "type": "integer" },
+          "routeLocked": { "type": "boolean" }
+        }
+      }
+    },
+    "constraints": { "type": "object" }
+  }
+}

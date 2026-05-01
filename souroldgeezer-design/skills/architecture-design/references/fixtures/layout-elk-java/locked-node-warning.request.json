@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "elk-locked",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": { "id": "v-elk-locked", "name": "Locked", "viewpoint": "Service Realization", "direction": "DOWN", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "locked", "width": 150, "height": 70, "x": 300, "y": 300, "locked": true },
+    { "id": "free", "width": 150, "height": 70, "generated": true }
+  ],
+  "edges": [{ "id": "e1", "source": "free", "target": "locked", "visible": true }],
+  "constraints": { "preserveExistingGeometry": true, "orthogonalRouting": true }
+}

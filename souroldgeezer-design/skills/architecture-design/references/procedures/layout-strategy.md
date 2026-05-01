@@ -24,8 +24,9 @@ visual/semantic quality, not on which backend produced the geometry.
 ## Non-goals
 
 - Do not make one concrete graph-layout algorithm the theory of the skill.
-- Do not add ELK, libavoid, Graphviz, maxGraph, yFiles, PCB routers, or other
-  layout/runtime dependencies in this procedure.
+- Do not make the bundled Java™ generated-layout path, route-repair path, global-polish path,
+  libavoid, Graphviz, maxGraph, yFiles, PCB routers, or any other runtime
+  dependency a semantic authority.
 - Do not weaken the materialized-view contract when a backend is unavailable.
 - Do not use a geometry backend to invent ArchiMate model elements, remove
   relationships, change relationship direction, or reinterpret viewpoint
@@ -81,10 +82,14 @@ without the final validation handoff.
 3. **Choose the viewpoint-specific layout policy.** Dispatch by the OEF
    `viewpoint=` value and apply the visual grammar in
    [layout-policies-by-viewpoint.md](layout-policies-by-viewpoint.md).
-4. **Select a layout backend or fallback.** Prefer a mature layered,
-   orthogonal, tile, timeline, hosting-stack, cluster, swimlane, or tree backend
-   when one is available and matches the viewpoint policy. Otherwise use
-   [layout-fallback.md](layout-fallback.md).
+4. **Select a layout backend or fallback.** For generated Service Realization,
+   Application Cooperation, and Technology Usage requests, the packaged Java™
+   runtime exposes `arch-layout.sh layout-elk` as the shipped layered/orthogonal
+   path. For architect-edited diagrams, prefer `route-repair`; when route-only
+   repair cannot clean the view without damaging the mental map, use
+   `global-polish`. Capability Map, Migration, Motivation, and Business Process
+   Cooperation still require viewpoint-specific policy or
+   [layout-fallback.md](layout-fallback.md) rather than generic layered layout.
 5. **Assign ports and route edges.** Apply
    [routing-and-glossing.md](routing-and-glossing.md): assign candidate ports,
    reserve lanes for high-priority edges, route high-priority paths first, and
@@ -102,8 +107,8 @@ without the final validation handoff.
 
 | Situation | Preferred policy |
 |---|---|
-| New generated Service Realization view | Layered/orthogonal backend when available; fallback deterministic layered layout otherwise |
-| Existing architect-edited view | Preserve node geometry; route-only repair and gloss generated or invalid routes |
+| New generated Service Realization view | Packaged Java™ `layout-elk` layered/orthogonal backend when appropriate; fallback deterministic layered layout otherwise |
+| Existing architect-edited view | Preserve node geometry; packaged Java™ `route-repair` for invalid generated/stale routes; gloss generated or invalid routes |
 | Capability Map | Capability tile/decomposition map; never generic layered layout as the primary policy |
 | Application Cooperation | Clustered dependency/integration layout; hub-and-spoke only when a hub criterion is met |
 | Service Realization | Layered realization spine with the main Realization chain visible |
@@ -111,12 +116,12 @@ without the final validation handoff.
 | Migration | Plateau/timeline layout; do not infer migration from ordinary dev/stage/prod deployment |
 | Motivation | Influence/traceability tree |
 | Business Process Cooperation | Flow, swimlane, and handoff layout |
+| Existing view needing bounded local movement | Packaged Java™ `global-polish` only when route-only repair is insufficient and locked geometry remains fixed |
 | Small generic directed view with no better policy | Fallback deterministic layered layout |
 
-Potential future backends: ELK/elkjs for layered and port-aware layout,
-libavoid-style routers for object-avoiding connector repair, Graphviz `dot` for
-simple directed fallback, and maxGraph for interactive-editor integration. None
-are mandatory for this skill version.
+Future backlog remains explicit: interactive layout debugger export,
+relationship-matrix source provenance, mainstream tool compatibility execution,
+and multi-evidence recovery are not shipped by this runtime.
 
 ## Fallback
 

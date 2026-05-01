@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "route-container",
+  "archimateTarget": "3.2",
+  "mode": "route-repair",
+  "view": { "id": "v-container", "name": "Container", "viewpoint": "Technology Usage", "direction": "DOWN", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "container", "width": 300, "height": 200, "x": 160, "y": 40 },
+    { "id": "a", "width": 100, "height": 60, "x": 40, "y": 300 },
+    { "id": "b", "width": 100, "height": 60, "x": 520, "y": 300 }
+  ],
+  "edges": [{ "id": "around-container", "source": "a", "target": "b", "visible": true }],
+  "constraints": { "orthogonalRouting": true, "avoidNodeBodies": true }
+}

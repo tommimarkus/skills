@@ -122,6 +122,24 @@ Require reading current code / IaC / workflow state against the diagram. Procedu
 | `AD-DR-11` | drift §Process, `architecture.md` §7.4 | Model process has no code — Business Process / Event / Interaction in `docs/architecture/**/*.oef.xml` has no matching Durable Functions orchestrator or Logic Apps workflow (either by `LIFT-CANDIDATE source=` mismatch or by `<name>` mismatch when no marker is present) and no `planned` / `external` property |
 | `AD-DR-12` | drift §Process, `architecture.md` §7.4 | Code workflow has no model — Durable Functions orchestrator or Logic Apps workflow exists in the repo but no Business Process in any OEF file references it (directly or via `LIFT-CANDIDATE source=`) |
 
+## Layout runtime diagnostics — `LAYOUT_*`
+
+Emitted by the packaged Java layout runtime before OEF materialization. These
+are not ArchiMate® smell codes; map them to `AD-L*` / readiness findings when
+the result is serialized into OEF.
+
+| Code | Source | Description |
+|---|---|---|
+| `LAYOUT_GEOMETRY_MISSING` | layout result validation | A visible node or route lacks required geometry |
+| `LAYOUT_DUPLICATE_ID` | layout result validation | Runtime result contains duplicate node or edge ids |
+| `LAYOUT_EDGE_ENDPOINT_MISSING` | layout result validation | Runtime edge endpoint does not resolve to a visible node |
+| `LAYOUT_CONNECTOR_NODE_INTERSECTION` | route metrics / repair | Runtime route crosses an unrelated node body; maps to `AD-L11` if serialized |
+| `LAYOUT_LOCKED_NODE_MOVED` | metrics validation | Locked node moved; cap the view unless the user explicitly requested global reflow |
+| `LAYOUT_LOCKED_ROUTE_INVALID` | route repair | Locked bendpoints violate hard route constraints and were not silently repaired |
+| `LAYOUT_NO_ROUTE` | route repair | No deterministic orthogonal route was possible inside configured limits |
+| `LAYOUT_UNSUPPORTED_VIEWPOINT` | generated layout backend | Viewpoint was not forced through generic layered layout; use viewpoint policy or fallback |
+| `LAYOUT_GLOBAL_POLISH_NO_IMPROVEMENT` | global polish | No bounded mental-map preserving candidate improved the score |
+
 ## Severity defaults
 
 | Code range | Default severity | Rationale |

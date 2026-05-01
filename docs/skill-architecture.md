@@ -117,6 +117,11 @@ Deterministic machinery is for work that should not depend on model judgment:
 - `fixtures/**` for stable inputs that exercise behavior and regressions.
 - `templates/**` for output shapes the agent should fill rather than invent.
 - `assets/**` for redistributable files needed by the skill.
+- `references/bin/**` for redistributable deterministic runtime artifacts when
+  source and build tooling stay in a repo-level `tools/**` project. Package
+  scripts must rebuild the artifact from source, keep development-only source
+  and build outputs out of the shipped skill runtime, and print enough evidence
+  for reviewers to verify what was included.
 
 Prefer machinery when the check is structural, repetitive, brittle under prose,
 or important enough to rerun after every change. Prose should explain why a

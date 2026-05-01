@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including change classification and professional-readiness review of OEF views; capability maps, application cooperation, service realization, technology usage, migration, motivation, or business process cooperation views; architecture drift checks against code, IaC, workflows, or process models; or reverse lookup from a code symbol, UI file, API endpoint, or workflow to its owning Business Process.
+description: Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, route repair, global polish, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes.
 ---
 
 # Architecture Design
@@ -43,6 +43,7 @@ relationship id and reason in the view documentation or final summary.
 - **Business, Motivation, and Strategy layer extraction from source code or IaC** → reference §7.2; these layers are forward-only by design. Extract emits typed stubs marked `FORWARD-ONLY — architect fills in`; the architect is responsible for populating them.
 - **Physical Layer extraction** → not attempted in v1; forward-only.
 - **Runtime observation of architecture** (live topology from deployed resources) → static signals only — project files, IaC, workflow definitions. Drift against a live Azure subscription is not in scope.
+- **Interactive layout debugging, full relationship-matrix source provenance, mainstream tool compatibility proof, and multi-evidence recovery** → deferred backlog. Do not present debugger export, Appendix B matrix execution, mainstream-tool compatibility evidence, or multi-evidence recovery as shipped behaviour.
 - **Governance, approval, or review-board workflow** → the skill produces and checks diagrams; it does not run the architectural governance process around them.
 - **Project documentation packaging** → out of scope. Consuming projects decide where generated artefacts live, which README rows or galleries exist, which PNG/SVG renders are published, and which CI jobs validate those project packages. When the user explicitly requests renders, this skill can produce PNG deployment artefacts from OEF via the bundled Archi script, but it does not design the consuming project's publication package unless asked.
 - **Publication readiness of a repo-specific docs package** → out of scope unless the user explicitly asks for that project packaging review. The skill's default success criterion is OEF/model/view quality, not render-gallery completeness.
@@ -73,7 +74,7 @@ Four modes — deliberately distinct from the 3-mode symmetry of `responsive-des
 
 Review has three sub-behaviours, dispatched on inputs:
 - **Artefact review** — a `.oef.xml` file alone → ArchiMate® 3.2 well-formedness + professional-readiness pass + `AD-*` / `AD-Q*` smell catalog per reference §8.
-- **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed and an X display is available. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
+- **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed and an X display is available. When PNGs are produced, validate blank/tiny/cropped/baseline-drift signals with `references/scripts/arch-layout.sh validate-png` per `references/procedures/rendered-png-validation.md`. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
 - **Drift detection** — a `.oef.xml` file + the current code/IaC at the canonical locations (§ project assimilation) → delta report (elements added / removed / changed since the model was last aligned).
 
 ### Lookup mode
@@ -88,43 +89,30 @@ Review has three sub-behaviours, dispatched on inputs:
 
 Use this loop when the user asks to polish an existing canonical OEF until the
 rendered diagrams are visually pristine, or otherwise explicitly asks to
-iterate across all modes for render quality. This is a mode-composition
-workflow, not a fifth mode: each pass keeps the four mode responsibilities
-separate and records which mode supplied each decision.
+iterate across all modes for render quality. This is mode composition, not a
+fifth mode.
 
 **Sequence per iteration:**
 
 `Review -> Extract -> Build -> Lookup -> render/compare`.
 
-1. **Review** the current OEF first. Run the artefact review path, including
-   [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh),
-   then render every view when a renderer is available. Record `AD-Q*`,
-   `AD-L*`, `AD-B-*`, and visual render findings by view id.
-2. **Extract** only for source truth. Re-run the discovery pass and applicable
-   lifting / drift procedures so layout patches do not fight current code,
-   IaC, workflow, or process-model facts. Do not use Extract to invent
-   forward-only Business / Motivation / Strategy content.
-3. **Build** the minimal layout/model patch. Apply the layout strategy and
-   professional-readiness procedure to the affected views, preserving existing
-   identifiers and architect-authored placements unless the Review findings
-   prove they are the defect.
-4. **Lookup** only for bounded questions and coverage scans: notation
-   validity, relationship choices, diagram-kind coverage, and reverse lookup
-   from a symbol or workflow to the owning Business Process. Lookup does not
-   mutate the model.
-5. **Render and compare all artifacts.** Re-run the source-geometry gate,
-   regenerate every requested PNG render with
-   [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh),
-   inspect every output rather than sampling, and compare source plus render
-   snapshots against the committed baseline. `archi-render.sh` requires Archi
-   and an X display; this is a weak dependency with no fallback support. If
-   Archi, `DISPLAY`, or another script prerequisite is missing, report render
-   inspection as not run with the exact blocker and continue only with static
-   source-geometry evidence. If the user explicitly asked for rendered
-   diagrams, or the consuming project already commits render snapshots/galleries
-   for the architecture package, updating those project render artifacts is in
-   scope. Otherwise, report render commands and output locations without
-   committing project packaging changes.
+1. **Review** the current OEF first: run artefact review,
+   `validate-oef-layout.sh`, and render all views when available; record
+   `AD-Q*`, `AD-L*`, `AD-B-*`, and render findings by view id.
+2. **Extract** only for source truth: rerun discovery plus applicable lifting /
+   drift procedures, and do not invent forward-only content.
+3. **Build** the minimal layout/model patch using the layout strategy and
+   professional-readiness procedure, preserving identifiers and architect
+   placements unless Review proves they are defective.
+4. **Lookup** only for bounded notation, relationship, coverage, or reverse
+   lookup questions; Lookup does not mutate the model.
+5. **Render and compare all artifacts:** rerun the source-geometry gate,
+   regenerate every requested PNG with `archi-render.sh`, validate PNGs with
+   `arch-layout.sh validate-png`, inspect all outputs, and compare source plus
+   render snapshots against the committed baseline. Missing Archi, `DISPLAY`,
+   or script prerequisites are disclosed exactly; project render artifacts are
+   updated only when the user asked or the project already commits the
+   architecture render package.
 
 **Stop condition:** stop only when the source-geometry gate passes, every
 rendered view passes visual inspection, no unresolved blocker/warn `AD-L*`,
@@ -147,17 +135,21 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/seed-views.md` | Extract outputs with forward-only Strategy, Motivation, or Business Service stubs | Extract step 3/4 → emit FORWARD-ONLY Capability Map and Motivation seed views so architect-owned stubs are visible in the diagram canvas, not only in raw `<elements>` |
 | `references/procedures/drift-detection.md` | Any diagram + code pair at canonical paths | Review → drift sub-behaviour (including process drift `AD-DR-11` / `AD-DR-12`) |
 | `references/procedures/layout-strategy.md` | Any view being built or extracted | Build / Extract → backend-neutral OEF geometry policy: preserve architect geometry, build a normalized layout request, select viewpoint policy, choose backend or fallback, route/gloss, normalize generated/mixed views, and validate final OEF quality |
-| `references/procedures/layout-backend-contract.md` | Build / Extract when generated or repaired geometry is needed | Defines the backend-neutral request/result shape for nodes, edges, hierarchy, ports, locks, semantic bands, metrics, and validation handoff |
+| `references/procedures/layout-backend-contract.md` | Build / Extract when generated or repaired geometry is needed | Defines the backend-neutral JSON Schema request/result shape for nodes, edges, hierarchy, ports, locks, semantic bands, metrics, and validation handoff |
 | `references/procedures/layout-policies-by-viewpoint.md` | Build / Extract after diagram kind is known | Selects the visual grammar for Capability Map, Application Cooperation, Service Realization, Technology Usage, Migration, Motivation, and Business Process Cooperation views |
-| `references/procedures/routing-and-glossing.md` | Build / Extract routing and Review route repair | Defines port-aware orthogonal routing, route-only repair, lane reservation, rip-up/reroute, and post-route glossing |
+| `references/procedures/routing-and-glossing.md` | Build / Extract routing and Review route repair | Defines port-aware orthogonal routing, route-only repair, lane reservation, rip-up/reroute, post-route glossing, and the shipped `route-repair` command |
 | `references/procedures/layout-fallback.md` | Build / Extract when no suitable backend is available | Fallback deterministic layered layout for small generated directed views; preserves prior deterministic conventions without treating them as a universal layout engine |
 | `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
+| `references/procedures/rendered-png-validation.md` | Review render requests and explicit render-polish loops after PNGs exist | Java™ ImageIO-based `validate-png` checks for blank, tiny, cropped, excessive-whitespace, and baseline-drift failures; ImageMagick is optional diagnostics only |
 | `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, `AD-L11`, `AD-L13`, and `AD-L15`; complements render inspection because cropped PNG exports can hide off-origin source geometry and explicit connector lanes can hide stacked-arrow / fan-out defects |
 | `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → render every OEF view to PNG through Archi's headless CLI. Archi is a weak dependency with no fallback renderer; missing Archi / `DISPLAY` / tool prerequisites must be reported as "render inspection not run" |
+| `references/scripts/arch-layout.sh` | Build / Extract layout contract checks; Review route repair, global polish, generated layout smoke, or PNG validation | Launches the packaged Java™ 21 runtime from `references/bin/arch-layout.jar` for `--version`, `validate-request`, `validate-result`, `layout-elk`, `route-repair`, `global-polish`, and `validate-png` |
+| `references/scripts/package-arch-layout.sh` | Plugin release packaging or runtime refresh after Java™ source changes | Runs the Gradle test suite, builds the self-contained runtime JAR, copies it to `references/bin/arch-layout.jar`, and prints included/excluded package evidence |
+| `references/schemas/layout-request.schema.json` / `references/schemas/layout-result.schema.json` | Backend request/result validation | Draft 2020-12 JSON contracts for generated layout, route repair, and global polish handoff |
 
 Smells are namespaced `AD-*` (reference §8), with sub-namespaces `AD-L*` for layout, `AD-B-*` for process-flow artefacts (§9.7 / §9.3), and `AD-Q*` for professional OEF/view quality. Use [`references/smell-catalog.md`](references/smell-catalog.md) as the compact code-to-reference index when emitting or interpreting findings. There are no framework-specific smell namespaces in v1 — architecture-design findings are notation-level, not stack-level.
 
-Regression fixtures live under `references/fixtures`. Read [`references/fixtures/README.md`](references/fixtures/README.md) before validating the full fixture corpus or fixture acceptance bar. Read `references/fixtures/render-quality-gate` only when changing the static layout gate, `AD-L*` source-geometry checks, or the negative cropped-render regression cases. Read `references/fixtures/layout-backend-contract` only when changing the backend-neutral layout request/result contract, locked-geometry preservation, or route-only repair examples.
+Regression fixtures live under `references/fixtures`. Read [`references/fixtures/README.md`](references/fixtures/README.md) before validating the corpus or acceptance bar. Read `references/fixtures/render-quality-gate` for static `AD-L*` gate changes; `references/fixtures/layout-backend-contract`, `references/fixtures/layout-contract`, or `references/fixtures/layout-elk-java` for schema/generated-layout contract changes; `references/fixtures/route-repair` for route-only repair changes; `references/fixtures/global-polish` for bounded movement changes; and `references/fixtures/rendered-png` for `validate-png` changes.
 
 Adding a new input source later (Terraform, Azure Pipelines YAML, ARM templates, Kubernetes manifests) means adding a new procedure file, not an extension.
 
@@ -192,7 +184,10 @@ produce PNGs:
    prerequisite is missing, disclose the exact failure and keep visual render
    inspection at `not run`.
 4. If rendering succeeds, inspect every emitted PNG before claiming visual
-   quality; do not sample views.
+   quality; do not sample views. Run `references/scripts/arch-layout.sh
+   validate-png --image <rendered.png> --result <result.json>` for invariant
+   checks, and add `--baseline <prior.png> --tolerance <ratio>` when a previous
+   render exists and the user requested comparison.
 5. Classify changed PNGs, README rows, galleries, or provenance text as
    `documentation/render inventory change`. Do not mark a render-only refresh as
    a semantic model change unless `<elements>` or `<relationships>` changed.

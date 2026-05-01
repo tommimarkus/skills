@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "elk-application-cooperation",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": { "id": "v-elk-app", "name": "Application Cooperation", "viewpoint": "Application Cooperation", "direction": "RIGHT", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "frontend", "width": 150, "height": 70, "generated": true },
+    { "id": "api", "width": 150, "height": 70, "generated": true },
+    { "id": "worker", "width": 150, "height": 70, "generated": true }
+  ],
+  "edges": [
+    { "id": "e1", "source": "frontend", "target": "api", "visible": true },
+    { "id": "e2", "source": "api", "target": "worker", "visible": true }
+  ],
+  "constraints": { "orthogonalRouting": true, "avoidNodeBodies": true }
+}

@@ -6,3 +6,5 @@ __pycache__/
 .codex/rules/default.rules
 .codex/config.toml
 .mcp.json
+tools/architecture-layout-java/.gradle/
+tools/architecture-layout-java/build/

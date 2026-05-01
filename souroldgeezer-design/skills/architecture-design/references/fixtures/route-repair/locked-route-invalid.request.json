@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "route-locked-invalid",
+  "archimateTarget": "3.2",
+  "mode": "route-repair",
+  "view": { "id": "v-locked-invalid", "name": "Locked Invalid", "viewpoint": "Service Realization", "direction": "RIGHT", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "a", "width": 100, "height": 60, "x": 40, "y": 80 },
+    { "id": "obstacle", "width": 100, "height": 100, "x": 220, "y": 60 },
+    { "id": "b", "width": 100, "height": 60, "x": 420, "y": 80 }
+  ],
+  "edges": [{ "id": "locked", "source": "a", "target": "b", "visible": true, "routeLocked": true, "existingRoute": [{ "x": 180, "y": 110 }, { "x": 300, "y": 110 }] }],
+  "constraints": { "orthogonalRouting": true, "avoidNodeBodies": true }
+}
