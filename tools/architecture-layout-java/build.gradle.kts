@@ -38,6 +38,8 @@ tasks.test {
 tasks.register<Jar>("runtimeJar") {
     archiveFileName.set("arch-layout.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     manifest {
         attributes["Main-Class"] = application.mainClass.get()
