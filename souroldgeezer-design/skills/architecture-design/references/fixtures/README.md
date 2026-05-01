@@ -85,6 +85,8 @@ without requiring Archi:
 Runtime warning fixtures and tests assert machine-readable geometry evidence:
 connector-node warnings name the edge, intersected node, route segment, node
 bounds, and relationship; overlap warnings carry both node ids and rectangles;
+containment warnings distinguish expected parent/child containment from
+child-outside-parent defects and container-boundary connector crossings;
 locked-node warnings carry requested and produced coordinates.
 
 ImageMagick may be useful when manually creating or inspecting PNG fixtures,

@@ -133,8 +133,10 @@ the result is serialized into OEF.
 | `LAYOUT_GEOMETRY_MISSING` | layout result validation | A visible node or route lacks required geometry |
 | `LAYOUT_DUPLICATE_ID` | layout result validation | Runtime result contains duplicate node or edge ids |
 | `LAYOUT_EDGE_ENDPOINT_MISSING` | layout result validation | Runtime edge endpoint does not resolve to a visible node |
-| `LAYOUT_NODE_OVERLAP` | route metrics / polish | Runtime node rectangles overlap; maps to `AD-L2` if serialized |
+| `LAYOUT_NODE_OVERLAP` | route metrics / polish | Runtime same-parent or unrelated node rectangles overlap; maps to `AD-L2` if serialized. Parent/child containment is reported separately and is not a generic overlap defect |
+| `LAYOUT_CHILD_OUTSIDE_PARENT_BOUNDS` | route metrics / polish | Nested child rectangle extends outside its parent container; maps to `AD-L2` / `AD-L9` depending on the view semantics |
 | `LAYOUT_CONNECTOR_NODE_INTERSECTION` | route metrics / repair | Runtime route crosses an unrelated node body; maps to `AD-L11` if serialized |
+| `LAYOUT_CONNECTOR_CONTAINER_BOUNDARY_CROSSING` | route metrics / repair | Runtime route crosses an ancestor or descendant container boundary; inspect whether the viewpoint expects that boundary crossing before mapping to `AD-L11` |
 | `LAYOUT_LOCKED_NODE_MOVED` | metrics validation | Locked node moved; cap the view unless the user explicitly requested global reflow |
 | `LAYOUT_LOCKED_ROUTE_INVALID` | route repair | Locked bendpoints violate hard route constraints and were not silently repaired |
 | `LAYOUT_NO_ROUTE` | route repair | No deterministic orthogonal route was possible inside configured limits |

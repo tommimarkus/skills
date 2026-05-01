@@ -17,9 +17,10 @@ import java.util.Optional;
 public final class LayoutMetricsCalculator {
     public LayoutMetrics compute(JsonNode request, JsonNode result) {
         Map<String, Rectangle> nodes = nodeGeometry(result);
-        int overlaps = countOverlaps(nodes);
+        ParentIndex parents = ParentIndex.from(request);
+        OverlapStats overlaps = classifyOverlaps(nodes, parents);
         List<EdgeRoute> routes = edgeRoutes(result);
-        int connectorNodeIntersections = countConnectorNodeIntersections(nodes, routes);
+        ConnectorStats connectorStats = classifyConnectorIntersections(nodes, routes, parents);
         int crossings = countCrossings(routes);
         int maxBends = 0;
         int totalBends = 0;
@@ -32,8 +33,13 @@ public final class LayoutMetricsCalculator {
         int canvasHeight = nodes.values().stream().mapToInt(Rectangle::bottom).max().orElse(0);
         Displacement displacement = displacement(request, nodes);
         return new LayoutMetrics(
-                overlaps,
-                connectorNodeIntersections,
+                overlaps.defects(),
+                overlaps.sameParent(),
+                overlaps.parentChildContainments(),
+                overlaps.childOutsideParentBounds(),
+                connectorStats.unrelatedIntersections(),
+                connectorStats.unrelatedIntersections(),
+                connectorStats.containerBoundaryCrossings(),
                 crossings,
                 maxBends,
                 routes.isEmpty() ? 0.0 : (double) totalBends / routes.size(),
@@ -46,7 +52,12 @@ public final class LayoutMetricsCalculator {
     public ObjectNode toJson(LayoutMetrics metrics) {
         ObjectNode node = JsonFiles.MAPPER.createObjectNode();
         node.put("nodeOverlaps", metrics.nodeOverlaps());
+        node.put("sameParentNodeOverlaps", metrics.sameParentNodeOverlaps());
+        node.put("parentChildContainments", metrics.parentChildContainments());
+        node.put("childOutsideParentBounds", metrics.childOutsideParentBounds());
         node.put("connectorNodeIntersections", metrics.connectorNodeIntersections());
+        node.put("connectorUnrelatedNodeIntersections", metrics.connectorUnrelatedNodeIntersections());
+        node.put("connectorContainerBoundaryCrossings", metrics.connectorContainerBoundaryCrossings());
         node.put("connectorCrossings", metrics.connectorCrossings());
         node.put("maxBends", metrics.maxBends());
         node.put("averageBends", metrics.averageBends());
@@ -99,25 +110,27 @@ public final class LayoutMetricsCalculator {
         };
     }
 
-    private static int countOverlaps(Map<String, Rectangle> nodes) {
-        return nodeOverlaps(nodes).size();
-    }
-
-    private static int countConnectorNodeIntersections(Map<String, Rectangle> nodes, List<EdgeRoute> routes) {
-        int intersections = 0;
+    private static ConnectorStats classifyConnectorIntersections(Map<String, Rectangle> nodes, List<EdgeRoute> routes, ParentIndex parents) {
+        int unrelatedIntersections = 0;
+        int containerBoundaryCrossings = 0;
         for (EdgeRoute edgeRoute : routes) {
             for (Segment segment : edgeRoute.route().segments()) {
                 for (Map.Entry<String, Rectangle> node : nodes.entrySet()) {
-                    if (node.getKey().equals(edgeRoute.source()) || node.getKey().equals(edgeRoute.target())) {
+                    String relationship = parents.relationshipToEndpoint(edgeRoute.source(), edgeRoute.target(), node.getKey());
+                    if ("source".equals(relationship) || "target".equals(relationship)) {
                         continue;
                     }
                     if (segment.intersects(node.getValue())) {
-                        intersections++;
+                        if ("ancestor".equals(relationship) || "descendant".equals(relationship)) {
+                            containerBoundaryCrossings++;
+                        } else {
+                            unrelatedIntersections++;
+                        }
                     }
                 }
             }
         }
-        return intersections;
+        return new ConnectorStats(unrelatedIntersections, containerBoundaryCrossings);
     }
 
     private static int countCrossings(List<EdgeRoute> routes) {
@@ -179,12 +192,23 @@ public final class LayoutMetricsCalculator {
         return bendpoints;
     }
 
-    public Optional<ConnectorNodeIntersection> firstConnectorNodeIntersection(JsonNode result) {
+    public Optional<ConnectorNodeIntersection> firstConnectorNodeIntersection(JsonNode request, JsonNode result) {
+        return firstConnectorIntersection(request, result, "unrelated");
+    }
+
+    public Optional<ConnectorNodeIntersection> firstConnectorContainerBoundaryCrossing(JsonNode request, JsonNode result) {
+        Optional<ConnectorNodeIntersection> ancestor = firstConnectorIntersection(request, result, "ancestor");
+        return ancestor.isPresent() ? ancestor : firstConnectorIntersection(request, result, "descendant");
+    }
+
+    private Optional<ConnectorNodeIntersection> firstConnectorIntersection(JsonNode request, JsonNode result, String wantedRelationship) {
         Map<String, Rectangle> nodes = nodeGeometry(result);
+        ParentIndex parents = ParentIndex.from(request);
         for (EdgeRoute edgeRoute : edgeRoutes(result)) {
             for (Segment segment : edgeRoute.route().segments()) {
                 for (Map.Entry<String, Rectangle> node : nodes.entrySet()) {
-                    if (!node.getKey().equals(edgeRoute.source()) && !node.getKey().equals(edgeRoute.target()) && segment.intersects(node.getValue())) {
+                    String relationship = parents.relationshipToEndpoint(edgeRoute.source(), edgeRoute.target(), node.getKey());
+                    if (wantedRelationship.equals(relationship) && segment.intersects(node.getValue())) {
                         return Optional.of(new ConnectorNodeIntersection(
                                 edgeRoute.id(),
                                 edgeRoute.source(),
@@ -192,7 +216,7 @@ public final class LayoutMetricsCalculator {
                                 node.getKey(),
                                 segment,
                                 node.getValue(),
-                                "unrelated"));
+                                relationship));
                     }
                 }
             }
@@ -202,6 +226,32 @@ public final class LayoutMetricsCalculator {
 
     public List<NodeOverlap> nodeOverlaps(JsonNode result) {
         return nodeOverlaps(nodeGeometry(result));
+    }
+
+    public List<NodeOverlap> nodeOverlaps(JsonNode request, JsonNode result) {
+        ParentIndex parents = ParentIndex.from(request);
+        return nodeOverlaps(nodeGeometry(result)).stream()
+                .filter(overlap -> !parents.isContainedPair(overlap.firstId(), overlap.secondId()))
+                .toList();
+    }
+
+    public List<ChildOutsideParentBounds> childOutsideParentBounds(JsonNode request, JsonNode result) {
+        Map<String, Rectangle> nodes = nodeGeometry(result);
+        ParentIndex parents = ParentIndex.from(request);
+        List<ChildOutsideParentBounds> bounds = new ArrayList<>();
+        for (NodeOverlap overlap : nodeOverlaps(nodes)) {
+            String parentId = parents.parentOfPair(overlap.firstId(), overlap.secondId());
+            if (parentId == null) {
+                continue;
+            }
+            String childId = parentId.equals(overlap.firstId()) ? overlap.secondId() : overlap.firstId();
+            Rectangle parent = nodes.get(parentId);
+            Rectangle child = nodes.get(childId);
+            if (!contains(parent, child)) {
+                bounds.add(new ChildOutsideParentBounds(parentId, parent, childId, child));
+            }
+        }
+        return bounds;
     }
 
     private static List<NodeOverlap> nodeOverlaps(Map<String, Rectangle> nodes) {
@@ -217,6 +267,38 @@ public final class LayoutMetricsCalculator {
             }
         }
         return overlaps;
+    }
+
+    private static OverlapStats classifyOverlaps(Map<String, Rectangle> nodes, ParentIndex parents) {
+        int sameParent = 0;
+        int parentChildContainments = 0;
+        int childOutsideParentBounds = 0;
+        int unrelated = 0;
+        for (NodeOverlap overlap : nodeOverlaps(nodes)) {
+            String parentId = parents.parentOfPair(overlap.firstId(), overlap.secondId());
+            if (parentId != null) {
+                String childId = parentId.equals(overlap.firstId()) ? overlap.secondId() : overlap.firstId();
+                Rectangle parent = nodes.get(parentId);
+                Rectangle child = nodes.get(childId);
+                if (contains(parent, child)) {
+                    parentChildContainments++;
+                } else {
+                    childOutsideParentBounds++;
+                }
+            } else if (parents.sameParent(overlap.firstId(), overlap.secondId())) {
+                sameParent++;
+            } else {
+                unrelated++;
+            }
+        }
+        return new OverlapStats(sameParent + unrelated, sameParent, parentChildContainments, childOutsideParentBounds);
+    }
+
+    private static boolean contains(Rectangle outer, Rectangle inner) {
+        return inner.x() >= outer.x()
+                && inner.y() >= outer.y()
+                && inner.right() <= outer.right()
+                && inner.bottom() <= outer.bottom();
     }
 
     public List<LockedNodeDisplacement> lockedNodeDisplacements(JsonNode request, JsonNode result) {
@@ -245,9 +327,81 @@ public final class LayoutMetricsCalculator {
     public record NodeOverlap(String firstId, Rectangle firstBounds, String secondId, Rectangle secondBounds) {
     }
 
+    public record ChildOutsideParentBounds(String parentId, Rectangle parentBounds, String childId, Rectangle childBounds) {
+    }
+
     public record LockedNodeDisplacement(String nodeId, Point requested, Point produced) {
     }
 
     private record Displacement(int locked, int movable) {
+    }
+
+    private record OverlapStats(
+            int defects,
+            int sameParent,
+            int parentChildContainments,
+            int childOutsideParentBounds) {
+    }
+
+    private record ConnectorStats(int unrelatedIntersections, int containerBoundaryCrossings) {
+    }
+
+    private record ParentIndex(Map<String, String> parents) {
+        static ParentIndex from(JsonNode request) {
+            Map<String, String> parents = new LinkedHashMap<>();
+            for (JsonNode node : request.path("nodes")) {
+                String id = node.path("id").asText("");
+                String parentId = node.path("parentId").asText("");
+                if (!id.isBlank() && !parentId.isBlank()) {
+                    parents.put(id, parentId);
+                }
+            }
+            return new ParentIndex(parents);
+        }
+
+        boolean isContainedPair(String first, String second) {
+            return parentOfPair(first, second) != null;
+        }
+
+        String parentOfPair(String first, String second) {
+            if (isAncestor(first, second)) {
+                return first;
+            }
+            if (isAncestor(second, first)) {
+                return second;
+            }
+            return null;
+        }
+
+        boolean sameParent(String first, String second) {
+            return parents.getOrDefault(first, "").equals(parents.getOrDefault(second, ""));
+        }
+
+        String relationshipToEndpoint(String source, String target, String node) {
+            if (source.equals(node)) {
+                return "source";
+            }
+            if (target.equals(node)) {
+                return "target";
+            }
+            if (isAncestor(node, source) || isAncestor(node, target)) {
+                return "ancestor";
+            }
+            if (isAncestor(source, node) || isAncestor(target, node)) {
+                return "descendant";
+            }
+            return "unrelated";
+        }
+
+        private boolean isAncestor(String possibleAncestor, String node) {
+            String current = parents.get(node);
+            while (current != null) {
+                if (possibleAncestor.equals(current)) {
+                    return true;
+                }
+                current = parents.get(current);
+            }
+            return false;
+        }
     }
 }

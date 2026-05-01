@@ -67,6 +67,8 @@
           "subjectIds": { "type": "array", "items": { "type": "string" } },
           "edgeId": { "type": "string" },
           "nodeId": { "type": "string" },
+          "parentId": { "type": "string" },
+          "childId": { "type": "string" },
           "nodeIds": { "type": "array", "items": { "type": "string" } },
           "relationship": { "type": "string" },
           "segment": {
@@ -85,12 +87,26 @@
               { "type": "array", "items": { "$ref": "#/$defs/rectangle" } }
             ]
           },
+          "parentBounds": { "$ref": "#/$defs/rectangle" },
+          "childBounds": { "$ref": "#/$defs/rectangle" },
           "requested": { "$ref": "#/$defs/point" },
           "produced": { "$ref": "#/$defs/point" }
         }
       }
     },
-    "metrics": { "type": "object" },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "nodeOverlaps": { "type": "integer" },
+        "sameParentNodeOverlaps": { "type": "integer" },
+        "parentChildContainments": { "type": "integer" },
+        "childOutsideParentBounds": { "type": "integer" },
+        "connectorNodeIntersections": { "type": "integer" },
+        "connectorUnrelatedNodeIntersections": { "type": "integer" },
+        "connectorContainerBoundaryCrossings": { "type": "integer" },
+        "connectorCrossings": { "type": "integer" }
+      }
+    },
     "validation": {
       "type": "object",
       "required": ["state"],

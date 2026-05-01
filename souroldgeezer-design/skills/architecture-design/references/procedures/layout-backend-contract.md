@@ -172,17 +172,27 @@ and `AD-L*` checks.
   route status.
 - `hiddenEdges`: relationship ids omitted or hidden from the view and the
   policy reason.
-- `metrics`: node overlaps, connector-node intersections, crossing count,
-  route count, max bends, average bends, moved locked nodes, and displaced
-  generated nodes.
+- `metrics`: node overlap defects, same-parent node overlaps, expected
+  parent/child containments, child-outside-parent containment defects,
+  unrelated connector-node intersections, connector-container boundary
+  crossings, crossing count, route count, max bends, average bends, moved
+  locked nodes, and displaced generated nodes.
 - `warnings`: backend limits, degraded fallback decisions, or constraints the
   backend could not satisfy. Geometry warnings carry stable machine-readable
   evidence, not only prose:
   - `LAYOUT_CONNECTOR_NODE_INTERSECTION` includes `edgeId`, intersected
     `nodeId`, `segment` (`x1`, `y1`, `x2`, `y2`), `nodeBounds`, and
     `relationship` (`unrelated` for blocking node-body crossings).
+  - `LAYOUT_CONNECTOR_CONTAINER_BOUNDARY_CROSSING` uses the same geometry
+    evidence with `relationship` set to `ancestor` or `descendant` so container
+    crossings are distinguishable from unrelated node-body defects.
   - `LAYOUT_NODE_OVERLAP` includes ordered `nodeIds` and matching
-    `nodeBounds` rectangles.
+    `nodeBounds` rectangles for same-parent or unrelated node overlap defects;
+    expected parent/child containment is reported under
+    `parentChildContainments`, not as a generic overlap.
+  - `LAYOUT_CHILD_OUTSIDE_PARENT_BOUNDS` includes `parentId`, `childId`,
+    `parentBounds`, and `childBounds` when a nested child crosses outside its
+    parent container.
   - locked-node movement/restoration warnings include `nodeId`, `requested`,
     and `produced` coordinates.
   Use this evidence to decide the OEF repair action: reroute the named edge
@@ -203,7 +213,9 @@ references/scripts/arch-layout.sh validate-result \
   --result <layout-result.json> \
   --strict \
   --max-node-overlaps 0 \
+  --max-child-outside-parent-bounds 0 \
   --max-connector-node-intersections 0 \
+  --max-connector-container-boundary-crossings 0 \
   --max-connector-crossings 0
 ```
 

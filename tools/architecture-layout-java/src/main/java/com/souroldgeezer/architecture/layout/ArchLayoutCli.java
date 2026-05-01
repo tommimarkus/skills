@@ -93,8 +93,12 @@ public final class ArchLayoutCli implements Callable<Integer> {
         boolean strict;
         @Option(names = "--max-node-overlaps", description = "Fail when metrics.nodeOverlaps exceeds this value.")
         int maxNodeOverlaps = -1;
+        @Option(names = "--max-child-outside-parent-bounds", description = "Fail when metrics.childOutsideParentBounds exceeds this value.")
+        int maxChildOutsideParentBounds = -1;
         @Option(names = "--max-connector-node-intersections", description = "Fail when metrics.connectorNodeIntersections exceeds this value.")
         int maxConnectorNodeIntersections = -1;
+        @Option(names = "--max-connector-container-boundary-crossings", description = "Fail when metrics.connectorContainerBoundaryCrossings exceeds this value.")
+        int maxConnectorContainerBoundaryCrossings = -1;
         @Option(names = "--max-connector-crossings", description = "Fail when metrics.connectorCrossings exceeds this value.")
         int maxConnectorCrossings = -1;
 
@@ -109,7 +113,9 @@ public final class ArchLayoutCli implements Callable<Integer> {
                     return 1;
                 }
                 if (!passesMetricThreshold(layoutResult, "nodeOverlaps", maxNodeOverlaps)
+                        || !passesMetricThreshold(layoutResult, "childOutsideParentBounds", maxChildOutsideParentBounds)
                         || !passesMetricThreshold(layoutResult, "connectorNodeIntersections", maxConnectorNodeIntersections)
+                        || !passesMetricThreshold(layoutResult, "connectorContainerBoundaryCrossings", maxConnectorContainerBoundaryCrossings)
                         || !passesMetricThreshold(layoutResult, "connectorCrossings", maxConnectorCrossings)) {
                     return 1;
                 }

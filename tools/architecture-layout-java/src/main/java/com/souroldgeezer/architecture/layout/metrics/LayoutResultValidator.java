@@ -31,7 +31,7 @@ public final class LayoutResultValidator {
                 warnings.add(WarningFactory.warning("LAYOUT_EDGE_ENDPOINT_MISSING", "error", "Edge endpoint does not resolve to a visible node.", List.of(id)));
             }
         }
-        metrics.firstConnectorNodeIntersection(result)
+        metrics.firstConnectorNodeIntersection(request, result)
                 .ifPresent(intersection -> {
                     ObjectNode warning = WarningFactory.warning(
                         "LAYOUT_CONNECTOR_NODE_INTERSECTION",
@@ -45,7 +45,21 @@ public final class LayoutResultValidator {
                     warning.put("relationship", intersection.relationship());
                     warnings.add(warning);
                 });
-        metrics.nodeOverlaps(result).forEach(overlap -> {
+        metrics.firstConnectorContainerBoundaryCrossing(request, result)
+                .ifPresent(intersection -> {
+                    ObjectNode warning = WarningFactory.warning(
+                        "LAYOUT_CONNECTOR_CONTAINER_BOUNDARY_CROSSING",
+                        "warning",
+                        "Route crosses a container boundary.",
+                        List.of(intersection.edgeId(), intersection.nodeId()));
+                    warning.put("edgeId", intersection.edgeId());
+                    warning.put("nodeId", intersection.nodeId());
+                    warning.set("segment", WarningFactory.segment(intersection.segment()));
+                    warning.set("nodeBounds", WarningFactory.rectangle(intersection.nodeBounds()));
+                    warning.put("relationship", intersection.relationship());
+                    warnings.add(warning);
+                });
+        metrics.nodeOverlaps(request, result).forEach(overlap -> {
             ObjectNode warning = WarningFactory.warning(
                     "LAYOUT_NODE_OVERLAP",
                     "warning",
@@ -57,6 +71,18 @@ public final class LayoutResultValidator {
             ArrayNode nodeBounds = warning.putArray("nodeBounds");
             nodeBounds.add(WarningFactory.rectangle(overlap.firstBounds()));
             nodeBounds.add(WarningFactory.rectangle(overlap.secondBounds()));
+            warnings.add(warning);
+        });
+        metrics.childOutsideParentBounds(request, result).forEach(containment -> {
+            ObjectNode warning = WarningFactory.warning(
+                    "LAYOUT_CHILD_OUTSIDE_PARENT_BOUNDS",
+                    "warning",
+                    "A nested child node extends outside its parent container.",
+                    List.of(containment.parentId(), containment.childId()));
+            warning.put("parentId", containment.parentId());
+            warning.put("childId", containment.childId());
+            warning.set("parentBounds", WarningFactory.rectangle(containment.parentBounds()));
+            warning.set("childBounds", WarningFactory.rectangle(containment.childBounds()));
             warnings.add(warning);
         });
         for (LayoutMetricsCalculator.LockedNodeDisplacement displacement : metrics.lockedNodeDisplacements(request, result)) {

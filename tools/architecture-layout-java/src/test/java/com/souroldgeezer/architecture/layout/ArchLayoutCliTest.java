@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.25.1"));
+        assertTrue(out.toString().contains("arch-layout 0.26.0"));
     }
 
     @Test
@@ -80,6 +80,23 @@ class ArchLayoutCliTest {
                         "--strict",
                         "--max-connector-node-intersections", "0"));
         assertTrue(err.toString().contains("connectorNodeIntersections=1 exceeds 0"));
+    }
+
+    @Test
+    void validateResultStrictCanGateOnContainmentDefectMetrics() throws Exception {
+        ObjectNode result = (ObjectNode) JsonFiles.read(fixture("layout-contract/valid-service-realization.result.json")).deepCopy();
+        ((ObjectNode) result.path("metrics")).put("childOutsideParentBounds", 1);
+        Path resultPath = tempDir.resolve("containment-warning.result.json");
+        JsonFiles.write(resultPath, result);
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        assertEquals(1, new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(err))
+                .execute(
+                        "validate-result",
+                        "--result", resultPath.toString(),
+                        "--strict",
+                        "--max-child-outside-parent-bounds", "0"));
+        assertTrue(err.toString().contains("childOutsideParentBounds=1 exceeds 0"));
     }
 
     @Test
@@ -158,6 +175,47 @@ class ArchLayoutCliTest {
     }
 
     @Test
+    void connectorCrossingParentContainerIsClassifiedAsBoundaryCrossing() throws Exception {
+        Path request = tempDir.resolve("container-crossing.request.json");
+        Path result = tempDir.resolve("container-crossing.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "container-boundary-crossing",
+                  "archimateTarget": "3.2",
+                  "mode": "route-repair",
+                  "view": {
+                    "id": "view",
+                    "name": "Container Boundary Crossing",
+                    "viewpoint": "Application Cooperation",
+                    "direction": "RIGHT",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "parent", "width": 200, "height": 160, "x": 40, "y": 40 },
+                    { "id": "child", "parentId": "parent", "width": 60, "height": 40, "x": 80, "y": 90 },
+                    { "id": "outside", "width": 80, "height": 60, "x": 360, "y": 100 }
+                  ],
+                  "edges": [
+                    { "id": "edge", "source": "child", "target": "outside" }
+                  ],
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("route-repair", "--request", request.toString(), "--result", result.toString()));
+
+        JsonNode layoutResult = JsonFiles.read(result);
+        assertEquals(0, layoutResult.path("metrics").path("connectorNodeIntersections").asInt(-1));
+        assertEquals(0, layoutResult.path("metrics").path("connectorUnrelatedNodeIntersections").asInt(-1));
+        assertEquals(1, layoutResult.path("metrics").path("connectorContainerBoundaryCrossings").asInt(-1));
+        JsonNode warning = warning(layoutResult, "LAYOUT_CONNECTOR_CONTAINER_BOUNDARY_CROSSING");
+        assertEquals("edge", warning.path("edgeId").asText());
+        assertEquals("parent", warning.path("nodeId").asText());
+        assertEquals("ancestor", warning.path("relationship").asText());
+    }
+
+    @Test
     void overlapWarningsCarryBothNodeIdsAndRectangles() throws Exception {
         Path request = tempDir.resolve("overlap.request.json");
         Path result = tempDir.resolve("overlap.result.json");
@@ -196,6 +254,79 @@ class ArchLayoutCliTest {
         assertEquals(70, warning.path("nodeBounds").get(1).path("y").asInt());
         assertEquals(100, warning.path("nodeBounds").get(1).path("w").asInt());
         assertEquals(60, warning.path("nodeBounds").get(1).path("h").asInt());
+    }
+
+    @Test
+    void parentChildContainmentIsReportedSeparatelyFromOverlapDefects() throws Exception {
+        Path request = tempDir.resolve("containment.request.json");
+        Path result = tempDir.resolve("containment.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "containment-metrics",
+                  "archimateTarget": "3.2",
+                  "mode": "route-repair",
+                  "view": {
+                    "id": "view",
+                    "name": "Containment Metrics",
+                    "viewpoint": "Application Cooperation",
+                    "direction": "RIGHT",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "parent", "width": 260, "height": 180, "x": 40, "y": 40 },
+                    { "id": "child", "parentId": "parent", "width": 80, "height": 60, "x": 80, "y": 90 }
+                  ],
+                  "edges": [],
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("route-repair", "--request", request.toString(), "--result", result.toString()));
+
+        JsonNode layoutResult = JsonFiles.read(result);
+        assertEquals(0, layoutResult.path("metrics").path("nodeOverlaps").asInt(-1));
+        assertEquals(0, layoutResult.path("metrics").path("sameParentNodeOverlaps").asInt(-1));
+        assertEquals(1, layoutResult.path("metrics").path("parentChildContainments").asInt(-1));
+        assertEquals(0, layoutResult.path("metrics").path("childOutsideParentBounds").asInt(-1));
+        assertFalse(layoutResult.path("warnings").toString().contains("LAYOUT_NODE_OVERLAP"));
+    }
+
+    @Test
+    void childOutsideParentBoundsIsReportedAsContainmentDefect() throws Exception {
+        Path request = tempDir.resolve("child-outside.request.json");
+        Path result = tempDir.resolve("child-outside.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "child-outside-parent",
+                  "archimateTarget": "3.2",
+                  "mode": "route-repair",
+                  "view": {
+                    "id": "view",
+                    "name": "Child Outside Parent",
+                    "viewpoint": "Application Cooperation",
+                    "direction": "RIGHT",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "parent", "width": 180, "height": 120, "x": 40, "y": 40 },
+                    { "id": "child", "parentId": "parent", "width": 100, "height": 80, "x": 160, "y": 110 }
+                  ],
+                  "edges": [],
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("route-repair", "--request", request.toString(), "--result", result.toString()));
+
+        JsonNode layoutResult = JsonFiles.read(result);
+        assertEquals(0, layoutResult.path("metrics").path("nodeOverlaps").asInt(-1));
+        assertEquals(0, layoutResult.path("metrics").path("parentChildContainments").asInt(-1));
+        assertEquals(1, layoutResult.path("metrics").path("childOutsideParentBounds").asInt(-1));
+        JsonNode warning = warning(layoutResult, "LAYOUT_CHILD_OUTSIDE_PARENT_BOUNDS");
+        assertEquals("parent", warning.path("parentId").asText());
+        assertEquals("child", warning.path("childId").asText());
     }
 
     @Test

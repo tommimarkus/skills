@@ -322,8 +322,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   generated-layout results for supported directed viewpoints,
   repairs stale or invalid routes while preserving locked node geometry,
   applies bounded global polish when route-only repair is insufficient,
-  emits machine-readable warning evidence for route intersections, overlaps,
-  and locked-node movement, materializes layout results back into OEF view
+  emits machine-readable warning evidence for route intersections, overlap
+  defects, parent/child containment boundaries, and locked-node movement,
+  materializes layout results back into OEF view
   geometry, and validates rendered PNG invariants. Source lives outside the shipped skill
   runtime under `tools/architecture-layout-java/`; release packaging uses
   [package-arch-layout.sh](souroldgeezer-design/skills/architecture-design/references/scripts/package-arch-layout.sh)
