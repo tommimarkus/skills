@@ -197,8 +197,10 @@ Manual skill-architecture checks:
 - Release hygiene: new plugin manifests, marketplace entry, README, CLAUDE,
   AGENTS if needed, subagent, wrapper, and Codex metadata land together.
 
-## Open Follow-Up
+## Implementation Status
 
-After this spec is approved, write an implementation plan that creates the new
-plugin and skill surfaces first, then migrates the internal GitHub workflow into
-the public core plus GitHub extension without changing repository behavior.
+Implemented on branch `issue-ops-public-skill` via the companion plan in
+[issue-ops-public-skill-implementation-plan.md](issue-ops-public-skill-implementation-plan.md).
+The shipped shape is the approved split: public `souroldgeezer-ops` plugin,
+tracker-agnostic `issue-ops` core, GitHub provider extension, and repo-local
+`github-issue-lifecycle` overlay.

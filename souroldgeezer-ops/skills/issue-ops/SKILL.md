@@ -50,6 +50,8 @@ tooling, issue identifier, or explicit user wording.
 - For GitHub repositories, issue URLs, or GitHub issue numbers, read
   [extensions/github.md](extensions/github.md) before resolving provider state
   or writing lifecycle comments.
+- For new provider extensions, follow the convention in
+  [extensions/README.md](extensions/README.md).
 - If no provider can be identified, ask one concise question naming the missing
   tracker or repository.
 - If a provider is identified but no matching extension exists, stop and report

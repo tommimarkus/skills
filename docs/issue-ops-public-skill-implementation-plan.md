@@ -1055,7 +1055,7 @@ git commit -m "fix: align issue ops validation"
 
 Expected: all validation commands pass after the fix commit.
 
-- [ ] **Step 8: Review final branch state**
+- [X] **Step 8: Review final branch state**
 
 Run:
 
@@ -1068,11 +1068,11 @@ Expected: clean branch with the design commit plus implementation commits.
 
 ## Self-Review Checklist
 
-- [ ] The new plugin is listed in `.claude-plugin/marketplace.json` and has both plugin manifests.
-- [ ] Manifest `name`, `version`, and `description` are synchronized across Claude, Codex, and marketplace surfaces.
-- [ ] `issue-ops` core does not include GitHub-specific mechanics beyond extension selection.
-- [ ] `extensions/github.md` owns GitHub state, tooling, lifecycle comments, integration strategies, and closure mechanics.
-- [ ] The internal `github-issue-lifecycle` skill is a repo overlay, not a second public workflow.
-- [ ] README, CLAUDE, and AGENTS reflect the new plugin and overlay relationship.
-- [ ] Codex `interface.defaultPrompt` has three entries.
-- [ ] Final validation commands all pass.
+- [X] The new plugin is listed in `.claude-plugin/marketplace.json` and has both plugin manifests.
+- [X] Manifest `name`, `version`, and `description` are synchronized across Claude, Codex, and marketplace surfaces.
+- [X] `issue-ops` core does not include GitHub-specific mechanics beyond extension selection.
+- [X] `extensions/github.md` owns GitHub state, tooling, lifecycle comments, integration strategies, and closure mechanics.
+- [X] The internal `github-issue-lifecycle` skill is a repo overlay, not a second public workflow.
+- [X] README, CLAUDE, and AGENTS reflect the new plugin and overlay relationship.
+- [X] Codex `interface.defaultPrompt` has three entries.
+- [X] Final validation commands all pass.
