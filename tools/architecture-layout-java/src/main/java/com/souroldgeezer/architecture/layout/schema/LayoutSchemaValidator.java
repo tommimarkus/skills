@@ -30,6 +30,12 @@ public final class LayoutSchemaValidator {
         return validateResult(result);
     }
 
+    public ValidationResult validateProvenance(JsonNode provenance) {
+        ValidationResult result = new ValidationResult();
+        validateAgainstSchema("layout-provenance.schema.json", provenance, result);
+        return result;
+    }
+
     public ValidationResult validateRequest(JsonNode request) {
         ValidationResult result = new ValidationResult();
         validateAgainstSchema("layout-request.schema.json", request, result);

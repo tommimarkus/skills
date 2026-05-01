@@ -107,6 +107,15 @@ without the final validation handoff.
 8. **Validate with `AD-L*` checks.** Run the source-geometry gate when a local
    OEF path exists. A backend result that fails `AD-L*` is not
    `diagram-readable`.
+9. **Emit layout provenance.** When the run emits or changes view geometry,
+   write a per-view provenance report with `arch-layout.sh layout-provenance`.
+   Feed it the selected request/result paths, materialized OEF path when one
+   exists, source-geometry gate outcome, PNG validation result when render ran,
+   and post-processing decisions such as `snap-10px` or
+   `preserve-oef-containment`. Use the generated `responseSummary`,
+   `readmeMarkdown`, and `oefDocumentation` strings as the canonical source for
+   final response, README row, or OEF `<documentation>` wording instead of
+   reconstructing provenance by hand.
 
 ## Layout decision record
 
@@ -124,6 +133,7 @@ per view before final delivery:
 | Result validation | `passed`, `failed`, or `not run` with reason |
 | OEF materialization | `materialized`, `not changed`, or `blocked` |
 | PNG validation | `not requested`, `validate-png passed`, `validate-png failed`, or `not run` with reason |
+| Provenance artifact | `layout-provenance emitted`, `not changed`, or `blocked` with reason |
 | Notes | Exact blocker, fallback reason, locked-geometry reason, or unsupported-viewpoint policy |
 
 This record distinguishes layout generation from render validation.
@@ -131,6 +141,14 @@ This record distinguishes layout generation from render validation.
 never evidence that `arch-layout.sh layout-elk`, `route-repair`, or
 `global-polish` generated OEF geometry, or that `materialize-oef` applied the
 result to the source OEF.
+
+The JSON provenance artifact at `layout-provenance.schema.json` carries the
+same distinction in machine-readable form. It records the selected geometry
+path (`layout-elk`, `route-repair`, `global-polish`, deterministic fallback,
+viewpoint policy, or preserved authored geometry), the backend/fallback that
+actually ran, materialization and render validation commands, source geometry
+and render gate outcomes, post-processing, and generated text snippets for the
+user response, README, or OEF documentation.
 
 ## Backend selection
 

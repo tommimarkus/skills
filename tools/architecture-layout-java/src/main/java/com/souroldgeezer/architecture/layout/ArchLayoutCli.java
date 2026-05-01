@@ -32,6 +32,7 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.RouteRepairCommand.class,
                 ArchLayoutCli.GlobalPolishCommand.class,
                 ArchLayoutCli.MaterializeOefCommand.class,
+                ArchLayoutCli.LayoutProvenanceCommand.class,
                 ArchLayoutCli.ValidatePngCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
@@ -284,6 +285,81 @@ public final class ArchLayoutCli implements Callable<Integer> {
                 stream.transferTo(System.err);
             }
             return process.waitFor();
+        }
+    }
+
+    @Command(name = "layout-provenance", description = "Write a per-view layout provenance report.")
+    static final class LayoutProvenanceCommand implements Callable<Integer> {
+        @Option(names = "--view", required = true)
+        String viewId;
+        @Option(names = "--layout-intent", required = true)
+        String layoutIntent;
+        @Option(names = "--selected-geometry-path", required = true)
+        String selectedGeometryPath;
+        @Option(names = "--request", required = true)
+        Path requestPath;
+        @Option(names = "--result")
+        Path resultPath;
+        @Option(names = "--materialized-oef")
+        Path materializedOefPath;
+        @Option(names = "--source-geometry-gate", defaultValue = "not-run")
+        String sourceGeometryGate;
+        @Option(names = "--png-result")
+        Path pngResultPath;
+        @Option(names = "--render-gate", defaultValue = "not-requested")
+        String renderGate;
+        @Option(names = "--snap-grid", defaultValue = "0")
+        int snapGrid;
+        @Option(names = "--preserve-oef-containment")
+        boolean preserveOefContainment;
+        @Option(names = "--post-processing")
+        java.util.List<String> postProcessing = new java.util.ArrayList<>();
+        @Option(names = "--out", required = true)
+        Path outPath;
+
+        @Override
+        public Integer call() throws IOException {
+            JsonNode request = JsonFiles.read(requestPath);
+            LayoutSchemaValidator validator = new LayoutSchemaValidator();
+            ValidationResult requestValidation = validator.validateRequest(request);
+            if (!requestValidation.ok()) {
+                requestValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutRequest: " + diagnostic));
+                return 1;
+            }
+            JsonNode result = null;
+            if (resultPath != null) {
+                result = JsonFiles.read(resultPath);
+                ValidationResult resultValidation = validator.validateResult(result);
+                if (!resultValidation.ok()) {
+                    resultValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutResult: " + diagnostic));
+                    return 1;
+                }
+            }
+            JsonNode pngResult = pngResultPath == null ? null : JsonFiles.read(pngResultPath);
+            ObjectNode report = new LayoutProvenanceReporter().report(new LayoutProvenanceReporter.Input(
+                    viewId,
+                    layoutIntent,
+                    selectedGeometryPath,
+                    requestPath,
+                    request,
+                    resultPath,
+                    result,
+                    materializedOefPath,
+                    sourceGeometryGate,
+                    pngResultPath,
+                    pngResult,
+                    renderGate,
+                    snapGrid,
+                    preserveOefContainment,
+                    postProcessing));
+            ValidationResult provenanceValidation = validator.validateProvenance(report);
+            if (!provenanceValidation.ok()) {
+                provenanceValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutProvenance: " + diagnostic));
+                return 1;
+            }
+            JsonFiles.write(outPath, report);
+            System.out.println("wrote layout provenance: " + outPath);
+            return 0;
         }
     }
 

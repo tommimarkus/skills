@@ -20,9 +20,9 @@ Self-check:
   Artifact quality:      model-valid | diagram-readable | review-ready  (worst-view minimum; model-level blockers: <none | comma-separated AD-* codes>)
   Runtime correspondence: <n>/<n> [runtime verified — or source-aligned, IaC verification required]
   Layout backend report:
-    | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | OEF materialization | PNG validation | Notes |
-    |---|---|---|---|---|---|---|---|---|
-    | view-application-cooperation | Application Cooperation | generated-layout-recreate | layout-elk | passed | passed | materialized | not requested | eligible generated view |
+    | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | OEF materialization | PNG validation | Provenance artifact | Notes |
+    |---|---|---|---|---|---|---|---|---|---|
+    | view-application-cooperation | Application Cooperation | generated-layout-recreate | layout-elk | passed | passed | materialized | not requested | layout-provenance emitted | eligible generated view |
 
 Deviations from defaults (if any): <list with reason>
 ```
@@ -47,9 +47,9 @@ Extraction summary:
   Artifact quality:       model-valid | diagram-readable | review-ready  (worst-view minimum; model-level blockers: <none | comma-separated AD-* codes>)
   Drift vs existing diagram: <added / removed / changed counts, or n/a if greenfield>
   Layout backend report:
-    | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | OEF materialization | PNG validation | Notes |
-    |---|---|---|---|---|---|---|---|---|
-    | view-technology-usage | Technology Usage | generated-layout-recreate | layout-elk | passed | passed | materialized | validate-png passed | eligible generated view; PNG validation followed render only |
+    | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | OEF materialization | PNG validation | Provenance artifact | Notes |
+    |---|---|---|---|---|---|---|---|---|---|
+    | view-technology-usage | Technology Usage | generated-layout-recreate | layout-elk | passed | passed | materialized | validate-png passed | layout-provenance emitted | eligible generated view; PNG validation followed render only |
 ```
 
 ### Review mode
@@ -85,7 +85,7 @@ Diagram kind: <reference §9 kind name — primary kind in scope this run>
 Diagram kinds present: <M> of 7 (<comma-separated canonical viewpoint names>)
 Diagram kinds missing: <comma-separated canonical viewpoint names, or "none">
 Layout intent: preserve-authored | route-repair-only | generated-layout-recreate | global-reflow
-Layout backend report: present <n>/<n> views; layout-elk used <n>; route-repair used <n>; global-polish used <n>; deterministic fallback used <n>; viewpoint-policy only <n>; preserved-authored <n>; unavailable/skipped <n>
+Layout backend report: present <n>/<n> views; layout-elk used <n>; route-repair used <n>; global-polish used <n>; deterministic fallback used <n>; viewpoint-policy only <n>; preserved-authored <n>; unavailable/skipped <n>; provenance emitted <n>/<n>
 Layout generation vs PNG validation: `layout-elk` / `route-repair` / `global-polish` generate or repair OEF geometry; `validate-png` validates rendered PNGs only
 Layers in scope: <comma-separated>
 Per-view readiness: <comma-separated `<view-id>=<readiness>:<authority>` triples, or "single-view artifact: see Artifact quality below">

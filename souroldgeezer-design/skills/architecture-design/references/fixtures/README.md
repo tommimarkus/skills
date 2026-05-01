@@ -80,6 +80,7 @@ without requiring Archi:
 ../scripts/arch-layout.sh materialize-oef --oef layout-elk-realistic/application-cooperation-compound-trust-boundaries.oef.xml --view id-view-realistic-application-cooperation --result /tmp/application-cooperation.realistic.result.json --out /tmp/application-cooperation.realistic.oef.xml --snap-grid 10 --run-source-gate
 ../scripts/arch-layout.sh materialize-oef --oef application-cooperation.oef.xml --view id-view-application-cooperation --result materialize-oef/layout-elk.result.json --out /tmp/application-cooperation.materialized.oef.xml --snap-grid 10 --run-source-gate
 ../scripts/arch-layout.sh validate-png --image rendered-png/valid-diagram.png --result /tmp/rendered-png-result.json
+../scripts/arch-layout.sh layout-provenance --view id-view-application-cooperation --layout-intent generated-layout-recreate --selected-geometry-path layout-elk --request layout-elk-java/service-realization.request.json --result /tmp/service-realization.layout-result.json --source-geometry-gate passed --render-gate not-requested --snap-grid 10 --preserve-oef-containment --out /tmp/layout-provenance.json
 ```
 
 Runtime warning fixtures and tests assert machine-readable geometry evidence:
@@ -91,6 +92,9 @@ locked-node warnings carry requested and produced coordinates.
 
 ImageMagick may be useful when manually creating or inspecting PNG fixtures,
 but runtime acceptance uses Java™ ImageIO through `validate-png`.
+Layout provenance reports capture which backend or fallback actually produced
+geometry, whether materialization and render validation ran, and generated text
+snippets for response, README, or OEF documentation output.
 
 ## Fixtures
 

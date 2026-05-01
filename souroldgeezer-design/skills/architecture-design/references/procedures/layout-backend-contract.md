@@ -4,7 +4,8 @@ Backend-neutral contract for architecture-design view geometry. This file
 defines what a geometry backend or fallback procedure consumes and returns. The
 packaged Java™ runtime validates this contract through Draft 2020-12 schemas at
 `references/schemas/layout-request.schema.json` and
-`references/schemas/layout-result.schema.json`.
+`references/schemas/layout-result.schema.json`. Per-view execution provenance
+uses the companion `references/schemas/layout-provenance.schema.json`.
 
 The skill builds this request after it has selected ArchiMate® elements,
 relationships, viewpoint, and curation policy. A backend may place nodes and
@@ -241,6 +242,35 @@ parent-relative. Use `--fail-on-warning` when warning-state results must not be
 materialized, `--preserve-locked-nodes` when locked result nodes should leave
 existing OEF geometry unchanged, and `--run-source-gate` to fail if
 `validate-oef-layout.sh` rejects the materialized file.
+
+Emit a per-view provenance artifact after geometry selection, optional
+materialization, and optional PNG validation:
+
+```bash
+references/scripts/arch-layout.sh layout-provenance \
+  --view <view-id> \
+  --layout-intent <layout-intent> \
+  --selected-geometry-path <layout-elk|route-repair|global-polish|deterministic-fallback|viewpoint-policy|preserved-authored> \
+  --request <layout-request.json> \
+  --result <layout-result.json> \
+  --materialized-oef <materialized.oef.xml> \
+  --source-geometry-gate <passed|failed|not-run> \
+  --png-result <rendered-png-result.json> \
+  --render-gate <passed|failed|not-requested|not-run> \
+  --snap-grid 10 \
+  --preserve-oef-containment \
+  --out <layout-provenance.json>
+```
+
+Omit `--result`, `--materialized-oef`, or `--png-result` when a fallback,
+blocked materialization, or no-render path means that artifact does not exist.
+The provenance report records the exact geometry command or `not-run`,
+request/result/materialization/render-validation commands, backend or fallback
+identity, source and render gates, post-processing such as `snap-10px` and OEF
+containment preservation, plus generated `responseSummary`, `readmeMarkdown`,
+and `oefDocumentation` strings. Use those strings when reporting layout
+provenance to users or project documentation so final prose stays tied to the
+machine-readable artifact.
 
 ## Validation handoff
 

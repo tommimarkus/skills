@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.26.0"));
+        assertTrue(out.toString().contains("arch-layout 0.27.0"));
     }
 
     @Test
@@ -427,6 +427,90 @@ class ArchLayoutCliTest {
     }
 
     @Test
+    void layoutProvenanceWritesPerViewReportWithGenerationMaterializationAndRenderEvidence() throws Exception {
+        Path layoutResult = tempDir.resolve("service-realization.result.json");
+        Path pngResult = tempDir.resolve("png-validation.json");
+        Path provenance = tempDir.resolve("layout-provenance.json");
+
+        assertEquals(0, cli().execute(
+                "layout-elk",
+                "--request", fixture("layout-elk-java/service-realization.request.json").toString(),
+                "--result", layoutResult.toString()));
+        Files.writeString(pngResult, """
+                {
+                  "valid": true,
+                  "message": "valid rendered PNG"
+                }
+                """);
+
+        assertEquals(0, cli().execute(
+                "layout-provenance",
+                "--view", "id-view-service-realization",
+                "--layout-intent", "generated-layout-recreate",
+                "--selected-geometry-path", "layout-elk",
+                "--request", fixture("layout-elk-java/service-realization.request.json").toString(),
+                "--result", layoutResult.toString(),
+                "--materialized-oef", "docs/architecture/example.oef.xml",
+                "--source-geometry-gate", "passed",
+                "--png-result", pngResult.toString(),
+                "--render-gate", "passed",
+                "--snap-grid", "10",
+                "--preserve-oef-containment",
+                "--out", provenance.toString()));
+
+        JsonNode report = JsonFiles.read(provenance);
+        JsonNode view = report.path("views").get(0);
+        assertEquals("arch-layout 0.27.0", report.path("generatedBy").asText());
+        assertEquals("id-view-service-realization", view.path("viewId").asText());
+        assertEquals("generated-layout-recreate", view.path("layoutIntent").asText());
+        assertEquals("layout-elk", view.path("selectedGeometryPath").asText());
+        assertEquals("elk-layered", view.path("backend").asText());
+        assertEquals("0.11.0", view.path("backendVersion").asText());
+        assertEquals("generated-layout", view.path("mode").asText());
+        assertEquals("layout-elk", view.path("commands").path("geometry").asText());
+        assertEquals("materialize-oef", view.path("commands").path("materialization").asText());
+        assertEquals("validate-png", view.path("commands").path("renderValidation").asText());
+        assertEquals("passed", view.path("sourceGeometryGate").asText());
+        assertEquals("passed", view.path("renderGate").asText());
+        assertEquals("valid rendered PNG", view.path("pngValidation").path("message").asText());
+        assertTrue(view.path("postProcessing").toString().contains("snap-10px"));
+        assertTrue(view.path("postProcessing").toString().contains("preserve-oef-containment"));
+        assertTrue(view.path("responseSummary").asText().contains("layout-elk"));
+        assertTrue(view.path("readmeMarkdown").asText().contains("id-view-service-realization"));
+        assertTrue(view.path("oefDocumentation").asText().contains("source geometry gate: passed"));
+    }
+
+    @Test
+    void layoutProvenanceCanReportFallbackWithoutBackendResult() throws Exception {
+        Path provenance = tempDir.resolve("fallback-provenance.json");
+
+        assertEquals(0, cli().execute(
+                "layout-provenance",
+                "--view", "id-view-capability",
+                "--layout-intent", "generated-layout-recreate",
+                "--selected-geometry-path", "deterministic-fallback",
+                "--request", fixture("layout-elk-java/unsupported-capability-map.request.json").toString(),
+                "--source-geometry-gate", "passed",
+                "--render-gate", "not-requested",
+                "--post-processing", "viewpoint-policy-capability-tile-map",
+                "--out", provenance.toString()));
+
+        JsonNode view = JsonFiles.read(provenance).path("views").get(0);
+        assertEquals("deterministic-fallback", view.path("selectedGeometryPath").asText());
+        assertEquals("not-run", view.path("backend").asText());
+        assertEquals("not-run", view.path("commands").path("geometry").asText());
+        assertEquals("not-run", view.path("commands").path("resultValidation").asText());
+        assertEquals("not-run", view.path("commands").path("renderValidation").asText());
+        assertTrue(view.path("postProcessing").toString().contains("viewpoint-policy-capability-tile-map"));
+    }
+
+    @Test
+    void layoutProvenanceDistinguishesRouteRepairAndGlobalPolishResults() throws Exception {
+        assertProvenanceUsesGeometryCommand("route-repair", "route-repair.result.json");
+        assertProvenanceUsesGeometryCommand("global-polish", "global-polish.result.json");
+    }
+
+    @Test
     void realisticNestedElkFixturesCompleteSourceGateLoop() throws Exception {
         assertRealisticNestedFixturePassesSourceGate(
                 "application-cooperation-compound-trust-boundaries",
@@ -511,6 +595,26 @@ class ArchLayoutCliTest {
         Document document = parseXml(materialized);
         assertEquals(parentNodeId, ((Element) elementById(document, nestedNodeId).getParentNode()).getAttribute("identifier"));
         assertTenPixelGrid(document);
+    }
+
+    private void assertProvenanceUsesGeometryCommand(String selectedGeometryPath, String resultFixture) throws Exception {
+        Path provenance = tempDir.resolve(selectedGeometryPath + "-provenance.json");
+
+        assertEquals(0, cli().execute(
+                "layout-provenance",
+                "--view", "id-view-application-cooperation",
+                "--layout-intent", "route-repair-only",
+                "--selected-geometry-path", selectedGeometryPath,
+                "--request", fixture("layout-contract/valid-rich-layout-contract.request.json").toString(),
+                "--result", fixture("materialize-oef/" + resultFixture).toString(),
+                "--source-geometry-gate", "not-run",
+                "--render-gate", "not-requested",
+                "--out", provenance.toString()));
+
+        JsonNode view = JsonFiles.read(provenance).path("views").get(0);
+        assertEquals(selectedGeometryPath, view.path("selectedGeometryPath").asText());
+        assertEquals(selectedGeometryPath, view.path("commands").path("geometry").asText());
+        assertEquals(selectedGeometryPath, view.path("backend").asText());
     }
 
     private static void assertTenPixelGrid(Document document) {
