@@ -418,6 +418,10 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   commands over that backend-neutral contract, but it does not ship the
   deferred interactive debugger, relationship-matrix provenance proof,
   mainstream-tool compatibility proof, or multi-evidence recovery loop.
+  Recreate, regenerate, and global reflow requests now report layout intent
+  plus a per-view backend/fallback row, so users can distinguish OEF geometry
+  generation or repair (`layout-elk`, `route-repair`, `global-polish`, or
+  viewpoint fallback) from rendered PNG validation (`validate-png`).
 - **Process-view emission contract** (introduced in 0.9.0). Build and
   Extract always emit a complete process-view set when Business Processes
   are in scope: one §9.7 Business Process Cooperation view per feature

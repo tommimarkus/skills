@@ -36,6 +36,16 @@ Validate a request before backend execution:
 references/scripts/arch-layout.sh validate-request --request <layout-request.json>
 ```
 
+Generated-layout execution for eligible viewpoints:
+
+```bash
+references/scripts/arch-layout.sh layout-elk --request <layout-request.json> --result <layout-result.json>
+```
+
+`layout-elk` is the generated-layout command. `validate-request` and
+`validate-result` are schema/contract gates. `validate-png` is a rendered-image
+invariant gate and does not generate or repair OEF geometry.
+
 ## Node fields
 
 Each node record includes:

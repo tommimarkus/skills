@@ -1,6 +1,6 @@
 interface:
   display_name: "Architecture Design"
-  short_description: "Build, extract, review, render, validate, repair, or look up ArchiMate® OEF models."
+  short_description: "Build, extract, review, render, validate, repair, reflow, or look up ArchiMate® OEF models."
   default_prompt: "Review this architecture model for professional readiness."
 policy:
   allow_implicit_invocation: true

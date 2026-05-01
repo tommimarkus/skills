@@ -8,15 +8,21 @@ The goal is to answer the architecture question each viewpoint is meant to
 answer. Generic layered layout is only a fallback for small directed stories,
 not the default for every view.
 
-| Viewpoint | Preferred policy | Avoid |
-|---|---|---|
-| Capability Map | Capability tile/decomposition map | Generic layered layout as primary policy |
-| Application Cooperation | Cluster, hub, integration lanes | Random force-directed layout unless cluster story is explicit |
-| Service Realization | Layered realization spine | Hiding the main realization chain |
-| Technology Usage | Hosting/deployment stack | Generic layer/aspect rows when hosting is the point |
-| Migration | Plateau/timeline layout | Treating dev/stage/prod topology as migration without intent |
-| Motivation | Influence/traceability tree | Layer/aspect grid as default |
-| Business Process Cooperation | Process-flow lanes, swimlanes, handoffs | Generic dependency layout |
+| Viewpoint | Preferred policy | Generated-layout backend policy | Avoid |
+|---|---|---|---|
+| Capability Map | Capability tile/decomposition map | `layout-elk` not eligible; use tile/decomposition policy or deterministic fallback only for small directed side stories | Generic layered layout as primary policy |
+| Application Cooperation | Cluster, hub, integration lanes | `layout-elk` eligible for generated/recreate requests when the request carries cluster/lane semantic bands | Random force-directed layout unless cluster story is explicit |
+| Service Realization | Layered realization spine | `layout-elk` eligible for generated/recreate requests when the realization spine and edge priorities are explicit | Hiding the main realization chain |
+| Technology Usage | Hosting/deployment stack | `layout-elk` eligible for generated/recreate requests when hosting-stack semantic bands are explicit | Generic layer/aspect rows when hosting is the point |
+| Migration | Plateau/timeline layout | `layout-elk` not eligible; use timeline/plateau policy and report fallback/policy | Treating dev/stage/prod topology as migration without intent |
+| Motivation | Influence/traceability tree | `layout-elk` not eligible; use traceability-tree policy and report fallback/policy | Layer/aspect grid as default |
+| Business Process Cooperation | Process-flow lanes, swimlanes, handoffs | `layout-elk` not eligible; use flow/lane policy and report fallback/policy | Generic dependency layout |
+
+Unsupported for `layout-elk` does not mean unvalidated or hand-waved. The
+skill still builds a per-view layout decision record, applies this viewpoint
+policy, uses deterministic fallback only where the policy allows it,
+materializes OEF geometry, and validates the final source geometry. The final
+response states `layout-elk not eligible` for these views.
 
 ## Capability Map
 
