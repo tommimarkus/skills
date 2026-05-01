@@ -74,8 +74,10 @@ without requiring Archi:
 ```bash
 ../scripts/arch-layout.sh validate-request --request layout-contract/valid-service-realization.request.json
 ../scripts/arch-layout.sh layout-elk --request layout-elk-java/service-realization.request.json --result /tmp/service-realization.layout-result.json
+../scripts/arch-layout.sh layout-elk --request layout-elk-realistic/application-cooperation-compound-trust-boundaries.request.json --result /tmp/application-cooperation.realistic.result.json
 ../scripts/arch-layout.sh route-repair --request route-repair/simple-obstacle.request.json --result /tmp/route-repair.layout-result.json
 ../scripts/arch-layout.sh global-polish --request global-polish/overlap-cluster.request.json --result /tmp/global-polish.layout-result.json
+../scripts/arch-layout.sh materialize-oef --oef layout-elk-realistic/application-cooperation-compound-trust-boundaries.oef.xml --view id-view-realistic-application-cooperation --result /tmp/application-cooperation.realistic.result.json --out /tmp/application-cooperation.realistic.oef.xml --snap-grid 10 --run-source-gate
 ../scripts/arch-layout.sh materialize-oef --oef application-cooperation.oef.xml --view id-view-application-cooperation --result materialize-oef/layout-elk.result.json --out /tmp/application-cooperation.materialized.oef.xml --snap-grid 10 --run-source-gate
 ../scripts/arch-layout.sh validate-png --image rendered-png/valid-diagram.png --result /tmp/rendered-png-result.json
 ```
@@ -112,6 +114,7 @@ but runtime acceptance uses Java™ ImageIO through `validate-png`.
 | `layout-backend-contract/locked-node-route-repair-result.yml` | Backend contract fixture | n/a | Expected repair result rerouting the edge while preserving all locked node coordinates |
 | `layout-contract/*.json` | Layout schema fixtures | n/a | Positive and negative request/result cases for `validate-request` and `validate-result` |
 | `layout-elk-java/*.json` | Generated-layout runtime fixtures | n/a | Directed-view requests for `layout-elk`, including nested, locked-node, and unsupported-viewpoint cases |
+| `layout-elk-realistic/*.{request.json,oef.xml}` | Generated-layout materialization fixtures | n/a | Larger nested OEF contexts for Application Cooperation trust boundaries, Technology Usage hosting stack, and Service Realization UI container; each request locks the existing OEF geometry, runs through `layout-elk`, materializes the result with `--snap-grid 10 --run-source-gate`, and preserves nested OEF node structure |
 | `route-repair/*.json` | Route repair fixtures | n/a | Obstacle, parallel-edge, route-locked, impossible-route, and container-crossing repair cases |
 | `global-polish/*.json` | Global polish fixtures | n/a | Overlap, connector-through-node, locked mental-map, and no-improvement cases |
 | `materialize-oef/*.json` | OEF materialization fixtures | n/a | Layout-result handoff cases for `layout-elk`, `route-repair`, and `global-polish`, plus warning and source-gate failure paths |

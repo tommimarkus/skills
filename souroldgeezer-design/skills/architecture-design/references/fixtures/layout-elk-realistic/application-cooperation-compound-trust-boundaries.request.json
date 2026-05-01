@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "realistic-application-cooperation-compound-trust-boundaries",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": {
+    "id": "id-view-realistic-application-cooperation",
+    "name": "Signup Application Cooperation",
+    "viewpoint": "Application Cooperation",
+    "direction": "RIGHT",
+    "qualityTarget": "diagram-readable"
+  },
+  "nodes": [
+    {
+      "id": "id-node-external-boundary",
+      "label": "External Identity Boundary",
+      "width": 340,
+      "height": 300,
+      "generated": true,
+      "x": 40,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-external-identity-provider",
+      "label": "External Identity Provider",
+      "width": 260,
+      "height": 180,
+      "parentId": "id-node-external-boundary",
+      "generated": true,
+      "x": 80,
+      "y": 100,
+      "locked": true
+    },
+    {
+      "id": "id-node-external-identity-interface",
+      "label": "Identity API",
+      "width": 180,
+      "height": 60,
+      "parentId": "id-node-external-identity-provider",
+      "generated": true,
+      "x": 120,
+      "y": 180,
+      "locked": true
+    },
+    {
+      "id": "id-node-internal-boundary",
+      "label": "Internal Signup Boundary",
+      "width": 760,
+      "height": 420,
+      "generated": true,
+      "x": 460,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-ui-component",
+      "label": "Signup Web UI",
+      "width": 260,
+      "height": 180,
+      "parentId": "id-node-internal-boundary",
+      "generated": true,
+      "x": 500,
+      "y": 90,
+      "locked": true
+    },
+    {
+      "id": "id-node-ui-route-signup",
+      "label": "Signup Route",
+      "width": 180,
+      "height": 60,
+      "parentId": "id-node-ui-component",
+      "generated": true,
+      "x": 540,
+      "y": 170,
+      "locked": true
+    },
+    {
+      "id": "id-node-api-gateway",
+      "label": "Signup API Component",
+      "width": 280,
+      "height": 180,
+      "parentId": "id-node-internal-boundary",
+      "generated": true,
+      "x": 830,
+      "y": 90,
+      "locked": true
+    },
+    {
+      "id": "id-node-contracts-interface",
+      "label": "Signup Contracts API",
+      "width": 210,
+      "height": 60,
+      "parentId": "id-node-api-gateway",
+      "generated": true,
+      "x": 870,
+      "y": 170,
+      "locked": true
+    },
+    {
+      "id": "id-node-signup-worker",
+      "label": "Signup Worker",
+      "width": 220,
+      "height": 80,
+      "parentId": "id-node-internal-boundary",
+      "generated": true,
+      "x": 850,
+      "y": 330,
+      "locked": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "id-conn-external-serves-contracts",
+      "source": "id-node-external-identity-interface",
+      "target": "id-node-contracts-interface",
+      "visible": true,
+      "priority": 10
+    },
+    {
+      "id": "id-conn-ui-serves-contracts",
+      "source": "id-node-ui-route-signup",
+      "target": "id-node-contracts-interface",
+      "visible": true,
+      "priority": 8
+    },
+    {
+      "id": "id-conn-contracts-serves-worker",
+      "source": "id-node-contracts-interface",
+      "target": "id-node-signup-worker",
+      "visible": true,
+      "priority": 7
+    }
+  ],
+  "constraints": {
+    "orthogonalRouting": true,
+    "avoidNodeBodies": true,
+    "preserveContainment": true
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "realistic-service-realization-ui-container",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": {
+    "id": "id-view-realistic-service-realization",
+    "name": "Signup Service Realization",
+    "viewpoint": "Service Realization",
+    "direction": "DOWN",
+    "qualityTarget": "review-ready"
+  },
+  "nodes": [
+    {
+      "id": "id-node-user",
+      "label": "Prospective Member",
+      "width": 200,
+      "height": 70,
+      "generated": true,
+      "x": 40,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-process-start",
+      "label": "Start Signup",
+      "width": 180,
+      "height": 70,
+      "generated": true,
+      "x": 300,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-process-confirm",
+      "label": "Confirm Signup",
+      "width": 190,
+      "height": 70,
+      "generated": true,
+      "x": 540,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-application-service",
+      "label": "Signup Service",
+      "width": 200,
+      "height": 70,
+      "generated": true,
+      "x": 790,
+      "y": 40,
+      "locked": true
+    },
+    {
+      "id": "id-node-ui-component",
+      "label": "Signup UI Component",
+      "width": 280,
+      "height": 170,
+      "generated": true,
+      "x": 300,
+      "y": 190,
+      "locked": true
+    },
+    {
+      "id": "id-node-ui-route-signup",
+      "label": "Signup Route",
+      "width": 180,
+      "height": 60,
+      "parentId": "id-node-ui-component",
+      "generated": true,
+      "x": 350,
+      "y": 260,
+      "locked": true
+    },
+    {
+      "id": "id-node-api-component",
+      "label": "Signup API Component",
+      "width": 240,
+      "height": 80,
+      "generated": true,
+      "x": 660,
+      "y": 220,
+      "locked": true
+    },
+    {
+      "id": "id-node-function-app",
+      "label": "Signup Function App",
+      "width": 250,
+      "height": 80,
+      "generated": true,
+      "x": 980,
+      "y": 220,
+      "locked": true
+    },
+    {
+      "id": "id-node-signup-data",
+      "label": "Signup Data Store",
+      "width": 220,
+      "height": 70,
+      "generated": true,
+      "x": 980,
+      "y": 380,
+      "locked": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "id-conn-user-starts-process",
+      "source": "id-node-user",
+      "target": "id-node-process-start",
+      "visible": true,
+      "priority": 10
+    },
+    {
+      "id": "id-conn-process-start-confirm",
+      "source": "id-node-process-start",
+      "target": "id-node-process-confirm",
+      "visible": true,
+      "priority": 9
+    },
+    {
+      "id": "id-conn-process-uses-service",
+      "source": "id-node-process-confirm",
+      "target": "id-node-application-service",
+      "visible": true,
+      "priority": 8
+    },
+    {
+      "id": "id-conn-api-realizes-service",
+      "source": "id-node-api-component",
+      "target": "id-node-application-service",
+      "visible": true,
+      "priority": 7
+    },
+    {
+      "id": "id-conn-route-serves-api",
+      "source": "id-node-ui-route-signup",
+      "target": "id-node-api-component",
+      "visible": true,
+      "priority": 6
+    },
+    {
+      "id": "id-conn-function-serves-api",
+      "source": "id-node-function-app",
+      "target": "id-node-api-component",
+      "visible": true,
+      "priority": 5
+    },
+    {
+      "id": "id-conn-data-serves-function",
+      "source": "id-node-signup-data",
+      "target": "id-node-function-app",
+      "visible": true,
+      "priority": 4
+    }
+  ],
+  "constraints": {
+    "orthogonalRouting": true,
+    "avoidNodeBodies": true,
+    "visibleRealizationSpine": true,
+    "preserveContainment": true
+  }
+}
