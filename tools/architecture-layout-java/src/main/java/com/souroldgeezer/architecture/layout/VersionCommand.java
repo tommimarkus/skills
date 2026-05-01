@@ -1,7 +1,7 @@
 package com.souroldgeezer.architecture.layout;
 
 public final class VersionCommand {
-    public static final String VERSION = "arch-layout 0.25.0";
+    public static final String VERSION = "arch-layout 0.25.1";
 
     private VersionCommand() {
     }

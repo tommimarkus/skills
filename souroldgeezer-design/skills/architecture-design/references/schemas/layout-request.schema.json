@@ -10,6 +10,7 @@
     "requestId": { "type": "string", "minLength": 1 },
     "archimateTarget": { "const": "3.2" },
     "mode": { "enum": ["generated-layout", "route-repair", "global-polish"] },
+    "preserveExistingGeometry": { "type": "boolean" },
     "view": {
       "type": "object",
       "required": ["id", "name", "viewpoint", "direction", "qualityTarget"],
@@ -31,6 +32,10 @@
         "additionalProperties": true,
         "properties": {
           "id": { "type": "string", "minLength": 1 },
+          "elementRef": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "semanticLayer": { "type": "string", "minLength": 1 },
+          "semanticAspect": { "type": "string", "minLength": 1 },
           "label": { "type": "string" },
           "width": { "type": "integer", "minimum": 1 },
           "height": { "type": "integer", "minimum": 1 },
@@ -38,7 +43,22 @@
           "y": { "type": "integer" },
           "locked": { "type": "boolean" },
           "generated": { "type": "boolean" },
-          "inferred": { "type": "boolean" }
+          "inferred": { "type": "boolean" },
+          "parentId": { "type": "string", "minLength": 1 },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "side": { "type": "string", "minLength": 1 },
+                "offset": { "type": "integer" },
+                "x": { "type": "integer" },
+                "y": { "type": "integer" }
+              }
+            }
+          }
         }
       }
     },
@@ -50,14 +70,122 @@
         "additionalProperties": true,
         "properties": {
           "id": { "type": "string", "minLength": 1 },
+          "relationshipRef": { "type": "string", "minLength": 1 },
+          "relationshipType": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
           "source": { "type": "string", "minLength": 1 },
           "target": { "type": "string", "minLength": 1 },
           "visible": { "type": "boolean" },
           "priority": { "type": "integer" },
-          "routeLocked": { "type": "boolean" }
+          "generated": { "type": "boolean" },
+          "locked": { "type": "boolean" },
+          "routeLocked": { "type": "boolean" },
+          "existingRoute": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/point" }
+          },
+          "preferredSourcePorts": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "preferredTargetPorts": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "priorBendpoints": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/point" }
+          },
+          "curationReason": { "type": "string" }
         }
       }
     },
-    "constraints": { "type": "object" }
+    "containers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["parent", "children"],
+        "additionalProperties": true,
+        "properties": {
+          "parent": { "type": "string", "minLength": 1 },
+          "children": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "relationshipRef": { "type": "string", "minLength": 1 },
+          "relationshipType": { "type": "string", "minLength": 1 },
+          "maxDepth": { "type": "integer", "minimum": 1 },
+          "mayHideEdge": { "type": "boolean" }
+        }
+      }
+    },
+    "locks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "node": { "type": "string", "minLength": 1 },
+          "edge": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "priorGeometry": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "x": { "type": "integer" },
+              "y": { "type": "integer" },
+              "w": { "type": "integer", "minimum": 1 },
+              "h": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "edges": { "type": "array" }
+      }
+    },
+    "semanticBands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "axis": { "type": "string", "minLength": 1 },
+          "order": { "type": "integer" },
+          "role": { "type": "string" }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "noRoutePossible": { "type": "boolean" },
+        "maxNodeDisplacement": { "type": "integer", "minimum": 0 },
+        "maxBends": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": true,
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" }
+      }
+    }
   }
 }

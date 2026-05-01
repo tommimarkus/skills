@@ -317,7 +317,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   as a thin launcher for a self-contained Java™ 21 runtime at
   `references/bin/arch-layout.jar`. The runtime validates the layout
   [request/result schemas](souroldgeezer-design/skills/architecture-design/references/schemas/),
-  produces generated-layout results for supported directed viewpoints,
+  exposes runtime-honored versus advisory request fields, rejects contradictory
+  hierarchy / locked-geometry / locked-route requests, produces
+  generated-layout results for supported directed viewpoints,
   repairs stale or invalid routes while preserving locked node geometry,
   applies bounded global polish when route-only repair is insufficient,
   emits machine-readable warning evidence for route intersections, overlaps,

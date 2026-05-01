@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.25.0"));
+        assertTrue(out.toString().contains("arch-layout 0.25.1"));
     }
 
     @Test
@@ -43,6 +43,14 @@ class ArchLayoutCliTest {
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-missing-node-geometry.result.json").toString()));
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-missing-backend.result.json").toString()));
         assertEquals(1, cli().execute("validate-result", "--result", fixture("layout-contract/invalid-edge-without-route-status.result.json").toString()));
+    }
+
+    @Test
+    void validationCommandsExposeRichRequestContractAndRejectContradictions() {
+        assertEquals(0, cli().execute("validate-request", "--request", fixture("layout-contract/valid-rich-layout-contract.request.json").toString()));
+        assertEquals(1, cli().execute("validate-request", "--request", fixture("layout-contract/invalid-missing-parent.request.json").toString()));
+        assertEquals(1, cli().execute("validate-request", "--request", fixture("layout-contract/invalid-locked-node-without-coordinates.request.json").toString()));
+        assertEquals(1, cli().execute("validate-request", "--request", fixture("layout-contract/invalid-route-locked-without-existing-route.request.json").toString()));
     }
 
     @Test

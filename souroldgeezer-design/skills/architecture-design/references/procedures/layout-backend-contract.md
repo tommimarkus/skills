@@ -28,7 +28,6 @@ route edges, but it cannot change architecture semantics.
 - `priorGeometry`: prior coordinates and bendpoints when available.
 - `semanticBands`: viewpoint/layer/aspect bands the backend should respect.
 - `constraints`: routing, obstacle, lane, and reflow limits.
-- `constraints`: routing, obstacle, lane, and reflow limits.
 
 Validate a request before backend execution:
 
@@ -48,6 +47,20 @@ layout-result quality gate: it fails when `validation.state` is not `valid` and
 can enforce explicit metric ceilings. `validate-png` is a rendered-image
 invariant gate and does not generate or repair OEF geometry.
 
+## Request field contract status
+
+The request schema keeps `additionalProperties: true` for forward-compatible
+agent experiments, but only the fields below have current contract meaning.
+Unknown fields are accepted and ignored by the packaged Java™ runtime unless
+another procedure names them.
+
+| Status | Fields | Contract meaning |
+|---|---|---|
+| Required schema/runtime | `schemaVersion`, `requestId`, `archimateTarget`, `mode`, `view.id`, `view.name`, `view.viewpoint`, `view.direction`, `view.qualityTarget`, `nodes[].id`, `nodes[].width`, `nodes[].height`, `edges[].id`, `edges[].source`, `edges[].target`, `constraints` | `validate-request` fails when any is missing or malformed. |
+| Optional runtime-honored | `nodes[].x`, `nodes[].y`, `nodes[].locked`, `nodes[].generated`, `nodes[].inferred`, `nodes[].parentId`, `nodes[].label`, `edges[].visible`, `edges[].priority`, `edges[].routeLocked`, `edges[].existingRoute`, `constraints.noRoutePossible`, `constraints.maxNodeDisplacement` | The packaged runtime reads these fields. `locked` nodes require both `x` and `y`; `routeLocked` edges require an `existingRoute`; `parentId` must reference another request node without cycles. |
+| Advisory / skill-owned | `preserveExistingGeometry`, `nodes[].elementRef`, `nodes[].type`, `nodes[].semanticLayer`, `nodes[].semanticAspect`, `nodes[].ports`, `edges[].relationshipRef`, `edges[].relationshipType`, `edges[].type`, `edges[].generated`, `edges[].locked`, `edges[].preferredSourcePorts`, `edges[].preferredTargetPorts`, `edges[].priorBendpoints`, `edges[].curationReason`, `containers`, `locks`, `priorGeometry`, `semanticBands`, `constraints.maxBends` | The schema and validator expose their shape so agents can build traceable requests. The architecture-design workflow owns their semantic interpretation unless a backend procedure says otherwise. |
+| Accepted but ignored by packaged runtime | Any extra property not listed above | Allowed for forward compatibility. Do not claim it influenced `layout-elk`, `route-repair`, or `global-polish` until runtime code and this table say so. |
+
 ## Node fields
 
 Each node record includes:
@@ -64,7 +77,7 @@ Each node record includes:
 - `generated`: whether the skill generated this placement in the current run.
 - `locked`: whether the node placement is architect-authored or otherwise fixed.
 - `prior`: prior `x`, `y`, `w`, and `h` when preservation applies.
-- `parent`: containing view-node id when nested or grouped.
+- `parentId`: containing view-node id when nested or grouped.
 - `ports`: optional explicit candidate ports.
 
 ## Edge fields
@@ -84,6 +97,7 @@ Each edge record includes:
   preserved unless they fail validation.
 - `preferredSourcePorts` / `preferredTargetPorts`: ordered port candidates.
 - `priorBendpoints`: prior bendpoints when route preservation applies.
+- `existingRoute`: bendpoints for a route locked from prior OEF geometry.
 - `curationReason`: reason for omission or hiding when `visible=false`.
 
 ## Containers and hierarchy
@@ -98,6 +112,10 @@ Containers describe visual containment separately from model relationships:
 - `maxDepth`: maximum supported depth for the current view.
 - `mayHideEdge`: whether the relationship may be represented by nesting instead
   of a visible connection.
+
+`validate-request` rejects containers whose parent or children do not reference
+request nodes. `nodes[].parentId` follows the same rule and must not introduce
+hierarchy cycles.
 
 Containment does not grant permission to hide the main Realization spine.
 
@@ -117,10 +135,14 @@ priority, congestion, and prior lane preservation.
 
 Locks protect architect-authored geometry:
 
-- `locked=true` nodes are not moved unless the user explicitly requested global
-  reflow or the existing placement violates a blocking rule.
+- `locked=true` nodes require `x` and `y`; they are not moved unless the user
+  explicitly requested global reflow or the existing placement violates a
+  blocking rule.
 - locked bendpoints are preserved only when relationship id, source, target,
   and `AD-L11` route validation still pass.
+- `routeLocked=true` edges require an `existingRoute`; otherwise
+  `validate-request` fails instead of silently generating a new route and
+  calling it locked.
 - generated nodes may move during local reflow.
 - generated routes may be ripped up and rerouted before locked nodes are moved.
 
