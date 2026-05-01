@@ -9,8 +9,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 class ArchLayoutCliTest {
     @TempDir
@@ -23,7 +28,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.21.0"));
+        assertTrue(out.toString().contains("arch-layout 0.23.0"));
     }
 
     @Test
@@ -109,6 +114,74 @@ class ArchLayoutCliTest {
         assertTrue(unchangedResult.path("warnings").toString().contains("LAYOUT_GLOBAL_POLISH_NO_IMPROVEMENT"));
     }
 
+    @Test
+    void materializeOefAppliesLayoutResultToNestedViewWithSnapping() throws Exception {
+        Path source = fixture("application-cooperation.oef.xml");
+        Path materialized = tempDir.resolve("application-cooperation.materialized.oef.xml");
+
+        assertEquals(0, cli().execute(
+                "materialize-oef",
+                "--oef", source.toString(),
+                "--view", "id-view-application-cooperation",
+                "--result", fixture("materialize-oef/layout-elk.result.json").toString(),
+                "--out", materialized.toString(),
+                "--snap-grid", "10"));
+
+        Document document = parseXml(materialized);
+        Element container = elementById(document, "id-node-collab-commerce");
+        Element service = elementById(document, "id-node-svc-checkout");
+        Element connection = elementById(document, "id-conn-http-serves-web");
+
+        assertEquals("40", container.getAttribute("x"));
+        assertEquals("430", service.getAttribute("x"));
+        assertEquals("80", service.getAttribute("y"));
+        assertEquals("id-node-collab-commerce", ((Element) service.getParentNode()).getAttribute("identifier"));
+        assertEquals("id-rel-http-serves-web", connection.getAttribute("relationshipRef"));
+        assertEquals("id-node-iface-checkout-http", connection.getAttribute("source"));
+        assertEquals("id-node-app-web", connection.getAttribute("target"));
+
+        NodeList bendpoints = connection.getElementsByTagNameNS("*", "bendpoint");
+        assertEquals(2, bendpoints.getLength());
+        assertEquals("580", ((Element) bendpoints.item(0)).getAttribute("x"));
+        assertEquals("570", ((Element) bendpoints.item(0)).getAttribute("y"));
+        assertEquals("220", ((Element) bendpoints.item(1)).getAttribute("x"));
+        assertEquals("570", ((Element) bendpoints.item(1)).getAttribute("y"));
+    }
+
+    @Test
+    void materializeOefCoversRouteRepairAndGlobalPolishResults() throws Exception {
+        assertCanMaterialize("route-repair.result.json");
+        assertCanMaterialize("global-polish.result.json");
+    }
+
+    @Test
+    void materializeOefCanRejectWarningResultsBeforeWritingOutput() {
+        Path materialized = tempDir.resolve("warning.oef.xml");
+
+        assertEquals(1, cli().execute(
+                "materialize-oef",
+                "--oef", fixture("application-cooperation.oef.xml").toString(),
+                "--view", "id-view-application-cooperation",
+                "--result", fixture("materialize-oef/warning.result.json").toString(),
+                "--out", materialized.toString(),
+                "--fail-on-warning"));
+        assertFalse(Files.exists(materialized));
+    }
+
+    @Test
+    void materializeOefCanRunSourceGeometryGate() {
+        Path materialized = tempDir.resolve("off-grid.oef.xml");
+
+        assertEquals(1, cli().execute(
+                "materialize-oef",
+                "--oef", fixture("application-cooperation.oef.xml").toString(),
+                "--view", "id-view-application-cooperation",
+                "--result", fixture("materialize-oef/off-grid.result.json").toString(),
+                "--out", materialized.toString(),
+                "--run-source-gate"));
+        assertTrue(Files.exists(materialized));
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }
@@ -124,5 +197,36 @@ class ArchLayoutCliTest {
             }
         }
         throw new AssertionError("Missing node " + id);
+    }
+
+    private void assertCanMaterialize(String resultFixture) throws Exception {
+        Path materialized = tempDir.resolve(resultFixture + ".oef.xml");
+
+        assertEquals(0, cli().execute(
+                "materialize-oef",
+                "--oef", fixture("application-cooperation.oef.xml").toString(),
+                "--view", "id-view-application-cooperation",
+                "--result", fixture("materialize-oef/" + resultFixture).toString(),
+                "--out", materialized.toString(),
+                "--snap-grid", "10"));
+        assertTrue(Files.exists(materialized));
+        assertEquals("100", elementById(parseXml(materialized), "id-node-app-payments").getAttribute("x"));
+    }
+
+    private static Document parseXml(Path path) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        return factory.newDocumentBuilder().parse(path.toFile());
+    }
+
+    private static Element elementById(Document document, String id) {
+        NodeList all = document.getElementsByTagNameNS("*", "*");
+        for (int index = 0; index < all.getLength(); index++) {
+            Node node = all.item(index);
+            if (node instanceof Element element && id.equals(element.getAttribute("identifier"))) {
+                return element;
+            }
+        }
+        throw new AssertionError("Missing XML element " + id);
     }
 }

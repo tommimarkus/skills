@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "materialize-oef-off-grid",
+  "backend": {
+    "name": "elk-layered",
+    "version": "0.11.0",
+    "mode": "generated-layout",
+    "deterministic": true
+  },
+  "mode": "generated-layout",
+  "deterministic": true,
+  "readiness": "success",
+  "nodeGeometry": [
+    { "id": "id-node-app-payments", "x": 91, "y": 191, "w": 240, "h": 80 }
+  ],
+  "edges": [],
+  "metrics": {
+    "nodeOverlaps": 0,
+    "connectorNodeIntersections": 0,
+    "connectorCrossings": 0,
+    "lockedNodeDisplacement": 0
+  },
+  "validation": { "state": "valid" }
+}

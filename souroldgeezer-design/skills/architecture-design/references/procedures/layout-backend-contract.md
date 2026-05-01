@@ -160,6 +160,29 @@ Validate a result before OEF materialization:
 references/scripts/arch-layout.sh validate-result --result <layout-result.json>
 ```
 
+Materialize a validated result into a specific OEF view:
+
+```bash
+references/scripts/arch-layout.sh materialize-oef \
+  --oef <source.oef.xml> \
+  --view <view-id> \
+  --result <layout-result.json> \
+  --out <materialized.oef.xml> \
+  --snap-grid 10 \
+  --run-source-gate
+```
+
+`materialize-oef` applies matching `nodeGeometry` records to OEF `<node>`
+`x` / `y` / `w` / `h` attributes and matching `edges` records to OEF
+`<connection>` bendpoints. It preserves model elements, model relationships,
+view-node ids, connection ids, XML nesting, `elementRef`, `relationshipRef`,
+`source`, and `target` attributes. Result coordinates are treated as absolute
+OEF coordinates; nested nodes stay nested, but their coordinates are not made
+parent-relative. Use `--fail-on-warning` when warning-state results must not be
+materialized, `--preserve-locked-nodes` when locked result nodes should leave
+existing OEF geometry unchanged, and `--run-source-gate` to fail if
+`validate-oef-layout.sh` rejects the materialized file.
+
 ## Validation handoff
 
 Backend output is always validated by the skill before OEF serialization:

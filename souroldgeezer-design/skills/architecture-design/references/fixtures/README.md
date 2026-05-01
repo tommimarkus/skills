@@ -76,6 +76,7 @@ without requiring Archi:
 ../scripts/arch-layout.sh layout-elk --request layout-elk-java/service-realization.request.json --result /tmp/service-realization.layout-result.json
 ../scripts/arch-layout.sh route-repair --request route-repair/simple-obstacle.request.json --result /tmp/route-repair.layout-result.json
 ../scripts/arch-layout.sh global-polish --request global-polish/overlap-cluster.request.json --result /tmp/global-polish.layout-result.json
+../scripts/arch-layout.sh materialize-oef --oef application-cooperation.oef.xml --view id-view-application-cooperation --result materialize-oef/layout-elk.result.json --out /tmp/application-cooperation.materialized.oef.xml --snap-grid 10 --run-source-gate
 ../scripts/arch-layout.sh validate-png --image rendered-png/valid-diagram.png --result /tmp/rendered-png-result.json
 ```
 
@@ -108,6 +109,7 @@ but runtime acceptance uses Java™ ImageIO through `validate-png`.
 | `layout-elk-java/*.json` | Generated-layout runtime fixtures | n/a | Directed-view requests for `layout-elk`, including nested, locked-node, and unsupported-viewpoint cases |
 | `route-repair/*.json` | Route repair fixtures | n/a | Obstacle, parallel-edge, route-locked, impossible-route, and container-crossing repair cases |
 | `global-polish/*.json` | Global polish fixtures | n/a | Overlap, connector-through-node, locked mental-map, and no-improvement cases |
+| `materialize-oef/*.json` | OEF materialization fixtures | n/a | Layout-result handoff cases for `layout-elk`, `route-repair`, and `global-polish`, plus warning and source-gate failure paths |
 | `rendered-png/*.png` | Rendered PNG validation fixtures | n/a | Blank, tiny, cropped, valid, and baseline-drift cases for `validate-png` |
 | `../scripts/validate-oef-layout.sh` | Static layout gate | n/a | Emits Review-style `AD-L*` findings for source OEF geometry |
 | `professional-quality-cases.md` | AD-Q expectations | n/a | Pressure cases for the professional-readiness pass: inventory views, thin process / service-realization views, orphaned decision context, and ambiguous labels |
@@ -121,5 +123,5 @@ layout result and rendered PNG:
 
 1. **Mechanical (auto-checkable):** PNG dimensions are larger than Archi's blank 100 x 100 placeholder; zero blocking AD-L11 findings; zero unresolved AD-L1 / L2 / L3 / L9 / L12 / L13 / L14 / L15 findings before claiming `diagram-readable`; AD-L4 within budget; AD-L5 within `n/6` crossings; AD-L8 grid-aligned; AD-L10 normalised origin within tolerance.
 2. **Visual (human judgment):** matches the per-viewpoint idiom in `layout-policies-by-viewpoint.md`; routes use consistent orthogonal lanes, ports, and lane spacing; labels do not collide with routes or other labels; gutters leave the view readable rather than merely non-overlapping; reads at the quality bar of the [Hosiaisluoma ArchiMate examples gallery](https://www.hosiaisluoma.fi/blog/archimate-examples/).
-3. **Runtime contract:** JSON request/result fixtures validate against the shipped schemas; `layout-elk`, `route-repair`, and `global-polish` results remain deterministic and preserve locked geometry as declared.
+3. **Runtime contract:** JSON request/result fixtures validate against the shipped schemas; `layout-elk`, `route-repair`, and `global-polish` results remain deterministic, preserve locked geometry as declared, and can be materialized into OEF without custom glue.
 4. **Deterministic:** re-running Build on the same input produces byte-identical OEF.

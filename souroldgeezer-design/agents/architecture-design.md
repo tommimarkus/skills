@@ -1,7 +1,7 @@
 ---
 name: architecture-design
 description: >-
-  Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, route repair, global polish, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes.
+  Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, route repair, global polish, layout-result to OEF materialization, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -78,8 +78,9 @@ When invoked, run the architecture-design skill and present results:
    `route-repair`, `global-polish`, or the deterministic fallback in
    `layout-fallback.md`; route and gloss with
    `routing-and-glossing.md`; validate request/result schemas from
-   `references/schemas/`; then validate final OEF geometry before claiming
-   `diagram-readable` or `review-ready`. Infer layout intent for
+   `references/schemas/`; materialize backend results with
+   `arch-layout.sh materialize-oef`; then validate final OEF geometry before
+   claiming `diagram-readable` or `review-ready`. Infer layout intent for
    recreate/regenerate/reflow requests. Use `layout-elk` for eligible generated
    Application Cooperation, Service Realization, and Technology Usage views
    unless blocked; report viewpoint policy or fallback for unsupported

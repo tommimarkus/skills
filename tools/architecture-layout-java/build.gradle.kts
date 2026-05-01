@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.souroldgeezer.architecture"
-version = "0.21.0"
+version = "0.23.0"
 
 java {
     toolchain {

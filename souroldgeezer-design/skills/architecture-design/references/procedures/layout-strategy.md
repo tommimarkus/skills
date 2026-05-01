@@ -86,9 +86,9 @@ without the final validation handoff.
    `generated-layout-recreate` on Application Cooperation, Service Realization,
    and Technology Usage views, build the normalized request, run
    `arch-layout.sh validate-request`, run `arch-layout.sh layout-elk`, run
-   `arch-layout.sh validate-result`, and materialize the result unless the
-   command is unavailable, validation fails, or the view has explicit locked
-   geometry. For unsupported viewpoints, do not silently hand-author geometry as
+   `arch-layout.sh validate-result`, and run `arch-layout.sh materialize-oef`
+   unless a command is unavailable, validation fails, or the view has explicit
+   locked geometry. For unsupported viewpoints, do not silently hand-author geometry as
    if a backend ran; select the viewpoint-specific policy or fallback and record
    the fallback reason. For architect-edited diagrams under
    `preserve-authored`, prefer `route-repair`; when route-only repair cannot
@@ -127,7 +127,8 @@ per view before final delivery:
 This record distinguishes layout generation from render validation.
 `arch-layout.sh validate-png` validates rendered PNG invariants only; it is
 never evidence that `arch-layout.sh layout-elk`, `route-repair`, or
-`global-polish` generated OEF geometry.
+`global-polish` generated OEF geometry, or that `materialize-oef` applied the
+result to the source OEF.
 
 ## Backend selection
 

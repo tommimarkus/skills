@@ -29,6 +29,7 @@ import picocli.CommandLine.Option;
                 ArchLayoutCli.LayoutElkCommand.class,
                 ArchLayoutCli.RouteRepairCommand.class,
                 ArchLayoutCli.GlobalPolishCommand.class,
+                ArchLayoutCli.MaterializeOefCommand.class,
                 ArchLayoutCli.ValidatePngCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
@@ -167,6 +168,75 @@ public final class ArchLayoutCli implements Callable<Integer> {
             JsonFiles.write(resultPath, result);
             System.out.println("wrote globalPolish layoutResult: " + resultPath);
             return 0;
+        }
+    }
+
+    @Command(name = "materialize-oef", description = "Apply layout result geometry and routes to an OEF view.")
+    static final class MaterializeOefCommand implements Callable<Integer> {
+        @Option(names = "--oef", required = true)
+        Path oefPath;
+        @Option(names = "--view", required = true)
+        String viewId;
+        @Option(names = "--result", required = true)
+        Path resultPath;
+        @Option(names = "--out", required = true)
+        Path outPath;
+        @Option(names = "--snap-grid", defaultValue = "0")
+        int snapGrid;
+        @Option(names = "--preserve-locked-nodes")
+        boolean preserveLockedNodes;
+        @Option(names = "--fail-on-warning")
+        boolean failOnWarning;
+        @Option(names = "--run-source-gate")
+        boolean runSourceGate;
+
+        @Override
+        public Integer call() throws IOException, InterruptedException {
+            LayoutSchemaValidator validator = new LayoutSchemaValidator();
+            JsonNode result = JsonFiles.read(resultPath);
+            ValidationResult resultValidation = validator.validateResult(result);
+            if (!resultValidation.ok()) {
+                resultValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutResult: " + diagnostic));
+                return 1;
+            }
+            String state = result.path("validation").path("state").asText();
+            if ("invalid".equals(state) || (failOnWarning && !"valid".equals(state))) {
+                System.err.println("layoutResult validation state is " + state + ": " + resultPath);
+                return 1;
+            }
+
+            OefMaterializer materializer = new OefMaterializer();
+            ValidationResult materialized = materializer.materialize(
+                    oefPath,
+                    viewId,
+                    result,
+                    outPath,
+                    new OefMaterializer.Options(snapGrid, preserveLockedNodes));
+            if (!materialized.ok()) {
+                materialized.diagnostics().forEach(diagnostic -> System.err.println("invalid OEF materialization: " + diagnostic));
+                return 1;
+            }
+
+            if (runSourceGate) {
+                int exitCode = runSourceGate(outPath);
+                if (exitCode != 0) {
+                    System.err.println("source geometry gate failed for: " + outPath);
+                    return 1;
+                }
+            }
+            System.out.println("wrote materialized OEF: " + outPath);
+            return 0;
+        }
+
+        private static int runSourceGate(Path materialized) throws IOException, InterruptedException {
+            Path gate = LayoutPaths.referencesDir().resolve("scripts").resolve("validate-oef-layout.sh");
+            Process process = new ProcessBuilder("bash", gate.toString(), materialized.toString())
+                    .redirectErrorStream(true)
+                    .start();
+            try (java.io.InputStream stream = process.getInputStream()) {
+                stream.transferTo(System.err);
+            }
+            return process.waitFor();
         }
     }
 

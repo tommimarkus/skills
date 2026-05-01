@@ -319,8 +319,9 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   [request/result schemas](souroldgeezer-design/skills/architecture-design/references/schemas/),
   produces generated-layout results for supported directed viewpoints,
   repairs stale or invalid routes while preserving locked node geometry,
-  applies bounded global polish when route-only repair is insufficient, and
-  validates rendered PNG invariants. Source lives outside the shipped skill
+  applies bounded global polish when route-only repair is insufficient,
+  materializes layout results back into OEF view geometry, and validates
+  rendered PNG invariants. Source lives outside the shipped skill
   runtime under `tools/architecture-layout-java/`; release packaging uses
   [package-arch-layout.sh](souroldgeezer-design/skills/architecture-design/references/scripts/package-arch-layout.sh)
   so only the JAR, shell launchers, schemas, procedures, and fixtures are
@@ -414,14 +415,16 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
   visible story path, L18 misleading boundary crossing, L19 ambiguous
   nested ownership, and L20 hidden realization spine).
   The packaged Java™ runtime adds concrete `validate-request`,
-  `validate-result`, `layout-elk`, `route-repair`, and `global-polish`
+  `validate-result`, `layout-elk`, `route-repair`, `global-polish`, and
+  `materialize-oef`
   commands over that backend-neutral contract, but it does not ship the
   deferred interactive debugger, relationship-matrix provenance proof,
   mainstream-tool compatibility proof, or multi-evidence recovery loop.
   Recreate, regenerate, and global reflow requests now report layout intent
   plus a per-view backend/fallback row, so users can distinguish OEF geometry
   generation or repair (`layout-elk`, `route-repair`, `global-polish`, or
-  viewpoint fallback) from rendered PNG validation (`validate-png`).
+  viewpoint fallback), result-to-OEF materialization (`materialize-oef`), and
+  rendered PNG validation (`validate-png`).
 - **Process-view emission contract** (introduced in 0.9.0). Build and
   Extract always emit a complete process-view set when Business Processes
   are in scope: one §9.7 Business Process Cooperation view per feature
