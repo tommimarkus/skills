@@ -180,6 +180,40 @@ Rerun checks only when the provider route supports it, the check is safe to
 rerun, and repository guidance or the user allows reruns. Never claim remote
 checks are green from local verification alone.
 
+### Pending Check Monitoring
+
+In `full-cycle`, pending required checks after PR creation, PR reuse, push,
+branch update, or check refresh are active work. Keep polling live GitHub PR
+state, combined status, check runs, required-check names, and head SHA until
+every required check reaches a terminal state or a GitHub escalation gate is
+hit. Do not stop after one retry, and do not final-report a normal completion
+while required checks are still pending.
+
+Use a provider-respectful cadence and avoid noisy public comments. Update a PR
+lifecycle marker only when the visible state changes materially, for example
+from `working` to `escalated` or `completed`; do not add one comment per poll.
+
+Classify terminal states this way:
+
+- `passed`: continue the requested lifecycle, including merge when authorized
+  and all other live gates are safe.
+- `failed`: address clear in-repo failures when the mode allows it; otherwise
+  escalate with the failing check names and the ownership classification.
+- `cancelled`, `skipped`, `missing`, or `unknown`: escalate unless repository
+  guidance explicitly documents that state as acceptable for the PR.
+- `pending` on a newer head SHA than previously inspected: restart monitoring
+  from the newer head after re-reading reviews, comments, and lifecycle
+  markers.
+
+Stop monitoring only for a real gate: provider queries are unavailable, the
+route is rate-limited, required check identity is unknown, an external provider
+does not expose enough state to continue, a repo-defined monitoring budget is
+exhausted, the user interrupts, or session/context limits make continued
+polling unsafe. In that case, update the lifecycle marker as `escalated` with a
+gate such as `required checks still pending after monitoring stopped`, and
+report `created/reused and monitoring stopped due to escalation` rather than a
+completed lifecycle.
+
 ## Branch Update And Push
 
 Prefer the PR's existing head branch when it clearly owns the work and is safe

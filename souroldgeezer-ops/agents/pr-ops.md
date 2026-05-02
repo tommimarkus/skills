@@ -14,6 +14,9 @@ When invoked:
 2. Follow the skill exactly: identify the provider, load the provider
    extension, resolve live provider and git state, classify the requested mode,
    and use the skill's ask-vs-continue and escalation rules.
+   In full-cycle mode, keep monitoring pending required checks until terminal
+   state or escalation; do not treat a single pending-check retry as
+   completion.
 3. Do not hijack incidental PR mentions, issue lifecycle work without an
    explicit prepared-branch handoff, standalone deep CI debugging, security
    posture review, design review, test-quality audit, or general

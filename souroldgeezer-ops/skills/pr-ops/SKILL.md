@@ -25,13 +25,25 @@ Default mode is `full-cycle`: inspect the requested PR, prepared branch, or
 queue; create or reuse a PR when the target is a prepared branch; classify
 reviews, comments, checks, branch state, and merge safety; address clear
 actionable work; verify; update the PR branch when safe; request review when
-appropriate; merge or close only when authorized; and clean up owned work areas.
+appropriate; monitor pending required checks until they reach a terminal state
+or a real escalation gate; merge or close only when authorized; and clean up
+owned work areas.
+
+In `full-cycle`, pending required checks are active lifecycle work, not a final
+state. A single pending-check retry is never completion. Continue refreshing
+live provider state through the provider extension until required checks pass,
+fail, become missing/unknown, are cancelled/skipped without documented
+allowance, or monitoring itself hits an escalation gate such as unavailable
+tooling, provider throttling, a repo-defined timeout, user interruption, or
+session/context exhaustion.
 
 Use a narrower mode only when the user asks for it:
 
 - `review-only`: inspect PR state and produce findings without changing files.
 - `create-or-update`: create or reuse a PR from a clearly selected prepared
   branch, then report its state without merging unless separately authorized.
+  This narrower mode may report pending checks after creation because it is not
+  a full-cycle monitoring request.
 - `checks-only`: inspect checks and classify failure ownership.
 - `address-feedback`: implement clear review feedback or check failures.
 - `merge-only`: merge or close a PR after live state proves it is safe.
@@ -129,9 +141,14 @@ For each PR or prepared branch:
     merging, closing, deleting branches, or final lifecycle writes.
 13. Create or update the PR, merge, close, request review, resolve threads, or
     clean up only through the selected strategy after live state is still safe.
-14. Rerun required verification after any merge, rebase, base update, or branch
+14. In `full-cycle`, when required checks are pending after PR creation,
+    branch update, push, or explicit check refresh, keep monitoring live check
+    state through the provider extension. Do not produce a normal final report
+    while checks are still pending; if monitoring cannot continue, update
+    lifecycle state as escalated and report the stop gate.
+15. Rerun required verification after any merge, rebase, base update, or branch
     update changes the tested result.
-15. Update lifecycle status and clean up only work areas owned by this run.
+16. Update lifecycle status and clean up only work areas owned by this run.
 
 ## Ask Vs Continue
 
@@ -191,8 +208,9 @@ Escalate on:
   repeated no-progress auto-fix, conflicts, push rejection, protected-branch
   mismatch, dirty owned work areas, or non-trivial branch history cleanup;
 - external fork or cross-repository boundaries, unknown check provider logs,
-  missing required checks, pending required checks, code-owner review conflict,
-  release/version ambiguity, unusual cost, or unusual runtime.
+  missing required checks, required checks that cannot be monitored to a safe
+  terminal state, code-owner review conflict, release/version ambiguity,
+  unusual cost, or unusual runtime.
 
 ## Output
 
@@ -209,6 +227,8 @@ End with a concise report:
 - base/head refs or SHAs inspected;
 - linked issues or sibling-skill handoff context when applicable;
 - review state and check state summary;
+- for full-cycle PRs with checks, whether checks reached a terminal state or
+  monitoring stopped due to an escalation gate;
 - integration or merge strategy;
 - lifecycle marker state;
 - verification summary;
