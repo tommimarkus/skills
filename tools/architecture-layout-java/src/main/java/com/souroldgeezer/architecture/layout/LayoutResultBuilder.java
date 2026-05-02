@@ -10,6 +10,7 @@ import com.souroldgeezer.architecture.layout.geometry.Route;
 import com.souroldgeezer.architecture.layout.metrics.LayoutMetrics;
 import com.souroldgeezer.architecture.layout.metrics.LayoutMetricsCalculator;
 import com.souroldgeezer.architecture.layout.metrics.LayoutResultValidator;
+import com.souroldgeezer.architecture.layout.policy.LayoutPolicyDiagnostics;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,10 @@ public final class LayoutResultBuilder {
         result.set("metrics", metrics.toJson(computed));
         ArrayNode allWarnings = JsonFiles.MAPPER.createArrayNode();
         warnings.forEach(allWarnings::add);
+        ObjectNode layoutPolicy = LayoutPolicyDiagnostics.evaluate(request, geometry, allWarnings);
+        if (layoutPolicy != null) {
+            result.set("layoutPolicy", layoutPolicy);
+        }
         resultValidator.warnings(request, result).forEach(allWarnings::add);
         if (!allWarnings.isEmpty()) {
             result.set("warnings", allWarnings);

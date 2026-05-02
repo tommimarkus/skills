@@ -167,6 +167,51 @@
         }
       }
     },
+    "layoutPolicy": {
+      "type": "object",
+      "required": ["name", "constraints"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "strictness": { "enum": ["warn", "strict"] },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "role": { "type": "string", "minLength": 1 },
+              "direction": { "enum": ["DOWN", "RIGHT", "LEFT", "UP"] },
+              "axis": { "enum": ["x", "y"] },
+              "parentId": { "type": "string", "minLength": 1 },
+              "nodeIds": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "edgeIds": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "pairs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["upper", "lower"],
+                  "additionalProperties": true,
+                  "properties": {
+                    "upper": { "type": "string", "minLength": 1 },
+                    "lower": { "type": "string", "minLength": 1 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "constraints": {
       "type": "object",
       "additionalProperties": true,

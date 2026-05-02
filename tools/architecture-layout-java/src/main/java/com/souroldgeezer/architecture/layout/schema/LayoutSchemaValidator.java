@@ -19,6 +19,9 @@ import java.util.Set;
 public final class LayoutSchemaValidator {
     private static final Set<String> REQUEST_MODES = Set.of("generated-layout", "route-repair", "global-polish");
     private static final Set<String> RESULT_MODES = Set.of("generated-layout", "route-repair", "global-polish");
+    private static final Set<String> POLICY_STRICTNESS = Set.of("warn", "strict");
+    private static final Set<String> POLICY_DIRECTIONS = Set.of("DOWN", "RIGHT", "LEFT", "UP");
+    private static final Set<String> POLICY_AXES = Set.of("x", "y");
 
     public ValidationResult validateRequest(Path requestPath) throws IOException {
         JsonNode request = JsonFiles.read(requestPath);
@@ -83,10 +86,10 @@ public final class LayoutSchemaValidator {
         validateParentReferences(nodesById, nodeIds, result);
         validateContainers(request, nodeIds, result);
         validateLocks(request, nodeIds, result);
+        Set<String> edgeIds = new HashSet<>();
         if (!request.has("edges") || !request.get("edges").isArray()) {
             result.add("/edges must be an array");
         } else {
-            Set<String> edgeIds = new HashSet<>();
             for (JsonNode edge : request.get("edges")) {
                 String id = requireText(edge, "id", result, "/edges/id");
                 if (id != null && !edgeIds.add(id)) {
@@ -122,6 +125,7 @@ public final class LayoutSchemaValidator {
         validateOptionalBoolean(request, "preserveExistingGeometry", result, "/preserveExistingGeometry");
         validatePriorGeometry(request, nodeIds, result);
         validateSemanticBands(request, result);
+        validateLayoutPolicy(request, nodeIds, edgeIds, result);
         return result;
     }
 
@@ -197,6 +201,7 @@ public final class LayoutSchemaValidator {
         if (layoutResult.has("warnings")) {
             validateWarnings(layoutResult.get("warnings"), result);
         }
+        validateResultLayoutPolicy(layoutResult, result);
         return result;
     }
 
@@ -359,6 +364,169 @@ public final class LayoutSchemaValidator {
             optionalText(band, "axis", result, path + "/axis");
             validateOptionalInt(band, "order", result, path + "/order");
             index++;
+        }
+    }
+
+    private static void validateLayoutPolicy(JsonNode request, Set<String> nodeIds, Set<String> edgeIds, ValidationResult result) {
+        if (!request.has("layoutPolicy")) {
+            return;
+        }
+        JsonNode policy = request.get("layoutPolicy");
+        if (!policy.isObject()) {
+            result.add("/layoutPolicy must be object");
+            return;
+        }
+        requireText(policy, "name", result, "/layoutPolicy/name");
+        if (policy.has("strictness")) {
+            String strictness = optionalText(policy, "strictness", result, "/layoutPolicy/strictness");
+            if (strictness != null && !POLICY_STRICTNESS.contains(strictness)) {
+                result.add("/layoutPolicy/strictness has unsupported value " + strictness);
+            }
+        }
+        JsonNode constraints = policy.get("constraints");
+        if (constraints == null || !constraints.isArray()) {
+            result.add("/layoutPolicy/constraints must be array");
+            return;
+        }
+        int index = 0;
+        for (JsonNode constraint : constraints) {
+            String path = "/layoutPolicy/constraints/" + index;
+            if (!constraint.isObject()) {
+                result.add(path + " must be object");
+                index++;
+                continue;
+            }
+            requireText(constraint, "id", result, path + "/id");
+            requireText(constraint, "kind", result, path + "/kind");
+            optionalText(constraint, "role", result, path + "/role");
+            validatePolicyDirection(constraint, path, result);
+            validatePolicyAxis(constraint, path, result);
+            String parentId = optionalText(constraint, "parentId", result, path + "/parentId");
+            if (parentId != null && !nodeIds.contains(parentId)) {
+                result.add(path + "/parentId references missing node " + parentId);
+            }
+            validatePolicyNodeIds(constraint, "nodeIds", nodeIds, result, path + "/nodeIds");
+            validatePolicyEdgeIds(constraint, edgeIds, result, path + "/edgeIds");
+            validatePolicyPairs(constraint, nodeIds, result, path + "/pairs");
+            index++;
+        }
+    }
+
+    private static void validateResultLayoutPolicy(JsonNode layoutResult, ValidationResult result) {
+        if (!layoutResult.has("layoutPolicy")) {
+            return;
+        }
+        JsonNode policy = layoutResult.get("layoutPolicy");
+        if (!policy.isObject()) {
+            result.add("/layoutPolicy must be object");
+            return;
+        }
+        requireText(policy, "name", result, "/layoutPolicy/name");
+        JsonNode constraints = policy.get("constraints");
+        if (constraints == null || !constraints.isArray()) {
+            result.add("/layoutPolicy/constraints must be array");
+            return;
+        }
+        int index = 0;
+        for (JsonNode constraint : constraints) {
+            String path = "/layoutPolicy/constraints/" + index;
+            requireText(constraint, "id", result, path + "/id");
+            requireText(constraint, "kind", result, path + "/kind");
+            requireText(constraint, "status", result, path + "/status");
+            requireText(constraint, "loweredBy", result, path + "/loweredBy");
+            if (!constraint.path("postChecked").isBoolean()) {
+                result.add(path + "/postChecked must be boolean");
+            }
+            index++;
+        }
+    }
+
+    private static void validatePolicyDirection(JsonNode constraint, String path, ValidationResult result) {
+        if (!constraint.has("direction")) {
+            return;
+        }
+        String direction = optionalText(constraint, "direction", result, path + "/direction");
+        if (direction != null && !POLICY_DIRECTIONS.contains(direction)) {
+            result.add(path + "/direction has unsupported value " + direction);
+        }
+    }
+
+    private static void validatePolicyAxis(JsonNode constraint, String path, ValidationResult result) {
+        if (!constraint.has("axis")) {
+            return;
+        }
+        String axis = optionalText(constraint, "axis", result, path + "/axis");
+        if (axis != null && !POLICY_AXES.contains(axis)) {
+            result.add(path + "/axis has unsupported value " + axis);
+        }
+    }
+
+    private static void validatePolicyNodeIds(JsonNode constraint, String field, Set<String> nodeIds, ValidationResult result, String path) {
+        if (!constraint.has(field)) {
+            return;
+        }
+        JsonNode values = constraint.get(field);
+        if (!values.isArray()) {
+            result.add(path + " must be array");
+            return;
+        }
+        int index = 0;
+        for (JsonNode value : values) {
+            if (!value.isTextual() || value.asText().isBlank()) {
+                result.add(path + "/" + index + " must be text");
+            } else if (!nodeIds.contains(value.asText())) {
+                result.add(path + "/" + index + " references missing node " + value.asText());
+            }
+            index++;
+        }
+    }
+
+    private static void validatePolicyEdgeIds(JsonNode constraint, Set<String> edgeIds, ValidationResult result, String path) {
+        if (!constraint.has("edgeIds")) {
+            return;
+        }
+        JsonNode values = constraint.get("edgeIds");
+        if (!values.isArray()) {
+            result.add(path + " must be array");
+            return;
+        }
+        int index = 0;
+        for (JsonNode value : values) {
+            if (!value.isTextual() || value.asText().isBlank()) {
+                result.add(path + "/" + index + " must be text");
+            } else if (!edgeIds.contains(value.asText())) {
+                result.add(path + "/" + index + " references missing edge " + value.asText());
+            }
+            index++;
+        }
+    }
+
+    private static void validatePolicyPairs(JsonNode constraint, Set<String> nodeIds, ValidationResult result, String path) {
+        if (!constraint.has("pairs")) {
+            return;
+        }
+        JsonNode pairs = constraint.get("pairs");
+        if (!pairs.isArray()) {
+            result.add(path + " must be array");
+            return;
+        }
+        int index = 0;
+        for (JsonNode pair : pairs) {
+            String pairPath = path + "/" + index;
+            if (!pair.isObject()) {
+                result.add(pairPath + " must be object");
+            } else {
+                validatePolicyPairEndpoint(pair, "upper", nodeIds, result, pairPath + "/upper");
+                validatePolicyPairEndpoint(pair, "lower", nodeIds, result, pairPath + "/lower");
+            }
+            index++;
+        }
+    }
+
+    private static void validatePolicyPairEndpoint(JsonNode pair, String field, Set<String> nodeIds, ValidationResult result, String path) {
+        String value = requireText(pair, field, result, path);
+        if (value != null && !nodeIds.contains(value)) {
+            result.add(path + " references missing node " + value);
         }
     }
 

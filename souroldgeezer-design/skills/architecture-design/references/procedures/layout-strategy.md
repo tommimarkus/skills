@@ -76,12 +76,16 @@ without the final validation handoff.
    reflow. Reuse prior bendpoints only when the relationship reference,
    source node, target node, and `AD-L11` route validation still pass.
 2. **Build the normalized layout request.** Include nodes, edges, hierarchy,
-   prior coordinates, locks, viewpoint, semantic bands, edge priority, route
-   constraints, and generated-vs-authored flags per
+   prior coordinates, locks, viewpoint, semantic bands, normalized
+   `layoutPolicy` constraints, edge priority, route constraints, and
+   generated-vs-authored flags per
    [layout-backend-contract.md](layout-backend-contract.md).
 3. **Choose the viewpoint-specific layout policy.** Dispatch by the OEF
    `viewpoint=` value and apply the visual grammar in
    [layout-policies-by-viewpoint.md](layout-policies-by-viewpoint.md).
+   Normalize the selected policy into backend-neutral `layoutPolicy`
+   constraints before backend execution; do not push raw ArchiMate® semantic
+   inference into the geometry backend.
 4. **Select a layout backend or fallback and record the decision.** For
    `generated-layout-recreate` on Application Cooperation, Service Realization,
    and Technology Usage views, build the normalized request, run
@@ -131,6 +135,7 @@ per view before final delivery:
 | Selected geometry path | `layout-elk`, `route-repair`, `global-polish`, `deterministic-fallback`, `viewpoint-policy`, or `preserved-authored` |
 | Request validation | `passed`, `failed`, or `not run` with reason |
 | Result validation | `passed`, `failed`, or `not run` with reason |
+| Layout policy diagnostics | `honored`, `weakened`, `unsupported`, `ignored`, or `not applicable` with the policy constraint ids |
 | OEF materialization | `materialized`, `not changed`, or `blocked` |
 | PNG validation | `not requested`, `validate-png passed`, `validate-png failed`, or `not run` with reason |
 | Provenance artifact | `layout-provenance emitted`, `not changed`, or `blocked` with reason |
@@ -149,6 +154,14 @@ viewpoint policy, or preserved authored geometry), the backend/fallback that
 actually ran, materialization and render validation commands, source geometry
 and render gate outcomes, post-processing, and generated text snippets for the
 user response, README, or OEF documentation.
+
+When `layoutPolicy` is present in a layout result, treat its constraint
+diagnostics as the backend evidence for viewpoint-aware geometry. `honored`
+means the runtime lowered the constraint and the produced coordinates passed
+the post-check. `weakened` means the runtime attempted the constraint but final
+geometry failed the post-check. `unsupported` means the request used a
+constraint kind that this runtime cannot lower; do not claim the generated view
+is viewpoint-aware until the policy warning is resolved or explicitly accepted.
 
 ## Backend selection
 

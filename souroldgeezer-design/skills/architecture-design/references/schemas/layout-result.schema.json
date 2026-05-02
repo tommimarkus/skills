@@ -94,6 +94,35 @@
         }
       }
     },
+    "layoutPolicy": {
+      "type": "object",
+      "required": ["name", "constraints"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "strictness": { "enum": ["warn", "strict"] },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "status", "loweredBy", "postChecked"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "role": { "type": "string", "minLength": 1 },
+              "status": { "enum": ["honored", "weakened", "unsupported", "ignored"] },
+              "loweredBy": { "type": "string" },
+              "postChecked": { "type": "boolean" },
+              "evidence": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "metrics": {
       "type": "object",
       "properties": {

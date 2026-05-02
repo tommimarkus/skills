@@ -11,6 +11,7 @@ import com.souroldgeezer.architecture.layout.geometry.Port;
 import com.souroldgeezer.architecture.layout.geometry.PortAssigner;
 import com.souroldgeezer.architecture.layout.geometry.Rectangle;
 import com.souroldgeezer.architecture.layout.geometry.Route;
+import com.souroldgeezer.architecture.layout.policy.LayoutPolicyDiagnostics;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -139,7 +140,7 @@ public final class ElkLayoutBackend {
                 rectangle.y() + shiftY,
                 rectangle.width(),
                 rectangle.height())));
-        return new ElkGraph(normalized, elkEdges, shiftX, shiftY);
+        return new ElkGraph(LayoutPolicyDiagnostics.applyPostProcessing(request, normalized), elkEdges, shiftX, shiftY);
     }
 
     private static ElkNode createNode(String id, Map<String, JsonNode> requestNodes, Map<String, ElkNode> elkNodes, ElkNode root) {

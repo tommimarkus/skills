@@ -28,6 +28,9 @@ route edges, but it cannot change architecture semantics.
 - `locks`: authored or externally fixed geometry.
 - `priorGeometry`: prior coordinates and bendpoints when available.
 - `semanticBands`: viewpoint/layer/aspect bands the backend should respect.
+- `layoutPolicy`: normalized, backend-neutral viewpoint constraints produced by
+  the skill from viewpoint policy, semantic bands, containers, spines, edge
+  priorities, and routing intent.
 - `constraints`: routing, obstacle, lane, and reflow limits.
 
 Validate a request before backend execution:
@@ -58,8 +61,8 @@ another procedure names them.
 | Status | Fields | Contract meaning |
 |---|---|---|
 | Required schema/runtime | `schemaVersion`, `requestId`, `archimateTarget`, `mode`, `view.id`, `view.name`, `view.viewpoint`, `view.direction`, `view.qualityTarget`, `nodes[].id`, `nodes[].width`, `nodes[].height`, `edges[].id`, `edges[].source`, `edges[].target`, `constraints` | `validate-request` fails when any is missing or malformed. |
-| Optional runtime-honored | `nodes[].x`, `nodes[].y`, `nodes[].locked`, `nodes[].generated`, `nodes[].inferred`, `nodes[].parentId`, `nodes[].label`, `edges[].visible`, `edges[].priority`, `edges[].routeLocked`, `edges[].existingRoute`, `constraints.noRoutePossible`, `constraints.maxNodeDisplacement` | The packaged runtime reads these fields. `locked` nodes require both `x` and `y`; `routeLocked` edges require an `existingRoute`; `parentId` must reference another request node without cycles. |
-| Advisory / skill-owned | `preserveExistingGeometry`, `nodes[].elementRef`, `nodes[].type`, `nodes[].semanticLayer`, `nodes[].semanticAspect`, `nodes[].ports`, `edges[].relationshipRef`, `edges[].relationshipType`, `edges[].type`, `edges[].generated`, `edges[].locked`, `edges[].preferredSourcePorts`, `edges[].preferredTargetPorts`, `edges[].priorBendpoints`, `edges[].curationReason`, `containers`, `locks`, `priorGeometry`, `semanticBands`, `constraints.maxBends` | The schema and validator expose their shape so agents can build traceable requests. The architecture-design workflow owns their semantic interpretation unless a backend procedure says otherwise. |
+| Optional runtime-honored | `nodes[].x`, `nodes[].y`, `nodes[].locked`, `nodes[].generated`, `nodes[].inferred`, `nodes[].parentId`, `nodes[].label`, `edges[].visible`, `edges[].priority`, `edges[].routeLocked`, `edges[].existingRoute`, `layoutPolicy.name`, `layoutPolicy.strictness`, `layoutPolicy.constraints[].id`, `layoutPolicy.constraints[].kind`, `layoutPolicy.constraints[].role`, `layoutPolicy.constraints[].direction`, `layoutPolicy.constraints[].axis`, `layoutPolicy.constraints[].nodeIds`, `layoutPolicy.constraints[].edgeIds`, `layoutPolicy.constraints[].parentId`, `layoutPolicy.constraints[].pairs`, `constraints.noRoutePossible`, `constraints.maxNodeDisplacement` | The packaged runtime reads these fields. `locked` nodes require both `x` and `y`; `routeLocked` edges require an `existingRoute`; `parentId` and policy references must resolve to request nodes or edges. Supported policy constraints are lowered into ELK options / graph structure where possible and post-checked in the result. |
+| Advisory / skill-owned | `preserveExistingGeometry`, `nodes[].elementRef`, `nodes[].type`, `nodes[].semanticLayer`, `nodes[].semanticAspect`, `nodes[].ports`, `edges[].relationshipRef`, `edges[].relationshipType`, `edges[].type`, `edges[].generated`, `edges[].locked`, `edges[].preferredSourcePorts`, `edges[].preferredTargetPorts`, `edges[].priorBendpoints`, `edges[].curationReason`, `containers`, `locks`, `priorGeometry`, `semanticBands`, `constraints.maxBends` | The schema and validator expose their shape so agents can build traceable requests. The architecture-design workflow owns their semantic interpretation. The skill may normalize these fields into `layoutPolicy`; the runtime must not infer ArchiMate semantics directly from them. |
 | Accepted but ignored by packaged runtime | Any extra property not listed above | Allowed for forward compatibility. Do not claim it influenced `layout-elk`, `route-repair`, or `global-polish` until runtime code and this table say so. |
 
 ## Node fields
@@ -162,6 +165,35 @@ Semantic bands are hints, not absolute pixels:
 Backend coordinates can vary, but final OEF must satisfy the viewpoint policy
 and `AD-L*` checks.
 
+## Layout policy
+
+`layoutPolicy` is the normalized runtime contract for viewpoint-aware generated
+layout. The architecture-design skill owns the semantic decision: it selects the
+viewpoint policy, decides which relationships remain visible, and translates
+`semanticBands`, containers, realization spines, hosting stacks, trust
+boundaries, edge priorities, and routing intent into backend-neutral
+constraints. The packaged runtime treats those constraints as geometry
+instructions over node ids and edge ids; it does not infer ArchiMate® meaning
+from `relationshipType`, element type, or `viewpoint`.
+
+Current packaged runtime constraint kinds:
+
+- `rank-chain`: a high-priority ordered chain such as a Service Realization
+  spine. Lowered through ELK Layered direction and edge priority, then
+  post-checked against produced node centers.
+- `rank-alignment`: a same-axis alignment pair such as Application Component
+  over Technology Node in a Technology Usage hosting stack. Lowered through ELK
+  Layered where possible and finished by bounded post-processing.
+- `compound-boundary`: a parent/child boundary such as an external trust
+  boundary. Lowered through nested ELK compound nodes and post-checked against
+  produced containment.
+
+Unsupported kinds are reported as `LAYOUT_POLICY_CONSTRAINT_UNSUPPORTED`.
+Supported kinds that are lowered but fail the post-check are reported as
+`LAYOUT_POLICY_CONSTRAINT_WEAKENED`. `strictness: "strict"` makes policy
+warnings errors; the default `"warn"` caps readiness without hiding the layout
+result.
+
 ## Backend result fields
 
 `layoutResult` returns the fields encoded by
@@ -173,6 +205,9 @@ and `AD-L*` checks.
   route status.
 - `hiddenEdges`: relationship ids omitted or hidden from the view and the
   policy reason.
+- `layoutPolicy`: per-constraint diagnostics with `status` (`honored`,
+  `weakened`, `unsupported`, or `ignored`), `loweredBy`, `postChecked`, and
+  machine-readable evidence.
 - `metrics`: node overlap defects, same-parent node overlaps, expected
   parent/child containments, child-outside-parent containment defects,
   unrelated connector-node intersections, connector-container boundary

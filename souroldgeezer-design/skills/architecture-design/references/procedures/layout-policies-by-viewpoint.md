@@ -11,9 +11,9 @@ not the default for every view.
 | Viewpoint | Preferred policy | Generated-layout backend policy | Avoid |
 |---|---|---|---|
 | Capability Map | Capability tile/decomposition map | `layout-elk` not eligible; use tile/decomposition policy or deterministic fallback only for small directed side stories | Generic layered layout as primary policy |
-| Application Cooperation | Cluster, hub, integration lanes | `layout-elk` eligible for generated/recreate requests when the request carries cluster/lane semantic bands | Random force-directed layout unless cluster story is explicit |
-| Service Realization | Layered realization spine | `layout-elk` eligible for generated/recreate requests when the realization spine and edge priorities are explicit | Hiding the main realization chain |
-| Technology Usage | Hosting/deployment stack | `layout-elk` eligible for generated/recreate requests when hosting-stack semantic bands are explicit | Generic layer/aspect rows when hosting is the point |
+| Application Cooperation | Cluster, hub, integration lanes | `layout-elk` eligible for generated/recreate requests when the request carries cluster/lane semantic bands normalized into `layoutPolicy` constraints | Random force-directed layout unless cluster story is explicit |
+| Service Realization | Layered realization spine | `layout-elk` eligible for generated/recreate requests when the realization spine and edge priorities are explicit and normalized into `layoutPolicy` constraints | Hiding the main realization chain |
+| Technology Usage | Hosting/deployment stack | `layout-elk` eligible for generated/recreate requests when hosting-stack semantic bands are explicit and normalized into `layoutPolicy` constraints | Generic layer/aspect rows when hosting is the point |
 | Migration | Plateau/timeline layout | `layout-elk` not eligible; use timeline/plateau policy and report fallback/policy | Treating dev/stage/prod topology as migration without intent |
 | Motivation | Influence/traceability tree | `layout-elk` not eligible; use traceability-tree policy and report fallback/policy | Layer/aspect grid as default |
 | Business Process Cooperation | Process-flow lanes, swimlanes, handoffs | `layout-elk` not eligible; use flow/lane policy and report fallback/policy | Generic dependency layout |
@@ -23,6 +23,15 @@ skill still builds a per-view layout decision record, applies this viewpoint
 policy, uses deterministic fallback only where the policy allows it,
 materializes OEF geometry, and validates the final source geometry. The final
 response states `layout-elk not eligible` for these views.
+
+`layoutPolicy` is the runtime-honored shape of these viewpoint policies. Keep
+`semanticBands` as authoring evidence and normalize them into `layoutPolicy`
+before calling `layout-elk`; do not ask the Java™ runtime to infer ArchiMate®
+semantics directly from relationship or element types. The packaged ELK adapter
+currently lowers `rank-chain`, `rank-alignment`, and `compound-boundary`
+constraints where they map to ELK Layered direction, edge priority, compound
+graphs, and bounded post-processing, then reports each constraint as honored,
+weakened, or unsupported in the layout result.
 
 ## Capability Map
 

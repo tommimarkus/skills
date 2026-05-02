@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.27.0"));
+        assertTrue(out.toString().contains("arch-layout 0.28.0"));
     }
 
     @Test
@@ -136,6 +136,211 @@ class ArchLayoutCliTest {
         assertEquals(300, node(result, "locked").path("y").asInt());
         assertEquals("capped", result.path("readiness").asText());
         assertTrue(result.path("warnings").toString().contains("LAYOUT_LOCKED_NODE_RESTORED"));
+    }
+
+    @Test
+    void validateRequestAcceptsLayoutPolicyAndRejectsMissingPolicyReferences() throws Exception {
+        Path valid = tempDir.resolve("valid-policy.request.json");
+        Path invalid = tempDir.resolve("invalid-policy.request.json");
+        Files.writeString(valid, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "policy-valid",
+                  "archimateTarget": "3.2",
+                  "mode": "generated-layout",
+                  "view": {
+                    "id": "view",
+                    "name": "Policy Valid",
+                    "viewpoint": "Service Realization",
+                    "direction": "DOWN",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "process", "width": 150, "height": 70 },
+                    { "id": "service", "width": 150, "height": 70 },
+                    { "id": "component", "width": 150, "height": 70 }
+                  ],
+                  "edges": [
+                    { "id": "e-process-service", "source": "process", "target": "service", "visible": true },
+                    { "id": "e-service-component", "source": "service", "target": "component", "visible": true }
+                  ],
+                  "layoutPolicy": {
+                    "name": "service-realization-spine",
+                    "strictness": "warn",
+                    "constraints": [
+                      {
+                        "id": "main-spine",
+                        "kind": "rank-chain",
+                        "role": "realization-spine",
+                        "nodeIds": ["process", "service", "component"],
+                        "edgeIds": ["e-process-service", "e-service-component"],
+                        "direction": "DOWN"
+                      }
+                    ]
+                  },
+                  "constraints": {}
+                }
+                """);
+        Files.writeString(invalid, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "policy-invalid",
+                  "archimateTarget": "3.2",
+                  "mode": "generated-layout",
+                  "view": {
+                    "id": "view",
+                    "name": "Policy Invalid",
+                    "viewpoint": "Service Realization",
+                    "direction": "DOWN",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "process", "width": 150, "height": 70 },
+                    { "id": "service", "width": 150, "height": 70 }
+                  ],
+                  "edges": [
+                    { "id": "e-process-service", "source": "process", "target": "service", "visible": true }
+                  ],
+                  "layoutPolicy": {
+                    "name": "service-realization-spine",
+                    "strictness": "warn",
+                    "constraints": [
+                      {
+                        "id": "main-spine",
+                        "kind": "rank-chain",
+                        "nodeIds": ["process", "missing-component"],
+                        "edgeIds": ["missing-edge"],
+                        "direction": "DOWN"
+                      }
+                    ]
+                  },
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("validate-request", "--request", valid.toString()));
+        assertEquals(1, cli().execute("validate-request", "--request", invalid.toString()));
+    }
+
+    @Test
+    void layoutElkReportsPolicyConstraintStatuses() throws Exception {
+        Path request = tempDir.resolve("policy-diagnostics.request.json");
+        Path resultPath = tempDir.resolve("policy-diagnostics.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "policy-diagnostics",
+                  "archimateTarget": "3.2",
+                  "mode": "generated-layout",
+                  "view": {
+                    "id": "view",
+                    "name": "Policy Diagnostics",
+                    "viewpoint": "Service Realization",
+                    "direction": "DOWN",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "process", "width": 150, "height": 70 },
+                    { "id": "service", "width": 150, "height": 70 },
+                    { "id": "component", "width": 150, "height": 70 }
+                  ],
+                  "edges": [
+                    { "id": "e-process-service", "source": "process", "target": "service", "visible": true, "priority": 100 },
+                    { "id": "e-service-component", "source": "service", "target": "component", "visible": true, "priority": 100 }
+                  ],
+                  "layoutPolicy": {
+                    "name": "service-realization-spine",
+                    "strictness": "warn",
+                    "constraints": [
+                      {
+                        "id": "main-spine",
+                        "kind": "rank-chain",
+                        "role": "realization-spine",
+                        "nodeIds": ["process", "service", "component"],
+                        "edgeIds": ["e-process-service", "e-service-component"],
+                        "direction": "DOWN"
+                      },
+                      {
+                        "id": "unsupported",
+                        "kind": "circle-pack",
+                        "nodeIds": ["process", "service"]
+                      }
+                    ]
+                  },
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("layout-elk", "--request", request.toString(), "--result", resultPath.toString()));
+
+        JsonNode result = JsonFiles.read(resultPath);
+        JsonNode policy = result.path("layoutPolicy");
+        assertEquals("service-realization-spine", policy.path("name").asText());
+        JsonNode mainSpine = policyConstraint(result, "main-spine");
+        assertEquals("rank-chain", mainSpine.path("kind").asText());
+        assertEquals("honored", mainSpine.path("status").asText());
+        assertEquals("elk-layered", mainSpine.path("loweredBy").asText());
+        assertTrue(mainSpine.path("postChecked").asBoolean());
+        assertEquals("DOWN", mainSpine.path("evidence").path("direction").asText());
+        assertEquals("unsupported", policyConstraint(result, "unsupported").path("status").asText());
+        assertTrue(result.path("warnings").toString().contains("LAYOUT_POLICY_CONSTRAINT_UNSUPPORTED"));
+    }
+
+    @Test
+    void layoutElkAppliesTechnologyUsageRankAlignmentPolicy() throws Exception {
+        Path request = tempDir.resolve("technology-alignment.request.json");
+        Path resultPath = tempDir.resolve("technology-alignment.result.json");
+        Files.writeString(request, """
+                {
+                  "schemaVersion": "1.0",
+                  "requestId": "technology-alignment",
+                  "archimateTarget": "3.2",
+                  "mode": "generated-layout",
+                  "view": {
+                    "id": "view",
+                    "name": "Technology Alignment",
+                    "viewpoint": "Technology Usage",
+                    "direction": "DOWN",
+                    "qualityTarget": "diagram-readable"
+                  },
+                  "nodes": [
+                    { "id": "app", "width": 140, "height": 70 },
+                    { "id": "host", "width": 220, "height": 90 },
+                    { "id": "storage", "width": 140, "height": 70 }
+                  ],
+                  "edges": [
+                    { "id": "e-app-host", "source": "app", "target": "host", "visible": true, "priority": 100 },
+                    { "id": "e-host-storage", "source": "host", "target": "storage", "visible": true, "priority": 40 }
+                  ],
+                  "layoutPolicy": {
+                    "name": "technology-usage-hosting-stack",
+                    "strictness": "warn",
+                    "constraints": [
+                      {
+                        "id": "app-host-stack",
+                        "kind": "rank-alignment",
+                        "role": "hosting-stack",
+                        "axis": "x",
+                        "pairs": [
+                          { "upper": "app", "lower": "host" }
+                        ]
+                      }
+                    ]
+                  },
+                  "constraints": {}
+                }
+                """);
+
+        assertEquals(0, cli().execute("layout-elk", "--request", request.toString(), "--result", resultPath.toString()));
+
+        JsonNode result = JsonFiles.read(resultPath);
+        JsonNode app = node(result, "app");
+        JsonNode host = node(result, "host");
+        int appCenter = app.path("x").asInt() + app.path("w").asInt() / 2;
+        int hostCenter = host.path("x").asInt() + host.path("w").asInt() / 2;
+        assertEquals(hostCenter, appCenter);
+        assertEquals("honored", policyConstraint(result, "app-host-stack").path("status").asText());
+        assertEquals("elk-layered+postprocess", policyConstraint(result, "app-host-stack").path("loweredBy").asText());
     }
 
     @Test
@@ -460,7 +665,7 @@ class ArchLayoutCliTest {
 
         JsonNode report = JsonFiles.read(provenance);
         JsonNode view = report.path("views").get(0);
-        assertEquals("arch-layout 0.27.0", report.path("generatedBy").asText());
+        assertEquals("arch-layout 0.28.0", report.path("generatedBy").asText());
         assertEquals("id-view-service-realization", view.path("viewId").asText());
         assertEquals("generated-layout-recreate", view.path("layoutIntent").asText());
         assertEquals("layout-elk", view.path("selectedGeometryPath").asText());
@@ -553,6 +758,15 @@ class ArchLayoutCliTest {
             }
         }
         throw new AssertionError("Missing warning " + code + " in " + result.path("warnings"));
+    }
+
+    private static JsonNode policyConstraint(JsonNode result, String id) {
+        for (JsonNode constraint : result.path("layoutPolicy").path("constraints")) {
+            if (id.equals(constraint.path("id").asText())) {
+                return constraint;
+            }
+        }
+        throw new AssertionError("Missing layout policy constraint " + id + " in " + result.path("layoutPolicy"));
     }
 
     private void assertCanMaterialize(String resultFixture) throws Exception {
