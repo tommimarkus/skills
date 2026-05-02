@@ -44,7 +44,7 @@ Then emit the suite-level assessment block:
 ### Gap report
 
 <One of the states documented in [sut-surface-enumeration.md § Gap report format](sut-surface-enumeration.md#gap-report-format):
- State A — enumeration ran (SUT projects list, counts table, top probable gaps, reconciliation with mutation)
+ State A — enumeration ran (SUT projects list, counts table, confirmation state, top probable gaps, reconciliation with mutation)
  State B — skipped (extension has no SUT surface enumeration section / quick mode / E2E-only scope)>
 
 ### Runtime distribution
@@ -72,3 +72,13 @@ Then emit the suite-level assessment block:
 - **P1** — <work item> `[mutation]` ← tag items surfaced by mutation testing
 - **P2** — ...
 ```
+
+Worklist rules:
+
+- Static-only `probable-static` gap entries are verification work, not direct
+  implementation work. Phrase them as "verify whether ..." and include the
+  mutation/manual-review step needed to confirm.
+- `confirmed-mutation` and `confirmed-manual` gaps may become implementation
+  work items.
+- `dismissed-indirect` gaps do not become worklist items; cite the covering
+  public-boundary test evidence in the gap report.

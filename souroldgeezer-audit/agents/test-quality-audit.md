@@ -1,6 +1,6 @@
 ---
 name: test-quality-audit
-description: Use when auditing unit, integration, or E2E test quality — distinguishing specification tests from characterization tests (unit), incidentally-scoped tests (integration), or scope-and-provenance failures (E2E), surfacing coupling, scope, and browser-layer smells, and producing per-test findings with severity and recommended actions. Dispatches on detected test type. Supports quick single-file / PR-diff audits and deep suite-wide audits, with pluggable per-stack extensions for framework-specific smells.
+description: Use when auditing unit, integration, or E2E test quality — distinguishing specification tests from characterization tests (unit), incidentally-scoped tests (integration), or scope-and-provenance failures (E2E), surfacing coupling, scope, and browser-layer smells, and producing per-test findings with severity and recommended actions. Dispatches on detected test type. Supports quick single-file / PR-diff audits and deep suite-wide audits with pluggable per-stack extensions.
 tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
 ---

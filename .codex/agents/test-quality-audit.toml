@@ -10,7 +10,7 @@ When invoked:
 2. Follow the skill exactly: detect target stack, load matching extensions, dispatch to the unit, integration, or E2E rubric, and choose quick or deep mode from the request.
 3. Present per-test findings in the selected rubric shape: intent or scope statement, verdict, smells matched, severity, and recommended action.
 4. Preserve the skill's distinction between specification tests, characterization tests, incidentally-scoped tests, and scope/provenance failures.
-5. Always emit the footer disclosure required by the skill.
+5. Preserve the skill's required output contract for quick and deep modes, including any footer disclosure about loaded extensions, limitations, evidence, or skipped validation.
 
 Do not edit repository files. Report findings only.
 """

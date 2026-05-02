@@ -22,8 +22,12 @@ Unlike mutation testing (step 4) which observes runtime kill behavior, surface e
    - Its identifier appears in a test method name or attribute (`[Fact(DisplayName = "...")]`).
    - Its identifier appears in a test body as an invocation target, a string literal (for routes), or a type reference (for migrations / exceptions).
    - An indirect-coverage signal fires (e.g. a controller test exercises a service method indirectly — the extension may document known indirect-coverage patterns that suppress false positives).
-5. **Emit a gap report** (see [§ Gap report format](#gap-report-format) below). Each unreferenced entry is a *probable* gap because grep is an approximate cross-reference. A true negative requires either mutation testing or manual verification.
-6. **On extension section missing**, report: "Gap detection skipped — stack extension has no SUT surface enumeration section. Mutation testing remains the only gap-finding mechanism for this scope." Continue with static findings.
+5. **Classify confirmation state.** Each unreferenced entry starts as `probable-static`. Upgrade it only when evidence supports it:
+   - `confirmed-mutation` — mutation testing reports `NoCoverage` or surviving mutants for the same symbol/file.
+   - `confirmed-manual` — manual read proves no test reaches the symbol through a caller, adapter, generated route, or cross-extension public-boundary test.
+   - `dismissed-indirect` — a test reaches the symbol indirectly and asserts the published contract.
+6. **Emit a gap report** (see [§ Gap report format](#gap-report-format) below). Each unreferenced entry is a *probable* gap unless it was upgraded by mutation or manual evidence. A true negative requires either mutation testing or manual verification.
+7. **On extension section missing**, report: "Gap detection skipped — stack extension has no SUT surface enumeration section. Mutation testing remains the only gap-finding mechanism for this scope." Continue with static findings.
 
 ## Gap classes
 
@@ -40,6 +44,8 @@ The extension's patterns must populate these five categories. Extensions may add
 - **Extensions own the grep patterns.** The core workflow is framework-neutral; language-specific patterns belong in `extensions/<stack>.md`.
 - **Gap detection is suite-level.** Never run step 2.5 in quick mode — a PR-diff or single-file audit produces noise.
 - **Never treat a probable gap as a confirmed gap** without verification. The report must flag each finding as probable and recommend mutation testing or manual review for confirmation.
+- **Do not create implementation-only worklist items from static-only gaps.** Worklist entries based on `probable-static` gaps must be framed as verification tasks first. Implementation work is allowed only after `confirmed-mutation` or `confirmed-manual` evidence exists.
+- **Account for cross-extension public-boundary coverage.** A Robot, Python, Node.js, or other external-runner test can satisfy a SUT-stack route/adapter gap when it exercises the public boundary and asserts the contract. It must not suppress source-level seam or mutation-target findings it cannot observe.
 - **Reconcile with mutation testing** in step 5 when both steps produced output.
 
 ## Gap report format
@@ -52,29 +58,30 @@ In the step-5 suite assessment, emit a `### Gap report` subsection in one of two
 ### Gap report (static SUT surface enumeration)
 
 - **SUT projects:** <project list>
-- **Method:** grep-based cross-reference from test files to SUT symbols via the stack extension's patterns. Weak signal — each finding is a *probable* gap and requires verification.
+- **Method:** grep-based cross-reference from test files to SUT symbols via the stack extension's patterns. Static-only findings are *probable* and require verification before implementation.
 
-| Class | Enumerated | Referenced from tests | Probable gaps | Confidence |
-|---|---|---|---|---|
-| `Gap-API` — public methods | <N> | <M> | <N-M> | medium |
-| `Gap-Route` — HTTP / function routes | <N> | <M> | <N-M> | high |
-| `Gap-Migration` — migration classes | <N> | <M> | <N-M> | high |
-| `Gap-Throw` — throw sites | <N> | <M> | <N-M> | medium |
-| `Gap-Validate` — validation attributes | <N> | <M> | <N-M> | high |
+| Class | Enumerated | Referenced from tests | Probable-static | Confirmed | Dismissed-indirect | Confidence |
+|---|---|---|---|---|---|---|
+| `Gap-API` — public methods | <N> | <M> | <P> | <C> | <D> | medium |
+| `Gap-Route` — HTTP / function routes | <N> | <M> | <P> | <C> | <D> | high |
+| `Gap-Migration` — migration classes | <N> | <M> | <P> | <C> | <D> | high |
+| `Gap-Throw` — throw sites | <N> | <M> | <P> | <C> | <D> | medium |
+| `Gap-Validate` — validation attributes | <N> | <M> | <P> | <C> | <D> | high |
 
-#### Top probable gaps (highest confidence first)
+#### Top gaps and verification candidates
 
-- **`Gap-Route`** — `DELETE /api/orders/{id}` (`api/Functions/OrdersApi.cs:88`): route registered, no test references the template. Likely true gap.
-- **`Gap-Migration`** — `AddOrderStatusColumnMigration` (`api/Migrations/0007_order_status.cs:14`): migration class name not mentioned in any test.
-- **`Gap-Validate`** — `[Required] CustomerId` on `CreateOrderRequest` (`shared/Requests.cs:22`): no test sends a request with missing `CustomerId`.
-- **`Gap-API`** — `OrderService.CancelOrderAsync` (`api/Services/OrderService.cs:42`): public, no test body references it. *Verify:* may be covered via a caller.
-- **`Gap-Throw`** — `throw new InvalidOperationException("Order already shipped")` (`api/Services/OrderService.cs:142`): no test names both the exception type and the method.
+- **Confirmed (`confirmed-mutation`) `Gap-Route`** — `DELETE /api/orders/{id}` (`api/Functions/OrdersApi.cs:88`): static probable gap and mutation `NoCoverage`. Action may be implementation work.
+- **Probable (`probable-static`) `Gap-Migration`** — `AddOrderStatusColumnMigration` (`api/Migrations/0007_order_status.cs:14`): migration class name not mentioned in any test. Next step: manually verify migration path or run mutation before implementing.
+- **Probable (`probable-static`) `Gap-Validate`** — `[Required] CustomerId` on `CreateOrderRequest` (`shared/Requests.cs:22`): no test sends a request with missing `CustomerId`. Next step: confirm no API contract test covers invalid request binding.
+- **Dismissed (`dismissed-indirect`) `Gap-API`** — `OrderService.CancelOrderAsync` (`api/Services/OrderService.cs:42`): covered through `DELETE /api/orders/{id}` contract test with state assertion.
+- **Probable (`probable-static`) `Gap-Throw`** — `throw new InvalidOperationException("Order already shipped")` (`api/Services/OrderService.cs:142`): no test names both the exception type and the method. Next step: manual read or mutation confirmation.
 
 #### Reconciliation with mutation testing (when step 4 produced results)
 
-- **Confirmed gaps** (static probable gap ∩ mutation `NoCoverage`): <list>
-- **Static-only probable gaps** (mutation saw runtime coverage): <list with note that indirect coverage exists>
-- **Mutation-only gaps** (no grep match but static cross-reference failed): <list — signal to tune the grep patterns in the extension>
+- **Confirmed gaps** (`confirmed-mutation`): <list>
+- **Static-only probable gaps** (`probable-static`): <verification candidates only; no implementation-only worklist item>
+- **Dismissed indirect coverage** (`dismissed-indirect`): <list with covering test evidence>
+- **Mutation-only gaps**: <list — signal to tune the grep patterns in the extension>
 ```
 
 **State B — enumeration skipped:**
