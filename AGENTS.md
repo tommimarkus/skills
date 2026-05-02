@@ -43,10 +43,11 @@ rules change.
   extension, and this repo's extra gates. Codex can invoke the thin
   [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml)
   wrapper for that overlay.
-- When the user explicitly asks to review, update, fix, merge, close, resume, or
-  process GitHub™ pull requests end to end, use the public `pr-ops` skill from
-  `souroldgeezer-ops` with its GitHub™ provider extension. Codex can invoke the
-  thin [.codex/agents/pr-ops.toml](.codex/agents/pr-ops.toml) wrapper for that
+- When the user explicitly asks to create, review, update, fix, merge, close,
+  resume, or process GitHub™ pull requests or prepared PR branches end to end,
+  use the public `pr-ops` skill from `souroldgeezer-ops` with its GitHub™
+  provider extension. Codex can invoke the thin
+  [.codex/agents/pr-ops.toml](.codex/agents/pr-ops.toml) wrapper for that
   workflow.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.

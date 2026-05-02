@@ -36,8 +36,8 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships thr
 - **souroldgeezer-ops** — operations workflows for issue, work-item, and
   pull-request lifecycle handling, with provider-agnostic `issue-ops` and
   `pr-ops` cores plus GitHub™ provider extensions for issue state, PR state,
-  reviews, checks, lifecycle comments, branch updates, merge, and closure
-  mechanics.
+  lifecycle comments, issue-to-PR handoff, PR creation/reuse from prepared
+  branches, reviews, checks, branch updates, merge, and closure mechanics.
 
 ## Install
 
@@ -170,8 +170,8 @@ Two operations skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Operates | Provider extensions |
 |---|---|---|
-| [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md) | Explicit issue and work-item lifecycle requests: triage, plan, implement, resume, close, queue processing, lifecycle state, escalation, verification, integration, and completion reporting | [github](souroldgeezer-ops/skills/issue-ops/extensions/github.md) for GitHub™ issue state, lifecycle comments, labels/projects/milestones context, GitHub™ MCP / `gh` / REST routing, PR-mode, direct-main mode, linked pull requests, and issue closure |
-| [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | Explicit pull-request lifecycle requests: review, check inspection, feedback fixes, branch update, review request, merge, close, cleanup, escalation, verification, and completion reporting | [github](souroldgeezer-ops/skills/pr-ops/extensions/github.md) for GitHub™ PR state, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup |
+| [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md) | Explicit issue and work-item lifecycle requests: triage, plan, implement, resume, close, queue processing, lifecycle state, escalation, local verification, integration handoff, and completion reporting | [github](souroldgeezer-ops/skills/issue-ops/extensions/github.md) for GitHub™ issue state, lifecycle comments, labels/projects/milestones context, GitHub™ MCP / `gh` / REST routing, `pr-ops` handoff, direct-main mode, linked pull requests, and issue closure |
+| [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | Explicit pull-request lifecycle requests: create or reuse PRs from prepared branches, review, check inspection, feedback fixes, branch update, review request, merge, close, cleanup, escalation, verification, and completion reporting | [github](souroldgeezer-ops/skills/pr-ops/extensions/github.md) for GitHub™ PR state, prepared branches, PR creation/reuse, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup |
 
 The core skills are provider-agnostic. Provider mechanics live in extensions and
 load only after the tracker or PR provider is identified.

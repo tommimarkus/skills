@@ -1,6 +1,6 @@
 ---
 name: pr-ops
-description: Use when the user explicitly asks to review, update, fix, merge, close, resume, or process one or more pull requests end to end; loads provider extensions such as GitHub™ only after the provider is identified.
+description: Use when the user explicitly asks to create, review, update, fix, merge, close, resume, or process one or more pull requests or prepared PR branches end to end; loads provider extensions such as GitHub™ only after the provider is identified.
 ---
 
 # PR Ops
@@ -8,25 +8,30 @@ description: Use when the user explicitly asks to review, update, fix, merge, cl
 ## Purpose
 
 Run an explicit pull-request or merge-request lifecycle after the user asks for
-it. Own the cross-provider operating loop: target resolution, mode selection,
+it or a sibling skill hands off a prepared branch. Own the cross-provider
+operating loop: target resolution, PR creation or reuse, mode selection,
 live-state authority, review and comment state, check state, branch-update
 safety, remediation handoff, verification, merge or close authority, cleanup,
 and completion reporting.
 
-Do not use this skill for incidental PR mentions, issue lifecycle work,
-standalone deep CI debugging, security posture review, design review,
-test-quality audit, or general project-management advice.
+Do not use this skill for incidental PR mentions, issue lifecycle work without
+an explicit prepared-branch handoff, standalone deep CI debugging, security
+posture review, design review, test-quality audit, or general
+project-management advice.
 
 ## Modes
 
-Default mode is `full-cycle`: inspect the requested PR or queue, classify
-reviews, comments, checks, branch state, and merge safety, address clear
-actionable work, verify, update the PR branch when safe, request review when
-appropriate, merge or close only when authorized, and clean up owned work areas.
+Default mode is `full-cycle`: inspect the requested PR, prepared branch, or
+queue; create or reuse a PR when the target is a prepared branch; classify
+reviews, comments, checks, branch state, and merge safety; address clear
+actionable work; verify; update the PR branch when safe; request review when
+appropriate; merge or close only when authorized; and clean up owned work areas.
 
 Use a narrower mode only when the user asks for it:
 
 - `review-only`: inspect PR state and produce findings without changing files.
+- `create-or-update`: create or reuse a PR from a clearly selected prepared
+  branch, then report its state without merging unless separately authorized.
 - `checks-only`: inspect checks and classify failure ownership.
 - `address-feedback`: implement clear review feedback or check failures.
 - `merge-only`: merge or close a PR after live state proves it is safe.
@@ -39,15 +44,16 @@ ask-vs-continue, escalation, ledger, verification, or output contracts.
 ## Evidence Contract
 
 Before acting, inspect the user's requested scope, PR identifiers or URLs,
-repository identity and remotes, repo guidance, current git branch, status,
-worktrees, available provider tooling and auth, base and head refs, linked work,
-reviews, comments, checks, branch protection or rules, and existing lifecycle
-markers.
+prepared branch targets, repository identity and remotes, repo guidance, current
+git branch, status, worktrees, available provider tooling and auth, base and
+head refs, linked work, reviews, comments, checks, branch protection or rules,
+and existing lifecycle markers.
 
 ## Provider Selection
 
 Identify the PR provider from the PR URL, repository remote, configured tooling,
-identifier shape, or explicit user wording.
+identifier shape, prepared branch repository, sibling-skill handoff, or explicit
+user wording.
 
 - For GitHub™ repositories, PR URLs, or GitHub™ PR numbers, read
   [extensions/github.md](extensions/github.md) before resolving provider state,
@@ -96,16 +102,18 @@ reconciliation entry.
 
 ## Normal Flow
 
-For each PR:
+For each PR or prepared branch:
 
 1. Resolve live provider state, repository identity, base and head refs,
-   current git state, linked work, permissions, and provider tooling.
-2. Load the provider extension and follow its provider-specific state, review,
-   check, lifecycle-marker, branch-update, merge, close, and cleanup rules.
+   current git state, linked work, permissions, provider tooling, and existing
+   PR candidates when the target is a branch.
+2. Load the provider extension and follow its provider-specific state, PR
+   creation or reuse, review, check, lifecycle-marker, branch-update, merge,
+   close, and cleanup rules.
 3. Create or update current lifecycle status when the provider supports visible
    status updates and the action will not create noisy public communication.
-4. Classify mode, actionability, blockers, review state, check state, branch
-   state, merge safety, and integration strategy.
+4. Classify mode, actionability, blockers, PR creation or reuse state, review
+   state, check state, branch state, merge safety, and integration strategy.
 5. Select or reuse a work area according to repo guidance and PR ownership.
 6. Implement only clear, in-scope feedback or check-failure remediation.
 7. Infer verification from repo guidance, touched-surface docs, scripts,
@@ -113,21 +121,23 @@ For each PR:
 8. Run item-level verification.
 9. Auto-fix only deterministic formatter, generated-file, or lint failures.
 10. Refresh live provider state, reviews, comments, checks, base/head refs,
-    lifecycle markers, linked work, and git state before push or branch update.
-11. Push or update the PR branch only when live state is still safe.
+    lifecycle markers, linked work, and git state before PR creation, push, or
+    branch update.
+11. Create, reuse, push, or update the PR branch only when live state is still
+    safe.
 12. Refresh live state again before requesting review, resolving threads,
     merging, closing, deleting branches, or final lifecycle writes.
-13. Merge, close, request review, resolve threads, or clean up only through the
-    selected strategy after live state is still safe.
+13. Create or update the PR, merge, close, request review, resolve threads, or
+    clean up only through the selected strategy after live state is still safe.
 14. Rerun required verification after any merge, rebase, base update, or branch
     update changes the tested result.
 15. Update lifecycle status and clean up only work areas owned by this run.
 
 ## Ask Vs Continue
 
-Continue autonomously when the PR target, repository, provider tooling,
-permissions, work area, verification path, branch-update path, and merge or
-close authorization are all clear.
+Continue autonomously when the PR or prepared branch target, repository,
+provider tooling, permissions, work area, verification path, PR creation or
+branch-update path, and merge or close authorization are all clear.
 
 Ask the user only for global blockers that stop the run:
 
@@ -136,16 +146,17 @@ Ask the user only for global blockers that stop the run:
 - write permission is missing for a requested write operation;
 - required verification tooling is missing and no repo-documented substitute
   exists;
-- base branch, merge method, or repository integration policy cannot be
-  determined;
-- the user asked for merge or close but authorization is ambiguous.
+- base branch, PR creation policy, merge method, or repository integration
+  policy cannot be determined;
+- the user asked for PR creation, merge, or close but authorization is
+  ambiguous.
 
 For item-local ambiguity, update lifecycle status when possible, mark the PR
 escalated, record the evidence, and continue the queue. Item-local ambiguity
 includes unclear review intent, conflicting reviewer comments, unresolved
 product contract, unsafe existing work, non-mechanical verification failure,
 unclear check ownership, merge conflict, branch protection mismatch, stale
-state, or any escalation gate.
+state, unclear prepared branch ownership, or any escalation gate.
 
 ## Escalation Gates
 
@@ -158,6 +169,8 @@ Escalate on:
 
 - wrong repository, wrong account, missing permission, or unexpected provider
   tooling route;
+- missing PR creation permission, ambiguous prepared branch ownership, or no
+  safe existing PR candidate for a branch handoff;
 - ambiguous review intent, contradictory requirements, unclear product contract,
   unresolved requested changes, or active human review disagreement;
 - security, auth, secrets, credentials, tokens, signing, workflow permissions,
@@ -185,14 +198,16 @@ Escalate on:
 
 End with a concise report:
 
-- completed count and PR identifiers;
-- merged, closed, updated, reviewed, or escalated action per PR;
-- escalated count and PR identifiers with gate names;
-- skipped count and PR identifiers with reasons;
+- completed count and PR identifiers or prepared branch targets;
+- created, reused, merged, closed, updated, reviewed, or escalated action per
+  PR or prepared branch;
+- escalated count and PR identifiers or prepared branch targets with gate names;
+- skipped count and PR identifiers or prepared branch targets with reasons;
 - remaining count when a queue was bounded;
 - provider extensions loaded;
 - provider tooling route and MCP availability when applicable;
 - base/head refs or SHAs inspected;
+- linked issues or sibling-skill handoff context when applicable;
 - review state and check state summary;
 - integration or merge strategy;
 - lifecycle marker state;

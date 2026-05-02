@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-ops",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions.",
   "author": {
     "name": "Sour Old Geezer",
@@ -19,8 +19,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use issue-ops to handle this GitHub™ issue end to end.",
-      "Use pr-ops to review and finish this GitHub™ pull request.",
+      "Use issue-ops to handle this GitHub™ issue end to end, delegating pull-request lifecycle work to pr-ops.",
+      "Use pr-ops to create or finish this GitHub™ pull request.",
       "Use pr-ops to resume this pull request lifecycle."
     ]
   }

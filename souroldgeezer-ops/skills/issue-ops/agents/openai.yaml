@@ -1,6 +1,6 @@
 interface:
   display_name: "Issue Ops"
-  short_description: "Operate issue and work-item lifecycles."
-  default_prompt: "Use issue-ops to handle this issue or work-item lifecycle."
+  short_description: "Operate issue lifecycles through implementation and handoff."
+  default_prompt: "Use issue-ops to handle this issue lifecycle and delegate pull-request work to pr-ops when needed."
 policy:
   allow_implicit_invocation: true
