@@ -33,10 +33,11 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships thr
   skills' Review mode to flag drift between code and the architect's
   model. Each skill has a matching Claude Code subagent; Codex consumes the
   bundled `skills/**/SKILL.md` workflows directly from the plugin.
-- **souroldgeezer-ops** — operations workflows for issue and work-item
-  lifecycle handling, with a tracker-agnostic `issue-ops` core and a GitHub™
-  provider extension for GitHub™ issue state, lifecycle comments, PR-mode,
-  direct-main mode, and closure mechanics.
+- **souroldgeezer-ops** — operations workflows for issue, work-item, and
+  pull-request lifecycle handling, with provider-agnostic `issue-ops` and
+  `pr-ops` cores plus GitHub™ provider extensions for issue state, PR state,
+  reviews, checks, lifecycle comments, branch updates, merge, and closure
+  mechanics.
 
 ## Install
 
@@ -165,19 +166,22 @@ The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling me
 
 ## What's in `souroldgeezer-ops`
 
-One operations skill with a matching one-shot Claude Code subagent:
+Two operations skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Operates | Provider extensions |
 |---|---|---|
 | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md) | Explicit issue and work-item lifecycle requests: triage, plan, implement, resume, close, queue processing, lifecycle state, escalation, verification, integration, and completion reporting | [github](souroldgeezer-ops/skills/issue-ops/extensions/github.md) for GitHub™ issue state, lifecycle comments, labels/projects/milestones context, GitHub™ MCP / `gh` / REST routing, PR-mode, direct-main mode, linked pull requests, and issue closure |
+| [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | Explicit pull-request lifecycle requests: review, check inspection, feedback fixes, branch update, review request, merge, close, cleanup, escalation, verification, and completion reporting | [github](souroldgeezer-ops/skills/pr-ops/extensions/github.md) for GitHub™ PR state, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup |
 
-The core skill is tracker-agnostic. Provider mechanics live in extensions and
-load only after the tracker is identified.
+The core skills are provider-agnostic. Provider mechanics live in extensions and
+load only after the tracker or PR provider is identified.
 
-Matching Claude Code subagent: [souroldgeezer-ops/agents/issue-ops.md](souroldgeezer-ops/agents/issue-ops.md).
-Codex installs the bundled skill through the plugin manifest, reads per-skill
-metadata from [souroldgeezer-ops/skills/issue-ops/agents/openai.yaml](souroldgeezer-ops/skills/issue-ops/agents/openai.yaml),
-and has a matching project-scoped wrapper in [.codex/agents/issue-ops.toml](.codex/agents/issue-ops.toml).
+Matching Claude Code subagents: [issue-ops](souroldgeezer-ops/agents/issue-ops.md)
+and [pr-ops](souroldgeezer-ops/agents/pr-ops.md). Codex installs the bundled
+skills through the plugin manifest, reads per-skill metadata from each
+`skills/<name>/agents/openai.yaml`, and has matching project-scoped wrappers in
+[.codex/agents/issue-ops.toml](.codex/agents/issue-ops.toml) and
+[.codex/agents/pr-ops.toml](.codex/agents/pr-ops.toml).
 
 ## How the audits work
 
@@ -568,7 +572,7 @@ souroldgeezer-ops/                 # operations plugin
   .codex-plugin/plugin.json
   agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
-    SKILL.md                       # tracker-agnostic workflow
+    SKILL.md                       # provider-agnostic workflow
     agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # provider-specific mechanics
 undecided/                         # skills not yet assigned to a plugin — NOT production-ready;

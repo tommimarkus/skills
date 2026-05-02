@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-ops",
-  "version": "0.1.0",
-  "description": "Operations skills for issue and work-item lifecycle handling, with a tracker-agnostic core and provider-specific extensions.",
+  "version": "0.2.0",
+  "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"

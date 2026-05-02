@@ -1,0 +1,6 @@
+interface:
+  display_name: "PR Ops"
+  short_description: "Operate pull-request lifecycles."
+  default_prompt: "Use pr-ops to handle this pull request lifecycle."
+policy:
+  allow_implicit_invocation: true
