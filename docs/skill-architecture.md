@@ -16,6 +16,19 @@ Use `scripts/skill-architecture-report.sh` for repeatable detection and report
 formatting when that script is available; skill workflows should stay thin by
 delegating structural validation to the tool.
 
+## Load Conditions
+
+Load this document at the start of any task that creates, edits, reviews,
+triages, plans, or fixes a skill-related surface in this repository. That
+includes published plugin skills, matching agents, runtime metadata, bundled
+references, extensions, deterministic machinery, manifests, marketplace
+entries, repo-internal authoring skills, and repo docs that describe those
+surfaces.
+
+Use it before choosing the change shape. The report is the repeatable closeout
+check, but it cannot recover decisions that were made without the craft standard
+in context.
+
 ## Four Authoring Surfaces
 
 ### 1. Trigger metadata

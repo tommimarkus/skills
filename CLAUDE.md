@@ -64,6 +64,26 @@ insufficient.
 
 Before finishing any task that changes repo structure or a skill's contract, re-read **all three files** and diff them mentally against the change. If any section is now wrong or incomplete, amend it in the same commit.
 
+## Skill architecture craft standard (MUST)
+
+For any task that creates, edits, reviews, triages, plans, or fixes a
+skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md)
+before deciding scope or making edits. This includes published plugin skills,
+matching agents, runtime metadata, bundled references, extensions, deterministic
+machinery, manifests, marketplace entries, repo-internal `.claude/skills/**`
+authoring skills, and README / CLAUDE / AGENTS sections that describe those
+surfaces.
+
+Treat the standard as the first design input and the report as the repeatable
+check. The closeout gate is not a substitute for the initial read; loading the
+standard only at the end misses trigger precision, workflow shape, context
+discipline, runtime parity, and release-hygiene decisions while the change is
+being made.
+
+Before finishing any change on those surfaces, apply the standard and run
+`scripts/skill-architecture-report.sh` when it is available. If the report
+cannot run, record why and what narrower verification was used.
+
 ## Structured-file tooling
 
 Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
@@ -114,13 +134,9 @@ Current internal skills:
 - **`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md) — copyright, trademark, and licence check for any skill-related edit. Fast five-question triage, then copyright / trademark / licence check if triggered, with a concern→remedy mapping, an anti-drift fence-posts section recording deliberate non-changes, and an authoritative-sources appendix grouping EU + US + UK statute, directive, and case law. Invoke on any create / modify / rename / move / delete touching `souroldgeezer-*/skills/**`, `souroldgeezer-*/agents/**`, `souroldgeezer-*/docs/*-reference/**`, `.claude/skills/**`, Claude Code / Codex plugin manifests, marketplace manifests, or the `CLAUDE.md` / `AGENTS.md` / `README.md` sections that describe those artefacts. Prevents verbatim reproduction of copyrighted spec prose / code / figures / samples, requires source citation as part of the paraphrase remedy, enforces ® / ™ on first-and-subsequent-significant public-visible mentions, applies the adjective-only rule for product / standard marks (corporate-name possessives outside scope), covers EU-only sui generis database right for structured spec tables, blocks bundling of third-party copyrighted assets unless the upstream licence permits redistribution, and preserves the repo's nominative-fair-use convention (no attribution blocks). Anchored in EU (EUTMR Art 14, *Gillette* C-228/03, *BMW v Deenik* C-63/97, InfoSoc Directive Art 5(3)(d), Database Directive 96/9, Software Directive 2009/24) and US (Lanham Act, *New Kids*, *Welles*, *Thaler v. Perlmutter* D.C. Cir. 2025) authority.
 - **`github-issue-lifecycle`** at [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md) — repo-local overlay for explicit GitHub™ issue lifecycle requests in this repository. It composes the public `issue-ops` skill from `souroldgeezer-ops`, the GitHub™ provider extension, and this repository's defaults for `ip-hygiene`, `.worktrees/**`, direct-main handling, skill-architecture verification, published-surface synchronization, lifecycle status, and cleanup. Codex has a thin project-scoped wrapper at [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml) that points back to this overlay.
 
-Skill architecture review is now governed by the advisory craft standard at
-[docs/skill-architecture.md](docs/skill-architecture.md). Before finishing any
-change that affects a published plugin skill or its related agent, runtime
-metadata, bundled reference, extension, deterministic machinery, manifest,
-marketplace entry, repo-internal `.claude/skills/**` authoring skill, or repo
-docs describing those surfaces, apply that standard and run
-`scripts/skill-architecture-report.sh` when it is available.
+Skill architecture review is governed by the repo-wide craft-standard rule
+above. Keep that rule early in this file so agents load the standard before
+designing or editing skill-related surfaces.
 
 Add to this section when new internal skills are introduced. Internal skills must not appear in `.claude-plugin/marketplace.json`, any plugin's `.claude-plugin/plugin.json`, or any plugin's `.codex-plugin/plugin.json`.
 

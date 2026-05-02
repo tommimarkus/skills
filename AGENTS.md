@@ -22,6 +22,11 @@ rules change.
   `description`.
 - Codex consumes bundled skills through `.codex-plugin/plugin.json` with
   `"skills": "./skills/"`.
+- For any work on skills, agents, runtime metadata, bundled references,
+  extensions, deterministic machinery, manifests, marketplace entries,
+  repo-internal authoring skills, or repo docs that describe those surfaces,
+  read [docs/skill-architecture.md](docs/skill-architecture.md) before deciding
+  scope or editing. This is an entry rule, not only a closeout check.
 - For local Codex marketplace development, refresh changed installed plugins
   through the plugin browser and restart Codex; `codex plugin marketplace
   upgrade <name>` is for Git-backed marketplaces and does not refresh local
@@ -65,9 +70,6 @@ rules change.
   [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
   when editing plugin manifests, skills, agents, bundled references, or
   README / CLAUDE / AGENTS sections that describe them.
-- Before finishing any change to a published plugin skill or its related
-  agent, runtime metadata, bundled reference, extension, manifest, marketplace
-  entry, repo-internal `.claude/skills/**` authoring skill, or repo docs,
-  apply the skill architecture craft standard in
-  [docs/skill-architecture.md](docs/skill-architecture.md) and run
-  `scripts/skill-architecture-report.sh` when it is available.
+- Before finishing those same skill-related changes, apply the skill
+  architecture craft standard and run `scripts/skill-architecture-report.sh`
+  when it is available.
