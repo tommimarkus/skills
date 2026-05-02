@@ -10,7 +10,8 @@ description: Use when the user explicitly asks to handle, triage, resume, implem
 Run an explicit issue or work-item lifecycle after the user asks for it. Own the
 cross-provider operating loop: target resolution, mode selection, live-state
 authority, queue limits, lifecycle state, escalation, implementation handoff,
-verification, integration, completion reporting, and queue continuation.
+local verification, integration handoff, completion reporting, and queue
+continuation.
 
 Do not use this skill for incidental issue mentions, ordinary pull-request
 review, standalone CI debugging, security posture review, design review, or
@@ -20,8 +21,9 @@ general project-management advice.
 
 Default mode is `full-cycle`: inspect the requested issue or queue, record
 visible lifecycle state when the provider supports it, implement actionable
-work, verify, integrate through the selected strategy, update status, and close
-or complete the work item when allowed.
+work, verify locally, hand off pull-request lifecycle work when the selected
+strategy requires it, update status, and close or complete the work item when
+allowed.
 
 Use a narrower mode only when the user asks for it:
 
@@ -30,10 +32,10 @@ Use a narrower mode only when the user asks for it:
 - `implement-only`: implement a clearly selected issue without queue work.
 - `resume`: recover an interrupted lifecycle from live tracker and git state.
 
-Provider extensions may add review, direct integration, or other
-provider-specific integration modes. Provider modes add mechanics; they do not
-replace the core authority, ask-vs-continue, escalation, ledger, verification,
-or completion contracts.
+Provider extensions may add direct integration, pull-request handoff, or other
+provider-specific issue completion modes. Provider modes add mechanics; they do
+not replace the core authority, ask-vs-continue, escalation, ledger,
+verification, handoff, or completion contracts.
 
 ## Evidence Contract
 
@@ -106,20 +108,25 @@ For each item:
 8. Run item-level verification.
 9. Auto-fix only deterministic formatter, generated-file, or lint failures.
 10. Refresh live provider state, comments, lifecycle markers, linked work, and
-    git state before integration; escalate if safety changed.
-11. Integrate only through the selected strategy after live state is still safe.
-12. Rerun required verification after integration when the strategy changes the
-    base branch or merge result.
-13. Before closure or final lifecycle writes, refresh live provider state,
-    comments, and lifecycle markers again when those writes are separate from
-    integration.
+    git state before integration handoff or direct integration; escalate if
+    safety changed.
+11. If the selected strategy requires a pull request, prepare the issue branch
+    and hand off PR creation, updates, checks, reviews, merge, and PR cleanup to
+    `pr-ops`; do not perform those PR lifecycle actions in `issue-ops`.
+12. If the selected strategy is direct integration, integrate only after live
+    state is still safe and rerun required verification when the base branch or
+    tested result changes.
+13. When a delegated PR lifecycle reports a merged result, refresh live issue
+    state, comments, lifecycle markers, and linked work before closure or final
+    lifecycle writes.
 14. Update lifecycle status, close or complete the item when allowed, and clean
-    up only work areas owned by this run.
+    up only issue work areas owned by this run.
 
 ## Ask Vs Continue
 
 Continue autonomously when the item target, repository, provider tooling,
-permissions, work area, verification path, and integration path are all clear.
+permissions, work area, verification path, and integration or handoff path are
+all clear.
 
 Ask the user only for global blockers that stop the run:
 
@@ -128,7 +135,8 @@ Ask the user only for global blockers that stop the run:
 - write permission is missing for a requested write operation;
 - required verification tooling is missing and no repo-documented substitute
   exists;
-- the base branch or integration policy cannot be determined.
+- the base branch, integration policy, or `pr-ops` handoff path cannot be
+  determined.
 
 For item-local ambiguity, update the lifecycle status when possible, mark the
 item escalated, record the evidence, and continue the queue. Item-local
@@ -166,8 +174,9 @@ Escalate on:
   repeated no-progress auto-fix, conflicts, push rejection, protected-branch
   mismatch, dirty owned work areas, or non-trivial branch history cleanup;
 - unclear generated artifact provenance, unusual cost, unusual runtime, unusual
-  API use, release/version ambiguity, external repository boundaries, or human
-  review conflict.
+  API use, release/version ambiguity, or external repository boundaries;
+- delegated `pr-ops` lifecycle escalation, unless the item can safely complete
+  through another explicitly authorized strategy.
 
 ## Output
 
@@ -180,6 +189,7 @@ End with a concise report:
 - provider extensions loaded;
 - provider tooling route and MCP availability when applicable;
 - integration strategy;
+- delegated `pr-ops` result when pull-request handoff was used;
 - lifecycle marker state;
 - verification summary;
 - global blocker when the run stopped early;

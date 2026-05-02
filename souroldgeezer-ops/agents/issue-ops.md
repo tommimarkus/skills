@@ -20,7 +20,7 @@ When invoked:
 4. Preserve the skill's completion output contract: completed, escalated,
    skipped, remaining, provider extensions loaded, provider tooling route and
    MCP availability when applicable, integration strategy, lifecycle marker
-   state, verification summary, global blocker when present, and lifecycle
-   ledger path when written.
+   state, delegated pr-ops result when applicable, verification summary, global
+   blocker when present, and lifecycle ledger path when written.
 5. Preserve the skill's output footer/disclosure contract in any delegated or
    provider-specific completion report.

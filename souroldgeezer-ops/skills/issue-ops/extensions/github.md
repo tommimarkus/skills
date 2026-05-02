@@ -15,10 +15,10 @@ Resolve current GitHub state before acting:
    branch or worktree.
 2. Issue state, title, body summary, labels, assignees, comments, linked pull
    requests, and visible lifecycle marker comments.
-3. Authenticated account and write permissions for comments, branches, pull
-   requests, and issue closure.
-4. Branch protection or repository rules that affect direct pushes, required
-   pull requests, and required checks.
+3. Authenticated account and write permissions for issue comments, local branch
+   preparation, and issue closure.
+4. Branch protection or repository rules that affect direct integration or
+   require a pull-request handoff.
 5. Current git state, including dirty files, active worktrees, and whether an
    existing branch clearly owns the issue.
 
@@ -55,7 +55,7 @@ Lifecycle status: implementing
 
 Actor: Codex
 Mode: full-cycle
-Integration: pr-mode
+Integration: pr-ops handoff
 Scope: #123
 Current step: working on an isolated branch
 Disposition: actionable
@@ -71,7 +71,7 @@ Lifecycle status: escalated
 
 Actor: Codex
 Mode: full-cycle
-Integration: pr-mode
+Integration: pr-ops handoff
 Scope: #123
 Gate: unclear acceptance criteria
 Evidence: issue comments conflict on the required behavior
@@ -87,11 +87,11 @@ Lifecycle status: completed
 
 Actor: Codex
 Mode: full-cycle
-Integration: pr-mode
+Integration: pr-ops handoff
 Scope: #123
-Result: merged pull request
-Verification: passed - unit tests, repository checks, whitespace check
-Resolution: implemented the issue request and verified the affected surface
+Result: delegated pr-ops merged PR #456
+Verification: passed - unit tests and delegated PR checks
+Resolution: implemented the issue request, delegated PR lifecycle, and verified issue closure safety
 Last reviewed: 2026-05-02T12:00:00+03:00
 ```
 
@@ -100,24 +100,28 @@ not add a separate closing comment unless updating the marker fails.
 
 ## Integration Strategies
 
-Default public integration strategy is `pr-mode`:
+Default public integration strategy is `pr-ops-handoff`:
 
 1. Create or reuse an issue-owned branch.
 2. Commit focused work.
-3. Push the branch.
-4. Open or update a pull request.
-5. Report the PR and verification state.
-6. Close the issue only after merge, or when the user explicitly authorizes
-   closure without merge.
+3. Run issue-level local verification.
+4. Hand off to `pr-ops` with repository identity, base branch, prepared branch,
+   linked issue, lifecycle marker context, and local verification summary.
+5. Let `pr-ops` push, create or reuse the pull request, handle PR checks and
+   reviews, merge when authorized and safe, and clean PR-owned work areas.
+6. Re-read the issue after `pr-ops` reports a merged pull request, then close
+   only when live issue state is still safe. Close without merge only when the
+   user explicitly authorizes closure without merge.
 
 Use `direct-main` only when the user or repository guidance explicitly allows
 it, branch protection permits it, and live state is clean. In direct-main mode,
 prefer one clean commit named `Fix #<number>: <title>` for defects or
 `Resolve #<number>: <title>` otherwise.
 
-Resume an existing pull request branch when one clearly owns the issue and is
-safe to continue. Escalate on unsafe existing PR state, unclear ownership,
-review conflict, or non-trivial branch history cleanup.
+When an existing linked pull request or issue branch clearly owns the issue,
+handoff that target to `pr-ops` instead of assessing PR checks, reviews, branch
+updates, merge safety, or PR cleanup in `issue-ops`. Escalate only when no
+safe issue-side handoff target can be identified.
 
 ## Labels, Projects, Milestones, And Assignees
 
@@ -134,10 +138,9 @@ Escalate the affected issue on:
 
 - wrong account, wrong repository, missing permission, or unexpected GitHub
   tool routing;
-- protected branch mismatch, required PR policy, required status checks, push
-  rejection, or local/CI disagreement;
-- existing PR with unclear ownership, active review disagreement, merge
-  conflict, stale branch, or non-trivial history cleanup;
+- protected branch mismatch that prevents both direct integration and
+  `pr-ops` handoff;
+- existing linked pull request or issue branch with unclear issue ownership;
 - concurrent lifecycle marker from another current actor;
 - GitHub Actions permissions, workflow token handling, secret handling,
   repository settings, branch rules, or sensitive history cleanup;
@@ -147,11 +150,11 @@ Escalate the affected issue on:
 ## Completion
 
 Before completion or closure, re-read issue state, comments, lifecycle markers,
-linked PR state, and branch/check state. Escalate instead of closing when late
-comments, another actor marker, issue or PR state changes, branch drift, or
-check changes alter integration or closure safety.
+linked pull requests, and the delegated `pr-ops` result. Escalate instead of
+closing when late comments, another actor marker, issue state changes, or a
+non-merged or escalated PR result alters closure safety.
 
-On completion, update the lifecycle marker before closing the issue. If a PR is
-created or reused, report the PR URL or number in the final chat output. If the
-issue remains open because merge has not happened, report the remaining state
-instead of closing it.
+On completion, update the lifecycle marker before closing the issue. If `pr-ops`
+created, reused, or merged a pull request, report the PR URL or number in the
+final chat output. If the issue remains open because the delegated PR lifecycle
+did not merge, report the remaining state instead of closing it.

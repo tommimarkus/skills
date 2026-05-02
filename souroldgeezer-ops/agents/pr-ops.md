@@ -1,6 +1,6 @@
 ---
 name: pr-ops
-description: Use when the user explicitly asks to review, update, fix, merge, close, resume, or process one or more pull requests end to end; loads provider extensions such as GitHub™ only after the provider is identified.
+description: Use when the user explicitly asks to create, review, update, fix, merge, close, resume, or process one or more pull requests or prepared PR branches end to end; loads provider extensions such as GitHub™ only after the provider is identified.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -14,12 +14,14 @@ When invoked:
 2. Follow the skill exactly: identify the provider, load the provider
    extension, resolve live provider and git state, classify the requested mode,
    and use the skill's ask-vs-continue and escalation rules.
-3. Do not hijack incidental PR mentions, issue lifecycle work, standalone deep
-   CI debugging, security posture review, design review, test-quality audit, or
-   general project-management advice.
-4. Preserve the skill's completion output contract: completed, merged, closed,
-   updated, reviewed, escalated, skipped, remaining, provider extensions loaded,
-   provider tooling route and MCP availability when applicable, base/head refs,
+3. Do not hijack incidental PR mentions, issue lifecycle work without an
+   explicit prepared-branch handoff, standalone deep CI debugging, security
+   posture review, design review, test-quality audit, or general
+   project-management advice.
+4. Preserve the skill's completion output contract: completed, created, reused,
+   merged, closed, updated, reviewed, escalated, skipped, remaining, provider
+   extensions loaded, provider tooling route and MCP availability when
+   applicable, base/head refs, linked issues or sibling-skill handoff context,
    review state, check state, integration or merge strategy, lifecycle marker
    state, verification summary, global blocker when present, and lifecycle
    ledger path when written.

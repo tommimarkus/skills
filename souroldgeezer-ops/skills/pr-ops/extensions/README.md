@@ -6,15 +6,15 @@ ask-vs-continue rules, escalation, verification inference, merge/close
 authorization, and completion output.
 
 Extensions do not override those core contracts. They add provider state
-resolution, tooling order, visible lifecycle markers, review-thread mechanics,
-check handling, branch-update mechanics, provider-specific merge and close
-rules, and cleanup gates.
+resolution, tooling order, visible lifecycle markers, PR creation or reuse
+mechanics, review-thread mechanics, check handling, branch-update mechanics,
+provider-specific merge and close rules, and cleanup gates.
 
 ## Current Extensions
 
 | File | Provider | Notes |
 |---|---|---|
-| [github.md](github.md) | GitHub™ | Pull requests, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup. |
+| [github.md](github.md) | GitHub™ | Pull requests, prepared branches, PR creation/reuse, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup. |
 
 ## Required Sections
 
@@ -28,6 +28,8 @@ Each provider extension is a single markdown file in this directory with:
   repository-identity checks.
 - **Lifecycle marker or status model**: how visible progress is written, edited,
   or skipped when permission is missing or public noise would be excessive.
+- **PR creation or reuse**: provider-specific prepared-branch, existing-PR, and
+  branch-push mechanics.
 - **Review and comment handling**: provider-specific review, thread, reply,
   resolve, and reviewer-request mechanics.
 - **Check handling**: provider-specific status, check-run, annotation, rerun,

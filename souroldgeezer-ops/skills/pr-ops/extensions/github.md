@@ -1,7 +1,8 @@
 # GitHub Extension
 
 Load this extension when the repository remote, pull request URL, PR number,
-provider tooling, or user wording identifies GitHub as the PR provider.
+prepared branch target, provider tooling, or user wording identifies GitHub as
+the PR provider.
 
 This extension adds GitHub mechanics to `pr-ops`. It does not replace the core
 authority, ledger, ask-vs-continue, escalation, verification, merge/close
@@ -13,20 +14,23 @@ Resolve current GitHub PR state before acting:
 
 1. Repository owner/name, default branch, current remote, and current local
    branch or worktree.
-2. PR state, title, body summary, draft flag, author, labels, assignees,
+2. Prepared branch state when the target is a branch: local branch, remote head
+   branch, intended base branch, linked issue context, and existing PR
+   candidates by head branch or linked issue.
+3. PR state, title, body summary, draft flag, author, labels, assignees,
    requested reviewers, linked issues, visible lifecycle marker comments, and
    existing review state.
-3. Base repository/branch/SHA and head repository/branch/SHA, including fork
+4. Base repository/branch/SHA and head repository/branch/SHA, including fork
    status and whether the current user can push to the head branch.
-4. Review comments, review threads, PR comments, unresolved conversations, and
+5. Review comments, review threads, PR comments, unresolved conversations, and
    latest reviews by reviewer.
-5. Status checks, check runs, required checks, pending checks, skipped checks,
+6. Status checks, check runs, required checks, pending checks, skipped checks,
    cancelled checks, annotations when available, and external-provider detail
    URLs.
-6. Branch protection or repository rules that affect pushes, branch updates,
+7. Branch protection or repository rules that affect PR creation, pushes,
    review requirements, required checks, merge queue, merge methods, and branch
    deletion.
-7. Current git state, including dirty files, active worktrees, and whether an
+8. Current git state, including dirty files, active worktrees, and whether an
    existing branch clearly owns the PR.
 
 Treat GitHub and git as live authority. Do not rely on a local ledger, stale
@@ -46,10 +50,12 @@ PR.
 ## Lifecycle Comment
 
 For long-running write work, add or update a PR lifecycle marker unless the run
-lacks comment permission or the user asked for read-only review. Update the
-latest marker from the same actor when possible. Add a new comment only when
-editing is unavailable, editing would hide reply context, or a fresh visible
-escalation is needed.
+lacks comment permission or the user asked for read-only review. When a prepared
+branch target has no PR yet, defer the PR marker until after PR creation and use
+the issue lifecycle marker or final chat output for pre-creation status. Update
+the latest marker from the same actor when possible. Add a new comment only
+when editing is unavailable, editing would hide reply context, or a fresh
+visible escalation is needed.
 
 Use current state only, not an event log. Summarize verification instead of
 dumping command output. Use strict offset timestamps. `Actor` identifies the
@@ -107,6 +113,31 @@ The final lifecycle marker update is sufficient before merge or close. Do not
 add a separate completion comment unless updating the marker fails or the user
 explicitly asks for a public summary.
 
+## PR Creation Or Reuse
+
+When the target is a prepared branch, create or reuse the GitHub pull request
+before applying review, check, merge, close, or cleanup rules.
+
+1. Re-read repository identity, default/base branch, local branch, remote head
+   branch, linked issue context, existing PR candidates, permissions, lifecycle
+   markers, and branch protection.
+2. Reuse an existing open PR when the head branch and linked issue context show
+   clear ownership and live state is safe.
+3. If no safe PR exists, push the prepared branch only after confirming the
+   local branch is clean enough for the requested operation, the branch has the
+   intended base, and the actor has permission to create or update the head.
+4. Create the PR using repository title/body conventions when available. Include
+   linked issue context supplied by `issue-ops` or the user. Set draft state,
+   reviewers, labels, projects, milestones, and assignees only when the user or
+   repository guidance asks for them.
+5. After the PR exists, continue through lifecycle marker, check, review,
+   branch-update, merge, close, and cleanup rules in this extension.
+
+Escalate when branch ownership is unclear, no safe base branch can be selected,
+an existing PR candidate has active conflicting ownership, the actor cannot
+push or create the PR, or creating the PR would cross an external fork or
+repository boundary without explicit authorization.
+
 ## Review And Comment Handling
 
 Distinguish PR comments, reviews, review threads, inline review comments, and
@@ -152,15 +183,19 @@ checks are green from local verification alone.
 ## Branch Update And Push
 
 Prefer the PR's existing head branch when it clearly owns the work and is safe
-to update. Create a local worktree or branch only when needed to inspect, test,
-or patch the PR.
+to update. For prepared branch targets, treat the selected branch as the
+candidate PR head only after ownership, base, and permission checks pass. Create
+a local worktree or branch only when needed to inspect, test, create, or patch
+the PR.
 
-Before pushing or updating:
+Before creating, pushing, or updating:
 
-1. Re-read PR state, base/head SHA, reviews, comments, checks, lifecycle
-   markers, branch protection, and mergeability.
-2. Confirm the local branch descends from the current PR head or that the update
-   strategy is explicitly authorized.
+1. Re-read PR or PR-candidate state, base/head SHA, reviews, comments, checks,
+   lifecycle markers, branch protection, and mergeability when a PR already
+   exists.
+2. Confirm the local branch descends from the current PR head when a PR exists;
+   for a prepared branch without a PR, confirm the intended base and no unsafe
+   remote divergence unless the update strategy is explicitly authorized.
 3. Confirm no other current actor owns the lifecycle marker or active branch
    work.
 
@@ -168,9 +203,9 @@ Use GitHub's branch update operation or merge base into the PR branch only when
 safe and non-destructive. Rebase, force-push, branch recreation, and non-trivial
 history cleanup require explicit user authorization.
 
-Escalate on fork permission ambiguity, push rejection, merge conflict, protected
-head branch mismatch, stale branch with active reviewer discussion, or local and
-remote SHA disagreement.
+Escalate on fork permission ambiguity, PR creation failure, push rejection,
+merge conflict, protected head branch mismatch, stale branch with active
+reviewer discussion, or local and remote SHA disagreement.
 
 ## Merge, Close, And Cleanup
 
@@ -202,6 +237,8 @@ Escalate the affected PR on:
 
 - wrong account, wrong repository, missing permission, or unexpected GitHub
   tool routing;
+- prepared branch ownership ambiguity, PR creation permission failure, or
+  unsafe existing PR reuse candidate;
 - protected branch mismatch, required PR policy, required status checks, merge
   queue ambiguity, push rejection, or local/CI disagreement;
 - unresolved requested changes, active review disagreement, unresolved
@@ -223,8 +260,8 @@ work, base/head SHA, branch/check state, and mergeability. Escalate instead of
 finishing when late comments, another actor marker, PR state changes, branch
 drift, or check changes alter safety.
 
-Report the PR URL or number, final review state, final check state, merge or
-close result when applicable, verification run locally, provider route, MCP
-availability, and any remaining manual action. If linked issues remain open or
-need separate lifecycle work, report that as a linked-work implication rather
-than closing them by default.
+Report the PR URL or number, whether it was created or reused, final review
+state, final check state, merge or close result when applicable, verification
+run locally, provider route, MCP availability, and any remaining manual action.
+If linked issues remain open or need separate lifecycle work, report that as a
+linked-work implication rather than closing them by default.

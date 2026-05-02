@@ -6,14 +6,15 @@ ask-vs-continue rules, escalation, verification inference, integration handoff,
 and completion output.
 
 Extensions do not override those core contracts. They add provider state
-resolution, tooling order, visible lifecycle markers, provider-specific
-integration modes, metadata handling, closure rules, and escalation gates.
+resolution, tooling order, visible lifecycle markers, provider-specific issue
+integration or PR-lifecycle handoff modes, metadata handling, closure rules,
+and escalation gates.
 
 ## Current Extensions
 
 | File | Provider | Notes |
 |---|---|---|
-| [github.md](github.md) | GitHub™ | Issues, lifecycle comments, MCP / `gh` / REST routing, PR-mode, direct-main mode, linked pull requests, checks, and closure safety. |
+| [github.md](github.md) | GitHub™ | Issues, lifecycle comments, MCP / `gh` / REST routing, `pr-ops` handoff, direct-main mode, linked pull requests, and closure safety. |
 
 ## Required Sections
 
@@ -27,8 +28,8 @@ Each provider extension is a single markdown file in this directory with:
   repository-identity checks.
 - **Lifecycle marker or status model**: how visible progress is written, edited,
   or skipped when permission is missing.
-- **Integration strategies**: provider-specific PR, direct-commit, branch,
-  merge, or completion mechanics.
+- **Integration strategies**: provider-specific direct-commit, branch
+  preparation, sibling PR-lifecycle handoff, or completion mechanics.
 - **Metadata policy**: labels, projects, milestones, assignees, components, or
   equivalent tracker fields.
 - **Escalation gates**: provider-specific stale-state, permission, concurrent
