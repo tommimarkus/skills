@@ -1,0 +1,27 @@
+{
+  "name": "souroldgeezer-ops",
+  "version": "0.1.0",
+  "description": "Operations skills for issue and work-item lifecycle handling, with a tracker-agnostic core and provider-specific extensions.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Ops",
+    "shortDescription": "Issue and work-item lifecycle operations.",
+    "longDescription": "Handle explicit issue and work-item lifecycle requests with a tracker-agnostic core, provider-specific extensions, lifecycle markers, escalation gates, and verification discipline.",
+    "developerName": "Sour Old Geezer",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use issue-ops to triage this issue queue.",
+      "Use issue-ops to resume this issue lifecycle.",
+      "Use issue-ops to handle this GitHub™ issue end to end."
+    ]
+  }
+}

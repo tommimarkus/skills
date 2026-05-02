@@ -1,0 +1,10 @@
+{
+  "name": "souroldgeezer-ops",
+  "version": "0.1.0",
+  "description": "Operations skills for issue and work-item lifecycle handling, with a tracker-agnostic core and provider-specific extensions.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT"
+}

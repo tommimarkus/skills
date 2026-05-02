@@ -7,192 +7,138 @@ description: Use when the user explicitly asks to handle, triage, resume, implem
 
 ## Purpose
 
-Run a mostly autonomous issue lifecycle for this repository after the user
-explicitly invokes it. Default to full-cycle handling: triage, lifecycle
-comment, isolated implementation, verification, direct-main integration, push,
-issue close, cleanup, and queue continuation.
+Run this repository's opinionated GitHub issue lifecycle by composing the public
+`issue-ops` skill with its GitHub extension, then applying repo-local defaults
+and gates.
 
-Do not use this skill for incidental issue mentions, ordinary PR review,
-general GitHub questions, or published marketplace/plugin distribution.
+Use this internal skill only for explicit GitHub issue lifecycle requests in
+this repository. Do not use it for incidental issue mentions, ordinary PR
+review, standalone CI debugging, general GitHub questions, or published
+marketplace/plugin distribution questions.
 
-## Invocation
+## Source Of Truth Stack
 
-Default mode is `full-cycle`. Narrow modes apply only when the user explicitly
-asks: `triage-only`, `plan-only`, `implement-only`, `resume`, or `pr-mode`.
+Follow these layers in order:
 
-Scope can be one issue, an explicit list, or `all open`. For `all open`, inspect
-all open issues, sort by trivially determinable priority, and then use oldest
-first. Trivial priority signals include existing priority or severity labels,
-obvious bug/regression/blocker/security signals, clear reproduction or
-acceptance criteria, and already-linked work that can be completed mechanically.
-Do not perform deep analysis only to rank the queue.
+1. Public `issue-ops` core at
+   `souroldgeezer-ops/skills/issue-ops/SKILL.md`.
+2. GitHub provider extension at
+   `souroldgeezer-ops/skills/issue-ops/extensions/github.md`.
+3. This repo-local overlay.
 
-Default queue limits:
+If this overlay conflicts with the public core on repo-specific behavior, this
+overlay wins only inside this repository. If the public core or GitHub extension
+changes a general lifecycle contract, update this overlay in the same change.
 
-- Complete at most 10 issues per invocation.
-- Inspect at most 25 issues per invocation.
-- Inspect each issue at most once per invocation.
+## Evidence Contract
 
-## Authority And State
+Before acting, inspect these inputs and use them as the evidence basis for the
+run: explicit issue scope from the user request, live GitHub issue state, latest
+comments, linked PRs, lifecycle markers, repo identity and remotes, git branch
+status and worktrees, repo guidance, and likely touched surfaces.
 
-Treat live GitHub state and git state as authoritative. Use the local ledger
-only as an append-only recovery hint:
+Evidence: the lifecycle marker and completion output must name the live issue
+state, inspected repo or git state, verification commands, and repo-local gates
+that materially shaped the disposition.
+
+## Repo Defaults
+
+Default mode remains `full-cycle` unless the user explicitly asks for
+`triage-only`, `plan-only`, `implement-only`, `resume`, or `pr-mode`.
+
+Use direct-main mode for clearly actionable repo-maintenance issues when live
+GitHub state, git state, branch protection, permissions, and verification are
+safe. Use PR-mode when the issue, branch policy, review state, or user request
+requires review before merge.
+
+For active issues, re-read live GitHub state, latest comments, lifecycle
+markers, linked PRs, repo remotes, branch status, and worktrees before
+direct-main integration, PR update or merge, issue closure, or final lifecycle
+marker writes.
+
+Use these dedicated worktrees unless they are dirty or occupied:
+
+```text
+.worktrees/github-issue-lifecycle-main
+.worktrees/issue-<number>
+```
+
+Keep direct-main issue branches local. Prefer one clean commit named
+`Fix #<number>: <title>` for defects or `Resolve #<number>: <title>`
+otherwise.
+
+Use the repo-local ledger as recovery hints only:
 
 ```text
 .cache/github-issue-lifecycle/ledger.jsonl
 ```
 
 Never commit the ledger. Never store secrets, tokens, raw logs, full issue
-bodies, or sensitive excerpts in it. On resume, read the ledger for hints, then
-verify every material fact against GitHub and git. If they disagree, trust
-GitHub/git and append a reconciliation entry.
-
-## Normal Flow
-
-For each issue:
-
-1. Resolve live issue state, comments, labels, linked PRs, repository identity,
-   and GitHub auth/tool routing.
-2. Run the repo-internal `ip-hygiene` triage against the issue body, comments,
-   referenced material, and likely touched surfaces.
-3. Create or update the lifecycle comment marker.
-4. Classify actionability, scope, and integration path.
-5. Resume an existing PR branch if one clearly owns the issue; otherwise use
-   direct-main mode.
-6. Use `.worktrees/github-issue-lifecycle-main` as the dedicated integration
-   worktree and `.worktrees/issue-<number>` as the issue worktree.
-7. Keep direct-main issue branches local. Prefer one clean commit named
-   `Fix #<number>: <title>` for defects or `Resolve #<number>: <title>`
-   otherwise.
-8. Infer verification from repo guidance, touched-surface docs, scripts,
-   package metadata, CI workflows, and finally the touched files.
-9. Run issue-branch verification.
-10. Auto-fix only deterministic mechanical formatter or lint failures.
-11. Fetch `main`. If remote `main` moved, rebase only when conflict-free.
-12. Fast-forward integration `main`, rerun verification, push `main`, update
-    the lifecycle comment to completed, close the issue, and clean up.
+bodies, or sensitive excerpts in it.
 
 ## Ask Vs Continue
 
-Continue autonomously when the issue target, repository, auth, worktree state,
-verification path, and integration path are all clear under this skill's normal
-flow.
+Continue when the public `issue-ops` core, GitHub extension, this overlay, live
+GitHub state, and git state make the issue scope, integration path, and
+verification path clear.
 
-Ask the user only for global blockers that stop the whole run, such as unusable
-GitHub auth, missing push permission, missing required verification tooling, or
-an unusable base branch.
+Ask the user only for global blockers that stop the run, such as unusable auth,
+missing push permission, missing required verification tooling, or an unusable
+base branch.
 
-For issue-local ambiguity, do not ask immediately during queue processing.
-Escalate that issue with a lifecycle marker, record the evidence, and continue
-to the next issue when possible. Issue-local ambiguity includes missing
+For issue-local ambiguity, do not guess and do not ask immediately during queue
+processing. Escalate the issue with a lifecycle marker, record the evidence,
+and continue the queue where possible. Issue-local ambiguity includes missing
 acceptance criteria, conflicting comments, duplicate precedence, uncertain
-product/skill contract, unsafe existing PR state, or any escalation gate below.
+skill contract, unsafe existing PR state, or stale lifecycle ownership.
 
-## Lifecycle Comment
+## Repo-Specific Gates
 
-Every inspected issue gets a lifecycle marker, including fast-triage skips and
-escalations. Update the latest marker in place where possible. Add a new
-comment only when editing is unavailable, editing would hide reply context, or
-a fresh visible escalation is needed.
+Before implementing issue content, run `.claude/skills/ip-hygiene/SKILL.md`
+triage when the issue body, comments, referenced material, or likely touched
+files involve:
 
-Use current state only, not an event log. Summarize verification instead of
-dumping command output. Use strict offset timestamps. `Actor` identifies the
-runtime, such as `Codex` or `Claude Code`.
+- `souroldgeezer-*/skills/**`;
+- `souroldgeezer-*/agents/**`;
+- `souroldgeezer-*/docs/*-reference/**`;
+- `.claude/skills/**`;
+- Claude Code or Codex plugin manifests;
+- marketplace manifests;
+- `README.md`, `CLAUDE.md`, or `AGENTS.md` sections that describe those
+  artifacts.
 
-```md
-<!-- github-issue-lifecycle:v1 -->
-Lifecycle status: implementing
+Escalate the issue on any `ip-hygiene` concern that requires maintainer
+judgment.
 
-Actor: Codex
-Mode: full-cycle
-Integration: direct-main
-Scope: #123
-Current step: working on a temporary branch
-Disposition: actionable
-Verification: pending
-Last reviewed: 2026-05-02T12:00:00+03:00
-```
+For published skill, plugin, agent, runtime metadata, bundled reference,
+extension, manifest, marketplace, internal authoring skill, or repo-doc changes,
+apply `docs/skill-architecture.md` and run `scripts/skill-architecture-report.sh`
+when available.
 
-Completed state:
+Keep these surfaces synchronized when touched by an issue:
 
-```md
-<!-- github-issue-lifecycle:v1 -->
-Lifecycle status: completed
-
-Actor: Codex
-Mode: full-cycle
-Integration: direct-main
-Scope: #123
-Result: pushed to `main`
-Verification: passed - skill architecture report, unit tests, whitespace check
-Resolution: implemented the issue request and verified the affected surface
-Last reviewed: 2026-05-02T12:00:00+03:00
-```
-
-The final lifecycle comment update is sufficient before closing the issue. Do
-not add a separate closing comment unless updating the lifecycle comment fails.
-
-## GitHub Tooling Order
-
-Use the best available GitHub integration in this order:
-
-1. GitHub MCP after verifying active session routing.
-2. `gh` CLI after verifying auth and repository context.
-3. GitHub REST API only when MCP and `gh` are unavailable or insufficient.
-
-## Labels, Projects, And Milestones
-
-Use existing labels when classification is obvious. Create or normalize labels
-only when following the repository's existing taxonomy. Do not create lifecycle
-labels. Treat projects and milestones as read-only context when permissions
-allow.
-
-## Escalation Gates
-
-Escalation means stop the affected issue, update its lifecycle marker with the
-gate and evidence, and continue the queue when possible. Stop the whole run only
-for global blockers such as unusable auth, unusable base branch, missing
-required verification tooling, or missing push permission.
-
-Escalate on:
-
-- wrong repository, wrong account, missing permission, or unexpected GitHub
-  tool routing;
-- `ip-hygiene` risk in issue content, referenced material, or likely touched
-  surfaces;
-- ambiguous scope, contradictory requirements, unclear product or skill
-  contract, or duplicate precedence requiring maintainer judgment;
-- security, auth, secrets, credentials, tokens, signing, GitHub Actions
-  permissions, MCP/PAT handling, secret scanning, repository settings, or
-  sensitive history cleanup;
-- dependency add, remove, upgrade, downgrade, replacement, or lockfile changes,
-  unless the issue explicitly targets that exact dependency change;
-- repo-wide guidance or agent behavior policy changes, unless explicitly
-  targeted by the issue or mechanically required by an in-scope published-skill
-  change;
-- destructive or hard-to-reverse operations;
-- stale state, concurrent actor changes, ownership conflicts, active maintainer
-  discussion, or a lifecycle marker from another current actor;
-- public communication that rejects a request, assigns blame, makes a
-  commitment, asks the reporter to do work, or exposes sensitive detail;
-- untrusted issue content execution before inspection proves it safe;
-- verification unavailable, non-mechanical failure, local/CI disagreement,
-  repeated no-progress auto-fix, conflicts, push rejection, protected `main`,
-  dirty lifecycle worktrees, or non-trivial branch history cleanup;
-- unclear generated artifact provenance, unusual cost/runtime/API use, release
-  or versioning ambiguity, external repository boundaries, human review
-  conflict, or unsafe existing PR state.
-
-Autonomous handling is allowed for:
-
-- published skill/plugin changes when the issue target is clear;
-- architecture/model/rendering issues, provided real validation or render
-  evidence is used where relevant;
-- mechanical formatting/lint fixes;
-- obvious label use, creation, or normalization.
+- public skill `SKILL.md`;
+- provider extension files;
+- matching Claude Code subagent;
+- project-scoped Codex wrapper;
+- `skills/<skill>/agents/openai.yaml`;
+- both plugin manifests;
+- `.claude-plugin/marketplace.json`;
+- `README.md`;
+- `CLAUDE.md`;
+- `AGENTS.md` when Codex entry rules change.
 
 ## Completion Output
 
-End with a concise chat report listing completed, escalated, skipped, and
-remaining issue counts. Include verification summaries and any global blocker.
-Do not write a separate local summary file.
+Use the public `issue-ops` completion output. Also name any repo-local gates
+used, such as `ip-hygiene` or `skill-architecture-report`, in the verification
+summary.
+
+## Verification And Rerun
+
+Run the public `issue-ops` and GitHub-extension verification selected for the
+touched files. For this repository, run `scripts/skill-architecture-report.sh .`
+when skill, plugin, agent, runtime metadata, marketplace, internal authoring
+skill, or repo-guidance surfaces are touched.
+
+Rerun validation after fixing validation findings before completion.
