@@ -19,6 +19,12 @@ an explicit prepared-branch handoff, standalone deep CI debugging, security
 posture review, design review, test-quality audit, or general
 project-management advice.
 
+When changing trigger metadata, workflow behavior, provider handoff rules,
+source grounding, or evaluation coverage for this skill, read `references/evals`
+and `references/source-grounding.md` first. Keep eval cases synthetic or
+originally paraphrased; do not copy pull request, review, check-log, or tracker
+text into bundled evals.
+
 ## Modes
 
 Default mode is `full-cycle`: inspect the requested PR, prepared branch, or

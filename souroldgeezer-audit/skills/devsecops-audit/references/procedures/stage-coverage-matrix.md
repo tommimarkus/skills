@@ -56,7 +56,9 @@ The classification `enforcing` vs `decorative` applies §1 of the rubric — the
 
 ### Operate
 - **Present if:** Application Insights / Log Analytics receiving traces; diagnostic settings on all Azure resources; CVE intake from OSV / NVD / GHSA.
-- **Enforcing if:** alerts trigger on anomalies; scrubbing PII at ingestion; diagnostic settings configured per CLAUDE.md § Infrastructure Development.
+- **Enforcing if:** alerts trigger on anomalies; scrubbing PII at ingestion;
+  diagnostic settings are configured for all supported Azure resources
+  (`bicep.HC-8`).
 - **Decorative if:** logs forwarded but never queried; alerts configured but never fire.
 - **Missing if:** no observability, or CI/CD events not forwarded to any aggregator (`DSO-HC-12`).
 

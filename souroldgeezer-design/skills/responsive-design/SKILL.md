@@ -13,6 +13,12 @@ Help Claude produce and review responsive web UI that is correct by construction
 
 **The reference is [../../docs/ui-reference/responsive-design.md](../../docs/ui-reference/responsive-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections and WCAG SCs by reference; the skill never duplicates reference prose.
 
+When changing trigger metadata, workflow behavior, extension selection, source
+grounding, or evaluation coverage for this skill, read `references/evals` and
+`references/source-grounding.md` first. Keep eval cases synthetic or originally
+paraphrased; do not copy external prompts, code, examples, screenshots,
+diagrams, or docs into this plugin.
+
 ## Non-goals
 
 - **General code quality** → out of scope; produce working responsive code, don't lint surrounding logic.

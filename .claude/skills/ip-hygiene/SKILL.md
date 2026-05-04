@@ -16,6 +16,12 @@ Use the detailed reference at
 any triage question hits, when a remedy is unclear, or when source authority is
 needed for a consequential change.
 
+Also read `references/evals` and `references/source-grounding.md` when changing
+trigger metadata, workflow behavior, rationalization gates, source grounding,
+or evaluation coverage. Keep eval cases synthetic or originally paraphrased;
+do not copy legal source text, vendor policies, or user issue text into bundled
+evals.
+
 ## Inputs
 
 Inspect the current diff, the touched files, and any source material or licence

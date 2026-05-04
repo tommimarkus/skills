@@ -17,12 +17,23 @@ If no, the control is decorative. The skill's job is to distinguish enforcing co
 
 **Read `references/smell-catalog.md`** for the compact code list used in reports.
 
+Also read `references/evals` and `references/source-grounding.md` when changing
+trigger metadata, workflow behavior, extension selection, rationalization
+gates, source grounding, or evaluation coverage. Keep eval cases synthetic or
+originally paraphrased; do not copy external prompts, code, configuration,
+tables, diagrams, screenshots, or docs into this plugin.
+
 ## Non-goals
 
-- **General code quality** → use `code-quality-review`.
+- **General code / module design quality** → use `software-design` when
+  available. Otherwise report only security-relevant design concerns and state
+  that non-security refactoring is out of scope.
 - **Test quality** → use `test-quality-audit`. The E2E sub-lane `S` complements this skill for CSP / CORS / cookie assertions.
-- **Dead code / unused dependencies** → use `validate-hygiene`.
-- **General Azure WAF review** → use `CLAUDE.md` § "Infrastructure Development" checklist directly.
+- **Dead code / unused dependencies** → out of scope unless the evidence creates
+  a security or supply-chain finding covered by the bundled rubric.
+- **General Azure infrastructure architecture, cost, or Well-Architected review**
+  → out of scope unless a bundled extension code or devsecops rubric section
+  applies.
 
 ## Audit modes
 
@@ -166,8 +177,9 @@ Honest limits: <verbatim §8 block>
 ## Complementary skills
 
 - `test-quality-audit` — E sub-lane S covers CSP / CORS / cookie assertions. Remediation actions for code-level security findings (e.g. `dns.HC-4`) include a text pointer: "Add an E2E test in the S sub-lane that asserts the fixed CORS config." Devsecops-audit never invokes test-quality-audit programmatically.
-- `code-quality-review` — refactoring opportunities adjacent to a security finding belong there, not here.
-- `validate-hygiene` — a pinned-but-unused dependency is dead code; a pinned-to-floating-tag dependency is a devsecops smell. Both skills may cite the same file from different angles.
+- `software-design` — refactoring opportunities adjacent to a security finding
+  belong there unless the design flaw creates a concrete security posture
+  finding in this rubric.
 
 ## Honest limits
 
@@ -182,3 +194,9 @@ Per rubric §8, this skill cannot determine:
 - Whether a third-party supplier is currently compromised.
 
 Deep-mode reports include this list in the footer. Quick-mode reports omit it — the honest-limits statement is only meaningful alongside a whole-repo verdict.
+
+## Skill Maintenance
+
+After any skill, extension, reference, output-contract, or metadata edit, rerun
+`scripts/skill-architecture-report.sh .` until it reports no current advisory
+findings.

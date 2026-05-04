@@ -7,7 +7,9 @@
 - Path matches `**/*.bicep` or `**/*.bicepparam`.
 - Any file whose first non-comment line contains `targetScope`, `resource`, `module`, `param`, `var`, or `output`.
 
-**Applies to rubric sections:** §3 (Deploy stage), §5.1 items 1, 17, 19, §5.3 items 2, 4, and the WAF pillars from `CLAUDE.md` § "Infrastructure Development".
+**Applies to rubric sections:** §3 (Deploy and Operate stages), §5.1 items 1,
+17, 19, §5.3 items 2, 4, and Azure control evidence surfaced by this
+extension.
 
 ## Cost banding
 
@@ -106,7 +108,7 @@ disableLocalAuth\s*:\s*false
 **Severity:** `block`
 
 **Remediation action:**
-> Add a `Microsoft.Authorization/locks` resource scoped to the stateful resource with `level: 'CanNotDelete'`. Required by CLAUDE.md § Infrastructure Development / Reliability pillar.
+> Add a `Microsoft.Authorization/locks` resource scoped to the stateful resource with `level: 'CanNotDelete'`, or document an equivalent deletion-protection control when platform policy forbids locks.
 
 ### `bicep.HC-7` — Soft delete / purge protection disabled
 
@@ -138,7 +140,9 @@ deleteRetentionPolicy[\s\S]*?enabled\s*:\s*false
 
 **Severity:** `block`
 
-**Rubric note:** CLAUDE.md § Cost Guidance explicitly grants the free 5 GB/month LAW ingestion — this remediation is free within the declared budget.
+**Rubric note:** Diagnostic settings are Band 1 because platform log forwarding
+is the baseline evidence path for §3 Operate. Actual ingestion scope still
+follows the resolved cost stance.
 
 **Remediation action:**
 > Add a `Microsoft.Insights/diagnosticSettings` resource targeting the existing Log Analytics workspace. For logs, use `categoryGroup: 'AllLogs'` (or `'audit'` for audit-only). For metrics, use `metrics: [{ category: 'AllMetrics', enabled: true }]`. The category-group form is for logs only; metrics still use the per-category form. See https://learn.microsoft.com/azure/azure-monitor/essentials/diagnostic-settings.
@@ -152,7 +156,7 @@ deleteRetentionPolicy[\s\S]*?enabled\s*:\s*false
 **Severity:** `block`
 
 **Remediation action:**
-> Promote to a `param` with a `@description` and, where applicable, `@minLength` / `@maxLength`. Values come from `parameters.example.json` or `deploy-infra.yml` inline overrides (see CLAUDE.md § Workflow parameterization).
+> Promote to a `param` with a `@description` and, where applicable, `@minLength` / `@maxLength`. Values should come from environment-specific parameter files, deployment workflow variables, or explicit caller inputs rather than reusable module literals.
 
 ### `bicep.HC-10` — `http20Enabled: false` or client affinity on stateless APIs
 
@@ -167,7 +171,7 @@ clientAffinityEnabled\s*:\s*true
 **Severity:** `block` (HTTP/2) / `warn` (affinity)
 
 **Remediation action:**
-> Set `http20Enabled: true` and `clientAffinityEnabled: false`. WAF Performance pillar per CLAUDE.md.
+> Set `http20Enabled: true` and `clientAffinityEnabled: false` for stateless API hosts.
 
 ### `bicep.HC-11` — Param missing metadata
 
@@ -178,7 +182,7 @@ clientAffinityEnabled\s*:\s*true
 **Severity:** `warn`
 
 **Remediation action:**
-> Add `@description('...')` for every param. Add length/value bounds where Azure enforces them. Required by CLAUDE.md § Operational Excellence pillar.
+> Add `@description('...')` for every param. Add length/value bounds where Azure enforces them so IaC inputs are auditable and constrained.
 
 ### `bicep.HC-12` — Key Vault still in access-policy mode
 
@@ -315,6 +319,9 @@ Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` 
 
 ## Carve-outs
 
-- **Do not flag `bicep.HC-9` in `main.bicep`** for values passed as inline overrides in `deploy-infra.yml` — the composition root is allowed to receive hardcoded values from workflow variables per CLAUDE.md § Workflow parameterization.
+- **Do not flag `bicep.HC-9` in `main.bicep`** for values passed as explicit
+  composition-root inputs from parameter files or deployment workflow variables.
+  Reusable modules are still expected to keep environment-specific values
+  parameterized.
 - **Do not flag `bicep.HC-11` `@minLength` / `@maxLength` for params that accept free-form strings with no Azure-enforced bounds** (e.g. `@description`-style documentation strings).
 - **Do not flag Band 2 codes when the resolved cost stance is `free`** — emit the single `info` suppression line instead.

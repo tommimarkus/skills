@@ -13,6 +13,8 @@ Help Claude produce, extract, review, and look up ArchiMate® architecture diagr
 
 **The reference is [../../docs/architecture-reference/architecture.md](../../docs/architecture-reference/architecture.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated diagrams embody the reference's defaults; review output cites reference sections and ArchiMate® 3.2 chapter / Appendix B references; the skill never duplicates reference prose.
 
+Read `references/evals` and `references/source-grounding.md` when changing trigger metadata, workflow behavior, layout/runtime gates, source grounding, or evaluation coverage.
+Keep eval cases synthetic or paraphrased; avoid external diagrams, schemas, examples, screenshots, or standard text.
 This skill is the architectural *bridge* between the code produced by [responsive-design](../responsive-design/SKILL.md) and [api-design](../api-design/SKILL.md) and the architect's mental model of the system. Build goes from intent to diagram. Extract goes from code and IaC to diagram, lifting the three extractable ArchiMate® layers and stubbing the three forward-only layers. Review checks both artefact well-formedness and drift between a diagram and current code. Siblings consume the canonical diagram path in their own Review mode to flag when code has drifted from the architect's model.
 
 The quality bar has three explicit levels:

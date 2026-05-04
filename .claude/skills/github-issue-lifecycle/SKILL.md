@@ -16,6 +16,12 @@ this repository. Do not use it for incidental issue mentions, ordinary PR
 review, standalone CI debugging, general GitHub questions, or published
 marketplace/plugin distribution questions.
 
+When changing trigger metadata, workflow behavior, repo-local gates, source
+grounding, or evaluation coverage for this skill, read `references/evals` and
+`references/source-grounding.md` first. Keep eval cases synthetic or originally
+paraphrased; do not copy issue, review, or runbook text into this internal
+skill.
+
 ## Source Of Truth Stack
 
 Follow these layers in order:

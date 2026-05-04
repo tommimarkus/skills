@@ -11,6 +11,12 @@ Shape software so the current change is coherent, small enough to validate, and 
 
 This is the design companion one layer closer to code than `architecture-design` and one layer more general than `responsive-design` or `api-design`. It does not produce architecture diagrams, API contracts, UI responsive behavior, security audits, or test-quality classifications.
 
+When changing trigger metadata, workflow behavior, extension selection, source
+grounding, or evaluation coverage for this skill, read `references/evals` and
+`references/source-grounding.md` first. Keep eval cases synthetic or originally
+paraphrased; do not copy external prompts, code, examples, diagrams, or docs
+into this plugin.
+
 ## Modes
 
 ### Build Mode
