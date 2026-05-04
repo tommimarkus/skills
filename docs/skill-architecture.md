@@ -8,8 +8,8 @@ and documentation that describes those surfaces.
 This standard is broader than anti-bloat. A good skill has precise triggering,
 calibrated workflow language, progressive disclosure, runtime parity,
 deterministic validation, context discipline, stop conditions, output contracts,
-rerun guidance, and an improvement loop that can detect both progress and
-degradation.
+rerun guidance, behavioral evidence, and an improvement loop that can detect
+both progress and degradation.
 
 Use this document for judgment only after deterministic validation is exhausted.
 Use `scripts/skill-architecture-report.sh` for repeatable detection and report
@@ -140,6 +140,51 @@ Prefer machinery when the check is structural, repetitive, brittle under prose,
 or important enough to rerun after every change. Prose should explain why a
 rule matters and how to interpret edge cases; scripts should calculate what can
 be calculated.
+
+Skill-local scripts should be usable without an agent reverse-engineering them:
+provide noninteractive help, stable exit codes, and structured output when a
+downstream check needs machine-readable results. Stateful scripts should expose
+a dry-run mode or be idempotent enough that rerunning them cannot silently
+corrupt the repository or generated artifacts.
+
+## Behavioral Evidence
+
+Behavioral evidence records why a skill should keep its current trigger,
+workflow, model-family split, or high-risk rejection gate. It is not a second
+workflow and should not live in always-loaded context.
+
+Use [skill-evaluation.md](skill-evaluation.md) for the JSONL field contracts and
+source-hygiene template when creating or reviewing evaluation artifacts.
+
+Store skill-scoped evidence under one-hop support files:
+
+- `references/evals/trigger-cases.jsonl` for prompts that should and should
+  not activate the skill.
+- `references/evals/behavior-cases.jsonl` for task prompts, expected artifacts,
+  required checks, forbidden behavior, and grading notes.
+- `references/evals/model-pressure.md` when a model family or runtime extension
+  exists because a generic core failed pressure scenarios.
+- `references/source-grounding.md` when the skill extracts lessons from real
+  traces, issues, reviews, runbooks, or correction history.
+
+Every eval case should be synthetic or originally paraphrased unless a specific
+source licence and quotation context have been reviewed. Link source material by
+URL or local path; do not copy third-party prompt text, examples, code,
+fixtures, tables, schemas, diagrams, logos, or screenshots into the plugin
+bundle.
+
+Trigger eval packs must contain both positive and negative cases. Negative
+cases are not filler; they are the evidence that the skill does not steal work
+from sibling skills or broad generic-agent tasks.
+
+Behavior eval packs should test output and decision quality, not only whether
+an answer was produced. A useful case names the expected artifacts, required
+checks, forbidden behaviors, and a deterministic or rubric-based grader.
+
+High-risk skills — security, audit, review, IP, or test-quality workflows —
+need explicit rationalization gates. They should tell agents how to reject
+plausible but unsupported findings, downgrade low-confidence evidence, and
+avoid both false positives and false negatives.
 
 ## Model-Family Calibration
 

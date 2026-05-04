@@ -17,6 +17,7 @@ REPORT_GROUPS = (
     "Trigger Metadata",
     "Workflow Body",
     "On-Demand Knowledge",
+    "Evaluation Evidence",
     "Deterministic Machinery",
     "Runtime Parity",
     "Repo Guidance Drift",
@@ -125,6 +126,49 @@ class SkillFile:
     description: str
     body: str
     scope: str
+
+
+@dataclass(frozen=True)
+class SkillEvidenceProfile:
+    skill_dir: str
+    trigger_eval_pack: bool
+    behavior_eval_pack: bool
+    source_grounding: bool
+    high_risk: bool
+    rationalization_gate: bool
+
+
+@dataclass(frozen=True)
+class BehavioralEvidenceAdoption:
+    profiles: tuple[SkillEvidenceProfile, ...]
+
+    @property
+    def skill_count(self) -> int:
+        return len(self.profiles)
+
+    @property
+    def trigger_eval_pack_count(self) -> int:
+        return sum(1 for profile in self.profiles if profile.trigger_eval_pack)
+
+    @property
+    def behavior_eval_pack_count(self) -> int:
+        return sum(1 for profile in self.profiles if profile.behavior_eval_pack)
+
+    @property
+    def source_grounding_count(self) -> int:
+        return sum(1 for profile in self.profiles if profile.source_grounding)
+
+    @property
+    def high_risk_skill_count(self) -> int:
+        return sum(1 for profile in self.profiles if profile.high_risk)
+
+    @property
+    def high_risk_rationalization_count(self) -> int:
+        return sum(
+            1
+            for profile in self.profiles
+            if profile.high_risk and profile.rationalization_gate
+        )
 
 
 def build_rule_catalog() -> tuple[Rule, ...]:
@@ -326,6 +370,42 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "deterministic",
             ("unmentioned-asset", "documented-asset"),
             "Mention the asset from SKILL.md with its use condition or remove the unused asset.",
+        ),
+        Rule(
+            "SAC-EVAL-HIDDEN-ARTIFACT",
+            "Evaluation Evidence",
+            "high",
+            "docs/skill-architecture.md#behavioral-evidence",
+            "deterministic",
+            ("hidden-eval-artifact", "advertised-eval-artifact"),
+            "Mention eval artifacts from SKILL.md with explicit load conditions.",
+        ),
+        Rule(
+            "SAC-EVAL-TRIGGER-SCHEMA",
+            "Evaluation Evidence",
+            "high",
+            "docs/skill-architecture.md#behavioral-evidence",
+            "deterministic",
+            ("malformed-trigger-eval", "valid-trigger-eval"),
+            "Fix trigger eval JSONL so it has positive and negative cases plus source-hygiene fields.",
+        ),
+        Rule(
+            "SAC-EVAL-BEHAVIOR-SCHEMA",
+            "Evaluation Evidence",
+            "high",
+            "docs/skill-architecture.md#behavioral-evidence",
+            "deterministic",
+            ("malformed-behavior-eval", "valid-behavior-eval"),
+            "Fix behavior eval JSONL so each case states expected artifacts, required checks, forbidden behaviors, and a grader.",
+        ),
+        Rule(
+            "SAC-EVAL-IP-HYGIENE",
+            "Evaluation Evidence",
+            "high",
+            "docs/skill-architecture.md#behavioral-evidence",
+            "heuristic",
+            ("eval-artifact-with-third-party-text", "synthetic-eval-artifact"),
+            "Use synthetic or originally paraphrased eval cases and record source handling.",
         ),
         Rule(
             "SAC-RUNTIME-MISSING-OPENAI",
@@ -542,6 +622,24 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "manual-prompt",
             ("run-ip-hygiene-review-when-source-material-changes",),
             "Prompt for the repo-internal IP hygiene pass when source-derived prose or bundled references changed.",
+        ),
+        Rule(
+            "SAC-WORKFLOW-RATIONALIZATION-GATE",
+            "Workflow Body",
+            "high",
+            "docs/skill-architecture.md#behavioral-evidence",
+            "heuristic",
+            ("high-risk-skill-without-rejection-gate", "high-risk-skill-with-honest-limits"),
+            "Add explicit false-positive, false-negative, confidence, or unsupported-evidence gates.",
+        ),
+        Rule(
+            "SAC-MANUAL-SCRIPT-INTERFACE",
+            "Deterministic Machinery",
+            "medium",
+            "docs/skill-architecture.md#4-deterministic-machinery",
+            "manual-prompt",
+            ("review-script-help-json-dry-run-contract",),
+            "Review skill-local scripts for noninteractive help, stable output, and dry-run/idempotency where stateful.",
         ),
         Rule(
             "SAC-UNCOVERED-FRESH-AGENT-EVAL",
@@ -900,6 +998,154 @@ def has_ask_continue_contract(text: str) -> bool:
     )
 
 
+TRIGGER_EVAL_REL = "references/evals/trigger-cases.jsonl"
+BEHAVIOR_EVAL_REL = "references/evals/behavior-cases.jsonl"
+SOURCE_GROUNDING_REL = "references/source-grounding.md"
+
+
+def is_behavioral_evidence_support(path_from_skill: str) -> bool:
+    return path_from_skill.startswith("references/evals/") or path_from_skill == SOURCE_GROUNDING_REL
+
+
+def skill_has_behavioral_evidence_load_cue(text: str) -> bool:
+    return any(
+        support_is_advertised(text, target)
+        for target in (
+            "references/evals",
+            TRIGGER_EVAL_REL,
+            BEHAVIOR_EVAL_REL,
+            SOURCE_GROUNDING_REL,
+        )
+    )
+
+
+def parse_jsonl(path: Path) -> tuple[list[dict], list[str]]:
+    records: list[dict] = []
+    errors: list[str] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError as error:
+            errors.append(f"line {line_number}: invalid JSON: {error.msg}")
+            continue
+        if not isinstance(parsed, dict):
+            errors.append(f"line {line_number}: JSONL record is not an object")
+            continue
+        parsed["_line"] = line_number
+        records.append(parsed)
+    if not records and not errors:
+        errors.append("file has no JSONL records")
+    return records, errors
+
+
+def missing_fields(record: dict, required: tuple[str, ...]) -> list[str]:
+    missing: list[str] = []
+    for field in required:
+        if field not in record or record[field] is None or record[field] == "":
+            missing.append(field)
+    return missing
+
+
+def valid_string_list(value: object) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(item, str) and item for item in value)
+
+
+def validate_eval_ip_hygiene(records: list[dict]) -> list[str]:
+    issues: list[str] = []
+    for record in records:
+        line = record.get("_line", "?")
+        handling = str(record.get("ip_handling", "")).lower()
+        source_kind = str(record.get("source_kind", "")).lower()
+        if record.get("contains_third_party_text") is not False:
+            issues.append(f"line {line}: contains_third_party_text must be false")
+        if not handling or handling == "unclear":
+            issues.append(f"line {line}: ip_handling must describe original/synthetic/paraphrased handling")
+        if source_kind != "synthetic" and not record.get("source_url"):
+            issues.append(f"line {line}: non-synthetic cases need source_url")
+    return issues
+
+
+def validate_trigger_eval(path: Path) -> tuple[list[str], list[str]]:
+    records, errors = parse_jsonl(path)
+    required = (
+        "id",
+        "prompt",
+        "expected_activation",
+        "reason",
+        "source_kind",
+        "ip_handling",
+        "contains_third_party_text",
+    )
+    schema_issues = list(errors)
+    expected_values: set[bool] = set()
+    for record in records:
+        line = record.get("_line", "?")
+        missing = missing_fields(record, required)
+        if missing:
+            schema_issues.append(f"line {line}: missing fields {', '.join(missing)}")
+        if "expected_activation" in record and not isinstance(record["expected_activation"], bool):
+            schema_issues.append(f"line {line}: expected_activation must be boolean")
+        if isinstance(record.get("expected_activation"), bool):
+            expected_values.add(record["expected_activation"])
+    if records and expected_values != {False, True}:
+        schema_issues.append("trigger evals need at least one should-trigger and one should-not-trigger case")
+    return schema_issues, validate_eval_ip_hygiene(records)
+
+
+def validate_behavior_eval(path: Path) -> tuple[list[str], list[str]]:
+    records, errors = parse_jsonl(path)
+    required = (
+        "id",
+        "prompt",
+        "expected_artifacts",
+        "required_checks",
+        "forbidden_behaviors",
+        "grader",
+        "source_kind",
+        "ip_handling",
+        "contains_third_party_text",
+    )
+    schema_issues = list(errors)
+    for record in records:
+        line = record.get("_line", "?")
+        missing = missing_fields(record, required)
+        if missing:
+            schema_issues.append(f"line {line}: missing fields {', '.join(missing)}")
+        for list_field in ("expected_artifacts", "required_checks", "forbidden_behaviors"):
+            if list_field in record and not valid_string_list(record[list_field]):
+                schema_issues.append(f"line {line}: {list_field} must be a non-empty string list")
+        if "grader" in record and not isinstance(record["grader"], str):
+            schema_issues.append(f"line {line}: grader must be a string")
+    return schema_issues, validate_eval_ip_hygiene(records)
+
+
+def high_risk_skill(skill: SkillFile) -> bool:
+    name_scope = f"{Path(skill.skill_dir).name} {skill.name}".lower()
+    description = skill.description.lower()
+    return bool(
+        re.search(r"\b(devsecops|security-audit|test-quality-audit|audit|review|ip-hygiene)\b", name_scope)
+        or re.search(r"\bwhen auditing\b", description)
+    )
+
+
+def has_rationalization_gate(text: str) -> bool:
+    signals = (
+        "false positive",
+        "false negative",
+        "confidence",
+        "unsupported",
+        "honest limits",
+        "static-only",
+        "do not fabricate",
+        "downgrade",
+        "limitation",
+    )
+    lower = text.lower()
+    return sum(1 for signal in signals if signal in lower) >= 2
+
+
 def unconditional_support_loads(text: str) -> list[str]:
     matches: list[str] = []
     condition = re.compile(r"\b(when|if|for|after|before|based on|conditional on|only when|as needed)\b", re.I)
@@ -912,6 +1158,112 @@ def unconditional_support_loads(text: str) -> list[str]:
         if path_match:
             matches.append(path_match.group(0).rstrip(".,;:)"))
     return matches
+
+
+def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) -> list[Finding]:
+    findings: list[Finding] = []
+    evidence_files = [
+        rel
+        for rel in (TRIGGER_EVAL_REL, BEHAVIOR_EVAL_REL, SOURCE_GROUNDING_REL)
+        if (repo_root / skill.skill_dir / rel).is_file()
+    ]
+    eval_root = repo_root / skill.skill_dir / "references/evals"
+    if eval_root.is_dir():
+        for path in eval_root.rglob("*"):
+            if path.is_file():
+                rel_from_skill = relpath(repo_root, path).removeprefix(f"{skill.skill_dir}/")
+                if rel_from_skill not in evidence_files:
+                    evidence_files.append(rel_from_skill)
+
+    if evidence_files and not skill_has_behavioral_evidence_load_cue(full_text):
+        findings.append(
+            make_finding(
+                "Evaluation Evidence",
+                "high",
+                "SAC-EVAL-HIDDEN-ARTIFACT",
+                f"{skill.skill_dir}/references/evals",
+                f"behavioral evidence exists but {skill.rel} has no references/evals or source-grounding load cue",
+                "Behavioral evidence should be discoverable from SKILL.md with explicit load conditions.",
+                "Claude/Codex may miss eval evidence during skill changes and preserve untested trigger or workflow behavior.",
+                "Mention eval artifacts from SKILL.md with explicit load conditions.",
+            )
+        )
+
+    trigger_path = repo_root / skill.skill_dir / TRIGGER_EVAL_REL
+    if trigger_path.is_file():
+        schema_issues, ip_issues = validate_trigger_eval(trigger_path)
+        if schema_issues:
+            findings.append(
+                make_finding(
+                    "Evaluation Evidence",
+                    "high",
+                    "SAC-EVAL-TRIGGER-SCHEMA",
+                    relpath(repo_root, trigger_path),
+                    "; ".join(schema_issues[:4]),
+                    "Trigger eval packs should contain JSONL positive and negative activation cases with source-hygiene fields.",
+                    "Claude/Codex trigger tuning may improve recall while missing false positives or copying unsafe prompt text.",
+                    "Fix trigger eval JSONL so it has positive and negative cases plus source-hygiene fields.",
+                )
+            )
+        if ip_issues:
+            findings.append(
+                make_finding(
+                    "Evaluation Evidence",
+                    "high",
+                    "SAC-EVAL-IP-HYGIENE",
+                    relpath(repo_root, trigger_path),
+                    "; ".join(ip_issues[:4]),
+                    "Eval artifacts should use synthetic or originally paraphrased cases and record source handling.",
+                    "Claude/Codex may propagate third-party prompt text or examples into the shipped plugin bundle.",
+                    "Use synthetic or originally paraphrased eval cases and record source handling.",
+                )
+            )
+
+    behavior_path = repo_root / skill.skill_dir / BEHAVIOR_EVAL_REL
+    if behavior_path.is_file():
+        schema_issues, ip_issues = validate_behavior_eval(behavior_path)
+        if schema_issues:
+            findings.append(
+                make_finding(
+                    "Evaluation Evidence",
+                    "high",
+                    "SAC-EVAL-BEHAVIOR-SCHEMA",
+                    relpath(repo_root, behavior_path),
+                    "; ".join(schema_issues[:4]),
+                    "Behavior eval packs should state expected artifacts, required checks, forbidden behaviors, and a grader.",
+                    "Claude/Codex may pass superficial evals that do not prove the workflow changed behavior.",
+                    "Fix behavior eval JSONL so each case states expected artifacts, required checks, forbidden behaviors, and a grader.",
+                )
+            )
+        if ip_issues:
+            findings.append(
+                make_finding(
+                    "Evaluation Evidence",
+                    "high",
+                    "SAC-EVAL-IP-HYGIENE",
+                    relpath(repo_root, behavior_path),
+                    "; ".join(ip_issues[:4]),
+                    "Eval artifacts should use synthetic or originally paraphrased cases and record source handling.",
+                    "Claude/Codex may propagate third-party prompt text or examples into the shipped plugin bundle.",
+                    "Use synthetic or originally paraphrased eval cases and record source handling.",
+                )
+            )
+
+    if high_risk_skill(skill) and not has_rationalization_gate(full_text):
+        findings.append(
+            make_finding(
+                "Workflow Body",
+                "high",
+                "SAC-WORKFLOW-RATIONALIZATION-GATE",
+                skill.rel,
+                "high-risk audit/review skill lacks explicit false-positive, confidence, unsupported-evidence, or honest-limits gate",
+                "High-risk skills should force agents to reject plausible but unsupported findings.",
+                "Claude/Codex may overstate security, audit, review, or test-quality claims without enough evidence.",
+                "Add explicit false-positive, false-negative, confidence, or unsupported-evidence gates.",
+            )
+        )
+
+    return findings
 
 
 def frontmatter_tools_include_skill(tools: str) -> bool:
@@ -939,6 +1291,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
     findings: list[Finding] = []
     combined_opening = f"{skill.description}\n" + "\n".join(skill.body.splitlines()[:40])
     full_text = skill.path.read_text(encoding="utf-8")
+    findings.extend(scan_behavioral_evidence(repo_root, skill, full_text))
 
     if len(skill.description) > 1024:
         findings.append(
@@ -1176,6 +1529,8 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
     unadvertised: dict[str, list[str]] = {}
     for support_rel in support_files(repo_root, skill.skill_dir):
         support_from_skill = support_rel.removeprefix(f"{skill.skill_dir}/")
+        if is_behavioral_evidence_support(support_from_skill):
+            continue
         if support_from_skill.endswith("/README.md"):
             support_bucket = support_from_skill.removesuffix("/README.md")
             if support_is_advertised(full_text, support_from_skill) or support_is_advertised(full_text, support_bucket):
@@ -1734,6 +2089,24 @@ def collect_findings(repo_root: Path) -> list[Finding]:
     return findings
 
 
+def collect_behavioral_evidence_adoption(repo_root: Path) -> BehavioralEvidenceAdoption:
+    profiles: list[SkillEvidenceProfile] = []
+    for skill_rel in find_skill_files(repo_root):
+        skill = load_skill(repo_root, skill_rel)
+        full_text = skill.path.read_text(encoding="utf-8")
+        profiles.append(
+            SkillEvidenceProfile(
+                skill_dir=skill.skill_dir,
+                trigger_eval_pack=(repo_root / skill.skill_dir / TRIGGER_EVAL_REL).is_file(),
+                behavior_eval_pack=(repo_root / skill.skill_dir / BEHAVIOR_EVAL_REL).is_file(),
+                source_grounding=(repo_root / skill.skill_dir / SOURCE_GROUNDING_REL).is_file(),
+                high_risk=high_risk_skill(skill),
+                rationalization_gate=has_rationalization_gate(full_text),
+            )
+        )
+    return BehavioralEvidenceAdoption(tuple(profiles))
+
+
 def load_replacement_ledger(repo_root: Path) -> list[dict]:
     ledger_path = repo_root / REPLACEMENT_LEDGER_REL
     if not ledger_path.is_file():
@@ -1940,6 +2313,46 @@ def replacement_calibration_to_dict(calibration: ReplacementCalibration) -> dict
     }
 
 
+def behavioral_evidence_adoption_to_dict(adoption: BehavioralEvidenceAdoption) -> dict[str, object]:
+    return {
+        "skill_count": adoption.skill_count,
+        "trigger_eval_pack_count": adoption.trigger_eval_pack_count,
+        "behavior_eval_pack_count": adoption.behavior_eval_pack_count,
+        "source_grounding_count": adoption.source_grounding_count,
+        "high_risk_skill_count": adoption.high_risk_skill_count,
+        "high_risk_rationalization_count": adoption.high_risk_rationalization_count,
+        "skills": [
+            {
+                "skill_dir": profile.skill_dir,
+                "trigger_eval_pack": profile.trigger_eval_pack,
+                "behavior_eval_pack": profile.behavior_eval_pack,
+                "source_grounding": profile.source_grounding,
+                "high_risk": profile.high_risk,
+                "rationalization_gate": profile.rationalization_gate,
+            }
+            for profile in adoption.profiles
+        ],
+    }
+
+
+def emit_behavioral_evidence_adoption(adoption: BehavioralEvidenceAdoption) -> str:
+    lines = [
+        "## Behavioral Evidence Adoption",
+        "",
+        f"- Skills scanned: `{adoption.skill_count}`",
+        f"- Trigger eval packs: `{adoption.trigger_eval_pack_count} of {adoption.skill_count}`",
+        f"- Behavior eval packs: `{adoption.behavior_eval_pack_count} of {adoption.skill_count}`",
+        f"- Source-grounding files: `{adoption.source_grounding_count} of {adoption.skill_count}`",
+        (
+            "- High-risk rationalization gates: "
+            f"`{adoption.high_risk_rationalization_count} of {adoption.high_risk_skill_count}`"
+        ),
+        "- Exit policy: adoption gaps are coverage debt, not strict findings, until intentionally ratcheted.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def emit_group(group: str, findings: list[Finding]) -> str:
     lines = [f"## {group}", ""]
     group_findings = [finding for finding in findings if finding.group == group]
@@ -2014,6 +2427,11 @@ NEXT_PRIORITY = {
     "SAC-REF-BROKEN-LINK": 7,
     "SAC-SCRIPT-UNADVERTISED": 8,
     "SAC-WORKFLOW-OUTPUT": 9,
+    "SAC-EVAL-HIDDEN-ARTIFACT": 10,
+    "SAC-EVAL-TRIGGER-SCHEMA": 11,
+    "SAC-EVAL-BEHAVIOR-SCHEMA": 12,
+    "SAC-EVAL-IP-HYGIENE": 13,
+    "SAC-WORKFLOW-RATIONALIZATION-GATE": 14,
 }
 
 
@@ -2063,10 +2481,12 @@ def render_report(
     findings: list[Finding],
     rules: tuple[Rule, ...] | None = None,
     calibration: ReplacementCalibration | None = None,
+    adoption: BehavioralEvidenceAdoption | None = None,
 ) -> str:
     rules = rules or build_rule_catalog()
     coverage = calculate_coverage(rules)
     calibration = calibration or calculate_replacement_calibration(repo_root)
+    adoption = adoption or collect_behavioral_evidence_adoption(repo_root)
     lines = [
         "# Skill Architecture Craft Report",
         "",
@@ -2108,6 +2528,7 @@ def render_report(
         f"- Replacement calibration passes: `{'yes' if calibration.passes else 'no'}`",
         "",
     ]
+    lines.append(emit_behavioral_evidence_adoption(adoption))
     for group in REPORT_GROUPS:
         lines.append(emit_group(group, findings))
     lines.append(emit_grouped_targets(findings))
@@ -2120,10 +2541,12 @@ def render_json(
     findings: list[Finding],
     rules: tuple[Rule, ...] | None = None,
     calibration: ReplacementCalibration | None = None,
+    adoption: BehavioralEvidenceAdoption | None = None,
 ) -> str:
     rules = rules or build_rule_catalog()
     coverage = calculate_coverage(rules)
     calibration = calibration or calculate_replacement_calibration(repo_root)
+    adoption = adoption or collect_behavioral_evidence_adoption(repo_root)
     payload = {
         "scope": {
             "repo": str(repo_root),
@@ -2140,6 +2563,7 @@ def render_json(
         },
         "coverage": coverage_to_dict(coverage),
         "replacement_calibration": replacement_calibration_to_dict(calibration),
+        "behavioral_evidence_adoption": behavioral_evidence_adoption_to_dict(adoption),
         "findings": [finding_to_dict(finding) for finding in findings],
         "rules": [rule_to_dict(rule) for rule in rules],
     }
@@ -2179,10 +2603,11 @@ def main(argv: list[str] | None = None) -> int:
     rules = build_rule_catalog()
     coverage = calculate_coverage(rules)
     calibration = calculate_replacement_calibration(resolved_repo_root)
+    adoption = collect_behavioral_evidence_adoption(resolved_repo_root)
     if args.format == "json":
-        print(render_json(resolved_repo_root, findings, rules, calibration), end="")
+        print(render_json(resolved_repo_root, findings, rules, calibration, adoption), end="")
     else:
-        print(render_report(resolved_repo_root, findings, rules, calibration), end="")
+        print(render_report(resolved_repo_root, findings, rules, calibration, adoption), end="")
     if args.strict and (findings or categories_below_floor(coverage) or not calibration.passes):
         return 1
     return 0

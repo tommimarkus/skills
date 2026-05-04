@@ -82,6 +82,20 @@ If any answer is yes, read
 [references/ip-hygiene-reference.md](references/ip-hygiene-reference.md) and run
 only the relevant check buckets below.
 
+## Rationalization Gates
+
+Before reporting an IP hygiene issue, reject false positives explicitly:
+
+- **False positive:** do not flag a mere descriptive product, library, tool, or
+  standard mention in an internal reference body unless it copies protected
+  expression, bundles material, or appears on a public-visible surface that
+  needs trademark handling.
+- **False negative:** do not downgrade copied prose, copied examples, bundled
+  third-party assets, unclear redistribution terms, or endorsement-like wording
+  just because the reference is useful to the skill.
+- **Confidence:** if source authority, licence terms, or trademark policy are
+  unclear and load-bearing, stop and ask rather than inventing a safe remedy.
+
 ## Check Buckets
 
 ### Copyright

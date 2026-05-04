@@ -357,6 +357,193 @@ def case_asset_unadvertised(complexity: str, index: str, scenario: str) -> dict:
     )
 
 
+def valid_trigger_eval_records(scenario: str) -> str:
+    return "\n".join(
+        [
+            json.dumps(
+                {
+                    "id": f"{scenario}-trigger-yes",
+                    "prompt": f"Use {scenario} for its owned task.",
+                    "expected_activation": True,
+                    "reason": "Direct skill request.",
+                    "source_kind": "synthetic",
+                    "source_url": "",
+                    "ip_handling": "original synthetic prompt; no third-party text",
+                    "contains_third_party_text": False,
+                },
+                separators=(",", ":"),
+            ),
+            json.dumps(
+                {
+                    "id": f"{scenario}-trigger-no",
+                    "prompt": f"Ask unrelated packaging question for {scenario}.",
+                    "expected_activation": False,
+                    "reason": "Near-miss request owned by another skill.",
+                    "source_kind": "synthetic",
+                    "source_url": "",
+                    "ip_handling": "original synthetic prompt; no third-party text",
+                    "contains_third_party_text": False,
+                },
+                separators=(",", ":"),
+            ),
+        ]
+    ) + "\n"
+
+
+def valid_behavior_eval_record(scenario: str) -> str:
+    return (
+        json.dumps(
+            {
+                "id": f"{scenario}-behavior",
+                "prompt": f"Review {scenario} with evidence.",
+                "expected_artifacts": ["short report"],
+                "required_checks": ["inspect SKILL.md"],
+                "forbidden_behaviors": ["invent missing files"],
+                "grader": "rubric: output cites inspected files",
+                "source_kind": "synthetic",
+                "source_url": "",
+                "ip_handling": "original synthetic prompt; no third-party text",
+                "contains_third_party_text": False,
+            },
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+
+
+def case_eval_hidden_artifact(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    return skill_case(
+        "SAC-EVAL-HIDDEN-ARTIFACT",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} hidden eval discoverability.",
+        clean_body(scenario),
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/skills/{name}/references/evals/trigger-cases.jsonl",
+                "content": valid_trigger_eval_records(scenario),
+            }
+        ],
+        expected_findings=[
+            {
+                "code": "SAC-EVAL-HIDDEN-ARTIFACT",
+                "path": f"example-plugin/skills/{name}/references/evals",
+            }
+        ],
+    )
+
+
+def case_eval_trigger_schema(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    record = {
+        "id": f"{scenario}-trigger-yes",
+        "prompt": f"Use {scenario}.",
+        "expected_activation": True,
+        "reason": "Direct request.",
+        "source_kind": "synthetic",
+        "source_url": "",
+        "ip_handling": "original synthetic prompt; no third-party text",
+        "contains_third_party_text": False,
+    }
+    return skill_case(
+        "SAC-EVAL-TRIGGER-SCHEMA",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} trigger eval schema.",
+        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/skills/{name}/references/evals/trigger-cases.jsonl",
+                "content": json.dumps(record, separators=(",", ":")) + "\n",
+            }
+        ],
+    )
+
+
+def case_eval_behavior_schema(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    record = {
+        "id": f"{scenario}-behavior",
+        "prompt": f"Review {scenario}.",
+        "source_kind": "synthetic",
+        "source_url": "",
+        "ip_handling": "original synthetic prompt; no third-party text",
+        "contains_third_party_text": False,
+    }
+    return skill_case(
+        "SAC-EVAL-BEHAVIOR-SCHEMA",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} behavior eval schema.",
+        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/skills/{name}/references/evals/behavior-cases.jsonl",
+                "content": json.dumps(record, separators=(",", ":")) + "\n",
+            }
+        ],
+    )
+
+
+def case_eval_ip_hygiene(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    unsafe = {
+        "id": f"{scenario}-trigger-unsafe",
+        "prompt": f"Use {scenario} with copied prompt text.",
+        "expected_activation": True,
+        "reason": "Direct request.",
+        "source_kind": "issue",
+        "source_url": "",
+        "ip_handling": "unclear",
+        "contains_third_party_text": True,
+    }
+    safe = {
+        "id": f"{scenario}-trigger-safe",
+        "prompt": f"Ask unrelated packaging question for {scenario}.",
+        "expected_activation": False,
+        "reason": "Near-miss request.",
+        "source_kind": "synthetic",
+        "source_url": "",
+        "ip_handling": "original synthetic prompt; no third-party text",
+        "contains_third_party_text": False,
+    }
+    return skill_case(
+        "SAC-EVAL-IP-HYGIENE",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} eval IP handling.",
+        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/skills/{name}/references/evals/trigger-cases.jsonl",
+                "content": "\n".join(json.dumps(record, separators=(",", ":")) for record in (unsafe, safe)) + "\n",
+            }
+        ],
+    )
+
+
+def case_rationalization_gate(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-security-audit-skill"
+    return skill_case(
+        "SAC-WORKFLOW-RATIONALIZATION-GATE",
+        complexity,
+        index,
+        scenario,
+        f"Use when auditing {scenario} security posture.",
+        clean_body(scenario),
+        skill_name=name,
+    )
+
+
 def case_runtime_missing_openai(complexity: str, index: str, scenario: str) -> dict:
     return skill_case("SAC-RUNTIME-MISSING-OPENAI", complexity, index, scenario, f"Use when checking {scenario} Codex metadata.", clean_body(scenario), omit_openai=True)
 
@@ -720,6 +907,11 @@ BUILDERS: list[tuple[str, CaseBuilder]] = [
     ("unadvertised-fixture", case_fixture_unadvertised),
     ("unadvertised-template", case_template_unadvertised),
     ("unadvertised-asset", case_asset_unadvertised),
+    ("hidden-eval-artifact", case_eval_hidden_artifact),
+    ("trigger-eval-schema", case_eval_trigger_schema),
+    ("behavior-eval-schema", case_eval_behavior_schema),
+    ("eval-ip-hygiene", case_eval_ip_hygiene),
+    ("rationalization-gate", case_rationalization_gate),
     ("missing-openai", case_runtime_missing_openai),
     ("skill-name-drift", case_runtime_name_drift),
     ("invalid-plugin-json", case_runtime_plugin_json),

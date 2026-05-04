@@ -113,6 +113,7 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertIn("# Skill Architecture Craft Report", output)
         self.assertIn("## Summary", output)
         self.assertIn("## Standard Coverage", output)
+        self.assertIn("## Behavioral Evidence Adoption", output)
         self.assertIn("- Weight policy: `fixed by severity; catalog entries cannot tune weights`", output)
         self.assertIn("- Severity weights: `blocker=13, high=8, medium=5, low=3`", output)
         self.assertIn("- Category floor: `80.0% minimum per report group`", output)
@@ -125,6 +126,8 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertIn("SAC-TRIGGER-AGGRESSIVE (medium)", output)
         self.assertIn("SAC-TRIGGER-MISSING-CONTEXT (high)", output)
         self.assertIn("SAC-WORKFLOW-OUTPUT (high)", output)
+        self.assertIn("SAC-EVAL-HIDDEN-ARTIFACT (high)", output)
+        self.assertIn("SAC-EVAL-TRIGGER-SCHEMA (high)", output)
         self.assertIn("SAC-REF-BROKEN-LINK (high)", output)
         self.assertIn("SAC-REF-UNADVERTISED-SUPPORT", output)
         self.assertIn("SAC-RUNTIME-DEFAULT-PROMPTS (medium)", output)
@@ -151,6 +154,48 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertIn("Findings: 0 total", result.stdout)
         self.assertIn("No target groups.", result.stdout)
         self.assertIn("No current advisory findings.", result.stdout)
+
+    def test_behavioral_evidence_adoption_is_reported_without_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "clean-repo"
+            self.make_clean_fixture(fixture)
+
+            result = run_engine_args("--format", "json", str(fixture))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        adoption = payload["behavioral_evidence_adoption"]
+        self.assertEqual(1, adoption["skill_count"])
+        self.assertEqual(1, adoption["trigger_eval_pack_count"])
+        self.assertEqual(1, adoption["behavior_eval_pack_count"])
+        self.assertEqual(1, adoption["source_grounding_count"])
+        self.assertEqual(0, adoption["high_risk_skill_count"])
+        self.assertEqual(0, payload["summary"]["finding_count"])
+
+    def test_eval_artifacts_have_specific_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "repo"
+            self.make_eval_issue_fixture(fixture)
+
+            result = run_engine(fixture)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = result.stdout
+        self.assertIn("SAC-EVAL-HIDDEN-ARTIFACT (high)", output)
+        self.assertIn("SAC-EVAL-TRIGGER-SCHEMA (high)", output)
+        self.assertIn("SAC-EVAL-BEHAVIOR-SCHEMA (high)", output)
+        self.assertIn("SAC-EVAL-IP-HYGIENE (high)", output)
+        self.assertIn("references/evals/trigger-cases.jsonl", output)
+
+    def test_high_risk_skill_requires_rationalization_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "repo"
+            self.make_high_risk_issue_fixture(fixture)
+
+            result = run_engine(fixture)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("SAC-WORKFLOW-RATIONALIZATION-GATE (high)", result.stdout)
 
     def test_usage_errors_exit_nonzero(self) -> None:
         missing = run_engine(REPO_ROOT / "does-not-exist")
@@ -211,6 +256,7 @@ class SkillArchitectureReportTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(str(fixture.resolve()), payload["scope"]["repo"])
         self.assertIn("coverage", payload)
+        self.assertIn("behavioral_evidence_adoption", payload)
         self.assertIn("findings", payload)
         self.assertIn("rules", payload)
         self.assertTrue(any(finding["code"] == "SAC-TRIGGER-AGGRESSIVE" for finding in payload["findings"]))
@@ -383,6 +429,12 @@ class SkillArchitectureReportTest(unittest.TestCase):
         write(fixture / "example-plugin/skills/noisy-skill/references/extra.md", "# Extra Procedure\n")
         write(fixture / "example-plugin/skills/noisy-skill/references/README.md", "# Maintainer Notes\n")
         write(
+            fixture / "example-plugin/skills/noisy-skill/references/evals/trigger-cases.jsonl",
+            """
+            {"id":"bad-trigger","prompt":"quoted external prompt","expected_activation":true,"contains_third_party_text":true}
+            """,
+        )
+        write(
             fixture / "example-plugin/skills/noisy-skill/scripts/helper.sh",
             """
             #!/usr/bin/env bash
@@ -455,6 +507,8 @@ class SkillArchitectureReportTest(unittest.TestCase):
             If the request is ambiguous, ask the user before proceeding.
             Rerun the report after changing this skill.
             Read references/group when grouped support behavior is under test.
+            Read references/evals when changing trigger or behavioral evaluation cases.
+            Read references/source-grounding.md when checking source provenance.
 
             | Support | Loaded when |
             |---|---|
@@ -496,6 +550,153 @@ class SkillArchitectureReportTest(unittest.TestCase):
         write(fixture / "example-plugin/skills/clean-skill/references/group/one.md", "# Grouped Support\n")
         write(fixture / "example-plugin/skills/clean-skill/references/group/README.md", "# Grouped Support Index\n")
         write(fixture / "example-plugin/skills/clean-skill/references/table/entry.md", "# Table Support\n")
+        write(
+            fixture / "example-plugin/skills/clean-skill/references/evals/trigger-cases.jsonl",
+            """
+            {"id":"clean-trigger-yes","prompt":"User asks for the clean fixture skill by name.","expected_activation":true,"reason":"Direct skill target.","source_kind":"synthetic","source_url":"","ip_handling":"original synthetic prompt; no third-party text","contains_third_party_text":false}
+            {"id":"clean-trigger-no","prompt":"User asks for unrelated packaging help.","expected_activation":false,"reason":"Packaging is outside this fixture skill.","source_kind":"synthetic","source_url":"","ip_handling":"original synthetic prompt; no third-party text","contains_third_party_text":false}
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/clean-skill/references/evals/behavior-cases.jsonl",
+            """
+            {"id":"clean-behavior-report","prompt":"Review the clean fixture skill.","expected_artifacts":["short report"],"required_checks":["inspect SKILL.md","cite command output"],"forbidden_behaviors":["invent missing files"],"grader":"rubric: report cites inspected files and avoids invented evidence","source_kind":"synthetic","source_url":"","ip_handling":"original synthetic prompt; no third-party text","contains_third_party_text":false}
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/clean-skill/references/source-grounding.md",
+            """
+            # Source Grounding
+
+            - `clean-fixture`: synthetic local fixture used for report-engine tests.
+              Handling: original repo-authored scenario; no third-party text, code,
+              fixtures, schemas, diagrams, or screenshots are bundled.
+            """,
+        )
+
+    def make_eval_issue_fixture(self, fixture: Path) -> None:
+        write(fixture / "AGENTS.md", "fixture agents\n")
+        write(fixture / "CLAUDE.md", "fixture claude\n")
+        write(
+            fixture / "example-plugin/skills/eval-issue-skill/SKILL.md",
+            """
+            ---
+            name: eval-issue-skill
+            description: Use when validating eval issue fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            ---
+
+            # Eval Issue Skill
+
+            Use this when fixture tests need evaluation issues.
+
+            Inputs: fixture files.
+            Evidence: cite the fixture files and command output inspected.
+            Output: a short report.
+            Stop when validation is complete.
+            If the request is ambiguous, ask the user before proceeding.
+            Rerun the report after changing this skill.
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/eval-issue-skill/agents/openai.yaml",
+            """
+            name: eval-issue-skill
+            description: Use when validating eval issue fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            """,
+        )
+        write(
+            fixture / "example-plugin/agents/eval-issue-skill.md",
+            """
+            ---
+            name: eval-issue-skill
+            description: Use when validating eval issue fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            tools: Skill
+            model: sonnet
+            ---
+
+            Invoke the skill.
+            """,
+        )
+        write(
+            fixture / ".codex/agents/eval-issue-skill.toml",
+            """
+            name = "eval-issue-skill"
+            description = "Fixture Codex wrapper for eval-issue-skill."
+            sandbox_mode = "workspace-write"
+            developer_instructions = \"\"\"
+            You are a fixture practitioner. Use the eval-issue-skill skill as the source of truth.
+            Always emit the footer disclosure required by the skill.
+            \"\"\"
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/eval-issue-skill/references/evals/trigger-cases.jsonl",
+            """
+            {"id":"bad-trigger","prompt":"copied external prompt","expected_activation":true,"contains_third_party_text":true}
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/eval-issue-skill/references/evals/behavior-cases.jsonl",
+            """
+            {"id":"bad-behavior","prompt":"missing behavioral fields","source_kind":"synthetic","ip_handling":"unclear","contains_third_party_text":false}
+            """,
+        )
+
+    def make_high_risk_issue_fixture(self, fixture: Path) -> None:
+        write(fixture / "AGENTS.md", "fixture agents\n")
+        write(fixture / "CLAUDE.md", "fixture claude\n")
+        write(
+            fixture / "example-plugin/skills/security-audit-skill/SKILL.md",
+            """
+            ---
+            name: security-audit-skill
+            description: Use when auditing security fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            ---
+
+            # Security Audit Skill
+
+            Use this when fixture tests need a high-risk audit skill.
+
+            Inputs: fixture files.
+            Evidence: cite the fixture files and command output inspected.
+            Output: a short report.
+            Stop when validation is complete.
+            If the request is ambiguous, ask the user before proceeding.
+            Rerun the report after changing this skill.
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/security-audit-skill/agents/openai.yaml",
+            """
+            name: security-audit-skill
+            description: Use when auditing security fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            """,
+        )
+        write(
+            fixture / "example-plugin/agents/security-audit-skill.md",
+            """
+            ---
+            name: security-audit-skill
+            description: Use when auditing security fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
+            tools: Skill
+            model: sonnet
+            ---
+
+            Invoke the skill.
+            """,
+        )
+        write(
+            fixture / ".codex/agents/security-audit-skill.toml",
+            """
+            name = "security-audit-skill"
+            description = "Fixture Codex wrapper for security-audit-skill."
+            sandbox_mode = "workspace-write"
+            developer_instructions = \"\"\"
+            You are a fixture practitioner. Use the security-audit-skill skill as the source of truth.
+            Always emit the footer disclosure required by the skill.
+            \"\"\"
+            """,
+        )
 
 
 if __name__ == "__main__":

@@ -171,6 +171,10 @@ and the seed cases in
 [references/golden-corpus/test-quality-audit-cases.jsonl](references/golden-corpus/test-quality-audit-cases.jsonl).
 Use the results to catch false-positive, false-negative, routing, severity, and
 action drift before finishing the skill change.
+Also read `references/evals` and `references/source-grounding.md` when changing
+trigger metadata, workflow behavior, or evaluation coverage. Keep behavioral
+eval cases synthetic or originally paraphrased; do not copy external prompts,
+code, fixtures, tables, diagrams, or docs into this plugin.
 After any skill, extension, reference, output-contract, or metadata edit, rerun
 `scripts/skill-architecture-report.sh .` and repeat this maintenance check
 until it reports no current advisory findings.

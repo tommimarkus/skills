@@ -13,6 +13,12 @@ Help Claude produce, extract, and review HTTP APIs that are correct by construct
 
 **The reference is [../../docs/api-reference/api-design.md](../../docs/api-reference/api-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections, RFCs, and loaded extension source anchors (Microsoft Learn, Node.js, Next.js, or other official runtime docs) by reference; the skill never duplicates reference prose.
 
+When changing trigger metadata, workflow behavior, extension selection, or
+evaluation coverage for this skill, read `references/evals` and
+`references/source-grounding.md` first. Keep eval cases synthetic or originally
+paraphrased; do not copy external prompts, code, fixtures, tables, diagrams, or
+docs into this plugin.
+
 ## Non-goals
 
 - **General .NET / Node.js / Next.js code quality** → out of scope; produce working API code, don't lint surrounding logic. The `test-quality-audit` and `devsecops-audit` skills in the `souroldgeezer-audit` plugin cover the audit side.
