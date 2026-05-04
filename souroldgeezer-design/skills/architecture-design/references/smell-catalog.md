@@ -36,6 +36,7 @@ Readable from the `.oef.xml` source alone. Rubric: `architecture.md` §8.
 | `AD-19` | §8, §9.5 | Fictitious plateaus — Extract emitted deployment Plateaus with no workflow/IaC/environment evidence |
 | `AD-20` | §8, §9.5 | Plateau triggering without migration intent — parallel deployment Plateaus connected as if one becomes the next |
 | `AD-21` | §8, §9.2 | Unbounded external component — external Application Component is not aggregated into an external trust-boundary Grouping |
+| `AD-22` | §8, §10, external-validation-handoff | Untriaged external validation finding — Archi import, Archi Validate Model, schema, or conformant-tool validation output reported a finding that has not yet been mapped to a narrower `AD-*` code or resolved |
 
 ## Professional artifact quality smells — `AD-Q*`
 
@@ -150,6 +151,7 @@ the result is serialized into OEF.
 | `AD-1`, `AD-2`, `AD-14`, `AD-14-LC`, `AD-15`, `AD-16`, `AD-17` | `block` | Hard ArchiMate 3.2 / OEF violations (layer discipline, Appendix B well-formedness, marker discipline, schema-import discipline) |
 | `AD-3`, `AD-4`, `AD-6`, `AD-9`, `AD-18`, `AD-20`, `AD-21` | `block` | Aspect / Realisation / Migration-axis / security-boundary discipline; rendering the diagram incoherent or misleading |
 | `AD-5`, `AD-7`, `AD-8`, `AD-10`, `AD-12`, `AD-13`, `AD-19` | `warn` | Legible but imprecise; diagram reads but makes a claim the model doesn't support |
+| `AD-22` | `warn`; escalate to `block` for tool-reported errors, import failures, schema failures, or claimed `review-ready` output | External validation evidence is real but not yet triaged to a narrower model smell |
 | `AD-Q1`, `AD-Q2`, `AD-Q8`, `AD-Q9` | `warn` | Professional-readiness blockers — the model may be valid, but the view does not yet carry its intended architecture message |
 | `AD-Q3`, `AD-Q4`, `AD-Q5`, `AD-Q6`, `AD-Q7`, `AD-Q10` | `info` by default; escalate to `warn` when the affected view is claimed as `review-ready` | Quality degradations; severity depends on whether the artefact is a draft or presented for review |
 | `AD-Q11` | `warn` by default; escalate to `block` when the affected view is in a stakeholder-facing report | Authority override contradicts visible `FORWARD-ONLY` / `LIFT-CANDIDATE` content; the override claims endorsement that the view itself shows as missing |

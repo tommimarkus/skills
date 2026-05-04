@@ -23,6 +23,12 @@ Output contains any of the following? Stop; fix before delivering:
 - **View `<node>` or `<connection>` without `xsi:type`.** Fix `AD-15`; `xmllint --noout` is insufficient.
 - **Metadata payload in the ArchiMate® namespace.** Fix `AD-16`; catalog payload elements need a non-ArchiMate namespace.
 - **Model children invalid or out of OEF sequence.** Fix `AD-17`; child order is `name -> documentation -> metadata -> elements -> relationships -> organizations -> propertyDefinitions -> views`, and model-root `<properties>` is invalid.
+- **External validation report unresolved.** Consume Archi import errors, Archi
+  Validate Model output, `xmllint --schema`, or conformant-tool validation
+  findings via `external-validation-handoff.md`; map them to existing `AD-*`
+  codes or report `AD-22` until triaged. Do not claim `model-valid` while import
+  or schema blockers remain, and do not claim `review-ready` while supplied
+  validation findings remain unresolved.
 - **Layer-ordering, overlap, undersize, view-budget, nested-plus-edge, off-grid, hierarchy, or canvas-origin layout defects.** Fix `AD-L1` through `AD-L10` before claiming `diagram-readable`.
 - **Connector passes through an unrelated node, or endpoint bendpoint sits inside the endpoint box.** Fix `AD-L11`; readiness cannot exceed `model-valid`.
 - **Layout request/result schema validation failed.** Fix the JSON contract or the OEF-to-layout handoff before materializing geometry.

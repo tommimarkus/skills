@@ -18,6 +18,7 @@ Self-check:
     |---|---|---|---|---|
     | <id>                          | <reference §9 kind>             | model-valid | diagram-readable | review-ready | lifted-from-source | forward-only-or-inferred | architect-approved | stakeholder-validated | <comma-separated AD-* codes, or "none"> |
   Artifact quality:      model-valid | diagram-readable | review-ready  (worst-view minimum; model-level blockers: <none | comma-separated AD-* codes>)
+  External validation:   not supplied/run | supplied (<tool>; <n> findings, <m> mapped, <u> unresolved, <x> unmapped)
   Runtime correspondence: <n>/<n> [runtime verified — or source-aligned, IaC verification required]
   Layout backend report:
     | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | Policy diagnostics | OEF materialization | PNG validation | Provenance artifact | Notes |
@@ -45,6 +46,7 @@ Extraction summary:
     |---|---|---|---|---|
     | <id>                          | <reference §9 kind>             | model-valid | diagram-readable | review-ready | lifted-from-source | forward-only-or-inferred | architect-approved | stakeholder-validated | <comma-separated AD-* codes, or "none"> |
   Artifact quality:       model-valid | diagram-readable | review-ready  (worst-view minimum; model-level blockers: <none | comma-separated AD-* codes>)
+  External validation:    not supplied/run | supplied (<tool>; <n> findings, <m> mapped, <u> unresolved, <x> unmapped)
   Drift vs existing diagram: <added / removed / changed counts, or n/a if greenfield>
   Layout backend report:
     | View id | Viewpoint | Intent | Geometry path | Request validation | Result validation | Policy diagnostics | OEF materialization | PNG validation | Provenance artifact | Notes |
@@ -65,6 +67,7 @@ Per-view readiness:
 Professional readiness: model-valid | diagram-readable | review-ready  (worst-view minimum; model-level blockers: <none | comma-separated AD-* codes>)
 Top artifact blockers: <none | concise list of AD-Q / AD-L / AD-B / AD-* codes>
 Change classification: semantic model change yes|no; view geometry change yes|no; documentation/render inventory change yes|no
+External validation handoff: not supplied/run | supplied (<tool>; <n> findings, <m> mapped, <u> unresolved, <x> unmapped)
 ```
 
 Then emit one per-finding block for each failure, followed by the rollup. All findings cite `AD-*` / `AD-Q*` code + reference §n + ArchiMate® 3.2 §/Appendix when applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (diagram-source inspection), `visual` (render inspection), `runtime` (vs current code/IaC). Only `static` and completed `visual` findings are definitively pass / fail from their evidence; `runtime` findings are "source-aligned, confirmation requires re-running drift detection on current code." The rollup states whether architecture semantics changed.
@@ -107,6 +110,7 @@ Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
 Render gate: not applicable (visual quality not requested) | passed (render ran on changed views) | engaged (visual quality requested but render not run; <n> changed views capped at model-valid)
 Render artifacts: not requested | not run (<blocker>) | <output directory and PNG count>
 Source geometry gate: not run | passed | failed <n> findings
+External validation handoff: not supplied/run | supplied (<tool>; findings <n> total, mapped <m>, unresolved <u>, unmapped <x>)
 Project assimilation:
   <block per the Project assimilation section above; canonical example below>
 Forward-only layers stubbed: <list, or "none">

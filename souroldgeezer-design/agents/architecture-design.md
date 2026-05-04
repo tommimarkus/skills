@@ -38,7 +38,8 @@ When invoked, run the architecture-design skill and present results:
    source-geometry `AD-L*` failures; classify each `<view>` as `model-valid`,
    `diagram-readable`, or `review-ready`, then derive the artifact rollup as
    the worst-view minimum (capped at `model-valid` by any unresolved
-   model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`). Also
+   model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`,
+   `AD-22`). Also
    derive each view's authority axis (`lifted-from-source` /
    `forward-only-or-inferred` / `architect-approved` / `stakeholder-validated`)
    per the reference §2.9 / §6.4b rules; emit `AD-Q11` when a view's
@@ -47,6 +48,13 @@ When invoked, run the architecture-design skill and present results:
    `FORWARD-ONLY` or `LIFT-CANDIDATE` content. When the user has explicitly
    requested visual quality and render did not run, apply the render gate per
    the same procedure: cap changed views at `model-valid` until render runs.
+   When the user supplies Archi import errors, Archi Validate Model output,
+   `xmllint --schema` output, or another conformant tool's validation report,
+   apply
+   [external-validation-handoff.md](../skills/architecture-design/references/procedures/external-validation-handoff.md):
+   map findings to the narrowest `AD-*` code, use `AD-22` only for untriaged
+   findings, report mapped / unresolved / unmapped counts, and do not claim
+   readiness while supplied validation blockers remain unresolved.
    For OEF edits, state the change classification before and after the change:
    semantic model change, view geometry change, and documentation/render
    inventory change. Treat view-specific relationship hiding as geometry when
@@ -129,6 +137,8 @@ When invoked, run the architecture-design skill and present results:
 5. For review mode: dispatch on inputs — artefact review (OEF file alone)
    runs the source-geometry gate, walks reference §10 checklist, and emits
    `AD-*` / `AD-Q*` findings per [references/smell-catalog.md](../skills/architecture-design/references/smell-catalog.md);
+   supplied Archi import / Validate Model / schema findings are consumed through
+   `external-validation-handoff.md` before the readiness rollup;
    render requests run `archi-render.sh` and inspect every emitted PNG when
    Archi is available, with no fallback renderer;
    drift detection (OEF file + current code/IaC) invokes
@@ -167,7 +177,9 @@ When invoked, run the architecture-design skill and present results:
    ArchiMate® 3.2 catalog; bundled XSD file (the skill must reference The
    Open Group's canonical schema URL, never copy the schema locally);
    invalid model-root children, including `<properties>` or the old layout
-   marker (`AD-17`); RBAC-only technology paths without visible Managed
+   marker (`AD-17`); untriaged external validation findings from Archi import,
+   Archi Validate Model, schema, or conformant-tool reports (`AD-22`);
+   RBAC-only technology paths without visible Managed
    Identity Access (`AD-18`); deployment Plateaus with no environment
    evidence (`AD-19`); Plateau-to-Plateau Triggering without explicit
    migration intent (`AD-20`); external Application Component outside an

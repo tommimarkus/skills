@@ -74,8 +74,9 @@ Four modes — deliberately distinct from `responsive-design` because Extract (c
 
 **Triggers:** "review this ArchiMate® model", "check `…oef.xml` against the standard", "is this architecture model well-formed", "is this architecture diagram professional / review-ready", "render this architecture model", "generate PNGs for this OEF", "refresh the architecture renders", "has the architecture drifted from the code", "drift check on `docs/architecture/<feature>.oef.xml`".
 
-Review has three sub-behaviours, dispatched on inputs:
+Review has four sub-behaviours, dispatched on inputs:
 - **Artefact review** — a `.oef.xml` file alone → ArchiMate® 3.2 well-formedness + professional-readiness pass + `AD-*` / `AD-Q*` smell catalog per reference §8.
+- **External validation handoff** — a `.oef.xml` plus supplied Archi import / Validate Model / schema findings → load `references/procedures/external-validation-handoff.md` before the readiness rollup.
 - **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed and an X display is available. When PNGs are produced, validate blank/tiny/cropped/baseline-drift signals with `references/scripts/arch-layout.sh validate-png` per `references/procedures/rendered-png-validation.md`. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
 - **Drift detection** — a `.oef.xml` file + the current code/IaC at the canonical locations (§ project assimilation) → delta report (elements added / removed / changed since the model was last aligned).
 
@@ -142,6 +143,7 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/routing-and-glossing.md` | Build / Extract routing and Review route repair | Defines port-aware orthogonal routing, route-only repair, lane reservation, rip-up/reroute, post-route glossing, and the shipped `route-repair` command |
 | `references/procedures/layout-fallback.md` | Build / Extract when no suitable backend is available | Fallback deterministic layered layout for small generated directed views; preserves prior deterministic conventions without treating them as a universal layout engine |
 | `references/procedures/professional-readiness.md` | Any OEF model or view being built, extracted, or reviewed | Build / Extract final pass and Review artefact pass → classify `model-valid` / `diagram-readable` / `review-ready`, curate extraction noise, and emit `AD-Q*` professional-quality findings |
+| `references/procedures/external-validation-handoff.md` | Read only when the user supplies Archi import errors, Archi Validate Model output, `xmllint --schema` output, or another conformant tool's validation report | Consume downstream tool findings as first-class evidence before readiness claims |
 | `references/procedures/rendered-png-validation.md` | Review render requests and explicit render-polish loops after PNGs exist | Java™ ImageIO-based `validate-png` checks for blank, tiny, cropped, excessive-whitespace, and baseline-drift failures; ImageMagick is optional diagnostics only |
 | `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, `AD-L11`, `AD-L13`, and `AD-L15`; complements render inspection because cropped PNG exports can hide off-origin source geometry and explicit connector lanes can hide stacked-arrow / fan-out defects |
 | `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → render every OEF view to PNG through Archi's headless CLI. Archi is a weak dependency with no fallback renderer; missing Archi / `DISPLAY` / tool prerequisites must be reported as "render inspection not run" |
@@ -169,27 +171,15 @@ The path is the coupling mechanism for the sibling design skills (`responsive-de
 
 ## Render artifacts
 
-Rendered PNGs are **deployment / publication artifacts derived from OEF**, not
-the architecture source of truth. OEF XML remains the model; PNGs exist so
-humans and documentation packages can inspect the views without opening an
-ArchiMate® tool.
+Rendered PNGs are **deployment / publication artifacts derived from OEF**, not the architecture source of truth. OEF XML remains the model; PNGs exist so humans and documentation packages can inspect the views without opening an ArchiMate® tool.
 
 When the user asks to render, refresh renders, inspect rendered views, or
 produce PNGs:
 
 1. Run the source-geometry gate first when a local OEF path exists.
-2. Invoke [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh)
-   with the requested OEF path and any caller-supplied `--archi-bin`,
-   `--cache-root`, `--config`, or `--output-root` settings.
-3. Treat Archi as a weak dependency. The script has no fallback support and the
-   skill must not invent one; if Archi, `DISPLAY`, `xmllint`, or another
-   prerequisite is missing, disclose the exact failure and keep visual render
-   inspection at `not run`.
-4. If rendering succeeds, inspect every emitted PNG before claiming visual
-   quality; do not sample views. Run `references/scripts/arch-layout.sh
-   validate-png --image <rendered.png> --result <result.json>` for invariant
-   checks, and add `--baseline <prior.png> --tolerance <ratio>` when a previous
-   render exists and the user requested comparison.
+2. Invoke [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh) with the requested OEF path and any caller-supplied `--archi-bin`, `--cache-root`, `--config`, or `--output-root` settings.
+3. Treat Archi as a weak dependency. The script has no fallback support and the skill must not invent one; if Archi, `DISPLAY`, `xmllint`, or another prerequisite is missing, disclose the exact failure and keep visual render inspection at `not run`.
+4. If rendering succeeds, inspect every emitted PNG before claiming visual quality; do not sample views. Run `references/scripts/arch-layout.sh validate-png --image <rendered.png> --result <result.json>` for invariant checks, and add `--baseline <prior.png> --tolerance <ratio>` when a previous render exists and the user requested comparison.
 5. Classify changed PNGs, README rows, galleries, or provenance text as
    `documentation/render inventory change`. Do not mark a render-only refresh as
    a semantic model change unless `<elements>` or `<relationships>` changed.
@@ -239,7 +229,8 @@ Before producing or reviewing a diagram, confirm the following. If the user hasn
    output location when the default `docs/architecture/<feature>.oef.xml` /
    `.cache/archi-views` convention is insufficient. Do not substitute another
    renderer if Archi is unavailable.
-9. **Layout intent.** Select `preserve-authored`, `route-repair-only`, `generated-layout-recreate`, or `global-reflow` per [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) §Layout decision record. "Recreate", "regenerate", "generate all diagrams", "rebuild the views", or "use the improved layout backend" selects `generated-layout-recreate`; prior coordinates are comparison input, not locks, unless explicitly locked. Backup before overwrite and include the per-view backend report.
+9. **External validation evidence.** If supplied, load `references/procedures/external-validation-handoff.md`; if the user asks about tool-reported findings but omits the report, ask for it.
+10. **Layout intent.** Select `preserve-authored`, `route-repair-only`, `generated-layout-recreate`, or `global-reflow` per [`references/procedures/layout-strategy.md`](references/procedures/layout-strategy.md) §Layout decision record. "Recreate", "regenerate", "generate all diagrams", "rebuild the views", or "use the improved layout backend" selects `generated-layout-recreate`; prior coordinates are comparison input, not locks, unless explicitly locked. Backup before overwrite and include the per-view backend report.
 
 If any answer deviates from defaults (e.g., "include Physical Layer for this data-centre diagram"), state the deviation explicitly in the output footer.
 
@@ -321,6 +312,7 @@ See [`references/output-format.md`](references/output-format.md) §Project assim
 
 6. **Self-check against reference §10 and the professional-readiness procedure** before declaring done. When the OEF exists as a local file, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) against it before visual render inspection; treat every emitted line as a source-geometry `AD-L*` finding and fix blocking / warning layout findings before claiming `diagram-readable`. Each checklist item carries `[static]`, `[visual]`, or `[runtime]` verification-layer tags. Walk each item:
    - `[static]` — verify against the diagram source just produced.
+   - `[external]` — when downstream validation evidence is supplied, load [`external-validation-handoff.md`](references/procedures/external-validation-handoff.md), map findings to `AD-*` evidence, disclose mapped / unresolved / unmapped counts, and cap quality as that procedure defines.
    - `[visual]` — when rendering is requested and Archi is available, run
      [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh),
      then inspect all emitted PNGs for connector-through-node, stacked connector
@@ -337,8 +329,9 @@ See [`references/output-format.md`](references/output-format.md) §Project assim
      §Quality verdict — *Render gate*. Unchanged views inherit their prior
      classification. The footer reports the gate state.
    - `[runtime]` — verify against the current `.csproj` / Bicep / workflow state; if out of scope, mark "source-aligned; runtime verification required."
-   If any `[static]` item fails, fix before delivering.
-   Classify quality **per `<view>` first** per [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) §Quality verdict, then derive the artifact rollup as the worst-view minimum. For each view also derive **authority** (§Authority levels in the same procedure): `lifted-from-source` by default when every element resolves to a current source; `forward-only-or-inferred` when any element comes from a `FORWARD-ONLY` block or unconfirmed `LIFT-CANDIDATE`; `architect-approved` or `stakeholder-validated` only when the view's `propid-authority` property (reference §6.4b) is set. Authority does not gate readiness — both axes are reported independently. Emit the per-view readiness matrix (with Authority column) in the self-check block when the artifact contains more than one materialized view; single-view artifacts may use a single-row matrix. State whether architecture semantics changed. Do not claim `review-ready` for a view if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L20`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, or `AD-21` blocker remains unresolved for that view, and do not claim `review-ready` for the artifact rollup if any model-level blocker (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`) remains unresolved. Emit `AD-Q11` for any view whose `propid-authority` override claims `architect-approved` or `stakeholder-validated` while still containing unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content.
+   If any `[static]` or supplied `[external]` item fails, fix or explicitly
+   lower the claimed quality before delivering.
+   Classify quality **per `<view>` first** per [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) §Quality verdict, then derive the artifact rollup as the worst-view minimum. For each view also derive **authority** (§Authority levels in the same procedure): `lifted-from-source` by default when every element resolves to a current source; `forward-only-or-inferred` when any element comes from a `FORWARD-ONLY` block or unconfirmed `LIFT-CANDIDATE`; `architect-approved` or `stakeholder-validated` only when the view's `propid-authority` property (reference §6.4b) is set. Authority does not gate readiness — both axes are reported independently. Emit the per-view readiness matrix (with Authority column) in the self-check block when the artifact contains more than one materialized view; single-view artifacts may use a single-row matrix. State whether architecture semantics changed. Do not claim `review-ready` for a view if any `AD-Q*`, `AD-L2`, `AD-L3`, `AD-L4`, `AD-L11` through `AD-L20`, `AD-B-*`, `AD-6`, `AD-2`, `AD-18`, `AD-20`, `AD-21`, or unresolved external validation finding remains for that view, and do not claim `review-ready` for the artifact rollup if any model-level blocker (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`, `AD-22`) remains unresolved. Emit `AD-Q11` for any view whose `propid-authority` override claims `architect-approved` or `stakeholder-validated` while still containing unresolved `FORWARD-ONLY` or `LIFT-CANDIDATE` content.
 
 7. **Emit footer disclosure.**
 
@@ -400,11 +393,13 @@ See [`references/output-format.md`](references/output-format.md) §Project assim
 
 1. **Parse the `.oef.xml`** into elements (with `xsi:type`, identifier, name), relationships (with `xsi:type`, source, target), views and their node/connection placements. If a local file path is available, run [`references/scripts/validate-oef-layout.sh`](references/scripts/validate-oef-layout.sh) and include its `AD-L*` findings directly in the Review output; this catches `AD-L10` origin drift, `AD-L11` endpoint bendpoints inside endpoint boxes, `AD-L13` stacked lanes, and `AD-L15` local fan-out crossings even when a renderer crops the PNG to plausible bounds. If a view has no materialized element nodes, missing `x` / `y` / `w` / `h`, no relationship connections for its visual story, or duplicate `identifier` attributes in the OEF file, cap the artefact at `model-valid` and report it before judging layout polish.
 
-2. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify each `<view>` as `model-valid`, `diagram-readable`, or `review-ready`, then derive the artifact rollup as the worst-view minimum (capped at `model-valid` by any unresolved model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`). Emit the per-view readiness matrix as the lead block of the Review output ([`references/output-format.md`](references/output-format.md) §Review mode). Findings become `AD-Q*` smell codes from reference §8.
+2. **Consume external validation evidence when supplied.** Load [`external-validation-handoff.md`](references/procedures/external-validation-handoff.md) before the readiness rollup only when the user supplied Archi import / Validate Model / schema findings.
 
-3. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
+3. **Run professional-readiness review.** `Read` and apply [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md). Classify each `<view>` as `model-valid`, `diagram-readable`, or `review-ready`, then derive the artifact rollup as the worst-view minimum (capped at `model-valid` by any unresolved model-level blocker — `AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`, `AD-22`). Emit the per-view readiness matrix as the lead block of the Review output ([`references/output-format.md`](references/output-format.md) §Review mode). Findings become `AD-Q*` smell codes from reference §8.
 
-3a. **Render on request.** If the user requested renders or visual inspection,
+4. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
+
+4a. **Render on request.** If the user requested renders or visual inspection,
 run `references/scripts/archi-render.sh` after static checks. Pass through
 caller-provided `--archi-bin`, `--cache-root`, `--config`, and `--output-root`
 when supplied. A missing Archi executable, missing `DISPLAY`, malformed XML, or
@@ -473,7 +468,7 @@ Minimum footer fields for all modes:
 - Per-view readiness matrix (when more than one materialized view) carrying Readiness (`model-valid` / `diagram-readable` / `review-ready`) and Authority (`lifted-from-source` / `forward-only-or-inferred` / `architect-approved` / `stakeholder-validated`) per view; artifact-rollup quality is the worst-view readiness minimum.
 - Change classification: semantic model, view geometry, documentation/render inventory.
 - Per-view layout backend report: one row per materialized view, distinguishing `layout-elk`, `route-repair`, `global-polish`, deterministic fallback, viewpoint-specific manual policy, preserved-authored geometry, unavailable backend, and validation-only PNG checks.
-- Self-check (skill tooling — reference files, procedures, and scripts present/missing, weak-dependency status), self-check (run — §10 checklist pass/fail), source-geometry gate, visual render inspection, render artifacts, and runtime drift state.
+- Self-check (skill tooling — reference files, procedures, and scripts present/missing, weak-dependency status), self-check (run — §10 checklist pass/fail), source-geometry gate, external validation handoff, visual render inspection, render artifacts, and runtime drift state.
 - Project assimilation and forward-only / process-view emission disclosure when applicable.
 
 `Diagram kinds present` / `Diagram kinds missing` are computed by scanning the produced or parsed OEF for every `<view>` `viewpoint=` attribute and matching against the seven canonical strings in reference §9.1–§9.7 (Capability Map · Application Cooperation · Service Realization · Technology Usage · Migration · Motivation · Business Process Cooperation). The `M of 7` count is the file-wide coverage; `Diagram kind:` above remains the primary kind in scope for the current run (the one the architect asked for in pre-flight, or the kind being reviewed). For a single-kind file, `Diagram kinds present: 1 of 7` and the `Diagram kind:` line agree.
@@ -482,7 +477,8 @@ Minimum footer fields for all modes:
 
 Read [references/red-flags.md](references/red-flags.md) when output contains an
 `AD-*`, `AD-Q*`, `AD-L*`, or `AD-B-*` finding, when an emitted OEF fails import,
-or before claiming `diagram-readable` / `review-ready` after a failed check.
+when Archi Validate Model or schema validation reports unresolved findings, or
+before claiming `diagram-readable` / `review-ready` after a failed check.
 Those red flags are stop conditions: fix them or explicitly lower the claimed
 quality level before delivering.
 

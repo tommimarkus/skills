@@ -15,6 +15,14 @@ and runtime diagnostics: schema validation failure caps the affected run at
 affected view until repaired; blank, tiny, cropped, or over-tolerance PNG
 validation failures cap visual-quality claims for the rendered view.
 
+When downstream tool validation evidence is supplied, readiness consumes that
+handoff too. Apply
+[external-validation-handoff.md](external-validation-handoff.md): unresolved
+Archi import or schema blockers mean the artifact is not yet proven
+`model-valid`; unresolved Archi Validate Model findings cap the affected view or
+artifact until fixed, mapped to a remaining `AD-*` finding, or explicitly
+documented as architect-owned.
+
 ## Quality levels
 
 - **model-valid:** XML/OEF structure, element types, relationship types, and basic ArchiMate well-formedness are correct.
@@ -83,6 +91,10 @@ For each `<view>`, use the lowest level justified by evidence:
 - Return `model-valid` when route repair reports `LAYOUT_NO_ROUTE` or
   `LAYOUT_LOCKED_ROUTE_INVALID` and the OEF still depends on that route for its
   visual story.
+- Return `model-valid` when supplied Archi Validate Model findings remain
+  unresolved for this view.
+- Return `model-valid` when unresolved `AD-22` findings remain after external
+  validation handoff triage.
 - Return `model-valid` when global polish returns
   `LAYOUT_GLOBAL_POLISH_NO_IMPROVEMENT` for a view whose stated target requires
   the unresolved defect to be fixed.
@@ -97,7 +109,7 @@ Cross-view smells (`AD-B-8`, `AD-B-9`, `AD-B-13`, `AD-B-14`, `AD-DR-*`) are attr
 
 Findings emitted by the source-geometry gate carry a `<view-id>` token in their evidence; map that to the per-view bucket directly. Findings without a view scope (model-level smells like `AD-15`, `AD-17`, `AD-14`) cap the *artifact* rollup but do not change individual view classifications.
 
-The **artifact rollup** is `min(per-view classifications)` ordered `model-valid < diagram-readable < review-ready`. If the artifact carries unresolved model-level blockers (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`), cap the rollup at `model-valid` regardless of per-view scores.
+The **artifact rollup** is `min(per-view classifications)` ordered `model-valid < diagram-readable < review-ready`. If the artifact carries unresolved model-level blockers (`AD-15`, `AD-17`, `AD-14`, `AD-14-LC`, `AD-16`, `AD-22`), cap the rollup at `model-valid` regardless of per-view scores. If supplied import or schema evidence still shows unresolved blockers, report `Artifact quality: not assessed (external validation blockers)` rather than claiming `model-valid`.
 
 **Render gate (when visual quality is in scope).** When the user has requested visual quality — explicit render request, render-polish loop, or Build / Extract with the `[visual]` self-check requested — and render did not run (Archi missing, `DISPLAY` unavailable, `archi-render.sh` blocker, or any other render prerequisite reported "not run" by the self-check), the changed views cap at `model-valid` until render runs. *Changed views* means views modified in the current run (Build emits, Extract re-emits, or Review's render-polish loop targets); unchanged views inherit their prior classification when one exists. Static `AD-L*` findings from the source-geometry gate still constrain the rollup further; the render gate is an additional cap, not a substitute. When the user has not requested visual quality, the render gate does not apply — the skill's source-geometry gate is the visual proxy and per-view readiness is derived from `[static]` checks alone.
 

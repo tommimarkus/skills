@@ -13,3 +13,8 @@ tool output, or example models.
   `references/fixtures/README.md`.
   Handling: local procedure and fixture contracts; eval cases paraphrase the
   expected behavior without copying fixture XML, JSON, or rendered images.
+- Source: architect-facing validation handoff scenarios involving downstream
+  tool reports such as import errors, model validation output, or schema
+  validation output.
+  Handling: synthetic scenario only; no vendor output, screenshots, schemas, or
+  issue text copied into eval cases.

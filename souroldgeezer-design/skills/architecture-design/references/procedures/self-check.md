@@ -1,6 +1,6 @@
 # Skill self-check — required local references
 
-Use this procedure before any Build / Extract / Review run. The skill advertises a contract that includes a bundled reference, several procedures, and two helper scripts; an installation that is missing any of them silently degrades the contract. The self-check turns silent degradation into explicit disclosure: missing tooling is named in the footer, and the affected verification is reported as "not run" with the exact blocker, not skipped over.
+Use this procedure before any Build / Extract / Review run. The skill advertises a contract that includes a bundled reference, several procedures, and helper scripts; an installation that is missing any of them silently degrades the contract. The self-check turns silent degradation into explicit disclosure: missing tooling is named in the footer, and the affected verification is reported as "not run" with the exact blocker, not skipped over.
 
 ## When this procedure runs
 
@@ -31,6 +31,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
 | `references/procedures/lifting-rules-gha.md` | Extract when GitHub Actions present — Implementation & Migration lifting |
 | `references/procedures/lifting-rules-process.md` | Extract when Durable Functions / Logic Apps present — Business Process / Event / Interaction lifting |
 | `references/procedures/drift-detection.md` | Review drift sub-behaviour |
+| `references/procedures/external-validation-handoff.md` | Build / Extract / Review when downstream Archi, schema, or conformant-tool validation evidence is supplied |
 | `references/procedures/rendered-png-validation.md` | Review render request and render-polish loop after PNGs exist |
 | `references/schemas/layout-request.schema.json` | Build / Extract generated layout, route repair, and global polish request validation |
 | `references/schemas/layout-result.schema.json` | Build / Extract generated layout, route repair, and global polish result validation |
