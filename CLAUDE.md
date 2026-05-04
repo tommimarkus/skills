@@ -259,9 +259,10 @@ Codex does not consume these plugin-root `agents/*.md` files. Codex installable 
 - **`architecture-design` render/load validation** runs through
   `references/scripts/archi-render.sh`: `xmllint --noout`, Archi XML Exchange
   import, the bundled `references/scripts/validate-model.ajs` jArchi Validate
-  Model step, then HTML report PNG generation. Missing Archi, jArchi script
-  support, `DISPLAY`, `xmllint`, the validation script, or invalid Validate
-  Model findings are render blockers, not reasons to use a fallback renderer.
+  Model step with required `ARCHI_VALIDATE_MODEL:` marker output, then HTML
+  report PNG generation. Missing Archi, jArchi script support, missing Validate
+  Model marker output, `DISPLAY`, `xmllint`, the validation script, or invalid
+  Validate Model findings are render blockers, not reasons to use a fallback renderer.
   Validate Model warnings are surfaced as readiness evidence without suppressing
   PNG output.
 - **`architecture-design` layout runtime** (0.28.0) ships a Java™ 21 CLI as

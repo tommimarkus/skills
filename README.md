@@ -375,14 +375,15 @@ skills through the plugin manifest, reads per-skill metadata from each
   Users can request renders through `architecture-design`; the skill runs
   `references/scripts/archi-render.sh` after source-geometry checks. The render
   script runs `xmllint --noout`, imports the OEF through Archi, runs the
-  bundled jArchi Validate Model script, records the output paths, and validates
-  every PNG with `arch-layout.sh validate-png` before visual inspection.
-  Invalid model findings fail the render; warnings are surfaced as readiness
-  evidence without suppressing PNG output.
+  bundled jArchi Validate Model script, requires `ARCHI_VALIDATE_MODEL:`
+  marker output to prove validation ran, records the output paths, and
+  validates every PNG with `arch-layout.sh validate-png` before visual
+  inspection. Invalid model findings fail the render; warnings are surfaced as
+  readiness evidence without suppressing PNG output.
   ImageMagick is optional diagnostics only; the shipped runtime uses Java™
   ImageIO for acceptance checks. The renderer executable is a weak dependency
   with no fallback renderer — missing renderer, jArchi script support,
-  `DISPLAY`, or script prerequisites are reported as
+  Validate Model marker output, `DISPLAY`, or script prerequisites are reported as
   `visual render inspection: not run`.
 - **Render gate** (introduced in 0.18.0). When the user has explicitly
   requested visual quality (render request, render-polish loop, or `[visual]`
@@ -535,7 +536,9 @@ skills through the plugin manifest, reads per-skill metadata from each
   reference the canonical schema URL via `xsi:schemaLocation`, and schema
   validation is delegated to the architect's toolchain (`xmllint --schema` or a
   conformant tool). Render/load validation uses Archi XML Exchange import plus
-  the bundled jArchi Validate Model script. When any toolchain reports
+  the bundled jArchi Validate Model script; the wrapper requires
+  `ARCHI_VALIDATE_MODEL:` marker output so an Archi report run that ignored the
+  script is not mistaken for successful validation. When any toolchain reports
   validation errors or warnings and the report is supplied, Review treats it as
   first-class evidence rather than an optional human-side note.
 - **Disclosure footer.** Every output ends with a footer listing mode,

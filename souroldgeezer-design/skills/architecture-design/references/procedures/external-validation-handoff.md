@@ -10,6 +10,12 @@ Also use it when `references/scripts/archi-render.sh` reports
 the bundled `validate-model.ajs` jArchi script. That output is runtime
 validation evidence, not a PNG-rendering failure.
 
+If `archi-render.sh` reports that Validate Model produced no machine-readable
+output, do not treat the render as external validation evidence. Report the
+render/load validation step as not run with that blocker; the likely causes are
+missing jArchi command-line script support or a script that failed before
+emitting its `ARCHI_VALIDATE_MODEL:` markers.
+
 This is an evidence handoff, not a mandatory extra gate for every run. When no
 external validation report is supplied, disclose `not supplied/run` in the
 footer and continue with the skill's source checks. When the user asks about

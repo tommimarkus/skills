@@ -48,7 +48,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
 
 2. **Verify executable scripts are present and runnable.** For each `*.sh` script in the *Required references* table whose row applies, confirm the file is present and that the executable bit is set. If the executable bit is missing, report it as a degraded-mode condition rather than silently invoking through `bash <path>`. For `arch-layout.sh`, also run `arch-layout.sh --version` when layout runtime behaviour is in scope; missing Java™ 21+ or missing `references/bin/arch-layout.jar` is a degraded runtime condition.
 
-3. **Verify weak dependencies are functional.** For `archi-render.sh`, additionally check Archi (or the configured renderer binary), jArchi script support, `DISPLAY` availability, `xmllint`, and the Validate Model script path only when render is in scope for the current run (Review render sub-behaviour, render-polish loop, or Build / Extract with `[visual]` self-check requested). Missing dependencies do not block the run; they downgrade visual render inspection to "not run" with the exact blocker.
+3. **Verify weak dependencies are functional.** For `archi-render.sh`, additionally check Archi (or the configured renderer binary), jArchi script support, `DISPLAY` availability, `xmllint`, the Validate Model script path, and the render script's proof that `ARCHI_VALIDATE_MODEL:` marker output was produced only when render is in scope for the current run (Review render sub-behaviour, render-polish loop, or Build / Extract with `[visual]` self-check requested). Missing dependencies do not block the run; they downgrade visual render inspection to "not run" with the exact blocker. A render run that produces PNGs but no Validate Model marker output is degraded in the same way, because Archi can complete report generation while ignoring `--script.runScript`.
 
 4. **Record the self-check outcome.** Build the self-check block for the footer:
    ```
@@ -65,7 +65,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
    - Missing `smell-catalog.md` → emit findings using the `AD-*` codes from prior knowledge but flag "code-to-section index unavailable; verify codes against `architecture.md` §8".
    - Missing any `references/procedures/*.md` whose row applies → that procedure's behaviour is reported as "not run (procedure file missing: <path>)". The affected output (forward-only stubs, layout, lifted layers, drift findings, etc.) is omitted from the run, not faked.
    - Missing `validate-oef-layout.sh` or non-executable → source-geometry gate reports "not run (script missing | non-executable)"; Build / Extract cannot claim per-view readiness above `model-valid` for any view that would have been gated.
-   - Missing `archi-render.sh`, `validate-model.ajs`, jArchi script support, or weak dependencies missing → visual render inspection reports "not run (blocker)"; render-polish loop refuses. `INVALID` Validate Model findings from a completed render/load run are render blockers; `WARN` findings are readiness evidence to triage through external validation handoff.
+   - Missing `archi-render.sh`, `validate-model.ajs`, jArchi script support, Validate Model marker output, or weak dependencies missing → visual render inspection reports "not run (blocker)"; render-polish loop refuses. `INVALID` Validate Model findings from a completed render/load run are render blockers; `WARN` findings are readiness evidence to triage through external validation handoff.
    - Missing `arch-layout.sh`, `references/bin/arch-layout.jar`, Java™ 21+, or the layout schemas → layout request/result validation, route repair, global polish, OEF materialization, layout provenance, and PNG validation report "not run (blocker)"; do not claim those runtime checks passed.
 
 6. **Disclose, don't silently degrade.** The degraded conditions go in the footer and (when they affect findings) in the per-finding output as `evidence: "<verification> not run: <blocker>"`. The skill never claims a check passed when its required tool was absent.
@@ -79,6 +79,7 @@ The skill's outputs are trusted because each finding cites a deterministic sourc
 - A runtime that loads `SKILL.md` from cache while the bundled procedure files were not synced.
 - A locally-customised installation where the architect renamed or moved a procedure file.
 - A renderer install that succeeded for the binary but lacks `DISPLAY` (headless CI without `xvfb-run`).
+- An Archi install that imports and renders XML but lacks the jArchi command-line script provider, causing `--script.runScript` to produce no validation markers.
 - A script whose executable bit was lost in a fresh checkout (Windows host writing into a Linux-mounted volume).
 - A skill update that added a new procedure but the user has the prior plugin version cached.
 

@@ -16,7 +16,23 @@ FIXTURE = (
 )
 
 
-def write_fake_archi(path: Path, *, validation_output: str = "") -> None:
+def write_fake_archi(
+    path: Path,
+    *,
+    validation_output: str | None = "ARCHI_VALIDATE_MODEL: OK invalid=0 warnings=0",
+) -> None:
+    validation_block = ""
+    if validation_output is not None:
+        validation_block = textwrap.dedent(
+            f"""\
+            if [[ -n "${{ARCHI_VALIDATE_MODEL_OUTPUT:-}}" ]]; then
+              printf '%s\\n' "{validation_output}" > "$ARCHI_VALIDATE_MODEL_OUTPUT"
+            else
+              printf '%s\\n' "{validation_output}"
+            fi
+            """
+        )
+
     path.write_text(
         textwrap.dedent(
             f"""\
@@ -35,9 +51,7 @@ def write_fake_archi(path: Path, *, validation_output: str = "") -> None:
               shift || true
             done
 
-            if [[ -n "{validation_output}" ]]; then
-              printf '%s\\n' "{validation_output}"
-            fi
+            {validation_block}
 
             mkdir -p "$report_dir/images"
             printf 'fake png\\n' > "$report_dir/images/view.png"
@@ -121,6 +135,18 @@ class ArchiRenderScriptTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Validate Model reported warning(s)", result.stderr)
+
+    def test_missing_validation_output_fails_even_when_archi_renders_images(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            fake_archi = tmp_path / "Archi"
+            args_file = tmp_path / "archi.args"
+            write_fake_archi(fake_archi, validation_output=None)
+
+            result = run_archi_render(fake_archi, args_file)
+
+            self.assertEqual(result.returncode, 6, result.stderr)
+            self.assertIn("Validate Model produced no machine-readable output", result.stderr)
 
 
 if __name__ == "__main__":

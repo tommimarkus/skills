@@ -9,8 +9,11 @@ derived-artifact quality gate.
 `xmllint --noout` and Archi XML Exchange import, it runs the bundled
 `validate-model.ajs` jArchi script. Any `ARCHI_VALIDATE_MODEL: INVALID` finding
 is a render blocker. `ARCHI_VALIDATE_MODEL: WARN` findings are surfaced without
-failing PNG generation. Both should be triaged through
-`external-validation-handoff.md` before readiness is claimed.
+failing PNG generation. The wrapper must see at least one
+`ARCHI_VALIDATE_MODEL:` marker from the script; if no marker is produced, treat
+the run as "Validate Model did not run" even when Archi still renders PNGs.
+Those warnings should be triaged through `external-validation-handoff.md` before
+readiness is claimed.
 
 ## Required runtime
 
@@ -64,6 +67,6 @@ references/scripts/archi-render.sh docs/architecture/<feature>.oef.xml --output-
 references/scripts/arch-layout.sh validate-png --image .cache/archi-views/<feature>/<view>.png --result .cache/archi-views/<feature>/<view>.png.json
 ```
 
-If Archi, jArchi script support, `DISPLAY`, `xmllint`, `validate-model.ajs`, or
-another render prerequisite is missing, report render and PNG validation as not
-run with the exact blocker.
+If Archi, jArchi script support, `DISPLAY`, `xmllint`, `validate-model.ajs`,
+Validate Model marker output, or another render prerequisite is missing, report
+render and PNG validation as not run with the exact blocker.

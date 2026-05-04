@@ -77,7 +77,7 @@ Four modes — deliberately distinct from `responsive-design` because Extract (c
 Review has four sub-behaviours, dispatched on inputs:
 - **Artefact review** — a `.oef.xml` file alone → ArchiMate® 3.2 well-formedness + professional-readiness pass + `AD-*` / `AD-Q*` smell catalog per reference §8.
 - **External validation handoff** — a `.oef.xml` plus supplied Archi import / Validate Model / schema findings → load `references/procedures/external-validation-handoff.md` before the readiness rollup.
-- **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed, jArchi script support is available, and an X display is available. The render script imports the OEF, runs the bundled Validate Model jArchi script, and only then creates the PNG report; `ARCHI_VALIDATE_MODEL: INVALID` findings are render blockers, while `ARCHI_VALIDATE_MODEL: WARN` findings are surfaced as validation evidence. When PNGs are produced, validate blank/tiny/cropped/baseline-drift signals with `references/scripts/arch-layout.sh validate-png` per `references/procedures/rendered-png-validation.md`. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
+- **Render request** — a `.oef.xml` file + a request for PNGs / rendered views / visual inspection → source-geometry gate, then `references/scripts/archi-render.sh` when Archi is installed, jArchi script support is available, and an X display is available. The render script imports the OEF, runs the bundled Validate Model jArchi script, requires `ARCHI_VALIDATE_MODEL:` marker output to prove that validation ran, and only then accepts the PNG report; missing marker output is a render blocker because Archi can otherwise render while ignoring `--script.runScript`. `ARCHI_VALIDATE_MODEL: INVALID` findings are render blockers, while `ARCHI_VALIDATE_MODEL: WARN` findings are surfaced as validation evidence. When PNGs are produced, validate blank/tiny/cropped/baseline-drift signals with `references/scripts/arch-layout.sh validate-png` per `references/procedures/rendered-png-validation.md`. Archi is a weak dependency: if prerequisites are missing, report the blocker and do not use a fallback renderer.
 - **Drift detection** — a `.oef.xml` file + the current code/IaC at the canonical locations (§ project assimilation) → delta report (elements added / removed / changed since the model was last aligned).
 
 ### Lookup mode
@@ -111,10 +111,10 @@ fifth mode.
    lookup questions; Lookup does not mutate the model.
 5. **Render and compare all artifacts:** rerun the source-geometry gate,
    regenerate every requested PNG with `archi-render.sh` (including its bundled
-   jArchi Validate Model step), validate PNGs with
-   `arch-layout.sh validate-png`, inspect all outputs, and compare source plus
-   render snapshots against the committed baseline. Missing Archi, `DISPLAY`,
-   jArchi script support, or script prerequisites are disclosed exactly; project
+   jArchi Validate Model step), validate PNGs with `arch-layout.sh validate-png`,
+   inspect all outputs, and compare source plus render snapshots against the
+   committed baseline. Missing Archi, `DISPLAY`, jArchi script support, missing
+   Validate Model marker output, or script prerequisites are disclosed exactly; project
    render artifacts are updated only when the user asked or the project already
    commits the architecture render package.
 
@@ -147,8 +147,8 @@ The skill ships without framework extensions in v1. **Per-stack lifting rules li
 | `references/procedures/external-validation-handoff.md` | Read only when the user supplies Archi import errors, Archi Validate Model output, `xmllint --schema` output, or another conformant tool's validation report | Consume downstream tool findings as first-class evidence before readiness claims |
 | `references/procedures/rendered-png-validation.md` | Review render requests and explicit render-polish loops after PNGs exist | Java™ ImageIO-based `validate-png` checks for blank, tiny, cropped, excessive-whitespace, and baseline-drift failures; ImageMagick is optional diagnostics only |
 | `references/scripts/validate-oef-layout.sh` | Any local OEF file with materialized views | Build / Extract final self-check and Review artefact pass → executable source-geometry gate for `AD-L2`, `AD-L3`, `AD-L8`, `AD-L10`, `AD-L11`, `AD-L13`, and `AD-L15`; complements render inspection because cropped PNG exports can hide off-origin source geometry and explicit connector lanes can hide stacked-arrow / fan-out defects |
-| `references/scripts/validate-model.ajs` | Archi render/load runs after OEF import and before HTML report generation | jArchi Validate Model step used by `archi-render.sh`; emits `ARCHI_VALIDATE_MODEL: INVALID` for relationship legality, missing visual references, and visual-connection endpoint defects, and `ARCHI_VALIDATE_MODEL: WARN` for empty views, unused elements, unused relationships, and possible duplicate elements |
-| `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → validate XML well-formedness, import the OEF through Archi's headless CLI, run the bundled jArchi Validate Model script, then render every OEF view to PNG. Archi is a weak dependency with no fallback renderer; missing Archi / jArchi script support / `DISPLAY` / tool prerequisites are reported as "render inspection not run"; invalid Validate Model findings are render blockers, and warnings are reported without failing PNG generation |
+| `references/scripts/validate-model.ajs` | Archi render/load runs after OEF import and before HTML report generation | jArchi Validate Model step used by `archi-render.sh`; emits `ARCHI_VALIDATE_MODEL: INVALID` for relationship legality, missing visual references, and visual-connection endpoint defects, `ARCHI_VALIDATE_MODEL: WARN` for empty views, unused elements, unused relationships, and possible duplicate elements, and a final `OK` / `FAIL` marker so the wrapper can prove that validation actually executed |
+| `references/scripts/archi-render.sh` | Any local OEF file when the user requests rendered diagrams, visual inspection, or refresh of PNG render artefacts | Review render-request sub-behaviour, explicit render-polish loop, and Build / Extract final self-check when a renderer is requested → validate XML well-formedness, import the OEF through Archi's headless CLI, run the bundled jArchi Validate Model script, require `ARCHI_VALIDATE_MODEL:` marker output, then render every OEF view to PNG. Archi is a weak dependency with no fallback renderer; missing Archi / jArchi script support / missing Validate Model marker output / `DISPLAY` / tool prerequisites are reported as "render inspection not run"; invalid Validate Model findings are render blockers, and warnings are reported without failing PNG generation |
 | `references/scripts/arch-layout.sh` | Build / Extract layout contract checks, strict result-quality gates, OEF materialization, layout policy diagnostics, and layout provenance output; Review route repair, global polish, generated layout smoke, or PNG validation | Launches the packaged Java™ 21 runtime from `references/bin/arch-layout.jar` for `--version`, `validate-request`, `validate-result`, `layout-elk`, `route-repair`, `global-polish`, `materialize-oef`, `layout-provenance`, and `validate-png` |
 | `references/scripts/package-arch-layout.sh` | Plugin release packaging or runtime refresh after Java™ source changes | Runs the Gradle test suite, builds the self-contained runtime JAR, copies it to `references/bin/arch-layout.jar`, and prints included/excluded package evidence |
 | `references/schemas/layout-request.schema.json` / `references/schemas/layout-result.schema.json` / `references/schemas/layout-provenance.schema.json` | Backend request/result validation, runtime-honored layout policy diagnostics, and provenance reporting | Draft 2020-12 JSON contracts for generated layout, route repair, global polish handoff, and per-view layout provenance |
@@ -180,7 +180,7 @@ produce PNGs:
 
 1. Run the source-geometry gate first when a local OEF path exists.
 2. Invoke [`references/scripts/archi-render.sh`](references/scripts/archi-render.sh) with the requested OEF path and any caller-supplied `--archi-bin`, `--cache-root`, `--config`, `--output-root`, or `--validate-model-script` settings.
-3. Treat Archi and jArchi script support as weak dependencies. The script has no fallback support and the skill must not invent one; if Archi, jArchi script support, `DISPLAY`, `xmllint`, the Validate Model script, or another prerequisite is missing, disclose the exact failure and keep visual render inspection at `not run`. If the bundled Validate Model step reports `INVALID`, treat it as a render blocker. If it reports `WARN`, keep the render output but map the warnings through external-validation handoff before claiming readiness.
+3. Treat Archi and jArchi script support as weak dependencies. The script has no fallback support and the skill must not invent one; if Archi, jArchi script support, `DISPLAY`, `xmllint`, the Validate Model script, marker output from the Validate Model script, or another prerequisite is missing, disclose the exact failure and keep visual render inspection at `not run`. If the bundled Validate Model step reports `INVALID`, treat it as a render blocker. If it reports `WARN`, keep the render output but map the warnings through external-validation handoff before claiming readiness.
 4. If rendering succeeds, inspect every emitted PNG before claiming visual quality; do not sample views. Run `references/scripts/arch-layout.sh validate-png --image <rendered.png> --result <result.json>` for invariant checks, and add `--baseline <prior.png> --tolerance <ratio>` when a previous render exists and the user requested comparison.
 5. Classify changed PNGs, README rows, galleries, or provenance text as
    `documentation/render inventory change`. Do not mark a render-only refresh as
@@ -320,10 +320,10 @@ See [`references/output-format.md`](references/output-format.md) §Project assim
      then inspect all emitted PNGs for connector-through-node, stacked connector
      lanes, orphan nodes, wide empty layer gaps, local fan-out crisscross, long
      peripheral bus routes, duplicate visible story paths, misleading boundary
-     crossings, and ambiguous nested ownership. Do not sample. If Archi or
-     jArchi script support, the Validate Model script, or another script
-     prerequisite is unavailable, disclose "render inspection not run" with the
-     blocker; do not weaken static `AD-L*` findings from the
+     crossings, and ambiguous nested ownership. Do not sample. If Archi, jArchi
+     script support, the Validate Model script, Validate Model marker output, or
+     another script prerequisite is unavailable, disclose "render inspection not
+     run" with the blocker; do not weaken static `AD-L*` findings from the
      source-geometry gate.
      **Render gate.** When the user has requested visual quality (explicit
      render request, render-polish loop, or `[visual]` self-check requested in
@@ -402,14 +402,7 @@ See [`references/output-format.md`](references/output-format.md) §Project assim
 
 4. **Walk reference §10 checklist bucket by bucket.** For each item, inspect the diagram and record: pass / fail / not-applicable. Failures become findings with `AD-*` smell codes from reference §8.
 
-4a. **Render on request.** If the user requested renders or visual inspection,
-run `references/scripts/archi-render.sh` after static checks. Pass through
-caller-provided `--archi-bin`, `--cache-root`, `--config`, `--output-root`, and
-`--validate-model-script` when supplied. A missing Archi executable, missing
-jArchi script support, missing `DISPLAY`, malformed XML, invalid Validate Model
-finding, or script exit code is not a fallback opportunity; report the exact
-command, failure, and "Visual render inspection: not run". Map Validate Model findings
-through [`external-validation-handoff.md`](references/procedures/external-validation-handoff.md)
+4a. **Render on request.** If the user requested renders or visual inspection, run `references/scripts/archi-render.sh` after static checks. Pass through caller-provided `--archi-bin`, `--cache-root`, `--config`, `--output-root`, and `--validate-model-script` when supplied. A missing Archi executable, missing jArchi script support, missing `DISPLAY`, malformed XML, missing Validate Model marker output, invalid Validate Model finding, or script exit code is not a fallback opportunity; report the exact command, failure, and "Visual render inspection: not run". Map Validate Model findings through [`external-validation-handoff.md`](references/procedures/external-validation-handoff.md)
 before the readiness rollup. Apply the render gate from
 [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md)
 §Quality verdict — *Render gate*: when render did not run and visual quality

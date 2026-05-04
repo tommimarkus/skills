@@ -19,7 +19,8 @@ Usage: archi-render.sh [OPTIONS] OEF_FILE
 Render every view in an ArchiMate OEF XML file as a PNG via Archi's CLI.
 The imported model is also checked with the bundled jArchi Validate Model
 script before report generation. Invalid findings fail the render; warnings are
-reported without suppressing PNG output.
+reported without suppressing PNG output. The script must emit
+ARCHI_VALIDATE_MODEL markers; missing markers mean validation did not run.
 
 Output goes to .cache/archi-views/<stem>/ by default, where <stem> is the OEF
 filename with .oef.xml / .xml stripped. Concurrent-safe: runs from different
@@ -74,6 +75,7 @@ Exit codes:
   3  Archi CLI returned non-zero (see stderr for log path)
   4  Archi completed but produced no view images
   5  jArchi Validate Model reported one or more invalid findings
+  6  jArchi Validate Model produced no machine-readable output
 EOF
 }
 
@@ -280,6 +282,8 @@ trap cleanup EXIT
 trap 'cleanup; exit 130' INT TERM
 
 mkdir -p "$work/config" "$work/data" "$work/report"
+validation_output="$work/validate-model.out"
+validation_markers="$work/validate-model.markers"
 
 # ---- output dir scoped by OEF stem -------------------------------------
 # Different OEFs go to different subdirs → no inter-OEF collisions.
@@ -308,10 +312,10 @@ archi_cmd=(
 
 rc=0
 if [[ "$quiet" = 1 ]]; then
-  "${archi_cmd[@]}" >"$log" 2>&1 || rc=$?
+  ARCHI_VALIDATE_MODEL_OUTPUT="$validation_output" "${archi_cmd[@]}" >"$log" 2>&1 || rc=$?
 else
   set +e
-  "${archi_cmd[@]}" 2>&1 \
+  ARCHI_VALIDATE_MODEL_OUTPUT="$validation_output" "${archi_cmd[@]}" 2>&1 \
     | tee "$log" \
     | grep --line-buffered -E '\[(HTMLReport|XML Exchange)\]'
   rc=${PIPESTATUS[0]}
@@ -326,34 +330,48 @@ if [[ $rc -ne 0 ]]; then
   exit 3
 fi
 
-validation_findings="$(grep -c '^ARCHI_VALIDATE_MODEL: INVALID ' "$log" || true)"
+{
+  [[ -s "$validation_output" ]] && grep '^ARCHI_VALIDATE_MODEL: ' "$validation_output" || true
+  grep '^ARCHI_VALIDATE_MODEL: ' "$log" || true
+} > "$validation_markers"
+
+validation_marker_count="$(wc -l < "$validation_markers")"
+if (( validation_marker_count == 0 )); then
+  persist_log="$cache_root/last-validation-missing-$oef_stem.log"
+  cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
+  echo "archi-render: Validate Model produced no machine-readable output — log preserved at $persist_log" >&2
+  echo "              jArchi script provider may be missing or the script did not run" >&2
+  exit 6
+fi
+
+validation_findings="$(grep -c '^ARCHI_VALIDATE_MODEL: INVALID ' "$validation_markers" || true)"
 if (( validation_findings > 0 )); then
   persist_log="$cache_root/last-validation-$oef_stem.log"
-  cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
+  cp -- "$validation_markers" "$persist_log" 2>/dev/null || persist_log="$validation_markers (deleted on exit)"
   echo "archi-render: Validate Model reported finding(s): $validation_findings — log preserved at $persist_log" >&2
   printed=0
   while IFS= read -r finding; do
     (( printed >= 20 )) && break
     printf '  %s\n' "$finding" >&2
     printed=$((printed + 1))
-  done < <(grep '^ARCHI_VALIDATE_MODEL: INVALID ' "$log" || true)
+  done < <(grep '^ARCHI_VALIDATE_MODEL: INVALID ' "$validation_markers" || true)
   if (( validation_findings > printed )); then
     echo "  ... $((validation_findings - printed)) more finding(s) in log" >&2
   fi
   exit 5
 fi
 
-validation_warnings="$(grep -c '^ARCHI_VALIDATE_MODEL: WARN ' "$log" || true)"
+validation_warnings="$(grep -c '^ARCHI_VALIDATE_MODEL: WARN ' "$validation_markers" || true)"
 if (( validation_warnings > 0 )); then
   persist_log="$cache_root/last-validation-warnings-$oef_stem.log"
-  cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
+  cp -- "$validation_markers" "$persist_log" 2>/dev/null || persist_log="$validation_markers (deleted on exit)"
   echo "archi-render: Validate Model reported warning(s): $validation_warnings — log preserved at $persist_log" >&2
   printed=0
   while IFS= read -r finding; do
     (( printed >= 20 )) && break
     printf '  %s\n' "$finding" >&2
     printed=$((printed + 1))
-  done < <(grep '^ARCHI_VALIDATE_MODEL: WARN ' "$log" || true)
+  done < <(grep '^ARCHI_VALIDATE_MODEL: WARN ' "$validation_markers" || true)
   if (( validation_warnings > printed )); then
     echo "  ... $((validation_warnings - printed)) more warning(s) in log" >&2
   fi

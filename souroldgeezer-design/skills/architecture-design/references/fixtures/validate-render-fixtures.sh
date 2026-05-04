@@ -5,7 +5,7 @@
 # Validate every materialized architecture-design OEF fixture by checking view
 # geometry and rendering each view through a caller-provided Archi render script.
 # The render script is expected to import the OEF and run its Validate Model
-# step before PNG output is accepted.
+# step with machine-readable marker output before PNG output is accepted.
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -20,7 +20,7 @@ Validate every *.oef.xml fixture in this directory:
   3. Every view has materialized Element nodes with x/y/w/h geometry.
   4. Every view has Relationship connections with source/target endpoints.
   5. Source geometry passes the AD-L render-quality gate.
-  6. The render script's import and Validate Model steps pass.
+  6. The render script's import and Validate Model marker-output steps pass.
   7. Rendering produces nonblank PNGs larger than Archi's 100x100 empty-view
      placeholder.
   8. The fixture set covers all seven architecture-design supported viewpoints.

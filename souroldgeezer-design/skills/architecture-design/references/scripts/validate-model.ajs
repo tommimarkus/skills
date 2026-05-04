@@ -14,6 +14,24 @@ var warningCount = 0;
 var usedElementIds = {};
 var usedRelationshipIds = {};
 var duplicateElementBuckets = {};
+var validatorOutputPath = null;
+var Files = null;
+var Paths = null;
+var StandardOpenOption = null;
+var StandardCharsets = null;
+var JavaString = null;
+
+try {
+  var System = Java.type("java.lang.System");
+  Files = Java.type("java.nio.file.Files");
+  Paths = Java.type("java.nio.file.Paths");
+  StandardOpenOption = Java.type("java.nio.file.StandardOpenOption");
+  StandardCharsets = Java.type("java.nio.charset.StandardCharsets");
+  JavaString = Java.type("java.lang.String");
+  validatorOutputPath = System.getenv("ARCHI_VALIDATE_MODEL_OUTPUT");
+} catch (error) {
+  validatorOutputPath = null;
+}
 
 function text(value) {
   if (value === null || value === undefined) {
@@ -37,14 +55,29 @@ function normalizedName(value) {
   return text(value).replace(/^\s+|\s+$/g, "").replace(/\s+/g, " ").toLowerCase();
 }
 
+function emit(line) {
+  if (validatorOutputPath) {
+    Files.write(
+      Paths.get(validatorOutputPath),
+      new JavaString(line + "\n").getBytes(StandardCharsets.UTF_8),
+      StandardOpenOption.CREATE,
+      StandardOpenOption.WRITE,
+      StandardOpenOption.APPEND
+    );
+    return;
+  }
+
+  console.log(line);
+}
+
 function invalid(message) {
   invalidCount += 1;
-  console.log("ARCHI_VALIDATE_MODEL: INVALID " + message);
+  emit("ARCHI_VALIDATE_MODEL: INVALID " + message);
 }
 
 function warn(message) {
   warningCount += 1;
-  console.log("ARCHI_VALIDATE_MODEL: WARN " + message);
+  emit("ARCHI_VALIDATE_MODEL: WARN " + message);
 }
 
 $("element").each(function(element) {
@@ -177,7 +210,7 @@ for (var key in duplicateElementBuckets) {
 }
 
 if (invalidCount === 0) {
-  console.log("ARCHI_VALIDATE_MODEL: OK invalid=0 warnings=" + warningCount);
+  emit("ARCHI_VALIDATE_MODEL: OK invalid=0 warnings=" + warningCount);
 } else {
-  console.log("ARCHI_VALIDATE_MODEL: FAIL invalid=" + invalidCount + " warnings=" + warningCount);
+  emit("ARCHI_VALIDATE_MODEL: FAIL invalid=" + invalidCount + " warnings=" + warningCount);
 }
