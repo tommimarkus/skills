@@ -365,19 +365,32 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 ---
 
-### `nodejs.LC-7` — `it.each` / `test.each` on a numeric / string / collection parameter without boundary values
+### `nodejs.LC-7` — `it.each` / `test.each` missing contract-derived boundary rows
 
 **Applies to:** `unit, integration` — refines core `LC-11`.
 
-**Detection:** an `it.each(...)` / `test.each(...)` / `describe.each(...)` whose data has a numeric parameter (`number`, `bigint`), string parameter, or collection parameter (`T[]`, `string[]`, `Set<T>`, `Map<K, V>`). Collect every row. Flag if **none** of these boundary values appears in at least one row:
+**Detection:** an `it.each(...)` / `test.each(...)` / `describe.each(...)` whose data has a numeric parameter (`number`, `bigint`), string parameter, collection parameter (`T[]`, `string[]`, `Set<T>`, `Map<K, V>`), parser input, enum/state value, or schema-validated field. Collect every row. First inspect the visible contract:
+
+- Zod / Yup / Joi / class-validator rules such as `.min(...)`, `.max(...)`, `.length(...)`, `.email()`, `.regex(...)`, `@MinLength`, `@MaxLength`, and custom `.refine(...)`.
+- Branch predicates and guard clauses around numeric, string, collection, date, or enum inputs.
+- Route params and request-body schemas.
+- TypeScript literal unions / enums when runtime code branches on them.
+
+Flag when no row covers the contract-derived boundary coverage items, or when rows cover only generic sentinels while richer edges are visible. Examples:
+
+- A schema `.min(6).max(15)` needs `5/6` and `15/16`; `''` alone is `sentinel-only`.
+- A quantity rule `1..10` needs `0/1` and `10/11`; `5` plus `[]` on an unrelated parameter is partial at best.
+- A `test.each` that repeats valid roles but never covers a forbidden role is positive-only for auth/authorization partitions.
+
+When no richer contract is visible, fall back to generic sentinel signals:
 
 - Numeric: `0`, `1`, `-1`, `Number.MAX_SAFE_INTEGER`, `Number.MIN_SAFE_INTEGER`, `Infinity`, `NaN` (scale to context — `NaN` / `Infinity` apply to `number` but not `bigint`).
 - String: `""` (empty), single-character literal, `null` / `undefined` (only where the signature allows it).
 - Collection: `[]`, `[singleItem]`, `null` / `undefined` (where the signature allows).
 
-**Why low-confidence:** boundary-value analysis (ISTQB CTFL) is standard. A parameterized test skipping boundaries covers only the happy interior of the equivalence class. Always flag with a note; the author can dismiss if the scope is intentionally narrow.
+**Why low-confidence:** boundary-value analysis is standard, but the test may be intentionally scoped to a narrow partition. Always report `Boundary evidence` as `contract-derived`, `partial`, `sentinel-only`, or `unknown`.
 
-**Rewrite (intent):** add at least one boundary row, or add a separate `test(...)` for each boundary the function is specified to handle.
+**Rewrite (intent):** add rows or separate `test(...)` cases for each boundary the function is specified to handle.
 
 ---
 
@@ -417,9 +430,9 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 **Applies to:** `unit, integration` — refines core `POS-4`.
 
-**Detection:** an `it.each(...)` / `test.each(...)` whose rows produce distinct expected values (not all identical — that would be core `LC-8`), covering equivalence classes or boundary values.
+**Detection:** an `it.each(...)` / `test.each(...)` whose rows produce distinct expected values (not all identical — that would be core `LC-8`) and map to named equivalence classes or contract-derived boundary values.
 
-**Why positive:** the parameterization is doing real work — each row is a different specification statement. When rows include boundary values, this signals disciplined test design.
+**Why positive:** the parameterization is doing real work — each row is a different specification statement. When rows include contract-derived boundary values, this signals disciplined test design. Do not award this signal for arbitrary sentinel rows when a richer contract is visible.
 
 ---
 
@@ -534,18 +547,18 @@ Exclude matches whose declaration is marked `@internal` via a preceding JSDoc co
 
 For each enumerated symbol, search the test project (test glob from § Detection signals, excluding `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, `StrykerOutput/` / `.stryker-tmp/`) for at least one of:
 
-- **`Gap-API`** — the symbol name appears as an identifier in any test name or test body. Word-boundary match: `\bcreateOrder\b`. Import-of-the-symbol plus a call-site in a test body both count.
-- **`Gap-Route`** — the route template appears as a string literal in any test body. Match after normalising case: `'/orders/:id'`. Partial matches (a test that calls `/orders` when the enumerated route is `/orders/:id`) are weaker — record with `medium` confidence, not `high`.
+- **`Gap-API`** — `covered-strong` only when the symbol name appears as an identifier and the same test asserts a return value, published side effect, error, state, or domain outcome. Word-boundary identifier presence (`\bcreateOrder\b`) by itself is `referenced-weak`; import/setup-only presence is `referenced-incidental`.
+- **`Gap-Route`** — `covered-strong` only when the route template appears as a string literal and the same test asserts the route's published contract: status plus body/header/auth/domain outcome, state change, validation error, or problem code. Partial route matches and status-only happy-path assertions are `referenced-weak`, not coverage.
 - **`Gap-Migration`** — the migration identifier appears as a path literal or string in any test body, or a test imports / executes the migration file directly.
-- **`Gap-Throw`** — both the error type (e.g. `NotFoundError`) *and* the containing method name appear in the same test method body (the test expects that specific error from that specific method). If only one appears, the throw site is a probable gap.
-- **`Gap-Validate`** — the validated field name (e.g. `email`) appears in a test body that also references the schema's containing binding or class. For Zod, look for `<schemaName>.safeParse(...)` / `<schemaName>.parse(...)` calls with a payload intentionally missing or violating the validated field.
+- **`Gap-Throw`** — both the error type (e.g. `NotFoundError`) *and* the containing method name appear in the same test method body, and the assertion expects that error or the public error envelope. If only one appears, or the test only awaits the happy path, the throw site is a probable gap.
+- **`Gap-Validate`** — the validated field name (e.g. `email`) appears in a test body that also references the schema's containing binding or class and intentionally omits or violates the field. For Zod, look for `<schemaName>.safeParse(...)` / `<schemaName>.parse(...)` calls with an invalid payload plus an assertion on failure. Valid-payload-only route tests are `referenced-weak`.
 
 ### Known indirect-coverage patterns (carve-outs)
 
 These patterns suppress a false-positive `Gap-API` entry:
 
-- A service method `createOrder` is covered indirectly when a Route Handler / controller / tRPC procedure that wraps it has a test, and the service type is imported / constructed inside that wrapper. Search for imports of the SUT symbol in handler files, then check whether the handler file's tests exist; if so, record the service method as "indirectly covered via `<handler>`" and suppress the `Gap-API` entry.
-- A Zod schema `UserSchema` is covered indirectly when any Route Handler test sends a request body that exercises the schema's fields. The audit can check for `request(app).post(...).send({ ... })` calls whose payload includes the schema's required fields; if any test exercises the schema transitively, suppress the `Gap-Validate` entries for those fields.
+- A service method `createOrder` is covered indirectly when a Route Handler / controller / tRPC procedure that wraps it has a test, and the service type is imported / constructed inside that wrapper. Search for imports of the SUT symbol in handler files, then check whether the handler file's tests assert the handler's contract. If so, record the service method as "indirectly covered via `<handler>`" and suppress the `Gap-API` entry. If the handler test is status-only or happy-path-only, keep the service as `referenced-weak`.
+- A Zod schema `UserSchema` is covered indirectly when any Route Handler test sends a request body that exercises the schema's fields and asserts validation success/failure. Valid-body-only tests can satisfy success coverage but do not suppress `Gap-Validate` entries for missing invalid-field branches.
 
 ### Confidence annotations
 

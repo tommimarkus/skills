@@ -220,7 +220,7 @@ Use `cookies` / `headers` injection at the boundary if the handler's shape requi
 
 **Detection:** `playwright.config.{ts,js,mjs}` at the project root whose `webServer` config points at `next build && next start` (or `pnpm start` / `npm start` resolving to the same) — matches the [Next.js official Playwright guide](https://nextjs.org/docs/app/guides/testing/playwright) verbatim.
 
-**Why positive:** the `with-playwright` example is the blessed Next.js E2E pattern as of v16.2.4. Running against `next start` (production build) rather than `next dev` (dev-mode with hot reload and dev-only overlays) catches production-only issues that dev-mode hides — chunking, static optimization, production RSC payload shape. No `@next/playwright` package is referenced in the current guide; using `@playwright/test` directly is correct.
+**Why positive:** the official Next.js testing guide points E2E users to the Playwright setup path. Running against `next start` (production build) rather than `next dev` (dev-mode with hot reload and dev-only overlays) catches production-only issues that dev-mode hides — chunking, static optimization, production RSC payload shape. No `@next/playwright` package is referenced in the current guide; using `@playwright/test` directly is correct.
 
 ---
 
@@ -297,6 +297,7 @@ Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumer
 - Glob `app/**/route.{js,ts,jsx,tsx}`. For each match, derive the route path from the parent-directory chain under `app/`, honouring Next.js's route group (`(name)`) and dynamic segment (`[slug]`, `[[...slug]]`, `[...slug]`) conventions. Example: `app/api/users/[id]/route.ts` → route template `/api/users/[id]`.
 - For each file, grep for exports matching `^export (async )?(function )?(?:const\s+)?(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b` — these are the supported HTTP method exports per the [Route Handlers API reference](https://nextjs.org/docs/app/api-reference/file-conventions/route).
 - A single `route.ts` file exporting multiple methods is multiple route entries (one per `<path> <METHOD>` pair).
+- A test that only calls the route and asserts a URL, heading, `200`, `201`, or `NextResponse` existence is `referenced-weak`. Strong coverage requires the route's contract oracle: body/header/problem shape, auth decision, validation error, state mutation, redirect, rewrite, or cache/session side effect.
 
 **Pages Router API routes.** Enumerate:
 
@@ -336,7 +337,15 @@ For each occurrence, record the containing function and whether a test reference
 - **Legacy NextAuth v4 `getServerSession`** — grep for `getServerSession\s*\(\s*(req|authOptions|options)` anywhere in the SUT. Record as legacy; recommend migration to `auth()` per [authjs.dev migration guide](https://authjs.dev/getting-started/migrating-to-v5).
 - **`useSession()` on the client** — hook from `next-auth/react`. Not an auth-enforcement point (runs in the browser; a determined user can bypass) but indicates the rendering branches on session state; relevant to component tests.
 
-Cross-referenced against the core six auth-scenario columns (`anonymous`, `token-expired`, `token-tampered`, `insufficient-scope`, `sufficient-scope`, `cross-user`) identically to `nodejs-integration.md`. Emit `Gap-AuthZ` rows for uncovered cells.
+Cross-reference against the required auth scenario columns from
+`nodejs-integration.md` and add scheme-specific cells when applicable. For
+Next.js, pay special attention to Auth.js session cookies, proxy / middleware
+matchers, Server Actions with cookie-backed forms, CSRF protection implemented
+in route handlers or actions, logout invalidation, SameSite cross-site
+behavior, and session rotation after sign-in or privilege changes. A
+Playwright or Route Handler test that only proves valid navigation or
+valid-token success is `referenced-weak` for these negative cells. Emit
+`Gap-AuthZ` rows for uncovered cells.
 
 ### Migration upgrade-path enumeration
 

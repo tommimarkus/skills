@@ -110,7 +110,16 @@ middleware declare auth dependencies:
 - Flask: auth decorators or middleware guarding routes.
 
 Minimum cells: `anonymous`, `token-expired`, `token-tampered`,
-`insufficient-scope`, `sufficient-scope`, and `cross-user`. Report uncovered
+`insufficient-scope`, `sufficient-scope`, and `cross-user`. Add
+scheme-specific cells when the app exposes them: `not-before`,
+`wrong-issuer`, `wrong-audience`, `wrong-token-type`, `revoked-token`,
+`logout-invalidated`, `idle-timeout`, `session-rotation`,
+`session-fixation`, `csrf-missing`, and `csrf-invalid`.
+
+A Python test covers a cell only when it arranges that auth/session state and
+asserts the documented status, response envelope, redirect, cookie mutation, or
+visible blocked state. A client call that only sends a valid token and asserts
+success is `referenced-weak` for every negative auth cell. Report uncovered
 cells as `Gap-AuthZ`.
 
 ## Migration Upgrade-Path Enumeration

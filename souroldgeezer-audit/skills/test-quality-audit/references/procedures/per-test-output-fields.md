@@ -14,13 +14,22 @@ For every unit or component test case, emit:
    `pasted-literal`, or `unknown`.
 3. **Assertion target** — `return-value`, `published-side-effect`,
    `internal-mock-invocation`, `structural-shape`, or `none`.
-4. **Test size** — `small`, `medium`, or `large` using Google sizing. Unit
+4. **Boundary evidence** — `contract-derived`, `sentinel-only`, `partial`,
+   `not-applicable`, or `unknown`. Use `partial` when some edges are present
+   but visible below / at / above or before / at / after coverage is missing.
+5. **Coverage strength** — `strong`, `weak`, `incidental`, `none`, or
+   `not-applicable`. Use `weak` for tests that name the SUT but assert only
+   setup, status-only success, structure, snapshot shape, or internal calls.
+6. **Gap relevance** — `satisfies-gap`, `does-not-satisfy-gap`, or
+   `not-gap-evidence`. A happy-path-only or weak test does not satisfy a
+   missing failure-partition gap for the same SUT surface.
+7. **Test size** — `small`, `medium`, or `large` using Google sizing. Unit
    tests should be `small`; larger sizes suggest lane migration.
-5. **Smells matched** — core `HC-*` / `LC-*` plus loaded extension codes.
-6. **Positive signals matched** — core `POS-*` plus loaded extension codes.
-7. **Verdict** — `specification`, `characterization`, or `ambiguous`.
-8. **Severity** — `block`, `warn`, or `info`.
-9. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
+8. **Smells matched** — core `HC-*` / `LC-*` plus loaded extension codes.
+9. **Positive signals matched** — core `POS-*` plus loaded extension codes.
+10. **Verdict** — `specification`, `characterization`, or `ambiguous`.
+11. **Severity** — `block`, `warn`, or `info`.
+12. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
    `split`, `delete`, `keep`, or `move-to-integration-lane`.
 
 ## Integration Rubric Fields
@@ -39,11 +48,15 @@ For every integration test case, emit:
 6. **Assertion target** — `published-contract`, `observable-state`,
    `response-value`, `internal-mock-invocation`, `structural-shape`, or
    `none`.
-7. **Smells matched** — core `I-*` plus loaded extension codes.
-8. **Positive signals matched** — core `I-POS-*` plus extension positives.
-9. **Verdict** — `specification`, `incidental`, or `ambiguous`.
-10. **Severity** — `block`, `warn`, or `info`.
-11. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
+7. **Coverage strength** — `strong`, `weak`, `incidental`, `none`, or
+   `not-applicable`.
+8. **Gap relevance** — `satisfies-gap`, `does-not-satisfy-gap`, or
+   `not-gap-evidence`.
+9. **Smells matched** — core `I-*` plus loaded extension codes.
+10. **Positive signals matched** — core `I-POS-*` plus extension positives.
+11. **Verdict** — `specification`, `incidental`, or `ambiguous`.
+12. **Severity** — `block`, `warn`, or `info`.
+13. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
     `split`, `narrow-the-seam`, `move-to-unit-lane`,
     `replace-with-contract-test`, `delete`, or `keep`.
 
@@ -69,12 +82,16 @@ For every E2E test case, emit:
 8. **Assertion target** — `user-observable-outcome`, `url-only`,
    `element-presence-only`, `snapshot`, `pixel-baseline`,
    `published-contract`, or `none`.
-9. **Smells matched** — core `E-*` plus loaded extension codes.
-10. **Positive signals matched** — core `E-POS-*` plus extension positives.
-11. **Verdict** — `specification`, `characterization`, `incidental`, or
+9. **Coverage strength** — `strong`, `weak`, `incidental`, `none`, or
+   `not-applicable`.
+10. **Gap relevance** — `satisfies-gap`, `does-not-satisfy-gap`, or
+   `not-gap-evidence`.
+11. **Smells matched** — core `E-*` plus loaded extension codes.
+12. **Positive signals matched** — core `E-POS-*` plus extension positives.
+13. **Verdict** — `specification`, `characterization`, `incidental`, or
     `ambiguous`.
-12. **Severity** — `block`, `warn`, or `info`.
-13. **Recommended action** — `rewrite-from-user-story`, `add-assertion`,
+14. **Severity** — `block`, `warn`, or `info`.
+15. **Recommended action** — `rewrite-from-user-story`, `add-assertion`,
     `split`, `narrow-the-journey`, `move-to-integration-lane`,
     `move-to-unit-lane`, `replace-selector-strategy`,
     `replace-wait-strategy`, `delete`, or `keep`.
@@ -88,6 +105,9 @@ For every E2E test case, emit:
 - **Intent:** Persists an order when checkout succeeds.
 - **Provenance:** unknown — expected value is a pasted literal with no fixture link.
 - **Assertion target:** internal-mock-invocation
+- **Boundary evidence:** not-applicable
+- **Coverage strength:** weak
+- **Gap relevance:** does-not-satisfy-gap
 - **Smells:** HC-5, HC-7, dotnet.HC-1
 - **Positive signals:** —
 - **Verdict:** characterization
@@ -130,6 +150,8 @@ rubric on every finding so mixed files remain auditable.
 - **Seam narrowness:** broad
 - **Fixture/data provenance:** shared-mutable
 - **Assertion target:** response-value
+- **Coverage strength:** weak
+- **Gap relevance:** does-not-satisfy-gap
 - **Smells:** I-HC-A2, I-HC-A4, I-LC-6
 - **Positive signals:** —
 - **Verdict:** incidental
@@ -151,6 +173,8 @@ rubric on every finding so mixed files remain auditable.
 - **Wait strategy:** wall-clock
 - **Fixture/data provenance:** shared-mutable
 - **Assertion target:** url-only
+- **Coverage strength:** weak
+- **Gap relevance:** does-not-satisfy-gap
 - **Smells:** E-HC-F1, E-HC-F2, E-HC-F3, E-HC-F5, E-HC-F6, E-HC-F10
 - **Positive signals:** —
 - **Verdict:** characterization

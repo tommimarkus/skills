@@ -18,26 +18,29 @@ Unlike mutation testing (step 4) which observes runtime kill behavior, surface e
 3. **Enumerate testable surface** by running the extension's grep patterns against the SUT source tree. For each pattern, capture:
    - A symbol identifier (method name, route template, migration class name, exception-throwing method name, validation-attribute target property).
    - A source location (file path and line number).
-4. **Cross-reference against test discovery.** For each enumerated symbol, check whether its identifier appears in at least one test file. A test "covers" a symbol when:
-   - Its identifier appears in a test method name or attribute (`[Fact(DisplayName = "...")]`).
-   - Its identifier appears in a test body as an invocation target, a string literal (for routes), or a type reference (for migrations / exceptions).
-   - An indirect-coverage signal fires (e.g. a controller test exercises a service method indirectly — the extension may document known indirect-coverage patterns that suppress false positives).
-5. **Classify confirmation state.** Each unreferenced entry starts as `probable-static`. Upgrade it only when evidence supports it:
+4. **Cross-reference against test discovery.** For each enumerated symbol, check whether test evidence reaches the surface and whether it asserts the relevant contract. Classify the best evidence as:
+   - `covered-strong` — a test reaches the SUT surface and asserts the relevant externally visible contract, state, error, validation result, or domain outcome.
+   - `referenced-weak` — a test names the route, function, symbol, component, keyword, or endpoint but asserts only setup, transport, status-only success, element presence, snapshot shape, or internal invocation.
+   - `referenced-incidental` — the surface appears in setup, mocks, fixtures, seed data, imports, or navigation but is not the behavior under test.
+   - `not-referenced` — no meaningful evidence found.
+   - `probable-static` — a surface looks intentionally static or pass-through, but the audit cannot prove that from tests alone.
+   - `confirmed-static-or-delegated` — the gap is dismissed with explicit evidence that the surface is static, generated, or delegated to another covered contract.
+5. **Classify confirmation state.** Each entry without `covered-strong` evidence remains a gap candidate. Upgrade it only when evidence supports it:
    - `confirmed-mutation` — mutation testing reports `NoCoverage` or surviving mutants for the same symbol/file.
    - `confirmed-manual` — manual read proves no test reaches the symbol through a caller, adapter, generated route, or cross-extension public-boundary test.
    - `dismissed-indirect` — a test reaches the symbol indirectly and asserts the published contract.
-6. **Emit a gap report** (see [§ Gap report format](#gap-report-format) below). Each unreferenced entry is a *probable* gap unless it was upgraded by mutation or manual evidence. A true negative requires either mutation testing or manual verification.
+6. **Emit a gap report** (see [§ Gap report format](#gap-report-format) below). Each `not-referenced`, `referenced-weak`, or `referenced-incidental` entry is a *probable* gap unless it was upgraded by mutation or manual evidence. A true negative requires either mutation testing, manual verification, or explicit static/delegation evidence.
 7. **On extension section missing**, report: "Gap detection skipped — stack extension has no SUT surface enumeration section. Mutation testing remains the only gap-finding mechanism for this scope." Continue with static findings.
 
 ## Gap classes
 
 The extension's patterns must populate these five categories. Extensions may add their own categories (e.g. `Gap-Resource` for a REST resource that has no test class) as long as they document them.
 
-- **`Gap-API`** — public type or method with no test reference. *Medium confidence:* indirect coverage via a caller is common.
-- **`Gap-Route`** — HTTP route / function handler / message-queue handler with no test reference to its route template, queue name, or topic. *High confidence:* routes are registered by string identity; a test that doesn't mention the string almost certainly doesn't cover it.
-- **`Gap-Migration`** — database migration class (or file) with no test reference to its class name. *High confidence.*
-- **`Gap-Throw`** — exception throw site with no test that both names the exception type and calls the containing method. *Medium confidence:* may be covered by a generic "error path" test that doesn't name the type.
-- **`Gap-Validate`** — a validation attribute (`[Required]`, `[StringLength]`, etc.) or custom validator on an input type with no test that sends a bad value for that field. *High confidence* on serialization-layer input types.
+- **`Gap-API`** — public type or method without strong observable test evidence. *Medium confidence:* indirect coverage via a caller is common.
+- **`Gap-Route`** — HTTP route / function handler / message-queue handler without strong route / queue / topic contract coverage. *High confidence:* routes are registered by string identity; status-only happy-path tests are weak references.
+- **`Gap-Migration`** — database migration class (or file) without migration or upgrade-path evidence. *High confidence.*
+- **`Gap-Throw`** — exception throw site without a test that reaches the behavior and asserts the published error contract. *Medium confidence:* may be covered by a generic "error path" test that doesn't name the type.
+- **`Gap-Validate`** — a validation attribute (`[Required]`, `[StringLength]`, etc.) or custom validator on an input type without a test that sends a bad value for that field and asserts the validation contract. *High confidence* on serialization-layer input types.
 
 ## Rules
 
@@ -45,6 +48,7 @@ The extension's patterns must populate these five categories. Extensions may add
 - **Gap detection is suite-level.** Never run step 2.5 in quick mode — a PR-diff or single-file audit produces noise.
 - **Never treat a probable gap as a confirmed gap** without verification. The report must flag each finding as probable and recommend mutation testing or manual review for confirmation.
 - **Do not create implementation-only worklist items from static-only gaps.** Worklist entries based on `probable-static` gaps must be framed as verification tasks first. Implementation work is allowed only after `confirmed-mutation` or `confirmed-manual` evidence exists.
+- **Weak references are still gaps.** A test that merely names a surface, asserts `200 OK`, checks element presence, or verifies an internal call does not suppress a gap for missing invalid, unauthorized, conflict, timeout, duplicate, boundary, or state-change behavior on that same surface.
 - **Account for cross-extension public-boundary coverage.** A Robot, Python, Node.js, or other external-runner test can satisfy a SUT-stack route/adapter gap when it exercises the public boundary and asserts the contract. It must not suppress source-level seam or mutation-target findings it cannot observe.
 - **Reconcile with mutation testing** in step 5 when both steps produced output.
 
@@ -60,17 +64,18 @@ In the step-5 suite assessment, emit a `### Gap report` subsection in one of two
 - **SUT projects:** <project list>
 - **Method:** grep-based cross-reference from test files to SUT symbols via the stack extension's patterns. Static-only findings are *probable* and require verification before implementation.
 
-| Class | Enumerated | Referenced from tests | Probable-static | Confirmed | Dismissed-indirect | Confidence |
-|---|---|---|---|---|---|---|
-| `Gap-API` — public methods | <N> | <M> | <P> | <C> | <D> | medium |
-| `Gap-Route` — HTTP / function routes | <N> | <M> | <P> | <C> | <D> | high |
-| `Gap-Migration` — migration classes | <N> | <M> | <P> | <C> | <D> | high |
-| `Gap-Throw` — throw sites | <N> | <M> | <P> | <C> | <D> | medium |
-| `Gap-Validate` — validation attributes | <N> | <M> | <P> | <C> | <D> | high |
+| Class | Enumerated | Covered strong | Referenced weak | Referenced incidental | Not referenced | Probable-static | Confirmed | Dismissed | Confidence |
+|---|---|---|---|---|---|---|---|---|---|
+| `Gap-API` — public methods | <N> | <S> | <W> | <I> | <NR> | <P> | <C> | <D> | medium |
+| `Gap-Route` — HTTP / function routes | <N> | <S> | <W> | <I> | <NR> | <P> | <C> | <D> | high |
+| `Gap-Migration` — migration classes | <N> | <S> | <W> | <I> | <NR> | <P> | <C> | <D> | high |
+| `Gap-Throw` — throw sites | <N> | <S> | <W> | <I> | <NR> | <P> | <C> | <D> | medium |
+| `Gap-Validate` — validation attributes | <N> | <S> | <W> | <I> | <NR> | <P> | <C> | <D> | high |
 
 #### Top gaps and verification candidates
 
 - **Confirmed (`confirmed-mutation`) `Gap-Route`** — `DELETE /api/orders/{id}` (`api/Functions/OrdersApi.cs:88`): static probable gap and mutation `NoCoverage`. Action may be implementation work.
+- **Weak reference (`referenced-weak`) `Gap-Route`** — `POST /api/orders` (`api/Functions/OrdersApi.cs:42`): test names the route and asserts `201` only; no invalid-payload, conflict, auth, or state oracle. Next step: confirm contract branches and add focused tests.
 - **Probable (`probable-static`) `Gap-Migration`** — `AddOrderStatusColumnMigration` (`api/Migrations/0007_order_status.cs:14`): migration class name not mentioned in any test. Next step: manually verify migration path or run mutation before implementing.
 - **Probable (`probable-static`) `Gap-Validate`** — `[Required] CustomerId` on `CreateOrderRequest` (`shared/Requests.cs:22`): no test sends a request with missing `CustomerId`. Next step: confirm no API contract test covers invalid request binding.
 - **Dismissed (`dismissed-indirect`) `Gap-API`** — `OrderService.CancelOrderAsync` (`api/Services/OrderService.cs:42`): covered through `DELETE /api/orders/{id}` contract test with state assertion.

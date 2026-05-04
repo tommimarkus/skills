@@ -34,15 +34,15 @@ Applies when `SKILL.md` step 0b selects the unit rubric. Cite as `HC-N`, `LC-N`,
 `LC-8` — Parameterized test where all cases assert the same thing; parameterization isn't doing work.
 `LC-9` — Skipped / ignored / quarantined test with no linked justification (`Skip=""`, `[Ignore]` with no reason, or reason string containing no issue number, URL, or ticket reference). A quarantine without an exit criterion becomes the permanent home for the flake.
 `LC-10` — Non-trivial assertion with no failure message; a complex or non-obvious expected value asserted without a `Because(...)` reason, xUnit message argument, or inline comment tying the expectation to a requirement. On failure, the message tells a future debugger nothing.
-`LC-11` — Parameterized test on a numeric or collection input with no boundary values. A `[Theory]` / `[TestCase]` / `it.each` exercising a function that takes `int`, `long`, `double`, `decimal`, `string`, or a collection without at least one of `0`, `1`, `-1`, `int.MaxValue`, empty collection, single-element collection, or null. Boundary-value analysis (ISTQB CTFL) is the standard gap for finite-case parameterized tests.
-`LC-12` — Positive test with no sibling negative test. A test named `..._Returns_...` / `..._Succeeds` / `..._Persists` on a method that has at least one documented failure mode (throws, returns error, returns null / `Result.Fail`, validates input), and no sibling test on the same method whose name matches `..._Throws_...` / `..._Fails_...` / `..._Rejects_...` / `..._Returns_Error_...`. The test covers only the happy path.
+`LC-11` — Parameterized test missing contract-derived boundary values. A `[Theory]` / `[TestCase]` / `it.each` exercises a finite set of numeric, string, collection, parser, validation, state, or time-window inputs while visible partitions or constraints have uncovered boundary coverage items. Generic sentinels (`0`, `1`, `-1`, `null`, empty, max) count only when they are actual boundaries for the visible contract; otherwise record `sentinel-only` or `partial-boundary`.
+`LC-12` — Positive or interior-only test with no sibling negative / partition test. A test named `..._Returns_...` / `..._Succeeds` / `..._Persists` on a method that has at least one documented or inferable failure mode (throws, returns error, returns null / `Result.Fail`, validates input), and no sibling test on the same behavior whose name or assertions cover `..._Throws_...` / `..._Fails_...` / `..._Rejects_...` / `..._Returns_Error_...` / `..._Validates_...`. The test covers only the happy path or only the interior of a valid partition.
 
 ### Positive signals (POS-*)
 
 `POS-1` — Test name reads as a requirement sentence.
 `POS-2` — Expected value has an external source (spec, RFC vector, sample file, domain invariant, linked ticket).
 `POS-3` — Assertions on return value or published side effect (not on internal mock invocations).
-`POS-4` — Parameterized tests covering boundaries/equivalence classes with *varied* expected values.
+`POS-4` — Parameterized tests covering contract-derived boundaries / equivalence classes with *varied* expected values. Boundary rows must map to a stated or inferable domain partition; arbitrary sentinel rows do not earn this signal by themselves.
 `POS-5` — Separate tests for happy path and each distinct sad path.
 `POS-6` — Comments citing a requirement, spec, or invariant on non-obvious expected values.
 `POS-7` — Test expresses an invariant (round-trip, idempotency, commutativity, associativity, bounds).
@@ -53,12 +53,12 @@ Applies when `SKILL.md` step 0b selects the unit rubric. Cite as `HC-N`, `LC-N`,
 
 Emitted by the deep-mode workflow's [§ SUT surface enumeration](../SKILL.md#sut-surface-enumeration) step (step 2.5). Unlike `HC-*` / `LC-*` / `POS-*` which rate tests that exist, gap codes name tests that *don't* exist — probable misses found by grep cross-reference from the SUT to the test project. Each entry in the gap report is a probable gap, not a confirmed one; extensions own the grep patterns and confidence level.
 
-`Gap-API` — public type or method in the SUT has no test reference. *Confidence: medium* — may be covered indirectly via a caller; verify via mutation testing or manual read.
-`Gap-Route` — HTTP route, function handler, or message-queue handler has no test reference to its route template / queue name / topic. *Confidence: high* — routes are registered by string identity.
-`Gap-Migration` — database migration class has no test reference to its class name. *Confidence: high*.
-`Gap-Throw` — exception throw site has no test that both names the exception type and calls the containing method. *Confidence: medium* — may be covered by a generic error-path test that doesn't name the type.
-`Gap-Validate` — validation attribute (e.g. `[Required]`, `[StringLength]`) on an input type has no test that sends a bad value for that field. *Confidence: high* on serialization-layer input types.
-`Gap-AuthZ` — protected endpoint has one or more uncovered cells in the auth scenario matrix (anonymous / token-expired / token-tampered / insufficient-scope / sufficient-scope / cross-user). Emitted by deep-mode step 2.6. *Confidence: high* — auth cells require explicit test setup, so indirect coverage is rare.
+`Gap-API` — public type or method in the SUT lacks strong test coverage. *Confidence: medium* — may be covered indirectly via a caller; weak identifier-only references do not suppress the gap without an observable oracle.
+`Gap-Route` — HTTP route, function handler, or message-queue handler lacks strong coverage for its route template / queue name / topic. *Confidence: high* — routes are registered by string identity; status-only happy-path references are `referenced-weak`.
+`Gap-Migration` — database migration class lacks strong upgrade or migration-path coverage. *Confidence: high*.
+`Gap-Throw` — exception throw site lacks a test that both reaches the behavior and asserts the published error contract. *Confidence: medium* — may be covered by a generic error-path test, but identifier-only references are weak evidence.
+`Gap-Validate` — validation attribute (e.g. `[Required]`, `[StringLength]`) or schema rule on an input type lacks a test that sends a bad value for that field and asserts the validation contract. *Confidence: high* on serialization-layer input types.
+`Gap-AuthZ` — protected endpoint has one or more uncovered cells in the auth / authorization / session matrix (minimum: anonymous / token-expired / token-tampered / insufficient-scope / sufficient-scope / cross-user; scheme-specific cells may include wrong issuer, wrong audience, wrong token type, not-before, revoked token, logout-invalidated, timeout, session rotation, fixation, CSRF). Emitted by deep-mode step 2.6. *Confidence: high* — auth cells require explicit test setup, so indirect coverage is rare.
 `Gap-MigUpgrade` — database migration class has no test that arranges non-empty seed data before invoking the migration. An empty-database test (`I-HC-A7`) does not count. Emitted by deep-mode step 2.7. *Confidence: high* for repos with an expand-only migration rule.
 
 ## Integration rubric

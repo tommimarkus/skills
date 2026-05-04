@@ -119,11 +119,11 @@ Robot tests cannot enumerate server-side auth declarations by themselves. Use th
 
 ### Matrix columns
 
-Use the core columns: `anonymous`, `token-expired`, `token-tampered`, `insufficient-scope`, `sufficient-scope`, `cross-user`. Add `admin-only` only when the endpoint or suite explicitly names an admin role.
+Use the core columns: `anonymous`, `token-expired`, `token-tampered`, `insufficient-scope`, `sufficient-scope`, `cross-user`. Add `not-before`, `wrong-issuer`, `wrong-audience`, `wrong-token-type`, `revoked-token`, `logout-invalidated`, `idle-timeout`, `session-rotation`, `session-fixation`, `csrf-missing`, `csrf-invalid`, and `admin-only` only when the endpoint, suite, tags, fixtures, or loaded SUT extension make those cells applicable.
 
 ### Cross-reference matching
 
-A Robot test covers a cell when the test name, tags, or body names the scenario and asserts the expected status / error / visible result. A setup keyword that silently changes identity without the test naming the scenario is not enough.
+A Robot test covers a cell when the test name, tags, or body names the scenario and asserts the expected status / error / visible result, cookie/session mutation, redirect, or blocked state. A setup keyword that silently changes identity without the test naming the scenario is not enough. A table with only valid credentials, `200` / `OK`, or "login succeeds" rows is `referenced-weak` for every negative cell.
 
 ### Output
 

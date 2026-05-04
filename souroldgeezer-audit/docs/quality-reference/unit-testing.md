@@ -60,7 +60,7 @@ Beck: "if the tests all pass, the code under test should be suitable for product
 |---|---|
 | Every branch of conditional logic needs at least one case | `if`, `switch`, ternary, early-return, pattern match |
 | Happy path *and* each distinct sad path | Any function with failure modes |
-| Boundary conditions: 0, 1, many, min, max, null, empty, overflow | Numeric, string, collection inputs |
+| Boundary conditions derived from equivalence partitions: below / at / above validation ranges, state-transition edges, empty / one / many collection cardinality, nullability boundaries, numeric limits, parser grammar limits, temporal windows | Numeric, string, collection, parser, validation, state-machine, and time-window inputs |
 | Invariants (things that must always be true) | Encryption non-determinism, serialization round-trips, ordering, idempotency |
 | External contracts: request/response shape, status codes, headers | System boundaries |
 | Observable side effects clients depend on | Persistence, outbound messages, emitted events |
@@ -73,6 +73,23 @@ Deliberately **off** the list:
 - Framework behavior (ORMs, routers, serializers, DI containers) — trust the framework
 - Pure delegation glue — test the thing it delegates to
 - Third-party code you don't own
+
+### 3.1 Boundary analysis is contract-derived
+
+Boundary-value analysis starts from a value domain and its equivalence
+partitions. Generic sentinel values such as `0`, `1`, `-1`, `null`, `empty`,
+`min`, or `max` are useful clues only when they are actual coverage items for
+the visible contract. They do not satisfy a richer domain boundary by
+themselves. For example, a login-length contract of `6..15` has boundary
+coverage around `5/6` and `15/16`; a test that covers only `0` has exercised
+one invalid sentinel but has not covered the stated acceptance and rejection
+edges.
+
+When the test basis exposes a range, enum transition, parser grammar,
+collection cardinality rule, persisted constraint, temporal cutoff, or
+validation attribute, audit boundary coverage against that basis. If the
+contract is absent, report the limitation and treat sentinel coverage as
+`unknown` rather than positive evidence.
 
 ---
 
@@ -114,6 +131,13 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 6. **Zero negative tests** for a function with documented error modes.
 7. **Excessive setup (>20 lines) for a single assertion.** Either the SUT has too many dependencies, or the test is reconstructing production state rather than isolating a behavior slice.
 8. **Parameterized test where all cases assert the same thing.** The parameterization isn't doing work.
+9. **Skipped / ignored / quarantined test with no linked justification.**
+10. **Non-trivial assertion with no failure message or requirement note.**
+11. **Parameterized test with missing contract-derived boundary values.** The
+    data may include generic sentinels but still miss visible domain edges,
+    such as one row for `0` while a `6..15` range needs `5/6` and `15/16`.
+12. **Positive test with no sibling negative test** for a method or input that
+    exposes a failure partition.
 
 ### 5.3 Positive signals (reward these)
 
@@ -124,6 +148,9 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 5. **Separate tests for happy path and each distinct sad path.**
 6. **Comments citing a requirement, spec, or invariant on non-obvious expected values.** Rare but gold.
 7. **Tests that express an invariant** (round-trip, idempotency, commutativity) rather than a single point.
+8. **Meaningful failure messages** on non-trivial assertions.
+9. **Property-based tests** whose generators are paired with a named invariant
+   and, where relevant, explicit examples for contract boundaries.
 
 ---
 

@@ -78,6 +78,10 @@ Worklist rules:
 - Static-only `probable-static` gap entries are verification work, not direct
   implementation work. Phrase them as "verify whether ..." and include the
   mutation/manual-review step needed to confirm.
+- `referenced-weak` and `referenced-incidental` gap entries are test-strengthening
+  work, not covered surfaces. Phrase them as "add or verify a contract oracle
+  for ..." and name the missing invalid, unauthorized, conflict, timeout,
+  duplicate, boundary, or state-change behavior.
 - `confirmed-mutation` and `confirmed-manual` gaps may become implementation
   work items.
 - `dismissed-indirect` gaps do not become worklist items; cite the covering

@@ -71,7 +71,7 @@ public async Task Get_Admin_Returns_Ok()
 }
 ```
 
-**Rewrite (intent):** cover the full matrix per `integration-testing.md §5.2 I-HC-B7` — anonymous (expect `401`), valid token (expect `200`), expired token (expect `401`), insufficient scope (expect `403`). Use a `TestAuthHandler` scheme registered via `factory.WithWebHostBuilder` so the test controls exactly which principal is presented.
+**Rewrite (intent):** cover the full matrix per `integration-testing.md §5.2 I-HC-B7` — anonymous (expect `401`), valid token/session (expect documented success), expired or not-yet-valid token (expect `401`), tampered/wrong-issuer/wrong-audience token where JWT/OIDC is used (expect `401`), insufficient scope/role (expect `403`), and cross-user/tenant access where resources have owners (expect `403` or `404`). Use a `TestAuthHandler` scheme registered via `factory.WithWebHostBuilder` so the test controls exactly which principal is presented.
 
 ---
 
@@ -96,15 +96,19 @@ For each enumerated endpoint, search the test project for each matrix column:
 
 - **`anonymous`** — a test that calls `factory.CreateClient()` (no auth handler configured) and asserts `401 Unauthorized` on the endpoint. Look for `HttpStatusCode.Unauthorized` or `.Should().Be(HttpStatusCode.Unauthorized)` alongside the endpoint route.
 - **`token-expired`** — a test that arranges a token with a `ValidTo` / `exp` claim in the past (e.g. `DateTimeOffset.UtcNow.AddMinutes(-5)` fed into a `JwtSecurityTokenHandler` or test-auth-handler factory).
+- **`not-before`** — a test that arranges `nbf` / `ValidFrom` in the future and asserts `401`.
 - **`token-tampered`** — a test that arranges a valid-format token whose signing key differs from the SUT's configuration, or a token whose `alg` is `none`, asserting `401`.
+- **`wrong-issuer` / `wrong-audience` / `wrong-token-type`** — tests that present validly signed tokens with an issuer, audience, or `typ`/scheme that the endpoint must reject, asserting `401`.
 - **`insufficient-scope`** — a test that uses a `TestAuthHandler` to present a principal *without* the required policy / role and asserts `403 Forbidden`.
 - **`sufficient-scope`** — a test that presents a principal with the required policy / role and asserts the documented success code.
 - **`cross-user`** — a test that presents user A's principal against a resource created by user B (e.g. a Cosmos partition key owned by user B) and asserts `403 Forbidden` or `404 Not Found`.
+- **`logout-invalidated` / `session-rotation` / `session-fixation` / `csrf-invalid`** — applicable when ASP.NET Core cookie auth, server-side sessions, or antiforgery tokens are part of the tested app. Cover by asserting logout invalidates the cookie, privilege changes rotate the session where required, a pre-login session id is not retained after login, and missing/invalid antiforgery tokens are rejected.
 
 ### Carve-outs
 
 - **Policy-less `[Authorize]`** — an endpoint decorated with bare `[Authorize]` has no scope / role requirement. The `insufficient-scope` cell is `n/a` for that endpoint; do not flag it as a gap.
 - **Single-user product** — if the repo has no multi-tenant model (no per-user resource ownership), the `cross-user` cell is `n/a`. Detect by searching for `partitionKey` / `userId` / `tenantId` parameters on the endpoint; if none, mark `n/a`.
+- **Bearer-only APIs** — cookie/session and CSRF cells are `n/a` unless the app has cookie auth, server-side session state, browser form posts, or antiforgery middleware.
 - **`dotnet.I-HC-B1` already fires** — a test flagged under `dotnet.I-HC-B1` (happy-path-only against a `factory.CreateClient()`) is the same gap as the auth matrix rows. Emit one finding per endpoint, not one per test; reference both codes.
 
 ---

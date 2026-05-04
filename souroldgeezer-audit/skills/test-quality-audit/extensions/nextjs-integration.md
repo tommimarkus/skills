@@ -114,14 +114,16 @@ In addition to the patterns in `nodejs-integration.md § Protected-endpoint patt
 
 ### Auth-scenario detection — Next.js refinements
 
-The matrix columns are the same six as `nodejs-integration.md` (`anonymous`, `token-expired`, `token-tampered`, `insufficient-scope`, `sufficient-scope`, `cross-user`). Next.js-specific detection hints:
+Use the core six columns from `nodejs-integration.md` (`anonymous`, `token-expired`, `token-tampered`, `insufficient-scope`, `sufficient-scope`, `cross-user`) plus any scheme-specific cells made applicable by Auth.js sessions, proxy / middleware, cookie-backed Server Actions, or browser form posts. Next.js-specific detection hints:
 
 - **`anonymous`** — a proxy test that invokes the proxy function with a `NextRequest` carrying no `session` cookie and asserts the returned `NextResponse.status === 307` (redirect) with `Location === '/login'` OR `status === 401`. For Route Handlers: same shape but using `GET(new Request(...))`.
 - **`sufficient-scope`** — a test that constructs a session token via the project's session-sign helper (typically a `signIn` test-helper, or Auth.js's `encode` with the project's `NEXTAUTH_SECRET`), sets it as the `session` cookie on the `NextRequest`, and asserts on success behaviour.
 - **`token-expired`** — for Auth.js sessions with a `maxAge`, craft a session whose `expires` field is in the past. For JWTs used by Auth.js or a custom scheme, standard `exp` in the past.
+- **`not-before` / `wrong-issuer` / `wrong-audience` / `wrong-token-type`** — for custom JWT/OIDC schemes, craft tokens with future `nbf`, rejected `iss`, rejected `aud`, or a token type/scheme that the route should reject.
 - **`token-tampered`** — a session cookie whose signature doesn't validate (a test-helper that re-signs with a wrong secret, or a cookie whose JSON body has been modified post-signing).
 - **`insufficient-scope`** — a session whose `user.role` / `user.permissions` / custom claim lacks the required value for the target endpoint. Auth.js's session-callback often attaches these; the test-helper can produce a session with the missing claim.
 - **`cross-user`** — a session for user A presented against a resource belonging to user B (common in multi-tenant or per-user-resource apps). Detect the applicability by checking the endpoint path for per-user segments (`/api/users/<userId>/*`, `/app/users/<userId>/*`) or request bodies with `userId` / `tenantId` / `orgId` fields.
+- **`logout-invalidated` / `session-rotation` / `session-fixation` / `csrf-invalid`** — for Auth.js/session-cookie or Server Action form flows, assert logout invalidates the old cookie, privileged session changes rotate where required, a pre-login session id is not retained after login, and missing/invalid CSRF tokens are rejected. Valid-session-only tests are `referenced-weak` for these cells.
 
 ### Next.js auth carve-outs
 

@@ -95,7 +95,7 @@ Osherove's three pillars (see [unit-testing.md §2.6](unit-testing.md)). An inte
 | Heuristic | Notes |
 |---|---|
 | Contract shape | Status codes, error envelope, header presence, content type |
-| Auth boundary | Anonymous, valid token, expired token, insufficient scope |
+| Auth boundary | Anonymous, valid token, expired token, tampered token, wrong issuer/audience/type where applicable, insufficient scope or role, cross-user/tenant access, session invalidation / CSRF where the app owns cookies or form posts |
 | Idempotency and retry | The SUT's actual retry path, not a mocked one |
 | Header propagation | Correlation ids, trace context, tenant headers |
 | Pagination and ordering contract | What the consumer actually depends on |
@@ -159,7 +159,7 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 4. **`I-HC-B4`** — Hardcoded port, container name, hostname, or environment URL. The test runs in exactly one environment by accident.
 5. **`I-HC-B5`** — The downstream service is mocked at the transport layer. Defeats the entire sub-lane: the test exercises no real seam. Either move it to the unit lane or replace it with a contract test.
 6. **`I-HC-B6`** — Retry test that stubs the transport. The SUT's retry code path is never really executed; only the wiring around it is.
-7. **`I-HC-B7`** — Auth test with only a happy-path valid token. No expired token, no missing token, no insufficient scope, no malformed token. The negative space is exactly where auth bugs live.
+7. **`I-HC-B7`** — Auth test with only a happy-path valid token/session. No missing token, expired token, tampered or malformed token, wrong issuer/audience/type where applicable, insufficient scope/role, cross-user or cross-tenant attempt, logout-invalidated session, or CSRF failure when those branches are part of the SUT. The negative space is exactly where auth bugs live.
 8. **`I-HC-B8`** — Contract test whose "expected" payload was pasted from a recorded run, with no consumer behind it. The contract is fictional.
 
 ### 5.3 Low-confidence smells, shared across sub-lanes — `I-LC-1..I-LC-6`

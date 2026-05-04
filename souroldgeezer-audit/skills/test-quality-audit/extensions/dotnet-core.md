@@ -220,19 +220,33 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 ---
 
-### `dotnet.LC-6` — `[Theory]` on a numeric parameter without boundary values
+### `dotnet.LC-6` — `[Theory]` missing contract-derived boundary rows
 
 **Applies to:** `unit, integration` — refines core `LC-11`.
 
-**Detection:** a `[Theory]` method with a numeric parameter (`int`, `long`, `double`, `decimal`, `float`) or collection parameter (`string`, `T[]`, `IEnumerable<T>`, `List<T>`). Collect every `[InlineData(...)]` / `[MemberData(...)]` / `[ClassData(...)]` row feeding that parameter. Flag if **none** of these boundary values appear in at least one row:
+**Detection:** a `[Theory]` method with a numeric parameter (`int`, `long`, `double`, `decimal`, `float`), string parameter, collection parameter (`T[]`, `IEnumerable<T>`, `List<T>`), enum/state parameter, or input DTO whose validation attributes expose a range or partition. Collect every `[InlineData(...)]` / `[MemberData(...)]` / `[ClassData(...)]` row feeding that parameter. First inspect the visible contract:
+
+- Data annotations: `[Range]`, `[StringLength]`, `[MinLength]`, `[MaxLength]`, `[Required]`, `[RegularExpression]`.
+- FluentValidation rules: `.MinimumLength(...)`, `.MaximumLength(...)`, `.InclusiveBetween(...)`, `.GreaterThan(...)`, `.LessThanOrEqualTo(...)`, `.Must(...)`.
+- Route constraints and model-binding constraints.
+- Enum / state-transition branches and guard clauses.
+- Persistence constraints that are asserted through request/response or DB state.
+
+Flag when no row covers the contract-derived boundary coverage items, or when rows cover only generic sentinels while richer edges are visible. Examples:
+
+- A login length contract `6..15` needs `5/6` and `15/16` for 2-value BVA; `0` alone is `sentinel-only`.
+- A `[Range(1, 10)]` quantity needs `0/1` and `10/11`; a single happy row `5` is interior-only.
+- A nullable `[Required]` field needs the missing/null case plus the valid case; a payload with the field present in every row is positive-only.
+
+When no richer contract is visible, fall back to generic sentinel signals:
 
 - Numeric: `0`, `1`, `-1`, `int.MaxValue`, `int.MinValue` (scale to the numeric type).
 - String: `""` (empty), single-character literal, `null`.
 - Collection: `new T[] {}`, `new T[] { x }`, `null`.
 
-**Why low-confidence:** the test may be intentionally scoped to a narrow equivalence class. Always flag with a note that boundary analysis is missing; the author can dismiss if the scope is narrow by design.
+**Why low-confidence:** the test may be intentionally scoped to a narrow equivalence class. Always report `Boundary evidence` as `contract-derived`, `partial`, `sentinel-only`, or `unknown` so the author can dismiss a narrow-by-design case with evidence.
 
-**Rewrite:** add at least one boundary row, or add a separate `[Fact]` for each boundary the function is specified to handle.
+**Rewrite:** add boundary rows or separate `[Fact]` tests for each contract edge the function is specified to handle.
 
 ---
 
@@ -421,18 +435,18 @@ For each enumerated symbol, the audit agent searches the test project tree (`tes
 
 When a test-artifact extension is also loaded, include its test files in the cross-reference if they exercise this .NET SUT's public boundary. For Robot Framework, also search `**/*.robot` and `**/*.resource` files, excluding generated outputs and vendored dependencies. A Robot test can satisfy a .NET gap when it calls the route, command, or public adapter and asserts the required contract. Count that as external contract coverage; do not require a C# test unless the gap is specifically source-level and not observable from Robot.
 
-- **`Gap-API`** — the symbol name appears as an identifier in any test method name (`public void CancelOrderAsync_...`) or test body (`sut.CancelOrderAsync(...)`, `new CancelOrderAsync...`). Word-boundary match: `\bCancelOrderAsync\b`.
-- **`Gap-Route`** — the route template appears as a string literal in any test body. Match the exact template after normalising case: `"orders/{id}"` or `"orders"`. Also match the Functions name from `[Function("...")]` as a string literal. In Robot tests, count RequestsLibrary / custom API-library calls that use the same route and assert status plus body/header/auth/domain outcome.
+- **`Gap-API`** — `covered-strong` only when the symbol name appears as an identifier and the same test asserts a return value, published side effect, error, state, or domain outcome. Word-boundary identifier presence by itself is `referenced-weak`. A constructor/import/setup-only mention is `referenced-incidental`.
+- **`Gap-Route`** — `covered-strong` only when the route template or Functions name appears and the test asserts the route's published contract: status plus body/header/auth/domain outcome, state change, validation error, or problem code. A test that only asserts `200`, `201`, URL reachability, or no exception is `referenced-weak`. In Robot tests, count RequestsLibrary / custom API-library calls only when they assert the same contract strength.
 - **`Gap-Migration`** — the migration class name appears as an identifier in any test body, or the migration file name appears as a path literal.
-- **`Gap-Throw`** — both the exception type (e.g. `InvalidOperationException`) *and* the containing method name appear in the same test method body. If either is missing, the throw site is a probable gap. Robot tests may cover this only when they assert the public error contract produced by that throw site; they do not cover private throw-site details.
-- **`Gap-Validate`** — the input type's property name (e.g. `CustomerId`) appears in a test body that also references the input type (e.g. `new CreateOrderRequest { CustomerId = null }`). In Robot API tests, count payloads that include or omit the field and assert the expected validation status / problem code.
+- **`Gap-Throw`** — both the exception type (e.g. `InvalidOperationException`) *and* the containing method name appear in the same test method body, and the assertion checks the exception or public error contract. If either is missing, or the test only reaches the happy path, the throw site remains a probable gap. Robot tests may cover this only when they assert the public error contract produced by that throw site; they do not cover private throw-site details.
+- **`Gap-Validate`** — the input type's property name (e.g. `CustomerId`) appears in a test body that also references the input type and intentionally violates or omits the field (e.g. `new CreateOrderRequest { CustomerId = null }`) with an assertion on validation status / problem details. Payloads that include only valid values are `referenced-weak` for invalid-field coverage. In Robot API tests, count payloads only when they include or omit the field and assert the expected validation status / problem code.
 
 ### Known indirect-coverage patterns (carve-outs)
 
 These patterns suppress a false-positive `Gap-API` entry:
 
-- A service method `Foo.BarAsync(...)` is covered indirectly when a Functions endpoint `Foo.BarFunction` that wraps it has a test, and the service type is registered in DI under the Functions project. Search DI registrations (`services.AddScoped<Foo>()` / `services.AddSingleton<Foo>()`) in the Functions project to establish wrapping; if a test exercises the wrapping endpoint, the service method is *indirectly covered* — record as "indirectly covered via `FooFunction`" and suppress the `Gap-API` entry.
-- A Robot Framework API, CLI, or browser test can cover a route, function, validation rule, or public adapter when it exercises the .NET public boundary and asserts the relevant contract. Record as "externally covered via Robot `<suite>/<test>`" and suppress only the matching public-boundary gap. Do not suppress unit-seam, private throw-site, or mutation-target findings from Robot evidence alone.
+- A service method `Foo.BarAsync(...)` is covered indirectly when a Functions endpoint `Foo.BarFunction` that wraps it has a test, and the service type is registered in DI under the Functions project. Search DI registrations (`services.AddScoped<Foo>()` / `services.AddSingleton<Foo>()`) in the Functions project to establish wrapping; if a test exercises the wrapping endpoint and asserts the published contract, record as "indirectly covered via `FooFunction`" and suppress the `Gap-API` entry. If the endpoint test is status-only, keep the service as `referenced-weak`.
+- A Robot Framework API, CLI, or browser test can cover a route, function, validation rule, or public adapter when it exercises the .NET public boundary and asserts the relevant contract. Record as "externally covered via Robot `<suite>/<test>`" and suppress only the matching public-boundary gap. Do not suppress unit-seam, private throw-site, or mutation-target findings from Robot evidence alone. Robot happy-path-only rows are weak evidence for negative validation/auth/boundary gaps.
 - A `MigrationRunner.RunAsync` test in `tests/Lfm.Api.Tests/` that exercises the runner with seed data covers every migration transitively if the test explicitly asserts post-state for each migration class. Search for the pattern and suppress `Gap-Migration` entries for the covered classes.
 
 ### Confidence annotations

@@ -117,7 +117,7 @@ The four sub-lanes have different jobs. Each earns its place differently.
 | Cookie jar attributes under real navigation | `HttpOnly`, `Secure`, `SameSite` actually survive in the browser, not just in the response header |
 | Session lifecycle | Invalidation on logout, fixation resistance, rotation on privilege change, expired-cookie behavior |
 | Cross-user access paths | Authenticated user A cannot reach user B's resources through routed navigation |
-| Negative-space auth | Tampered cookie, expired token, missing token, malformed token, insufficient scope |
+| Negative-space auth | Missing token/session, expired token, not-before token, tampered cookie/token, malformed token, wrong issuer/audience/type where applicable, insufficient scope/role, cross-user or cross-tenant navigation, revoked token/session |
 
 ### 3.5 Narrow vs. broad
 
@@ -179,7 +179,7 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 
 1. **`E-HC-S1`** — Asserts a security header's *value* only; does not exercise the browser's enforcement of it. If the test does not need a browser to prove anything, the test is in the wrong lane — move to integration sub-lane B. Sub-lane S exists to prove browser *behavior*, not response headers.
 2. **`E-HC-S2`** — XSS or injection payload test with one pasted-literal payload and no reference to OWASP, a payload list, or a fuzzing corpus. The negative-space coverage is zero.
-3. **`E-HC-S3`** — Auth test with only a happy-path valid session. No expired token, no missing token, no tampered cookie, no cross-user access attempt. (Browser-layer analogue of [`I-HC-B7`](integration-testing.md).)
+3. **`E-HC-S3`** — Auth test with only a happy-path valid session. No missing or expired token/session, no tampered cookie, no revoked or logout-invalidated session, no insufficient-role/scope state, no cross-user access attempt, and no CSRF or SameSite negative case where cookie-backed browser flows are in scope. (Browser-layer analogue of [`I-HC-B7`](integration-testing.md).)
 4. **`E-HC-S4`** — CSP / CORS / frame-ancestors test asserts server response without verifying *browser-side* blocking. The contract under test is what the browser does with the policy, not what the server declared.
 5. **`E-HC-S5`** — Security test that runs against a test-only endpoint, a debug route, or a build flavor that does not exist in production. Whatever it proves, it does not prove what production does. (Browser-layer analogue of [`I-HC-B2`](integration-testing.md).)
 

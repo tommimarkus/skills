@@ -8,6 +8,12 @@ Static audit grades **test quality**. Mutation testing grades **test effectivene
 
 - Static audit catches characterization tests (locked current behavior), mock-verification smells, and pasted-literal expected values. It cannot see whether assertions actually verify anything, nor whether files exist without tests at all.
 - Mutation testing catches surviving mutants (code that changed without any test failing) and no-coverage gaps (code no test ever exercises). It cannot tell you whether a high-scoring test is pinning the right behavior or the wrong one.
+- Boundary analysis explains many survived mutants. When a mutant changes
+  `<` to `<=`, flips an enum/state branch, removes a validator, or changes a
+  parser cutoff, reconcile the survivor against `LC-11` / `LC-12`: the suite
+  may have exercised a generic sentinel or happy interior value without
+  exercising the contract-derived boundary. Do not treat mutation score as a
+  standalone oracle; use it to identify which boundary or gap evidence is weak.
 
 Running both on the same audit produces a reconciliation: **agreement** where both say "fine" or both say "broken" is trustworthy; **disagreement** is where the real findings live. A file rated `strong` by static audit that has surviving mutants is the single highest-signal result mutation testing can produce.
 
@@ -25,6 +31,10 @@ Running both on the same audit produces a reconciliation: **agreement** where bo
    - Per-file killed / survived / no-coverage counts.
    - Surviving-mutant details for files the static audit rated `strong` (the audit-vs-mutation disagreements).
    - List of files with zero coverage (all mutants `NoCoverage`).
+   - Boundary-sensitive survivors: comparison, range, validation, branch,
+     parser, enum/state, and time-window mutants that survived despite nearby
+     tests. Link these back to `Boundary evidence` and `Coverage strength`
+     fields in per-test findings when possible.
 
 ## Output states
 
@@ -41,6 +51,7 @@ In the step-5 suite assessment, the `Mutation testing` subsection must be presen
 - **Files with zero coverage:** <count>, top examples: <file list>
 - **Audit-vs-mutation agreements (static rated weak/adequate + survivors):** <file list>
 - **Audit-vs-mutation disagreements (static rated strong + survivors):** <file list with counts> — highest-value findings
+- **Boundary-sensitive survivors:** <comparison/range/validation/branch survivors that suggest missing contract-derived edges>
 - **Notes:** <any scope caveats, e.g. "Blazor WASM SUT excluded per extension limitation">
 ```
 

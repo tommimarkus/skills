@@ -107,12 +107,28 @@ network, database, or global state for an entire module/session.
 
 Rewrite: narrow fixture scope and request it explicitly from tests that need it.
 
+### `python.LC-3` — parametrized cases miss contract-derived boundaries
+
+Applies to: unit, integration
+
+Detection: `pytest.mark.parametrize`, `subTest`, or table-driven fixture data
+covers numeric, string, collection, parser, enum/state, CLI, or validated
+inputs while visible contracts expose boundaries that are absent from the rows.
+Inspect Pydantic constraints, dataclass validators, `argparse` choices/ranges,
+attrs validators, parser grammar cutoffs, branch predicates, and route/request
+schemas before falling back to generic sentinels. Generic values such as `0`,
+`None`, `""`, and `[]` are `sentinel-only` unless they are actual boundaries
+for the visible contract.
+
+Rewrite: add below / at / above or before / at / after rows for the named
+contract, plus the corresponding invalid partition where one exists.
+
 ### `python.POS-1` — explicit parametrized boundary set
 
 Applies to: unit, integration
 
-Detection: `pytest.mark.parametrize` or `subTest` covers boundary/equivalence
-classes with varied expected values.
+Detection: `pytest.mark.parametrize` or `subTest` covers contract-derived
+boundary/equivalence classes with varied expected values.
 
 ### `python.POS-2` — property-based invariant
 
@@ -161,8 +177,12 @@ Python gap detection is approximate and deep-mode only.
   request-schema validators.
 
 Cross-reference by symbol name, route string, migration revision/name, or
-exception type in test names, assertions, and bodies. Treat all static-only
-results as probable until mutation or manual review confirms them.
+exception type in test names, assertions, and bodies. Classify identifier-only,
+import-only, route-status-only, and valid-payload-only tests as
+`referenced-weak` or `referenced-incidental`; they do not suppress gaps for
+missing invalid, auth, boundary, throw, migration, or state-change behavior.
+Treat all static-only results as probable until mutation or manual review
+confirms them.
 
 ## Determinism Verification
 

@@ -111,7 +111,7 @@ test('GET /admin/users returns ok', async () => {
 });
 ```
 
-**Rewrite (intent):** cover the full matrix per [integration-testing.md § 5.2 I-HC-B7](../../../docs/quality-reference/integration-testing.md) — anonymous (expect `401`), valid token (expect `200`), expired token (expect `401`), insufficient scope (expect `403`). For Auth.js v5, use the blessed test harness (mock session factory) rather than bypassing the middleware.
+**Rewrite (intent):** cover the full matrix per [integration-testing.md § 5.2 I-HC-B7](../../../docs/quality-reference/integration-testing.md) — anonymous (expect `401`), valid token/session (expect documented success), expired or not-yet-valid token (expect `401`), tampered/wrong-issuer/wrong-audience token where JWT/OIDC is used (expect `401`), insufficient scope/role (expect `403`), cross-user/tenant access where resources have owners (expect `403` or `404`), and cookie/session/CSRF lifecycle cells where the app owns them. For Auth.js v5, use the project session helper rather than bypassing the middleware.
 
 ---
 
@@ -199,15 +199,19 @@ For each enumerated endpoint, search the test project for each matrix column:
 
 - **`anonymous`** — a test that calls `request(app).<method>('<route>')` (no `Authorization` header, no session cookie) and asserts `.expect(401)` / `.expect(403)`. Match `expect\(res\.status\)\.toBe\((401|403)\)` or `\.expect\((401|403)\)`.
 - **`token-expired`** — a test that arranges a JWT with `exp` in the past. Match `jwt\.sign\(.*\{[^}]*exp\s*:\s*Math\.floor\(Date\.now\(\)\s*/\s*1000\)\s*-\s*\d+` or a test-helper named `expiredToken()` / `tokenWithExp(-<delta>)`.
+- **`not-before`** — a test that arranges `nbf` in the future and asserts `401`.
 - **`token-tampered`** — a test that arranges a token whose signing secret differs from the SUT's, or whose `alg` header is `none`. Match `jwt\.sign\(.*'<wrongSecret>'` or `alg\s*:\s*['"]none['"]`.
+- **`wrong-issuer` / `wrong-audience` / `wrong-token-type`** — tests that present validly signed tokens with rejected `iss`, `aud`, or `typ` / scheme values, asserting `401`.
 - **`insufficient-scope`** — a test that presents a session whose `role`/`scope`/`permissions` lack the endpoint's required value, asserting `.expect(403)`.
 - **`sufficient-scope`** — a test that presents a session with the required role / scope, asserting the documented success code.
 - **`cross-user`** — a test that presents user A's session against a resource created by user B (e.g. resource path `/api/users/<B_id>/orders`) and asserts `403` or `404`.
+- **`logout-invalidated` / `idle-timeout` / `session-rotation` / `session-fixation` / `csrf-invalid`** — applicable when Express/Fastify/Nest/Next uses cookie-backed sessions, `express-session`, Auth.js cookies, CSRF middleware, or browser form posts. Cover by asserting logout invalidates the cookie, timeout is rejected, privilege changes rotate the session where required, a pre-login session id is not retained after login, and missing/invalid CSRF tokens are rejected.
 
 ### Carve-outs
 
 - **Bare `@UseGuards(JwtAuthGuard)` / `requireAuth()` with no scope / role** — the endpoint has no scope / role requirement. The `insufficient-scope` cell is `n/a` for that endpoint; do not flag it as a gap.
 - **Single-user product** — if the repo has no multi-tenant model (no per-user / per-org resource ownership), the `cross-user` cell is `n/a`. Detect by grepping for `userId` / `tenantId` / `orgId` / `ownerId` in the endpoint's path params or request body schema; if none, mark `n/a`.
+- **Bearer-only APIs** — cookie/session and CSRF cells are `n/a` unless the app has cookie auth, server-side session state, browser form posts, or CSRF middleware.
 - **`nodejs.I-HC-B1` already fires** — a test flagged under `nodejs.I-HC-B1` (happy-path-only against a protected endpoint) is the same gap as the auth matrix rows. Emit one finding per endpoint, not one per test; reference both codes.
 
 ---

@@ -205,6 +205,27 @@ Page Should Contain    Thank you
 
 ---
 
+### `robotframework.LC-4` - Template or data-driven rows cover only a narrow happy partition
+
+**Applies to:** `unit, integration, e2e`
+
+**Detection:** a `Test Template`, data-driven table, or repeated keyword call
+uses only valid credentials, `200` / `OK` statuses, one valid role, one valid
+payload shape, or repeated values from the same equivalence class while the
+keyword name, tags, endpoint, schema, or SUT extension exposes invalid,
+unauthorized, forbidden, empty, duplicate, boundary, or session-lifecycle
+partitions.
+
+**Why low-confidence:** Robot tables can look broad because they have many
+rows, but rows that all assert the same happy result are still one narrow
+scenario. Generic empty/null/status rows do not count as boundary coverage
+unless the SUT contract says those are the relevant edges.
+
+**Rewrite (intent):** add rows for named negative partitions and assert the
+observable status, message, page state, or domain outcome for each row.
+
+---
+
 ## Framework-specific positive signals (`robotframework.POS-*`)
 
 ### `robotframework.POS-1` - Business keyword plus explicit technical oracle
@@ -252,7 +273,7 @@ Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumer
 
 Robot Framework itself does not expose the production SUT surface. When another SUT stack extension is detected (.NET, Node.js / TypeScript, Next.js, or future Python), use that extension's SUT surface enumeration for product-code gaps.
 
-Robot tests can still satisfy SUT-stack coverage gaps when they exercise the SUT's public boundary and assert the relevant contract. Example: a RequestsLibrary test against a .NET route can satisfy that route's `.NET` `Gap-Route` entry if it asserts status plus stable body/header/auth/domain behavior. Record this as external contract coverage under the SUT extension. Do not use Robot evidence to suppress source-level unit seams, private throw-site details, or mutation-target findings that Robot cannot observe.
+Robot tests can still satisfy SUT-stack coverage gaps when they exercise the SUT's public boundary and assert the relevant contract. Example: a RequestsLibrary test against a .NET route can satisfy that route's `.NET` `Gap-Route` entry if it asserts status plus stable body/header/auth/domain behavior. Record this as external contract coverage under the SUT extension. Robot rows that only assert `200`, `OK`, URL reachability, element presence, or successful login are `referenced-weak`; they do not suppress invalid-payload, unauthorized, forbidden, session-lifecycle, duplicate, boundary, or state-change gaps. Do not use Robot evidence to suppress source-level unit seams, private throw-site details, or mutation-target findings that Robot cannot observe.
 
 Use Robot-specific surface enumeration only when the audit scope says the **keyword layer** is the SUT, such as a shared `.resource` library or custom test library intended for reuse.
 
