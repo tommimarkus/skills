@@ -1,6 +1,6 @@
 # Extension: Azure Functions (.NET, isolated worker)
 
-Stack-specific additions to the `serverless-api-design` skill for Azure Functions .NET. The core reference [`../../../docs/api-reference/serverless-api-design.md`](../../../docs/api-reference/serverless-api-design.md) stays framework-neutral; this extension layers Functions-specific primitives, patterns, and smells on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Functions .NET. The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Functions-specific primitives, patterns, and smells on top without overriding core rules.
 
 > **Isolated worker only.** The in-process .NET Functions model reaches end of support on **2026-11-10** (MSFT Learn: `azure/azure-functions/migrate-dotnet-to-isolated-model`; `azure/azure-functions/functions-dotnet-class-library`). This extension refuses to author in-process code and flags existing in-process code as `afdotnet.HC-1`.
 

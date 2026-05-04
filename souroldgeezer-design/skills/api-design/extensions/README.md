@@ -1,6 +1,6 @@
 # Extensions
 
-Per-stack packs loaded on demand by the `serverless-api-design` skill. The core workflow in `../SKILL.md` is framework-neutral; extensions add stack-specific primitives, patterns, smells, positive signals, and carve-outs.
+Per-stack packs loaded on demand by the `api-design` skill. The core workflow in `../SKILL.md` is framework-neutral; extensions add stack-specific primitives, patterns, smells, positive signals, and carve-outs.
 
 ## Load order
 
@@ -13,7 +13,7 @@ Extensions **never override** core rules. They may only **add** or **carve out**
 
 ## Extensions compose
 
-Unlike some earlier skill designs where one extension per target was the norm, `serverless-api-design` expects **multi-extension composition** as the common case. A typical production API loads:
+Unlike some earlier skill designs where one extension per target was the norm, `api-design` expects **multi-extension composition** as the common case. A typical production API loads:
 
 - `azure-functions-dotnet.md` for the compute / runtime layer (HTTP trigger shape, DI in `Program.cs`, managed identity, retry attributes, problem+json emission, hosting plan).
 - `azure-cosmosdb.md` for the primary data layer (partition-key strategy, point-read vs query shape, ETag → 412, continuation-token cursors, change-feed processor, data-plane RBAC).
@@ -50,6 +50,10 @@ Each extension is a single markdown file in this directory. Required sections:
 | `azure-cosmosdb.md` | Azure Cosmos DB (NoSQL API) | Provisioned vs Serverless capacity surface, hierarchical partition keys, point-read vs query cost, ETag / `IfMatchEtag` → 412, continuation-token pagination, change-feed processor / trigger, data-plane RBAC, `disableLocalAuth=true`, TTL + unique-key idempotency cache. |
 | `azure-blob-storage.md` | Azure Blob Storage (Block Blobs) | SAS-direct vs API-proxy surface, user-delegation SAS (no account keys), Event-Grid-sourced blob triggers, range requests + 206, ETag optimistic concurrency, archive rehydration as async 202, `allowSharedKeyAccess=false`, versioning + soft delete + immutable storage. |
 
+## Future hosted API extensions
+
+Hosted API guidance belongs in future runtime extensions, not in the core workflow. Likely extension families include ASP.NET Core on Azure App Service, ASP.NET Core on Azure Container Apps, and Kubernetes-hosted HTTP APIs. Add those only when their runtime primitives, detection signals, and smells are specified.
+
 ## Adding an extension
 
 1. Copy one of the existing extensions as a template (pick the closest domain — compute, data, object storage).
@@ -66,5 +70,5 @@ Each extension is a single markdown file in this directory. Required sections:
 ## Non-goals for extensions
 
 - Extensions are not general framework guides. They address the *contract / security / reliability / observability / performance* surface only.
-- Extensions do not duplicate the core reference. If a point already lives in `../../../docs/api-reference/serverless-api-design.md`, cite it; do not restate.
+- Extensions do not duplicate the core reference. If a point already lives in `../../../docs/api-reference/api-design.md`, cite it; do not restate.
 - Extensions do not override the security / contract / reliability / observability baselines. A stack cannot opt out of problem+json or managed-identity — it can only provide its own idiomatic way of honouring them.

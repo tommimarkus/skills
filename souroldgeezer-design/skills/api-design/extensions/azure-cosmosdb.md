@@ -1,6 +1,6 @@
 # Extension: Azure Cosmos DB (NoSQL API)
 
-Stack-specific additions to the `serverless-api-design` skill for Azure Cosmos DB (NoSQL API, `Microsoft.Azure.Cosmos` SDK v3). The core reference [`../../../docs/api-reference/serverless-api-design.md`](../../../docs/api-reference/serverless-api-design.md) stays framework-neutral; this extension layers Cosmos-specific primitives, patterns, and smells on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Cosmos DB (NoSQL API, `Microsoft.Azure.Cosmos` SDK v3). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Cosmos-specific primitives, patterns, and smells on top without overriding core rules.
 
 Scope: the **NoSQL (Core SQL) API** only. Cosmos MongoDB, Cassandra, Gremlin, and Table APIs have different SDK surfaces and idioms; they are not covered here.
 

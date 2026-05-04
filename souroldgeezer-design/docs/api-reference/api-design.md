@@ -1,22 +1,22 @@
-# Serverless HTTP API design — a reference for building, not auditing
+# HTTP API design — a reference for building, extracting, and reviewing
 
 ## 1. Context
 
-A deployed endpoint that returns 200 OK is not the same as a production HTTP API. The central problem of serverless API design is **presence vs. efficacy**: a function that responds to a curl command is not evidence that the API holds up under retries, ships a stable error contract, survives key rotation, emits correlated telemetry, handles 429 from its own data store, survives a cold start inside a p95 budget, or degrades sensibly when the downstream dependency is the one throttling. An HTTP status code is not a contract.
+A deployed endpoint that returns 200 OK is not the same as a production HTTP API. The central problem of API design is **presence vs. efficacy**: an endpoint that responds to a curl command is not evidence that the API holds up under retries, ships a stable error contract, survives key rotation, emits correlated telemetry, handles 429 from its own data store, stays inside its latency budget, or degrades sensibly when the downstream dependency is the one throttling. An HTTP status code is not a contract.
 
-Serverless API design in 2026 is less about stitching triggers and more about writing an API whose **contract, security posture, reliability envelope, and observability** are correct by construction — before the first load test, and regardless of which compute plan or data service sits underneath. This reference is a playbook for that practice: principles, decisions with defaults, a cheatsheet of primitives and status codes, worked patterns, named gotchas, and a review checklist — organized for the person building or reviewing an API, not for a scanner.
+API design in 2026 is less about wiring a route than about writing an API whose **contract, security posture, reliability envelope, and observability** are correct by construction — before the first load test, and regardless of which hosting model, runtime, or data service sits underneath. This reference is a playbook for that practice: principles, decisions with defaults, a cheatsheet of primitives and status codes, worked patterns, named gotchas, and a review checklist — organized for the person building, extracting, or reviewing an API, not for a scanner.
 
 **Security is enforced throughout, not referenced.** Every decision, pattern, and checklist item that touches authentication, authorization, secrets, or data access names the specific discipline it protects: HTTPS-only, Microsoft Entra ID plus managed identities over keys, Key Vault references over literals, data-plane RBAC, least-privilege scopes, input validation at the boundary. A design choice that compromises any of these is called out, never silently accepted.
 
 **Contract discipline is a baseline, not a future concern.** Every endpoint here ships with an OpenAPI 3.1 definition, RFC 9457 `application/problem+json` on every error path, an explicit versioning strategy (no implicit v1), RFC 9110 conditional requests (`ETag`, `If-Match`, `If-None-Match`) on mutable resources, and idempotency semantics that match the HTTP verb. POSTs that retry without an `Idempotency-Key` are a smell; PUT / DELETE without `If-Match` on concurrently-writable resources is a smell.
 
-**Reliability is baseline.** Mutations are idempotent (by verb or by idempotency key). Outbound calls retry with exponential backoff and jitter. Throttle responses are `429 Too Many Requests` with `Retry-After`. Queues carry poison / dead-letter policies. Long-running work does not live on an HTTP trigger past the hosting plan's function timeout.
+**Reliability is baseline.** Mutations are idempotent (by verb or by idempotency key). Outbound calls retry with exponential backoff and jitter. Throttle responses are `429 Too Many Requests` with `Retry-After`. Async workers carry bounded retry plus poison / dead-letter handling. Long-running work does not block a synchronous HTTP request past the runtime's timeout budget.
 
 **Observability is baseline.** Every request carries a W3C `traceparent`; every log is structured; every error carries a correlation ID (`traceparent`-derived or explicit); every outbound call propagates `traceparent` downstream. Application Insights / OpenTelemetry is wired at the worker level, not retrofitted per endpoint.
 
-**Performance is responsiveness for APIs.** Responsive here means responsive to cold start, to connection exhaustion, to dependency latency, to throttling — not just to a raw RPS number. The reference environment is mobile-client p95 over public internet; the hosting plan choice (Consumption / Flex Consumption / Premium / Dedicated) is a design-time decision governed by cold-start tolerance, not a deployment afterthought.
+**Performance is responsiveness for APIs.** Responsive here means responsive to startup latency, connection exhaustion, dependency latency, throttling, and scale events — not just to a raw RPS number. The reference environment is mobile-client p95 over public internet; the hosting choice is a design-time decision governed by latency tolerance, workload shape, operations model, and cost, not a deployment afterthought.
 
-**Scope.** Serverless HTTP APIs in 2026, emphasis on Azure Functions .NET (isolated worker) with Cosmos DB and Azure Blob Storage as the canonical data layers. gRPC, GraphQL, SOAP, AWS Lambda, and Google Cloud Functions are out of scope — see §8. Data-model design (schema, DDD, event-sourcing) is also out of scope; this reference covers the contract and the runtime around it, not the domain model.
+**Scope.** HTTP APIs in 2026, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Cosmos DB, and Azure Blob Storage. gRPC, GraphQL, SOAP, and runtimes without a bundled extension are out of scope — see §8. Data-model design (schema, DDD, event-sourcing) is also out of scope; this reference covers the contract and the runtime around it, not the domain model.
 
 ## 2. Principles
 
@@ -36,16 +36,16 @@ Every endpoint belongs to a version. New APIs default to URI-path versioning (`/
 HTTPS-only, TLS 1.2+. Entra ID (OAuth 2.0 / OIDC) for end-user auth and for service-to-service between first-party services; managed identities (system-assigned or user-assigned) for every Azure-to-Azure hop; Key Vault references in app settings for the few remaining secrets; data-plane RBAC for data stores (Cosmos `disableLocalAuth=true`, Storage `allowSharedKeyAccess=false`). Input is validated at the boundary, not in the handler body. Authorization is explicit and scope-based — "the function key proves anything about the caller" is false.
 
 ### 2.6 Reliability is baseline
-Mutations are idempotent by verb (PUT, DELETE) or by idempotency key (POST with `Idempotency-Key` + a replay cache). Outbound calls retry with exponential backoff and jitter, capped, and honour server-supplied `Retry-After`. Throttle responses are 429 with `Retry-After` (seconds or HTTP-date). Queue triggers carry built-in retry plus poison / dead-letter. Long-running work does not live on an HTTP trigger past the plan's function timeout — it moves to a queue-backed processor or Durable Functions.
+Mutations are idempotent by verb (PUT, DELETE) or by idempotency key (POST with `Idempotency-Key` + a replay cache). Outbound calls retry with exponential backoff and jitter, capped, and honour server-supplied `Retry-After`. Throttle responses are 429 with `Retry-After` (seconds or HTTP-date). Async workers carry bounded retry plus poison / dead-letter handling. Long-running work does not live inside the synchronous HTTP request — it moves to a queue-backed processor or workflow runtime.
 
 ### 2.7 Observability is baseline
 Every request carries a W3C `traceparent` header (`00-<trace-id>-<span-id>-<flags>`); the runtime propagates it into `ILogger` scopes and onto outbound `HttpClient` calls. Logs are structured — named fields, not interpolated strings. Every error response carries a correlation identifier the client can quote back (the `traceparent` trace-id is sufficient). Application Insights or OpenTelemetry is wired at the worker startup, not inside individual handlers. Per-request cost signals (Cosmos RU charge, Blob Storage request count) are emitted as structured fields so dashboards are one query away.
 
 ### 2.8 Performance is responsiveness for APIs
-Responsive means responsive to cold start, connection overhead, and dependency latency — not raw throughput. Singleton clients (`HttpClient`, `CosmosClient`, `BlobServiceClient`) live in DI, never in handler bodies. Hosting plan selection (Consumption / Flex Consumption / Premium / Dedicated) is a design-time decision keyed to cold-start tolerance; public APIs default to Flex Consumption with always-ready instances, internal low-traffic to Consumption, strict-SLO workloads to Premium.
+Responsive means responsive to startup latency, connection overhead, dependency latency, and scale events — not raw throughput. Singleton clients (`HttpClient`, `CosmosClient`, `BlobServiceClient`) live in DI, never in handler bodies. Hosting selection is a design-time decision keyed to latency tolerance, scale shape, operational ownership, and cost; runtime extensions supply concrete platform defaults.
 
 ### 2.9 Progressive enhancement across capability axes
-Sync HTTP is the baseline; async patterns (202 + polling, webhook delivery, Durable Functions orchestration, queue-backed processor) are additive. Reach for the simplest pattern that satisfies the requirement and move up only when it doesn't: if a queue + 202 will do, don't reach for Durable orchestration; if a Service Bus trigger gives you dead-lettering for free, don't hand-roll retry loops.
+Sync HTTP is the baseline; async patterns (202 + polling, webhook delivery, workflow orchestration, queue-backed processor) are additive. Reach for the simplest pattern that satisfies the requirement and move up only when it doesn't: if a queue + 202 will do, don't reach for a full orchestration runtime; if a broker or worker platform gives you dead-lettering for free, don't hand-roll retry loops.
 
 ## 3. Decisions
 
@@ -75,7 +75,7 @@ End-user calls authenticate with Microsoft Entra ID (OAuth 2.0 / OIDC); service-
 ### 3.4 Authorization model
 Authentication proves who. Authorization proves what they can do. Never use "holds a key" as proof of "allowed to perform this operation."
 
-**Default:** scope-based or app-role-based authorization on every endpoint; deny-by-default; explicit `[Authorize(Policy="...")]` or equivalent. `AuthorizationLevel.Anonymous` on a function trigger is allowed only if the endpoint is genuinely public (e.g., a health probe).
+**Default:** scope-based or app-role-based authorization on every endpoint; deny-by-default; explicit route/handler policy metadata. Anonymous runtime-level access is allowed only if the endpoint is genuinely public (e.g., a health probe).
 
 **OAuth 2.0 flow matrix.** Pick the flow by caller type, not by token shape:
 
@@ -90,7 +90,7 @@ Resource Owner Password Credentials (ROPC) is **disallowed** for Entra ID per Mi
 
 **Scope vs app role:** scopes (`scp` claim) are delegated permissions tied to the signed-in user ("this user consented to this app acting on their behalf"). App roles (`roles` claim) are application permissions granted to the app identity directly. An endpoint that a user invokes checks `scp`; an endpoint that only other services invoke checks `roles`. An endpoint that accepts both (end-user *and* service caller) checks whichever is present.
 
-**Token validation:** for .NET isolated-worker Functions, use `Microsoft.Identity.Web` (`AddMicrosoftIdentityWebApi(...)`) — it handles JWKs discovery, signature validation, issuer / audience / lifetime checks, and exposes `HttpContext.User` with the right claims. Hand-rolling JWT validation against raw JWKs is a foot-gun: issuer multi-tenancy (`/common` vs tenant-pinned), `v1.0` vs `v2.0` issuer URIs, and JWKs key rotation are all easy to get wrong.
+**Token validation:** use the platform's maintained OAuth / OIDC middleware rather than hand-rolling JWT validation against raw JWKs. Issuer multi-tenancy, issuer-version drift, audience checks, clock skew, and JWK rotation are all easy to get wrong.
 
 *When to deviate:* health / readiness / liveness probes that must be reachable without credentials for platform health checks. Document and rate-limit.
 
@@ -125,9 +125,9 @@ Filters and field projections that trust client-supplied names expand the API su
 *When to deviate:* internal admin endpoints where the caller is trusted and the cost of maintaining an allowlist exceeds the value. Document the trust boundary.
 
 ### 3.9 Async patterns
-Long-running or deferred work is an explicit design choice with a named pattern; it is never achieved by blocking an HTTP trigger past the plan's function timeout.
+Long-running or deferred work is an explicit design choice with a named pattern; it is never achieved by blocking a synchronous HTTP request past the runtime timeout.
 
-**Default:** 202 Accepted + `Location` + polling for most async work. Webhook delivery when the client is itself a service with a reachable callback endpoint. Durable Functions orchestration when the workflow is multi-step, requires fan-out / fan-in, or needs compensation logic.
+**Default:** 202 Accepted + `Location` + polling for most async work. Webhook delivery when the client is itself a service with a reachable callback endpoint. Workflow orchestration when the process is multi-step, requires fan-out / fan-in, or needs compensation logic.
 
 *When to deviate:* a synchronous endpoint that legitimately takes 2–3 seconds and whose callers are tolerant (interactive admin action, for instance) can stay sync — but not past Consumption-plan 230-second request limits or Premium-plan configured timeout.
 
@@ -146,11 +146,11 @@ Input is validated at the boundary. Handler bodies should not defend against sha
 *When to deviate:* never. Internal endpoints get the same discipline.
 
 ### 3.12 Payload size limits
-Serverless runtimes have memory and request-size ceilings that a blob payload will hit long before business logic does.
+API runtimes have memory, timeout, and request-size ceilings that a blob payload can hit long before business logic does.
 
-**Default:** request bodies capped at a documented size (typically 25 MB for JSON / form uploads; lower in Consumption plan). Anything larger uses direct-to-blob upload via a user-delegation SAS — the API mints the SAS and the client uploads directly to Storage, bypassing the Function. Response bodies are bounded or streamed (`Transfer-Encoding: chunked`).
+**Default:** request bodies capped at a documented size (typically 25 MB for JSON / form uploads unless the loaded runtime extension says otherwise). Anything larger uses direct-to-object-store upload via a scoped delegated URL — the API mints the upload grant and the client uploads directly to storage, bypassing the API runtime. Response bodies are bounded or streamed (`Transfer-Encoding: chunked`).
 
-*When to deviate:* genuinely small-payload endpoints may skip streaming infrastructure. Direct-to-blob SAS is the escape hatch for anything that would otherwise exhaust Function memory.
+*When to deviate:* genuinely small-payload endpoints may skip streaming infrastructure. Object-store direct upload is the escape hatch for anything that would otherwise exhaust API runtime memory.
 
 ### 3.13 CORS
 `Access-Control-Allow-Origin: *` and credentials do not mix, and wildcard origin on an authenticated endpoint is a confused-deputy invitation.
@@ -166,12 +166,12 @@ Observability is wired at worker startup, not per endpoint.
 
 *When to deviate:* never. Every endpoint gets the same discipline.
 
-### 3.15 Hosting plan selection
-Hosting plan is a contract parameter: it fixes cold-start tolerance, scale-out characteristics, max function timeout, and per-instance memory.
+### 3.15 Hosting and runtime selection
+Hosting is a contract parameter: it fixes startup tolerance, scale-out characteristics, timeout behavior, instance memory, operations model, and failure domains.
 
-**Default:** Flex Consumption with per-trigger always-ready instances for public APIs. Consumption plan for internal, low-traffic, cold-start-tolerant endpoints. Premium for strict p95 / SLO workloads that cannot tolerate any cold start. Dedicated (App Service) only for workloads that must share a plan with web apps or need always-on for reasons orthogonal to serverless.
+**Default:** choose the smallest runtime shape that satisfies the API's latency, scale, timeout, payload, and operational requirements; document the decision in IaC or deployment docs. Loaded runtime extensions provide concrete defaults for their platforms.
 
-*When to deviate:* clear cost or topology reasons. Document the reason; the plan choice is visible in IaC and reviewable.
+*When to deviate:* clear cost, topology, compliance, or platform-standard reasons. Document the reason; the hosting choice is visible in IaC or deployment manifests and reviewable.
 
 ### 3.16 Data-access contract
 Every data-store client (`CosmosClient`, `BlobServiceClient`, `SqlConnection`, `ServiceBusClient`) is registered as a singleton in DI and constructed with `DefaultAzureCredential`. Per-invocation construction is a bug.
@@ -183,7 +183,7 @@ Every data-store client (`CosmosClient`, `BlobServiceClient`, `SqlConnection`, `
 ### 3.17 Secrets contract
 Secrets live in Key Vault and are referenced from app settings via the `@Microsoft.KeyVault(SecretUri=...)` syntax. Account keys, shared access keys, and connection strings with embedded secrets are legacy debt.
 
-**Default:** Key Vault references in app settings; managed identity on the Function app with Key Vault Secrets User role. Cosmos DB accounts have `disableLocalAuth=true`. Storage accounts have `allowSharedKeyAccess=false`. No secrets in code literals, no keys in `local.settings.json` committed to git.
+**Default:** Key Vault references in app settings; managed identity on the API runtime with the minimum data-plane role needed. Cosmos DB accounts have `disableLocalAuth=true`. Storage accounts have `allowSharedKeyAccess=false`. No secrets in code literals, no keys in local settings committed to git.
 
 *When to deviate:* never for new code. Legacy code is migration debt, not a reference pattern.
 
@@ -379,31 +379,17 @@ public async Task<IActionResult> Handle(HttpRequest req, IHttpClientFactory fact
 - Terminal statuses include the result (succeeded) or a problem+json under `error` (failed).
 - Status endpoint is idempotent and cheap to call.
 
-### 5.4 Long-running job via Durable orchestration
-Prefer §5.3 for simple async. Reach for Durable when coordination is required. The orchestrator is *replay-based*: on every resume, the runtime re-executes orchestrator code from the top, skipping past already-completed awaits using the history table. Anything non-deterministic breaks replay.
+### 5.4 Long-running job via workflow orchestration
+Prefer §5.3 for simple async. Reach for orchestration when coordination is required: fan-out / fan-in, external events, human approval, compensation, or long-running monitors.
 
-**Determinism rules (hard):**
-- Time: `context.CurrentUtcDateTime`, never `DateTime.UtcNow`.
-- IDs: `context.NewGuid()`, never `Guid.NewGuid()`.
-- Randomness: pass a seed through an activity; orchestrator itself cannot call `Random`.
-- I/O: orchestrator only calls activities and sub-orchestrators — no HTTP, no SQL, no file I/O, no SDK clients.
-- Async: only await `context.*` APIs and the results of `CallActivityAsync` / `CallSubOrchestratorAsync` — no `Task.Delay`, no ambient `HttpClient`.
+**Default:** the HTTP surface still returns 202 + `Location`; orchestration status is exposed through the same job-status resource shape as §5.3. The loaded runtime extension supplies the concrete orchestration APIs and determinism rules.
 
-**Named sub-patterns:**
-
-1. **Fan-out-fan-in.** Orchestrator schedules N activities in parallel (`var tasks = items.Select(i => context.CallActivityAsync<T>(...)); await Task.WhenAll(tasks);`), aggregates results. Bounded parallelism: cap the fan-out width to avoid saturating downstream (`items.Chunk(50)`); Durable itself parallelises beyond what single-instance worker threads can handle.
-
-2. **Monitor (polling).** Orchestrator sleeps via `context.CreateTimer(...)` and checks an external condition in an activity, loops until done or times out. Use when the external system lacks webhooks / events. Set an explicit upper bound on iterations; eternal monitors that loop forever should use the eternal-orchestration pattern instead.
-
-3. **Human approval.** Orchestrator schedules a timer *and* awaits an external event: `var approval = context.WaitForExternalEvent<ApprovalDecision>("Approval"); var timeout = context.CreateTimer(context.CurrentUtcDateTime.AddHours(24), cts.Token); var winner = await Task.WhenAny(approval, timeout);`. External systems POST to `sendEventPostUri` with the decision. Cancel the losing task's CTS to release resources.
-
-4. **Eternal orchestration.** Long-running monitor / poll loop that would exceed practical history-table size — at the end of each iteration, call `context.ContinueAsNew(state)` to restart with fresh history. Required for orchestrators that run for days or more.
-
-5. **Compensation (saga).** Step fails → roll back completed work by invoking compensating activities in reverse order. Wrap each step in try/catch inside the orchestrator; the catch branch calls `context.CallActivityAsync` for the undo.
-
-**HTTP surface:** `[DurableClient]` starter returns `createCheckStatusResponse(req, instanceId)` → 202 + `statusQueryGetUri`. External systems fire events via `sendEventPostUri`. Poll `statusQueryGetUri` for progress / result.
-
-**Versioning:** in-flight instances see the orchestrator version they started on. Breaking changes to orchestrator logic must either (a) wait for drain (all in-flight complete on old version) or (b) split by task-hub name so old and new coexist. There is no hot-swap of orchestrator code for instances mid-flight.
+**Core rules:**
+- Keep orchestration state and job status versioned as an API contract.
+- Bound fan-out width so downstream dependencies are not saturated.
+- Keep orchestration steps idempotent or compensatable.
+- Do not perform non-deterministic work in replay-based orchestrators; use the loaded runtime extension's deterministic clock, ID, timer, and activity APIs.
+- For breaking workflow changes, drain in-flight instances or route old and new versions separately.
 
 ### 5.5a Webhook delivery (outbound)
 - Server-side: publish via queue-backed processor; signature header `X-Signature: t=<ts>,v1=<hmac-sha256-hex>` computed over `<ts>.<raw-body>`; retry with exponential backoff + jitter; after N failures move to DLQ.
@@ -435,7 +421,7 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - Combine with `Idempotency-Key` so whole-batch retries are safe.
 
 ### 5.8 Fan-out via queue-backed handler
-- HTTP trigger enqueues; returns 202 with `Location` pointing at status endpoint.
+- HTTP endpoint enqueues; returns 202 with `Location` pointing at status endpoint.
 - Queue trigger processes (built-in retry, poison / DLQ).
 - Status endpoint reads projection written by the processor.
 - Cheaper and simpler than Durable for stateless fan-out.
@@ -455,7 +441,7 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - After sunset, v1 endpoints return 410 Gone with problem+json pointing at v2.
 
 ### 5.11 Event-driven ingress (HTTP → Service Bus → processor)
-- HTTP trigger validates + publishes to Service Bus; returns 202 with `Location`.
+- HTTP endpoint validates + publishes to Service Bus; returns 202 with `Location`.
 - Service Bus trigger processes; tune `maxConcurrentCalls` / `maxAutoLockRenewalDuration` via `host.json`.
 - Broker-side dedup via `MessageId` (`requiresDuplicateDetection: true` on the queue) so producer retries don't double-process.
 - Dead-letter subscriber writes a problem+json error record clients retrieve via `/jobs/{id}`. Include the original `MessageId` and the dead-letter reason (`DeadLetterReason`, `DeadLetterErrorDescription`).
@@ -464,7 +450,7 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - **Poison handling:** after `MaxDeliveryCount` (default 10) the message is dead-lettered automatically. Don't reset `DeliveryCount` on transient failures — let the broker's retry count drive dead-lettering, and surface it in the `/jobs/{id}` failure record.
 
 ### 5.12 OAuth2 / OIDC-protected endpoint with scope check
-- Authentication: Entra ID (validator at the edge or in the Function worker).
+- Authentication: Entra ID (validator at the edge or in the API runtime).
 - Authorization: `[Authorize(Policy="Orders.Write")]` or equivalent scope-based check.
 - 401 on missing / invalid token + `WWW-Authenticate: Bearer realm="...", error="invalid_token"`.
 - 403 on valid token without the required scope + problem+json `type: insufficient-scope`.
@@ -483,13 +469,11 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - **SAD-G-silent-retry** — try-catch-retry loop that swallows the failure cause; prod issues present as latency bumps with no errors. Fix: observe retries (`retry-attempt` log field), bound them, surface exhaustion as 5xx with detail.
 - **SAD-G-no-correlation-id** — error response with no trace-id / correlation field; support tickets become scavenger hunts. Fix per §3.14.
 - **SAD-G-timer-doing-http-work** — timer trigger that calls outbound HTTP APIs in a loop (effectively an HTTP client); no scale, no observability, no DLQ. Fix: queue-backed processor.
-- **SAD-G-inprocess-model** — new .NET Functions code using the in-process model (retired 2026-11-10). Fix: isolated worker.
-- **SAD-G-functionname-attribute** — `[FunctionName(...)]` attribute in isolated-worker code. Fix: `[Function(...)]`.
-- **SAD-G-anonymous-private** — `AuthorizationLevel.Anonymous` on an endpoint that handles non-public data. Fix per §3.3 / §3.4.
+- **SAD-G-anonymous-private** — anonymous or key-only access on an endpoint that handles non-public data. Fix per §3.3 / §3.4 and the loaded runtime extension.
 - **SAD-G-secrets-in-query-strings** — secrets, tokens, or PII placed in query strings; they end up in access logs, referer headers, and browser history. Fix: request body or `Authorization` header.
 - **SAD-G-cors-wildcard-auth** — `Access-Control-Allow-Origin: *` on an authenticated endpoint. Fix per §3.13.
-- **SAD-G-http-trigger-long-running** — work on an HTTP trigger that regularly exceeds the plan timeout. Fix per §3.9.
-- **SAD-G-durable-overkill** — Durable orchestration for a single-step async job. Fix: queue-backed handler per §5.8.
+- **SAD-G-http-request-long-running** — work inside a synchronous HTTP request that regularly exceeds the runtime timeout. Fix per §3.9.
+- **SAD-G-orchestration-overkill** — workflow orchestration for a single-step async job. Fix: queue-backed handler per §5.8.
 - **SAD-G-static-runtime-claim** — a review claiming p95 latency, cold-start time, or error rate from static analysis. Fix: restate as "static signals aligned; runtime metrics require load test / RUM."
 - **SAD-G-version-drift** — coexisting versioning strategies (URI-path for most, query string for some) or an "implicit v1" that's really v1.5. Fix per §3.2.
 
@@ -524,7 +508,7 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Input validated at boundary (OpenAPI schema + semantic) `[static][contract]`.
 - CORS allowlist, not wildcard on authenticated endpoints `[static][iac]`.
 - Rate limiting at the edge (Front Door / API Management) on public endpoints `[iac][security-tool]`.
-- No `AuthorizationLevel.Anonymous` on non-public endpoints `[static]`.
+- No anonymous or key-only access on non-public endpoints `[static]`.
 - No secrets in logs, query strings, or error `detail` fields `[static][runtime]`.
 
 ### Reliability (hard requirements)
@@ -532,7 +516,7 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Outbound retries use exponential backoff + jitter; bounded `[static]`.
 - 429 responses include `Retry-After` `[static]`.
 - Poison / dead-letter configured on every queue trigger `[static][iac]`.
-- No long-running work on HTTP trigger past the plan function timeout `[static]`.
+- No long-running work inside a synchronous HTTP request past the runtime timeout `[static]`.
 - ETag / If-Match on concurrently-writable resources `[static][contract]`.
 
 ### Observability (hard requirements)
@@ -546,15 +530,15 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 ### Performance (hard requirements, at p95)
 - Singleton `HttpClient` via `IHttpClientFactory` `[static]`.
 - Singleton data-store clients (`CosmosClient`, `BlobServiceClient`) via DI `[static]`.
-- Hosting plan fits cold-start tolerance (Flex Consumption / Premium for strict-SLO) `[iac]`.
-- ReadyToRun / Placeholder opt-ins on latency-sensitive apps `[static][iac]`.
+- Hosting/runtime choice fits latency, scale, timeout, payload, and operational requirements `[iac]`.
+- Runtime-specific startup optimizations are enabled for latency-sensitive apps when the loaded extension requires them `[static][iac]`.
 - Response / request payload sizes bounded; large payloads use direct-to-blob SAS `[static][contract]`.
 - p95 latency and cold-start observed under load `[load][runtime]`.
 
 ## 8. Out of scope
 
 - **Non-HTTP wire formats.** gRPC, GraphQL, SOAP, JSON-RPC — separate disciplines with their own contracts; this reference is HTTP APIs.
-- **Other serverless platforms.** AWS Lambda, Google Cloud Functions, Cloudflare Workers — future extensions (`aws-lambda-*.md`, `gcf-*.md`) on demand; the core principles here are largely portable but the primitives are not.
+- **Runtimes without bundled extensions.** Hosted, serverless, container, edge, and gateway runtimes need their own extension when their primitives differ; the core principles here are portable but runtime mechanics are not.
 - **Other Azure data layers.** Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Azure Cache for Redis — future per-service extensions; the Cosmos + Blob pair is the current scope.
 - **Cosmos DB non-NoSQL APIs.** MongoDB API, Cassandra API, Gremlin, Table — separate SDK surfaces with different idioms.
 - **Data-model design.** Schema design, DDD, event-sourcing, CQRS — this reference covers the HTTP contract and runtime around the model, not the model itself.

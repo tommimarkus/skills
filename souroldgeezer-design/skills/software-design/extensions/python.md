@@ -14,7 +14,7 @@ This extension covers tooling design, not application/service runtime,
 security posture, or test-quality minutiae. Delegate command-injection,
 secret, dependency-supply-chain, lockfile, and permission posture to
 `devsecops-audit`, test quality to `test-quality-audit`, web/HTTP runtime
-concerns to `serverless-api-design`, and code-to-architecture drift to
+concerns to `api-design`, and code-to-architecture drift to
 `architecture-design` when the script is only an adapter around those
 concerns.
 

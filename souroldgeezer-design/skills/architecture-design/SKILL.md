@@ -13,7 +13,7 @@ Help Claude produce, extract, review, and look up ArchiMate® architecture diagr
 
 **The reference is [../../docs/architecture-reference/architecture.md](../../docs/architecture-reference/architecture.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated diagrams embody the reference's defaults; review output cites reference sections and ArchiMate® 3.2 chapter / Appendix B references; the skill never duplicates reference prose.
 
-This skill is the architectural *bridge* between the code produced by [responsive-design](../responsive-design/SKILL.md) and [serverless-api-design](../serverless-api-design/SKILL.md) and the architect's mental model of the system. Build goes from intent to diagram. Extract goes from code and IaC to diagram, lifting the three extractable ArchiMate® layers and stubbing the three forward-only layers. Review checks both artefact well-formedness and drift between a diagram and current code. Siblings consume the canonical diagram path in their own Review mode to flag when code has drifted from the architect's model.
+This skill is the architectural *bridge* between the code produced by [responsive-design](../responsive-design/SKILL.md) and [api-design](../api-design/SKILL.md) and the architect's mental model of the system. Build goes from intent to diagram. Extract goes from code and IaC to diagram, lifting the three extractable ArchiMate® layers and stubbing the three forward-only layers. Review checks both artefact well-formedness and drift between a diagram and current code. Siblings consume the canonical diagram path in their own Review mode to flag when code has drifted from the architect's model.
 
 The quality bar has three explicit levels:
 
@@ -50,7 +50,7 @@ relationship id and reason in the view documentation or final summary.
 
 ## Modes
 
-Four modes — deliberately distinct from the 3-mode symmetry of `responsive-design` / `serverless-api-design` because Extract (code → diagram) is a first-class, load-bearing operation for this skill.
+Four modes — deliberately distinct from `responsive-design` because Extract (code → diagram) is a first-class, load-bearing operation for this skill.
 
 ### Build mode
 
@@ -161,7 +161,7 @@ Diagrams written and read by the skill live at a single canonical path:
 docs/architecture/<feature>.oef.xml
 ```
 
-The path is the coupling mechanism for the sibling design skills (`responsive-design` and `serverless-api-design`). Their Review mode checks this path, and if a matching diagram exists, dispatches to `architecture-design` Review for drift detection.
+The path is the coupling mechanism for the sibling design skills (`responsive-design` and `api-design`). Their Review mode checks this path, and if a matching diagram exists, dispatches to `architecture-design` Review for drift detection.
 
 `<feature>` is a short snake-case or kebab-case identifier — `checkout`, `order-to-cash`, `auth`, `ingestion-pipeline`. One file per feature; the file may contain multiple views inside its `<views>/<diagrams>` block (Capability Map, Application Cooperation, Technology Usage, etc. for the same feature). The skill suggests the filename; the architect can override.
 
@@ -487,7 +487,7 @@ quality level before delivering.
 ## Complementary skills
 
 - **`responsive-design`** (same plugin `souroldgeezer-design`) — produces the UI Application Components this skill models. Its Review mode checks for `docs/architecture/<feature>.oef.xml` and dispatches to this skill for drift detection when present.
-- **`serverless-api-design`** (same plugin) — produces the HTTP API Application Components and the Technology Layer resources (Cosmos DB, Blob Storage, Key Vault, managed identity, Function Apps) this skill models. Same auto-dispatch pattern in its Review mode.
+- **`api-design`** (same plugin) — produces the HTTP API Application Components and, through loaded runtime/data extensions, the Technology Layer resources this skill models, such as Cosmos DB, Blob Storage, Key Vault, managed identity, or Function Apps. Same auto-dispatch pattern in its Review mode.
 - **`devsecops-audit`** (plugin `souroldgeezer-audit`) — pipeline and IaC posture audit. Complements this skill: `architecture-design` proves the architecture *model* is well-formed; `devsecops-audit` proves the pipeline and infrastructure posture are secure. The GitHub Actions workflows that become Implementation & Migration Work Packages here are the same workflows audited there.
 
 ## Honest limits

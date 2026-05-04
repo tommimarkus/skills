@@ -9,7 +9,7 @@ This extension covers script and module design, not command-injection hardening,
 secret handling, OS provisioning, or test-quality minutiae. Delegate security
 posture to `devsecops-audit`, test quality to `test-quality-audit`, and
 deployment topology / IaC ownership to `architecture-design` or
-`serverless-api-design` when the script is only an adapter around those
+`api-design` when the script is only an adapter around those
 concerns.
 
 ## Platform Sources

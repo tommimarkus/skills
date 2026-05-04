@@ -902,7 +902,7 @@ async function performOptimistic(item) {
 }
 ```
 
-**Retry discipline.** Transient failures (408, 429, 502, 503, 504) can auto-retry *once* with backoff before surfacing an error; anything beyond that is user-visible and user-actioned. Permanent failures (400, 401, 403, 404, 409, 410, 412, 422) never auto-retry — surface the problem-detail `title` and offer the fix. On 429, honour `Retry-After` — a countdown in the retry button is a nice touch; a silent retry that ignores `Retry-After` is an amplification hazard. Cross-reference: `serverless-api-design.md` §3.10 / §3.5.
+**Retry discipline.** Transient failures (408, 429, 502, 503, 504) can auto-retry *once* with backoff before surfacing an error; anything beyond that is user-visible and user-actioned. Permanent failures (400, 401, 403, 404, 409, 410, 412, 422) never auto-retry — surface the problem-detail `title` and offer the fix. On 429, honour `Retry-After` — a countdown in the retry button is a nice touch; a silent retry that ignores `Retry-After` is an amplification hazard. Cross-reference: `api-design.md` §3.10 / §3.5.
 
 **Localized empty / error copy.** All state strings (`"No invoices yet"`, `"Create your first invoice"`, `"Couldn't load invoices"`) go through the same i18n pipeline as the rest of the UI. Test empty-state illustrations in RTL and in forced-colors — decorative SVGs that hard-code a light-mode palette become invisible in dark mode or under `forced-colors: active` (see §5.14).
 
@@ -1267,7 +1267,7 @@ function validate(file) {
 async function uploadOne(file) {
   const li = renderRow(file);                              // renders <progress max=100 value=0>
   // For large files, prefer a pre-signed direct-to-blob SAS (blob.PAT-direct-upload-sas
-  // in the serverless-api-design Blob Storage extension). The API returns { uploadUrl,
+  // in the api-design Blob Storage extension). The API returns { uploadUrl,
   // blobUri }; the browser PUTs the payload directly to Blob Storage, not the Function.
   const { uploadUrl, blobUri } = await fetch("/uploads", { method: "POST", body: JSON.stringify({ name: file.name, size: file.size, type: file.type }), headers: { "Content-Type": "application/json" } }).then(r => r.json());
 
@@ -1294,8 +1294,8 @@ async function uploadOne(file) {
 - **Visible file input inside the drop zone** — the `<label for="attachments">` wraps the input, so clicking anywhere in the zone opens the picker. Keyboard users Tab to the input (visually hidden but in the tab order) and activate with `Space` / `Enter`. SC 2.5.7 satisfied: drag is an enhancement, not the only path.
 - **Validation surfaces to a pre-existing live region** — errors and progress updates go to `#upload-status`; it exists at page load so announcements fire reliably.
 - **Per-file progress via `<progress>`** — native element with `max=100` and `value`, `aria-valuetext` for screen readers ("67 percent uploaded"). Update `value` on `xhr.upload.progress`; don't re-render the whole `<li>` (flickers).
-- **`accept` attribute + server-side validation** — `accept` is a UX hint; clients can always submit any type. Re-validate server-side and reject with problem+json (`invalid-file-type`, `payload-too-large`) per `serverless-api-design.md` §3.11 / §3.12.
-- **Direct-to-blob SAS for large payloads** — the API endpoint `POST /uploads` issues a user-delegation SAS; the browser PUTs directly to Blob Storage. Function memory / timeout no longer constrain payload size. Cross-reference `blob.PAT-direct-upload-sas` in the `serverless-api-design` Blob Storage extension.
+- **`accept` attribute + server-side validation** — `accept` is a UX hint; clients can always submit any type. Re-validate server-side and reject with problem+json (`invalid-file-type`, `payload-too-large`) per `api-design.md` §3.11 / §3.12.
+- **Direct-to-blob SAS for large payloads** — the API endpoint `POST /uploads` issues a user-delegation SAS; the browser PUTs directly to Blob Storage. API runtime memory / timeout no longer constrain payload size. Cross-reference `blob.PAT-direct-upload-sas` in the `api-design` Blob Storage extension.
 - **`fetchpriority="high"` — not applicable here.** Upload and LCP compete if the page is media-heavy; the upload starts on explicit user gesture, so it's a deliberate choice that takes bandwidth from background loads.
 - **Cancellation** — wire an `AbortController` (or `xhr.abort()`) so a "Cancel" button per row interrupts in-flight uploads. Don't silently let cancelled uploads complete — the server may still receive the payload.
 

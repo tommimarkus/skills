@@ -278,7 +278,7 @@ Output contains any of the following? Stop; fix before delivering:
 
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — CSP, CORS, cookie attributes, and supply-chain concerns that surface in browser-facing code live there.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — if asked to write tests that verify responsive/a11y behaviour, E2E sub-lane A covers the test-quality rules; this skill does not author E2E tests.
-- `serverless-api-design` (same plugin `souroldgeezer-design`) — if the UI consumes a serverless HTTP API, that skill enforces the API contract (OpenAPI 3.1, RFC 9457 problem+json, RFC 9110 ETag), security (Entra ID / managed identities / Key Vault / data-plane RBAC), reliability (idempotency, 429 + `Retry-After`), and observability (structured logs, W3C `traceparent`). The two skills compose; neither duplicates the other.
+- `api-design` (same plugin `souroldgeezer-design`) — if the UI consumes an HTTP API, that skill enforces the API contract (OpenAPI 3.1, RFC 9457 problem+json, RFC 9110 ETag), security (Entra ID / managed identities / Key Vault / data-plane RBAC), reliability (idempotency, 429 + `Retry-After`), and observability (structured logs, W3C `traceparent`). The two skills compose; neither duplicates the other.
 - `architecture-design` (same plugin) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application Layer of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
 
 ## Honest limits

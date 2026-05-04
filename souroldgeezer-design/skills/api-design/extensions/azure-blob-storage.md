@@ -1,6 +1,6 @@
 # Extension: Azure Blob Storage (Block Blobs)
 
-Stack-specific additions to the `serverless-api-design` skill for Azure Blob Storage (Block Blobs via `Azure.Storage.Blobs` SDK v12). The core reference [`../../../docs/api-reference/serverless-api-design.md`](../../../docs/api-reference/serverless-api-design.md) stays framework-neutral; this extension layers Blob-specific primitives, patterns, and smells on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Blob Storage (Block Blobs via `Azure.Storage.Blobs` SDK v12). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Blob-specific primitives, patterns, and smells on top without overriding core rules.
 
 Scope: **Block Blobs** (the common case for API payloads). Append Blobs and Page Blobs are out of scope. ADLS Gen2 hierarchical-namespace accounts (`isHnsEnabled=true`) are not covered here; the ACL surface differs and warrants a separate extension.
 
@@ -174,7 +174,7 @@ Run this after the core framework-agnostic discovery pass; results feed into the
 8. **CORS rules** — IaC `corsRules[].allowedOrigins: ["*"]` on an account serving authenticated content → `blob.HC-8`.
 9. **Versioning / soft delete / immutability** — IaC `isVersioningEnabled`, `deleteRetentionPolicy`, `immutableStorageWithVersioning`. Record retention windows and whether they fit the API's compliance story.
 10. **Network posture** — `publicNetworkAccess`, `networkAcls`, private endpoints. Record.
-11. **Function memory / timeout vs largest payload accepted** — cross-check. If the API accepts 100 MB payloads on a Consumption-plan 1.5 GB-memory Function, flag `blob.HC-4` / §3.12 — use direct-to-blob SAS.
+11. **API runtime memory / timeout vs largest payload accepted** — cross-check. If the API accepts 100 MB payloads through a memory-constrained runtime, flag `blob.HC-4` / §3.12 — use direct-to-blob SAS.
 12. **Event Grid subscriptions** — any subscription to blob events on the account; record.
 
 ### Mapping reference defaults to Blob idioms

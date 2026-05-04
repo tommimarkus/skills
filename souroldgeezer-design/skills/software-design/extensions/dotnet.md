@@ -2,7 +2,7 @@
 
 Load this extension for .NET solutions and projects: `.sln`, `.slnx`, `.csproj`, `.cs`, `Directory.Build.*`, `global.json`, `InternalsVisibleTo`, `IServiceCollection`, `DbContext`, `BackgroundService`, or package references commonly used in .NET applications.
 
-This extension covers design signals, not API runtime, security, or test-quality minutiae. Delegate endpoint contract and serverless runtime concerns to `serverless-api-design`, security posture to `devsecops-audit`, and test quality to `test-quality-audit`.
+This extension covers design signals, not API runtime, security, or test-quality minutiae. Delegate endpoint contract and API runtime concerns to `api-design`, security posture to `devsecops-audit`, and test quality to `test-quality-audit`.
 
 ## Platform Sources
 

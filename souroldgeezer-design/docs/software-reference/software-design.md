@@ -7,7 +7,7 @@
 The reference sits between implementation tactics and architecture notation:
 
 - Below `architecture-design`: no ArchiMate models, OEF XML, enterprise viewpoints, or architecture drift checks.
-- Above specialist runtime skills: no responsive UI rules, HTTP API contracts, serverless runtime guidance, security posture audit, or test-quality audit.
+- Above specialist runtime skills: no responsive UI rules, HTTP API contracts, API runtime guidance, security posture audit, or test-quality audit.
 - Inside software design: boundaries, responsibilities, dependency direction, state/data ownership, vocabulary, coupling, cohesion, quality tradeoffs, and safe evolution.
 
 ## 2. Source Basis
@@ -189,7 +189,7 @@ Checklist:
 ## 9. Delegation Map
 
 - `responsive-design`: responsive UI, accessibility, internationalization, visual behavior, Core Web Vitals.
-- `serverless-api-design`: HTTP API contract, auth, runtime reliability, serverless data-service patterns, API observability.
+- `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability.
 - `architecture-design`: ArchiMate models, OEF XML, enterprise/solution views, architecture drift.
 - `devsecops-audit`: security posture, IaC, workflows, release artifacts, secrets, pipeline controls.
 - `test-quality-audit`: test quality, characterization/specification classification, integration/E2E scope, mutation-testing worklists.

@@ -9,7 +9,7 @@ description: Use when building, extracting, reviewing, or looking up sustainable
 
 Shape software so the current change is coherent, small enough to validate, and cheap to change later. The skill applies the bundled reference at [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md) and cites the smell catalog in [references/smell-catalog.md](references/smell-catalog.md).
 
-This is the design companion one layer closer to code than `architecture-design` and one layer more general than `responsive-design` or `serverless-api-design`. It does not produce architecture diagrams, API contracts, UI responsive behavior, security audits, or test-quality classifications.
+This is the design companion one layer closer to code than `architecture-design` and one layer more general than `responsive-design` or `api-design`. It does not produce architecture diagrams, API contracts, UI responsive behavior, security audits, or test-quality classifications.
 
 ## Modes
 
@@ -171,7 +171,7 @@ Reuse compliant infrastructure and names. Flag non-compliant design as legacy de
 ## Delegation Boundaries
 
 - UI responsiveness, WCAG, i18n, visual behavior, and Core Web Vitals: `responsive-design`.
-- HTTP API contract, auth, reliability, serverless runtime, API observability, and Azure data-service patterns: `serverless-api-design`.
+- HTTP API contract, auth, reliability, API runtime behavior, API observability, and data-service patterns: `api-design`.
 - ArchiMate models, OEF XML, enterprise/solution architecture, and code-to-architecture drift: `architecture-design`.
 - Pipeline, IaC, release, or application security posture: `devsecops-audit`.
 - Unit/integration/E2E test quality or mutation-testing worklists: `test-quality-audit`.

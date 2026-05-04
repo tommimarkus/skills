@@ -6,7 +6,7 @@ The reference is [../../../../docs/architecture-reference/architecture.md](../..
 
 ## Sources read
 
-- **Durable Functions orchestrators.** C# functions carrying `[Function]` (isolated worker) or `[FunctionName]` (in-process, deprecated — flag per `afdotnet.LC-1` from `serverless-api-design` if encountered) whose trigger parameter type is `TaskOrchestrationContext` (isolated worker) or `IDurableOrchestrationContext` (in-process).
+- **Durable Functions orchestrators.** C# functions carrying `[Function]` (isolated worker) or `[FunctionName]` (in-process, deprecated — flag per `afdotnet.LC-1` from `api-design` if encountered) whose trigger parameter type is `TaskOrchestrationContext` (isolated worker) or `IDurableOrchestrationContext` (in-process).
 - **Logic Apps definitions.** `workflow.json`, `*.logicapp.json`, and Bicep `Microsoft.Logic/workflows` resources carrying a `definition.$schema` of the Logic Apps workflow-definition language.
 - **Function triggers on the same Function App** that invoke an orchestrator (`[DurableClient]` HTTP starters, queue / timer / event-grid triggers) — consulted only to identify the Business Event that starts each Process.
 

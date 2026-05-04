@@ -1,24 +1,24 @@
 ---
-name: serverless-api-design
-description: Use when building, reviewing, or looking up modern serverless HTTP APIs — endpoints, services, or features built on Azure® Functions™ (.NET™) with Azure® Cosmos DB™ and/or Azure® Blob Storage™ data layers. Applies the bundled reference at souroldgeezer-design/docs/api-reference/serverless-api-design.md, enforcing security (Microsoft® Entra ID™ / managed identities / Azure® Key Vault™ / data-plane RBAC, `disableLocalAuth` on Azure® Cosmos DB™ and `allowSharedKeyAccess=false` on Azure® Blob Storage™), contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 conditional requests via ETag), reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), and observability (structured logs, W3C® traceparent, correlation ID, per-request RU / request-charge visibility) as hard baselines. Supports build, review, and lookup modes with a matching subagent and composable extensions for Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage™.
+name: api-design
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 conditional requests), security, reliability, observability, and honest verification-layer disclosure. Supports composable runtime and data extensions, including Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage.
 ---
 
-# Serverless API Design
+# API Design
 
 ## Overview
 
-Help Claude produce and review serverless HTTP APIs that are correct by construction across contract, security, reliability, and observability — before the first load test, and regardless of which compute plan or data service sits underneath. The central problem, from §1 of the reference:
+Help Claude produce, extract, and review HTTP APIs that are correct by construction across contract, security, reliability, and observability — before the first load test, and regardless of which hosting model, runtime, or data service sits underneath. The central problem, from §1 of the reference:
 
 > Presence vs. efficacy — a function that responds to a curl command is not evidence that the API holds up under retries, ships a stable error contract, survives key rotation, emits correlated telemetry, handles 429 from its own data store, survives a cold start inside a p95 budget, or degrades sensibly when the downstream dependency is the one throttling. An HTTP status code is not a contract.
 
-**The reference is [../../docs/api-reference/serverless-api-design.md](../../docs/api-reference/serverless-api-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections and RFC / MSFT Learn sources by reference; the skill never duplicates reference prose.
+**The reference is [../../docs/api-reference/api-design.md](../../docs/api-reference/api-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections and RFC / MSFT Learn sources by reference; the skill never duplicates reference prose.
 
 ## Non-goals
 
 - **General .NET code quality** → out of scope; produce working API code, don't lint surrounding logic. The `test-quality-audit` and `devsecops-audit` skills in the `souroldgeezer-audit` plugin cover the audit side.
 - **Verification of runtime SLIs** (p95 latency, cold-start, error rate, RU charge) → static signals only. Real numbers need load tests (Azure Load Testing / k6), RUM, Azure Monitor, and Application Insights; surface this honestly.
 - **Wire-format choice** — gRPC, GraphQL, SOAP — reference §8 out-of-scope; decline and redirect.
-- **AWS Lambda / Google Cloud Functions** — core principles port, but primitives and extensions do not; out-of-scope for now.
+- **Unsupported runtime mechanics** — core principles port, but stack-specific primitives require a bundled extension; do not invent hosted, serverless, container, or edge runtime rules that are not in the loaded reference/extension set.
 - **Data-model design / DDD / event-sourcing** — this skill handles the contract and runtime; modelling belongs elsewhere.
 
 ## Modes
@@ -27,7 +27,13 @@ Help Claude produce and review serverless HTTP APIs that are correct by construc
 
 **Use for:** creating an endpoint, service, API surface, or feature from scratch.
 
-**Triggers:** "build an endpoint", "design an API for …", "create a serverless …", "how should I expose …", "implement this service", "make me a POST /…", "add a function for …".
+**Triggers:** "build an endpoint", "design an API for …", "create an API", "how should I expose …", "implement this service", "make me a POST /…", "add a route for …".
+
+### Extract mode
+
+**Use for:** adapting to an existing API or establishing the current API baseline before design or review.
+
+**Triggers:** "what API do we have", "extract the API design", "map these endpoints", "baseline this API", "what contract/auth/error/versioning shape is present".
 
 ### Review mode
 
@@ -41,7 +47,7 @@ Help Claude produce and review serverless HTTP APIs that are correct by construc
 
 **Triggers:** "which status code for X", "how do I version this", "should I use Durable or a queue", "what's the shape of problem+json", "which auth level here".
 
-**Default:** If the request is ambiguous, ask the user which mode they want.
+**Default:** Existing API with no requested change defaults to Extract. New endpoint or feature defaults to Build. Review/audit/check wording defaults to Review. Narrow principle/status-code/header questions default to Lookup. If still ambiguous, ask the user which mode they want.
 
 ## Extensions
 
@@ -57,16 +63,16 @@ Multiple extensions load when the target matches multiple sets of signals. Unkno
 
 Extensions **never override** core rules. They add stack-specific primitives, patterns, and smells (namespaced `<ext>.HC-N` / `<ext>.LC-N` / `<ext>.POS-N`), or carve out false positives for idiomatic stack patterns. Carve-outs win only for the exact pattern described. Smell-code namespaces (`afdotnet.*`, `cosmos.*`, `blob.*`, core `SAD-*`) are distinct by construction, so findings from multiple extensions never collide.
 
-## Pre-flight (build & review)
+## Pre-flight (build, extract & review)
 
 Before writing or reviewing code, confirm the following. If the user hasn't supplied them, ask — don't invent answers:
 
 1. **Consumer scope.** First-party UI, third-party partners, machine-to-machine only? Default: mixed; design for public-contract discipline (OpenAPI, stable error types, cursor pagination, 429 + `Retry-After`).
 2. **Auth model.** Entra ID (OAuth 2.0 / OIDC) + managed identity, function keys, Easy Auth, Anonymous? Default: Entra ID + managed identity, no secrets in code.
-3. **Framework / hosting stack.** Azure Functions (.NET)? Detect via `.csproj` + `host.json`; otherwise ask. Identify isolated worker vs the retiring in-process model; refuse to author in-process-model code (retired 2026-11-10).
-4. **Hosting plan target.** Consumption / Flex Consumption / Premium / Dedicated? Default: Flex Consumption for public APIs; Consumption for internal low-traffic; Premium when p95 cold-start must be ~0.
+3. **Framework / hosting stack.** Detect matching runtime/data extensions from manifests and source signals; otherwise ask. Unknown stacks proceed with only the core reference.
+4. **Hosting target and performance posture.** Hosted, serverless, containerized, edge, or unknown? Default: record the target when present; do not invent a runtime-specific plan. Runtime extensions may add concrete defaults.
 5. **Reliability posture.** Idempotency required on mutations? Retry tolerance of clients? Default: idempotency on all mutations; safe retry + backoff on all outbound calls.
-6. **Observability target.** Application Insights / OpenTelemetry exporter / team SLO? Default: register OpenTelemetry in `Program.cs` per the current `azure/azure-functions/functions-opentelemetry` page plus end-to-end `traceparent`.
+6. **Observability target.** OpenTelemetry, Application Insights, another exporter, or team SLO? Default: structured logs plus W3C `traceparent` propagation; loaded extensions add runtime-specific wiring.
 7. **Architecture pairing.** Does a paired ArchiMate model exist at `docs/architecture/<feature>.oef.xml` for the feature in scope? If yes: in review mode, the skill auto-dispatches to `architecture-design` Review for drift detection (§ Review mode workflow step 6); in build mode, the architect can opt in ("also update the architecture diagram") to dispatch to `architecture-design` Extract after Build. Default: auto-detect the path for review mode; opt-in for build mode.
 
 If any answer changes a decision's default (e.g., "internal only, no client SDKs generated" → §3.2 URI-path versioning becomes header versioning), state the deviation explicitly in the output.
@@ -75,16 +81,16 @@ If any answer changes a decision's default (e.g., "internal only, no client SDKs
 
 **Direction is one-way: the project is assimilated to the reference, not the reference to the project.** The reference's security / contract / reliability / observability baselines are non-negotiable; its decision defaults (§3) are the target state. Assimilation means discovering what the project ships so output (a) reuses compliant infrastructure instead of duplicating it, and (b) surfaces non-compliant infrastructure as legacy debt rather than silently extending it.
 
-Before emitting code or opening a review on an existing project, run the discovery pass below. Keep detection lightweight — canonical locations only. If nothing found, assume greenfield and emit the §4.5 baseline contract.
+Before emitting code, extracting a baseline, or opening a review on an existing project, run the discovery pass below. Keep detection lightweight — canonical locations only. If nothing found, assume greenfield and emit the §4.5 baseline contract.
 
 ### Framework-agnostic discovery
 
 Do this pass every time, regardless of stack:
 
-1. **OpenAPI / contract** — grep for `swagger.json`, `openapi.yaml`, `openapi.json`, `*.openapi.*`, or OpenAPI-generating packages in `.csproj` (`Microsoft.Azure.Functions.Worker.Extensions.OpenApi`, `Swashbuckle.*`, `Microsoft.OpenApi.*`). If absent, treat as contract-first greenfield — the skill generates an OpenAPI document as part of Build mode.
+1. **OpenAPI / contract** — grep for `swagger.json`, `openapi.yaml`, `openapi.json`, `*.openapi.*`, or OpenAPI-generating packages in project manifests (`Swashbuckle.*`, `Microsoft.OpenApi.*`, `Microsoft.Azure.Functions.Worker.Extensions.OpenApi`). If absent, treat as contract-first greenfield in Build mode and as missing-contract debt in Extract / Review mode.
 2. **Error shape** — grep for `application/problem+json`, `ProblemDetails`, `TypedResults.Problem`, `Results.Problem`, custom error DTOs. Compliant → reuse; custom error shape → flag as legacy debt, emit problem+json in added code, never extend the custom shape.
 3. **Versioning** — grep for `/v1/`, `/v2/`, `api-version=`, `Asp.Versioning`. Record the strategy; flag if two strategies coexist (URI path + query parameter on different endpoints is a §3.2 deviation).
-4. **Auth config** — grep for `AuthorizationLevel.`, `[Authorize]`, Easy Auth settings (`authsettingsV2`), Entra ID app-registration references, managed identity usage in IaC, function-keys-only patterns. Record the approach.
+4. **Auth config** — grep for `[Authorize]`, endpoint policy metadata, OIDC / OAuth / Entra ID app-registration references, managed identity usage in IaC, API-key patterns, function-key patterns, and Easy Auth settings (`authsettingsV2`). Record the approach.
 5. **Secrets** — grep for `@Microsoft.KeyVault(`, raw connection strings or access keys in `local.settings.json` (especially committed), connection-string patterns in code literals, hardcoded keys. Flag hardcoded secrets as *immediate* legacy debt — not scope-dependent.
 6. **Observability** — grep for `AddApplicationInsightsTelemetryWorkerService`, `AddOpenTelemetry`, `UseAzureMonitorExporter` / Azure Monitor exporter package references, `ILogger` scopes, `traceparent` / `Activity.Current` propagation on outbound `HttpClient`.
 7. **Manifest signals only** — `.csproj` / `package.json` to identify framework, SDK, versions. Extension handles deep stack-specific config.
@@ -112,7 +118,7 @@ Reuse is conditional on **substantive compliance**, not presence. For each disco
 | Data client lifetime (§3.16) | Singleton via DI; managed-identity auth | Per-invocation construction; account keys; multiple client instances |
 | Observability pipeline (§3.14) | OpenTelemetry / Application Insights registered in `Program.cs`; structured logs; `traceparent` end-to-end | Console logging; per-handler ad-hoc telemetry; missing outbound propagation |
 | Rate-limiting / throttling (§3.10) | Edge-level (API Management / Front Door) with per-consumer quotas; 429 + `Retry-After` | Origin-only, no `Retry-After`, wildcard throttling |
-| Hosting plan (§3.15) | Fits cold-start tolerance; documented | Consumption plan on p95-sensitive public API; Dedicated on genuinely sparse workload |
+| Hosting target (§3.15) | Fits latency, cost, scale, and operations posture; documented | Undocumented plan/runtime choice; runtime shape conflicts with stated SLO |
 
 **Name adoption is always fine.** If the project calls its problem+json `type` URIs `https://api.example.com/errors/...` and the reference examples use `https://api.example.com/errors/...`, adopt the project's base URL — the rule is shape and stability, not spelling.
 
@@ -128,8 +134,8 @@ When the project's existing approach violates a reference rule:
    - **Legacy debt: scope-dependent.**
      - If the task explicitly includes migration, fix in place and show the diff.
      - If the task does not include migration, leave the legacy untouched and add a `Legacy debt` entry to the footer naming file / line + the violated rule. Do not extend the legacy pattern into added files.
-     - If the legacy is load-bearing for the task (e.g., added endpoint sits inside a shared-key-auth Function app), halt and ask the user which scope to take.
-3. **Never silently propagate a violation.** If existing config uses `allowSharedKeyAccess=true`, generating an added Function that reads blobs quietly inherits the insecure posture; output a warning block naming the IaC file and `blob.HC-2`; let the user decide.
+     - If the legacy is load-bearing for the task (e.g., added endpoint sits inside a shared-key-auth runtime), halt and ask the user which scope to take.
+3. **Never silently propagate a violation.** If existing config uses `allowSharedKeyAccess=true`, generating added API code that reads blobs quietly inherits the insecure posture; output a warning block naming the IaC file and `blob.HC-2`; let the user decide.
 
 ### Footer additions
 
@@ -154,7 +160,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 0. **Dispatch.** Confirm build mode. Run the pre-flight above. Detect stack; announce which extensions load.
 
-1. **Principles scan.** Read reference [§2 Principles](../../docs/api-reference/serverless-api-design.md#2-principles). The skill's output must not violate any principle silently — violations require an explicit, justified deviation in a comment or an OpenAPI extension.
+1. **Principles scan.** Read reference [§2 Principles](../../docs/api-reference/api-design.md#2-principles). The skill's output must not violate any principle silently — violations require an explicit, justified deviation in a comment or an OpenAPI extension.
 
 2. **Decision defaults.** For each API choice the endpoint needs, pull the corresponding default from reference §3:
    - Resource model → §3.1.
@@ -186,9 +192,32 @@ The legacy-debt list is the record of what the project violates; it is not a lis
    - `[runtime]` / `[load]` / `[security-tool]` items: **never** claim a pass from static analysis; report as "not statically verifiable — run load test / RUM / API scanner for ground truth."
    If any `[static]` / `[iac]` / `[contract]` item fails, fix it and re-check.
 
-7. **Architecture diagram refresh (optional).** If the architect opted in during pre-flight (step 7), dispatch to `architecture-design` Extract targeting the feature just built. The canonical path `docs/architecture/<feature>.oef.xml` is updated with any new or changed Application Layer elements — added Azure Functions projects become Application Components, `[HttpTrigger]` routes become Application Interfaces, and `CosmosClient` / `BlobServiceClient` usage becomes Used-by relationships to Technology Nodes lifted from Bicep. If not opted in, skip silently.
+7. **Architecture diagram refresh (optional).** If the architect opted in during pre-flight (step 7), dispatch to `architecture-design` Extract targeting the feature just built. The canonical path `docs/architecture/<feature>.oef.xml` is updated with any new or changed Application Layer elements — API runtime projects become Application Components, routes become Application Interfaces, and loaded extensions contribute Technology Layer relationships where applicable. If not opted in, skip silently.
 
 8. **Emit footer disclosure.**
+
+## Extract mode workflow
+
+0. **Dispatch.** Confirm extract mode. Run pre-flight. Detect stack; announce extensions.
+
+1. **Structural scan.** Read source-readable API boundaries first: route declarations, OpenAPI files, controllers / functions / handlers, auth wiring, error middleware, versioning, and deployment manifests. Do not infer runtime behavior beyond the evidence.
+
+2. **Baseline map.** Produce the current API baseline:
+   - Contract shape: OpenAPI present / missing / stale.
+   - Route surface: endpoint groups and notable verbs.
+   - Auth model: caller types, authn/authz mechanism, and gaps.
+   - Error shape: problem+json, custom DTO, string/HTML, or mixed.
+   - Versioning: strategy and conflicts.
+   - Runtime stack: loaded runtime extension or unknown.
+   - Data/storage extensions loaded: detected data and object-store surfaces.
+   - Legacy debt: non-compliant patterns from project assimilation.
+   - Next smallest migration move: one concrete correction that improves API correctness without redesigning the whole service.
+
+3. **Layer honesty.** Mark each claim as `static`, `iac`, `contract`, or `inferred`; do not claim runtime SLOs or load behavior from source.
+
+4. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml`, dispatch to `architecture-design` Review with the drift-detection sub-behaviour and include `AD-DR-*` findings after the baseline map.
+
+5. **Emit footer disclosure.**
 
 ## Review mode workflow
 
@@ -207,7 +236,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
      severity: block | warn | info
      evidence: <quoted snippet or grep match>
      action:   <suggested fix template>
-     ref:      serverless-api-design.md §<n.m> + (RFC <n> | MSFT Learn: <slug> | extension code)
+     ref:      api-design.md §<n.m> + (RFC <n> | MSFT Learn: <slug> | extension code)
    ```
 
    Codes are drawn from the extensions (`afdotnet.HC-1`, `cosmos.HC-4`, `blob.HC-2`, etc.), from the core `SAD-G-*` labels in reference §6 when a finding matches a named gotcha, and by reference section + RFC / MSFT Learn when there's no narrower code.
@@ -216,7 +245,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 5. **Rollup.** After per-finding output, one paragraph per bucket summarising severity counts and the top fix.
 
-6. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml` (discovered in pre-flight step 7), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `AD-DR-*` findings in a dedicated "Architecture drift" section of the output, after the serverless-api-design rollup. If no matching diagram exists, skip silently.
+6. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml` (discovered in pre-flight step 7), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `AD-DR-*` findings in a dedicated "Architecture drift" section of the output, after the api-design rollup. If no matching diagram exists, skip silently.
 
 7. **Emit footer disclosure.**
 
@@ -252,6 +281,21 @@ Self-check:
 Deviations from defaults (if any): <list with reason>
 ```
 
+### Extract mode
+
+```
+API baseline:
+  Contract shape:       <OpenAPI present / missing / stale + evidence layer>
+  Route surface:        <endpoint groups and notable verbs>
+  Auth model:           <authn/authz shape and gaps>
+  Error shape:          <problem+json / custom DTO / string / mixed>
+  Versioning:           <strategy and conflicts>
+  Runtime stack:        <loaded runtime extension or unknown>
+  Data/storage:         <loaded data/object extensions or none>
+  Legacy debt:          <non-compliant patterns with reference/extension codes>
+  Next smallest move:   <one concrete migration or hardening step>
+```
+
 ### Review mode
 
 Per-finding block for each failure, then rollup. All findings cite reference section + RFC / MSFT Learn source / extension code where applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (grep / lint / source inspection), `iac` (Bicep / Terraform / ARM review), `contract` (OpenAPI document review), `runtime` (RUM / Azure Monitor / Application Insights), `security-tool` (OWASP ZAP / Burp / API Management policies), `load` (Azure Load Testing / k6 / JMeter). Only `static` / `iac` / `contract` findings are definitively pass / fail from the review alone; the rest are "source-aligned, verification deferred to <layer>".
@@ -263,9 +307,9 @@ Two to four lines of prose + one footer line.
 ### Footer (all modes)
 
 ```
-Mode: build | review | lookup
+Mode: build | extract | review | lookup
 Extensions loaded: <space-separated subset of {azure-functions-dotnet, azure-cosmosdb, azure-blob-storage} or "(none)">
-Reference: souroldgeezer-design/docs/api-reference/serverless-api-design.md
+Reference: souroldgeezer-design/docs/api-reference/api-design.md
 Self-check: pass | <n failures> | n/a
 Runtime-verified metrics: none — use Azure Load Testing / App Insights / Azure Monitor for p95, error rate, cold-start, RU charge, storage latency
 Architecture pairing: drift-check clean | <n> drift findings | extract refreshed | none (no paired diagram)
@@ -275,23 +319,19 @@ Architecture pairing: drift-check clean | <n> drift findings | extract refreshed
 
 Output contains any of the following? Stop; fix before delivering:
 
-- In-process .NET Functions model in added or modified code. Fix: isolated worker per `afdotnet.HC-1`; cite 2026-11-10 retirement.
-- `[FunctionName(...)]` attribute in isolated-worker code. Fix: `[Function(...)]` per `afdotnet.HC-11`.
 - Secrets in app-settings literals, `local.settings.json` committed to git, or code literals. Fix per §3.17 — Key Vault references + managed identity.
 - Per-invocation `HttpClient` construction inside a handler body. Fix per §3.16 — `IHttpClientFactory` + singleton typed client.
-- `AuthorizationLevel.Anonymous` on a non-public endpoint. Fix per §3.3 / §3.4.
+- Anonymous or key-only authorization on an endpoint that handles non-public data. Fix per §3.3 / §3.4 and the loaded runtime extension.
 - Error path returns plain JSON / string rather than `application/problem+json`. Fix per §3.5.
 - POST mutation without `Idempotency-Key` support where retries matter. Fix per §3.6 / §5.6.
 - 429 response without `Retry-After`. Fix per §3.10.
 - Outbound `HttpClient` call without `traceparent` propagation (non-`IHttpClientFactory`-backed client). Fix per §3.14.
-- Durable orchestration used where a queue + HTTP 202 would suffice. Fix per §5.4 / §5.8.
-- Long-running work on an HTTP trigger past the plan timeout. Fix per §3.9.
+- Orchestration/workflow runtime used where queue-backed HTTP 202 would suffice. Fix per §5.4 / §5.8 and the loaded runtime extension.
+- Long-running work held inside a synchronous HTTP request past the runtime timeout. Fix per §3.9.
 - Missing OpenAPI for an added endpoint. Fix per §2.1 / §3.2.
 - CORS wildcard on an authenticated endpoint. Fix per §3.13.
-- Cosmos `CosmosClient` constructed per invocation, or account key in code. Fix per §3.16 / `cosmos.HC-1` / `cosmos.HC-2`.
-- Cosmos GET-by-id performed as a cross-partition query. Fix per `cosmos.HC-4` — `ReadItemAsync(id, partitionKey)`.
-- Storage `allowSharedKeyAccess=true` on a newly-deployed account, or service-SAS signed with an account key. Fix per §3.17 / `blob.HC-2` / `blob.HC-3`.
-- API streams a large upload through the Function (re-uploading to blob). Fix per §3.12 — direct-to-blob user-delegation SAS per `blob.PAT-direct-upload-sas`.
+- Loaded extension high-confidence smells in added code or new IaC (`afdotnet.HC-*`, `cosmos.HC-*`, `blob.HC-*`, or future extension equivalents). Fix using the owning extension; do not duplicate extension rules in the core workflow.
+- API streams a large upload through the runtime without a documented memory/timeout budget. Fix per §3.12 and the loaded object-storage extension.
 - Claiming p95 / cold-start / error-rate / RU-charge pass from static review. Fix: restate as "static signals aligned; runtime metrics require load test / RUM."
 - Non-Baseline / preview-only feature used without fallback (e.g., Cosmos hybrid-search RRF when GA status is uncertain). Fix: feature-detect and fall back, or document the preview dependency.
 
