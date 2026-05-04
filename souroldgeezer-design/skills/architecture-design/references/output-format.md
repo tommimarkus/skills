@@ -104,7 +104,7 @@ Self-check (skill tooling):
   Reference files:        present <n>/<n> | degraded (<missing path list>)
   Procedures:             present <n>/<n> | degraded (<missing path list>)
   Scripts:                present <n>/<n>, executable <m>/<n> | degraded (<missing or non-executable path list>)
-  Weak dependencies:      archi-render.sh: runnable | not run (<blocker>)
+  Weak dependencies:      archi-render.sh: runnable | not run (<blocker>); validate-model.ajs: available | not run (<blocker>)
 Self-check (run): pass | <n failures> | n/a
 Visual render inspection: not run | passed <n>/<n> views | failed <n>/<n> views
 Render gate: not applicable (visual quality not requested) | passed (render ran on changed views) | engaged (visual quality requested but render not run; <n> changed views capped at model-valid)

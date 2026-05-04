@@ -37,7 +37,8 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
 | `references/schemas/layout-result.schema.json` | Build / Extract generated layout, route repair, and global polish result validation |
 | `references/schemas/layout-provenance.schema.json` | Build / Extract per-view layout provenance reporting |
 | `references/scripts/validate-oef-layout.sh` | Build / Extract final self-check; Review artefact pass — executable source-geometry gate |
-| `references/scripts/archi-render.sh` | Review render request, render-polish loop — weak dependency (Archi + `DISPLAY` required) |
+| `references/scripts/validate-model.ajs` | Review render request, render-polish loop — jArchi Validate Model script run by `archi-render.sh` after OEF import |
+| `references/scripts/archi-render.sh` | Review render request, render-polish loop — weak dependency (Archi + jArchi script support + `DISPLAY` required) |
 | `references/scripts/arch-layout.sh` | Layout request/result validation, generated layout, route repair, global polish, OEF materialization, layout provenance, and rendered PNG validation — requires Java™ 21+ and packaged runtime JAR |
 | `references/scripts/package-arch-layout.sh` | Repo/release packaging after Java™ source changes — runs Gradle tests and refreshes `references/bin/arch-layout.jar` |
 
@@ -47,7 +48,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
 
 2. **Verify executable scripts are present and runnable.** For each `*.sh` script in the *Required references* table whose row applies, confirm the file is present and that the executable bit is set. If the executable bit is missing, report it as a degraded-mode condition rather than silently invoking through `bash <path>`. For `arch-layout.sh`, also run `arch-layout.sh --version` when layout runtime behaviour is in scope; missing Java™ 21+ or missing `references/bin/arch-layout.jar` is a degraded runtime condition.
 
-3. **Verify weak dependencies are functional.** For `archi-render.sh`, additionally check Archi (or the configured renderer binary), `DISPLAY` availability, and `xmllint` only when render is in scope for the current run (Review render sub-behaviour, render-polish loop, or Build / Extract with `[visual]` self-check requested). Missing dependencies do not block the run; they downgrade visual render inspection to "not run" with the exact blocker.
+3. **Verify weak dependencies are functional.** For `archi-render.sh`, additionally check Archi (or the configured renderer binary), jArchi script support, `DISPLAY` availability, `xmllint`, and the Validate Model script path only when render is in scope for the current run (Review render sub-behaviour, render-polish loop, or Build / Extract with `[visual]` self-check requested). Missing dependencies do not block the run; they downgrade visual render inspection to "not run" with the exact blocker.
 
 4. **Record the self-check outcome.** Build the self-check block for the footer:
    ```
@@ -55,7 +56,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
      Reference files:        present <n>/<n> | degraded (<missing path list>)
      Procedures:             present <n>/<n> | degraded (<missing path list>)
      Scripts:                present <n>/<n>, executable <m>/<n> | degraded (<missing or non-executable path list>)
-     Weak dependencies:      archi-render.sh: <runnable | not run (<blocker>)>; arch-layout.sh: <runnable | not run (<blocker>)>
+     Weak dependencies:      archi-render.sh: <runnable | not run (<blocker>)>; validate-model.ajs: <available | not run (<blocker>)>; arch-layout.sh: <runnable | not run (<blocker>)>
    ```
    Add this block to the standard footer (`output-format.md` §Footer) ahead of `Project assimilation:`.
 
@@ -64,7 +65,7 @@ The Skill tool that loaded `SKILL.md` does not auto-inject this file. `Read` it 
    - Missing `smell-catalog.md` → emit findings using the `AD-*` codes from prior knowledge but flag "code-to-section index unavailable; verify codes against `architecture.md` §8".
    - Missing any `references/procedures/*.md` whose row applies → that procedure's behaviour is reported as "not run (procedure file missing: <path>)". The affected output (forward-only stubs, layout, lifted layers, drift findings, etc.) is omitted from the run, not faked.
    - Missing `validate-oef-layout.sh` or non-executable → source-geometry gate reports "not run (script missing | non-executable)"; Build / Extract cannot claim per-view readiness above `model-valid` for any view that would have been gated.
-   - Missing `archi-render.sh` or weak dependencies missing → visual render inspection reports "not run (blocker)"; render-polish loop refuses.
+   - Missing `archi-render.sh`, `validate-model.ajs`, jArchi script support, or weak dependencies missing → visual render inspection reports "not run (blocker)"; render-polish loop refuses. `INVALID` Validate Model findings from a completed render/load run are render blockers; `WARN` findings are readiness evidence to triage through external validation handoff.
    - Missing `arch-layout.sh`, `references/bin/arch-layout.jar`, Java™ 21+, or the layout schemas → layout request/result validation, route repair, global polish, OEF materialization, layout provenance, and PNG validation report "not run (blocker)"; do not claim those runtime checks passed.
 
 6. **Disclose, don't silently degrade.** The degraded conditions go in the footer and (when they affect findings) in the per-finding output as `evidence: "<verification> not run: <blocker>"`. The skill never claims a check passed when its required tool was absent.

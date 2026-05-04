@@ -5,6 +5,11 @@ outside the skill, including Archi import errors, Archi Validate Model output,
 `xmllint --schema` output, or another conformant ArchiMate tool's model
 validation report.
 
+Also use it when `references/scripts/archi-render.sh` reports
+`ARCHI_VALIDATE_MODEL: INVALID` or `ARCHI_VALIDATE_MODEL: WARN` findings from
+the bundled `validate-model.ajs` jArchi script. That output is runtime
+validation evidence, not a PNG-rendering failure.
+
 This is an evidence handoff, not a mandatory extra gate for every run. When no
 external validation report is supplied, disclose `not supplied/run` in the
 footer and continue with the skill's source checks. When the user asks about

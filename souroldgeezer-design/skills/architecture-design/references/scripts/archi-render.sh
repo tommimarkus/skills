@@ -17,6 +17,9 @@ usage() {
 Usage: archi-render.sh [OPTIONS] OEF_FILE
 
 Render every view in an ArchiMate OEF XML file as a PNG via Archi's CLI.
+The imported model is also checked with the bundled jArchi Validate Model
+script before report generation. Invalid findings fail the render; warnings are
+reported without suppressing PNG output.
 
 Output goes to .cache/archi-views/<stem>/ by default, where <stem> is the OEF
 filename with .oef.xml / .xml stripped. Concurrent-safe: runs from different
@@ -28,6 +31,9 @@ Options:
       --config FILE       Read KEY=VALUE settings. Config values override CLI
                           arguments and environment values.
       --output-root DIR   Root for rendered PNG output; <stem>/ is appended.
+      --validate-model-script PATH
+                          Path to a jArchi Validate Model-compatible script.
+                          Defaults to the bundled validate-model.ajs.
   -q, --quiet             Suppress Archi progress output. Only print result paths.
   -h, --help              Show this help.
 
@@ -47,12 +53,15 @@ Environment:
   ARCHI_RENDER_OEF_FILE     Default OEF file when OEF_FILE is omitted.
   ARCHI_RENDER_OUTPUT_ROOT  Root for rendered PNG output.
                             Default: .cache/archi-views.
+  ARCHI_RENDER_VALIDATE_MODEL_SCRIPT
+                            jArchi script run after OEF import and before HTML
+                            report generation.
   DISPLAY        Required. Archi's SWT needs an X display (use xvfb-run on
                  pure Wayland without Xwayland).
 
 Config file keys:
   ARCHI_BIN, ARCHI_RENDER_CACHE_ROOT, ARCHI_RENDER_OEF_FILE,
-  ARCHI_RENDER_OUTPUT_ROOT
+  ARCHI_RENDER_OUTPUT_ROOT, ARCHI_RENDER_VALIDATE_MODEL_SCRIPT
 
 Precedence:
   config file > CLI argument > environment variable > default
@@ -64,6 +73,7 @@ Exit codes:
   2  OEF file is not well-formed XML
   3  Archi CLI returned non-zero (see stderr for log path)
   4  Archi completed but produced no view images
+  5  jArchi Validate Model reported one or more invalid findings
 EOF
 }
 
@@ -134,6 +144,7 @@ load_config() {
       ARCHI_RENDER_CACHE_ROOT) cache_root="$value" ;;
       ARCHI_RENDER_OEF_FILE) oef_rel="$value" ;;
       ARCHI_RENDER_OUTPUT_ROOT) output_root="$value" ;;
+      ARCHI_RENDER_VALIDATE_MODEL_SCRIPT) validate_model_script="$value" ;;
       *) die "unknown config key $key in $config" ;;
     esac
   done < "$config"
@@ -141,11 +152,13 @@ load_config() {
 
 # ---- argparse -----------------------------------------------------------
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 quiet=0
 config_file="${ARCHI_RENDER_CONFIG:-}"
 cli_archi_bin=""
 cli_cache_root=""
 cli_output_root=""
+cli_validate_model_script=""
 oef_arg=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -175,6 +188,12 @@ while [[ $# -gt 0 ]]; do
       cli_output_root="$1"
       ;;
     --output-root=*) cli_output_root="${1#*=}" ;;
+    --validate-model-script)
+      shift
+      [[ $# -gt 0 ]] || die "--validate-model-script requires a path"
+      cli_validate_model_script="$1"
+      ;;
+    --validate-model-script=*) cli_validate_model_script="${1#*=}" ;;
     --) shift; oef_arg="${1:-}"; break ;;
     -*) die "unknown option: $1 (try --help)" ;;
     *) oef_arg="$1" ;;
@@ -197,10 +216,12 @@ archi_bin="${ARCHI_BIN:-$HOME/.local/bin/Archi}"
 cache_root="${ARCHI_RENDER_CACHE_ROOT:-.cache/archi}"
 oef_rel="${ARCHI_RENDER_OEF_FILE:-}"
 output_root="${ARCHI_RENDER_OUTPUT_ROOT:-.cache/archi-views}"
+validate_model_script="${ARCHI_RENDER_VALIDATE_MODEL_SCRIPT:-$script_dir/validate-model.ajs}"
 
 [[ -n "$cli_archi_bin" ]] && archi_bin="$cli_archi_bin"
 [[ -n "$cli_cache_root" ]] && cache_root="$cli_cache_root"
 [[ -n "$cli_output_root" ]] && output_root="$cli_output_root"
+[[ -n "$cli_validate_model_script" ]] && validate_model_script="$cli_validate_model_script"
 [[ -n "$oef_arg" ]] && oef_rel="$oef_arg"
 
 if [[ -n "$config_file" ]]; then
@@ -212,10 +233,12 @@ fi
 [[ -n "$cache_root" ]] || die "cache root cannot be empty"
 [[ -n "$oef_rel" ]] || die "OEF file path cannot be empty (pass OEF_FILE or set ARCHI_RENDER_OEF_FILE)"
 [[ -n "$output_root" ]] || die "output root cannot be empty"
+[[ -n "$validate_model_script" ]] || die "Validate Model script path cannot be empty"
 
 archi_bin="$(resolve_repo_path "$archi_bin")"
 cache_root="$(resolve_repo_path "$cache_root")"
 output_root="$(resolve_repo_path "$output_root")"
+validate_model_script="$(resolve_repo_path "$validate_model_script")"
 
 if [[ "$oef_rel" = /* ]]; then
   oef_abs="$oef_rel"
@@ -225,6 +248,8 @@ fi
 
 [[ -f "$oef_abs" ]] || die "OEF file not found: $oef_abs"
 oef_abs="$(realpath "$oef_abs")"
+[[ -f "$validate_model_script" ]] || die "Validate Model script not found: $validate_model_script"
+validate_model_script="$(realpath "$validate_model_script")"
 
 [[ -x "$archi_bin" ]] || die "Archi binary not executable at $archi_bin (set ARCHI_BIN to override)"
 
@@ -277,6 +302,7 @@ archi_cmd=(
   -data          "$work/data"
   --abortOnException
   --xmlexchange.import "$oef_abs"
+  --script.runScript "$validate_model_script"
   --html.createReport  "$work/report"
 )
 
@@ -298,6 +324,39 @@ if [[ $rc -ne 0 ]]; then
   cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
   echo "archi-render: Archi exited $rc — log preserved at $persist_log" >&2
   exit 3
+fi
+
+validation_findings="$(grep -c '^ARCHI_VALIDATE_MODEL: INVALID ' "$log" || true)"
+if (( validation_findings > 0 )); then
+  persist_log="$cache_root/last-validation-$oef_stem.log"
+  cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
+  echo "archi-render: Validate Model reported finding(s): $validation_findings — log preserved at $persist_log" >&2
+  printed=0
+  while IFS= read -r finding; do
+    (( printed >= 20 )) && break
+    printf '  %s\n' "$finding" >&2
+    printed=$((printed + 1))
+  done < <(grep '^ARCHI_VALIDATE_MODEL: INVALID ' "$log" || true)
+  if (( validation_findings > printed )); then
+    echo "  ... $((validation_findings - printed)) more finding(s) in log" >&2
+  fi
+  exit 5
+fi
+
+validation_warnings="$(grep -c '^ARCHI_VALIDATE_MODEL: WARN ' "$log" || true)"
+if (( validation_warnings > 0 )); then
+  persist_log="$cache_root/last-validation-warnings-$oef_stem.log"
+  cp -- "$log" "$persist_log" 2>/dev/null || persist_log="$log (deleted on exit)"
+  echo "archi-render: Validate Model reported warning(s): $validation_warnings — log preserved at $persist_log" >&2
+  printed=0
+  while IFS= read -r finding; do
+    (( printed >= 20 )) && break
+    printf '  %s\n' "$finding" >&2
+    printed=$((printed + 1))
+  done < <(grep '^ARCHI_VALIDATE_MODEL: WARN ' "$log" || true)
+  if (( validation_warnings > printed )); then
+    echo "  ... $((validation_warnings - printed)) more warning(s) in log" >&2
+  fi
 fi
 
 # ---- collect PNGs -------------------------------------------------------

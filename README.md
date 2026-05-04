@@ -373,11 +373,15 @@ skills through the plugin manifest, reads per-skill metadata from each
 - **Render artefacts.** OEF XML remains the architecture source of truth.
   Rendered PNGs are deployment / publication artefacts derived from the OEF.
   Users can request renders through `architecture-design`; the skill runs
-  `references/scripts/archi-render.sh` after source-geometry checks, records
-  the output paths, and validates every PNG with `arch-layout.sh validate-png`
-  before visual inspection. ImageMagick is optional diagnostics only; the
-  shipped runtime uses Java™ ImageIO for acceptance checks. The renderer
-  executable is a weak dependency with no fallback renderer — missing renderer,
+  `references/scripts/archi-render.sh` after source-geometry checks. The render
+  script runs `xmllint --noout`, imports the OEF through Archi, runs the
+  bundled jArchi Validate Model script, records the output paths, and validates
+  every PNG with `arch-layout.sh validate-png` before visual inspection.
+  Invalid model findings fail the render; warnings are surfaced as readiness
+  evidence without suppressing PNG output.
+  ImageMagick is optional diagnostics only; the shipped runtime uses Java™
+  ImageIO for acceptance checks. The renderer executable is a weak dependency
+  with no fallback renderer — missing renderer, jArchi script support,
   `DISPLAY`, or script prerequisites are reported as
   `visual render inspection: not run`.
 - **Render gate** (introduced in 0.18.0). When the user has explicitly
@@ -527,13 +531,13 @@ skills through the plugin manifest, reads per-skill metadata from each
   XML (the element and relationship vocabulary is unbounded) but not
   first-class in v1.
 - **OEF XML, tool-neutral.** Output is loadable by every major ArchiMate®
-  tool. The skill
-  does not bundle The Open Group's XSD schemas — emitted files reference
-  the canonical schema URL via `xsi:schemaLocation`, and validation is
-  delegated to the architect's toolchain (Archi's import, or
-  `xmllint --schema`). When that toolchain reports validation findings and the
-  report is supplied, Review treats it as first-class evidence rather than an
-  optional human-side note.
+  tool. The skill does not bundle The Open Group's XSD schemas — emitted files
+  reference the canonical schema URL via `xsi:schemaLocation`, and schema
+  validation is delegated to the architect's toolchain (`xmllint --schema` or a
+  conformant tool). Render/load validation uses Archi XML Exchange import plus
+  the bundled jArchi Validate Model script. When any toolchain reports
+  validation errors or warnings and the report is supplied, Review treats it as
+  first-class evidence rather than an optional human-side note.
 - **Disclosure footer.** Every output ends with a footer listing mode,
   reference path, canonical path, diagram kind, layers in scope, self-
   check result, project-assimilation summary (existing model reused /

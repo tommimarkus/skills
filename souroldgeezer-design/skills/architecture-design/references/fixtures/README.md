@@ -8,8 +8,9 @@ Small ArchiMate® OEF XML files exercising all seven supported §9 viewpoints at
 2. The layout strategy finds no prior view at the canonical path, so all elements get generated placement.
 3. The matching viewpoint policy plus backend or deterministic fallback computes coordinates, then routing/glossing assigns ports and bendpoints. JSON layout contract fixtures exercise the same request/result shape through `../scripts/arch-layout.sh`.
 4. The skill writes the resulting OEF, including `<node>` and `<connection>` geometry in the `<view>`.
-5. The bundled `../scripts/archi-render.sh` renders the OEF to PNG when Archi
-   and an X display are available.
+5. The bundled `../scripts/archi-render.sh` imports the OEF, runs the bundled
+   `../scripts/validate-model.ajs` jArchi validation step, and renders the OEF
+   to PNG when Archi, jArchi script support, and an X display are available.
 6. `../scripts/arch-layout.sh validate-png` checks that every produced PNG is nonblank, not tiny, not cropped, and within any configured baseline-drift tolerance; visual inspection then checks that the PNG is spacious, consistently routed, and at the per-viewpoint acceptance bar (see spec §6.2 of `docs/superpowers/specs/2026-04-25-architecture-design-pro-quality-design.md`).
 
 ## Render
@@ -38,9 +39,10 @@ the fixture set is considered valid:
 The gate discovers all OEF fixtures in this directory, passes explicit cache and
 output roots through to `archi-render.sh`, verifies materialized view geometry,
 runs [`../scripts/validate-oef-layout.sh`](../scripts/validate-oef-layout.sh)
-for source-geometry `AD-L*` findings, renders every diagram, and fails if any
-PNG is Archi's blank 100 x 100 placeholder. It also fails when the fixture set
-does not cover all seven supported viewpoint values: Capability Map,
+for source-geometry `AD-L*` findings, lets `archi-render.sh` run its jArchi
+Validate Model step, renders every diagram, and fails if any PNG is Archi's
+blank 100 x 100 placeholder. It also fails when the fixture set does not cover
+all seven supported viewpoint values: Capability Map,
 Application Cooperation, Service Realization, Technology Usage, Migration,
 Motivation, and Business Process Cooperation. If no cache or output root is
 supplied, the validator creates a temporary root under `${TMPDIR:-/tmp}`.

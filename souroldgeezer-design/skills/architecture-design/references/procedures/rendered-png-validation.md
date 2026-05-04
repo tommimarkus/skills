@@ -5,6 +5,13 @@ and the user asked for rendered-view quality, visual inspection, or render
 comparison. OEF remains the architecture source of truth; PNG validation is a
 derived-artifact quality gate.
 
+`archi-render.sh` validates the loaded model before producing PNGs: after
+`xmllint --noout` and Archi XML Exchange import, it runs the bundled
+`validate-model.ajs` jArchi script. Any `ARCHI_VALIDATE_MODEL: INVALID` finding
+is a render blocker. `ARCHI_VALIDATE_MODEL: WARN` findings are surfaced without
+failing PNG generation. Both should be triaged through
+`external-validation-handoff.md` before readiness is claimed.
+
 ## Required runtime
 
 The shipped validator is Java™ ImageIO-based and runs through:
@@ -57,5 +64,6 @@ references/scripts/archi-render.sh docs/architecture/<feature>.oef.xml --output-
 references/scripts/arch-layout.sh validate-png --image .cache/archi-views/<feature>/<view>.png --result .cache/archi-views/<feature>/<view>.png.json
 ```
 
-If Archi, `DISPLAY`, `xmllint`, or another render prerequisite is missing,
-report render and PNG validation as not run with the exact blocker.
+If Archi, jArchi script support, `DISPLAY`, `xmllint`, `validate-model.ajs`, or
+another render prerequisite is missing, report render and PNG validation as not
+run with the exact blocker.
