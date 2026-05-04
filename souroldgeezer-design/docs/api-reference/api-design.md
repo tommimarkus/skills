@@ -6,7 +6,7 @@ A deployed endpoint that returns 200 OK is not the same as a production HTTP API
 
 API design in 2026 is less about wiring a route than about writing an API whose **contract, security posture, reliability envelope, and observability** are correct by construction — before the first load test, and regardless of which hosting model, runtime, or data service sits underneath. This reference is a playbook for that practice: principles, decisions with defaults, a cheatsheet of primitives and status codes, worked patterns, named gotchas, and a review checklist — organized for the person building, extracting, or reviewing an API, not for a scanner.
 
-**Security is enforced throughout, not referenced.** Every decision, pattern, and checklist item that touches authentication, authorization, secrets, or data access names the specific discipline it protects: HTTPS-only, Microsoft Entra ID plus managed identities over keys, Key Vault references over literals, data-plane RBAC, least-privilege scopes, input validation at the boundary. A design choice that compromises any of these is called out, never silently accepted.
+**Security is enforced throughout, not referenced.** Every decision, pattern, and checklist item that touches authentication, authorization, secrets, or data access names the specific discipline it protects: HTTPS-only, OAuth 2.0 / OIDC through maintained middleware, managed or workload identity where the platform supports it, platform secret managers over literals, data-plane RBAC for managed data services, least-privilege scopes, input validation at the boundary. A design choice that compromises any of these is called out, never silently accepted.
 
 **Contract discipline is a baseline, not a future concern.** Every endpoint here ships with an OpenAPI 3.1 definition, RFC 9457 `application/problem+json` on every error path, an explicit versioning strategy (no implicit v1), RFC 9110 conditional requests (`ETag`, `If-Match`, `If-None-Match`) on mutable resources, and idempotency semantics that match the HTTP verb. POSTs that retry without an `Idempotency-Key` are a smell; PUT / DELETE without `If-Match` on concurrently-writable resources is a smell.
 
@@ -16,7 +16,7 @@ API design in 2026 is less about wiring a route than about writing an API whose 
 
 **Performance is responsiveness for APIs.** Responsive here means responsive to startup latency, connection exhaustion, dependency latency, throttling, and scale events — not just to a raw RPS number. The reference environment is mobile-client p95 over public internet; the hosting choice is a design-time decision governed by latency tolerance, workload shape, operations model, and cost, not a deployment afterthought.
 
-**Scope.** HTTP APIs in 2026, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Cosmos DB, and Azure Blob Storage. gRPC, GraphQL, SOAP, and runtimes without a bundled extension are out of scope — see §8. Data-model design (schema, DDD, event-sourcing) is also out of scope; this reference covers the contract and the runtime around it, not the domain model.
+**Scope.** HTTP APIs in 2026, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Node.js hosted/serverless APIs, hosted Next.js API surfaces, Cosmos DB, and Azure Blob Storage. gRPC, GraphQL, SOAP, and runtimes without a bundled extension are out of scope — see §8. Data-model design (schema, DDD, event-sourcing) is also out of scope; this reference covers the contract and the runtime around it, not the domain model.
 
 ## 2. Principles
 
@@ -33,16 +33,16 @@ Every error response is `application/problem+json` per RFC 9457 — `type` (URI 
 Every endpoint belongs to a version. New APIs default to URI-path versioning (`/v1/...`); the alternative — header or media-type versioning — is chosen explicitly and with a documented reason. "Implicit v1" is a smell; clients must not be able to tell which version they are speaking by omission.
 
 ### 2.5 Security is baseline
-HTTPS-only, TLS 1.2+. Entra ID (OAuth 2.0 / OIDC) for end-user auth and for service-to-service between first-party services; managed identities (system-assigned or user-assigned) for every Azure-to-Azure hop; Key Vault references in app settings for the few remaining secrets; data-plane RBAC for data stores (Cosmos `disableLocalAuth=true`, Storage `allowSharedKeyAccess=false`). Input is validated at the boundary, not in the handler body. Authorization is explicit and scope-based — "the function key proves anything about the caller" is false.
+HTTPS-only, TLS 1.2+. Use OAuth 2.0 / OIDC through maintained middleware for end-user and service-to-service auth; use managed identities or workload identities for cloud-to-cloud hops where the hosting platform supports them; use platform secret managers for the few remaining secrets; use data-plane RBAC for managed data stores. Azure extensions map this to Entra ID, managed identities, Key Vault references, Cosmos `disableLocalAuth=true`, and Storage `allowSharedKeyAccess=false`. Input is validated at the boundary, not in the handler body. Authorization is explicit and scope-based — "the function key or API key proves anything about the caller" is false.
 
 ### 2.6 Reliability is baseline
 Mutations are idempotent by verb (PUT, DELETE) or by idempotency key (POST with `Idempotency-Key` + a replay cache). Outbound calls retry with exponential backoff and jitter, capped, and honour server-supplied `Retry-After`. Throttle responses are 429 with `Retry-After` (seconds or HTTP-date). Async workers carry bounded retry plus poison / dead-letter handling. Long-running work does not live inside the synchronous HTTP request — it moves to a queue-backed processor or workflow runtime.
 
 ### 2.7 Observability is baseline
-Every request carries a W3C `traceparent` header (`00-<trace-id>-<span-id>-<flags>`); the runtime propagates it into `ILogger` scopes and onto outbound `HttpClient` calls. Logs are structured — named fields, not interpolated strings. Every error response carries a correlation identifier the client can quote back (the `traceparent` trace-id is sufficient). Application Insights or OpenTelemetry is wired at the worker startup, not inside individual handlers. Per-request cost signals (Cosmos RU charge, Blob Storage request count) are emitted as structured fields so dashboards are one query away.
+Every request carries a W3C `traceparent` header (`00-<trace-id>-<span-id>-<flags>`); the runtime propagates it into request-local context / logger scopes and onto outbound HTTP calls. Logs are structured — named fields, not interpolated strings. Every error response carries a correlation identifier the client can quote back (the `traceparent` trace-id is sufficient). OpenTelemetry or the platform-native telemetry bridge is wired at worker / process startup, not inside individual handlers. Per-request cost signals (Cosmos RU charge, Blob Storage request count, external dependency count / latency) are emitted as structured fields so dashboards are one query away.
 
 ### 2.8 Performance is responsiveness for APIs
-Responsive means responsive to startup latency, connection overhead, dependency latency, and scale events — not raw throughput. Singleton clients (`HttpClient`, `CosmosClient`, `BlobServiceClient`) live in DI, never in handler bodies. Hosting selection is a design-time decision keyed to latency tolerance, scale shape, operational ownership, and cost; runtime extensions supply concrete platform defaults.
+Responsive means responsive to startup latency, connection overhead, dependency latency, and scale events — not raw throughput. HTTP and data clients (`HttpClient`, Undici / `fetch` dispatcher, CosmosClient, BlobServiceClient, database pools, queue clients) live in DI, module scope, or an app container, never in handler bodies. Hosting selection is a design-time decision keyed to latency tolerance, scale shape, operational ownership, and cost; runtime extensions supply concrete platform defaults.
 
 ### 2.9 Progressive enhancement across capability axes
 Sync HTTP is the baseline; async patterns (202 + polling, webhook delivery, workflow orchestration, queue-backed processor) are additive. Reach for the simplest pattern that satisfies the requirement and move up only when it doesn't: if a queue + 202 will do, don't reach for a full orchestration runtime; if a broker or worker platform gives you dead-lettering for free, don't hand-roll retry loops.
@@ -66,11 +66,11 @@ URI-path versioning is the most discoverable for public APIs and the easiest to 
 *When to deviate:* internal APIs where a single client controls both sides and header versioning reduces churn; public APIs that must preserve exact existing URLs across schema changes and choose `api-version=` query parameter for compatibility with the existing clients. Media-type versioning (`Accept: application/vnd.example.v2+json`) is rarely warranted; pick it only when content negotiation is the clearest expression of the contract.
 
 ### 3.3 Authentication model
-End-user calls authenticate with Microsoft Entra ID (OAuth 2.0 / OIDC); service-to-service Azure-to-Azure uses managed identities; external service-to-service uses OAuth 2.0 client credentials. Function keys are a narrow fallback for tightly-scoped service-to-service with a single trusted caller.
+End-user calls authenticate with OAuth 2.0 / OIDC through maintained middleware. Service-to-service calls use OAuth 2.0 client credentials or platform managed/workload identity when available. Azure targets use Microsoft Entra ID and managed identities. Function keys and API keys are a narrow fallback for tightly-scoped service-to-service with a single trusted caller.
 
-**Default:** Entra ID + managed identity on the server side. No secrets in code.
+**Default:** OAuth 2.0 / OIDC for callers, managed/workload identity where available, and no secrets in code. Azure targets default to Entra ID + managed identity.
 
-*When to deviate:* a narrow service-to-service hop where both sides are internal, the caller is a single trusted service, and the overhead of OAuth setup is not justified — use a function key sourced from Key Vault and rotated. Document the scope and the rotation policy.
+*When to deviate:* a narrow service-to-service hop where both sides are internal, the caller is a single trusted service, and the overhead of OAuth setup is not justified — use a scoped key sourced from a platform secret manager and rotated. Document the scope and the rotation policy.
 
 ### 3.4 Authorization model
 Authentication proves who. Authorization proves what they can do. Never use "holds a key" as proof of "allowed to perform this operation."
@@ -129,12 +129,12 @@ Long-running or deferred work is an explicit design choice with a named pattern;
 
 **Default:** 202 Accepted + `Location` + polling for most async work. Webhook delivery when the client is itself a service with a reachable callback endpoint. Workflow orchestration when the process is multi-step, requires fan-out / fan-in, or needs compensation logic.
 
-*When to deviate:* a synchronous endpoint that legitimately takes 2–3 seconds and whose callers are tolerant (interactive admin action, for instance) can stay sync — but not past Consumption-plan 230-second request limits or Premium-plan configured timeout.
+*When to deviate:* a synchronous endpoint that legitimately takes 2–3 seconds and whose callers are tolerant (interactive admin action, for instance) can stay sync — but not past the loaded runtime extension's request timeout, gateway idle timeout, or configured platform limit.
 
 ### 3.10 Rate limiting & throttling
 Throttling is a first-class response, not an implementation detail. Clients that retry without observing `Retry-After` create amplification loops.
 
-**Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` informational headers on successful responses so clients can self-pace. Rate limiting is enforced at the edge (Azure Front Door / API Management) on public endpoints; origin-only limiting is a fallback, not a primary defence.
+**Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` informational headers on successful responses so clients can self-pace. Rate limiting is enforced at the edge (API gateway, reverse proxy, CDN/WAF, Front Door / API Management on Azure) on public endpoints; origin-only limiting is a fallback, not a primary defence.
 
 *When to deviate:* internal service-to-service endpoints with a small, trusted set of callers can skip `RateLimit-*` informational headers, but 429 + `Retry-After` remains mandatory.
 
@@ -162,7 +162,7 @@ API runtimes have memory, timeout, and request-size ceilings that a blob payload
 ### 3.14 Observability contract
 Observability is wired at worker startup, not per endpoint.
 
-**Default:** structured `ILogger` scopes on every handler with named fields; W3C `traceparent` propagation end-to-end (inbound → scope → outbound `HttpClient` → data-store SDK); correlation identifier (trace-id) in every error response body; Application Insights or OpenTelemetry exporter registered in `Program.cs`. Per-request cost signals (Cosmos `RequestCharge`, storage request count) emitted as structured log fields.
+**Default:** structured logger scopes / request context on every handler with named fields; W3C `traceparent` propagation end-to-end (inbound → scope/context → outbound HTTP → data-store SDK); correlation identifier (trace-id) in every error response body; OpenTelemetry / Application Insights / platform telemetry registered at startup. Per-request cost signals (Cosmos `RequestCharge`, storage request count, dependency latency/count) emitted as structured log fields.
 
 *When to deviate:* never. Every endpoint gets the same discipline.
 
@@ -174,16 +174,16 @@ Hosting is a contract parameter: it fixes startup tolerance, scale-out character
 *When to deviate:* clear cost, topology, compliance, or platform-standard reasons. Document the reason; the hosting choice is visible in IaC or deployment manifests and reviewable.
 
 ### 3.16 Data-access contract
-Every data-store client (`CosmosClient`, `BlobServiceClient`, `SqlConnection`, `ServiceBusClient`) is registered as a singleton in DI and constructed with `DefaultAzureCredential`. Per-invocation construction is a bug.
+Every outbound HTTP and data-store client (`HttpClient`, Undici / `fetch` dispatcher, database pool, `CosmosClient`, `BlobServiceClient`, `SqlConnection`, `ServiceBusClient`) is registered as a singleton in DI, module scope, or an application container and uses managed/workload identity where the platform supports it. Per-invocation construction is a bug.
 
-**Default:** singleton client via DI; managed-identity auth; preferred-regions configured for multi-region clients; per-request cost signals surfaced.
+**Default:** singleton / process-scope client; managed/workload-identity auth where available; preferred-regions configured for multi-region clients; per-request cost signals surfaced.
 
 *When to deviate:* dev-only local emulator usage may differ. Production code does not instantiate clients per request.
 
 ### 3.17 Secrets contract
-Secrets live in Key Vault and are referenced from app settings via the `@Microsoft.KeyVault(SecretUri=...)` syntax. Account keys, shared access keys, and connection strings with embedded secrets are legacy debt.
+Secrets live in the platform secret manager and are referenced from runtime configuration rather than committed files or code literals. Azure targets use Key Vault references from app settings via the `@Microsoft.KeyVault(SecretUri=...)` syntax. Account keys, shared access keys, API keys in query strings, committed `.env` files, and connection strings with embedded secrets are legacy debt.
 
-**Default:** Key Vault references in app settings; managed identity on the API runtime with the minimum data-plane role needed. Cosmos DB accounts have `disableLocalAuth=true`. Storage accounts have `allowSharedKeyAccess=false`. No secrets in code literals, no keys in local settings committed to git.
+**Default:** platform secret references in runtime settings; managed/workload identity on the API runtime with the minimum data-plane role needed. Azure Cosmos DB accounts have `disableLocalAuth=true`. Azure Storage accounts have `allowSharedKeyAccess=false`. No secrets in code literals, no keys in local settings committed to git.
 
 *When to deviate:* never for new code. Legacy code is migration debt, not a reference pattern.
 
@@ -309,17 +309,17 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   securitySchemes:
-    entraId:
+    oauth2:
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
-          tokenUrl:         https://login.microsoftonline.com/common/oauth2/v2.0/token
+          authorizationUrl: https://auth.example.com/oauth2/authorize
+          tokenUrl:         https://auth.example.com/oauth2/token
           scopes:
             "api://<app-id>/Orders.Read":  Read orders
             "api://<app-id>/Orders.Write": Create / modify orders
 security:
-  - entraId: ["api://<app-id>/Orders.Read"]
+  - oauth2: ["api://<app-id>/Orders.Read"]
 paths:
   /orders/{id}:
     get:
@@ -450,17 +450,17 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - **Poison handling:** after `MaxDeliveryCount` (default 10) the message is dead-lettered automatically. Don't reset `DeliveryCount` on transient failures — let the broker's retry count drive dead-lettering, and surface it in the `/jobs/{id}` failure record.
 
 ### 5.12 OAuth2 / OIDC-protected endpoint with scope check
-- Authentication: Entra ID (validator at the edge or in the API runtime).
-- Authorization: `[Authorize(Policy="Orders.Write")]` or equivalent scope-based check.
+- Authentication: maintained OAuth2 / OIDC validator at the edge or in the API runtime.
+- Authorization: `[Authorize(Policy="Orders.Write")]`, framework policy middleware, or equivalent scope-based check.
 - 401 on missing / invalid token + `WWW-Authenticate: Bearer realm="...", error="invalid_token"`.
 - 403 on valid token without the required scope + problem+json `type: insufficient-scope`.
 - Never use 404 to mask missing authorization unless existence is itself sensitive.
 
 ## 6. Gotchas — named anti-patterns
 
-- **SAD-G-secrets-in-settings** — account keys, connection strings with embedded secrets, or function keys pasted into app settings as literals. Fix per §3.17: Key Vault reference + managed identity.
-- **SAD-G-shared-key-public** — shared-key / account-key auth exposed to public callers. Fix per §3.3 / §3.5.
-- **SAD-G-httpclient-per-invocation** — `new HttpClient()` inside a handler body; socket exhaustion under load. Fix per §3.16 / §2.8: singleton via `IHttpClientFactory`.
+- **SAD-G-secrets-in-settings** — account keys, connection strings with embedded secrets, function keys, or `.env` secrets committed as literals. Fix per §3.17: platform secret reference + managed/workload identity where available.
+- **SAD-G-shared-key-public** — shared-key / account-key / API-key auth exposed to public callers. Fix per §3.3 / §3.5.
+- **SAD-G-httpclient-per-invocation** — outbound HTTP client constructed inside a handler body (`new HttpClient()`, new Node dispatcher/Agent per request); socket exhaustion under load. Fix per §3.16 / §2.8: singleton via DI, app container, or module scope.
 - **SAD-G-unbounded-response** — response body that scales with result-set size; OOM under growth. Fix per §3.7: cursor pagination with `limit` cap, or streaming.
 - **SAD-G-post-no-idempotency** — POST mutation with no idempotency key and no natural key; retries double-submit. Fix per §3.6 / §5.6.
 - **SAD-G-at-least-once-no-dedup** — claiming at-least-once delivery without a dedup mechanism; silently double-processes. Fix: idempotency key or natural key dedup on the receiving side.
@@ -501,10 +501,10 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 
 ### Security (hard requirements)
 - HTTPS-only enforced at platform `[iac]`.
-- Authentication via Entra ID or managed identity `[static][iac]`.
+- Authentication via OAuth 2.0 / OIDC, maintained session/JWT middleware, Entra ID, managed identity, or workload identity `[static][iac]`.
 - Authorization scope- or role-based, deny-by-default `[static][contract]`.
-- Secrets via Key Vault references; no literals `[static][iac]`.
-- Data-plane: Cosmos `disableLocalAuth=true`, Storage `allowSharedKeyAccess=false` `[iac]`.
+- Secrets via platform secret references; no literals or committed `.env` secrets `[static][iac]`.
+- Data-plane: when Azure data extensions load, Cosmos `disableLocalAuth=true`, Storage `allowSharedKeyAccess=false` `[iac]`.
 - Input validated at boundary (OpenAPI schema + semantic) `[static][contract]`.
 - CORS allowlist, not wildcard on authenticated endpoints `[static][iac]`.
 - Rate limiting at the edge (Front Door / API Management) on public endpoints `[iac][security-tool]`.
@@ -520,16 +520,16 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - ETag / If-Match on concurrently-writable resources `[static][contract]`.
 
 ### Observability (hard requirements)
-- Structured `ILogger` scopes on every handler, with named fields `[static]`.
-- `traceparent` propagated inbound → scope → outbound HttpClient `[static]`.
+- Structured logger scopes / request context on every handler, with named fields `[static]`.
+- `traceparent` propagated inbound → scope/context → outbound HTTP client `[static]`.
 - Correlation ID (trace-id) in every error response `[static][contract]`.
-- Application Insights / OpenTelemetry registered in `Program.cs` `[static][iac]`.
+- OpenTelemetry / Application Insights / platform telemetry registered at worker or process startup `[static][iac]`.
 - Per-request cost signals surfaced in logs (Cosmos `RequestCharge`, storage request count) `[static]`.
 - p95 latency + error rate + cold-start tracked in RUM / Azure Monitor `[runtime]`.
 
 ### Performance (hard requirements, at p95)
-- Singleton `HttpClient` via `IHttpClientFactory` `[static]`.
-- Singleton data-store clients (`CosmosClient`, `BlobServiceClient`) via DI `[static]`.
+- Singleton outbound HTTP client/factory/dispatcher (`IHttpClientFactory`, Undici / `fetch` dispatcher, or equivalent) `[static]`.
+- Singleton data-store clients / pools (`CosmosClient`, `BlobServiceClient`, database pools, queue clients) via DI, module scope, or app container `[static]`.
 - Hosting/runtime choice fits latency, scale, timeout, payload, and operational requirements `[iac]`.
 - Runtime-specific startup optimizations are enabled for latency-sensitive apps when the loaded extension requires them `[static][iac]`.
 - Response / request payload sizes bounded; large payloads use direct-to-blob SAS `[static][contract]`.
@@ -538,10 +538,10 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 ## 8. Out of scope
 
 - **Non-HTTP wire formats.** gRPC, GraphQL, SOAP, JSON-RPC — separate disciplines with their own contracts; this reference is HTTP APIs.
-- **Runtimes without bundled extensions.** Hosted, serverless, container, edge, and gateway runtimes need their own extension when their primitives differ; the core principles here are portable but runtime mechanics are not.
+- **Runtimes without bundled extensions.** Edge, gateway, mobile backend, and non-Node hosted/serverless runtimes need their own extension when their primitives differ; the core principles here are portable but runtime mechanics are not.
 - **Other Azure data layers.** Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Azure Cache for Redis — future per-service extensions; the Cosmos + Blob pair is the current scope.
 - **Cosmos DB non-NoSQL APIs.** MongoDB API, Cassandra API, Gremlin, Table — separate SDK surfaces with different idioms.
 - **Data-model design.** Schema design, DDD, event-sourcing, CQRS — this reference covers the HTTP contract and runtime around the model, not the model itself.
-- **General .NET code quality.** Null-safety, LINQ style, async-correctness lint — out of scope; `devsecops-audit` and `test-quality-audit` in the `souroldgeezer-audit` plugin cover the audit side.
+- **General .NET / Node.js / Next.js code quality.** Null-safety, LINQ style, async-correctness lint, module-structure lint, React component design — out of scope; `devsecops-audit` and `test-quality-audit` in the `souroldgeezer-audit` plugin cover the audit side.
 - **UI on top of the API.** Responsive UI, a11y, i18n — that's the `responsive-design` sibling skill.
 - **Runtime SLO verification.** p95, cold-start, error rate, RU charges — these require load / RUM and are out of scope for static review; §7 tags these as `[load]` / `[runtime]` and defers to the appropriate tool.

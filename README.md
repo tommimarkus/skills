@@ -17,8 +17,9 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships thr
   Azure® Key Vault™ / data-plane RBAC), contract discipline
   (OpenAPI™ 3.1, RFC 9457 problem+json), reliability (idempotency,
   429 + Retry-After), and observability (structured logs, W3C® traceparent),
-  with composable extensions for Azure® Functions™ on .NET™, Azure® Cosmos DB™,
-  and Azure® Blob Storage™. For architecture (build, extract, review, lookup): enforces
+  with composable extensions for Azure® Functions™ on .NET™, Node.js® hosted /
+  serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob
+  Storage™. For architecture (build, extract, review, lookup): enforces
   ArchiMate® 3.2 layer discipline and Appendix B relationship well-formedness;
   serialises models as **OEF XML** per The Open Group ArchiMate® Model
   Exchange File Format 3.2 (loadable in ArchiMate®-conformant tools);
@@ -157,7 +158,7 @@ Four design skills, each with a matching one-shot Claude Code subagent:
 |---|---|---|
 | [software-design](souroldgeezer-design/skills/software-design/SKILL.md) | Sustainable software design for code/module/script changes - Build, Extract, Review, and Lookup across boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, lightweight tradeoffs, and socio-technical fit | [.NET™](souroldgeezer-design/skills/software-design/extensions/dotnet.md) (solution/project references, namespaces, assembly visibility, dependency injection, persistence model leakage, hosted services, and common .NET™ design ceremony); [shell-script](souroldgeezer-design/skills/software-design/extensions/shell-script.md) (Bash/zsh interpreter boundaries, sourced modules, shell option/trap state, Linux® / macOS™ / Windows Subsystem for Linux™ compatibility, and `devsecops-audit` Quick validation when available); [Python®](souroldgeezer-design/skills/software-design/extensions/python.md) (repo-internal tooling — entry-point boundaries, import-time workflow, `sys.path` stitching, module-state coupling, environment backchannels, `subprocess` command-construction, stream / exit-code contracts, type-hint boundaries, reproducibility contract across Python® version + lockfile / PEP 723 inline pins, async-misuse, shell-style Python® smell, and `devsecops-audit` Quick validation when available; skips web/ASGI applications) |
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
-| [api-design](souroldgeezer-design/skills/api-design/SKILL.md) | Modern HTTP APIs — Build, Extract, Review, and Lookup across contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), security, reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), observability (structured logs, W3C® traceparent, correlation ID, request-charge visibility), and honest verification-layer disclosure | [azure-functions-dotnet](souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md), [azure-cosmosdb](souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
+| [api-design](souroldgeezer-design/skills/api-design/SKILL.md) | Modern HTTP APIs — Build, Extract, Review, and Lookup across contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), security, reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), observability (structured logs, W3C® traceparent, correlation ID, request-charge visibility), and honest verification-layer disclosure | [azure-functions-dotnet](souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md), [nodejs](souroldgeezer-design/skills/api-design/extensions/nodejs.md), [nextjs](souroldgeezer-design/skills/api-design/extensions/nextjs.md), [azure-cosmosdb](souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
 | [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, materialized OEF view geometry, change classification (semantic model / view geometry / documentation-render inventory), and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (per-view readiness matrix with Readiness + Authority axes, executable source-geometry `AD-L*` gate, packaged layout request/result/policy/provenance checks, route repair, global polish, Java™ ImageIO-based PNG validation, optional render artefacts with render gate when visual quality is requested, artefact findings, duplicate realization view detection, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process), plus an explicit Review → Extract → Build → Lookup → render/compare iteration loop for user-requested render polishing | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-design/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md), the executable [source-geometry gate](souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh), optional [render script](souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh), packaged [layout runtime](souroldgeezer-design/skills/architecture-design/references/scripts/arch-layout.sh), [layout schemas](souroldgeezer-design/skills/architecture-design/references/schemas/), [rendered PNG validation](souroldgeezer-design/skills/architecture-design/references/procedures/rendered-png-validation.md), [layout strategy](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md), [backend contract](souroldgeezer-design/skills/architecture-design/references/procedures/layout-backend-contract.md), [viewpoint policies](souroldgeezer-design/skills/architecture-design/references/procedures/layout-policies-by-viewpoint.md), [routing/glossing](souroldgeezer-design/skills/architecture-design/references/procedures/routing-and-glossing.md), and [deterministic fallback](souroldgeezer-design/skills/architecture-design/references/procedures/layout-fallback.md), invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `LAYOUT_*` / `AD-B-*` checks in Review |
 
 References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
@@ -242,7 +243,7 @@ skills through the plugin manifest, reads per-skill metadata from each
 
 - **Reference-driven.** Same shape as `responsive-design` — a workflow
   applying an external reference. Output cites reference sections (e.g.
-  `§3.6`, `§5.6`), RFCs (`RFC 9457`, `RFC 9110`), and MSFT Learn slugs;
+  `§3.6`, `§5.6`), RFCs (`RFC 9457`, `RFC 9110`), and official runtime docs;
   extension-specific findings cite extension codes (`afdotnet.HC-11`,
   `cosmos.HC-4`, `blob.HC-2`). The prose lives in the reference
   ([souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md)),
@@ -269,18 +270,22 @@ skills through the plugin manifest, reads per-skill metadata from each
   (account keys, `allowSharedKeyAccess=true`, `HttpClient` per invocation)
   is flagged as legacy debt, never silently extended.
 - **Composable per-stack extensions.** `azure-functions-dotnet` (isolated
-  worker only — in-process retired 2026-11-10), `azure-cosmosdb` (NoSQL API
-  with Provisioned vs Serverless surface), and `azure-blob-storage` (Block
-  Blobs with SAS-direct vs API-proxy surface) **load together** when the
-  target spans all three layers. Each extension owns a distinct smell-code
-  namespace (`afdotnet.*`, `cosmos.*`, `blob.*`) so findings never collide,
-  and each contributes stack-specific patterns without overriding the core.
+  worker only — in-process retired 2026-11-10), `nodejs` (Node.js® hosted and
+  serverless API runtime surface), `nextjs` (hosted Next.js™ Route Handlers,
+  Pages API routes, Server Actions, instrumentation, and self-hosting),
+  `azure-cosmosdb` (NoSQL API with Provisioned vs Serverless surface), and
+  `azure-blob-storage` (Block Blobs with SAS-direct vs API-proxy surface)
+  **load together** when the target spans those layers. `nextjs` loads after
+  `nodejs`. Each extension owns a distinct smell-code namespace
+  (`afdotnet.*`, `nodejs.*`, `nextjs.*`, `cosmos.*`, `blob.*`) so findings
+  never collide, and each contributes stack-specific patterns without
+  overriding the core.
 - **Disclosure footer.** Every output ends with a footer listing which
-  extensions loaded (subset of `azure-functions-dotnet`, `azure-cosmosdb`,
-  `azure-blob-storage`), self-check counts by verification layer,
+  extensions loaded (subset of `azure-functions-dotnet`, `nodejs`, `nextjs`,
+  `azure-cosmosdb`, `azure-blob-storage`), self-check counts by verification layer,
   project-assimilation summary, the reference path, and an explicit note
-  that runtime-verified metrics need Azure® Load Testing, Azure® Monitor
-  Application Insights, and Azure® Monitor.
+  that runtime-verified metrics need load testing, RUM, and platform
+  observability.
 
 ## How `architecture-design` works
 

@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 conditional requests), security, reliability, observability, and honest verification-layer disclosure. Supports composable runtime and data extensions, including Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -16,11 +16,12 @@ When invoked, run the api-design skill and present results:
 2. Follow the skill instructions exactly — confirm mode (build / extract / review /
    lookup), run the pre-flight questions if inputs are ambiguous, detect the
    stack, and load all matching extensions (they compose: Azure Functions .NET
-   + Cosmos + Blob all load together when the target spans those layers).
+   + Cosmos + Blob all load together when the target spans those layers; hosted
+   Next.js loads Node.js first, then Next.js).
 3. For build mode: produce OpenAPI fragments, handler code, `Program.cs` DI
    wiring, and IaC snippets that embody the reference's decision defaults;
    cite the reference sections the output draws from (`§3.6`, `§5.6`, etc.)
-   plus RFC / MSFT Learn sources; never duplicate reference prose; run the
+   plus RFCs and official runtime docs named by loaded extensions; never duplicate reference prose; run the
    §7 self-check across the five buckets (Contract / Security / Reliability /
    Observability / Performance) before handing back.
 4. For extract mode: produce the API baseline map: contract shape, route
@@ -28,7 +29,8 @@ When invoked, run the api-design skill and present results:
    data/storage extensions, legacy debt, and next smallest migration move.
 5. For review mode: walk reference §7 bucket by bucket. Emit per-finding
    output citing the reference section plus the extension smell code where
-   one matches (`afdotnet.HC-N`, `cosmos.HC-N`, `blob.HC-N`, `SAD-G-*`).
+   one matches (`afdotnet.HC-N`, `nodejs.HC-N`, `nextjs.HC-N`, `cosmos.HC-N`,
+   `blob.HC-N`, `SAD-G-*`).
    Include a `layer:` field (`static` / `iac` / `contract` / `runtime` /
    `security-tool` / `load`) so the reader knows how to confirm. Follow with
    a short per-bucket rollup.
@@ -43,14 +45,18 @@ When invoked, run the api-design skill and present results:
    orchestration where a queue would suffice; long-running work on an HTTP
    trigger past the plan timeout; missing OpenAPI for an added endpoint;
    CORS wildcard on an authenticated endpoint; `CosmosClient` constructed
-   per invocation or account key in code; Cosmos GET-by-id as a
+   per invocation or account key in code; Node.js handler `app.listen` in a
+   serverless entrypoint; hosted Node.js / Next.js app with no reverse-proxy
+   or request-size contract; Next.js Server Action exposed as a public API
+   instead of a Route Handler; Cosmos GET-by-id as a
    cross-partition query instead of a point read; Storage
    `allowSharedKeyAccess=true` on a newly-deployed account; account-key /
    service-SAS auth; an API streaming a large upload through the runtime
    without a documented memory/timeout budget; claiming p95 / cold-start
    / error-rate / RU-charge pass from a static review.
 8. Always emit the footer disclosure: mode, extensions loaded (subset of
-   `azure-functions-dotnet`, `azure-cosmosdb`, `azure-blob-storage`),
+   `azure-functions-dotnet`, `nodejs`, `nextjs`, `azure-cosmosdb`,
+   `azure-blob-storage`),
    reference path, self-check result, and the explicit note that runtime
    SLIs (p95, cold-start, error rate, RU charge, storage latency) need
-   Azure Load Testing / App Insights / Azure Monitor for ground truth.
+   load testing, RUM, and platform observability for ground truth.

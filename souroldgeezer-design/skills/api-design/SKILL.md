@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 conditional requests), security, reliability, observability, and honest verification-layer disclosure. Supports composable runtime and data extensions, including Azure® Functions™ on .NET™, Azure® Cosmos DB™, and Azure® Blob Storage.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage.
 ---
 
 # API Design
@@ -11,12 +11,12 @@ Help Claude produce, extract, and review HTTP APIs that are correct by construct
 
 > Presence vs. efficacy — a function that responds to a curl command is not evidence that the API holds up under retries, ships a stable error contract, survives key rotation, emits correlated telemetry, handles 429 from its own data store, survives a cold start inside a p95 budget, or degrades sensibly when the downstream dependency is the one throttling. An HTTP status code is not a contract.
 
-**The reference is [../../docs/api-reference/api-design.md](../../docs/api-reference/api-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections and RFC / MSFT Learn sources by reference; the skill never duplicates reference prose.
+**The reference is [../../docs/api-reference/api-design.md](../../docs/api-reference/api-design.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Generated code embodies the reference's defaults; review output cites reference sections, RFCs, and loaded extension source anchors (Microsoft Learn, Node.js, Next.js, or other official runtime docs) by reference; the skill never duplicates reference prose.
 
 ## Non-goals
 
-- **General .NET code quality** → out of scope; produce working API code, don't lint surrounding logic. The `test-quality-audit` and `devsecops-audit` skills in the `souroldgeezer-audit` plugin cover the audit side.
-- **Verification of runtime SLIs** (p95 latency, cold-start, error rate, RU charge) → static signals only. Real numbers need load tests (Azure Load Testing / k6), RUM, Azure Monitor, and Application Insights; surface this honestly.
+- **General .NET / Node.js / Next.js code quality** → out of scope; produce working API code, don't lint surrounding logic. The `test-quality-audit` and `devsecops-audit` skills in the `souroldgeezer-audit` plugin cover the audit side.
+- **Verification of runtime SLIs** (p95 latency, cold-start, error rate, RU charge) → static signals only. Real numbers need load tests (k6 / JMeter / Azure Load Testing), RUM, and platform observability (OpenTelemetry, Azure Monitor, Application Insights, or equivalent); surface this honestly.
 - **Wire-format choice** — gRPC, GraphQL, SOAP — reference §8 out-of-scope; decline and redirect.
 - **Unsupported runtime mechanics** — core principles port, but stack-specific primitives require a bundled extension; do not invent hosted, serverless, container, or edge runtime rules that are not in the loaded reference/extension set.
 - **Data-model design / DDD / event-sourcing** — this skill handles the contract and runtime; modelling belongs elsewhere.
@@ -51,24 +51,26 @@ Help Claude produce, extract, and review HTTP APIs that are correct by construct
 
 ## Extensions
 
-The core workflow is framework-neutral. Extensions are per-stack packs loaded on demand. **Multiple extensions compose on the same target** — an API on Azure Functions .NET that stores entities in Cosmos and blobs in Storage loads all three extensions at once, and each adds orthogonal guidance (compute + query patterns + object patterns) without colliding:
+The core workflow is framework-neutral. Extensions are per-stack packs loaded on demand. **Multiple extensions compose on the same target** — an API on Azure Functions .NET that stores entities in Cosmos and blobs in Storage loads all three extensions at once; a hosted Next.js API with a database loads `nodejs.md` first, then `nextjs.md`, plus any data/storage extensions that match. Each adds orthogonal guidance (runtime + framework + data + object patterns) without colliding:
 
 | Extension | Applies to | Loaded when target matches |
 |---|---|---|
 | `extensions/azure-functions-dotnet.md` | Azure Functions .NET isolated worker | `.csproj` with `Microsoft.Azure.Functions.Worker`, OR `host.json` at repo root, OR `[Function(...)]` attribute in `.cs`, OR `FunctionsApplication.CreateBuilder` / `ConfigureFunctionsWebApplication()` in `Program.cs`, OR `HttpRequestData` / `HttpResponseData` / `HttpRequest` (ASP.NET Core integration) usage in a function class |
+| `extensions/nodejs.md` | Node.js / TypeScript HTTP APIs, hosted or serverless | `package.json`, OR Node HTTP framework deps (`express`, `fastify`, `koa`, `hono`, `@nestjs/core`), OR serverless Node deps/config (`@azure/functions`, `aws-lambda`, `serverless.yml`, SAM `template.yaml`, `netlify/functions/**`), OR source importing `node:http`, calling `app.listen` / `http.createServer`, or exporting a Node serverless `handler` |
+| `extensions/nextjs.md` | Hosted Next.js API surfaces | `next` in `package.json`, OR `next.config.*`, OR `app/**/route.{js,ts}`, OR `pages/api/**/*.{js,ts}`, OR `instrumentation.{js,ts}` in a Next.js project, OR `'use server'` in `app/**`; load `nodejs.md` first |
 | `extensions/azure-cosmosdb.md` | Azure Cosmos DB (NoSQL API) | `Microsoft.Azure.Cosmos` package ref in `.csproj`, OR `CosmosClient` / `Container` / `PartitionKey` / `PartitionKeyBuilder` in `.cs`, OR `[CosmosDBInput]` / `[CosmosDBTrigger]` / `[CosmosDBOutput]` attributes, OR `extensions.cosmosDB` / `cosmosDb` block in `host.json`, OR `AccountEndpoint=https://*.documents.azure.com` patterns in `local.settings.json` / Bicep / Terraform, OR `disableLocalAuth` / `capabilities: EnableServerless` on Cosmos accounts in IaC |
 | `extensions/azure-blob-storage.md` | Azure Blob Storage (Block Blobs) | `Azure.Storage.Blobs` package ref in `.csproj`, OR `BlobServiceClient` / `BlobContainerClient` / `BlobClient` / `BlobSasBuilder` / `UserDelegationKey` in `.cs`, OR `[BlobInput]` / `[BlobTrigger]` / `[BlobOutput]` attributes, OR `extensions.blobs` block in `host.json`, OR `.blob.core.windows.net` / `BlobEndpoint=` patterns in settings / IaC, OR `allowSharedKeyAccess` / `supportsHttpsTrafficOnly` on storage accounts in IaC |
 
 Multiple extensions load when the target matches multiple sets of signals. Unknown stacks proceed with only the core reference. See `extensions/README.md` for adding an extension.
 
-Extensions **never override** core rules. They add stack-specific primitives, patterns, and smells (namespaced `<ext>.HC-N` / `<ext>.LC-N` / `<ext>.POS-N`), or carve out false positives for idiomatic stack patterns. Carve-outs win only for the exact pattern described. Smell-code namespaces (`afdotnet.*`, `cosmos.*`, `blob.*`, core `SAD-*`) are distinct by construction, so findings from multiple extensions never collide.
+Extensions **never override** core rules. They add stack-specific primitives, patterns, and smells (namespaced `<ext>.HC-N` / `<ext>.LC-N` / `<ext>.POS-N`), or carve out false positives for idiomatic stack patterns. Carve-outs win only for the exact pattern described. Smell-code namespaces (`afdotnet.*`, `nodejs.*`, `nextjs.*`, `cosmos.*`, `blob.*`, core `SAD-*`) are distinct by construction, so findings from multiple extensions never collide.
 
 ## Pre-flight (build, extract & review)
 
 Before writing or reviewing code, confirm the following. If the user hasn't supplied them, ask — don't invent answers:
 
 1. **Consumer scope.** First-party UI, third-party partners, machine-to-machine only? Default: mixed; design for public-contract discipline (OpenAPI, stable error types, cursor pagination, 429 + `Retry-After`).
-2. **Auth model.** Entra ID (OAuth 2.0 / OIDC) + managed identity, function keys, Easy Auth, Anonymous? Default: Entra ID + managed identity, no secrets in code.
+2. **Auth model.** OAuth 2.0 / OIDC, maintained JWT/session middleware, Entra ID + managed identity, function keys, Easy Auth, Anonymous? Default: OAuth 2.0 / OIDC or Entra ID for Azure targets; no secrets in code.
 3. **Framework / hosting stack.** Detect matching runtime/data extensions from manifests and source signals; otherwise ask. Unknown stacks proceed with only the core reference.
 4. **Hosting target and performance posture.** Hosted, serverless, containerized, edge, or unknown? Default: record the target when present; do not invent a runtime-specific plan. Runtime extensions may add concrete defaults.
 5. **Reliability posture.** Idempotency required on mutations? Retry tolerance of clients? Default: idempotency on all mutations; safe retry + backoff on all outbound calls.
@@ -90,9 +92,9 @@ Do this pass every time, regardless of stack:
 1. **OpenAPI / contract** — grep for `swagger.json`, `openapi.yaml`, `openapi.json`, `*.openapi.*`, or OpenAPI-generating packages in project manifests (`Swashbuckle.*`, `Microsoft.OpenApi.*`, `Microsoft.Azure.Functions.Worker.Extensions.OpenApi`). If absent, treat as contract-first greenfield in Build mode and as missing-contract debt in Extract / Review mode.
 2. **Error shape** — grep for `application/problem+json`, `ProblemDetails`, `TypedResults.Problem`, `Results.Problem`, custom error DTOs. Compliant → reuse; custom error shape → flag as legacy debt, emit problem+json in added code, never extend the custom shape.
 3. **Versioning** — grep for `/v1/`, `/v2/`, `api-version=`, `Asp.Versioning`. Record the strategy; flag if two strategies coexist (URI path + query parameter on different endpoints is a §3.2 deviation).
-4. **Auth config** — grep for `[Authorize]`, endpoint policy metadata, OIDC / OAuth / Entra ID app-registration references, managed identity usage in IaC, API-key patterns, function-key patterns, and Easy Auth settings (`authsettingsV2`). Record the approach.
-5. **Secrets** — grep for `@Microsoft.KeyVault(`, raw connection strings or access keys in `local.settings.json` (especially committed), connection-string patterns in code literals, hardcoded keys. Flag hardcoded secrets as *immediate* legacy debt — not scope-dependent.
-6. **Observability** — grep for `AddApplicationInsightsTelemetryWorkerService`, `AddOpenTelemetry`, `UseAzureMonitorExporter` / Azure Monitor exporter package references, `ILogger` scopes, `traceparent` / `Activity.Current` propagation on outbound `HttpClient`.
+4. **Auth config** — grep for `[Authorize]`, endpoint policy metadata, OIDC / OAuth / Entra ID app-registration references, managed identity usage in IaC, API-key patterns, function-key patterns, Easy Auth settings (`authsettingsV2`), Next.js `proxy.ts` / `middleware.ts`, auth/session libraries, and maintained JWT/session middleware. Record the approach.
+5. **Secrets** — grep for `@Microsoft.KeyVault(`, `.env*` committed with secret-shaped values, raw connection strings or access keys in local settings, connection-string patterns in code literals, hardcoded keys, and token/query-string patterns. Flag hardcoded secrets as *immediate* legacy debt — not scope-dependent.
+6. **Observability** — grep for `AddApplicationInsightsTelemetryWorkerService`, `AddOpenTelemetry`, `UseAzureMonitorExporter` / Azure Monitor exporter package references, `ILogger` scopes, `traceparent` / `Activity.Current` propagation on outbound `HttpClient`, Node.js OpenTelemetry setup, `AsyncLocalStorage`, and Next.js `instrumentation.ts|js`.
 7. **Manifest signals only** — `.csproj` / `package.json` to identify framework, SDK, versions. Extension handles deep stack-specific config.
 
 ### Stack-specific discovery
@@ -100,6 +102,8 @@ Do this pass every time, regardless of stack:
 Delegated to the matching extension(s). Each loaded extension covers its own stack's configuration surface:
 
 - `azure-functions-dotnet.md` — isolated vs in-process model, ASP.NET Core integration opt-in, DI in `Program.cs`, singleton clients, OpenTelemetry setup, `local.settings.json` vs real settings vs Key Vault refs, IaC presence (Bicep/Terraform for Flex Consumption plan and managed-identity assignments), `host.json` retry and `functionTimeout` values.
+- `nodejs.md` — hosted vs serverless Node.js surface, `package.json` runtime and lockfile, framework routing/error hooks, request/body/header limits, AsyncLocalStorage request context, OpenTelemetry startup, serverless handler shape, reverse proxy evidence, and graceful shutdown.
+- `nextjs.md` — hosted Next.js surface, App Router Route Handlers, Pages API routes, Server Actions, route segment config, instrumentation, cache/deployment consistency, reverse proxy evidence, and Server Actions encryption key posture.
 - `azure-cosmosdb.md` — account capacity mode (serverless / provisioned / autoscale), partition-key strategy, consistency level, indexing policy, RBAC data-plane role assignments vs account-key-based legacy, `disableLocalAuth`, `AllowBulkExecution`, `EnableContentResponseOnWrite`, change-feed lease containers, preferred-regions list.
 - `azure-blob-storage.md` — account-level `allowSharedKeyAccess`, RBAC role assignments (Storage Blob Data Contributor / Reader / Delegator), presence of account keys / service SAS in code, versioning / soft-delete / immutability, Event Grid subscriptions, Blob Trigger source mode (Event Grid vs legacy polling), CORS rules, public-container access levels, CMK vs Microsoft-managed keys.
 
@@ -111,12 +115,12 @@ Reuse is conditional on **substantive compliance**, not presence. For each disco
 
 | Discovered in project | Reuse when | Replace / migrate when |
 |---|---|---|
-| Auth module (§3.3) | Entra ID + managed identity; Key Vault refs for any secret | Function-keys-only on public endpoints; secrets in literals or committed `local.settings.json` |
+| Auth module (§3.3) | OAuth 2.0 / OIDC or Entra ID + managed identity on Azure targets; secret refs for any secret | Function-keys-only on public endpoints; custom token parsing; secrets in literals or committed local settings |
 | Error middleware (§3.5) | Emits `application/problem+json` with stable `type` URIs | Custom error shape, English-string messages, leaks stack traces |
 | Versioning strategy (§3.2) | One strategy applied uniformly (URI path preferred) | Mixed strategies; "implicit v1"; version in domain name without path prefix |
 | Pagination primitive (§3.7) | Cursor-based, opaque token, capped `limit` | Offset / `skip` on unbounded collections; no `limit` cap |
-| Data client lifetime (§3.16) | Singleton via DI; managed-identity auth | Per-invocation construction; account keys; multiple client instances |
-| Observability pipeline (§3.14) | OpenTelemetry / Application Insights registered in `Program.cs`; structured logs; `traceparent` end-to-end | Console logging; per-handler ad-hoc telemetry; missing outbound propagation |
+| Data client lifetime (§3.16) | Singleton via DI, module scope, or app container; managed/workload-identity auth where available | Per-invocation construction; account keys; multiple client instances |
+| Observability pipeline (§3.14) | OpenTelemetry / Application Insights / Next instrumentation registered at startup; structured logs; `traceparent` end-to-end | Console logging; per-handler ad-hoc telemetry; missing outbound propagation |
 | Rate-limiting / throttling (§3.10) | Edge-level (API Management / Front Door) with per-consumer quotas; 429 + `Retry-After` | Origin-only, no `Retry-After`, wildcard throttling |
 | Hosting target (§3.15) | Fits latency, cost, scale, and operations posture; documented | Undocumented plan/runtime choice; runtime shape conflicts with stated SLO |
 
@@ -184,6 +188,9 @@ The legacy-debt list is the record of what the project violates; it is not a lis
    - `afdotnet.*` contributes `[Function]` attribute shape, isolated-worker HTTP response style ([BuiltIn] vs [AspNetCore]), DI in `Program.cs`, `TypedResults.Problem()` for RFC 9457 under `[AspNetCore]`, Durable trigger attributes, managed-identity via `DefaultAzureCredential`, Key Vault references, Flex Consumption always-ready instances, `IHttpClientFactory` + Polly / standard resilience handler.
    - `cosmos.*` contributes point-read vs query shape, `IfMatchEtag` → 412, `Idempotency-Key` container with TTL + unique-key, `ContinuationToken` for cursor pagination, change-feed processor, data-plane RBAC, `disableLocalAuth=true`, `x-ms-retry-after-ms` passthrough to HTTP `Retry-After`.
    - `blob.*` contributes direct-to-blob upload via user-delegation SAS, `BlobSasBuilder` with `SasProtocol.Https`, Event-Grid-sourced blob trigger, RBAC (Storage Blob Data Contributor / Delegator), `allowSharedKeyAccess=false`, range requests, ETag-based optimistic concurrency, archive rehydration as async 202.
+   For a Node.js / Next.js target:
+   - `nodejs.*` contributes hosted/serverless surface selection, problem+json helpers, AsyncLocalStorage request context, OpenTelemetry startup, body-size limits, serverless handler rules, reverse proxy evidence, resilient fetch, and graceful shutdown.
+   - `nextjs.*` contributes hosted Next.js Route Handler / Pages API / Server Action semantics, route segment config, instrumentation, shared cache/deployment consistency, and Server Actions key posture.
 
 6. **Self-check against §7 before declaring done.** Each checklist item carries a verification-layer tag (`[static]`, `[iac]`, `[contract]`, `[runtime]`, `[security-tool]`, `[load]`). Walk the five buckets — Contract discipline, Security, Reliability, Observability, Performance — and:
    - `[static]` items: verify against the code you wrote; pass / fail with confidence.
@@ -236,7 +243,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
      severity: block | warn | info
      evidence: <quoted snippet or grep match>
      action:   <suggested fix template>
-     ref:      api-design.md §<n.m> + (RFC <n> | MSFT Learn: <slug> | extension code)
+     ref:      api-design.md §<n.m> + (RFC <n> | official runtime doc | extension code)
    ```
 
    Codes are drawn from the extensions (`afdotnet.HC-1`, `cosmos.HC-4`, `blob.HC-2`, etc.), from the core `SAD-G-*` labels in reference §6 when a finding matches a named gotcha, and by reference section + RFC / MSFT Learn when there's no narrower code.
@@ -255,7 +262,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 1. **Locate.** Grep reference for the concept (status code, header, pattern, RFC, MSFT Learn slug, extension primitive). Load only the matched section plus its immediate context.
 
-2. **Answer concisely.** One or two sentences, citing the reference section and (if applicable) RFC / MSFT Learn source. Include the default rule if it's a §3 decision.
+2. **Answer concisely.** One or two sentences, citing the reference section and (if applicable) RFC / official runtime source. Include the default rule if it's a §3 decision.
 
 3. **Footer disclosure** (single line in lookup mode).
 
@@ -276,7 +283,7 @@ Self-check:
   Observability:         <n>/<n>  [static verified]
                          <n> item(s) need runtime trace verification (Application Insights)
   Performance:           <n>/<n>  [static / iac verified]
-                         <n> item(s) require Azure Load Testing / App Insights p95 metrics
+                         <n> item(s) require load testing / platform p95 metrics
 
 Deviations from defaults (if any): <list with reason>
 ```
@@ -290,7 +297,7 @@ API baseline:
   Auth model:           <authn/authz shape and gaps>
   Error shape:          <problem+json / custom DTO / string / mixed>
   Versioning:           <strategy and conflicts>
-  Runtime stack:        <loaded runtime extension or unknown>
+  Runtime stack:        <loaded runtime extension(s) or unknown>
   Data/storage:         <loaded data/object extensions or none>
   Legacy debt:          <non-compliant patterns with reference/extension codes>
   Next smallest move:   <one concrete migration or hardening step>
@@ -298,7 +305,7 @@ API baseline:
 
 ### Review mode
 
-Per-finding block for each failure, then rollup. All findings cite reference section + RFC / MSFT Learn source / extension code where applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (grep / lint / source inspection), `iac` (Bicep / Terraform / ARM review), `contract` (OpenAPI document review), `runtime` (RUM / Azure Monitor / Application Insights), `security-tool` (OWASP ZAP / Burp / API Management policies), `load` (Azure Load Testing / k6 / JMeter). Only `static` / `iac` / `contract` findings are definitively pass / fail from the review alone; the rest are "source-aligned, verification deferred to <layer>".
+Per-finding block for each failure, then rollup. All findings cite reference section + RFC / official runtime source / extension code where applicable. Each finding includes a `layer:` field so the reader knows how to confirm: `static` (grep / lint / source inspection), `iac` (Bicep / Terraform / ARM / deployment config review), `contract` (OpenAPI document review), `runtime` (RUM / OpenTelemetry / Azure Monitor / Application Insights / equivalent), `security-tool` (OWASP ZAP / Burp / API gateway policies / WAF logs), `load` (k6 / JMeter / Azure Load Testing). Only `static` / `iac` / `contract` findings are definitively pass / fail from the review alone; the rest are "source-aligned, verification deferred to <layer>".
 
 ### Lookup mode
 
@@ -308,10 +315,10 @@ Two to four lines of prose + one footer line.
 
 ```
 Mode: build | extract | review | lookup
-Extensions loaded: <space-separated subset of {azure-functions-dotnet, azure-cosmosdb, azure-blob-storage} or "(none)">
+Extensions loaded: <space-separated subset of {azure-functions-dotnet, nodejs, nextjs, azure-cosmosdb, azure-blob-storage} or "(none)">
 Reference: souroldgeezer-design/docs/api-reference/api-design.md
 Self-check: pass | <n failures> | n/a
-Runtime-verified metrics: none — use Azure Load Testing / App Insights / Azure Monitor for p95, error rate, cold-start, RU charge, storage latency
+Runtime-verified metrics: none — use load testing, RUM, and platform observability for p95, error rate, cold-start, RU charge, storage latency, and dependency latency
 Architecture pairing: drift-check clean | <n> drift findings | extract refreshed | none (no paired diagram)
 ```
 
@@ -320,17 +327,17 @@ Architecture pairing: drift-check clean | <n> drift findings | extract refreshed
 Output contains any of the following? Stop; fix before delivering:
 
 - Secrets in app-settings literals, `local.settings.json` committed to git, or code literals. Fix per §3.17 — Key Vault references + managed identity.
-- Per-invocation `HttpClient` construction inside a handler body. Fix per §3.16 — `IHttpClientFactory` + singleton typed client.
+- Per-invocation HTTP/data client construction inside a handler body. Fix per §3.16 and loaded runtime extension — `IHttpClientFactory`, DI, app container, or module-scope singleton as appropriate.
 - Anonymous or key-only authorization on an endpoint that handles non-public data. Fix per §3.3 / §3.4 and the loaded runtime extension.
 - Error path returns plain JSON / string rather than `application/problem+json`. Fix per §3.5.
 - POST mutation without `Idempotency-Key` support where retries matter. Fix per §3.6 / §5.6.
 - 429 response without `Retry-After`. Fix per §3.10.
-- Outbound `HttpClient` call without `traceparent` propagation (non-`IHttpClientFactory`-backed client). Fix per §3.14.
+- Outbound HTTP call without `traceparent` propagation. Fix per §3.14 and loaded runtime extension.
 - Orchestration/workflow runtime used where queue-backed HTTP 202 would suffice. Fix per §5.4 / §5.8 and the loaded runtime extension.
 - Long-running work held inside a synchronous HTTP request past the runtime timeout. Fix per §3.9.
 - Missing OpenAPI for an added endpoint. Fix per §2.1 / §3.2.
 - CORS wildcard on an authenticated endpoint. Fix per §3.13.
-- Loaded extension high-confidence smells in added code or new IaC (`afdotnet.HC-*`, `cosmos.HC-*`, `blob.HC-*`, or future extension equivalents). Fix using the owning extension; do not duplicate extension rules in the core workflow.
+- Loaded extension high-confidence smells in added code or new IaC (`afdotnet.HC-*`, `nodejs.HC-*`, `nextjs.HC-*`, `cosmos.HC-*`, `blob.HC-*`, or future extension equivalents). Fix using the owning extension; do not duplicate extension rules in the core workflow.
 - API streams a large upload through the runtime without a documented memory/timeout budget. Fix per §3.12 and the loaded object-storage extension.
 - Claiming p95 / cold-start / error-rate / RU-charge pass from static review. Fix: restate as "static signals aligned; runtime metrics require load test / RUM."
 - Non-Baseline / preview-only feature used without fallback (e.g., Cosmos hybrid-search RRF when GA status is uncertain). Fix: feature-detect and fall back, or document the preview dependency.
@@ -344,6 +351,6 @@ Output contains any of the following? Stop; fix before delivering:
 
 ## Honest limits
 
-- **Runtime SLIs (p95 latency, cold-start, error rate, RU charge, storage latency) cannot be asserted from static analysis.** Static signals (singleton-client wiring, retry configuration, plan selection, ReadyToRun / Placeholder opt-ins, binding retry attributes) are necessary but not sufficient. Point at Azure Load Testing, Application Insights / Azure Monitor, and CrUX / RUM for the client side.
+- **Runtime SLIs (p95 latency, cold-start, error rate, RU charge, storage latency) cannot be asserted from static analysis.** Static signals (singleton-client wiring, retry configuration, plan/runtime selection, ReadyToRun / Placeholder opt-ins, Node.js timeout settings, binding retry attributes) are necessary but not sufficient. Point at load testing, RUM, and the platform observability stack (Azure Load Testing / Application Insights / Azure Monitor for Azure targets) for ground truth.
 - **Verification layers `[runtime]` / `[load]` / `[security-tool]` are deferred from the skill itself** to a load test, observability pipeline, or API security scanner. The skill reports "source-aligned; final verification requires <layer>" rather than claiming unverified passes.
 - **Preview-status features** (Cosmos full-text search / hybrid search, some OpenTelemetry extension surface) — the skill cites the MSFT Learn page for the feature; if the page still marks the feature preview on 2026-04-23, the skill flags that and requires a feature-detection fallback or a documented preview dependency.

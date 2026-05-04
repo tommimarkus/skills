@@ -1,6 +1,6 @@
 interface:
   display_name: "API Design"
-  short_description: "Build, extract, review, or look up HTTP API guidance."
+  short_description: "Build, extract, review, or look up HTTP API guidance for .NET, Node.js®, and Next.js™."
   default_prompt: "Design an HTTP API for this feature."
 policy:
   allow_implicit_invocation: true
