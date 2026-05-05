@@ -1,0 +1,13 @@
+interface:
+  display_name: App Design
+  short_description: >-
+    Use when building, extracting, reviewing, or looking up web frontend
+    application design — routes, screens, component architecture, state and data
+    flow, rendering boundaries, forms, navigation, browser runtime behavior,
+    responsive behavior, accessibility, internationalization, Core Web Vitals
+    posture, and Blazor™ WebAssembly app surfaces without duplicating generic
+    software, API, infrastructure, architecture-model, security-audit, or
+    test-quality specialist skills.
+  default_prompt: "Review this frontend app design against the app-design reference."
+policy:
+  allow_implicit_invocation: true

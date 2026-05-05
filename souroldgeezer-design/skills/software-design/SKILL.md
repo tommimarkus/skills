@@ -10,9 +10,9 @@ description: Use when building, extracting, reviewing, or looking up sustainable
 Shape software so the current change is coherent, small enough to validate, and cheap to change later. The skill applies the bundled reference at [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md) and cites the smell catalog in [references/smell-catalog.md](references/smell-catalog.md).
 
 This is the design companion one layer closer to code than
-`architecture-design` and one layer more general than `responsive-design`,
+`architecture-design` and one layer more general than `app-design`,
 `api-design`, or `infra-design`. It does not produce architecture diagrams, API
-contracts, infrastructure/IaC topology, UI responsive behavior, security
+contracts, infrastructure/IaC topology, frontend app/UI behavior, security
 audits, or test-quality classifications.
 
 When changing trigger metadata, workflow behavior, extension selection, source
@@ -182,7 +182,13 @@ to expand scope or choose a smaller safe change.
 
 ## Delegation Boundaries
 
-- UI responsiveness, WCAG, i18n, visual behavior, and Core Web Vitals: `responsive-design`.
+- Web frontend application structure, component architecture, route/screen
+  design, frontend state/data behavior, browser runtime behavior, responsive
+  behavior, accessibility, internationalization, visual behavior, and Core Web
+  Vitals: `app-design`. `software-design` supports app-design from the
+  engineering side for decomposition, dependency direction, helper/library
+  extraction, state-machine shape, adapter boundaries, and coupling risks
+  underneath frontend features.
 - HTTP API contract, auth, reliability, API runtime behavior, API observability, and data-service patterns: `api-design`.
 - Infrastructure/IaC topology, cloud-resource design, environment/state
   ownership, rollout/rollback, and operations handoff: `infra-design`.
@@ -214,5 +220,5 @@ Stop and revise before delivering if output:
 - Duplicates a domain model or vocabulary in a second boundary without naming the translation rule.
 - Claims runtime performance, production operability, team ownership, or change-frequency facts from static source alone.
 - Extends a legacy design violation into new code without flagging it.
-- Reviews API, UI, infrastructure, security-audit, test-quality, or ArchiMate
+- Reviews API, frontend app/UI, infrastructure, security-audit, test-quality, or ArchiMate
   concerns instead of delegating.

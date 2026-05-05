@@ -190,7 +190,13 @@ Checklist:
 
 ## 9. Delegation Map
 
-- `responsive-design`: responsive UI, accessibility, internationalization, visual behavior, Core Web Vitals.
+- `app-design`: web frontend application structure, component architecture,
+  route/screen design, frontend state/data behavior, browser runtime behavior,
+  responsive behavior, accessibility, internationalization, visual behavior,
+  and Core Web Vitals. `software-design` supports app-design from the
+  engineering side for decomposition, dependency direction, helper/library
+  extraction, state-machine shape, adapter boundaries, and coupling risks
+  underneath frontend features.
 - `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability.
 - `infra-design`: infrastructure/IaC topology, cloud resources, environment and
   state boundaries, rollout/rollback, operations handoff.

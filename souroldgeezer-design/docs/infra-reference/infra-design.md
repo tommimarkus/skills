@@ -194,7 +194,8 @@ part of infrastructure design.
 - HTTP API contract, auth behavior, idempotency, problem+json, retries, API
   observability: `api-design`.
 - Code/module/script design: `software-design`.
-- Responsive UI and WCAG behavior: `responsive-design`.
+- Web frontend app and UI concerns, including responsive behavior,
+  accessibility, i18n, visual behavior, and Core Web Vitals: `app-design`.
 - ArchiMate/OEF modeling, rendered diagrams, and model drift: `architecture-design`.
 - Security posture, secrets, least privilege, pipeline hardening, supply chain:
   `devsecops-audit`.

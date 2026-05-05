@@ -543,5 +543,7 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - **Cosmos DB non-NoSQL APIs.** MongoDB API, Cassandra API, Gremlin, Table — separate SDK surfaces with different idioms.
 - **Data-model design.** Schema design, DDD, event-sourcing, CQRS — this reference covers the HTTP contract and runtime around the model, not the model itself.
 - **General .NET / Node.js / Next.js code quality.** Null-safety, LINQ style, async-correctness lint, module-structure lint, React component design — out of scope; `devsecops-audit` and `test-quality-audit` in the `souroldgeezer-audit` plugin cover the audit side.
-- **UI on top of the API.** Responsive UI, a11y, i18n — that's the `responsive-design` sibling skill.
+- **Web frontend app or UI on top of the API.** Routes, screens, component
+  architecture, frontend state/data behavior, responsive layout, accessibility,
+  and i18n belong to the `app-design` sibling skill.
 - **Runtime SLO verification.** p95, cold-start, error rate, RU charges — these require load / RUM and are out of scope for static review; §7 tags these as `[load]` / `[runtime]` and defers to the appropriate tool.

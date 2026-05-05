@@ -217,7 +217,9 @@ ask whether to expand scope or choose a smaller safe change.
 - HTTP API contract, auth behavior, retries, API observability, and data-service
   API patterns: `api-design`.
 - Code/module/script design: `software-design`.
-- UI responsiveness, WCAG, i18n, and Core Web Vitals: `responsive-design`.
+- Web frontend app and UI concerns, including routes/screens, component
+  architecture, responsive behavior, accessibility, i18n, visual behavior, and
+  Core Web Vitals: `app-design`.
 - ArchiMate models, OEF XML, rendered architecture diagrams, and
   code-to-architecture drift: `architecture-design`.
 - Pipeline/IaC/application security posture, secrets, least privilege,
