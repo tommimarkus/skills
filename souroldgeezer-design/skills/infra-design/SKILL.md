@@ -1,6 +1,6 @@
 ---
 name: infra-design
-description: Use when building, extracting, reviewing, or looking up infrastructure design for IaC, cloud resources, deployment topology, environment strategy, state, rollout, operations, or Azure, Terraform, and Bicep surfaces. Route endpoint contracts to api-design, code/module/script shape to software-design, architecture models to architecture-design, security posture to devsecops-audit, and test quality to test-quality-audit.
+description: Use when building, extracting, reviewing, or looking up infrastructure design for IaC, cloud resources, deployment topology, environment strategy, state, rollout, operations, or Azure®, Terraform, and Bicep surfaces. Route endpoint contracts to api-design, code/module/script shape to software-design, architecture models to architecture-design, security posture to devsecops-audit, and test quality to test-quality-audit.
 ---
 
 # Infra Design
