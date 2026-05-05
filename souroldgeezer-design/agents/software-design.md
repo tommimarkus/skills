@@ -6,8 +6,8 @@ description: >-
   existing codebases, especially when the task needs boundary placement,
   dependency direction, responsibility assignment, semantic coherence, coupling
   control, evolutionary design, or .NET™, shell-script, or Python® tooling
-  project guidance without duplicating UI, API, architecture-model, security,
-  or test-quality specialist skills.
+  project guidance without duplicating UI, API, infrastructure,
+  architecture-model, security-audit, or test-quality specialist skills.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -22,7 +22,8 @@ When invoked, run the software-design skill and present results:
 1. Invoke the `software-design` skill using the Skill tool.
 2. Follow the skill instructions exactly: confirm build, extract, review, or
    lookup mode; detect stack; load matching extensions; keep specialist UI,
-   API, architecture, security, and test-quality concerns delegated.
+   API, infrastructure, architecture, security-audit, and test-quality concerns
+   delegated.
 3. For build mode: produce the compact design brief, cite reference sections,
    name deferred decisions and rejected abstractions, and choose the cheapest
    validation step.

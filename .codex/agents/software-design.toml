@@ -1,5 +1,5 @@
 name = "software-design"
-description = "Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python® tooling project guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills."
+description = "Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python® tooling project guidance without duplicating UI, API, infrastructure, architecture-model, security-audit, or test-quality specialist skills."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

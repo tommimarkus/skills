@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-design",
-  "version": "1.0.0",
-  "description": "Reference-driven design skills for sustainable software, responsive web UI, and HTTP APIs. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, matching Claude Code subagents, and Codex skill metadata.",
+  "version": "1.1.0",
+  "description": "Reference-driven design skills for sustainable software, responsive web UI, HTTP APIs, and infrastructure. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, matching Claude Code subagents, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"
@@ -10,8 +10,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Design",
-    "shortDescription": "Reference-driven software, UI, and API design.",
-    "longDescription": "Build, extract, review, and look up sustainable software design, responsive UI, and API design guidance with bundled references.",
+    "shortDescription": "Reference-driven software, UI, API, and infrastructure design.",
+    "longDescription": "Build, extract, review, and look up sustainable software design, responsive UI, API design, and infrastructure/IaC design guidance with bundled references.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
     "capabilities": [
@@ -20,8 +20,8 @@
     ],
     "defaultPrompt": [
       "Review this module design for coupling and boundary risks.",
-      "Review this UI against the responsive design reference.",
-      "Design or review this API contract and implementation surface."
+      "Review this UI, API, or infrastructure design against the matching reference.",
+      "Design or review this API contract, infrastructure, or implementation surface."
     ]
   }
 }

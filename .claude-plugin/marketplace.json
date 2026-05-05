@@ -17,8 +17,8 @@
     {
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
-      "version": "1.0.0",
-      "description": "Reference-driven design skills for sustainable software, responsive web UI, and HTTP APIs. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, matching Claude Code subagents, and Codex skill metadata."
+      "version": "1.1.0",
+      "description": "Reference-driven design skills for sustainable software, responsive web UI, HTTP APIs, and infrastructure. Covers code/module/script boundaries and dependencies, WCAG™ 2.2 AA responsive UI, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, matching Claude Code subagents, and Codex skill metadata."
     },
     {
       "name": "souroldgeezer-architecture",
