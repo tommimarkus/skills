@@ -1,6 +1,6 @@
 # Fragmentation Refactor ExecPlan
 
-Status: Draft  
+Status: In progress  
 Branch: `refactor/fragmentation-cleanup`  
 Worktree: `.worktrees/fragmentation-refactor`  
 Coordinator model: `gpt-5.5`  
@@ -97,6 +97,11 @@ git status --short
 
 If a runtime parity checker or generator is added in P2, add it to this verification set and run it after P2 through P6.
 
+P0 discovered that bare `python -m unittest` currently exits `5` because the
+repo's tests use the `*_test.py` filename pattern under `tests/`. Explicit
+discovery with `python -m unittest discover -s tests -p '*_test.py'` runs the
+suite. P1 owns making the recurring verification command deterministic.
+
 When validating from the main checkout root instead of the worktree, prune `.worktrees/`:
 
 ```bash
@@ -110,13 +115,179 @@ find . \
 
 | Phase | Status | Owner | Goal | Acceptance |
 |---|---|---|---|---|
-| P0 | Todo | Coordinator + `sog_baseline_explorer` | Create plan and baseline map | ExecPlan exists; surfaces and drift points documented |
+| P0 | Done | Coordinator + `sog_baseline_explorer` | Create plan and baseline map | ExecPlan exists; surfaces and drift points documented |
 | P1 | Todo | `sog_manifest_ci` | Fix manifest validity and add syntax/path gates | JSON/TOML/path checks pass and are scripted |
 | P2 | Todo | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker or generator detects drift; tests exist |
 | P3 | Todo | `sog_architecture_split` | Split architecture out of design | `souroldgeezer-architecture` exists; manifests pass; migration note exists |
 | P4 | Todo | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
 | P5 | Todo | `sog_docs_release` | Simplify README and add plugin/release docs | README is a map; docs/plugins and release checklist exist |
 | P6 | Todo | `sog_final_reviewer` | Final read-only review and validation | All checks pass; reviewer returns merge/no-merge |
+
+## P0 Baseline Map
+
+### Published plugin catalog
+
+Current shared marketplace:
+
+```text
+souroldgeezer-audit   0.3.2  ./souroldgeezer-audit
+souroldgeezer-design  0.31.0 ./souroldgeezer-design
+souroldgeezer-ops     0.3.2  ./souroldgeezer-ops
+```
+
+Each published plugin currently has matching Claude Code and Codex plugin
+manifests:
+
+```text
+souroldgeezer-*/.claude-plugin/plugin.json
+souroldgeezer-*/.codex-plugin/plugin.json
+```
+
+The quick baseline found plugin `name`, `version`, `description`, Codex
+`skills`, and Codex `interface.defaultPrompt` count synchronized across the
+three shipped plugins. The current Codex prompt count is three for every plugin.
+
+### Runtime surfaces
+
+Skill runtime source:
+
+```text
+souroldgeezer-audit/skills/devsecops-audit/SKILL.md
+souroldgeezer-audit/skills/test-quality-audit/SKILL.md
+souroldgeezer-design/skills/api-design/SKILL.md
+souroldgeezer-design/skills/architecture-design/SKILL.md
+souroldgeezer-design/skills/responsive-design/SKILL.md
+souroldgeezer-design/skills/software-design/SKILL.md
+souroldgeezer-ops/skills/issue-ops/SKILL.md
+souroldgeezer-ops/skills/pr-ops/SKILL.md
+```
+
+Claude Code subagent surfaces:
+
+```text
+souroldgeezer-audit/agents/devsecops-audit.md
+souroldgeezer-audit/agents/test-quality-audit.md
+souroldgeezer-design/agents/api-design.md
+souroldgeezer-design/agents/architecture-design.md
+souroldgeezer-design/agents/responsive-design.md
+souroldgeezer-design/agents/software-design.md
+souroldgeezer-ops/agents/issue-ops.md
+souroldgeezer-ops/agents/pr-ops.md
+```
+
+Codex project wrappers:
+
+```text
+.codex/agents/api-design.toml
+.codex/agents/architecture-design.toml
+.codex/agents/devsecops-audit.toml
+.codex/agents/github-issue-lifecycle.toml
+.codex/agents/issue-ops.toml
+.codex/agents/pr-ops.toml
+.codex/agents/responsive-design.toml
+.codex/agents/software-design.toml
+.codex/agents/test-quality-audit.toml
+```
+
+Codex per-skill metadata:
+
+```text
+souroldgeezer-*/skills/*/agents/openai.yaml
+```
+
+Repo-internal authoring overlays:
+
+```text
+.claude/skills/github-issue-lifecycle/SKILL.md
+.claude/skills/ip-hygiene/SKILL.md
+```
+
+### Duplicated metadata surfaces
+
+- Plugin `name`, `version`, and `description` are repeated in the shared
+  marketplace plus both plugin manifests.
+- Skill trigger descriptions are repeated in `SKILL.md` frontmatter,
+  `agents/*.md` frontmatter, `.codex/agents/*.toml`, and
+  `skills/*/agents/openai.yaml`.
+- Plugin positioning and install guidance are repeated across `README.md`,
+  `CLAUDE.md`, and `AGENTS.md`.
+- Architecture capability is described in `souroldgeezer-design` manifests,
+  README tables, Claude subagent prose, Codex metadata, the architecture skill,
+  reference docs, runtime scripts, schemas, Java tooling, and fixtures.
+- Issue/PR lifecycle behavior is intentionally split across public skills,
+  GitHub provider extensions, repo-internal overlay guidance, and Codex wrappers;
+  wrappers must remain routing surfaces rather than behavior sources.
+
+### Behavior duplicated outside canonical `SKILL.md`
+
+- `souroldgeezer-design/agents/architecture-design.md` contains detailed
+  architecture workflow steps, finding-code lists, layout routing behavior, and
+  render/readiness logic that overlap with canonical
+  `architecture-design/SKILL.md` plus references. This is the largest behavior
+  duplication risk and a target for P3/P4 routing cleanup.
+- `README.md` and `CLAUDE.md` currently carry extensive architecture behavior,
+  layout-runtime, render, and readiness details that should become calmer public
+  and authoring summaries after the split.
+- `responsive-design` and `api-design` correctly reference architecture drift
+  handoff behavior, but their current text assumes `architecture-design` is in
+  the same `souroldgeezer-design` plugin.
+- Runtime scripts and Java tooling encode deterministic architecture behavior;
+  they should stay as machinery, with `SKILL.md` and references explaining when
+  to invoke them.
+
+### Validation scripts and tests discovered
+
+Repo-level validation:
+
+```text
+scripts/skill-architecture-report.sh
+scripts/skill_architecture_report.py
+tests/skill_architecture_report_test.py
+tests/skill_architecture_report_ledger.jsonl
+tests/generate_skill_architecture_report_ledger.py
+```
+
+Architecture runtime and render tests:
+
+```text
+tests/archi_render_script_test.py
+tests/validate_model_script_test.py
+tools/architecture-layout-java/src/test/java/com/souroldgeezer/architecture/layout/ArchLayoutCliTest.java
+tools/architecture-layout-java/src/test/java/com/souroldgeezer/architecture/layout/geometry/GeometryTest.java
+tools/architecture-layout-java/src/test/java/com/souroldgeezer/architecture/layout/png/PngAnalyzerTest.java
+```
+
+### Size and fragmentation signal
+
+Current `SKILL.md` sizes:
+
+```text
+  9409 souroldgeezer-ops/skills/issue-ops/SKILL.md
+ 10709 souroldgeezer-audit/skills/test-quality-audit/SKILL.md
+ 11086 souroldgeezer-audit/skills/devsecops-audit/SKILL.md
+ 11171 souroldgeezer-design/skills/software-design/SKILL.md
+ 12200 souroldgeezer-ops/skills/pr-ops/SKILL.md
+ 26907 souroldgeezer-design/skills/responsive-design/SKILL.md
+ 35492 souroldgeezer-design/skills/api-design/SKILL.md
+ 67931 souroldgeezer-design/skills/architecture-design/SKILL.md
+```
+
+The architecture skill is the clear slimming target for P4. P3 should move it
+without slimming except for path corrections.
+
+### Constraints and drift points
+
+- The current repo still presents three public plugins; P3/P5 must update it to
+  four public plugins when `souroldgeezer-architecture` lands.
+- Local Codex marketplace installs can diverge from source; packaging docs must
+  keep the local refresh caveat.
+- `docs/refactor/codex-master-prompt.md` and
+  `docs/refactor/fragmentation-runbook.md` are currently untracked. They were
+  left untouched in P0 and should be reconciled only if a later phase explicitly
+  chooses to ship them.
+- No committed canonical `docs/architecture/*.oef.xml` product models were
+  found in this checkout; architecture OEFs are fixtures under the skill
+  reference tree.
 
 ## P0 — Plan and Baseline
 
@@ -157,7 +328,10 @@ git commit -m "Add fragmentation refactor ExecPlan"
 Completion notes:
 
 ```text
-Pending.
+Completed 2026-05-05. `sog_baseline_explorer` ran read-only and the coordinator
+cross-checked manifests, runtime metadata surfaces, skill sizes, architecture
+asset locations, and validation tooling. No product files were edited beyond
+this ExecPlan in P0.
 ```
 
 ## P1 — Manifest and Validation Gates
@@ -174,6 +348,8 @@ Tasks:
 - Check marketplace plugin paths.
 - Check plugin manifest shape.
 - Check documented starter-prompt or manifest constraints.
+- Make bare `python -m unittest` run the repo test suite, or replace the
+  recurring command with an explicit discovery command if that proves safer.
 - Add a local script or CI step for these checks.
 - Keep changes minimal.
 - Do not restructure plugins.
@@ -598,17 +774,18 @@ Pending.
 
 | Date | Decision | Reason | Consequence |
 |---|---|---|---|
-| YYYY-MM-DD | Use one branch and one worktree | The multi-branch plan was too complex | Phases are tracked by commits instead of separate branches |
-| YYYY-MM-DD | Use `.worktrees/fragmentation-refactor` | Repo already gitignores `.worktrees/` | Validation from main must prune `.worktrees/` |
-| YYYY-MM-DD | Keep temporary refactor agents outside repo | Repo `.codex/agents/` is a shipped product surface | Subagents live in `~/.codex/agents/` |
-| YYYY-MM-DD | Fix manifests before product refactor | Later moves need a reliable validation floor | P1 precedes P2/P3 |
-| YYYY-MM-DD | Split architecture after parity work | Large moves should not increase metadata drift | P3 depends on P2 |
+| 2026-05-05 | Use one branch and one worktree | The multi-branch plan was too complex | Phases are tracked by commits instead of separate branches |
+| 2026-05-05 | Use `.worktrees/fragmentation-refactor` | Repo already gitignores `.worktrees/` | Validation from main must prune `.worktrees/` |
+| 2026-05-05 | Keep temporary refactor agents outside repo | Repo `.codex/agents/` is a shipped product surface | Subagents live in `~/.codex/agents/` |
+| 2026-05-05 | Fix manifests before product refactor | Later moves need a reliable validation floor | P1 precedes P2/P3 |
+| 2026-05-05 | Split architecture after parity work | Large moves should not increase metadata drift | P3 depends on P2 |
+| 2026-05-05 | Treat untracked refactor prompt/runbook as out of P0 scope | P0 commit is only the ExecPlan baseline map | Later phases may reconcile them deliberately |
 
 ## Progress Log
 
 | Date | Phase | Update | Evidence |
 |---|---|---|---|
-| YYYY-MM-DD | P0 | Pending | Pending |
+| 2026-05-05 | P0 | Baseline map recorded; no product files edited; recurring unittest command issue assigned to P1 | `sog_baseline_explorer`; `jq -r '.plugins[] ...' .claude-plugin/marketplace.json`; manifest `jq` scans; `find ... SKILL.md`; `find ... agents/openai.yaml`; `wc -c souroldgeezer-*/skills/*/SKILL.md`; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` exit 5 / `NO TESTS RAN`; `python -m unittest discover -s tests -p '*_test.py'` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed only this ExecPlan plus two pre-existing untracked refactor docs |
 | YYYY-MM-DD | P1 | Pending | Pending |
 | YYYY-MM-DD | P2 | Pending | Pending |
 | YYYY-MM-DD | P3 | Pending | Pending |
