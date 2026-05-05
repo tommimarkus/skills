@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: §9.5 Migration.
+  Architect intent: a release hardening migration from baseline to target plateau,
+  with gap, work packages, deliverables, and cutover event laid out on a readable timeline.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-migration">
+
+  <name xml:lang="en">Fixture — Migration (Release hardening)</name>
+
+  <documentation xml:lang="en">Migration fixture: baseline and target Plateaus are connected through a release-hardening Gap and production cutover Event, with Work Packages producing Deliverables that become part of the target state.</documentation>
+
+  <metadata>
+    <schema>http://purl.org/dc/elements/1.1/</schema>
+    <schemaversion>1.1</schemaversion>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Fixture — Migration (Release hardening)</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.12.1 (fixture)</dc:creator>
+  </metadata>
+
+  <elements>
+    <element identifier="id-plat-baseline" xsi:type="Plateau">
+      <name xml:lang="en">Baseline Checkout Platform</name>
+    </element>
+    <element identifier="id-gap-release-hardening" xsi:type="Gap">
+      <name xml:lang="en">Release hardening gap</name>
+    </element>
+    <element identifier="id-event-production-cutover" xsi:type="ImplementationEvent">
+      <name xml:lang="en">Production cutover</name>
+    </element>
+    <element identifier="id-plat-target" xsi:type="Plateau">
+      <name xml:lang="en">Hardened Checkout Platform</name>
+    </element>
+    <element identifier="id-wp-release-gates" xsi:type="WorkPackage">
+      <name xml:lang="en">Introduce release gates</name>
+    </element>
+    <element identifier="id-wp-observability" xsi:type="WorkPackage">
+      <name xml:lang="en">Deploy observability baseline</name>
+    </element>
+    <element identifier="id-deliv-policy" xsi:type="Deliverable">
+      <name xml:lang="en">Release gate policy</name>
+    </element>
+    <element identifier="id-deliv-telemetry" xsi:type="Deliverable">
+      <name xml:lang="en">Telemetry baseline</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-wp-gates-triggers-observability" source="id-wp-release-gates" target="id-wp-observability" xsi:type="Triggering"/>
+    <relationship identifier="id-rel-gates-real-policy" source="id-wp-release-gates" target="id-deliv-policy" xsi:type="Realization"/>
+    <relationship identifier="id-rel-observability-real-telemetry" source="id-wp-observability" target="id-deliv-telemetry" xsi:type="Realization"/>
+    <relationship identifier="id-rel-target-agg-policy" source="id-plat-target" target="id-deliv-policy" xsi:type="Aggregation"/>
+    <relationship identifier="id-rel-target-agg-telemetry" source="id-plat-target" target="id-deliv-telemetry" xsi:type="Aggregation"/>
+    <relationship identifier="id-rel-baseline-triggers-gap" source="id-plat-baseline" target="id-gap-release-hardening" xsi:type="Triggering"/>
+    <relationship identifier="id-rel-gap-triggers-event" source="id-gap-release-hardening" target="id-event-production-cutover" xsi:type="Triggering"/>
+    <relationship identifier="id-rel-event-triggers-target" source="id-event-production-cutover" target="id-plat-target" xsi:type="Triggering"/>
+  </relationships>
+
+  <organizations>
+    <item>
+      <label xml:lang="en">Implementation and Migration</label>
+      <item identifierRef="id-plat-baseline"/>
+      <item identifierRef="id-gap-release-hardening"/>
+      <item identifierRef="id-event-production-cutover"/>
+      <item identifierRef="id-plat-target"/>
+      <item identifierRef="id-wp-release-gates"/>
+      <item identifierRef="id-wp-observability"/>
+      <item identifierRef="id-deliv-policy"/>
+      <item identifierRef="id-deliv-telemetry"/>
+    </item>
+  </organizations>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-migration"
+            xsi:type="Diagram"
+            viewpoint="Migration">
+        <name xml:lang="en">Release Hardening — Migration</name>
+        <documentation xml:lang="en">True migration view: baseline Plateau moves through a release-hardening Gap and production cutover Event to the hardened target Plateau. Work Packages produce Deliverables nested inside the target Plateau, making the target-state contents visible without long aggregation lanes.</documentation>
+        <node identifier="id-node-wp-release-gates" elementRef="id-wp-release-gates" xsi:type="Element" x="940" y="40" w="210" h="80"/>
+        <node identifier="id-node-wp-observability" elementRef="id-wp-observability" xsi:type="Element" x="1190" y="40" w="250" h="80"/>
+        <node identifier="id-node-plat-baseline" elementRef="id-plat-baseline" xsi:type="Element" x="40" y="390" w="260" h="100"/>
+        <node identifier="id-node-gap-release-hardening" elementRef="id-gap-release-hardening" xsi:type="Element" x="360" y="400" w="230" h="80"/>
+        <node identifier="id-node-event-production-cutover" elementRef="id-event-production-cutover" xsi:type="Element" x="660" y="360" w="240" h="80"/>
+        <node identifier="id-node-plat-target" elementRef="id-plat-target" xsi:type="Element" x="940" y="280" w="500" h="260">
+          <node identifier="id-node-deliv-policy" elementRef="id-deliv-policy" xsi:type="Element" x="980" y="370" w="200" h="70"/>
+          <node identifier="id-node-deliv-telemetry" elementRef="id-deliv-telemetry" xsi:type="Element" x="1200" y="370" w="210" h="70"/>
+        </node>
+        <connection identifier="id-conn-wp-gates-triggers-observability" relationshipRef="id-rel-wp-gates-triggers-observability" source="id-node-wp-release-gates" target="id-node-wp-observability" xsi:type="Relationship"/>
+        <connection identifier="id-conn-gates-real-policy" relationshipRef="id-rel-gates-real-policy" source="id-node-wp-release-gates" target="id-node-deliv-policy" xsi:type="Relationship"/>
+        <connection identifier="id-conn-observability-real-telemetry" relationshipRef="id-rel-observability-real-telemetry" source="id-node-wp-observability" target="id-node-deliv-telemetry" xsi:type="Relationship"/>
+        <connection identifier="id-conn-baseline-triggers-gap" relationshipRef="id-rel-baseline-triggers-gap" source="id-node-plat-baseline" target="id-node-gap-release-hardening" xsi:type="Relationship"/>
+        <connection identifier="id-conn-gap-triggers-event" relationshipRef="id-rel-gap-triggers-event" source="id-node-gap-release-hardening" target="id-node-event-production-cutover" xsi:type="Relationship">
+          <bendpoint x="480" y="350"/>
+          <bendpoint x="780" y="350"/>
+        </connection>
+        <connection identifier="id-conn-event-triggers-target" relationshipRef="id-rel-event-triggers-target" source="id-node-event-production-cutover" target="id-node-plat-target" xsi:type="Relationship">
+          <bendpoint x="780" y="590"/>
+          <bendpoint x="1190" y="590"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

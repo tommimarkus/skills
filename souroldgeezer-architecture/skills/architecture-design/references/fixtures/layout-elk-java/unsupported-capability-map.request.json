@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "elk-unsupported-capability-map",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": { "id": "v-capability", "name": "Capability Map", "viewpoint": "Capability Map", "direction": "DOWN", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "cap-a", "width": 160, "height": 80, "x": 40, "y": 40 },
+    { "id": "cap-b", "width": 160, "height": 80, "x": 240, "y": 40 }
+  ],
+  "edges": [],
+  "constraints": { "preserveExistingGeometry": true }
+}

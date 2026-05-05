@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "invalid-locked-node-without-coordinates",
+  "archimateTarget": "3.2",
+  "mode": "global-polish",
+  "view": {
+    "id": "view-technology-usage",
+    "name": "Technology Usage",
+    "viewpoint": "Technology Usage",
+    "direction": "DOWN",
+    "qualityTarget": "diagram-readable"
+  },
+  "nodes": [
+    { "id": "locked-node", "width": 150, "height": 70, "locked": true },
+    { "id": "target", "width": 150, "height": 70 }
+  ],
+  "edges": [
+    { "id": "edge", "source": "locked-node", "target": "target" }
+  ],
+  "constraints": {}
+}

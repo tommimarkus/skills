@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "elk-nested-compound",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": { "id": "v-elk-nested", "name": "Nested", "viewpoint": "Application Cooperation", "direction": "DOWN", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "container", "width": 260, "height": 160, "generated": true },
+    { "id": "child-a", "width": 120, "height": 60, "parentId": "container", "generated": true },
+    { "id": "child-b", "width": 120, "height": 60, "parentId": "container", "generated": true }
+  ],
+  "edges": [{ "id": "e1", "source": "child-a", "target": "child-b", "visible": true }],
+  "constraints": { "orthogonalRouting": true, "avoidNodeBodies": true }
+}

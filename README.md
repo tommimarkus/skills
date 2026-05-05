@@ -1,12 +1,12 @@
 # souroldgeezer
 
-Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships three plugins:
+Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships four plugins:
 
 - **souroldgeezer-audit** — rubric-driven audits for DevSecOps posture and
   test quality, with per-stack extensions and matching Claude Code subagents.
 - **souroldgeezer-design** — reference-driven design for sustainable software,
-  modern web UIs, HTTP APIs, and ArchiMate® architecture models. For
-  software design (build, extract, review, lookup): shapes code/module/script
+  modern web UIs, and HTTP APIs. For software design (build, extract, review,
+  lookup): shapes code/module/script
   boundaries, dependency direction, responsibility placement, semantic
   coherence, coupling control, and evolutionary design, with .NET™ and
   shell-script extensions.
@@ -19,21 +19,14 @@ Claude Code and Codex plugin marketplace by Sour Old Geezer. Currently ships thr
   429 + Retry-After), and observability (structured logs, W3C® traceparent),
   with composable extensions for Azure® Functions™ on .NET™, Node.js® hosted /
   serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob
-  Storage™. For architecture (build, extract, review, lookup): enforces
-  ArchiMate® 3.2 layer discipline and Appendix B relationship well-formedness;
-  serialises models as **OEF XML** per The Open Group ArchiMate® Model
-  Exchange File Format 3.2 (loadable in ArchiMate®-conformant tools);
-  lifts Application + Technology + Implementation & Migration layers from
-  .NET™ / Bicep™ / GitHub Actions™ and the Business layer's Process / Event /
-  Interaction from Durable Functions + Logic Apps (as `LIFT-CANDIDATE`s the
-  architect confirms); marks the rest of Business and all Motivation /
-  Strategy as forward-only with seed views; shows Managed Identity / RBAC,
-  deployment topology, and external trust-boundary concerns when extractable;
-  supports macro Business Process Cooperation and UI-aware Service Realization
-  diagram kind (§9.3 Process-rooted modality); dispatches from the sibling
-  skills' Review mode to flag drift between code and the architect's
-  model. Each skill has a matching Claude Code subagent; Codex consumes the
+  Storage™. Each skill has a matching Claude Code subagent; Codex consumes the
   bundled `skills/**/SKILL.md` workflows directly from the plugin.
+- **souroldgeezer-architecture** — reference-driven ArchiMate® 3.2
+  architecture modeling. It owns `architecture-design`, the bundled
+  architecture reference, OEF XML / ArchiMate® support, layout runtime wiring,
+  render validation procedures, schemas, fixtures, and scripts. It preserves
+  the canonical `docs/architecture/<feature>.oef.xml` drift handoff used by
+  `responsive-design` and `api-design`.
 - **souroldgeezer-ops** — operations workflows for issue, work-item, and
   pull-request lifecycle handling, with provider-agnostic `issue-ops` and
   `pr-ops` cores plus GitHub™ provider extensions for issue state, PR state,
@@ -51,6 +44,7 @@ Add this marketplace and enable the plugins you want:
 /plugin marketplace add tommimarkus/skills
 /plugin install souroldgeezer-audit@souroldgeezer
 /plugin install souroldgeezer-design@souroldgeezer
+/plugin install souroldgeezer-architecture@souroldgeezer
 /plugin install souroldgeezer-ops@souroldgeezer
 ```
 
@@ -67,6 +61,7 @@ Or, for local development against a clone:
   "enabledPlugins": {
     "souroldgeezer-audit@souroldgeezer": true,
     "souroldgeezer-design@souroldgeezer": true,
+    "souroldgeezer-architecture@souroldgeezer": true,
     "souroldgeezer-ops@souroldgeezer": true
   }
 }
@@ -107,6 +102,15 @@ entries. Codex warns and ignores extra starter prompts.
 The repo intentionally does not duplicate the catalog under
 `.agents/plugins/marketplace.json`; the existing `.claude-plugin/marketplace.json`
 is the shared marketplace for both Claude Code and Codex.
+
+### Migration note
+
+Users who previously installed `souroldgeezer-design` for `architecture-design`
+must install `souroldgeezer-architecture@souroldgeezer` as well. The
+`architecture-design` skill name, OEF XML behavior, canonical
+`docs/architecture/<feature>.oef.xml` path, layout runtime commands, render
+validation procedures, schemas, fixtures, and project-scoped Codex wrapper name
+are preserved; only the plugin namespace and bundled file paths changed.
 
 Skill authoring and review guidance lives in
 [docs/skill-architecture.md](docs/skill-architecture.md). Use it as the
@@ -152,17 +156,26 @@ project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
 
 ## What's in `souroldgeezer-design`
 
-Four design skills, each with a matching one-shot Claude Code subagent:
+Three design skills, each with a matching one-shot Claude Code subagent:
 
 | Skill | Covers | Stack extensions |
 |---|---|---|
 | [software-design](souroldgeezer-design/skills/software-design/SKILL.md) | Sustainable software design for code/module/script changes - Build, Extract, Review, and Lookup across boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, lightweight tradeoffs, and socio-technical fit | [.NET™](souroldgeezer-design/skills/software-design/extensions/dotnet.md) (solution/project references, namespaces, assembly visibility, dependency injection, persistence model leakage, hosted services, and common .NET™ design ceremony); [shell-script](souroldgeezer-design/skills/software-design/extensions/shell-script.md) (Bash/zsh interpreter boundaries, sourced modules, shell option/trap state, Linux® / macOS™ / Windows Subsystem for Linux™ compatibility, and `devsecops-audit` Quick validation when available); [Python®](souroldgeezer-design/skills/software-design/extensions/python.md) (repo-internal tooling — entry-point boundaries, import-time workflow, `sys.path` stitching, module-state coupling, environment backchannels, `subprocess` command-construction, stream / exit-code contracts, type-hint boundaries, reproducibility contract across Python® version + lockfile / PEP 723 inline pins, async-misuse, shell-style Python® smell, and `devsecops-audit` Quick validation when available; skips web/ASGI applications) |
 | [responsive-design](souroldgeezer-design/skills/responsive-design/SKILL.md) | Modern responsive web UI in HTML / CSS / JS — enforces WCAG 2.2 AA, internationalization (LTR + RTL + text expansion), and Core Web Vitals (LCP / CLS / INP) as hard baselines | [blazor-wasm](souroldgeezer-design/skills/responsive-design/extensions/blazor-wasm.md) (covers both standalone Blazor WebAssembly and Blazor Web App `.Client` hosting) |
 | [api-design](souroldgeezer-design/skills/api-design/SKILL.md) | Modern HTTP APIs — Build, Extract, Review, and Lookup across contract discipline (OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, RFC 9110 ETag), security, reliability (idempotency on mutations, safe retries, 429 + Retry-After, poison / dead-letter), observability (structured logs, W3C® traceparent, correlation ID, request-charge visibility), and honest verification-layer disclosure | [azure-functions-dotnet](souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md), [nodejs](souroldgeezer-design/skills/api-design/extensions/nodejs.md), [nextjs](souroldgeezer-design/skills/api-design/extensions/nextjs.md), [azure-cosmosdb](souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md), [azure-blob-storage](souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md) — **compose** on the same target |
-| [architecture-design](souroldgeezer-design/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, materialized OEF view geometry, change classification (semantic model / view geometry / documentation-render inventory), and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (per-view readiness matrix with Readiness + Authority axes, executable source-geometry `AD-L*` gate, external Archi import / Validate Model / schema validation handoff, packaged layout request/result/policy/provenance checks, route repair, global polish, Java™ ImageIO-based PNG validation, optional render artefacts with render gate when visual quality is requested, artefact findings, duplicate realization view detection, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process), plus an explicit Review → Extract → Build → Lookup → render/compare iteration loop for user-requested render polishing | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-design/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-design/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-design/skills/architecture-design/references/procedures/professional-readiness.md), [external-validation-handoff](souroldgeezer-design/skills/architecture-design/references/procedures/external-validation-handoff.md), the executable [source-geometry gate](souroldgeezer-design/skills/architecture-design/references/scripts/validate-oef-layout.sh), optional [render script](souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh), packaged [layout runtime](souroldgeezer-design/skills/architecture-design/references/scripts/arch-layout.sh), [layout schemas](souroldgeezer-design/skills/architecture-design/references/schemas/), [rendered PNG validation](souroldgeezer-design/skills/architecture-design/references/procedures/rendered-png-validation.md), [layout strategy](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md), [backend contract](souroldgeezer-design/skills/architecture-design/references/procedures/layout-backend-contract.md), [viewpoint policies](souroldgeezer-design/skills/architecture-design/references/procedures/layout-policies-by-viewpoint.md), [routing/glossing](souroldgeezer-design/skills/architecture-design/references/procedures/routing-and-glossing.md), and [deterministic fallback](souroldgeezer-design/skills/architecture-design/references/procedures/layout-fallback.md), invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `LAYOUT_*` / `AD-B-*` checks in Review |
 
-References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), [souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md), and [souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md).
-Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), [souroldgeezer-design/agents/api-design.md](souroldgeezer-design/agents/api-design.md), and [souroldgeezer-design/agents/architecture-design.md](souroldgeezer-design/agents/architecture-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
+References live at [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md), [souroldgeezer-design/docs/ui-reference/responsive-design.md](souroldgeezer-design/docs/ui-reference/responsive-design.md), and [souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md).
+Matching Claude Code subagents are at [souroldgeezer-design/agents/software-design.md](souroldgeezer-design/agents/software-design.md), [souroldgeezer-design/agents/responsive-design.md](souroldgeezer-design/agents/responsive-design.md), and [souroldgeezer-design/agents/api-design.md](souroldgeezer-design/agents/api-design.md). Codex installs the bundled skills through the plugin manifest, reads per-skill metadata from each `skills/<name>/agents/openai.yaml`, and has matching project-scoped custom-agent wrappers in [.codex/agents/](.codex/agents/).
+
+## What's in `souroldgeezer-architecture`
+
+One architecture skill with a matching one-shot Claude Code subagent:
+
+| Skill | Covers | Support files |
+|---|---|---|
+| [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | ArchiMate® 3.2 enterprise / solution architecture models — enforces ArchiMate® 3.2 layer discipline, relationship well-formedness, Core-vs-extension defaults, materialized OEF view geometry, change classification (semantic model / view geometry / documentation-render inventory), and professional OEF/view readiness (`model-valid`, `diagram-readable`, `review-ready`); serialised as **OEF XML** (ArchiMate® Model Exchange File Format), loadable in ArchiMate®-conformant tools. 4-mode shape: Build (intent → model), Extract (code + IaC + workflows → model with per-layer lifting; Business Process / Event / Interaction lift from Durable Functions + Logic Apps as `LIFT-CANDIDATE`s, rest of Business / Motivation / Strategy are forward-only with seed views), Review (per-view readiness matrix with Readiness + Authority axes, executable source-geometry `AD-L*` gate, external Archi import / Validate Model / schema validation handoff, packaged layout request/result/policy/provenance checks, route repair, global polish, Java™ ImageIO-based PNG validation, optional render artefacts with render gate when visual quality is requested, artefact findings, duplicate realization view detection, and drift detection including process drift, RBAC, deployment-topology, and trust-boundary checks against current repo state), Lookup (notation Q&A, domain discovery, reverse lookup from code or UI symbol → owning process), plus an explicit Review → Extract → Build → Lookup → render/compare iteration loop for user-requested render polishing | Per-input-source lifting procedures (not extensions): [.NET](souroldgeezer-architecture/skills/architecture-design/references/procedures/lifting-rules-dotnet.md), [Bicep](souroldgeezer-architecture/skills/architecture-design/references/procedures/lifting-rules-bicep.md), [GitHub Actions](souroldgeezer-architecture/skills/architecture-design/references/procedures/lifting-rules-gha.md), [Durable Functions + Logic Apps](souroldgeezer-architecture/skills/architecture-design/references/procedures/lifting-rules-process.md), [seed views](souroldgeezer-architecture/skills/architecture-design/references/procedures/seed-views.md), plus [professional-readiness](souroldgeezer-architecture/skills/architecture-design/references/procedures/professional-readiness.md), [external-validation-handoff](souroldgeezer-architecture/skills/architecture-design/references/procedures/external-validation-handoff.md), the executable [source-geometry gate](souroldgeezer-architecture/skills/architecture-design/references/scripts/validate-oef-layout.sh), optional [render script](souroldgeezer-architecture/skills/architecture-design/references/scripts/archi-render.sh), packaged [layout runtime](souroldgeezer-architecture/skills/architecture-design/references/scripts/arch-layout.sh), [layout schemas](souroldgeezer-architecture/skills/architecture-design/references/schemas/), [rendered PNG validation](souroldgeezer-architecture/skills/architecture-design/references/procedures/rendered-png-validation.md), [layout strategy](souroldgeezer-architecture/skills/architecture-design/references/procedures/layout-strategy.md), [backend contract](souroldgeezer-architecture/skills/architecture-design/references/procedures/layout-backend-contract.md), [viewpoint policies](souroldgeezer-architecture/skills/architecture-design/references/procedures/layout-policies-by-viewpoint.md), [routing/glossing](souroldgeezer-architecture/skills/architecture-design/references/procedures/routing-and-glossing.md), and [deterministic fallback](souroldgeezer-architecture/skills/architecture-design/references/procedures/layout-fallback.md), invoked by Build / Extract and restated as `AD-Q*` / `AD-L*` / `LAYOUT_*` / `AD-B-*` checks in Review |
+
+The architecture reference lives at [souroldgeezer-architecture/docs/architecture-reference/architecture.md](souroldgeezer-architecture/docs/architecture-reference/architecture.md). The matching Claude Code subagent is [souroldgeezer-architecture/agents/architecture-design.md](souroldgeezer-architecture/agents/architecture-design.md). Codex installs the bundled skill through the plugin manifest, reads per-skill metadata from `skills/architecture-design/agents/openai.yaml`, and uses the project-scoped custom-agent wrapper in [.codex/agents/architecture-design.toml](.codex/agents/architecture-design.toml).
 
 The canonical path `docs/architecture/<feature>.oef.xml` remains the coupling mechanism for UI/API code-to-architecture drift: `responsive-design` and `api-design` auto-dispatch to `architecture-design` Review when a paired model is present.
 
@@ -290,7 +303,7 @@ skills through the plugin manifest, reads per-skill metadata from each
 ## How `architecture-design` works
 
 - **Reference-driven.** Same shape as the sibling design skills — a workflow
-  applying an external reference ([souroldgeezer-design/docs/architecture-reference/architecture.md](souroldgeezer-design/docs/architecture-reference/architecture.md)).
+  applying an external reference ([souroldgeezer-architecture/docs/architecture-reference/architecture.md](souroldgeezer-architecture/docs/architecture-reference/architecture.md)).
   Output cites reference sections (e.g. `§4.2`, `§9.3`) and ArchiMate® 3.2
   chapters / Appendix B entries; findings cite smell codes (`AD-*` for
   artefact, `AD-Q*` for professional OEF/view quality, `AD-DR-*` for drift,
@@ -350,10 +363,10 @@ skills through the plugin manifest, reads per-skill metadata from each
   drift (IaC vs. what's actually running in Azure) is out of scope and
   requires Azure Resource Graph / Defender for Cloud.
 - **Packaged layout runtime** (introduced in 0.21.0). The skill ships
-  [arch-layout.sh](souroldgeezer-design/skills/architecture-design/references/scripts/arch-layout.sh)
+  [arch-layout.sh](souroldgeezer-architecture/skills/architecture-design/references/scripts/arch-layout.sh)
   as a thin launcher for a self-contained Java™ 21 runtime at
   `references/bin/arch-layout.jar`. The runtime validates the layout
-  [request/result schemas](souroldgeezer-design/skills/architecture-design/references/schemas/),
+  [request/result schemas](souroldgeezer-architecture/skills/architecture-design/references/schemas/),
   exposes runtime-honored versus advisory request fields, rejects contradictory
   hierarchy / locked-geometry / locked-route requests, produces
   generated-layout results for supported directed viewpoints,
@@ -367,7 +380,7 @@ skills through the plugin manifest, reads per-skill metadata from each
   OEF-documentation text, and validates rendered PNG invariants. Source lives
   outside the shipped skill
   runtime under `tools/architecture-layout-java/`; release packaging uses
-  [package-arch-layout.sh](souroldgeezer-design/skills/architecture-design/references/scripts/package-arch-layout.sh)
+  [package-arch-layout.sh](souroldgeezer-architecture/skills/architecture-design/references/scripts/package-arch-layout.sh)
   so only the JAR, shell launchers, schemas, procedures, and fixtures are
   distributed with the plugin skill.
 - **Render artefacts.** OEF XML remains the architecture source of truth.
@@ -406,7 +419,7 @@ skills through the plugin manifest, reads per-skill metadata from each
   render-polish loop is in scope.
 - **Skill self-check** (introduced in 0.18.0). Build / Extract / Review step 0
   invokes
-  [self-check.md](souroldgeezer-design/skills/architecture-design/references/procedures/self-check.md)
+  [self-check.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/self-check.md)
   to verify required reference files, procedures, and scripts are present and
   runnable. Missing tooling produces a degraded-mode footer entry naming the
   blocker; affected verifications are reported as "not run" rather than
@@ -423,7 +436,7 @@ skills through the plugin manifest, reads per-skill metadata from each
   one is found. Neither sibling reaches into the architecture-design
   surface beyond this path.
 - **Per-input-source lifting procedures** live under
-  [souroldgeezer-design/skills/architecture-design/references/procedures/](souroldgeezer-design/skills/architecture-design/references/procedures/) —
+  [souroldgeezer-architecture/skills/architecture-design/references/procedures/](souroldgeezer-architecture/skills/architecture-design/references/procedures/) —
   `.NET` for the Application Layer, `Bicep` for the Technology Layer,
   `GitHub Actions` for the Implementation & Migration Layer, `Durable
   Functions + Logic Apps` for the Business Layer's Process / Event /
@@ -436,7 +449,7 @@ skills through the plugin manifest, reads per-skill metadata from each
   workflow), not by target stack choice, so this skill does not use the
   `extensions/` pattern the sibling skills do.
 - **Backend-neutral layout policy** (refactored in 0.20.0). The
-  [layout-strategy.md](souroldgeezer-design/skills/architecture-design/references/procedures/layout-strategy.md)
+  [layout-strategy.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/layout-strategy.md)
   procedure
   governs materialized `<view>` placement via a viewpoint-constrained pipeline:
   Build and Extract must emit Element nodes with `elementRef`, `x`, `y`, `w`,
@@ -481,7 +494,7 @@ skills through the plugin manifest, reads per-skill metadata from each
   (containing every top-level process — root of its Composition tree)
   plus §9.3 Service Realization coverage per distinct realization story
   (top-level + Composition-nested sub-orchestrators per
-  [process-view-emission.md](souroldgeezer-design/skills/architecture-design/references/procedures/process-view-emission.md)).
+  [process-view-emission.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/process-view-emission.md)).
   Multiple processes that share the same Application / Technology / data /
   security / deployment / UI-entry story are consolidated into one process-rooted
   §9.3 view; materially different process stories keep separate views.
@@ -582,13 +595,22 @@ souroldgeezer-design/              # design plugin
     software-reference/            # bundled reference (software-design.md)
     ui-reference/                  # bundled reference (responsive-design.md)
     api-reference/                 # bundled reference (api-design.md)
-    architecture-reference/        # bundled reference (architecture.md)
   agents/*.md                      # Claude Code subagents (one per skill, same name)
   skills/<name>/
     SKILL.md                       # workflow
     agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
     extensions/                    # per-stack packs (primitives + patterns + project-assimilation)
     references/                    # smell catalogs + reusable procedures where needed
+souroldgeezer-architecture/        # architecture plugin
+  .claude-plugin/plugin.json
+  .codex-plugin/plugin.json
+  docs/
+    architecture-reference/        # bundled reference (architecture.md)
+  agents/architecture-design.md    # Claude Code subagent
+  skills/architecture-design/
+    SKILL.md                       # workflow
+    agents/openai.yaml             # Codex per-skill UI metadata / invocation policy
+    references/                    # OEF XML / ArchiMate® support, procedures, schemas, scripts, fixtures, packaged runtime
 souroldgeezer-ops/                 # operations plugin
   .claude-plugin/plugin.json
   .codex-plugin/plugin.json

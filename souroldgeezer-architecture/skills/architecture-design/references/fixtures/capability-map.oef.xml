@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: §9.1 Capability Map.
+  Architect intent: customer-growth capability decomposed into four reviewable sub-capabilities,
+  with business functions and a business service showing realization without application detail.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-capability-map">
+
+  <name xml:lang="en">Fixture — Capability Map (Customer growth)</name>
+
+  <documentation xml:lang="en">Capability Map fixture: a parent customer-growth capability contains four sub-capabilities, and business functions plus one business service make the realization path explicit without leaking application or technology structure.</documentation>
+
+  <metadata>
+    <schema>http://purl.org/dc/elements/1.1/</schema>
+    <schemaversion>1.1</schemaversion>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Fixture — Capability Map (Customer growth)</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">architecture-design 0.12.1 (fixture)</dc:creator>
+  </metadata>
+
+  <elements>
+    <element identifier="id-cap-customer-growth" xsi:type="Capability">
+      <name xml:lang="en">Customer Growth</name>
+    </element>
+    <element identifier="id-cap-order-intake" xsi:type="Capability">
+      <name xml:lang="en">Order Intake</name>
+    </element>
+    <element identifier="id-cap-payment-readiness" xsi:type="Capability">
+      <name xml:lang="en">Payment Readiness</name>
+    </element>
+    <element identifier="id-cap-fulfilment-control" xsi:type="Capability">
+      <name xml:lang="en">Fulfilment Control</name>
+    </element>
+    <element identifier="id-cap-service-assurance" xsi:type="Capability">
+      <name xml:lang="en">Service Assurance</name>
+    </element>
+    <element identifier="id-func-customer-engagement" xsi:type="BusinessFunction">
+      <name xml:lang="en">Customer Engagement Function</name>
+    </element>
+    <element identifier="id-func-revenue-ops" xsi:type="BusinessFunction">
+      <name xml:lang="en">Revenue Operations Function</name>
+    </element>
+    <element identifier="id-func-fulfilment-ops" xsi:type="BusinessFunction">
+      <name xml:lang="en">Fulfilment Operations Function</name>
+    </element>
+    <element identifier="id-bsvc-guided-purchase" xsi:type="BusinessService">
+      <name xml:lang="en">Guided Purchase Service</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-cap-root-order" source="id-cap-customer-growth" target="id-cap-order-intake" xsi:type="Composition"/>
+    <relationship identifier="id-rel-cap-root-payment" source="id-cap-customer-growth" target="id-cap-payment-readiness" xsi:type="Composition"/>
+    <relationship identifier="id-rel-cap-root-fulfil" source="id-cap-customer-growth" target="id-cap-fulfilment-control" xsi:type="Composition"/>
+    <relationship identifier="id-rel-cap-root-assurance" source="id-cap-customer-growth" target="id-cap-service-assurance" xsi:type="Composition"/>
+    <relationship identifier="id-rel-engagement-real-order" source="id-func-customer-engagement" target="id-cap-order-intake" xsi:type="Realization"/>
+    <relationship identifier="id-rel-revenue-real-payment" source="id-func-revenue-ops" target="id-cap-payment-readiness" xsi:type="Realization"/>
+    <relationship identifier="id-rel-fulfil-real-control" source="id-func-fulfilment-ops" target="id-cap-fulfilment-control" xsi:type="Realization"/>
+    <relationship identifier="id-rel-service-real-growth" source="id-bsvc-guided-purchase" target="id-cap-customer-growth" xsi:type="Realization"/>
+  </relationships>
+
+  <organizations>
+    <item>
+      <label xml:lang="en">Strategy</label>
+      <item identifierRef="id-cap-customer-growth"/>
+      <item identifierRef="id-cap-order-intake"/>
+      <item identifierRef="id-cap-payment-readiness"/>
+      <item identifierRef="id-cap-fulfilment-control"/>
+      <item identifierRef="id-cap-service-assurance"/>
+    </item>
+    <item>
+      <label xml:lang="en">Business</label>
+      <item identifierRef="id-func-customer-engagement"/>
+      <item identifierRef="id-func-revenue-ops"/>
+      <item identifierRef="id-func-fulfilment-ops"/>
+      <item identifierRef="id-bsvc-guided-purchase"/>
+    </item>
+  </organizations>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-capability-map"
+            xsi:type="Diagram"
+            viewpoint="Capability Map">
+        <name xml:lang="en">Customer Growth — Capability Map</name>
+        <documentation xml:lang="en">Tile-grid capability view: Customer Growth is decomposed into four sub-capabilities; the lower business-function row shows how business behaviour realizes the capability map while staying free of application and technology inventory.</documentation>
+        <node identifier="id-node-cap-customer-growth" elementRef="id-cap-customer-growth" xsi:type="Element" x="40" y="40" w="1180" h="280">
+          <node identifier="id-node-cap-order-intake" elementRef="id-cap-order-intake" xsi:type="Element" x="80" y="150" w="240" h="100"/>
+          <node identifier="id-node-cap-payment-readiness" elementRef="id-cap-payment-readiness" xsi:type="Element" x="360" y="150" w="240" h="100"/>
+          <node identifier="id-node-cap-fulfilment-control" elementRef="id-cap-fulfilment-control" xsi:type="Element" x="640" y="150" w="240" h="100"/>
+          <node identifier="id-node-cap-service-assurance" elementRef="id-cap-service-assurance" xsi:type="Element" x="920" y="150" w="240" h="100"/>
+        </node>
+        <node identifier="id-node-func-customer-engagement" elementRef="id-func-customer-engagement" xsi:type="Element" x="80" y="410" w="260" h="80"/>
+        <node identifier="id-node-func-revenue-ops" elementRef="id-func-revenue-ops" xsi:type="Element" x="430" y="410" w="260" h="80"/>
+        <node identifier="id-node-func-fulfilment-ops" elementRef="id-func-fulfilment-ops" xsi:type="Element" x="780" y="410" w="270" h="80"/>
+        <node identifier="id-node-bsvc-guided-purchase" elementRef="id-bsvc-guided-purchase" xsi:type="Element" x="500" y="590" w="280" h="80"/>
+        <connection identifier="id-conn-engagement-real-order" relationshipRef="id-rel-engagement-real-order" source="id-node-func-customer-engagement" target="id-node-cap-order-intake" xsi:type="Relationship"/>
+        <connection identifier="id-conn-revenue-real-payment" relationshipRef="id-rel-revenue-real-payment" source="id-node-func-revenue-ops" target="id-node-cap-payment-readiness" xsi:type="Relationship"/>
+        <connection identifier="id-conn-fulfil-real-control" relationshipRef="id-rel-fulfil-real-control" source="id-node-func-fulfilment-ops" target="id-node-cap-fulfilment-control" xsi:type="Relationship"/>
+        <connection identifier="id-conn-service-real-growth" relationshipRef="id-rel-service-real-growth" source="id-node-bsvc-guided-purchase" target="id-node-cap-customer-growth" xsi:type="Relationship">
+          <bendpoint x="1120" y="540"/>
+          <bendpoint x="1120" y="350"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

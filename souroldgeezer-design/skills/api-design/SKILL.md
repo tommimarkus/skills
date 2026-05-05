@@ -351,7 +351,7 @@ Output contains any of the following? Stop; fix before delivering:
 ## Complementary skills
 
 - `responsive-design` (same plugin `souroldgeezer-design`) — if the API is paired with a web UI, that skill covers the UI contract (WCAG 2.2 AA, i18n, CWV). The two skills compose; neither duplicates the other.
-- `architecture-design` (same plugin) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application and Technology Layers of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
+- `architecture-design` (plugin `souroldgeezer-architecture`) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application and Technology Layers of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — pipeline, release, secrets scanning, IaC posture, CSP / CORS / cookie attributes on the hosting tier. This skill proves the *code and contract* are compliant; the audit skill proves the *pipeline* is compliant.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — integration / E2E test quality for the endpoints this skill produces (Node.js + .NET + Next.js extensions available).
 

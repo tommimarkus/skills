@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: realistic Service Realization generated-layout handoff.
+  Synthetic process-to-service view with a nested UI route and backend runtime/data nodes.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-realistic-service-realization">
+  <name xml:lang="en">Fixture - Realistic Service Realization</name>
+  <documentation xml:lang="en">Synthetic fixture for generated layout materialization with process chain, nested UI route, application service, API component, runtime node, and data node.</documentation>
+  <elements>
+    <element identifier="id-user" xsi:type="BusinessActor"><name xml:lang="en">Prospective Member</name></element>
+    <element identifier="id-process-start" xsi:type="BusinessProcess"><name xml:lang="en">Start Signup</name></element>
+    <element identifier="id-process-confirm" xsi:type="BusinessProcess"><name xml:lang="en">Confirm Signup</name></element>
+    <element identifier="id-application-service" xsi:type="ApplicationService"><name xml:lang="en">Signup Service</name></element>
+    <element identifier="id-ui-component" xsi:type="ApplicationComponent"><name xml:lang="en">Signup UI Component</name></element>
+    <element identifier="id-ui-route-signup" xsi:type="ApplicationInterface"><name xml:lang="en">Signup Route</name></element>
+    <element identifier="id-api-component" xsi:type="ApplicationComponent"><name xml:lang="en">Signup API Component</name></element>
+    <element identifier="id-function-app" xsi:type="Node"><name xml:lang="en">Signup Function App</name></element>
+    <element identifier="id-signup-data" xsi:type="Node"><name xml:lang="en">Signup Data Store</name></element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-rel-user-starts-process" source="id-user" target="id-process-start" xsi:type="Assignment"/>
+    <relationship identifier="id-rel-process-start-confirm" source="id-process-start" target="id-process-confirm" xsi:type="Triggering"/>
+    <relationship identifier="id-rel-process-uses-service" source="id-process-confirm" target="id-application-service" xsi:type="Serving"/>
+    <relationship identifier="id-rel-ui-composes-route" source="id-ui-component" target="id-ui-route-signup" xsi:type="Composition"/>
+    <relationship identifier="id-rel-api-realizes-service" source="id-api-component" target="id-application-service" xsi:type="Realization"/>
+    <relationship identifier="id-rel-route-serves-api" source="id-ui-route-signup" target="id-api-component" xsi:type="Serving"/>
+    <relationship identifier="id-rel-function-serves-api" source="id-function-app" target="id-api-component" xsi:type="Serving"/>
+    <relationship identifier="id-rel-data-serves-function" source="id-signup-data" target="id-function-app" xsi:type="Serving"/>
+  </relationships>
+  <views>
+    <diagrams>
+      <view identifier="id-view-realistic-service-realization" xsi:type="Diagram" viewpoint="Service Realization">
+        <name xml:lang="en">Signup - Service Realization</name>
+        <node identifier="id-node-user" elementRef="id-user" xsi:type="Element" x="40" y="40" w="200" h="70"/>
+        <node identifier="id-node-process-start" elementRef="id-process-start" xsi:type="Element" x="300" y="40" w="180" h="70"/>
+        <node identifier="id-node-process-confirm" elementRef="id-process-confirm" xsi:type="Element" x="540" y="40" w="190" h="70"/>
+        <node identifier="id-node-application-service" elementRef="id-application-service" xsi:type="Element" x="790" y="40" w="200" h="70"/>
+        <node identifier="id-node-ui-component" elementRef="id-ui-component" xsi:type="Element" x="300" y="190" w="280" h="170">
+          <node identifier="id-node-ui-route-signup" elementRef="id-ui-route-signup" xsi:type="Element" x="350" y="260" w="180" h="60"/>
+        </node>
+        <node identifier="id-node-api-component" elementRef="id-api-component" xsi:type="Element" x="660" y="220" w="240" h="80"/>
+        <node identifier="id-node-function-app" elementRef="id-function-app" xsi:type="Element" x="980" y="220" w="250" h="80"/>
+        <node identifier="id-node-signup-data" elementRef="id-signup-data" xsi:type="Element" x="980" y="380" w="220" h="70"/>
+        <connection identifier="id-conn-user-starts-process" relationshipRef="id-rel-user-starts-process" source="id-node-user" target="id-node-process-start" xsi:type="Relationship"/>
+        <connection identifier="id-conn-process-start-confirm" relationshipRef="id-rel-process-start-confirm" source="id-node-process-start" target="id-node-process-confirm" xsi:type="Relationship"/>
+        <connection identifier="id-conn-process-uses-service" relationshipRef="id-rel-process-uses-service" source="id-node-process-confirm" target="id-node-application-service" xsi:type="Relationship"/>
+        <connection identifier="id-conn-api-realizes-service" relationshipRef="id-rel-api-realizes-service" source="id-node-api-component" target="id-node-application-service" xsi:type="Relationship"/>
+        <connection identifier="id-conn-route-serves-api" relationshipRef="id-rel-route-serves-api" source="id-node-ui-route-signup" target="id-node-api-component" xsi:type="Relationship"/>
+        <connection identifier="id-conn-function-serves-api" relationshipRef="id-rel-function-serves-api" source="id-node-function-app" target="id-node-api-component" xsi:type="Relationship"/>
+        <connection identifier="id-conn-data-serves-function" relationshipRef="id-rel-data-serves-function" source="id-node-signup-data" target="id-node-function-app" xsi:type="Relationship"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

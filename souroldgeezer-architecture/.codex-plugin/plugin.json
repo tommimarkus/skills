@@ -1,0 +1,27 @@
+{
+  "name": "souroldgeezer-architecture",
+  "version": "0.1.0",
+  "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers OEF XML build/extract/review/render/lookup, canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, deployment topology, trust boundaries, packaged Java™ layout validation, warning evidence, route repair, global polish, OEF materialization, rendered PNG validation, external validation handoff, layout policy diagnostics, layout provenance output, change classification, per-view readiness matrix, render-contract disclosure, skill self-check, matching Claude Code subagent, and Codex skill metadata.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Architecture",
+    "shortDescription": "Reference-driven ArchiMate® architecture modeling.",
+    "longDescription": "Build, extract, review, render, validate, repair, and look up ArchiMate® OEF XML architecture models with bundled references, layout runtime wiring, schemas, fixtures, and render validation procedures.",
+    "developerName": "Sour Old Geezer",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Review this architecture model for professional readiness.",
+      "Render this OEF model and validate the diagrams.",
+      "Extract an ArchiMate® architecture model from this codebase."
+    ]
+  }
+}

@@ -1,0 +1,216 @@
+// SPDX-FileCopyrightText: 2026 Sour Old Geezer contributors
+// SPDX-License-Identifier: MIT
+//
+// jArchi validation script for the current Archi model.
+//
+// Source grounding: this script follows the validation intent of the jArchi
+// community "Validate Model.ajs" utility, extends it with low-risk Archi-style
+// warnings, and uses repo-original wording plus stable machine-readable output
+// for archi-render.sh.
+// https://github.com/archi-contribs/jarchi-community-script-pack/blob/main/Utils/Validate%20Model.ajs
+
+var invalidCount = 0;
+var warningCount = 0;
+var usedElementIds = {};
+var usedRelationshipIds = {};
+var duplicateElementBuckets = {};
+var validatorOutputPath = null;
+var Files = null;
+var Paths = null;
+var StandardOpenOption = null;
+var StandardCharsets = null;
+var JavaString = null;
+
+try {
+  var System = Java.type("java.lang.System");
+  Files = Java.type("java.nio.file.Files");
+  Paths = Java.type("java.nio.file.Paths");
+  StandardOpenOption = Java.type("java.nio.file.StandardOpenOption");
+  StandardCharsets = Java.type("java.nio.charset.StandardCharsets");
+  JavaString = Java.type("java.lang.String");
+  validatorOutputPath = System.getenv("ARCHI_VALIDATE_MODEL_OUTPUT");
+} catch (error) {
+  validatorOutputPath = null;
+}
+
+function text(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return String(value).replace(/"/g, "'");
+}
+
+function conceptLabel(concept) {
+  if (!concept) {
+    return "missing-concept";
+  }
+  return text(concept.type) + " \"" + text(concept.name) + "\" id=" + text(concept.id);
+}
+
+function viewLabel(view) {
+  return "view id=" + text(view.id) + " name=\"" + text(view.name) + "\"";
+}
+
+function normalizedName(value) {
+  return text(value).replace(/^\s+|\s+$/g, "").replace(/\s+/g, " ").toLowerCase();
+}
+
+function emit(line) {
+  if (validatorOutputPath) {
+    Files.write(
+      Paths.get(validatorOutputPath),
+      new JavaString(line + "\n").getBytes(StandardCharsets.UTF_8),
+      StandardOpenOption.CREATE,
+      StandardOpenOption.WRITE,
+      StandardOpenOption.APPEND
+    );
+    return;
+  }
+
+  console.log(line);
+}
+
+function invalid(message) {
+  invalidCount += 1;
+  emit("ARCHI_VALIDATE_MODEL: INVALID " + message);
+}
+
+function warn(message) {
+  warningCount += 1;
+  emit("ARCHI_VALIDATE_MODEL: WARN " + message);
+}
+
+$("element").each(function(element) {
+  var name = normalizedName(element.name);
+  if (name.length === 0) {
+    return;
+  }
+
+  var key = text(element.type) + "\n" + name;
+  if (!duplicateElementBuckets[key]) {
+    duplicateElementBuckets[key] = [];
+  }
+  duplicateElementBuckets[key].push(element);
+});
+
+$("relationship").each(function(relationship) {
+  var source = relationship.source;
+  var target = relationship.target;
+
+  if (!source || !target) {
+    invalid(
+      "relationship id=" + text(relationship.id) +
+      " type=" + text(relationship.type) +
+      " has missing endpoint(s)"
+    );
+    return;
+  }
+
+  if (!$.model.isAllowedRelationship(relationship.type, source.type, target.type)) {
+    invalid(
+      "relationship id=" + text(relationship.id) +
+      " type=" + text(relationship.type) +
+      " is not allowed from " + conceptLabel(source) +
+      " to " + conceptLabel(target)
+    );
+  }
+});
+
+$("view").each(function(view) {
+  var visualElementCount = 0;
+
+  view.find("element").each(function(node) {
+    visualElementCount += 1;
+
+    if (!node.concept) {
+      invalid(
+        "visual element id=" + text(node.id) +
+        " in " + viewLabel(view) +
+        " has missing model element"
+      );
+      return;
+    }
+
+    usedElementIds[node.concept.id] = true;
+  });
+
+  if (visualElementCount === 0) {
+    warn("empty view " + viewLabel(view));
+  }
+});
+
+$("view").find("relationship").each(function(connection) {
+  var relationship = connection.concept;
+  var relationSource = relationship ? relationship.source : null;
+  var relationTarget = relationship ? relationship.target : null;
+  var viewSource = connection.source ? connection.source.concept : null;
+  var viewTarget = connection.target ? connection.target.concept : null;
+
+  if (relationship && relationship.id) {
+    usedRelationshipIds[relationship.id] = true;
+  }
+
+  if (!relationship || !relationSource || !relationTarget || !viewSource || !viewTarget) {
+    invalid(
+      "visual connection id=" + text(connection.id) +
+      " has missing model or view endpoint(s)"
+    );
+    return;
+  }
+
+  if (viewSource.id !== relationSource.id || viewTarget.id !== relationTarget.id) {
+    invalid(
+      "visual connection id=" + text(connection.id) +
+      " relationship id=" + text(relationship.id) +
+      " connects " + conceptLabel(viewSource) +
+      " to " + conceptLabel(viewTarget) +
+      " but model relationship connects " + conceptLabel(relationSource) +
+      " to " + conceptLabel(relationTarget)
+    );
+  }
+});
+
+$("element").each(function(element) {
+  if (!usedElementIds[element.id]) {
+    warn("unused element " + conceptLabel(element));
+  }
+});
+
+$("relationship").each(function(relationship) {
+  if (!usedRelationshipIds[relationship.id]) {
+    warn(
+      "unused relationship id=" + text(relationship.id) +
+      " type=" + text(relationship.type) +
+      " from " + conceptLabel(relationship.source) +
+      " to " + conceptLabel(relationship.target)
+    );
+  }
+});
+
+for (var key in duplicateElementBuckets) {
+  if (!Object.prototype.hasOwnProperty.call(duplicateElementBuckets, key)) {
+    continue;
+  }
+
+  var bucket = duplicateElementBuckets[key];
+  if (bucket.length < 2) {
+    continue;
+  }
+
+  var ids = [];
+  for (var index = 0; index < bucket.length; index += 1) {
+    ids.push(text(bucket[index].id));
+  }
+
+  warn(
+    "possible duplicate element type=" + text(bucket[0].type) +
+    " name=\"" + text(bucket[0].name) +
+    "\" ids=" + ids.join(",")
+  );
+}
+
+if (invalidCount === 0) {
+  emit("ARCHI_VALIDATE_MODEL: OK invalid=0 warnings=" + warningCount);
+} else {
+  emit("ARCHI_VALIDATE_MODEL: FAIL invalid=" + invalidCount + " warnings=" + warningCount);
+}

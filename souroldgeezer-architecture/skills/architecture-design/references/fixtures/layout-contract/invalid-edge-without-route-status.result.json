@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "missing-route-status",
+  "backend": { "name": "fixture", "version": "1.0", "mode": "generated-layout", "deterministic": true },
+  "mode": "generated-layout",
+  "deterministic": true,
+  "readiness": "success",
+  "nodeGeometry": [{ "id": "n1", "x": 0, "y": 0, "w": 100, "h": 60 }, { "id": "n2", "x": 0, "y": 140, "w": 100, "h": 60 }],
+  "edges": [{ "id": "e1", "source": "n1", "target": "n2", "sourcePort": "south", "targetPort": "north", "bendpoints": [], "route": { "style": "orthogonal" } }],
+  "metrics": {},
+  "validation": { "state": "valid" }
+}

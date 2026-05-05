@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "service-realization-valid",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": {
+    "id": "view-service-realization",
+    "name": "Service Realization",
+    "viewpoint": "Service Realization",
+    "direction": "DOWN",
+    "qualityTarget": "review-ready"
+  },
+  "nodes": [
+    { "id": "business-process", "label": "Submit request", "width": 160, "height": 72, "locked": false, "generated": true },
+    { "id": "application-service", "label": "Request service", "width": 160, "height": 72, "locked": false, "generated": true },
+    { "id": "application-component", "label": "Request API", "width": 160, "height": 72, "locked": false, "generated": true }
+  ],
+  "edges": [
+    { "id": "edge-realization", "source": "application-service", "target": "business-process", "priority": 10, "visible": true, "relationshipType": "Realization" },
+    { "id": "edge-serving", "source": "application-component", "target": "application-service", "priority": 8, "visible": true, "relationshipType": "Serving" }
+  ],
+  "constraints": {
+    "preserveExistingGeometry": true,
+    "lockedNodes": ["business-process"],
+    "orthogonalRouting": true,
+    "avoidNodeBodies": true,
+    "parallelEdgeSeparation": 24,
+    "visibleRealizationSpine": true,
+    "maxNodeDisplacement": 80
+  }
+}

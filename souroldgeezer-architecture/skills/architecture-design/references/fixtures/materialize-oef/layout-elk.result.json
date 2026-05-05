@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "materialize-oef-layout-elk",
+  "backend": {
+    "name": "elk-layered",
+    "version": "0.11.0",
+    "mode": "generated-layout",
+    "deterministic": true
+  },
+  "mode": "generated-layout",
+  "deterministic": true,
+  "readiness": "success",
+  "nodeGeometry": [
+    { "id": "id-node-collab-commerce", "x": 40, "y": 40, "w": 1121, "h": 619 },
+    { "id": "id-node-svc-checkout", "x": 431, "y": 83, "w": 300, "h": 80 },
+    { "id": "id-node-app-payments", "x": 101, "y": 171, "w": 240, "h": 80 },
+    { "id": "id-node-app-inventory", "x": 819, "y": 171, "w": 240, "h": 80 },
+    { "id": "id-node-app-orders-api", "x": 451, "y": 269, "w": 260, "h": 100 },
+    { "id": "id-node-app-web", "x": 101, "y": 431, "w": 240, "h": 80 },
+    { "id": "id-node-iface-checkout-http", "x": 451, "y": 469, "w": 260, "h": 80 },
+    { "id": "id-node-app-notifications", "x": 819, "y": 431, "w": 240, "h": 80 }
+  ],
+  "edges": [
+    { "id": "id-conn-orders-real-checkout", "source": "id-node-app-orders-api", "target": "id-node-svc-checkout", "sourcePort": "N", "targetPort": "S", "bendpoints": [], "route": { "status": "routed", "style": "orthogonal" } },
+    { "id": "id-conn-orders-comp-http", "source": "id-node-app-orders-api", "target": "id-node-iface-checkout-http", "sourcePort": "S", "targetPort": "N", "bendpoints": [], "route": { "status": "routed", "style": "orthogonal" } },
+    { "id": "id-conn-http-serves-web", "source": "id-node-iface-checkout-http", "target": "id-node-app-web", "sourcePort": "W", "targetPort": "E", "bendpoints": [{ "x": 581, "y": 569 }, { "x": 219, "y": 569 }], "route": { "status": "routed", "style": "orthogonal" } },
+    { "id": "id-conn-payments-serves-orders", "source": "id-node-app-payments", "target": "id-node-app-orders-api", "sourcePort": "E", "targetPort": "W", "bendpoints": [{ "x": 221, "y": 319 }], "route": { "status": "routed", "style": "orthogonal" } },
+    { "id": "id-conn-inventory-serves-orders", "source": "id-node-app-inventory", "target": "id-node-app-orders-api", "sourcePort": "W", "targetPort": "E", "bendpoints": [{ "x": 939, "y": 319 }], "route": { "status": "routed", "style": "orthogonal" } },
+    { "id": "id-conn-orders-serves-notifications", "source": "id-node-app-orders-api", "target": "id-node-app-notifications", "sourcePort": "E", "targetPort": "N", "bendpoints": [{ "x": 941, "y": 319 }, { "x": 941, "y": 389 }], "route": { "status": "routed", "style": "orthogonal" } }
+  ],
+  "metrics": {
+    "nodeOverlaps": 0,
+    "connectorNodeIntersections": 0,
+    "connectorCrossings": 0,
+    "lockedNodeDisplacement": 0
+  },
+  "validation": { "state": "valid" }
+}
