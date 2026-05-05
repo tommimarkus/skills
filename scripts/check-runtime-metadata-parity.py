@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -30,6 +31,14 @@ def repo_relative(repo: Path, path: Path) -> str:
         return path.relative_to(repo).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def markdown_link(label: str, target: str) -> str:
+    return f"[{label}]({target})"
+
+
+def relative_markdown_target(source_path: Path, target_path: Path) -> str:
+    return os.path.relpath(target_path, start=source_path.parent).replace(os.sep, "/")
 
 
 def normalize_text(value: Any) -> str:
@@ -242,7 +251,8 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
             else:
                 findings.append(Finding(repo_relative(repo, openai_path), "exists", "present", "missing"))
 
-            readme_link = f"[{skill_name}]({plugin_name}/skills/{skill_name}/SKILL.md)"
+            skill_target = plugin_dir / "skills" / skill_name / "SKILL.md"
+            readme_link = markdown_link(skill_name, f"{plugin_name}/skills/{skill_name}/SKILL.md")
             if readme and readme_link not in readme:
                 findings.append(Finding("README.md", f"skill-link:{skill_name}", readme_link, "missing"))
 
@@ -250,12 +260,16 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
             if docs_plugins.exists():
                 for doc_path in sorted(docs_plugins.glob("*.md")):
                     doc = doc_path.read_text(encoding="utf-8")
-                    if plugin_name in doc and readme_link not in doc:
+                    doc_link = markdown_link(
+                        skill_name,
+                        relative_markdown_target(doc_path, skill_target),
+                    )
+                    if plugin_name in doc and doc_link not in doc:
                         findings.append(
                             Finding(
                                 repo_relative(repo, doc_path),
                                 f"skill-link:{skill_name}",
-                                readme_link,
+                                doc_link,
                                 "missing",
                             )
                         )

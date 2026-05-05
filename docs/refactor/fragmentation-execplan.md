@@ -125,7 +125,7 @@ find . \
 | P2 | Done | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker detects drift; tests exist |
 | P3 | Done | `sog_architecture_split` | Split architecture out of design | `souroldgeezer-architecture` exists; manifests pass; migration note exists |
 | P4 | Todo | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
-| P5 | Todo | `sog_docs_release` | Simplify README and add plugin/release docs | README is a map; docs/plugins and release checklist exist |
+| P5 | Done | `sog_docs_release` | Simplify README and add plugin/release docs | README is a map; docs/plugins and release checklist exist |
 | P6 | Todo | `sog_final_reviewer` | Final read-only review and validation | All checks pass; reviewer returns merge/no-merge |
 
 ## P0 Baseline Map
@@ -490,7 +490,7 @@ Canonical metadata field map:
 | Codex per-skill display name | Deterministic title case of the skill name, preserving known acronyms (`API`, `DevSecOps`, `PR`) | `<plugin>/skills/<skill>/agents/openai.yaml#interface.display_name` |
 | Repo-internal Codex wrapper `name` and `description` | `.claude/skills/<name>/SKILL.md` frontmatter | `.codex/agents/<name>.toml#name`, `.codex/agents/<name>.toml#description` when no public skill of that name exists |
 | README plugin tables | Public skill inventory | `README.md` must link every shipped public skill as `[skill](<plugin>/skills/<skill>/SKILL.md)` |
-| Docs plugin tables | Public skill inventory when docs plugin pages exist | `docs/plugins/*.md` pages that mention a plugin must link every shipped public skill for that plugin |
+| Docs plugin tables | Public skill inventory when docs plugin pages exist | `docs/plugins/*.md` pages that mention a plugin must link every shipped public skill for that plugin using a doc-relative link |
 
 P2 chose a strict checker over a generator. `SKILL.md` frontmatter remains the
 canonical behavioral trigger surface for public skills; generated
@@ -930,7 +930,28 @@ git commit -m "Simplify public docs and add release checklist"
 Completion notes:
 
 ```text
-Pending.
+Completed 2026-05-05. Public docs were simplified into a product map and
+plugin-specific doc pages. README.md now covers what this repo is, the plugin
+matrix, install flows for Claude and Codex, local development, three examples,
+validation commands, and links to detailed plugin docs. Added
+docs/plugins/audit.md, docs/plugins/design.md, docs/plugins/architecture.md,
+docs/plugins/ops.md, and docs/release-checklist.md. Release hygiene now lives
+in the checklist, including semver guidance and synchronized manifest updates.
+Install and packaging guidance was cross-checked against current official
+Claude Code plugin/marketplace docs and OpenAI Codex plugin/skills docs. During
+review, plugin docs were corrected to use doc-relative skill links, and the
+runtime metadata parity checker/test were tightened so docs pages cannot pass
+with README-root links that are broken from `docs/plugins/`.
+
+Validation evidence:
+- `find . -name '*.json' -print0 | xargs -0 -n1 jq -e .`: exit 0.
+- TOML parse command: `TOML OK`.
+- `python -m unittest tests.runtime_metadata_parity_test`: 3 tests `OK`, including doc-relative plugin-link drift detection.
+- `python -m unittest`: 24 tests `OK`.
+- `python scripts/check-runtime-metadata-parity.py --check .`: `Runtime metadata parity OK`.
+- `scripts/validate-fragmentation.sh`: `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, `Runtime metadata parity OK`, and 24 unit tests `OK`.
+- `scripts/skill-architecture-report.sh --strict .`: 0 findings.
+- `git diff --check`: clean.
 ```
 
 ## P6 — Final Validation and Review
@@ -1029,5 +1050,5 @@ Pending.
 | 2026-05-05 | P2 | Runtime metadata parity checker added and wired into recurring validation | `python -m unittest tests.runtime_metadata_parity_test` ran 2 tests OK with intentional drift detection; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed `Runtime metadata parity OK` and ran 23 tests OK; `python -m unittest` ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | 2026-05-05 | P3 | Architecture plugin split completed; migration note and move map recorded | `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 23 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `test -d souroldgeezer-architecture` exit 0; `bash souroldgeezer-architecture/skills/architecture-design/references/scripts/arch-layout.sh --version` printed `arch-layout 0.28.0`; `git diff --check` clean |
 | 2026-05-05 | P4 | Architecture-design skill slimmed into compact operational router; detailed procedures moved to one-hop operational workflow reference with explicit load conditions | `wc -l -w -c` showed `SKILL.md` reduced from 68,018 bytes to 16,421 bytes and new `architecture-operational-workflow.md` at 20,914 bytes; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
-| YYYY-MM-DD | P5 | Pending | Pending |
+| 2026-05-05 | P5 | Public docs simplified into a product map; plugin docs and release checklist added; plugin-doc link parity tightened to require doc-relative links | Official Claude Code plugin/marketplace docs and OpenAI Codex plugin/skills docs cross-checked; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest tests.runtime_metadata_parity_test` ran 3 tests OK; `python -m unittest` ran 24 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, `Runtime metadata parity OK`, and 24 unit tests `OK`; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | YYYY-MM-DD | P6 | Pending | Pending |

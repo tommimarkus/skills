@@ -60,6 +60,27 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("souroldgeezer-example/agents/example-skill.md", result.stdout)
         self.assertIn("description", result.stdout)
 
+    def test_docs_plugin_links_must_be_relative_to_doc(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / "docs/plugins/example.md",
+                """
+                # `souroldgeezer-example`
+
+                | Skill | Summary |
+                |---|---|
+                | [example-skill](souroldgeezer-example/skills/example-skill/SKILL.md) | Broken from docs/plugins |
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("docs/plugins/example.md", result.stdout)
+        self.assertIn("[example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md)", result.stdout)
+
     def make_clean_fixture(self, repo: Path) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
         skill_description = "Use when checking runtime metadata parity for an example skill."
@@ -160,6 +181,16 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             | Skill | Summary | Extensions |
             |---|---|---|
             | [example-skill](souroldgeezer-example/skills/example-skill/SKILL.md) | Example parity checks | none |
+            """,
+        )
+        write(
+            repo / "docs/plugins/example.md",
+            """
+            # `souroldgeezer-example`
+
+            | Skill | Summary |
+            |---|---|
+            | [example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md) | Example parity checks |
             """,
         )
 
