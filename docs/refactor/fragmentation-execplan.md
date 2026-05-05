@@ -91,17 +91,18 @@ print("TOML OK")
 PY
 
 python -m unittest
+python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
 git status --short
 ```
 
-If a runtime parity checker or generator is added in P2, add it to this verification set and run it after P2 through P6.
+The P2 runtime parity checker is part of the recurring verification set and is
+also called by `scripts/validate-fragmentation.sh`.
 
-P0 discovered that bare `python -m unittest` currently exits `5` because the
-repo's tests use the `*_test.py` filename pattern under `tests/`. Explicit
-discovery with `python -m unittest discover -s tests -p '*_test.py'` runs the
-suite. P1 owns making the recurring verification command deterministic.
+P0 discovered that bare `python -m unittest` exited `5` because the repo's tests
+use the `*_test.py` filename pattern under `tests/`. P1 restored that recurring
+command with a root discovery shim.
 P1 decision: restore bare `python -m unittest` with a root discovery shim and
 add a repo-local validation script for JSON, TOML, marketplace path, and plugin
 manifest checks.
@@ -121,7 +122,7 @@ find . \
 |---|---|---|---|---|
 | P0 | Done | Coordinator + `sog_baseline_explorer` | Create plan and baseline map | ExecPlan exists; surfaces and drift points documented |
 | P1 | Done | `sog_manifest_ci` | Fix manifest validity and add syntax/path gates | JSON/TOML/path checks pass and are scripted; bare `python -m unittest` now reaches the `*_test.py` suite |
-| P2 | Todo | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker or generator detects drift; tests exist |
+| P2 | Done | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker detects drift; tests exist |
 | P3 | Todo | `sog_architecture_split` | Split architecture out of design | `souroldgeezer-architecture` exists; manifests pass; migration note exists |
 | P4 | Todo | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
 | P5 | Todo | `sog_docs_release` | Simplify README and add plugin/release docs | README is a map; docs/plugins and release checklist exist |
@@ -463,6 +464,7 @@ Acceptance:
 
 ```bash
 python -m unittest
+python scripts/check-runtime-metadata-parity.py --check .
 scripts/skill-architecture-report.sh --strict .
 ```
 
@@ -475,6 +477,26 @@ Canonical field map is documented.
 The new parity command is added to the global verification set.
 ```
 
+Canonical metadata field map:
+
+| Canonical field | Canonical source | Validated/generated surfaces |
+|---|---|---|
+| Plugin `name` | `.claude-plugin/marketplace.json#plugins[].name` | `<plugin>/.claude-plugin/plugin.json#name`, `<plugin>/.codex-plugin/plugin.json#name` |
+| Plugin `version` | `.claude-plugin/marketplace.json#plugins[].version` | `<plugin>/.claude-plugin/plugin.json#version`, `<plugin>/.codex-plugin/plugin.json#version` |
+| Plugin `description` | `.claude-plugin/marketplace.json#plugins[].description` | `<plugin>/.claude-plugin/plugin.json#description`, `<plugin>/.codex-plugin/plugin.json#description` |
+| Codex plugin skill root | Repo convention | `<plugin>/.codex-plugin/plugin.json#skills == "./skills/"` |
+| Public skill `name` | `<plugin>/skills/<skill>/SKILL.md` frontmatter `name`, matching directory name | `<plugin>/agents/<skill>.md` frontmatter `name`, `.codex/agents/<skill>.toml#name` |
+| Public skill trigger `description` | `<plugin>/skills/<skill>/SKILL.md` frontmatter `description` | `<plugin>/agents/<skill>.md` frontmatter `description`, `.codex/agents/<skill>.toml#description`, `<plugin>/skills/<skill>/agents/openai.yaml#interface.short_description` |
+| Codex per-skill display name | Deterministic title case of the skill name, preserving known acronyms (`API`, `DevSecOps`, `PR`) | `<plugin>/skills/<skill>/agents/openai.yaml#interface.display_name` |
+| Repo-internal Codex wrapper `name` and `description` | `.claude/skills/<name>/SKILL.md` frontmatter | `.codex/agents/<name>.toml#name`, `.codex/agents/<name>.toml#description` when no public skill of that name exists |
+| README plugin tables | Public skill inventory | `README.md` must link every shipped public skill as `[skill](<plugin>/skills/<skill>/SKILL.md)` |
+| Docs plugin tables | Public skill inventory when docs plugin pages exist | `docs/plugins/*.md` pages that mention a plugin must link every shipped public skill for that plugin |
+
+P2 chose a strict checker over a generator. `SKILL.md` frontmatter remains the
+canonical behavioral trigger surface for public skills; generated
+source-of-truth metadata files would be more invasive and would add a second surface
+before the P3 plugin split.
+
 Suggested commit:
 
 ```bash
@@ -485,7 +507,11 @@ git commit -m "Add runtime metadata parity validation"
 Completion notes:
 
 ```text
-Pending.
+Completed 2026-05-05. Added `scripts/check-runtime-metadata-parity.py --check`
+as a strict marketplace-driven parity checker, added drift-detection unittest
+coverage, aligned metadata-only Codex wrapper and per-skill `openai.yaml`
+descriptions to canonical `SKILL.md` frontmatter, and wired the checker into
+`scripts/validate-fragmentation.sh`.
 ```
 
 ## P3 — Architecture Plugin Split
@@ -816,6 +842,8 @@ Pending.
 | 2026-05-05 | Treat untracked refactor prompt/runbook as out of P0 scope | P0 commit is only the ExecPlan baseline map | Later phases may reconcile them deliberately |
 | 2026-05-05 | Keep `python -m unittest` as the recurring unit command | The user-approved command should exercise the existing `*_test.py` suite | A root `test_all.py` shim discovers `tests/*_test.py` |
 | 2026-05-05 | Make the manifest gate marketplace-driven | P3 adds another plugin, so hardcoding current plugin directories would create immediate drift | `scripts/validate-fragmentation.sh` iterates `.claude-plugin/marketplace.json` |
+| 2026-05-05 | Use a parity checker instead of a generator | Generation would add a second source of truth before the architecture split | `scripts/check-runtime-metadata-parity.py --check .` validates canonical metadata fields |
+| 2026-05-05 | Treat `SKILL.md` frontmatter as canonical skill trigger metadata | `SKILL.md` remains the canonical skill surface | Claude agents, Codex wrappers, and per-skill OpenAI metadata align to it |
 
 ## Progress Log
 
@@ -823,7 +851,7 @@ Pending.
 |---|---|---|---|
 | 2026-05-05 | P0 | Baseline map recorded; no product files edited; recurring unittest command issue assigned to P1 | `sog_baseline_explorer`; `jq -r '.plugins[] ...' .claude-plugin/marketplace.json`; manifest `jq` scans; `find ... SKILL.md`; `find ... agents/openai.yaml`; `wc -c souroldgeezer-*/skills/*/SKILL.md`; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` exit 5 / `NO TESTS RAN`; `python -m unittest discover -s tests -p '*_test.py'` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed only this ExecPlan plus two pre-existing untracked refactor docs |
 | 2026-05-05 | P1 | Manifest/path validation added; bare unittest discovery fixed | `scripts/validate-fragmentation.sh` printed `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, and ran 21 tests OK; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed P1 files plus the two pre-existing untracked refactor docs |
-| YYYY-MM-DD | P2 | Pending | Pending |
+| 2026-05-05 | P2 | Runtime metadata parity checker added and wired into recurring validation | `python -m unittest tests.runtime_metadata_parity_test` ran 2 tests OK with intentional drift detection; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed `Runtime metadata parity OK` and ran 23 tests OK; `python -m unittest` ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | YYYY-MM-DD | P3 | Pending | Pending |
 | YYYY-MM-DD | P4 | Pending | Pending |
 | YYYY-MM-DD | P5 | Pending | Pending |

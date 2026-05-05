@@ -1,5 +1,5 @@
 name = "issue-ops"
-description = "Issue and work-item lifecycle operator with tracker-specific extensions."
+description = "Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more issues or work items end to end; loads provider extensions such as GitHub™ only after the tracker is identified."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

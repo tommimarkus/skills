@@ -1,6 +1,9 @@
 interface:
   display_name: "Issue Ops"
-  short_description: "Operate issue lifecycles through implementation and handoff."
+  short_description: >-
+    Use when the user explicitly asks to handle, triage, resume, implement,
+    close, or process one or more issues or work items end to end; loads provider
+    extensions such as GitHub™ only after the tracker is identified.
   default_prompt: "Use issue-ops to handle this issue lifecycle and delegate pull-request work to pr-ops when needed."
 policy:
   allow_implicit_invocation: true

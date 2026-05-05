@@ -1,5 +1,5 @@
 name = "pr-ops"
-description = "Pull-request creation and lifecycle operator with provider-specific extensions."
+description = "Use when the user explicitly asks to create, review, update, fix, merge, close, resume, or process one or more pull requests or prepared PR branches end to end; loads provider extensions such as GitHub™ only after the provider is identified."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

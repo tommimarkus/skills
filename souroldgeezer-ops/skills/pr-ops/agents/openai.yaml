@@ -1,6 +1,10 @@
 interface:
   display_name: "PR Ops"
-  short_description: "Create and operate pull-request lifecycles."
+  short_description: >-
+    Use when the user explicitly asks to create, review, update, fix, merge,
+    close, resume, or process one or more pull requests or prepared PR branches
+    end to end; loads provider extensions such as GitHub™ only after the provider
+    is identified.
   default_prompt: "Use pr-ops to create or handle this pull request lifecycle."
 policy:
   allow_implicit_invocation: true

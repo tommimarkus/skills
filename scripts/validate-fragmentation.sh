@@ -99,4 +99,5 @@ validate_json
 validate_toml
 validate_marketplace_paths
 validate_plugin_manifests
+python scripts/check-runtime-metadata-parity.py --check .
 python -m unittest

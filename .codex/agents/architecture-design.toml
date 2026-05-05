@@ -1,5 +1,5 @@
 name = "architecture-design"
-description = "Architecture practitioner for build, extract, review, render, reflow, lookup, validation-handoff, layout-policy, layout-provenance, change-classification, and professional-readiness workflows."
+description = "Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, layout policy diagnostics, machine-readable layout warning evidence, route repair, global polish, layout-result to OEF materialization, per-view layout provenance output, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
