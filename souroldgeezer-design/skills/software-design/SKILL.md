@@ -1,6 +1,6 @@
 ---
 name: software-design
-description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python® tooling project guidance without duplicating UI, API, architecture-model, security, or test-quality specialist skills.
+description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python® tooling project guidance without duplicating UI, API, infrastructure, architecture-model, security-audit, or test-quality specialist skills.
 ---
 
 # Software Design
@@ -9,7 +9,11 @@ description: Use when building, extracting, reviewing, or looking up sustainable
 
 Shape software so the current change is coherent, small enough to validate, and cheap to change later. The skill applies the bundled reference at [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md) and cites the smell catalog in [references/smell-catalog.md](references/smell-catalog.md).
 
-This is the design companion one layer closer to code than `architecture-design` and one layer more general than `responsive-design` or `api-design`. It does not produce architecture diagrams, API contracts, UI responsive behavior, security audits, or test-quality classifications.
+This is the design companion one layer closer to code than
+`architecture-design` and one layer more general than `responsive-design`,
+`api-design`, or `infra-design`. It does not produce architecture diagrams, API
+contracts, infrastructure/IaC topology, UI responsive behavior, security
+audits, or test-quality classifications.
 
 When changing trigger metadata, workflow behavior, extension selection, source
 grounding, or evaluation coverage for this skill, read `references/evals` and
@@ -134,7 +138,9 @@ For build and review work in an existing repo, inspect these signals before reco
 5. Existing compliant seams worth preserving.
 6. Legacy debt that must not be extended silently.
 
-Reuse compliant infrastructure and names. Flag non-compliant design as legacy debt. If legacy debt is load-bearing for the requested change, halt and ask whether to expand scope or choose a smaller safe change.
+Reuse compliant structure and names. Flag non-compliant design as legacy debt.
+If legacy debt is load-bearing for the requested change, halt and ask whether
+to expand scope or choose a smaller safe change.
 
 ## Build Workflow
 
@@ -178,8 +184,11 @@ Reuse compliant infrastructure and names. Flag non-compliant design as legacy de
 
 - UI responsiveness, WCAG, i18n, visual behavior, and Core Web Vitals: `responsive-design`.
 - HTTP API contract, auth, reliability, API runtime behavior, API observability, and data-service patterns: `api-design`.
+- Infrastructure/IaC topology, cloud-resource design, environment/state
+  ownership, rollout/rollback, and operations handoff: `infra-design`.
 - ArchiMate models, OEF XML, enterprise/solution architecture, and code-to-architecture drift: `architecture-design`.
-- Pipeline, IaC, release, or application security posture: `devsecops-audit`.
+- Pipeline, IaC security posture, release artifact hardening, secrets, least
+  privilege, or application security posture: `devsecops-audit`.
 - Unit/integration/E2E test quality or mutation-testing worklists: `test-quality-audit`.
 
 ## Footer
@@ -205,4 +214,5 @@ Stop and revise before delivering if output:
 - Duplicates a domain model or vocabulary in a second boundary without naming the translation rule.
 - Claims runtime performance, production operability, team ownership, or change-frequency facts from static source alone.
 - Extends a legacy design violation into new code without flagging it.
-- Reviews API, UI, security, test quality, or ArchiMate concerns instead of delegating.
+- Reviews API, UI, infrastructure, security-audit, test-quality, or ArchiMate
+  concerns instead of delegating.
