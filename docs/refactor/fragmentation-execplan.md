@@ -91,6 +91,7 @@ print("TOML OK")
 PY
 
 python -m unittest
+scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
 git status --short
 ```
@@ -101,6 +102,9 @@ P0 discovered that bare `python -m unittest` currently exits `5` because the
 repo's tests use the `*_test.py` filename pattern under `tests/`. Explicit
 discovery with `python -m unittest discover -s tests -p '*_test.py'` runs the
 suite. P1 owns making the recurring verification command deterministic.
+P1 decision: restore bare `python -m unittest` with a root discovery shim and
+add a repo-local validation script for JSON, TOML, marketplace path, and plugin
+manifest checks.
 
 When validating from the main checkout root instead of the worktree, prune `.worktrees/`:
 
@@ -116,7 +120,7 @@ find . \
 | Phase | Status | Owner | Goal | Acceptance |
 |---|---|---|---|---|
 | P0 | Done | Coordinator + `sog_baseline_explorer` | Create plan and baseline map | ExecPlan exists; surfaces and drift points documented |
-| P1 | Todo | `sog_manifest_ci` | Fix manifest validity and add syntax/path gates | JSON/TOML/path checks pass and are scripted |
+| P1 | Done | `sog_manifest_ci` | Fix manifest validity and add syntax/path gates | JSON/TOML/path checks pass and are scripted; bare `python -m unittest` now reaches the `*_test.py` suite |
 | P2 | Todo | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker or generator detects drift; tests exist |
 | P3 | Todo | `sog_architecture_split` | Split architecture out of design | `souroldgeezer-architecture` exists; manifests pass; migration note exists |
 | P4 | Todo | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
@@ -257,6 +261,32 @@ tools/architecture-layout-java/src/test/java/com/souroldgeezer/architecture/layo
 tools/architecture-layout-java/src/test/java/com/souroldgeezer/architecture/layout/png/PngAnalyzerTest.java
 ```
 
+### P1 validation evidence
+
+Recurring validation script:
+
+```text
+scripts/validate-fragmentation.sh
+```
+
+Passing commands from this worktree:
+
+```text
+scripts/validate-fragmentation.sh
+python -m unittest
+python -m unittest discover -s tests -p '*_test.py'
+```
+
+Observed results:
+
+```text
+JSON OK
+TOML OK
+Marketplace paths OK
+Plugin manifests OK
+Ran 21 tests
+```
+
 ### Size and fragmentation signal
 
 Current `SKILL.md` sizes:
@@ -390,7 +420,11 @@ git commit -m "Fix manifests and add validation gates"
 Completion notes:
 
 ```text
-Pending.
+Completed 2026-05-05. `sog_manifest_ci` added a root unittest discovery shim
+and a marketplace-driven local validation script. The script parses JSON, parses
+TOML, validates marketplace plugin paths, validates Claude/Codex plugin manifest
+shape, checks marketplace-to-manifest name/version/description alignment, and
+runs `python -m unittest`.
 ```
 
 ## P2 — Runtime Metadata Parity
@@ -780,13 +814,15 @@ Pending.
 | 2026-05-05 | Fix manifests before product refactor | Later moves need a reliable validation floor | P1 precedes P2/P3 |
 | 2026-05-05 | Split architecture after parity work | Large moves should not increase metadata drift | P3 depends on P2 |
 | 2026-05-05 | Treat untracked refactor prompt/runbook as out of P0 scope | P0 commit is only the ExecPlan baseline map | Later phases may reconcile them deliberately |
+| 2026-05-05 | Keep `python -m unittest` as the recurring unit command | The user-approved command should exercise the existing `*_test.py` suite | A root `test_all.py` shim discovers `tests/*_test.py` |
+| 2026-05-05 | Make the manifest gate marketplace-driven | P3 adds another plugin, so hardcoding current plugin directories would create immediate drift | `scripts/validate-fragmentation.sh` iterates `.claude-plugin/marketplace.json` |
 
 ## Progress Log
 
 | Date | Phase | Update | Evidence |
 |---|---|---|---|
 | 2026-05-05 | P0 | Baseline map recorded; no product files edited; recurring unittest command issue assigned to P1 | `sog_baseline_explorer`; `jq -r '.plugins[] ...' .claude-plugin/marketplace.json`; manifest `jq` scans; `find ... SKILL.md`; `find ... agents/openai.yaml`; `wc -c souroldgeezer-*/skills/*/SKILL.md`; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` exit 5 / `NO TESTS RAN`; `python -m unittest discover -s tests -p '*_test.py'` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed only this ExecPlan plus two pre-existing untracked refactor docs |
-| YYYY-MM-DD | P1 | Pending | Pending |
+| 2026-05-05 | P1 | Manifest/path validation added; bare unittest discovery fixed | `scripts/validate-fragmentation.sh` printed `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, and ran 21 tests OK; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed P1 files plus the two pre-existing untracked refactor docs |
 | YYYY-MM-DD | P2 | Pending | Pending |
 | YYYY-MM-DD | P3 | Pending | Pending |
 | YYYY-MM-DD | P4 | Pending | Pending |
