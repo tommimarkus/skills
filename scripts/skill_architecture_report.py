@@ -28,6 +28,8 @@ CATEGORY_COVERAGE_FLOOR = 80.0
 REPLACEMENT_LEDGER_REL = "tests/skill_architecture_report_ledger.jsonl"
 MIN_REPLACEMENT_CASES = 500
 MIN_AUTOMATED_RECALL = 90.0
+MAX_CLAUDE_AGENT_BODY_CHARS = 6000
+MAX_CODEX_AGENT_INSTRUCTIONS_CHARS = 3000
 SEVERITY_WEIGHTS = {
     "blocker": 13.0,
     "high": 8.0,
@@ -523,6 +525,15 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "deterministic",
             ("codex-agent-without-footer-contract", "codex-agent-preserves-footer-contract"),
             "Make the Codex custom agent preserve the skill's footer disclosure contract.",
+        ),
+        Rule(
+            "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
+            "Runtime Parity",
+            "high",
+            "docs/skill-architecture.md#runtime-contract",
+            "deterministic",
+            ("runtime-wrapper-duplicates-workflow", "runtime-wrapper-routes-to-skill"),
+            "Shrink runtime wrappers to routing instructions and keep the full workflow in SKILL.md.",
         ),
         Rule(
             "SAC-RUNTIME-OPENAI-NAME-DRIFT",
@@ -1287,6 +1298,27 @@ def codex_agent_preserves_footer(instructions: str) -> bool:
     )
 
 
+def wrapper_workflow_duplication_markers(text: str) -> list[str]:
+    lowered = text.lower()
+    markers = (
+        "pre-flight",
+        "project assimilation",
+        "build mode",
+        "extract mode",
+        "review mode",
+        "professional-readiness",
+        "layout-strategy",
+        "validate-oef-layout",
+        "archi-render",
+        "render gate",
+        "forward-only",
+        "lift-candidate",
+        "ad-l",
+        "ad-q",
+    )
+    return [marker for marker in markers if marker in lowered]
+
+
 def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
     findings: list[Finding] = []
     combined_opening = f"{skill.description}\n" + "\n".join(skill.body.splitlines()[:40])
@@ -1668,7 +1700,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 )
             )
         else:
-            agent_frontmatter, _agent_body = parse_frontmatter(agent_path)
+            agent_frontmatter, agent_body = parse_frontmatter(agent_path)
             agent_name = agent_frontmatter.get("name", "")
             if agent_name and agent_name != expected_name:
                 findings.append(
@@ -1709,6 +1741,20 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                         "Claude subagent trigger metadata should mirror the skill description.",
                         "Claude trigger matching can drift from the shared skill contract.",
                         "Make the Claude Code subagent description mirror the skill description.",
+                    )
+                )
+            agent_duplication_markers = wrapper_workflow_duplication_markers(agent_body)
+            if len(agent_body) > MAX_CLAUDE_AGENT_BODY_CHARS and len(agent_duplication_markers) >= 4:
+                findings.append(
+                    make_finding(
+                        "Runtime Parity",
+                        "high",
+                        "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
+                        agent_rel,
+                        f"Claude subagent body length={len(agent_body)} chars; workflow markers={', '.join(agent_duplication_markers[:8])}",
+                        "Runtime wrappers should launch or route to SKILL.md without embedding the full workflow.",
+                        "Claude subagents may drift from the canonical shared skill behavior.",
+                        "Shrink the Claude subagent to a router and keep detailed workflow rules in SKILL.md and one-hop references.",
                     )
                 )
 
@@ -1753,6 +1799,23 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                             "Codex custom agents should preserve the skill's output disclosure contract.",
                             "Codex outputs may omit loaded extensions, MCP availability, cost stance, or reference path details.",
                             "Make the Codex custom agent preserve the skill's footer disclosure contract.",
+                        )
+                    )
+                codex_duplication_markers = wrapper_workflow_duplication_markers(instructions)
+                if (
+                    len(instructions) > MAX_CODEX_AGENT_INSTRUCTIONS_CHARS
+                    and len(codex_duplication_markers) >= 4
+                ):
+                    findings.append(
+                        make_finding(
+                            "Runtime Parity",
+                            "high",
+                            "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
+                            codex_agent_rel,
+                            f"Codex wrapper instructions length={len(instructions)} chars; workflow markers={', '.join(codex_duplication_markers[:8])}",
+                            "Runtime wrappers should launch or route to SKILL.md without embedding the full workflow.",
+                            "Codex custom agents may drift from the canonical shared skill behavior.",
+                            "Shrink the Codex wrapper to a router and keep detailed workflow rules in SKILL.md and one-hop references.",
                         )
                     )
 

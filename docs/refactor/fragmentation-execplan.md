@@ -1021,7 +1021,27 @@ git commit -m "Finalize fragmentation refactor"
 Completion notes:
 
 ```text
-Pending.
+Initial P6 review returned no-merge on 2026-05-05. Blockers:
+- `souroldgeezer-architecture/agents/architecture-design.md` duplicated the
+  detailed architecture workflow instead of routing to the canonical skill.
+- `.codex/agents/architecture-design.toml` duplicated the same detailed
+  workflow in `developer_instructions`.
+- The ExecPlan was not yet final.
+
+Applied blocker fix:
+- Slimmed both architecture runtime wrappers to thin routers that point back to
+  `architecture-design` / `SKILL.md` as the source of truth and preserve only
+  route, load, and footer requirements.
+- Added deterministic skill architecture report coverage:
+  `SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION`.
+- Added generated ledger case `SAC-T00534` so workflow-heavy runtime wrappers
+  are caught by replacement calibration.
+
+Validation evidence before rerunning P6:
+- `python -m unittest tests.skill_architecture_report_test`: 15 tests `OK`.
+- `scripts/skill-architecture-report.sh --strict .`: 0 findings, 534 ledger
+  cases, 521/521 tool-detected gold findings, 100.0% automated replacement
+  recall.
 ```
 
 ## Decision Log
