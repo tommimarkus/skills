@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "materialize-oef-route-repair",
+  "backend": {
+    "name": "route-repair",
+    "version": "1.0",
+    "mode": "route-repair",
+    "deterministic": true
+  },
+  "mode": "route-repair",
+  "deterministic": true,
+  "readiness": "success",
+  "nodeGeometry": [
+    { "id": "id-node-collab-commerce", "x": 40, "y": 40, "w": 1120, "h": 620 },
+    { "id": "id-node-svc-checkout", "x": 430, "y": 80, "w": 300, "h": 80 },
+    { "id": "id-node-app-payments", "x": 100, "y": 170, "w": 240, "h": 80 },
+    { "id": "id-node-app-inventory", "x": 820, "y": 170, "w": 240, "h": 80 },
+    { "id": "id-node-app-orders-api", "x": 450, "y": 270, "w": 260, "h": 100 },
+    { "id": "id-node-app-web", "x": 100, "y": 430, "w": 240, "h": 80 },
+    { "id": "id-node-iface-checkout-http", "x": 450, "y": 470, "w": 260, "h": 80 },
+    { "id": "id-node-app-notifications", "x": 820, "y": 430, "w": 240, "h": 80 }
+  ],
+  "edges": [
+    { "id": "id-conn-http-serves-web", "source": "id-node-iface-checkout-http", "target": "id-node-app-web", "sourcePort": "W", "targetPort": "E", "bendpoints": [{ "x": 580, "y": 570 }, { "x": 220, "y": 570 }], "route": { "status": "repaired", "style": "orthogonal" } }
+  ],
+  "metrics": {
+    "nodeOverlaps": 0,
+    "connectorNodeIntersections": 0,
+    "connectorCrossings": 0,
+    "lockedNodeDisplacement": 0
+  },
+  "validation": { "state": "valid" }
+}

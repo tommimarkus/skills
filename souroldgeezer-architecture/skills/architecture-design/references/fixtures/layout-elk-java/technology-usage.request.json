@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "elk-technology-usage",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "view": { "id": "v-elk-tech", "name": "Technology Usage", "viewpoint": "Technology Usage", "direction": "DOWN", "qualityTarget": "diagram-readable" },
+  "nodes": [
+    { "id": "app", "width": 150, "height": 70, "generated": true },
+    { "id": "function", "width": 150, "height": 70, "generated": true },
+    { "id": "storage", "width": 150, "height": 70, "generated": true }
+  ],
+  "edges": [
+    { "id": "e1", "source": "app", "target": "function", "visible": true },
+    { "id": "e2", "source": "function", "target": "storage", "visible": true }
+  ],
+  "constraints": { "orthogonalRouting": true, "avoidNodeBodies": true }
+}

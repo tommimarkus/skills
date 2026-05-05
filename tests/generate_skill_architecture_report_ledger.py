@@ -858,6 +858,38 @@ def case_openai_desc_drift(complexity: str, index: str, scenario: str) -> dict:
     )
 
 
+def case_runtime_wrapper_workflow_duplication(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    description = f"Use when checking {scenario} runtime wrapper size."
+    repeated_workflow = "\n".join(
+        (
+            "Run pre-flight, project assimilation, build mode, extract mode, "
+            "review mode, professional-readiness, layout-strategy, "
+            "validate-oef-layout, archi-render, render gate, forward-only, "
+            "LIFT-CANDIDATE, AD-L, and AD-Q checks."
+        )
+        for _ in range(45)
+    )
+    return skill_case(
+        "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
+        complexity,
+        index,
+        scenario,
+        description,
+        clean_body(scenario),
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/agents/{name}.md",
+                "content": (
+                    f"---\nname: {name}\ndescription: {description}\ntools: Skill\nmodel: sonnet\n---\n\n"
+                    f"{repeated_workflow}\n"
+                ),
+            }
+        ],
+    )
+
+
 def case_doc_split_marketplace(complexity: str, index: str, scenario: str) -> dict:
     return {
         "complexity": complexity,
@@ -1089,6 +1121,11 @@ def build_guard_cases() -> list[dict]:
                 "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
             ],
             "complete marketplace and plugin manifests avoid runtime parity findings",
+        ),
+        case_runtime_wrapper_workflow_duplication(
+            "adversarial",
+            "guard",
+            "runtime-wrapper-duplicates-workflow",
         ),
     ]
 

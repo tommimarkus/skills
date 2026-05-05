@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture: realistic Application Cooperation generated-layout handoff.
+  Synthetic trust-boundary model with nested interfaces and cross-boundary Serving edges.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Model.xsd"
+       identifier="id-fixture-realistic-application-cooperation">
+  <name xml:lang="en">Fixture - Realistic Application Cooperation</name>
+  <documentation xml:lang="en">Synthetic fixture for generated layout materialization with two trust boundaries, nested interfaces, and cross-boundary Serving routes.</documentation>
+  <elements>
+    <element identifier="id-external-boundary" xsi:type="Grouping"><name xml:lang="en">External Identity Boundary</name></element>
+    <element identifier="id-external-identity-provider" xsi:type="ApplicationComponent"><name xml:lang="en">External Identity Provider</name></element>
+    <element identifier="id-external-identity-interface" xsi:type="ApplicationInterface"><name xml:lang="en">Identity API</name></element>
+    <element identifier="id-internal-boundary" xsi:type="Grouping"><name xml:lang="en">Internal Signup Boundary</name></element>
+    <element identifier="id-ui-component" xsi:type="ApplicationComponent"><name xml:lang="en">Signup Web UI</name></element>
+    <element identifier="id-ui-route-signup" xsi:type="ApplicationInterface"><name xml:lang="en">Signup Route</name></element>
+    <element identifier="id-api-gateway" xsi:type="ApplicationComponent"><name xml:lang="en">Signup API Component</name></element>
+    <element identifier="id-contracts-interface" xsi:type="ApplicationInterface"><name xml:lang="en">Signup Contracts API</name></element>
+    <element identifier="id-signup-worker" xsi:type="ApplicationComponent"><name xml:lang="en">Signup Worker</name></element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-rel-external-provider-composes-interface" source="id-external-identity-provider" target="id-external-identity-interface" xsi:type="Composition"/>
+    <relationship identifier="id-rel-ui-composes-route" source="id-ui-component" target="id-ui-route-signup" xsi:type="Composition"/>
+    <relationship identifier="id-rel-api-composes-contracts" source="id-api-gateway" target="id-contracts-interface" xsi:type="Composition"/>
+    <relationship identifier="id-rel-external-serves-contracts" source="id-external-identity-interface" target="id-contracts-interface" xsi:type="Serving"/>
+    <relationship identifier="id-rel-ui-serves-contracts" source="id-ui-route-signup" target="id-contracts-interface" xsi:type="Serving"/>
+    <relationship identifier="id-rel-contracts-serves-worker" source="id-contracts-interface" target="id-signup-worker" xsi:type="Serving"/>
+  </relationships>
+  <views>
+    <diagrams>
+      <view identifier="id-view-realistic-application-cooperation" xsi:type="Diagram" viewpoint="Application Cooperation">
+        <name xml:lang="en">Signup - Application Cooperation</name>
+        <node identifier="id-node-external-boundary" elementRef="id-external-boundary" xsi:type="Element" x="40" y="40" w="340" h="300">
+          <node identifier="id-node-external-identity-provider" elementRef="id-external-identity-provider" xsi:type="Element" x="80" y="100" w="260" h="180">
+            <node identifier="id-node-external-identity-interface" elementRef="id-external-identity-interface" xsi:type="Element" x="120" y="180" w="180" h="60"/>
+          </node>
+        </node>
+        <node identifier="id-node-internal-boundary" elementRef="id-internal-boundary" xsi:type="Element" x="460" y="40" w="760" h="420">
+          <node identifier="id-node-ui-component" elementRef="id-ui-component" xsi:type="Element" x="500" y="90" w="260" h="180">
+            <node identifier="id-node-ui-route-signup" elementRef="id-ui-route-signup" xsi:type="Element" x="540" y="170" w="180" h="60"/>
+          </node>
+          <node identifier="id-node-api-gateway" elementRef="id-api-gateway" xsi:type="Element" x="830" y="90" w="280" h="180">
+            <node identifier="id-node-contracts-interface" elementRef="id-contracts-interface" xsi:type="Element" x="870" y="170" w="210" h="60"/>
+          </node>
+          <node identifier="id-node-signup-worker" elementRef="id-signup-worker" xsi:type="Element" x="850" y="330" w="220" h="80"/>
+        </node>
+        <connection identifier="id-conn-external-serves-contracts" relationshipRef="id-rel-external-serves-contracts" source="id-node-external-identity-interface" target="id-node-contracts-interface" xsi:type="Relationship"/>
+        <connection identifier="id-conn-ui-serves-contracts" relationshipRef="id-rel-ui-serves-contracts" source="id-node-ui-route-signup" target="id-node-contracts-interface" xsi:type="Relationship"/>
+        <connection identifier="id-conn-contracts-serves-worker" relationshipRef="id-rel-contracts-serves-worker" source="id-node-contracts-interface" target="id-node-signup-worker" xsi:type="Relationship"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

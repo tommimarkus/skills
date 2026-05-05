@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "valid-rich-layout-contract",
+  "archimateTarget": "3.2",
+  "mode": "generated-layout",
+  "preserveExistingGeometry": false,
+  "view": {
+    "id": "view-application-cooperation",
+    "name": "Application Cooperation",
+    "viewpoint": "Application Cooperation",
+    "direction": "RIGHT",
+    "qualityTarget": "diagram-readable"
+  },
+  "nodes": [
+    {
+      "id": "group-external",
+      "elementRef": "element-external-group",
+      "type": "Grouping",
+      "semanticLayer": "Application",
+      "semanticAspect": "active-structure",
+      "width": 300,
+      "height": 220,
+      "label": "External services",
+      "generated": true
+    },
+    {
+      "id": "identity-provider",
+      "elementRef": "element-identity-provider",
+      "type": "ApplicationComponent",
+      "semanticLayer": "Application",
+      "semanticAspect": "active-structure",
+      "width": 150,
+      "height": 70,
+      "x": 80,
+      "y": 80,
+      "locked": true,
+      "generated": false,
+      "parentId": "group-external",
+      "ports": [
+        { "id": "east-main", "side": "east" }
+      ]
+    },
+    {
+      "id": "signup-api",
+      "elementRef": "element-signup-api",
+      "type": "ApplicationComponent",
+      "semanticLayer": "Application",
+      "semanticAspect": "active-structure",
+      "width": 160,
+      "height": 70,
+      "label": "Signup API",
+      "generated": true,
+      "ports": [
+        { "id": "west-main", "side": "west" }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "serving-identity-api",
+      "relationshipRef": "relationship-identity-api",
+      "relationshipType": "Serving",
+      "type": "Serving",
+      "source": "identity-provider",
+      "target": "signup-api",
+      "visible": true,
+      "priority": 10,
+      "generated": true,
+      "routeLocked": true,
+      "existingRoute": [
+        { "x": 230, "y": 115 },
+        { "x": 360, "y": 115 }
+      ],
+      "preferredSourcePorts": ["east-main"],
+      "preferredTargetPorts": ["west-main"],
+      "curationReason": "main cooperation story"
+    }
+  ],
+  "containers": [
+    {
+      "parent": "group-external",
+      "children": ["identity-provider"],
+      "relationshipRef": "relationship-external-contains-identity",
+      "relationshipType": "Composition",
+      "maxDepth": 2,
+      "mayHideEdge": true
+    }
+  ],
+  "locks": [
+    { "node": "identity-provider", "reason": "architect-authored geometry" }
+  ],
+  "priorGeometry": {
+    "nodes": [
+      { "id": "identity-provider", "x": 80, "y": 80, "w": 150, "h": 70 }
+    ],
+    "edges": []
+  },
+  "semanticBands": [
+    { "id": "external-boundary", "axis": "x", "order": 1, "role": "trust-boundary" }
+  ],
+  "constraints": {
+    "maxNodeDisplacement": 80,
+    "maxBends": 4,
+    "noRoutePossible": false
+  }
+}

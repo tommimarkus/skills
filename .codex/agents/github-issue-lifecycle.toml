@@ -1,5 +1,5 @@
 name = "github-issue-lifecycle"
-description = "GitHub™ issue lifecycle operator for explicit repo-internal issue handling."
+description = "Use when the user explicitly asks to handle, triage, resume, implement, close, or process one or more GitHub™ issues end to end in this repository."
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

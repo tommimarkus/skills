@@ -1,0 +1,56 @@
+layoutRequest:
+  archimateTarget: "3.2"
+  viewpoint: "Technology Usage"
+  direction: "hosting-stack"
+  preserveExistingGeometry: true
+  qualityTarget: "diagram-readable"
+
+  nodes:
+    - id: "view-node-orders-api"
+      elementRef: "app-component-orders-api"
+      type: "ApplicationComponent"
+      semanticLayer: "Application"
+      semanticAspect: "ActiveStructure"
+      size: { width: 160, height: 64 }
+      locked: true
+      generated: false
+      prior: { x: 40, y: 40, width: 160, height: 64 }
+    - id: "view-node-cosmos"
+      elementRef: "node-cosmos"
+      type: "Node"
+      semanticLayer: "Technology"
+      semanticAspect: "ActiveStructure"
+      size: { width: 160, height: 64 }
+      locked: true
+      generated: false
+      prior: { x: 440, y: 40, width: 160, height: 64 }
+    - id: "view-node-key-vault"
+      elementRef: "node-key-vault"
+      type: "Node"
+      semanticLayer: "Technology"
+      semanticAspect: "ActiveStructure"
+      size: { width: 160, height: 64 }
+      locked: true
+      generated: false
+      prior: { x: 240, y: 40, width: 160, height: 64 }
+
+  edges:
+    - id: "view-connection-cosmos-serves-orders"
+      relationshipRef: "rel-cosmos-serves-orders"
+      type: "Serving"
+      source: "view-node-cosmos"
+      target: "view-node-orders-api"
+      priority: 80
+      visible: true
+      generated: false
+      locked: true
+      priorBendpoints:
+        - { x: 360, y: 72 }
+        - { x: 220, y: 72 }
+
+  constraints:
+    avoidNodeBodies: true
+    orthogonalRouting: true
+    preserveLockedNodes: true
+    routeOnlyRepair: true
+    separateParallelEdges: true

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Negative fixture: source geometry that can still render as a plausible cropped
+  PNG, but fails source-layout checks.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate3_Model.xsd"
+       identifier="id-fixture-cropped-but-failing">
+
+  <name xml:lang="en">Fixture - Cropped but failing layout</name>
+
+  <documentation xml:lang="en">Negative fixture for the render-quality gate: the view uses off-origin coordinates and a straight connector that crosses an unrelated node.</documentation>
+
+  <elements>
+    <element identifier="id-app-source" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Source App</name>
+    </element>
+    <element identifier="id-app-middle" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Middle App</name>
+    </element>
+    <element identifier="id-app-target" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Target App</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-source-to-target" source="id-app-source" target="id-app-target" xsi:type="Serving"/>
+  </relationships>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-cropped-but-failing"
+            xsi:type="Diagram"
+            viewpoint="Application Cooperation">
+        <name xml:lang="en">Cropped but failing layout</name>
+        <documentation xml:lang="en">The used region starts at (120, 120), so a cropped PNG can look acceptable while AD-L10 fails. The source-to-target connector crosses Middle App, so AD-L11 fails.</documentation>
+        <node identifier="id-node-source" elementRef="id-app-source" xsi:type="Element" x="120" y="120" w="120" h="60"/>
+        <node identifier="id-node-middle" elementRef="id-app-middle" xsi:type="Element" x="300" y="120" w="120" h="60"/>
+        <node identifier="id-node-target" elementRef="id-app-target" xsi:type="Element" x="480" y="120" w="120" h="60"/>
+        <connection identifier="id-conn-source-to-target"
+                    relationshipRef="id-rel-source-to-target"
+                    source="id-node-source"
+                    target="id-node-target"
+                    xsi:type="Relationship"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

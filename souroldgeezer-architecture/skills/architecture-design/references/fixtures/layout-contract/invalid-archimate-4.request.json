@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "archimate-4",
+  "archimateTarget": "4.0",
+  "mode": "generated-layout",
+  "view": { "id": "v", "name": "Invalid", "viewpoint": "Service Realization", "direction": "DOWN", "qualityTarget": "review-ready" },
+  "nodes": [{ "id": "n1", "width": 100, "height": 60 }],
+  "edges": [],
+  "constraints": {}
+}

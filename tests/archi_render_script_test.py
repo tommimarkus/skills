@@ -7,12 +7,12 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ARCHI_RENDER = REPO_ROOT / "souroldgeezer-design/skills/architecture-design/references/scripts/archi-render.sh"
+ARCHI_RENDER = REPO_ROOT / "souroldgeezer-architecture/skills/architecture-design/references/scripts/archi-render.sh"
 DEFAULT_VALIDATE_SCRIPT = (
-    REPO_ROOT / "souroldgeezer-design/skills/architecture-design/references/scripts/validate-model.ajs"
+    REPO_ROOT / "souroldgeezer-architecture/skills/architecture-design/references/scripts/validate-model.ajs"
 )
 FIXTURE = (
-    REPO_ROOT / "souroldgeezer-design/skills/architecture-design/references/fixtures/application-cooperation.oef.xml"
+    REPO_ROOT / "souroldgeezer-architecture/skills/architecture-design/references/fixtures/application-cooperation.oef.xml"
 )
 
 

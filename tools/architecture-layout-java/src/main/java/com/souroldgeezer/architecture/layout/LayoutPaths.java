@@ -6,7 +6,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 public final class LayoutPaths {
-    private static final String REFERENCES = "souroldgeezer-design/skills/architecture-design/references";
+    private static final String REFERENCES = "souroldgeezer-architecture/skills/architecture-design/references";
 
     private LayoutPaths() {
     }

@@ -1,0 +1,56 @@
+layoutRequest:
+  archimateTarget: "3.2"
+  viewpoint: "Service Realization"
+  direction: "top-down"
+  preserveExistingGeometry: true
+  qualityTarget: "diagram-readable"
+
+  nodes:
+    - id: "view-node-business-process-place-order"
+      elementRef: "business-process-place-order"
+      type: "BusinessProcess"
+      semanticLayer: "Business"
+      semanticAspect: "Behaviour"
+      size: { width: 180, height: 64 }
+      locked: true
+      generated: false
+      prior: { x: 420, y: 40, width: 180, height: 64 }
+    - id: "view-node-app-service-place-order"
+      elementRef: "app-service-place-order"
+      type: "ApplicationService"
+      semanticLayer: "Application"
+      semanticAspect: "Behaviour"
+      size: { width: 180, height: 64 }
+      locked: false
+      generated: true
+    - id: "view-node-app-component-orders-api"
+      elementRef: "app-component-orders-api"
+      type: "ApplicationComponent"
+      semanticLayer: "Application"
+      semanticAspect: "ActiveStructure"
+      size: { width: 160, height: 64 }
+      locked: false
+      generated: true
+
+  edges:
+    - id: "view-connection-service-realizes-process"
+      relationshipRef: "rel-service-realizes-process"
+      type: "Realization"
+      source: "view-node-app-service-place-order"
+      target: "view-node-business-process-place-order"
+      priority: 100
+      visible: true
+    - id: "view-connection-component-realizes-service"
+      relationshipRef: "rel-component-realizes-service"
+      type: "Realization"
+      source: "view-node-app-component-orders-api"
+      target: "view-node-app-service-place-order"
+      priority: 100
+      visible: true
+
+  constraints:
+    avoidNodeBodies: true
+    orthogonalRouting: true
+    preserveLockedNodes: true
+    separateParallelEdges: true
+    keepRealizationSpineVisible: true

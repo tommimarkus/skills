@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Negative fixture: three fan-out connectors from one source contain a local
+  crisscross that is visible in rendered output.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate3_Model.xsd"
+       identifier="id-fixture-fanout-crisscross">
+
+  <name xml:lang="en">Fixture - Fan-out crisscross</name>
+
+  <documentation xml:lang="en">Negative fixture for AD-L15: three visible connectors fan out from one source, and two routes cross in the local fan-out.</documentation>
+
+  <elements>
+    <element identifier="id-app-source" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Source</name>
+    </element>
+    <element identifier="id-app-target-top" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Top Target</name>
+    </element>
+    <element identifier="id-app-target-middle" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Mid Target</name>
+    </element>
+    <element identifier="id-app-target-bottom" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Bottom Target</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-source-to-top" source="id-app-source" target="id-app-target-top" xsi:type="Serving"/>
+    <relationship identifier="id-rel-source-to-middle" source="id-app-source" target="id-app-target-middle" xsi:type="Serving"/>
+    <relationship identifier="id-rel-source-to-bottom" source="id-app-source" target="id-app-target-bottom" xsi:type="Serving"/>
+  </relationships>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-fanout-crisscross"
+            xsi:type="Diagram"
+            viewpoint="Application Cooperation">
+        <name xml:lang="en">Fan-out crisscross</name>
+        <documentation xml:lang="en">The top and bottom routes cross inside the three-edge fan-out from Source, so AD-L15 must reject the view.</documentation>
+        <node identifier="id-node-source" elementRef="id-app-source" xsi:type="Element" x="40" y="160" w="140" h="60"/>
+        <node identifier="id-node-target-top" elementRef="id-app-target-top" xsi:type="Element" x="700" y="40" w="140" h="60"/>
+        <node identifier="id-node-target-middle" elementRef="id-app-target-middle" xsi:type="Element" x="700" y="160" w="140" h="60"/>
+        <node identifier="id-node-target-bottom" elementRef="id-app-target-bottom" xsi:type="Element" x="700" y="280" w="140" h="60"/>
+        <connection identifier="id-conn-source-to-top"
+                    relationshipRef="id-rel-source-to-top"
+                    source="id-node-source"
+                    target="id-node-target-top"
+                    xsi:type="Relationship">
+          <bendpoint x="110" y="120"/>
+          <bendpoint x="240" y="120"/>
+          <bendpoint x="240" y="320"/>
+          <bendpoint x="500" y="320"/>
+          <bendpoint x="500" y="70"/>
+        </connection>
+        <connection identifier="id-conn-source-to-middle"
+                    relationshipRef="id-rel-source-to-middle"
+                    source="id-node-source"
+                    target="id-node-target-middle"
+                    xsi:type="Relationship">
+          <bendpoint x="280" y="190"/>
+          <bendpoint x="460" y="190"/>
+        </connection>
+        <connection identifier="id-conn-source-to-bottom"
+                    relationshipRef="id-rel-source-to-bottom"
+                    source="id-node-source"
+                    target="id-node-target-bottom"
+                    xsi:type="Relationship">
+          <bendpoint x="110" y="260"/>
+          <bendpoint x="240" y="260"/>
+          <bendpoint x="240" y="60"/>
+          <bendpoint x="680" y="60"/>
+          <bendpoint x="680" y="300"/>
+          <bendpoint x="460" y="300"/>
+          <bendpoint x="680" y="310"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

@@ -10,7 +10,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VALIDATE_MODEL = (
-    REPO_ROOT / "souroldgeezer-design/skills/architecture-design/references/scripts/validate-model.ajs"
+    REPO_ROOT / "souroldgeezer-architecture/skills/architecture-design/references/scripts/validate-model.ajs"
 )
 
 

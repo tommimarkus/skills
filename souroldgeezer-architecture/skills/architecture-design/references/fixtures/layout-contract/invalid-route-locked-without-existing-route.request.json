@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "invalid-route-locked-without-existing-route",
+  "archimateTarget": "3.2",
+  "mode": "route-repair",
+  "view": {
+    "id": "view-service-realization",
+    "name": "Service Realization",
+    "viewpoint": "Service Realization",
+    "direction": "DOWN",
+    "qualityTarget": "diagram-readable"
+  },
+  "nodes": [
+    { "id": "source", "width": 150, "height": 70, "x": 40, "y": 40 },
+    { "id": "target", "width": 150, "height": 70, "x": 300, "y": 40 }
+  ],
+  "edges": [
+    { "id": "locked-route", "source": "source", "target": "target", "routeLocked": true }
+  ],
+  "constraints": {}
+}

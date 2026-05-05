@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Negative fixture: two visible connections share the same target-side lane.
+-->
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate3_Model.xsd"
+       identifier="id-fixture-stacked-connector-lane">
+
+  <name xml:lang="en">Fixture - Stacked connector lane</name>
+
+  <documentation xml:lang="en">Negative fixture for AD-L13: two incoming connectors share the same target-side attach lane and would stack arrowheads.</documentation>
+
+  <elements>
+    <element identifier="id-app-source-a" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Source A</name>
+    </element>
+    <element identifier="id-app-source-b" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Source B</name>
+    </element>
+    <element identifier="id-app-target" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Target</name>
+    </element>
+  </elements>
+
+  <relationships>
+    <relationship identifier="id-rel-source-a-to-target" source="id-app-source-a" target="id-app-target" xsi:type="Serving"/>
+    <relationship identifier="id-rel-source-b-to-target" source="id-app-source-b" target="id-app-target" xsi:type="Serving"/>
+  </relationships>
+
+  <views>
+    <diagrams>
+      <view identifier="id-view-stacked-connector-lane"
+            xsi:type="Diagram"
+            viewpoint="Application Cooperation">
+        <name xml:lang="en">Stacked connector lane</name>
+        <documentation xml:lang="en">Both incoming connectors attach to Target at the same left-side midpoint, so AD-L13 must reject the stacked lane before diagram-readable claims.</documentation>
+        <node identifier="id-node-source-a" elementRef="id-app-source-a" xsi:type="Element" x="40" y="40" w="140" h="60"/>
+        <node identifier="id-node-source-b" elementRef="id-app-source-b" xsi:type="Element" x="40" y="160" w="140" h="60"/>
+        <node identifier="id-node-target" elementRef="id-app-target" xsi:type="Element" x="360" y="100" w="140" h="60"/>
+        <connection identifier="id-conn-source-a-to-target"
+                    relationshipRef="id-rel-source-a-to-target"
+                    source="id-node-source-a"
+                    target="id-node-target"
+                    xsi:type="Relationship">
+          <bendpoint x="260" y="70"/>
+          <bendpoint x="260" y="130"/>
+        </connection>
+        <connection identifier="id-conn-source-b-to-target"
+                    relationshipRef="id-rel-source-b-to-target"
+                    source="id-node-source-b"
+                    target="id-node-target"
+                    xsi:type="Relationship">
+          <bendpoint x="260" y="190"/>
+          <bendpoint x="260" y="130"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>
