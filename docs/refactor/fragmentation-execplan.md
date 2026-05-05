@@ -1,6 +1,6 @@
 # Fragmentation Refactor ExecPlan
 
-Status: In progress  
+Status: Complete
 Branch: `refactor/fragmentation-cleanup`  
 Worktree: `.worktrees/fragmentation-refactor`  
 Coordinator model: `gpt-5.5`  
@@ -124,9 +124,9 @@ find . \
 | P1 | Done | `sog_manifest_ci` | Fix manifest validity and add syntax/path gates | JSON/TOML/path checks pass and are scripted; bare `python -m unittest` now reaches the `*_test.py` suite |
 | P2 | Done | `sog_runtime_parity` | Prevent Claude/Codex metadata drift | Checker detects drift; tests exist |
 | P3 | Done | `sog_architecture_split` | Split architecture out of design | `souroldgeezer-architecture` exists; manifests pass; migration note exists |
-| P4 | Todo | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
+| P4 | Done | `sog_skill_slimming` | Slim architecture skill into compact router | Heavy material moved to references with load conditions |
 | P5 | Done | `sog_docs_release` | Simplify README and add plugin/release docs | README is a map; docs/plugins and release checklist exist |
-| P6 | Todo | `sog_final_reviewer` | Final read-only review and validation | All checks pass; reviewer returns merge/no-merge |
+| P6 | Done | `sog_final_reviewer` | Final read-only review and validation | All checks pass; reviewer returned no high-risk regressions after blocker fixes |
 
 ## P0 Baseline Map
 
@@ -1042,6 +1042,26 @@ Validation evidence before rerunning P6:
 - `scripts/skill-architecture-report.sh --strict .`: 0 findings, 534 ledger
   cases, 521/521 tool-detected gold findings, 100.0% automated replacement
   recall.
+
+Second P6 review returned no high-risk regressions on 2026-05-05. The only
+remaining blockers were ExecPlan closeout bookkeeping: top-level status, stale
+phase-board entries, and the P6 progress-log row. Those are resolved in this
+final update.
+
+Final validation evidence:
+- `find . -name '*.json' -print0 | xargs -0 -n1 jq -e .`: exit 0.
+- TOML parse command: `TOML OK`.
+- `python -m unittest`: 24 tests `OK`.
+- `python scripts/check-runtime-metadata-parity.py --check .`: `Runtime metadata parity OK`.
+- `scripts/validate-fragmentation.sh`: `JSON OK`, `TOML OK`,
+  `Marketplace paths OK`, `Plugin manifests OK`, `Runtime metadata parity OK`,
+  and 24 unit tests `OK`.
+- `scripts/skill-architecture-report.sh --strict .`: 0 findings, 534 ledger
+  cases, 521/521 tool-detected gold findings, 100.0% automated replacement
+  recall.
+- `git diff --check`: clean.
+- Final reviewer checked `arch-layout.sh --version`, `validate-request`, and
+  `validate-oef-layout.sh` against architecture fixtures successfully.
 ```
 
 ## Decision Log
@@ -1071,4 +1091,4 @@ Validation evidence before rerunning P6:
 | 2026-05-05 | P3 | Architecture plugin split completed; migration note and move map recorded | `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 23 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `test -d souroldgeezer-architecture` exit 0; `bash souroldgeezer-architecture/skills/architecture-design/references/scripts/arch-layout.sh --version` printed `arch-layout 0.28.0`; `git diff --check` clean |
 | 2026-05-05 | P4 | Architecture-design skill slimmed into compact operational router; detailed procedures moved to one-hop operational workflow reference with explicit load conditions | `wc -l -w -c` showed `SKILL.md` reduced from 68,018 bytes to 16,421 bytes and new `architecture-operational-workflow.md` at 20,914 bytes; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | 2026-05-05 | P5 | Public docs simplified into a product map; plugin docs and release checklist added; plugin-doc link parity tightened to require doc-relative links | Official Claude Code plugin/marketplace docs and OpenAI Codex plugin/skills docs cross-checked; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest tests.runtime_metadata_parity_test` ran 3 tests OK; `python -m unittest` ran 24 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, `Runtime metadata parity OK`, and 24 unit tests `OK`; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
-| YYYY-MM-DD | P6 | Pending | Pending |
+| 2026-05-05 | P6 | Final review rerun completed; ExecPlan marked complete after wrapper blockers and closeout bookkeeping were fixed | First `sog_final_reviewer` returned no-merge for architecture wrapper workflow duplication; blocker fix commit `9870d8e` slimmed the wrappers and added `SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION` plus ledger case `SAC-T00534`; second `sog_final_reviewer` found no high-risk regressions and only ExecPlan closeout bookkeeping; final gate: `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 24 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 24 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings with 534 ledger cases and 100.0% recall; `git diff --check` clean |
