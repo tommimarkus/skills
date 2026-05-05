@@ -174,10 +174,10 @@ souroldgeezer-design/                  ← published software / UI / API / infra
   docs/ui-reference/responsive-design.md
   docs/api-reference/api-design.md
   docs/infra-reference/infra-design.md
-  skills/infra-design/SKILL.md
-                     /agents/openai.yaml
-                     /extensions/ ← Azure®, Terraform™, and Bicep™ infrastructure-design overlays
-                     /references/ ← behavioral evidence and source grounding
+  skills/{software-design,responsive-design,api-design,infra-design}/SKILL.md
+  skills/{software-design,responsive-design,api-design,infra-design}/agents/openai.yaml
+  skills/infra-design/extensions/ ← Azure®, Terraform™, and Bicep™ infrastructure-design overlays
+  skills/infra-design/references/ ← behavioral evidence and source grounding
 souroldgeezer-architecture/            ← published architecture plugin
   .claude-plugin/plugin.json
   .codex-plugin/plugin.json
