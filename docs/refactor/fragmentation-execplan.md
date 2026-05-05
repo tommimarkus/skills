@@ -775,7 +775,86 @@ git commit -m "Slim architecture skill into router with references"
 Completion notes:
 
 ```text
-Pending.
+Completed 2026-05-05.
+
+Before/after size report:
+- Before P4 `architecture-design/SKILL.md`: 497 lines, 8,676 words, 68,018 bytes.
+- After P4 `architecture-design/SKILL.md`: 313 lines, 1,733 words, 16,421 bytes.
+- Always-loaded reduction: 184 lines, 6,943 words, 51,597 bytes
+  (75.9% byte reduction).
+- New one-hop operational reference:
+  `souroldgeezer-architecture/skills/architecture-design/references/procedures/architecture-operational-workflow.md`
+  is 420 lines, 2,574 words, 20,914 bytes.
+
+Load-condition map:
+- `../../docs/architecture-reference/architecture.md`: notation principles,
+  element/relationship rules, OEF serialization, diagram kinds, smell
+  definitions, and checklist references.
+- `references/procedures/architecture-operational-workflow.md`: selected
+  mode workflow, pre-flight, project assimilation, render-polish loop,
+  forward-only rules, preservation rules, and validation sequencing.
+- `references/smell-catalog.md`: emitting or interpreting `AD-*`, `AD-L*`,
+  `AD-B-*`, `AD-Q*`, or `AD-DR-*` findings.
+- `references/procedures/professional-readiness.md`: every Build, Extract,
+  and Review readiness verdict, authority axis, render gate, and `AD-Q*`
+  findings.
+- `references/procedures/layout-strategy.md` plus
+  `layout-backend-contract.md`, `layout-policies-by-viewpoint.md`,
+  `routing-and-glossing.md`, and `layout-fallback.md`: Build/Extract layout,
+  Review repair/polish, backend generation, viewpoint policy, routing, route
+  repair, global polish, or fallback layout.
+- `references/procedures/lifting-rules-*.md`, `process-view-emission.md`, and
+  `seed-views.md`: Extract source lifting, process-view emission, and
+  forward-only seed views.
+- `references/procedures/drift-detection.md`: Review with current
+  source/IaC/workflow comparison or explicit drift question.
+- `references/procedures/external-validation-handoff.md`: supplied Archi
+  import, Validate Model, schema, `xmllint --schema`, or conformant-tool
+  findings.
+- `references/procedures/rendered-png-validation.md`: PNGs exist or rendered
+  view comparison is requested.
+- `references/scripts/validate-oef-layout.sh`, `arch-layout.sh`,
+  `archi-render.sh`, `validate-model.ajs`, and `package-arch-layout.sh`:
+  source-geometry validation, layout runtime commands, render requests,
+  jArchi Validate Model, and Java runtime packaging respectively.
+- `references/schemas/*.schema.json`, `references/bin/arch-layout.jar`,
+  `references/fixtures/**`, `references/red-flags.md`, `references/evals/`,
+  and `references/source-grounding.md`: layout contract validation, packaged
+  runtime execution through script wrapper, regression corpus changes,
+  failed-check/readiness red flags, and behavior/source-grounding changes.
+
+Moved content map:
+- Purpose / ownership / mode dispatch stayed in `SKILL.md` as compact router
+  text.
+- Detailed mode procedures moved from `SKILL.md` to
+  `references/procedures/architecture-operational-workflow.md`:
+  Build, Extract, Review, Lookup, drift detection, render request, and
+  render-polish iteration.
+- Pre-flight questions, defaults, ask-vs-continue rules, change
+  classification, layout intent selection, and canonical path handling moved
+  behind the operational workflow load condition.
+- Project assimilation discovery, forward-only preservation, render-contract
+  disclosure, and existing-model reuse/non-compliance rules moved behind the
+  operational workflow load condition.
+- OEF/XML serialization constraints, metadata requirements, top-level child
+  ordering, materialized view requirements, and view-specific relationship
+  curation moved behind the Build workflow load condition.
+- Validation sequencing, source-geometry gate behavior, external validation
+  handoff, rendered PNG checks, render gate, per-view readiness/authority
+  rollup, and red-flag stop rules moved behind explicit procedure/script load
+  conditions.
+- Long support inventory moved into the `SKILL.md` reference load map with
+  exact load conditions for procedures, scripts, schemas, fixtures, packaged
+  runtime, evals, and source grounding.
+
+Validation evidence:
+- `python scripts/check-runtime-metadata-parity.py --check .`:
+  `Runtime metadata parity OK`.
+- `scripts/validate-fragmentation.sh`: `JSON OK`, `TOML OK`,
+  `Marketplace paths OK`, `Plugin manifests OK`, `Runtime metadata parity OK`,
+  and 23 unit tests `OK`.
+- `scripts/skill-architecture-report.sh --strict .`: 0 findings.
+- `git diff --check`: clean.
 ```
 
 ## P5 — Public Docs and Release Surface
@@ -949,6 +1028,6 @@ Pending.
 | 2026-05-05 | P1 | Manifest/path validation added; bare unittest discovery fixed | `scripts/validate-fragmentation.sh` printed `JSON OK`, `TOML OK`, `Marketplace paths OK`, `Plugin manifests OK`, and ran 21 tests OK; `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 21 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git status --short` showed P1 files plus the two pre-existing untracked refactor docs |
 | 2026-05-05 | P2 | Runtime metadata parity checker added and wired into recurring validation | `python -m unittest tests.runtime_metadata_parity_test` ran 2 tests OK with intentional drift detection; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed `Runtime metadata parity OK` and ran 23 tests OK; `python -m unittest` ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | 2026-05-05 | P3 | Architecture plugin split completed; migration note and move map recorded | `find . -name '*.json' -print0 \| xargs -0 -n1 jq -e .` exit 0; TOML parse command printed `TOML OK`; `python -m unittest` ran 23 tests OK; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `test -d souroldgeezer-architecture` exit 0; `bash souroldgeezer-architecture/skills/architecture-design/references/scripts/arch-layout.sh --version` printed `arch-layout 0.28.0`; `git diff --check` clean |
-| YYYY-MM-DD | P4 | Pending | Pending |
+| 2026-05-05 | P4 | Architecture-design skill slimmed into compact operational router; detailed procedures moved to one-hop operational workflow reference with explicit load conditions | `wc -l -w -c` showed `SKILL.md` reduced from 68,018 bytes to 16,421 bytes and new `architecture-operational-workflow.md` at 20,914 bytes; `python scripts/check-runtime-metadata-parity.py --check .` printed `Runtime metadata parity OK`; `scripts/validate-fragmentation.sh` printed all validation OK and ran 23 tests OK; `scripts/skill-architecture-report.sh --strict .` found 0 findings; `git diff --check` clean |
 | YYYY-MM-DD | P5 | Pending | Pending |
 | YYYY-MM-DD | P6 | Pending | Pending |
