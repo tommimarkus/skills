@@ -1,0 +1,9 @@
+interface:
+  display_name: "Infra Design"
+  short_description: >-
+    Use when building, extracting, reviewing, or looking up infrastructure
+    design for IaC, cloud resources, deployment topology, environment strategy,
+    state, rollout, operations, or Azure, Terraform, and Bicep surfaces.
+  default_prompt: "Use $infra-design to review this infrastructure or IaC design."
+policy:
+  allow_implicit_invocation: true
