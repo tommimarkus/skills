@@ -13,3 +13,7 @@ tables, diagrams, screenshots, or documentation.
   Handling: local extension and procedure contracts; eval cases exercise
   extension loading, cost stance, MCP availability, and output disclosure
   without reproducing external configuration examples.
+- Source: installed Codex Security plugin skill metadata and
+  `codex-security:security-scan` workflow name.
+  Handling: local runtime capability reference only; the eval case is original
+  synthetic prose and does not copy the plugin workflow body.

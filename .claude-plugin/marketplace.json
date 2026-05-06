@@ -11,7 +11,7 @@
     {
       "name": "souroldgeezer-audit",
       "source": "./souroldgeezer-audit",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "description": "Rubric-driven audits for DevSecOps posture and test quality, with per-stack extensions, matching Claude Code subagents, and Codex skill metadata."
     },
     {

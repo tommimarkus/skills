@@ -26,4 +26,4 @@ When invoked, run the devsecops-audit skill and present the results:
    presence-vs-efficacy verdict (`enforcing` / `partial` / `decorative`), and
    the honest-limits statement.
 5. Always emit the footer disclosure: extensions loaded, resolved cost stance,
-   MCP availability, rubric path.
+   MCP availability, Codex Security usage, rubric path.
