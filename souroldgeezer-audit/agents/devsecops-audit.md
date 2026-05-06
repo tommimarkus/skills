@@ -1,11 +1,7 @@
 ---
 name: devsecops-audit
 description: >-
-  Use when auditing DevSecOps pipeline and application security posture —
-  workflows, IaC, release artifacts, and code-level security smells — against
-  the bundled rubric at souroldgeezer-audit/docs/security-reference/devsecops.md.
-  Supports quick single-target audits and deep whole-repo audits with
-  conditional MCP live-state probes and configurable cost stance.
+  Use when auditing DevSecOps security posture for CI/CD workflows, IaC, containers, releases, or code-level security smells. Supports quick PR/file audits and deep repo reviews. Defer non-security design to sibling software, infra, API, app, architecture, and test-quality skills.
 tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
 ---

@@ -1,231 +1,71 @@
 ---
 name: devsecops-audit
-description: Use when auditing DevSecOps pipeline and application security posture — workflows, IaC, release artifacts, and code-level security smells — against the bundled rubric at souroldgeezer-audit/docs/security-reference/devsecops.md. Supports quick single-target audits and deep whole-repo audits with conditional MCP live-state probes and configurable cost stance.
+description: >-
+  Use when auditing DevSecOps security posture for CI/CD workflows, IaC, containers, releases, or code-level security smells. Supports quick PR/file audits and deep repo reviews. Defer non-security design to sibling software, infra, API, app, architecture, and test-quality skills.
 ---
 
 # DevSecOps Audit
 
-## Overview
-
-Audit a repository's DevSecOps posture against [../../docs/security-reference/devsecops.md](../../docs/security-reference/devsecops.md). The central question, from §1 of the rubric:
-
-> If any control under audit were silently disabled for a sprint, would anyone notice — via a failed build, a blocked merge, a missed deploy, an alert someone reads, or a report someone acts on?
-
-If no, the control is decorative. The skill's job is to distinguish enforcing controls from decorative ones and produce actionable findings.
-
-**The rubric is [../../docs/security-reference/devsecops.md](../../docs/security-reference/devsecops.md)** (bundled with the plugin). This skill is the *workflow* for applying it. Findings cite rubric sections and smell codes by reference; the skill never duplicates rubric prose.
-
-**Read `references/smell-catalog.md`** for the compact code list used in reports.
-
-Also read `references/evals` and `references/source-grounding.md` when changing
-trigger metadata, workflow behavior, extension selection, rationalization
-gates, source grounding, or evaluation coverage. Keep eval cases synthetic or
-originally paraphrased; do not copy external prompts, code, configuration,
-tables, diagrams, screenshots, or docs into this plugin.
-
-## Non-goals
-
-- **General code / module design quality** → use `software-design` when
-  available. Otherwise report only security-relevant design concerns and state
-  that non-security refactoring is out of scope.
-- **Test quality** → use `test-quality-audit`. The E2E sub-lane `S` complements this skill for CSP / CORS / cookie assertions.
-- **Dead code / unused dependencies** → out of scope unless the evidence creates
-  a security or supply-chain finding covered by the bundled rubric.
-- **General Azure infrastructure architecture, cost, or Well-Architected review**
-  → out of scope unless a bundled extension code or devsecops rubric section
-  applies.
-
-## Audit modes
-
-### Quick mode
-
-**Use for:** a PR diff, a single workflow file, a single Bicep module, a single Dockerfile, a handful of changed C# files. Pre-merge feedback loop.
-
-- Per-finding output only, no rollup.
-- No MCP calls.
-- Extensions load based on target type.
-
-**Triggers:** "audit this PR", "check this workflow", "audit this Bicep", "is this Dockerfile OK", "devsecops quick".
-
-### Deep mode
-
-**Use for:** a whole-repo audit, pre-release posture check, quarterly review, large multi-file feature branch audit.
-
-- Full twelve-section report per rubric §9.
-- Stage coverage matrix, anti-pattern scan, smell matches, positive signals, evidence-per-release, MCP live-state probes, presence-vs-efficacy verdict, honest-limits statement.
-
-**Triggers:** "full devsecops audit", "audit the pipeline", "security posture review", "devsecops deep".
-
-**Default:** If the request is ambiguous, ask the user which mode they want.
-
-## Extensions
-
-The core workflow is framework-neutral. Extensions are per-stack smell packs loaded on demand:
-
-| Extension | Applies to | Loaded when target matches |
-|---|---|---|
-| `extensions/github-actions.md` | CI workflow files | `.github/workflows/*.y?ml` |
-| `extensions/bicep.md` | Azure IaC | `infra/**/*.bicep`, `**/*.bicepparam` |
-| `extensions/dockerfile.md` | Containers | `**/Dockerfile`, `**/docker-compose*.y?ml` |
-| `extensions/dotnet-security.md` | C# / .NET | `*.csproj`, `*.cs` under `api/` `app/` `shared/` `tests/`, `appsettings*.json` |
-
-Multiple extensions may load for the same audit. Unknown target types proceed with only the **file-agnostic core smells**: `DSO-HC-0`, `DSO-HC-1`, `DSO-HC-10`, `DSO-HC-14`, `DSO-HC-15`. See `extensions/README.md` for adding a new extension.
-
-Extensions never override core rules. They add namespaced smells or carve out false positives. Carve-outs win only for the exact pattern described.
-
-## Optional Codex Security Handoff
-
-When the Codex Security plugin is available in the current runtime, use
-`codex-security:security-scan` for application-vulnerability scanning that
-overlaps this audit. Keep the DevSecOps audit as the output owner: Codex
-Security contributes vulnerability evidence, while this skill maps surviving
-security-relevant results to the bundled rubric and smell codes when a mapping
-exists.
-
-- Use the handoff for PR, branch, commit, working-tree, or whole-repo targets
-  that include application code or an explicit code-level security request.
-- Do not call Codex Security phase skills directly unless already inside that
-  plugin's phase workflow; `codex-security:security-scan` owns its phase order.
-- If the plugin is unavailable, continue with the native extensions and
-  disclose the fallback instead of weakening the audit.
-- For workflow-only, IaC-only, Dockerfile-only, or release-manifest-only audits,
-  record Codex Security as not applicable unless the user asks for code-level
-  vulnerability coverage too.
-
-## Cost stance
-
-Some extensions (currently `bicep.md`) split smells into Band 1 (always-block) and Band 2 (cost-gated). The cost stance controls whether Band 2 fires. Three stances: `free`, `mixed`, `full`.
-
-**Resolution precedence** (highest wins):
-
-1. `--cost-stance=<value>` invocation arg
-2. `config.yaml` in this skill dir
-3. `CLAUDE.md` § "Cost Guidance" auto-detect
-4. Hard default: `full`
-
-See `references/procedures/cost-stance-detection.md` for the full resolver. Every report emits a one-line disclosure:
-
-```
-Cost stance: free (source: skills/devsecops-audit/config.yaml)
-```
-
-## Quick Mode Workflow
-
-0. **Detect target type(s).** Glob the target. Possible types: workflow file, Bicep module, Dockerfile, `docker-compose*.yml`, C# source, `appsettings*.json`, `.csproj`, release manifest, `SECURITY.md`, `CODEOWNERS`. A single PR may hit multiple types.
-
-0b. **Resolve cost stance.** Run `references/procedures/cost-stance-detection.md`. Record `{stance, source}` for the footer.
-
-0c. **Resolve Codex Security handoff.** Apply the optional handoff above before
-finalizing code-level findings. Record `used`, `unavailable`, or `not
-applicable` for the footer.
-
-1. **Load matching extensions** per target type. Announce which extensions loaded.
-
-2. **Read supporting context.** Base workflow templates, `CODEOWNERS`, branch-protection declarative config, `SECURITY.md` presence, `config.yaml`. Prevents flagging idiomatic helpers as smells.
-
-3. **For each target file:**
-   - Apply file-agnostic core smells first (`DSO-HC-0`, `DSO-HC-1`, `DSO-HC-10`, `DSO-HC-14`, `DSO-HC-15` where applicable).
-   - Apply extension smells filtered by the extension's `Applies to:` metadata.
-   - Apply extension carve-outs for idiomatic patterns.
-   - For Band 2 smells: check the resolved cost stance; skip unless `full` or `mixed` with the specific code enabled.
-
-4. **Emit findings** in the per-finding format (see Output below). No rollup, no stage matrix, no MCP probes.
-
-## Deep Mode Workflow
-
-0. **Detect & load.** Same as quick, but glob the whole repo: `.github/workflows/**`, `infra/**`, any `Dockerfile`, `docker-compose*.y?ml`, `api/**`, `app/**`, `shared/**`, `tests/**`, `SECURITY.md`, `CODEOWNERS`, `README.md`. Announce which extensions loaded.
-
-0b. **Resolve cost stance** via the procedure. Record for the footer.
-
-0c. **Probe MCP availability.** Attempt a single no-op `mcp__github__get_me` call. Success → live-state probes enabled. Any failure → MCP unavailable, record the skip, continue with static findings only. **Never retry.**
-
-0d. **Resolve Codex Security handoff.** Apply the optional handoff above before
-the smell-match and verdict steps. Record `used`, `unavailable`, or `not
-applicable` for the footer.
-
-1. **Scope statement.** Which repos, workflows, environments, release artifacts are in scope. Anything explicitly excluded. Rubric §9 item 1.
-
-2. **Declared target levels.** Does the repo declare ASVS / SCVS / SLSA / DSOMM / SAMM / NIS2 / CRA? If nothing is declared, emit `DSO-HC-0` as the first finding and continue. Rubric §9 item 2.
-
-3. **Stage coverage matrix.** Run `references/procedures/stage-coverage-matrix.md`. Emit the eight-stage matrix with `enforcing` / `decorative` / `missing` classification per row. Rubric §9 item 3.
-
-4. **Anti-pattern scan.** For each of `CICD-SEC-1..10`, scan the repo for the corresponding pattern. Emit one finding per match with file/line locator. Rubric §9 item 4.
-
-5. **Smell matches.** Collect every `DSO-HC-*`, `DSO-LC-*`, and `DSO-SUB-*` finding produced so far, plus extension smells. Cite codes only; evidence pointers to file:line. Rubric §9 item 5.
-
-6. **Positive signals.** Collect every `DSO-POS-*` and `<ext>.POS-*` matched. Rubric §9 item 6.
-
-7. **Supply-chain provenance check.** Run `references/procedures/evidence-per-release.md`. Emit SBOM / signing / pinning / cadence block. Rubric §9 item 7.
-
-8. **Evidence-per-release check.** For the most recent release, list which §5.3 artifacts exist and which are claimed in docs but missing from the release itself. Rubric §9 item 8.
-
-9. **Framework coupling report.** For each of SSDF (PO / PS / PW / RV), CRA Annex I, NIS2 Article 21: which rows are demonstrably covered by repo evidence, which are claimed but not evidenced, which are missing. Rubric §9 item 9.
-
-10. **MCP live-state probes** via `references/procedures/mcp-github-probes.md`, conditional on step 0c. Fetch branch protection, recent run exit codes, Dependabot / Code-scanning / Secret-scanning alerts, collaborators. Emit the `live-state` block.
-
-11. **Presence-vs-efficacy verdict.** Single word: `enforcing` / `partial` / `decorative`. Backed by the finding list and the stage matrix. Rubric §9 item 10.
-
-12. **Honest-limits statement.** Emit the §8 block verbatim listing what a static + MCP-read-only audit cannot determine. Do not invent certainty.
-
-## Output format
-
-### Per-finding shape (both modes)
-
-```
-[DSO-HC-2] workflow: .github/workflows/deploy.yml:14
-  severity: block
-  stage:    Build
-  evidence: uses: actions/checkout@main   (floating tag)
-  action:   Pin to commit SHA, e.g. actions/checkout@<40-char-sha>
-  rubric:   devsecops.md §5.1 item 2; OpenSSF Scorecard Pinned-Dependencies
-```
-
-### Quick mode report
-
-Findings block only. Footer:
-
-```
-Extensions loaded: github-actions, dotnet-security
-Cost stance:       free (source: skills/devsecops-audit/config.yaml)
-Codex Security:    used / unavailable / not applicable
-Rubric:            souroldgeezer-audit/docs/security-reference/devsecops.md
-```
-
-### Deep mode report
-
-All twelve sections. Remediation worklist ordered by severity (block → warn → info), then by stage. Footer adds:
-
-```
-MCP github:  available / unavailable
-Cost stance: <stance> (source: <source>)
-Codex Security: <used / unavailable / not applicable>
-Rubric:      souroldgeezer-audit/docs/security-reference/devsecops.md
-Honest limits: <verbatim §8 block>
-```
-
-## Complementary skills
-
-- `test-quality-audit` — E sub-lane S covers CSP / CORS / cookie assertions. Remediation actions for code-level security findings (e.g. `dns.HC-4`) include a text pointer: "Add an E2E test in the S sub-lane that asserts the fixed CORS config." Devsecops-audit never invokes test-quality-audit programmatically.
-- `software-design` — refactoring opportunities adjacent to a security finding
-  belong there unless the design flaw creates a concrete security posture
-  finding in this rubric.
-
-## Honest limits
-
-Per rubric §8, this skill cannot determine:
-
-- Whether a declared control is actually enforced in CI runs beyond the MCP-accessible window.
-- Whether a reported vulnerability is reachable from the codebase.
-- Whether a secret was used before it was rotated.
-- Whether a maintainer account is legitimately controlled.
-- Whether SBOM-declared dependencies are what actually got linked.
-- Whether runtime anomalies have occurred.
-- Whether a third-party supplier is currently compromised.
-
-Deep-mode reports include this list in the footer. Quick-mode reports omit it — the honest-limits statement is only meaningful alongside a whole-repo verdict.
-
-## Skill Maintenance
-
-After any skill, extension, reference, output-contract, or metadata edit, rerun
-`scripts/skill-architecture-report.sh .` until it reports no current advisory
-findings.
+Audit whether controls affect what ships. Use `../../docs/security-reference/devsecops.md`
+and cite `../../docs/security-reference/devsecops-smell-catalog.md` codes; do
+not restate rubric prose.
+
+## Contract
+
+Own Quick/Deep audits for CI/CD, IaC, containers, releases, supply-chain
+evidence, and security code smells. Delegate non-security design/test work to
+sibling skills.
+
+Inputs: files/diffs/repo scope, mode, cost stance, release/live evidence, and
+tools. If ambiguous, ask the user when mode/scope/cost stance/MCP or network
+use/destructive action/sibling ownership lacks a safe default; otherwise
+continue. Reject false positives, state confidence and honest limits, and never
+claim runtime enforcement, reachability, account control, rotation, or
+provenance from unsupported evidence.
+
+## Load Map
+
+Load `extensions/github-actions.md` and `docs/security-reference/devsecops-extensions/github-actions.md` when workflows/actions match.
+Load `extensions/bicep.md` and `docs/security-reference/devsecops-extensions/bicep.md` when Bicep/Azure IaC matches.
+Load `extensions/dockerfile.md` and `docs/security-reference/devsecops-extensions/dockerfile.md` when Docker/Compose/container targets match.
+Load `extensions/dotnet-security.md` and `docs/security-reference/devsecops-extensions/dotnet-security.md` when C#/.NET/appsettings targets match.
+Load `extensions/README.md` only when editing extensions.
+
+Load `references/procedures/cost-stance-detection.md` when resolving cost stance. Load `references/procedures/stage-coverage-matrix.md`, `references/procedures/evidence-per-release.md`, and `references/procedures/mcp-github-probes.md` when running Deep mode.
+
+Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic.
+
+## Workflow
+
+1. Select mode, scope, target types, evidence layers, and delegations.
+2. Prefer `rg`; inspect workflow/IaC/container/code/release/security files,
+   then load and announce extensions.
+3. Resolve cost stance from invocation, `config.yaml`, repo guidance, then
+   default `full`; disclose source.
+4. Use `codex-security:security-scan` when available and app-code vulnerability
+   coverage overlaps; otherwise disclose unavailable/not applicable.
+5. For Deep, probe GitHub MCP once; on failure record unavailable and continue
+   static-only. Never retry.
+6. Apply codes, separate fact from inference, reject unsupported findings, then
+   emit output/footer.
+
+## Outputs
+
+- Quick: findings only; no rollup or MCP probes.
+- Deep: rubric §9 sections 1-12: scope, target levels, stage matrix,
+  CICD-SEC scan, smells, positives, provenance, evidence-per-release,
+  framework coupling, live-state block, verdict, honest limits.
+
+Findings use `[CODE] type: path:line` with severity, stage, evidence, action,
+and citation. Severity is `block`, `warn`, or `info`. If none, say so with
+limits. Every answer reports extensions, cost stance/source, Codex Security,
+rubric path, and evidence limits. Deep also reports MCP GitHub, verdict
+(`enforcing`, `partial`, `decorative`), and rubric §8 limits.
+
+## Stop Conditions
+
+Stop when scope is missing, sibling ownership dominates, needed live evidence is
+absent, cost-gated findings lack stance, MCP/tool failure would be retried,
+output would copy rubric/vendor prose, or confidence is too low.
+
+Rerun `scripts/skill-architecture-report.sh .` after skill edits.
