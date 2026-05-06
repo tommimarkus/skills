@@ -4,13 +4,13 @@ Addon to [nodejs-core.md](nodejs-core.md) loaded **only when step 0b selects the
 
 **Prerequisite:** `nodejs-core.md` must already be loaded. The test-type detection signals that route a test to the E2E rubric (`@playwright/test`, `cypress`, `webdriverio`, `puppeteer` imports; `playwright.config.*` / `cypress.config.*` / `wdio.conf.*` files) live in `nodejs-core.md` because dispatch happens before rubric selection.
 
-**Note on procedures not applicable to E2E:** `nodejs-core.md` declares the Stryker JS mutation tool, SUT surface enumeration, and determinism verification. Per [SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional) and [SKILL.md § Determinism verification](../SKILL.md#determinism-verification), those procedures **do not apply to E2E audit targets** — the SUT for an E2E test is the whole deployed stack driven through a browser, and neither mutation testing nor determinism rerun is meaningful against that target. The audit agent must skip those steps when the selected rubric is E2E.
+**Note on procedures not applicable to E2E:** `nodejs-core.md` declares the Stryker JS mutation tool, SUT surface enumeration, and determinism verification. Per [SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md) and [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md), those procedures **do not apply to E2E audit targets** — the SUT for an E2E test is the whole deployed stack driven through a browser, and neither mutation testing nor determinism rerun is meaningful against that target. The audit agent must skip those steps when the selected rubric is E2E.
 
 ---
 
 ## Sub-lane classification hints
 
-Core [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric) already lists the canonical sub-lane routing signals (axe imports → A, Web Vitals / `PerformanceObserver` → P, CSP / cookie-jar assertions → S, default F).
+Core [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md) already lists the canonical sub-lane routing signals (axe imports → A, Web Vitals / `PerformanceObserver` → P, CSP / cookie-jar assertions → S, default F).
 
 Node-ecosystem refinements:
 

@@ -1,6 +1,6 @@
 # Determinism verification
 
-**When this runs:** step 4.5 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md). Runs the non-E2E test suite twice in sequence and compares the pass / fail list. Any test that passes once and fails once (or produces a different error) is a runtime-proven flake — stronger evidence than any static smell. Optional; gated on project size.
+**When this runs:** step 4.5 of the deep-mode workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md). Runs the non-E2E test suite twice in sequence and compares the pass / fail list. Any test that passes once and fails once (or produces a different error) is a runtime-proven flake — stronger evidence than any static smell. Optional; gated on project size.
 
 ## Why two runs is worth the cost
 

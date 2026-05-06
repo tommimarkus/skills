@@ -1,6 +1,6 @@
 # Deep mode output format
 
-**When this runs:** read before producing the deep-mode output in steps 5 and 6 of the workflow in [../../SKILL.md](../../SKILL.md). Defines the templates for the per-file rollup, the suite-level assessment (pyramid ratio, gap report, runtime distribution, determinism findings, mutation testing subsection), and the prioritized remediation worklist. Quick-mode audits only emit per-test findings and do not use these templates.
+**When this runs:** read before producing the deep-mode output in steps 5 and 6 of the workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md). Defines the templates for the per-file rollup, the suite-level assessment (pyramid ratio, gap report, runtime distribution, determinism findings, mutation testing subsection), and the prioritized remediation worklist. Quick-mode audits only emit per-test findings and do not use these templates.
 
 ## Per-file rollup
 

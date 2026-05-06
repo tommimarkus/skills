@@ -25,7 +25,7 @@ Detection glob shortcuts: `**/*.csproj`, `**/*Tests.cs`, `**/*Tests/*.cs`, `**/T
 
 ## Test type detection signals
 
-Consumed by [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric). Declares which patterns route a .NET test to the integration or E2E rubric instead of the unit rubric. A test with no matching integration or E2E signal defaults to the unit rubric — explicit and backwards compatible.
+Consumed by [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md). Declares which patterns route a .NET test to the integration or E2E rubric instead of the unit rubric. A test with no matching integration or E2E signal defaults to the unit rubric — explicit and backwards compatible.
 
 ### Integration rubric signals
 
@@ -53,7 +53,7 @@ Route the test (or the containing file / project) to the E2E rubric when any of 
 - **Construction.** The test injects or constructs an `IPlaywright`, `IBrowser`, `IBrowserContext`, `IPage`, `IWebDriver`, or similar browser-session type.
 - **Base class or helper.** The test class inherits from `PageTest`, `ContextTest`, `BrowserTest`, `PlaywrightTest` (Playwright NUnit/MSTest/Xunit base classes from `Microsoft.Playwright.NUnit` / `.MSTest` / `.Xunit`), `PlaywrightServiceBrowserNUnit` / `ServicePageTest` (Azure Playwright Workspaces cloud-browser bases), or equivalent project-specific bases that expose a browser session.
 
-Once a file is routed to E2E, classify each test into a sub-lane (`F` functional / `A` accessibility / `P` performance / `S` security) using the sub-lane signals in [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric):
+Once a file is routed to E2E, classify each test into a sub-lane (`F` functional / `A` accessibility / `P` performance / `S` security) using the sub-lane signals in [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md):
 
 - `[Trait("Category", "Accessibility")]` or axe / `AxeBuilder` / `AccessibilityHelper`-style imports → sub-lane **A**.
 - `[Trait("Category", "Perf")]` or Web Vitals / `PerformanceObserver` / `PerfHelper`-style imports → sub-lane **P**.
@@ -68,7 +68,7 @@ When a single test class contains multiple patterns — some tests use only mock
 
 ## Test double classification
 
-Required reading for auditors: [../../../docs/quality-reference/unit-testing.md § 7.1](../../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
+Required reading for auditors: [../../docs/quality-reference/unit-testing.md § 7.1](../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
 
 Moq, NSubstitute, FakeItEasy, and Microsoft.Extensions.Logging.Testing all produce test doubles through one construction syntax but serve different roles in the taxonomy. Classify each double before applying interaction-pinning smells:
 
@@ -369,7 +369,7 @@ Patterns that look like core smells but are idiomatic in .NET and must not be fl
 
 - **Do not flag `LC-1`** (mocking same-layer code) when the mocked type is an interface owned by the tested module *and* the project has a documented "test via seams" convention (e.g. a `CLAUDE.md` or `README.md` stating that interfaces exist specifically for testability). Ask before flagging if ambiguous.
 
-- **Do not flag `LC-7`** (excessive setup) when the setup is constructing an `IHost`, `WebApplicationFactory<T>`, `HostBuilder`, `TestServer`, an `IPlaywright` / `IBrowser` / `IBrowserContext` / `IPage`, an `IWebDriver`, a Testcontainers-based stack fixture, or a collection-level fixture that brings up a full backend for an E2E run. Under the new dispatch model (see [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric)), these are **routing signals into the integration or E2E rubric** — tests using them should be audited under that rubric where heavy setup is expected, not the unit rubric at all. This carve-out stays in force as a **safety net for cases where the dispatch is uncertain**: if a test somehow reaches the unit rubric with one of these setups, suppress the `LC-7` finding rather than flagging a test that was misrouted.
+- **Do not flag `LC-7`** (excessive setup) when the setup is constructing an `IHost`, `WebApplicationFactory<T>`, `HostBuilder`, `TestServer`, an `IPlaywright` / `IBrowser` / `IBrowserContext` / `IPage`, an `IWebDriver`, a Testcontainers-based stack fixture, or a collection-level fixture that brings up a full backend for an E2E run. Under the new dispatch model (see [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md)), these are **routing signals into the integration or E2E rubric** — tests using them should be audited under that rubric where heavy setup is expected, not the unit rubric at all. This carve-out stays in force as a **safety net for cases where the dispatch is uncertain**: if a test somehow reaches the unit rubric with one of these setups, suppress the `LC-7` finding rather than flagging a test that was misrouted.
 
 - **Do not flag `HC-10`** (snapshot tests pinning unspecified output) when the snapshot target is a JSON response whose schema is published via an OpenAPI document in the repo, a gRPC proto, or an equivalent contract document. Reference the contract in the carve-out decision.
 
@@ -379,7 +379,7 @@ Patterns that look like core smells but are idiomatic in .NET and must not be fl
 
 ## SUT surface enumeration
 
-Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumeration) — step 2.5 of the deep-mode workflow. This section declares the .NET-specific grep patterns the audit agent uses to enumerate testable symbols in a SUT and cross-reference them against a test project. Applies under both the unit and integration rubrics; not run under the E2E rubric.
+Consumed by [SKILL.md § SUT surface enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.5 of the deep-mode workflow. This section declares the .NET-specific grep patterns the audit agent uses to enumerate testable symbols in a SUT and cross-reference them against a test project. Applies under both the unit and integration rubrics; not run under the E2E rubric.
 
 ### SUT identification
 
@@ -463,7 +463,7 @@ When the gap report lists a probable `Gap-API` finding on a SUT shape that Stryk
 
 ## Determinism verification
 
-Consumed by [SKILL.md § Determinism verification](../SKILL.md#determinism-verification) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
+Consumed by [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
 
 ### Cheap-rerun command
 
@@ -499,7 +499,7 @@ Compare via `dotnet-trx` or a manual diff of the `<UnitTestResult outcome="Passe
 
 ## Mutation tool
 
-The core skill runs mutation testing conditionally in deep mode (see [SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional)). It uses the subsections below to decide whether Stryker.NET is available, how to run it, and whether the SUT is a shape the tool can handle. Applies under unit and integration rubrics; never run under the E2E rubric.
+The core skill runs mutation testing conditionally in deep mode (see [SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md)). It uses the subsections below to decide whether Stryker.NET is available, how to run it, and whether the SUT is a shape the tool can handle. Applies under unit and integration rubrics; never run under the E2E rubric.
 
 ### 1. Tool name and link
 

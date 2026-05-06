@@ -40,7 +40,7 @@ Record these on detection; they affect rubric routing and procedure choices:
 
 ## Test type detection signals
 
-Consumed by [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric). A Robot Framework test with no matching integration or E2E signal defaults to the unit rubric only when the target is the keyword layer itself; otherwise ask whether the suite is intended as integration or E2E.
+Consumed by [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md). A Robot Framework test with no matching integration or E2E signal defaults to the unit rubric only when the target is the keyword layer itself; otherwise ask whether the suite is intended as integration or E2E.
 
 ### Integration rubric signals - sub-lane A (in-process or adjacent dependency)
 
@@ -70,7 +70,7 @@ Route the test to E2E when any of these are present:
 - **AppiumLibrary.** Mobile flag from detection is present.
 - **User-session keywords.** Test body includes navigation, real browser / app session setup, click/type/tap gestures, or assertions on rendered page/app state.
 
-Once a test routes to E2E, classify sub-lanes using the core [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric) plus these Robot-specific signals:
+Once a test routes to E2E, classify sub-lanes using the core [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md) plus these Robot-specific signals:
 
 - `[Tags]    a11y` / `accessibility` or axe-style accessibility library usage -> sub-lane **A**.
 - `[Tags]    perf` / `performance` or browser performance / timing metrics -> sub-lane **P**.
@@ -269,7 +269,7 @@ observable status, message, page state, or domain outcome for each row.
 
 ## SUT surface enumeration
 
-Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumeration) in deep mode.
+Consumed by [SKILL.md § SUT surface enumeration](../../skills/test-quality-audit/SKILL.md) in deep mode.
 
 Robot Framework itself does not expose the production SUT surface. When another SUT stack extension is detected (.NET, Node.js / TypeScript, Next.js, or future Python), use that extension's SUT surface enumeration for product-code gaps.
 
@@ -295,7 +295,7 @@ For each enumerated keyword, search audited test cases for a call row whose firs
 
 ## Determinism verification
 
-Consumed by [SKILL.md § Determinism verification](../SKILL.md#determinism-verification) - step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics when the suite is cheap to rerun. Do not run against E2E suites.
+Consumed by [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md) - step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics when the suite is cheap to rerun. Do not run against E2E suites.
 
 ### Cheap-rerun command
 

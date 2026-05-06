@@ -111,7 +111,7 @@ test('GET /admin/users returns ok', async () => {
 });
 ```
 
-**Rewrite (intent):** cover the full matrix per [integration-testing.md § 5.2 I-HC-B7](../../../docs/quality-reference/integration-testing.md) — anonymous (expect `401`), valid token/session (expect documented success), expired or not-yet-valid token (expect `401`), tampered/wrong-issuer/wrong-audience token where JWT/OIDC is used (expect `401`), insufficient scope/role (expect `403`), cross-user/tenant access where resources have owners (expect `403` or `404`), and cookie/session/CSRF lifecycle cells where the app owns them. For Auth.js v5, use the project session helper rather than bypassing the middleware.
+**Rewrite (intent):** cover the full matrix per [integration-testing.md § 5.2 I-HC-B7](../../docs/quality-reference/integration-testing.md) — anonymous (expect `401`), valid token/session (expect documented success), expired or not-yet-valid token (expect `401`), tampered/wrong-issuer/wrong-audience token where JWT/OIDC is used (expect `401`), insufficient scope/role (expect `403`), cross-user/tenant access where resources have owners (expect `403` or `404`), and cookie/session/CSRF lifecycle cells where the app owns them. For Auth.js v5, use the project session helper rather than bypassing the middleware.
 
 ---
 
@@ -179,7 +179,7 @@ test('GET /admin/users returns ok', async () => {
 
 ## Auth matrix enumeration
 
-Consumed by [SKILL.md § Auth matrix enumeration](../SKILL.md#auth-matrix-enumeration) — step 2.6 of the deep-mode workflow. Integration-only: auth enforcement matrices target HTTP seams, which live under the integration rubric.
+Consumed by [SKILL.md § Auth matrix enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.6 of the deep-mode workflow. Integration-only: auth enforcement matrices target HTTP seams, which live under the integration rubric.
 
 ### Protected-endpoint patterns
 
@@ -218,7 +218,7 @@ For each enumerated endpoint, search the test project for each matrix column:
 
 ## Migration upgrade-path enumeration
 
-Consumed by [SKILL.md § Migration upgrade-path enumeration](../SKILL.md#migration-upgrade-path-enumeration) — step 2.7 of the deep-mode workflow. Integration-only: migrations run against a real data store.
+Consumed by [SKILL.md § Migration upgrade-path enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.7 of the deep-mode workflow. Integration-only: migrations run against a real data store.
 
 ### Migration enumeration patterns (per ORM)
 

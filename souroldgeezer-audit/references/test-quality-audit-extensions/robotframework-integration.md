@@ -111,7 +111,7 @@ ${response}=    GET    ${BASE_URL}/orders/123    expected_status=200
 
 ## Auth matrix enumeration
 
-Consumed by [SKILL.md § Auth matrix enumeration](../SKILL.md#auth-matrix-enumeration) in deep mode when Robot integration tests exercise an authenticated API or CLI boundary.
+Consumed by [SKILL.md § Auth matrix enumeration](../../skills/test-quality-audit/SKILL.md) in deep mode when Robot integration tests exercise an authenticated API or CLI boundary.
 
 ### Protected endpoint / command detection
 

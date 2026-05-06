@@ -1,13 +1,13 @@
 # SUT surface enumeration
 
-**When this runs:** step 2.5 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md). This is the skill's static gap-detection pass — *find tests that don't exist yet* for public API, HTTP routes, migrations, throw sites, and validation attributes in the SUT. Never run in quick mode. Never run against E2E audit targets.
+**When this runs:** step 2.5 of the deep-mode workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md). This is the skill's static gap-detection pass — *find tests that don't exist yet* for public API, HTTP routes, migrations, throw sites, and validation attributes in the SUT. Never run in quick mode. Never run against E2E audit targets.
 
 Unlike mutation testing (step 4) which observes runtime kill behavior, surface enumeration reads the production code to ask "what ought to be tested?" and cross-references against the test project. Both are complementary — mutation testing catches tests that execute code without verifying it; surface enumeration catches code that has no test at all.
 
 ## Why both static surface enumeration and mutation testing
 
 - **Static audit alone** only examines files that already have tests.
-- **Mutation testing** catches `NoCoverage` files at runtime, but only when the tool is installed and the SUT shape is supported (e.g. Stryker.NET cannot mutate Blazor WASM — see [../../extensions/dotnet-core.md § Known SUT limitations](../../extensions/dotnet-core.md)).
+- **Mutation testing** catches `NoCoverage` files at runtime, but only when the tool is installed and the SUT shape is supported (e.g. Stryker.NET cannot mutate Blazor WASM — see [../test-quality-audit-extensions/dotnet-core.md § Known SUT limitations](../test-quality-audit-extensions/dotnet-core.md)).
 - **Static surface enumeration** works on any SUT the stack extension has grep patterns for, even Blazor WASM. It produces *probable* gaps from grep, so it is noisier than mutation testing.
 - When both run on the same suite, a symbol flagged by both is a **confirmed gap**; a symbol flagged by static-only is a *probable* gap; a symbol flagged by mutation-only is a signal the grep patterns need tuning.
 

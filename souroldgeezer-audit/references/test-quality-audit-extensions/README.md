@@ -1,6 +1,6 @@
 # Extensions
 
-Per-stack smell packs for the `test-quality-audit` skill. The core rubric in [../SKILL.md](../SKILL.md) is deliberately framework-neutral; extensions add the framework-specific detail that would otherwise bloat the core or cause false positives when applied to the wrong stack.
+Per-stack smell packs for the `test-quality-audit` skill. The core rubric in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md) is deliberately framework-neutral; extensions add the framework-specific detail that would otherwise bloat the core or cause false positives when applied to the wrong stack.
 
 ## Purpose
 
@@ -9,8 +9,8 @@ Extensions **augment** the core rubric. They can:
 - Add framework-specific smells (high-confidence and low-confidence) for both the unit and integration rubrics.
 - Add framework-specific positive signals to reward.
 - **Carve out** core smells that would produce false positives on idiomatic framework patterns.
-- Declare **test type detection signals** that route a test to the integration rubric instead of the unit rubric. Consumed by [../SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric).
-- Declare the mutation-testing tool for that stack, with a detection command, run command, install instructions, and a known-unsupported SUT list. The core skill uses this declaration to run mutation testing conditionally in deep mode (see [../SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional)).
+- Declare **test type detection signals** that route a test to the integration rubric instead of the unit rubric. Consumed by [../../skills/test-quality-audit/SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md).
+- Declare the mutation-testing tool for that stack, with a detection command, run command, install instructions, and a known-unsupported SUT list. The core skill uses this declaration to run mutation testing conditionally in deep mode (see [../../skills/test-quality-audit/SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md)).
 
 Extensions **never override** core rules. A carve-out suppresses a specific core smell only for the exact pattern it describes. When in doubt, prefer the core rule.
 

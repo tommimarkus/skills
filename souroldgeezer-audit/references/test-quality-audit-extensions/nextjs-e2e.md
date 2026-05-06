@@ -4,13 +4,13 @@ Addon to [nextjs-core.md](nextjs-core.md) loaded **only when step 0b selects the
 
 **Prerequisite:** [`nodejs-core.md`](nodejs-core.md), [`nextjs-core.md`](nextjs-core.md), and [`nodejs-e2e.md`](nodejs-e2e.md) must already be loaded. This file adds Next.js-specific refinements on top. `nextjs.E-*` smells are additional to `nodejs.E-*` smells, not replacements. The Playwright locator / web-first-assertion / per-test context patterns (`nodejs.E-POS-F1..F3`) all apply under Next.js unchanged.
 
-**Note on procedures not applicable to E2E:** `nodejs-core.md` declares the Stryker JS mutation tool, SUT surface enumeration, and determinism verification. Per [SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional) and [SKILL.md § Determinism verification](../SKILL.md#determinism-verification), those procedures **do not apply to E2E audit targets** — the SUT for an E2E test is the whole deployed stack driven through a browser. Skip those steps when the selected rubric is E2E.
+**Note on procedures not applicable to E2E:** `nodejs-core.md` declares the Stryker JS mutation tool, SUT surface enumeration, and determinism verification. Per [SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md) and [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md), those procedures **do not apply to E2E audit targets** — the SUT for an E2E test is the whole deployed stack driven through a browser. Skip those steps when the selected rubric is E2E.
 
 ---
 
 ## Sub-lane classification hints
 
-Core [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric) and [`nodejs-e2e.md § Sub-lane classification hints`](nodejs-e2e.md#sub-lane-classification-hints) already cover the canonical signals. Next.js refinements:
+Core [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md) and [`nodejs-e2e.md § Sub-lane classification hints`](nodejs-e2e.md#sub-lane-classification-hints) already cover the canonical signals. Next.js refinements:
 
 - **App Router–only assertions on hydration timing** — a test that `page.goto('/dashboard')` then immediately `await expect(page.getByRole('button', { name: 'Add item' })).toBeEnabled()` is sub-lane F (functional journey); the hydration wait is the functional gate.
 - **RSC-payload network interception** — a test that uses `page.route('**/_rsc=*', ...)` to assert on the serialized Server Component payload is sub-lane F but characterization (see `nextjs.E-HC-F2`). The RSC payload shape is a Next.js compile-time artifact, not a published contract.

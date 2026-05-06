@@ -42,7 +42,7 @@ Record these on detection; several smells and the mutation-tool config depend on
 
 ## Test type detection signals
 
-Consumed by [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric). Declares which patterns route a Node.js test to the integration or E2E rubric instead of the unit rubric. A test with no matching integration or E2E signal defaults to the unit rubric — explicit and backwards compatible.
+Consumed by [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md). Declares which patterns route a Node.js test to the integration or E2E rubric instead of the unit rubric. A test with no matching integration or E2E signal defaults to the unit rubric — explicit and backwards compatible.
 
 ### Integration rubric signals — sub-lane A (in-process)
 
@@ -85,7 +85,7 @@ Route the test to the E2E rubric when any of these are present:
   - Puppeteer: `import puppeteer from 'puppeteer'` plus `browser.newPage()`.
 - **Browser-session construction.** `browser.newContext()` / `context.newPage()` / `page.goto(...)` / `cy.visit(...)` / `$('#selector').click()`.
 
-Once a file is routed to E2E, classify each test into a sub-lane (`F` / `A` / `P` / `S`) using the signals in [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric):
+Once a file is routed to E2E, classify each test into a sub-lane (`F` / `A` / `P` / `S`) using the signals in [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md):
 
 - `@tag('a11y')` / `test.describe('a11y', ...)` / `@axe-core/playwright` / `cypress-axe` / `axe-core` import → sub-lane **A**.
 - `@tag('perf')` / `web-vitals` npm package / `PerformanceObserver` / Lighthouse CI import → sub-lane **P**.
@@ -100,7 +100,7 @@ When a single test file contains multiple patterns — some tests use only mocke
 
 ## Test double classification
 
-Required reading for auditors: [../../../docs/quality-reference/unit-testing.md § 7.1](../../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
+Required reading for auditors: [../../docs/quality-reference/unit-testing.md § 7.1](../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
 
 Jest, Vitest, Sinon, `node:test` `mock`, and `testdouble` all produce test doubles through one construction syntax but serve different roles in the taxonomy. Classify each double before applying interaction-pinning smells. The rule: **a double is a Mock only when the test body verifies it** (asserts on calls received). A double that is only set up to return values, never verified, is a Stub.
 
@@ -476,7 +476,7 @@ Patterns that look like core smells but are idiomatic in Node.js / TypeScript an
 
 - **Do not flag `LC-1`** (mocking same-layer code) when the mocked type is an interface owned by the tested module *and* the project has a documented "test via seams" / "interface-segregation" convention (e.g. a `CLAUDE.md`, `README.md`, or ADR stating that interfaces exist specifically for testability). Ask before flagging if ambiguous.
 
-- **Do not flag `LC-7`** (excessive setup) when the setup is constructing a `Testcontainers` stack (`new GenericContainer(...).withEnvironment(...).start()`), `supertest(app)` with a non-trivial app, `new NestApplication(...)` / `Test.createTestingModule(...).compile()` (safety net for NestJS projects until a dedicated extension exists), a `@playwright/test` `webServer` config, or a `vitest.config` `globalSetup` bringing up a real backend for an E2E run. Under the new dispatch model (see [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric)), these are **routing signals into the integration or E2E rubric** — tests using them should be audited under that rubric where heavy setup is expected, not the unit rubric at all. This carve-out stays in force as a **safety net** for cases where the dispatch is uncertain.
+- **Do not flag `LC-7`** (excessive setup) when the setup is constructing a `Testcontainers` stack (`new GenericContainer(...).withEnvironment(...).start()`), `supertest(app)` with a non-trivial app, `new NestApplication(...)` / `Test.createTestingModule(...).compile()` (safety net for NestJS projects until a dedicated extension exists), a `@playwright/test` `webServer` config, or a `vitest.config` `globalSetup` bringing up a real backend for an E2E run. Under the new dispatch model (see [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md)), these are **routing signals into the integration or E2E rubric** — tests using them should be audited under that rubric where heavy setup is expected, not the unit rubric at all. This carve-out stays in force as a **safety net** for cases where the dispatch is uncertain.
 
 - **Do not flag `HC-10`** (snapshot tests pinning unspecified output) when the snapshot target is:
   - A JSON response whose schema is published via an OpenAPI document (any `openapi.{yaml,json}`) in the repo, OR
@@ -489,7 +489,7 @@ Patterns that look like core smells but are idiomatic in Node.js / TypeScript an
 
 ## SUT surface enumeration
 
-Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumeration) — step 2.5 of the deep-mode workflow. This section declares the Node.js / TypeScript grep patterns the audit agent uses to enumerate testable symbols in a SUT and cross-reference them against a test project. Applies under both the unit and integration rubrics; not run under the E2E rubric.
+Consumed by [SKILL.md § SUT surface enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.5 of the deep-mode workflow. This section declares the Node.js / TypeScript grep patterns the audit agent uses to enumerate testable symbols in a SUT and cross-reference them against a test project. Applies under both the unit and integration rubrics; not run under the E2E rubric.
 
 ### SUT identification
 
@@ -575,7 +575,7 @@ When the gap report lists a probable `Gap-API` finding on a SUT shape that Stryk
 
 ## Determinism verification
 
-Consumed by [SKILL.md § Determinism verification](../SKILL.md#determinism-verification) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
+Consumed by [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
 
 ### Cheap-rerun command
 
@@ -612,13 +612,13 @@ Run twice (swap `run1` for `run2` on the second run). Diff the JUnit XML outputs
 
 - **Project size:** skip and recommend targeted rerun of top-N slowest tests when the test project has ≥ 500 test methods. Determine via `grep -rc "^\s*\(it\|test\)\.\?\(only\|skip\)\?\s*[('`]" '<test-dir>'` or similar.
 - **Total elapsed time from run 1:** if run 1 takes more than 60 seconds, warn the user before running run 2. Abort if the user declines.
-- **E2E projects:** never run. Browser-driven suites require different tooling (see [SKILL.md § Determinism verification](../SKILL.md#determinism-verification)).
+- **E2E projects:** never run. Browser-driven suites require different tooling (see [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md)).
 
 ---
 
 ## Mutation tool
 
-The core skill runs mutation testing conditionally in deep mode (see [SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional)). It uses the subsections below to decide whether Stryker Mutator JS is available, how to run it, and whether the SUT is a shape the tool can handle. Applies under unit and integration rubrics; never run under the E2E rubric.
+The core skill runs mutation testing conditionally in deep mode (see [SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md)). It uses the subsections below to decide whether Stryker Mutator JS is available, how to run it, and whether the SUT is a shape the tool can handle. Applies under unit and integration rubrics; never run under the E2E rubric.
 
 ### 1. Tool name and link
 

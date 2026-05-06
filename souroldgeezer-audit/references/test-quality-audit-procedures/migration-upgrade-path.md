@@ -1,6 +1,6 @@
 # Migration upgrade-path enumeration
 
-**When this runs:** step 2.7 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md). For each database migration in the SUT, checks that there is an upgrade-path test that runs the migration against a representative prior-schema state (not an empty database). Runs only in deep mode. Integration-rubric scope: skipped when the loaded extension has no migration-upgrade section.
+**When this runs:** step 2.7 of the deep-mode workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md). For each database migration in the SUT, checks that there is an upgrade-path test that runs the migration against a representative prior-schema state (not an empty database). Runs only in deep mode. Integration-rubric scope: skipped when the loaded extension has no migration-upgrade section.
 
 ## Why an upgrade-path test, not a smoke test
 

@@ -1,6 +1,6 @@
 # Mutation testing (conditional)
 
-**When this runs:** step 4 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md), whenever the loaded extension's declared mutation tool is installed. Skipped gracefully otherwise. Never run in quick mode. Never run against E2E audit targets.
+**When this runs:** step 4 of the deep-mode workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md), whenever the loaded extension's declared mutation tool is installed. Skipped gracefully otherwise. Never run in quick mode. Never run against E2E audit targets.
 
 ## Why it is part of deep mode
 

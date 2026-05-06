@@ -4,13 +4,13 @@ Addon to [robotframework-core.md](robotframework-core.md) loaded **only when ste
 
 **Prerequisite:** `robotframework-core.md` must already be loaded. The test-type detection signals that route a test to E2E live in `robotframework-core.md` because dispatch happens before rubric selection.
 
-**Note on procedures not applicable to E2E:** `robotframework-core.md` declares a Robot-level mutation skip and non-E2E determinism verification. Per [SKILL.md § Mutation testing (conditional)](../SKILL.md#mutation-testing-conditional) and [SKILL.md § Determinism verification](../SKILL.md#determinism-verification), those procedures do not run against E2E targets.
+**Note on procedures not applicable to E2E:** `robotframework-core.md` declares a Robot-level mutation skip and non-E2E determinism verification. Per [SKILL.md § Mutation testing (conditional)](../../skills/test-quality-audit/SKILL.md) and [SKILL.md § Determinism verification](../../skills/test-quality-audit/SKILL.md), those procedures do not run against E2E targets.
 
 ---
 
 ## Sub-lane classification hints
 
-Core [SKILL.md § 0b step 5](../SKILL.md#0b-select-the-rubric) already lists canonical sub-lane routing signals. Robot-specific refinements:
+Core [SKILL.md § 0b step 5](../../skills/test-quality-audit/SKILL.md) already lists canonical sub-lane routing signals. Robot-specific refinements:
 
 - **Tags are primary.** `[Tags]    a11y`, `[Tags]    perf`, `[Tags]    security`, and `Test Tags` equivalents are strong sub-lane signals when the test body matches the tag.
 - **Accessibility.** Axe-style libraries, accessibility audit keywords, focus-order checks, keyboard-only navigation, aria-label assertions, or screen-reader name assertions -> sub-lane A.

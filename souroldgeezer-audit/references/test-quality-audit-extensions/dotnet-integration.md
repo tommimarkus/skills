@@ -77,7 +77,7 @@ public async Task Get_Admin_Returns_Ok()
 
 ## Auth matrix enumeration
 
-Consumed by [SKILL.md § Auth matrix enumeration](../SKILL.md#auth-matrix-enumeration) — step 2.6 of the deep-mode workflow. Integration-only: auth enforcement matrices target HTTP seams, which live under the integration rubric.
+Consumed by [SKILL.md § Auth matrix enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.6 of the deep-mode workflow. Integration-only: auth enforcement matrices target HTTP seams, which live under the integration rubric.
 
 ### Protected-endpoint patterns
 
@@ -115,7 +115,7 @@ For each enumerated endpoint, search the test project for each matrix column:
 
 ## Migration upgrade-path enumeration
 
-Consumed by [SKILL.md § Migration upgrade-path enumeration](../SKILL.md#migration-upgrade-path-enumeration) — step 2.7 of the deep-mode workflow. Integration-only: migrations run against a real data store.
+Consumed by [SKILL.md § Migration upgrade-path enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.7 of the deep-mode workflow. Integration-only: migrations run against a real data store.
 
 ### Migration enumeration pattern
 

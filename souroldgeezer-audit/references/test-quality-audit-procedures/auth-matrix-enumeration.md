@@ -1,6 +1,6 @@
 # Auth matrix enumeration
 
-**When this runs:** step 2.6 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md). Enumerates protected endpoints in the SUT and checks whether each cell of the auth scenario matrix has test coverage. Runs only in deep mode. Integration-rubric scope: skipped when the loaded extension has no auth-matrix section.
+**When this runs:** step 2.6 of the deep-mode workflow in [../../skills/test-quality-audit/SKILL.md](../../skills/test-quality-audit/SKILL.md). Enumerates protected endpoints in the SUT and checks whether each cell of the auth scenario matrix has test coverage. Runs only in deep mode. Integration-rubric scope: skipped when the loaded extension has no auth-matrix section.
 
 ## Why a matrix instead of per-test smells
 

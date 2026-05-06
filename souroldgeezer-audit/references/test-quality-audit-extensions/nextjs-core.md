@@ -50,7 +50,7 @@ Record these on detection:
 
 ## Test type detection signals
 
-Consumed by [SKILL.md § 0b (Rubric selection)](../SKILL.md#0b-select-the-rubric). Next.js **rewrites the test-type routing rules** because the file's location in the Next.js source tree dictates whether the test can be unit, integration, or E2E — a Server Component cannot be meaningfully unit-tested in isolation, a Route Handler is out-of-process contract, and a Server Action is in-process with a real DB.
+Consumed by [SKILL.md § 0b (Rubric selection)](../../skills/test-quality-audit/SKILL.md). Next.js **rewrites the test-type routing rules** because the file's location in the Next.js source tree dictates whether the test can be unit, integration, or E2E — a Server Component cannot be meaningfully unit-tested in isolation, a Route Handler is out-of-process contract, and a Server Action is in-process with a real DB.
 
 ### Next.js file-shape routing table
 
@@ -274,7 +274,7 @@ Patterns that look like `nodejs.*` or core smells but are idiomatic in Next.js a
 
 ## SUT surface enumeration
 
-Consumed by [SKILL.md § SUT surface enumeration](../SKILL.md#sut-surface-enumeration) — step 2.5 of the deep-mode workflow. This section **extends** `nodejs-core.md`'s five-class enumeration with Next.js-specific patterns. Classes deferred entirely to `nodejs-core.md` are marked as such; classes with additional Next.js patterns below are layered *on top of* the `nodejs-core.md` patterns (both fire; de-duplicate at the audit-output stage).
+Consumed by [SKILL.md § SUT surface enumeration](../../skills/test-quality-audit/SKILL.md) — step 2.5 of the deep-mode workflow. This section **extends** `nodejs-core.md`'s five-class enumeration with Next.js-specific patterns. Classes deferred entirely to `nodejs-core.md` are marked as such; classes with additional Next.js patterns below are layered *on top of* the `nodejs-core.md` patterns (both fire; de-duplicate at the audit-output stage).
 
 ### `Gap-API` (Next.js additions)
 
