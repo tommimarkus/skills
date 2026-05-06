@@ -1,224 +1,76 @@
 ---
 name: software-design
-description: Use when building, extracting, reviewing, or looking up sustainable software design for code changes, modules, scripts, libraries, services, refactors, or existing codebases, especially when the task needs boundary placement, dependency direction, responsibility assignment, semantic coherence, coupling control, evolutionary design, or .NET™, shell-script, or Python® tooling project guidance without duplicating UI, API, infrastructure, architecture-model, security-audit, or test-quality specialist skills.
+description: >-
+  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test-quality work.
 ---
 
 # Software Design
 
-## Overview
+## Purpose
 
-Shape software so the current change is coherent, small enough to validate, and cheap to change later. The skill applies the bundled reference at [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md) and cites the smell catalog in [references/smell-catalog.md](references/smell-catalog.md).
+Shape code-, script-, and module-level design so changes stay coherent. Use
+[../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md)
+and [references/smell-catalog.md](references/smell-catalog.md).
 
-This is the design companion one layer closer to code than
-`architecture-design` and one layer more general than `app-design`,
-`api-design`, or `infra-design`. It does not produce architecture diagrams, API
-contracts, infrastructure/IaC topology, frontend app/UI behavior, security
-audits, or test-quality classifications.
+## Contract
 
-When changing trigger metadata, workflow behavior, extension selection, source
-grounding, or evaluation coverage for this skill, read `references/evals` and
-`references/source-grounding.md` first. Keep eval cases synthetic or originally
-paraphrased; do not copy external prompts, code, examples, diagrams, or docs
-into this plugin.
+Own Build, Extract, Review, and Lookup for boundaries, dependencies,
+responsibilities, state/data ownership, semantics, coupling, evolution, and debt.
+Delegate app/UI, API, infra/IaC, ArchiMate/OEF, security, and test quality to
+`app-design`, `api-design`, `infra-design`, `architecture-design`,
+`devsecops-audit`, and `test-quality-audit`.
 
-## Modes
+Inputs: files, diffs/proposals, intent, and provided history/runtime/human
+evidence. Do not infer non-static facts from static source. If the request is
+ambiguous, ask the user when mode, scope, source, evidence cost, destructive
+edits, or sibling ownership lack a safe default; otherwise continue.
 
-### Build Mode
+Modes: Build new/refactored design; Extract existing design; Review code, PRs,
+proposals, or plans; Lookup narrow principles/tradeoffs.
 
-Use for a new feature, module, workflow, library seam, refactor target, or code change before implementation.
+## Load Map
 
-Output a compact design brief:
+Load what applies: core reference sections 2-7 and 9;
+[references/smell-catalog.md](references/smell-catalog.md) for `SD-*` findings;
+[extensions/dotnet.md](extensions/dotnet.md) for .NET solution/project signals;
+[extensions/shell-script.md](extensions/shell-script.md) for shell or portability
+signals; [extensions/python.md](extensions/python.md) for repo-internal Python
+tooling signals; and [extensions/README.md](extensions/README.md) only when
+editing extensions. Skip Python web/ASGI apps and delegate app/API concerns.
 
-```text
-Mode: Build
-Scope:
-Forces:
-Recommended design:
-Boundaries:
-Dependency direction:
-State / data ownership:
-Deferred decisions:
-Rejected abstractions:
-Validation step:
-Delegations:
-Footer:
-```
+Before changing trigger metadata, workflow, extension selection, grounding, or
+evals, load [references/evals](references/evals) and
+[references/source-grounding.md](references/source-grounding.md); keep evals
+synthetic/paraphrased. Unknown stacks use core only.
 
-### Extract Mode
+## Workflow
 
-Use when adapting to an existing codebase or when the user asks what design is already present.
+1. Select mode, scope, and design question.
+2. Prefer `rg`; inspect inputs, detect stack, and announce extensions.
+3. Assimilate modules, refs/imports, adapters, shared code, terms, duplicated
+   models, state owners, seams, and debt.
+4. Separate fact from inference, choose the smallest coherent move, include
+   available mandatory extension validation, then emit contract/footer.
 
-Output a software-design baseline:
+## Mode Outputs
 
-```text
-Mode: Extract
-Scope:
-Signals inspected:
-Current design map:
-Boundary candidates:
-Coupling hotspots:
-Semantic drift:
-Design debt:
-Preserve:
-Next smallest move:
-Delegations:
-Footer:
-```
+- Build: scope/forces, pattern, responsibilities, dependencies, state owner,
+  deferred decisions, rejected abstractions, validation, delegations.
+- Extract: modules, boundaries, ownership, dependencies, clusters, hotspots,
+  seams, debt, next move.
+- Review: actionable findings only; `block` fragmentation, unsafe path, cycle,
+  inversion, duplicate model, shared state, speculation, or load-bearing legacy;
+  `warn` risk, `info` note/deferred check.
+- Lookup: direct rule, exception, citation, delegation, one-line footer.
 
-### Review Mode
+Every final answer reports mode, extensions, reference path, verification layers
+(`static`, `graph`, `history`, `runtime`, `human`), assimilation, delegations,
+and limits. Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer,
+severity, evidence, action, and citation. If none, say so with limits.
 
-Use for code, pull requests, design proposals, planned implementations, or "is this design good?" questions.
+## Stop Conditions
 
-Per finding:
-
-```text
-[SD-<family>-<n>] <file>:<line>
-  bucket:   waste | boundary | coupling | semantic | evolution | tradeoff | socio-technical
-  layer:    static | graph | history | runtime | human
-  severity: block | warn | info
-  evidence: <short snippet or observed structure>
-  action:   <smallest useful design correction>
-  ref:      software-design.md section <n.m> + smell code or extension code
-```
-
-Block only when the design likely forces expensive fragmentation or makes the requested change unsafe: circular project references, boundary inversion, duplicated domain models, shared mutable domain state, mandatory speculative abstractions, or a load-bearing legacy pattern that new work cannot avoid.
-
-### Lookup Mode
-
-Use for narrow design questions: "Should this be a service?", "Where should this responsibility live?", "Is this abstraction premature?", "How should I split this module?"
-
-Answer in two to six lines, cite the reference section, and include a footer line.
-
-## Default Dispatch
-
-- Existing repo with no specific change: Extract.
-- New feature or refactor request: Build.
-- Existing code or proposal with review/audit/is-this-good wording: Review.
-- Narrow principle or tradeoff question: Lookup.
-- Ambiguous request: ask the user to choose.
-
-## Extensions
-
-Load extensions only when source signals match.
-
-| Extension | Applies to | Loaded when target matches |
-|---|---|---|
-| [extensions/dotnet.md](extensions/dotnet.md) | .NET solution and project design | `.sln`, `.slnx`, `.csproj`, `.cs`, `Directory.Build.*`, `global.json`, `InternalsVisibleTo`, `IServiceCollection`, `DbContext`, `BackgroundService`, or package references commonly used in .NET applications |
-| [extensions/shell-script.md](extensions/shell-script.md) | Bash and zsh shell-script design | `.sh`, `.bash`, `.zsh`, executable files with `bash`, `zsh`, or `sh` shebangs, `BASH_SOURCE`, `ZSH_VERSION`, `setopt`, `emulate`, `autoload`, `source`, `trap`, shell completion/bootstrap files, or Linux/macOS/WSL portability requirements |
-| [extensions/python.md](extensions/python.md) | Repo-internal Python® tooling design | `.py` files under `scripts/`, `tools/`, `bin/`, `dev/`, `tasks/`, `hack/`, or `ci/`; `#!/usr/bin/env python*` shebangs; `[project.scripts]` / `console_scripts` entries; PEP 723 `# /// script` inline metadata; or files invoked from `Makefile`, `justfile`, `tox.ini`, `noxfile.py`, or `.github/workflows/**`. Skip when the file or project imports `django`, `flask`, `fastapi`, `starlette`, `aiohttp`, `litestar`, `sanic`, `bottle`, `pyramid`, `tornado`, or `quart`. |
-
-Unknown stacks proceed with the core reference only. The .NET extension adds stack-specific evidence and smell codes in the `dotnet.SD-*` namespace; the shell-script extension adds Bash/zsh and Linux/macOS/WSL portability evidence and smell codes in the `shell.SD-*` namespace; the Python® tooling extension adds repo-internal-script evidence and smell codes in the `python.SD-*` namespace. Extensions never override core rules.
-
-## Pre-Flight
-
-Before build, extract, or review:
-
-1. Identify mode and scope. If the user supplied files, read only the relevant slice first.
-2. Identify the design question: smallest change, boundary placement, dependency direction, semantic model, refactor path, tradeoff, or ownership fit.
-3. Detect stack and load matching extensions. Announce loaded extensions.
-4. Read the reference sections needed for the mode:
-   - Principles and defaults: reference sections 2 and 3.
-   - Primitives and patterns: sections 4 and 5.
-   - Smells and checklist: sections 6 and 7 plus [references/smell-catalog.md](references/smell-catalog.md).
-5. State verification layers available from the current evidence: `static`, `graph`, `history`, `runtime`, `human`.
-6. Delegate instead of stretching the skill when the request belongs to a sibling skill.
-
-If the user has not supplied a product/domain constraint, default to the smallest coherent design that satisfies the source-readable requirement and leaves deferred decisions explicit.
-
-## Project Assimilation
-
-Assimilation is one-way: the project is brought up to the reference; the reference is not weakened to match local drift.
-
-For build and review work in an existing repo, inspect these signals before recommending a design:
-
-1. Module/project/package shape: solution files, project files, package manifests, top-level directories.
-2. Dependency direction: project references, imports/usings, adapters, shared libraries.
-3. Semantic boundaries: repeated domain terms, duplicated models, DTO/entity/domain leakage.
-4. Change-locality evidence: recent churn if history is in scope, duplicated edits, fan-out hotspots.
-5. Existing compliant seams worth preserving.
-6. Legacy debt that must not be extended silently.
-
-Reuse compliant structure and names. Flag non-compliant design as legacy debt.
-If legacy debt is load-bearing for the requested change, halt and ask whether
-to expand scope or choose a smaller safe change.
-
-## Build Workflow
-
-1. Confirm Build mode and load extensions.
-2. Frame scope as in/out. Name the design forces using reference section 3.
-3. Choose the smallest design primitive or pattern from reference sections 4 and 5.
-4. Define responsibilities and dependency direction. Prefer hiding volatile decisions behind the boundary that owns them.
-5. Name deferred decisions and rejected abstractions. This is mandatory when common abstractions are tempting but unjustified.
-6. Pick the cheapest validation step: a narrow implementation spike, characterization test, design review with a domain expert, dependency-graph check, or runtime measurement. Include any validation step that a loaded extension marks as mandatory when that validator is available.
-7. Emit the Build output contract and footer.
-
-## Extract Workflow
-
-1. Confirm Extract mode and load extensions.
-2. Inspect source-readable structure first. Use `rg`/file reads, project manifests, import/reference graphs, and only then history/runtime/human evidence if the user supplied or approved it.
-3. Separate facts from inference. Mark inferred intent explicitly.
-4. Produce a current design map: modules, boundaries, ownership signals, dependency direction, semantic clusters, coupling hotspots, and preserved seams.
-5. Identify the next smallest useful design move. Avoid proposing a broad redesign when one boundary correction or deletion of a speculative abstraction would unlock the work.
-6. Emit the Extract output contract and footer.
-
-## Review Workflow
-
-1. Confirm Review mode and load extensions.
-2. Walk the checklist in reference section 7 and the smell catalog.
-3. Emit only actionable findings. Do not pad with generic best-practice commentary.
-4. Use severity consistently:
-   - `block`: likely fragmentation, unsafe change path, or mandatory new-code routing through a bad design.
-   - `warn`: maintainability or evolution risk with a clear smaller correction.
-   - `info`: useful design note or deferred validation.
-5. Keep layer claims honest. Static review cannot prove runtime, history, or human/ownership facts.
-6. Follow findings with a short rollup and footer.
-
-## Lookup Workflow
-
-1. Locate the relevant reference section or smell code.
-2. Answer directly with the default rule and the exception boundary.
-3. Recommend a sibling skill only when the question crosses into that sibling's scope.
-4. Emit a one-line footer.
-
-## Delegation Boundaries
-
-- Web frontend application structure, component architecture, route/screen
-  design, frontend state/data behavior, browser runtime behavior, responsive
-  behavior, accessibility, internationalization, visual behavior, and Core Web
-  Vitals: `app-design`. `software-design` supports app-design from the
-  engineering side for decomposition, dependency direction, helper/library
-  extraction, state-machine shape, adapter boundaries, and coupling risks
-  underneath frontend features.
-- HTTP API contract, auth, reliability, API runtime behavior, API observability, and data-service patterns: `api-design`.
-- Infrastructure/IaC topology, cloud-resource design, environment/state
-  ownership, rollout/rollback, and operations handoff: `infra-design`.
-- ArchiMate models, OEF XML, enterprise/solution architecture, and code-to-architecture drift: `architecture-design`.
-- Pipeline, IaC security posture, release artifact hardening, secrets, least
-  privilege, or application security posture: `devsecops-audit`.
-- Unit/integration/E2E test quality or mutation-testing worklists: `test-quality-audit`.
-
-## Footer
-
-Every mode emits:
-
-```text
-Mode:
-Extensions loaded:
-Reference path: souroldgeezer-design/docs/software-reference/software-design.md
-Verification layers used:
-Project assimilation:
-Delegations:
-Limits:
-```
-
-## Red Flags
-
-Stop and revise before delivering if output:
-
-- Adds a generic interface, base class, repository, event bus, mediator, plugin system, shared kernel, or framework layer without current evidence.
-- Moves logic only to match folder names while preserving the same coupling.
-- Duplicates a domain model or vocabulary in a second boundary without naming the translation rule.
-- Claims runtime performance, production operability, team ownership, or change-frequency facts from static source alone.
-- Extends a legacy design violation into new code without flagging it.
-- Reviews API, frontend app/UI, infrastructure, security-audit, test-quality, or ArchiMate
-  concerns instead of delegating.
+Stop when source/scope is missing, sibling ownership dominates, required
+non-static facts are absent, load-bearing debt has no smaller safe move,
+extension validation is unavailable, or a generic interface/base/repository/bus/
+mediator/shared-kernel/plugin/framework layer lacks current evidence.
