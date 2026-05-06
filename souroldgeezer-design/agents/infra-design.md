@@ -1,6 +1,7 @@
 ---
 name: infra-design
-description: Use when building, extracting, reviewing, or looking up infrastructure design for IaC, cloud resources, deployment topology, environment strategy, state, identity boundaries, rollout/rollback, operations handoff, or Azure®, Terraform™, and Bicep™ surfaces without duplicating API, UI, code, architecture-model, security-audit, or test-quality specialist skills.
+description: >-
+  Use when building, extracting, reviewing, or looking up infrastructure/IaC design: topology, environments, state, identity, rollout/rollback, operations handoff, and Azure®, Terraform™, or Bicep™. Defer API, UI, code, architecture, security, and test-quality work.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
