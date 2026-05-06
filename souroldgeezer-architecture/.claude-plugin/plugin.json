@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-architecture",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers OEF XML build/extract/review/render/lookup, canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, deployment topology, trust boundaries, packaged Java™ layout validation, warning evidence, route repair, global polish, OEF materialization, rendered PNG validation, external validation handoff, layout policy diagnostics, layout provenance output, change classification, per-view readiness matrix, render-contract disclosure, skill self-check, matching Claude Code subagent, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",

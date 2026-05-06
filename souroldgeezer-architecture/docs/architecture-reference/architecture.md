@@ -929,7 +929,7 @@ diffs are all clean for the requested quality level.
 - [runtime] Technology Nodes in this diagram correspond to IaC resources (for Azure: Bicep). Nodes that have no IaC are flagged as *planned* or *out-of-scope*.
 - [runtime] Implementation & Migration Work Packages in this diagram correspond to workflows in `.github/workflows/` where applicable.
 - [runtime] Application Components that represent HTTP APIs have corresponding runtime projects or deployed API resources described by `api-design` output; loaded runtime extensions provide concrete technology mappings such as Azure Function Apps. Drift between the ArchiMate component set and the deployed API set is reported.
-- [runtime] Application Components that represent UI apps have corresponding Blazor WebAssembly projects or equivalent described by `responsive-design` output; drift is reported.
+- [runtime] Application Components that represent frontend apps have corresponding Blazor WebAssembly projects or equivalent described by `app-design` output; drift is reported.
 - [runtime] Business Processes in `docs/architecture/**/*.oef.xml` have matching Durable Functions orchestrators or Logic Apps workflows in the repo (`AD-DR-11`), and every Durable Functions orchestrator and Logic Apps workflow is referenced by some Business Process (`AD-DR-12`); `LIFT-CANDIDATE source=` paths resolve to existing files.
 
 ## 11. Authoritative sources
@@ -947,5 +947,5 @@ The `architecture-design` skill composes with two design skills in
 in the architect's model — the sibling references document what that component
 looks like on its own terms.
 
-- `../../souroldgeezer-design/docs/ui-reference/responsive-design.md` — UI surface of a Blazor WebAssembly or HTML/CSS/JS Application Component.
+- `../../souroldgeezer-design/docs/app-reference/app-design.md` — frontend app surface of a Blazor WebAssembly or HTML/CSS/JS Application Component.
 - `../../souroldgeezer-design/docs/api-reference/api-design.md` — HTTP API surface of an Application Component, including Technology-Layer details supplied by loaded runtime/data extensions, such as Cosmos DB, Blob Storage, Key Vault, managed identity, or Azure Functions resources that appear as Nodes and System Software in ArchiMate Technology Usage views.

@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, validating, repairing, or looking up enterprise, solution, or application architecture models in ArchiMate® 3.2 OEF XML, including runtime layout contract checks, layout policy diagnostics, machine-readable layout warning evidence, route repair, global polish, layout-result to OEF materialization, per-view layout provenance output, rendered PNG validation, change classification, professional-readiness review of OEF views, architecture drift checks, and reverse lookup from code, UI, API, or workflow artifacts to owning Business Processes.
+description: Use when building, extracting, reviewing, rendering, validating, repairing, or looking up ArchiMate® 3.2 OEF XML architecture models, especially layout/runtime checks, readiness review, PNG validation, drift detection, or reverse lookup from code, UI, API, or workflows to Business Processes.
 ---
 
 # Architecture Design
@@ -43,10 +43,11 @@ Does not own:
 
 Sibling handoffs:
 
-- `responsive-design` and `api-design` produce code/API surfaces that this skill
-  can model and review for drift through `docs/architecture/<feature>.oef.xml`.
-- `devsecops-audit` audits pipeline and infrastructure posture; this skill only
-  models those workflows as architecture elements.
+- `app-design`, `api-design`, and `infra-design` own app, API, and
+  infrastructure design; this skill models those surfaces and reviews paired
+  `docs/architecture/<feature>.oef.xml` files for architecture drift.
+- `devsecops-audit` audits security posture; this skill only models controls
+  and workflows as architecture elements.
 
 ## When To Use
 
@@ -132,138 +133,58 @@ architect intent instead.
 
 ## Reference Load Map
 
-Always one-hop discoverable from this router:
+Load only the files whose conditions apply:
 
-- `../../docs/architecture-reference/architecture.md`: load for notation
-  principles, element/relationship rules, OEF serialization, diagram kinds,
-  smell definitions, and checklist references.
-- `references/procedures/architecture-operational-workflow.md`: load for
-  mode-specific steps, pre-flight details, project assimilation, render-polish
-  loop, forward-only rules, preservation rules, and validation sequencing.
-- `references/smell-catalog.md`: load when emitting or interpreting `AD-*`,
-  `AD-L*`, `AD-B-*`, `AD-Q*`, or `AD-DR-*` findings.
-- `references/procedures/professional-readiness.md`: load for every Build,
-  Extract, and Review readiness verdict; it owns the per-view matrix,
-  authority axis, render gate, and `AD-Q*` findings.
-- `references/procedures/layout-strategy.md`: load for every Build/Extract view
-  and any Review repair or polish request; it selects preserve-authored,
-  route-repair-only, generated-layout-recreate, or global-reflow intent.
-- `references/procedures/layout-backend-contract.md`,
+- Use `../../docs/architecture-reference/architecture.md` as needed for the
+  full notation and modeling reference.
+- Use `references/procedures/architecture-operational-workflow.md`,
+  `references/procedures/self-check.md`, and `references/output-format.md` as
+  needed for workflow, self-check, and response contracts.
+- Use `references/smell-catalog.md` and `references/red-flags.md` as needed
+  for Review findings and escalation cues.
+- For readiness and validation, load `references/procedures/` files:
+  `professional-readiness.md` for every Build, Extract, and Review verdict;
+  `external-validation-handoff.md` for supplied Archi import, Validate Model,
+  schema, `xmllint --schema`, or conformant-tool findings;
+  `rendered-png-validation.md` after PNGs exist; `drift-detection.md` when
+  Review compares source, IaC, or workflows.
+- For layout, load `references/procedures/layout-strategy.md` for every
+  Build/Extract view and any repair or polish Review; then load
+  `references/procedures/layout-backend-contract.md`,
   `references/procedures/layout-policies-by-viewpoint.md`,
-  `references/procedures/routing-and-glossing.md`, and
-  `references/procedures/layout-fallback.md`: load only when the layout strategy
-  selects backend generation, viewpoint policy, routing/route repair/global
-  polish, or fallback layout.
-- `references/procedures/lifting-rules-dotnet.md`,
-  `references/procedures/lifting-rules-bicep.md`,
-  `references/procedures/lifting-rules-gha.md`,
-  `references/procedures/lifting-rules-process.md`,
-  `references/procedures/process-view-emission.md`, and
-  `references/procedures/seed-views.md`: load only for Extract, or for Build
+  `references/procedures/routing-and-glossing.md`,
+  `references/procedures/layout-fallback.md`. Load `references/schemas` when
+  request/result/provenance validation is in scope.
+- For extraction and process views:
+  load `lifting-rules-dotnet.md`, `lifting-rules-bicep.md`,
+  `lifting-rules-gha.md`, `lifting-rules-process.md`,
+  `process-view-emission.md`, and `seed-views.md` only for Extract, or for Build
   when process-view emission is requested.
-- `references/procedures/drift-detection.md`: load when Review includes current
-  source/IaC/workflow comparison or the user asks whether a model drifted.
-- `references/procedures/external-validation-handoff.md`: load only when the
-  user supplies Archi import, Archi Validate Model, schema, `xmllint --schema`,
-  or conformant-tool findings.
-- `references/procedures/rendered-png-validation.md`: load after PNGs exist or
-  when rendered view comparison is requested.
-- `references/schemas/layout-request.schema.json`,
-  `references/schemas/layout-result.schema.json`, and
-  `references/schemas/layout-provenance.schema.json`: load when validating,
-  emitting, or debugging layout request/result/provenance JSON.
-- `references/bin/arch-layout.jar`: never inspect directly during normal skill
-  use; it is the packaged Java runtime invoked through
-  `references/scripts/arch-layout.sh`.
-- `references/scripts/validate-oef-layout.sh`: run for local materialized OEF
-  views in Build/Extract self-check and Review artifact passes.
-- `references/scripts/arch-layout.sh`: run for layout runtime commands:
-  `--version`, `validate-request`, `validate-result`, `layout-elk`,
-  `route-repair`, `global-polish`, `materialize-oef`, `layout-provenance`, and
-  `validate-png`.
-- `references/scripts/archi-render.sh` and `references/scripts/validate-model.ajs`:
-  run only for explicit render requests, render-polish loops, or visual
-  inspection gates; Archi and jArchi support are weak dependencies with no
-  fallback renderer.
-- `references/scripts/package-arch-layout.sh`: run only for plugin release
-  packaging or runtime refresh after Java source changes; it rebuilds and copies
-  `references/bin/arch-layout.jar`.
-- `references/red-flags.md`: load when checks fail, output contains findings,
-  import/schema/Validate Model reports unresolved issues, or before claiming
-  `diagram-readable` / `review-ready` after a failed check.
-- `references/evals/` and `references/source-grounding.md`: load only when
-  changing trigger metadata, workflow behavior, layout/runtime gates, source
-  grounding, or evaluation coverage.
-- `references/fixtures/README.md` and top-level fixture OEF examples
-  `references/fixtures/application-cooperation.oef.xml`,
-  `references/fixtures/business-process-cooperation.oef.xml`,
-  `references/fixtures/capability-map.oef.xml`,
-  `references/fixtures/migration.oef.xml`,
-  `references/fixtures/motivation.oef.xml`,
-  `references/fixtures/service-realization.oef.xml`, and
-  `references/fixtures/technology-usage.oef.xml`: load only when validating or
-  changing the regression corpus or example coverage.
-- `references/fixtures/render-quality-gate`,
-  `references/fixtures/layout-backend-contract`,
-  `references/fixtures/layout-contract`,
-  `references/fixtures/layout-elk-java`,
-  `references/fixtures/layout-elk-realistic`,
-  `references/fixtures/route-repair`,
-  `references/fixtures/global-polish`,
-  `references/fixtures/materialize-oef`, and
-  `references/fixtures/rendered-png`: load only when changing the matching
-  layout backend, route repair, global polish, OEF materialization, or PNG
-  validation behavior.
-
-Tooling support load cues:
-
-- Use references/bin/arch-layout.jar through `references/scripts/arch-layout.sh`
-  when the packaged layout runtime is needed.
-- Load references/fixtures when validating the whole architecture-design fixture
-  corpus.
-- Load references/fixtures/layout-quality-cases.md when changing layout quality
-  examples.
-- Load references/fixtures/lifting-quality-cases.md when changing extraction or
-  lifting examples.
-- Load references/fixtures/professional-quality-cases.md when changing
-  professional-readiness examples.
-- Run references/fixtures/validate-render-fixtures.sh when validating render
-  fixture coverage.
-- Load references/fixtures/global-polish when changing global polish cases.
-- Load references/fixtures/layout-backend-contract when changing backend
-  request/result contracts.
-- Load references/fixtures/layout-contract when changing layout schema
-  acceptance or rejection behavior.
-- Load references/fixtures/layout-elk-java when changing Java layout backend
-  cases.
-- Load references/fixtures/layout-elk-realistic when changing realistic
-  request-to-materialized-OEF layout loops.
-- Load references/fixtures/materialize-oef when changing layout-result to OEF
-  materialization.
-- Load references/fixtures/render-quality-gate when changing static render
-  quality gates.
-- Load references/fixtures/rendered-png when changing PNG validation.
-- Load references/fixtures/route-repair when changing route repair.
-- Load references/procedures/layout-backend-contract.md when changing layout
-  backend contracts.
-- Load references/procedures/layout-policies-by-viewpoint.md when changing
-  viewpoint policy selection.
-- Load references/procedures/lifting-rules-bicep.md when extracting Bicep.
-- Load references/procedures/lifting-rules-dotnet.md when extracting .NET.
-- Load references/procedures/lifting-rules-gha.md when extracting GitHub
-  Actions.
-- Load references/procedures/lifting-rules-process.md when extracting process
-  candidates.
-- Load references/procedures/process-view-emission.md when process views are
-  emitted.
-- Load references/procedures/routing-and-glossing.md when routing, route
-  repair, or route glossing is needed.
-- Load references/procedures/seed-views.md when Extract emits forward-only seed
-  views.
-- Validate references/schemas/layout-request.schema.json when checking layout
-  requests.
-- Validate references/schemas/layout-result.schema.json when checking layout
-  results.
+- For local materialized OEF views, run
+  `references/scripts/validate-oef-layout.sh`.
+- For layout runtime work, run `references/scripts/arch-layout.sh`
+  (`--version`, `validate-request`, `validate-result`, `layout-elk`,
+  `route-repair`, `global-polish`, `materialize-oef`, `layout-provenance`,
+  `validate-png`); use `references/bin/arch-layout.jar` only through that script.
+- For explicit render/visual gates, run `references/scripts/archi-render.sh`
+  and `references/scripts/validate-model.ajs`.
+- For plugin release packaging or Java runtime refresh, run `references/scripts/package-arch-layout.sh`.
+- For fixture corpus work, use `references/fixtures`,
+  `references/fixtures/README.md`,
+  `references/fixtures/validate-render-fixtures.sh`, and the matching fixture
+  family.
+- Use `references/fixtures/global-polish` when global polish fixtures are in scope.
+- Use `references/fixtures/layout-backend-contract` when backend contract fixtures are in scope.
+- Use `references/fixtures/layout-contract` when request/result schema fixtures are in scope.
+- Use `references/fixtures/layout-elk-java` when Java ELK layout fixtures are in scope.
+- Use `references/fixtures/layout-elk-realistic` when realistic ELK fixtures are in scope.
+- Use `references/fixtures/materialize-oef` when materialization fixtures are in scope.
+- Use `references/fixtures/render-quality-gate` when render quality fixtures are in scope.
+- Use `references/fixtures/rendered-png` when PNG validation fixtures are in scope.
+- Use `references/fixtures/route-repair` when route repair fixtures are in scope.
+- For trigger metadata, workflow behavior, layout/runtime gates, source
+  grounding, or evaluation coverage, load `references/evals` and
+  `references/source-grounding.md`.
 
 ## Output Contract
 
