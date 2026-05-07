@@ -10,8 +10,8 @@
     "backendVersion" : "0.11.0",
     "backendMode" : "generated-layout",
     "mode" : "generated-layout",
-    "request" : "/home/souroldgeezer/repos/skills/.worktrees/architecture-ir-runtime/souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-requests/id-view-service-realization.request.json",
-    "result" : "/home/souroldgeezer/repos/skills/.worktrees/architecture-ir-runtime/souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-results/id-view-service-realization.result.json",
+    "request" : "souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-requests/id-view-service-realization.request.json",
+    "result" : "souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-results/id-view-service-realization.result.json",
     "sourceGeometryGate" : "not-run",
     "renderGate" : "not-requested",
     "commands" : {

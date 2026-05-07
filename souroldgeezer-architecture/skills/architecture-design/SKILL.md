@@ -178,6 +178,8 @@ Load only the files whose conditions apply:
   `validate-result`, `layout-elk`, `route-repair`, `global-polish`,
   `materialize-oef`, `layout-provenance`, `validate-png`); use
   `references/bin/arch-layout.jar` only through that script.
+- Use `references/bin/arch-layout.jar` only for packaged runtime evidence,
+  version checks, or release packaging review.
 - For explicit render/visual gates, run `references/scripts/archi-render.sh`
   and `references/scripts/validate-model.ajs`.
 - For plugin release packaging or Java runtime refresh, run `references/scripts/package-arch-layout.sh`.
@@ -188,6 +190,16 @@ Load only the files whose conditions apply:
 - Use `references/fixtures/global-polish` when global polish fixtures are in scope.
 - Use `references/fixtures/architecture-ir` when Architecture IR package
   validation, OEF import/export, freshness, or round-trip behavior is in scope.
+- Use `references/fixtures/architecture-ir/service-realization` when testing
+  the valid IR round trip or expected OEF export.
+- Use `references/fixtures/architecture-ir/service-realization/layout-requests`
+  when testing generated IR layout request fixtures.
+- Use `references/fixtures/architecture-ir/service-realization/layout-results`
+  when testing generated IR layout result fixtures.
+- Use `references/fixtures/architecture-ir/service-realization/layout-provenance`
+  when testing generated IR layout provenance fixtures.
+- Use `references/fixtures/architecture-ir/invalid/missing-lock-target` when
+  testing IR cross-file diagnostics for broken geometry locks.
 - Use `references/fixtures/layout-backend-contract` when backend contract fixtures are in scope.
 - Use `references/fixtures/layout-contract` when request/result schema fixtures are in scope.
 - Use `references/fixtures/layout-elk-java` when Java ELK layout fixtures are in scope.
