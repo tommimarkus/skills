@@ -1,0 +1,29 @@
+{
+  "schemaVersion" : "1.0",
+  "generatedBy" : "arch-layout 0.28.0",
+  "views" : [ {
+    "viewId" : "id-view-service-realization",
+    "viewpoint" : "Service Realization",
+    "layoutIntent" : "generated-layout-recreate",
+    "selectedGeometryPath" : "layout-elk",
+    "backend" : "elk-layered",
+    "backendVersion" : "0.11.0",
+    "backendMode" : "generated-layout",
+    "mode" : "generated-layout",
+    "request" : "/home/souroldgeezer/repos/skills/.worktrees/architecture-ir-runtime/souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-requests/id-view-service-realization.request.json",
+    "result" : "/home/souroldgeezer/repos/skills/.worktrees/architecture-ir-runtime/souroldgeezer-architecture/skills/architecture-design/references/fixtures/architecture-ir/service-realization/layout-results/id-view-service-realization.result.json",
+    "sourceGeometryGate" : "not-run",
+    "renderGate" : "not-requested",
+    "commands" : {
+      "geometry" : "layout-elk",
+      "requestValidation" : "validate-request",
+      "resultValidation" : "validate-result",
+      "materialization" : "not-run",
+      "renderValidation" : "not-run"
+    },
+    "postProcessing" : [ "snap-10px" ],
+    "responseSummary" : "id-view-service-realization: layout-elk (elk-layered 0.11.0, mode generated-layout); source geometry gate: not-run; render gate: not-requested",
+    "readmeMarkdown" : "| id-view-service-realization | layout-elk | elk-layered 0.11.0 | generated-layout | not-run | not-requested |",
+    "oefDocumentation" : "Layout provenance: view id-view-service-realization; geometry path: layout-elk; backend: elk-layered 0.11.0; source geometry gate: not-run; render gate: not-requested."
+  } ]
+}

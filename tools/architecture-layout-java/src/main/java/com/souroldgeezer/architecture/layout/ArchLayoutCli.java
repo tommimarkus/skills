@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrCompiler;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefImporter;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefExporter;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrPaths;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrValidator;
 import com.souroldgeezer.architecture.layout.png.PngAnalysisResult;
@@ -42,7 +43,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.ValidateIrCommand.class,
                 ArchLayoutCli.ImportOefCommand.class,
                 ArchLayoutCli.CompileIrCommand.class,
-                ArchLayoutCli.BuildIrArtifactsCommand.class
+                ArchLayoutCli.BuildIrArtifactsCommand.class,
+                ArchLayoutCli.ExportOefCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -210,6 +212,21 @@ public final class ArchLayoutCli implements Callable<Integer> {
                 case "global-polish" -> new GlobalPolishBackend().polish(request);
                 default -> new ElkLayoutBackend().layout(request);
             };
+        }
+    }
+
+    @Command(name = "export-oef", description = "Export architecture IR and layout results to OEF XML.")
+    static final class ExportOefCommand implements Callable<Integer> {
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+        @Option(names = "--out", required = true)
+        Path out;
+
+        @Override
+        public Integer call() throws IOException {
+            new ArchitectureIrOefExporter().export(archDir, out);
+            System.out.println("wrote OEF export: " + out);
+            return 0;
         }
     }
 

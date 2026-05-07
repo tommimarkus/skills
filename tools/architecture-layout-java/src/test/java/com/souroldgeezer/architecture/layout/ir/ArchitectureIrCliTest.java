@@ -77,6 +77,21 @@ class ArchitectureIrCliTest {
         assertEquals(0, cli().execute("validate-result", "--result", result.toString(), "--strict"));
     }
 
+    @Test
+    void exportOefUsesCurrentIrAndLayoutResult() throws Exception {
+        Path archDir = tempDir.resolve("service-realization.arch");
+        Path out = tempDir.resolve("service-realization.oef.xml");
+        copyFixtureDirectory(fixture("architecture-ir/service-realization"), archDir);
+
+        assertEquals(0, cli().execute("build-ir-artifacts", "--arch-dir", archDir.toString()));
+        assertEquals(0, cli().execute("export-oef", "--arch-dir", archDir.toString(), "--out", out.toString()));
+
+        String xml = Files.readString(out);
+        assertTrue(xml.contains("identifier=\"id-place-order-process\""));
+        assertTrue(xml.contains("relationshipRef=\"id-rel-service-realises-process\""));
+        assertTrue(xml.contains("viewpoint=\"Service Realization\""));
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }
