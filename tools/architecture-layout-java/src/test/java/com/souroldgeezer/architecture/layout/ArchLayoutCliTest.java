@@ -29,7 +29,7 @@ class ArchLayoutCliTest {
                 .execute("--version");
 
         assertEquals(0, exitCode);
-        assertTrue(out.toString().contains("arch-layout 0.28.0"));
+        assertTrue(out.toString().contains("arch-layout 0.29.0"));
     }
 
     @Test
@@ -665,7 +665,7 @@ class ArchLayoutCliTest {
 
         JsonNode report = JsonFiles.read(provenance);
         JsonNode view = report.path("views").get(0);
-        assertEquals("arch-layout 0.28.0", report.path("generatedBy").asText());
+        assertEquals("arch-layout 0.29.0", report.path("generatedBy").asText());
         assertEquals("id-view-service-realization", view.path("viewId").asText());
         assertEquals("generated-layout-recreate", view.path("layoutIntent").asText());
         assertEquals("layout-elk", view.path("selectedGeometryPath").asText());

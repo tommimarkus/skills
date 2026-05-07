@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, validating, repairing, or looking up ArchiMate® 3.2 OEF XML architecture models, especially layout/runtime checks, readiness review, PNG validation, drift detection, or reverse lookup from code, UI, API, or workflows to Business Processes.
+description: Use when building, extracting, reviewing, rendering, validating, repairing, or looking up ArchiMate® 3.2 Architecture IR or OEF XML models, especially layout/runtime checks, OEF import/export, readiness review, PNG validation, drift detection, or reverse lookup from code, UI, API, or workflows to Business Processes.
 ---
 
 # Architecture Design

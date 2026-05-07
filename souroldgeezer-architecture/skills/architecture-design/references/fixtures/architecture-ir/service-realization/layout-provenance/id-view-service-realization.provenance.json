@@ -1,6 +1,6 @@
 {
   "schemaVersion" : "1.0",
-  "generatedBy" : "arch-layout 0.28.0",
+  "generatedBy" : "arch-layout 0.29.0",
   "views" : [ {
     "viewId" : "id-view-service-realization",
     "viewpoint" : "Service Realization",
