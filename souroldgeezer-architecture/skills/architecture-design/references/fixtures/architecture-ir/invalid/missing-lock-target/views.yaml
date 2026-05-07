@@ -1,0 +1,41 @@
+schemaVersion: "1.0"
+views:
+  - id: id-view-service-realization
+    name: Place Order - Service Realization
+    viewpoint: Service Realization
+    qualityTarget: review-ready
+    direction: DOWN
+    documentation: Shows how the Place Order process is realized by application and technology elements.
+    nodes:
+      - id: id-node-process
+        elementRef: id-place-order-process
+        width: 230
+        height: 80
+      - id: id-node-app-service
+        elementRef: id-place-order-service
+        width: 230
+        height: 80
+      - id: id-node-api
+        elementRef: id-orders-api
+        width: 230
+        height: 80
+      - id: id-node-funcapp
+        elementRef: id-funcapp
+        width: 230
+        height: 80
+    connections:
+      - id: id-conn-service-process
+        relationshipRef: id-rel-service-realises-process
+        source: id-node-app-service
+        target: id-node-process
+        priority: 100
+      - id: id-conn-api-service
+        relationshipRef: id-rel-api-realises-service
+        source: id-node-api
+        target: id-node-app-service
+        priority: 100
+      - id: id-conn-funcapp-api
+        relationshipRef: id-rel-funcapp-hosts-api
+        source: id-node-funcapp
+        target: id-node-api
+        priority: 80

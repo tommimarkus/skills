@@ -115,6 +115,26 @@ class ArchitectureIrCliTest {
         assertEquals(0, cli().execute("freshness", "--arch-dir", archDir.toString(), "--oef", oef.toString(), "--mode", "build"));
     }
 
+    @Test
+    void validateIrRejectsMissingLockTarget() {
+        assertEquals(1, cli().execute("validate-ir", "--arch-dir", fixture("architecture-ir/invalid/missing-lock-target").toString()));
+    }
+
+    @Test
+    void oefImportBuildExportRoundTripPreservesIdentifiers() throws Exception {
+        Path imported = tempDir.resolve("imported.arch");
+        Path exported = tempDir.resolve("exported.oef.xml");
+
+        assertEquals(0, cli().execute("import-oef", "--oef", fixture("service-realization.oef.xml").toString(), "--arch-dir", imported.toString()));
+        assertEquals(0, cli().execute("build-ir-artifacts", "--arch-dir", imported.toString(), "--allow-warning"));
+        assertEquals(0, cli().execute("export-oef", "--arch-dir", imported.toString(), "--out", exported.toString()));
+
+        String xml = Files.readString(exported);
+        assertTrue(xml.contains("identifier=\"id-place-order-process\""));
+        assertTrue(xml.contains("identifier=\"id-rel-service-realises-process\""));
+        assertTrue(xml.contains("identifier=\"id-view-service-realization\""));
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }
