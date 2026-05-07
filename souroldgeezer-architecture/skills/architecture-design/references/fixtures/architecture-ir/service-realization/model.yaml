@@ -1,0 +1,37 @@
+schemaVersion: "1.0"
+feature:
+  id: service-realization
+  name: Service Realization Fixture
+  documentation: Small IR fixture for importer, compiler, and exporter tests.
+  creator: architecture-design ir-runtime-test
+archimateTarget: "3.2"
+elements:
+  - id: id-place-order-process
+    type: BusinessProcess
+    name: Place Order
+    authority: architect-approved
+  - id: id-place-order-service
+    type: ApplicationService
+    name: Place Order Service
+    authority: architect-approved
+  - id: id-orders-api
+    type: ApplicationComponent
+    name: Orders API
+    authority: lifted-from-source
+  - id: id-funcapp
+    type: Node
+    name: Azure Function App
+    authority: lifted-from-source
+relationships:
+  - id: id-rel-service-realises-process
+    type: Realization
+    source: id-place-order-service
+    target: id-place-order-process
+  - id: id-rel-api-realises-service
+    type: Realization
+    source: id-orders-api
+    target: id-place-order-service
+  - id: id-rel-funcapp-hosts-api
+    type: Assignment
+    source: id-funcapp
+    target: id-orders-api

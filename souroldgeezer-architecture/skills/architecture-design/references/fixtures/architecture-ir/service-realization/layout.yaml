@@ -1,0 +1,20 @@
+schemaVersion: "1.0"
+views:
+  - view: id-view-service-realization
+    intent: generated-layout-recreate
+    geometryPath: layout-elk
+    layoutPolicy:
+      name: service-realization-spine
+      strictness: strict
+      constraints:
+        - id: main-spine
+          kind: rank-chain
+          role: realization-spine
+          nodeIds:
+            - id-node-process
+            - id-node-app-service
+            - id-node-api
+          edgeIds:
+            - id-conn-service-process
+            - id-conn-api-service
+          direction: DOWN

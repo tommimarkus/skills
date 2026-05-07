@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://souroldgeezer.dev/schemas/architecture/architecture-views.schema.json",
+  "title": "Architecture IR views",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "views"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "viewpoint",
+          "qualityTarget",
+          "nodes",
+          "connections"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "viewpoint": {
+            "type": "string",
+            "minLength": 1
+          },
+          "qualityTarget": {
+            "enum": [
+              "diagram-readable",
+              "review-ready"
+            ]
+          },
+          "direction": {
+            "enum": [
+              "DOWN",
+              "RIGHT",
+              "LEFT",
+              "UP"
+            ]
+          },
+          "documentation": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "elementRef"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "elementRef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "parent": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "relationshipRef",
+                "source",
+                "target"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "relationshipRef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "priority": {
+                  "type": "integer"
+                },
+                "visible": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "hiddenRelationships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "relationshipRef",
+                "reason"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "relationshipRef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

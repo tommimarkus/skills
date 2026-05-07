@@ -19,6 +19,7 @@ application {
 dependencies {
     implementation("info.picocli:picocli:4.7.6")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.2")
     implementation("com.networknt:json-schema-validator:2.0.1")
     implementation("org.eclipse.elk:org.eclipse.elk.core:0.11.0")
     implementation("org.eclipse.elk:org.eclipse.elk.graph:0.11.0")
