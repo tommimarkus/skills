@@ -4,6 +4,7 @@
   "archimateTarget" : "3.2",
   "mode" : "generated-layout",
   "preserveExistingGeometry" : false,
+  "layoutIntent" : "generated-layout-recreate",
   "selectedGeometryPath" : "layout-elk",
   "view" : {
     "id" : "id-view-service-realization",
@@ -92,8 +93,8 @@
       "id" : "main-spine",
       "kind" : "rank-chain",
       "role" : "realization-spine",
-      "nodeIds" : [ "id-node-process", "id-node-app-service", "id-node-api" ],
-      "edgeIds" : [ "id-conn-service-process", "id-conn-api-service" ],
+      "nodeIds" : [ "id-node-api", "id-node-app-service", "id-node-process" ],
+      "edgeIds" : [ "id-conn-api-service", "id-conn-service-process" ],
       "direction" : "DOWN"
     } ]
   },

@@ -64,6 +64,19 @@ class ArchitectureIrCliTest {
         assertEquals("layout-elk", requestJson.path("selectedGeometryPath").asText(""));
     }
 
+    @Test
+    void buildIrArtifactsRunsLayoutAndWritesResult() throws Exception {
+        Path archDir = tempDir.resolve("service-realization.arch");
+        copyFixtureDirectory(fixture("architecture-ir/service-realization"), archDir);
+
+        assertEquals(0, cli().execute("build-ir-artifacts", "--arch-dir", archDir.toString()));
+
+        Path request = archDir.resolve("layout-requests/id-view-service-realization.request.json");
+        Path result = archDir.resolve("layout-results/id-view-service-realization.result.json");
+        assertEquals(0, cli().execute("validate-request", "--request", request.toString()));
+        assertEquals(0, cli().execute("validate-result", "--result", result.toString(), "--strict"));
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }

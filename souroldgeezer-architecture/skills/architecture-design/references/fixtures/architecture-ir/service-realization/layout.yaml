@@ -11,10 +11,10 @@ views:
           kind: rank-chain
           role: realization-spine
           nodeIds:
-            - id-node-process
-            - id-node-app-service
             - id-node-api
+            - id-node-app-service
+            - id-node-process
           edgeIds:
-            - id-conn-service-process
             - id-conn-api-service
+            - id-conn-service-process
           direction: DOWN

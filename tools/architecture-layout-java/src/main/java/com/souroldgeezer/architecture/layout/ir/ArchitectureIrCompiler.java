@@ -63,6 +63,7 @@ public final class ArchitectureIrCompiler {
         request.put("archimateTarget", "3.2");
         request.put("mode", modeFor(geometryPath));
         request.put("preserveExistingGeometry", preservesExistingGeometry(text(layoutView, "intent")));
+        request.put("layoutIntent", text(layoutView, "intent"));
         request.put("selectedGeometryPath", geometryPath);
 
         ObjectNode requestView = request.putObject("view");

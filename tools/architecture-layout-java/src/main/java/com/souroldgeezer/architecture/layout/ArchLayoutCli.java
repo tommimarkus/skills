@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrCompiler;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefImporter;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrPaths;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrValidator;
 import com.souroldgeezer.architecture.layout.png.PngAnalysisResult;
 import com.souroldgeezer.architecture.layout.png.PngAnalyzer;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -39,7 +41,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.ValidatePngCommand.class,
                 ArchLayoutCli.ValidateIrCommand.class,
                 ArchLayoutCli.ImportOefCommand.class,
-                ArchLayoutCli.CompileIrCommand.class
+                ArchLayoutCli.CompileIrCommand.class,
+                ArchLayoutCli.BuildIrArtifactsCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -138,6 +141,75 @@ public final class ArchLayoutCli implements Callable<Integer> {
                 System.out.println("wrote layoutRequest: " + request);
             }
             return 0;
+        }
+    }
+
+    @Command(name = "build-ir-artifacts", description = "Compile IR and run layout backends to write result and provenance JSON.")
+    static final class BuildIrArtifactsCommand implements Callable<Integer> {
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+        @Option(names = "--allow-warning")
+        boolean allowWarning;
+        @Option(names = "--snap-grid", defaultValue = "10")
+        int snapGrid;
+
+        @Override
+        public Integer call() throws IOException {
+            ArchitectureIrPaths paths = new ArchitectureIrPaths(archDir);
+            List<Path> requests = new ArchitectureIrCompiler().compile(archDir);
+            LayoutSchemaValidator validator = new LayoutSchemaValidator();
+            for (Path requestPath : requests) {
+                JsonNode request = JsonFiles.read(requestPath);
+                String viewId = request.path("view").path("id").asText();
+                ObjectNode result = runBackend(request);
+                ValidationResult resultValidation = validator.validateResult(result);
+                if (!resultValidation.ok()) {
+                    resultValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutResult: " + diagnostic));
+                    return 1;
+                }
+                String state = result.path("validation").path("state").asText();
+                if (!allowWarning && !"valid".equals(state)) {
+                    System.err.println("layoutResult validation state is " + state + ": " + viewId);
+                    return 1;
+                }
+                Path resultPath = paths.result(viewId);
+                JsonFiles.write(resultPath, result);
+                System.out.println("wrote layoutResult: " + resultPath);
+
+                ObjectNode provenance = new LayoutProvenanceReporter().report(new LayoutProvenanceReporter.Input(
+                        viewId,
+                        request.path("layoutIntent").asText("generated-layout-recreate"),
+                        request.path("selectedGeometryPath").asText(request.path("mode").asText()),
+                        requestPath,
+                        request,
+                        resultPath,
+                        result,
+                        null,
+                        "not-run",
+                        null,
+                        null,
+                        "not-requested",
+                        snapGrid,
+                        false,
+                        List.of()));
+                ValidationResult provenanceValidation = validator.validateProvenance(provenance);
+                if (!provenanceValidation.ok()) {
+                    provenanceValidation.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutProvenance: " + diagnostic));
+                    return 1;
+                }
+                Path provenancePath = paths.provenance(viewId);
+                JsonFiles.write(provenancePath, provenance);
+                System.out.println("wrote layoutProvenance: " + provenancePath);
+            }
+            return 0;
+        }
+
+        private static ObjectNode runBackend(JsonNode request) {
+            return switch (request.path("mode").asText()) {
+                case "route-repair" -> new RouteRepairBackend().repair(request);
+                case "global-polish" -> new GlobalPolishBackend().polish(request);
+                default -> new ElkLayoutBackend().layout(request);
+            };
         }
     }
 
