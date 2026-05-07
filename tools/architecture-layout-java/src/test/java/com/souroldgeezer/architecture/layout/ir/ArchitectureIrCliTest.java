@@ -1,7 +1,9 @@
 package com.souroldgeezer.architecture.layout.ir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.souroldgeezer.architecture.layout.ArchLayoutCli;
 import com.souroldgeezer.architecture.layout.LayoutPaths;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +33,20 @@ class ArchitectureIrCliTest {
                 Files.readString(archDir.resolve("views.yaml")).replace("id-orders-api", "id-missing-api"));
 
         assertEquals(1, cli().execute("validate-ir", "--arch-dir", archDir.toString()));
+    }
+
+    @Test
+    void importOefWritesIrAndPreservesArchitectGeometryAsLocks() throws Exception {
+        Path archDir = tempDir.resolve("imported.arch");
+        Path oef = fixture("service-realization.oef.xml");
+
+        assertEquals(0, cli().execute("import-oef", "--oef", oef.toString(), "--arch-dir", archDir.toString()));
+        assertEquals(0, cli().execute("validate-ir", "--arch-dir", archDir.toString()));
+
+        JsonNode layout = YamlFiles.read(archDir.resolve("layout.yaml"));
+        assertTrue(layout.toString().contains("architect-edited-oef"));
+        assertTrue(layout.toString().contains("id-node-process"));
+        assertTrue(layout.toString().contains("id-conn-page-route"));
     }
 
     private ArchLayoutCli cli() {

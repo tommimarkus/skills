@@ -3,6 +3,7 @@ package com.souroldgeezer.architecture.layout;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefImporter;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrValidator;
 import com.souroldgeezer.architecture.layout.png.PngAnalysisResult;
 import com.souroldgeezer.architecture.layout.png.PngAnalyzer;
@@ -35,7 +36,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.MaterializeOefCommand.class,
                 ArchLayoutCli.LayoutProvenanceCommand.class,
                 ArchLayoutCli.ValidatePngCommand.class,
-                ArchLayoutCli.ValidateIrCommand.class
+                ArchLayoutCli.ValidateIrCommand.class,
+                ArchLayoutCli.ImportOefCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -99,6 +101,26 @@ public final class ArchLayoutCli implements Callable<Integer> {
             }
             result.diagnostics().forEach(diagnostic -> System.err.println("invalid architecture IR: " + diagnostic));
             return 1;
+        }
+    }
+
+    @Command(name = "import-oef", description = "Import architect-edited OEF into an architecture IR package.")
+    static final class ImportOefCommand implements Callable<Integer> {
+        @Option(names = "--oef", required = true)
+        Path oef;
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+
+        @Override
+        public Integer call() throws IOException {
+            new ArchitectureIrOefImporter().importOef(oef, archDir);
+            ValidationResult result = new ArchitectureIrValidator().validate(archDir);
+            if (!result.ok()) {
+                result.diagnostics().forEach(diagnostic -> System.err.println("invalid imported architecture IR: " + diagnostic));
+                return 1;
+            }
+            System.out.println("wrote architecture IR: " + archDir);
+            return 0;
         }
     }
 
