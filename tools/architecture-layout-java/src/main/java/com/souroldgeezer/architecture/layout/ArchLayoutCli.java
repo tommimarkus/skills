@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrCompiler;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrFreshness;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefImporter;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefExporter;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrPaths;
@@ -44,7 +45,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.ImportOefCommand.class,
                 ArchLayoutCli.CompileIrCommand.class,
                 ArchLayoutCli.BuildIrArtifactsCommand.class,
-                ArchLayoutCli.ExportOefCommand.class
+                ArchLayoutCli.ExportOefCommand.class,
+                ArchLayoutCli.FreshnessCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -227,6 +229,26 @@ public final class ArchLayoutCli implements Callable<Integer> {
             new ArchitectureIrOefExporter().export(archDir, out);
             System.out.println("wrote OEF export: " + out);
             return 0;
+        }
+    }
+
+    @Command(name = "freshness", description = "Report freshness across architecture IR, generated layout artifacts, and OEF export.")
+    static final class FreshnessCommand implements Callable<Integer> {
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+        @Option(names = "--oef", required = true)
+        Path oef;
+        @Option(names = "--mode", required = true)
+        String mode;
+
+        @Override
+        public Integer call() throws IOException {
+            ArchitectureIrFreshness.Report report = new ArchitectureIrFreshness().check(archDir, oef, mode);
+            PrintStream stream = report.exitCode() == 0 ? System.out : System.err;
+            stream.println("state: " + report.state());
+            stream.println("decision: " + report.decision());
+            report.diagnostics().forEach(diagnostic -> stream.println("diagnostic: " + diagnostic));
+            return report.exitCode();
         }
     }
 

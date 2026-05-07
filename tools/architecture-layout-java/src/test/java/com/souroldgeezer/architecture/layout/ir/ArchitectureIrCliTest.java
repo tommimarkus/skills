@@ -92,6 +92,29 @@ class ArchitectureIrCliTest {
         assertTrue(xml.contains("viewpoint=\"Service Realization\""));
     }
 
+    @Test
+    void freshnessReportsReviewOnlyDriftWithoutMutation() throws Exception {
+        Path archDir = tempDir.resolve("service-realization.arch");
+        Path oef = tempDir.resolve("service-realization.oef.xml");
+        copyFixtureDirectory(fixture("architecture-ir/service-realization"), archDir);
+        Files.writeString(oef, "<model/>");
+
+        int exit = cli().execute("freshness", "--arch-dir", archDir.toString(), "--oef", oef.toString(), "--mode", "review");
+
+        assertEquals(1, exit);
+    }
+
+    @Test
+    void freshnessAcceptsCurrentBuildArtifacts() throws Exception {
+        Path archDir = tempDir.resolve("service-realization.arch");
+        Path oef = tempDir.resolve("service-realization.oef.xml");
+        copyFixtureDirectory(fixture("architecture-ir/service-realization"), archDir);
+        assertEquals(0, cli().execute("build-ir-artifacts", "--arch-dir", archDir.toString()));
+        assertEquals(0, cli().execute("export-oef", "--arch-dir", archDir.toString(), "--out", oef.toString()));
+
+        assertEquals(0, cli().execute("freshness", "--arch-dir", archDir.toString(), "--oef", oef.toString(), "--mode", "build"));
+    }
+
     private ArchLayoutCli cli() {
         return new ArchLayoutCli(new PrintStream(new ByteArrayOutputStream()), new PrintStream(new ByteArrayOutputStream()));
     }
