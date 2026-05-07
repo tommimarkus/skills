@@ -3,6 +3,7 @@ package com.souroldgeezer.architecture.layout;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrValidator;
 import com.souroldgeezer.architecture.layout.png.PngAnalysisResult;
 import com.souroldgeezer.architecture.layout.png.PngAnalyzer;
 import com.souroldgeezer.architecture.layout.png.PngAnalyzer.PngOptions;
@@ -33,7 +34,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.GlobalPolishCommand.class,
                 ArchLayoutCli.MaterializeOefCommand.class,
                 ArchLayoutCli.LayoutProvenanceCommand.class,
-                ArchLayoutCli.ValidatePngCommand.class
+                ArchLayoutCli.ValidatePngCommand.class,
+                ArchLayoutCli.ValidateIrCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -79,6 +81,23 @@ public final class ArchLayoutCli implements Callable<Integer> {
                 return 0;
             }
             result.diagnostics().forEach(diagnostic -> System.err.println("invalid layoutRequest: " + diagnostic));
+            return 1;
+        }
+    }
+
+    @Command(name = "validate-ir", description = "Validate an architecture IR source package.")
+    static final class ValidateIrCommand implements Callable<Integer> {
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+
+        @Override
+        public Integer call() throws IOException {
+            ValidationResult result = new ArchitectureIrValidator().validate(archDir);
+            if (result.ok()) {
+                System.out.println("valid architecture IR: " + archDir);
+                return 0;
+            }
+            result.diagnostics().forEach(diagnostic -> System.err.println("invalid architecture IR: " + diagnostic));
             return 1;
         }
     }

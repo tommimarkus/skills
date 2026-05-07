@@ -39,6 +39,24 @@ public final class LayoutSchemaValidator {
         return result;
     }
 
+    public ValidationResult validateArchitectureModel(JsonNode model) {
+        ValidationResult result = new ValidationResult();
+        validateAgainstSchema("architecture-model.schema.json", model, result);
+        return result;
+    }
+
+    public ValidationResult validateArchitectureViews(JsonNode views) {
+        ValidationResult result = new ValidationResult();
+        validateAgainstSchema("architecture-views.schema.json", views, result);
+        return result;
+    }
+
+    public ValidationResult validateArchitectureLayout(JsonNode layout) {
+        ValidationResult result = new ValidationResult();
+        validateAgainstSchema("architecture-layout.schema.json", layout, result);
+        return result;
+    }
+
     public ValidationResult validateRequest(JsonNode request) {
         ValidationResult result = new ValidationResult();
         validateAgainstSchema("layout-request.schema.json", request, result);
