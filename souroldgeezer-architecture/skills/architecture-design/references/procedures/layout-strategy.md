@@ -13,10 +13,11 @@ strategy*. Layout smell codes are defined in
 
 ## Purpose
 
-The skill produces a semantic layout request. A backend, existing
-architect-authored geometry, or the bundled fallback procedure produces
-coordinates and bendpoints. The skill then validates and serialises the final
-geometry as OEF XML.
+The skill produces semantic layout intent: visible story, viewpoint policy,
+locks, curation, hierarchy, and route priorities. The `arch-layout` runtime is
+the authority for production coordinates, ports, bendpoints, route repair, and
+global polish whenever it is available for the selected path. The skill then
+validates and serialises the final geometry as OEF XML.
 
 Professional readiness is based on the final OEF materialisation and
 visual/semantic quality, not on which backend produced the geometry.
@@ -28,6 +29,9 @@ visual/semantic quality, not on which backend produced the geometry.
   libavoid, Graphviz, maxGraph, yFiles, PCB routers, or any other runtime
   dependency a semantic authority.
 - Do not weaken the materialized-view contract when a backend is unavailable.
+- Do not hand-author around a failed authoritative layout run and then claim
+  production layout evidence. Report the conflict, select a disclosed fallback,
+  or lower the quality claim.
 - Do not use a geometry backend to invent ArchiMate model elements, remove
   relationships, change relationship direction, or reinterpret viewpoint
   semantics.
@@ -63,11 +67,18 @@ The architecture-design skill owns semantic policy:
 - which geometry is locked because an architect authored it; and
 - which `AD-L*`, `AD-Q*`, and OEF checks decide readiness.
 
-Geometry backends own placement and routing mechanics only. A backend consumes
-the normalized request described in
+`arch-layout` owns production placement and routing mechanics. A backend
+consumes the normalized request described in
 [layout-backend-contract.md](layout-backend-contract.md) and returns node
 coordinates, ports, bendpoints, and metrics. Backend output is never trusted
 without the final validation handoff.
+
+The Architecture IR package captures only layout intent and lock ownership:
+semantic bands, visible relationships, curation reasons, requested geometry
+path, and required locks. Final coordinates, port choices, bendpoints, route
+repair, global polish, and generated provenance come from `arch-layout`. If
+required locks make a valid layout impossible, report the lock ids and cap the
+view quality instead of silently moving them or inventing unproven routes.
 
 ## Pipeline
 
@@ -75,10 +86,11 @@ without the final validation handoff.
    placements matched by `elementRef` unless the user explicitly requests global
    reflow. Reuse prior bendpoints only when the relationship reference,
    source node, target node, and `AD-L11` route validation still pass.
-2. **Build the normalized layout request.** Include nodes, edges, hierarchy,
-   prior coordinates, locks, viewpoint, semantic bands, normalized
-   `layoutPolicy` constraints, edge priority, route constraints, and
-   generated-vs-authored flags per
+2. **Build the normalized layout request.** When Architecture IR exists, run
+   `compile-ir`; otherwise build the same request shape directly. Include
+   nodes, edges, hierarchy, prior coordinates, locks, viewpoint, semantic
+   bands, normalized `layoutPolicy` constraints, edge priority, route
+   constraints, and generated-vs-authored flags per
    [layout-backend-contract.md](layout-backend-contract.md).
 3. **Choose the viewpoint-specific layout policy.** Dispatch by the OEF
    `viewpoint=` value and apply the visual grammar in
@@ -86,19 +98,17 @@ without the final validation handoff.
    Normalize the selected policy into backend-neutral `layoutPolicy`
    constraints before backend execution; do not push raw ArchiMate® semantic
    inference into the geometry backend.
-4. **Select a layout backend or fallback and record the decision.** For
-   `generated-layout-recreate` on Application Cooperation, Service Realization,
-   and Technology Usage views, build the normalized request, run
-   `arch-layout.sh validate-request`, run `arch-layout.sh layout-elk`, run
-   `arch-layout.sh validate-result` for schema/contract validity, run
-   `arch-layout.sh validate-result --strict` with any requested quality metric
-   thresholds before claiming diagram-readable output, and run `arch-layout.sh materialize-oef`
-   unless a command is unavailable, validation fails, or the view has explicit
-   locked geometry. For unsupported viewpoints, do not silently hand-author geometry as
-   if a backend ran; select the viewpoint-specific policy or fallback and record
-   the fallback reason. For architect-edited diagrams under
-   `preserve-authored`, prefer `route-repair`; when route-only repair cannot
-   clean the view without damaging the mental map, use `global-polish`.
+4. **Select a layout backend or fallback and record the decision.** For IR
+   packages, run `arch-layout.sh build-ir-artifacts` so request validation,
+   backend execution, result validation, and provenance stay coupled. For
+   direct request workflows, use `validate-request`, `layout-elk`,
+   `validate-result`, and strict result gates before claiming
+   diagram-readable output. For unsupported viewpoints, do not silently
+   hand-author geometry as if a backend ran; select the viewpoint-specific
+   policy or fallback and record the fallback reason. For architect-edited
+   diagrams under `preserve-authored`, prefer `route-repair`; when route-only
+   repair cannot clean the view without damaging the mental map, use
+   `global-polish`.
 5. **Assign ports and route edges.** Apply
    [routing-and-glossing.md](routing-and-glossing.md): assign candidate ports,
    reserve lanes for high-priority edges, route high-priority paths first, and
@@ -109,8 +119,8 @@ without the final validation handoff.
    to the `(40, 40)` used-region origin. Do not shift a fully preserved
    architect-authored view solely for cosmetic origin alignment.
 8. **Validate with `AD-L*` checks.** Run the source-geometry gate when a local
-   OEF path exists. A backend result that fails `AD-L*` is not
-   `diagram-readable`.
+   OEF path exists. An `arch-layout` result or fallback result that fails
+   `AD-L*` is not `diagram-readable`.
 9. **Emit layout provenance.** When the run emits or changes view geometry,
    write a per-view provenance report with `arch-layout.sh layout-provenance`.
    Feed it the selected request/result paths, materialized OEF path when one

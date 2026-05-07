@@ -11,6 +11,64 @@ The skill builds this request after it has selected ArchiMate® elements,
 relationships, viewpoint, and curation policy. A backend may place nodes and
 route edges, but it cannot change architecture semantics.
 
+## Architecture IR package commands
+
+Architecture IR packages live at `docs/architecture/<feature>.arch/` and carry
+the agent-editable source files `model.yaml`, `views.yaml`, and `layout.yaml`.
+Use these commands through `references/scripts/arch-layout.sh`; never call the
+jar directly from skill guidance.
+
+Validate the IR package and cross-file references:
+
+```bash
+bash references/scripts/arch-layout.sh validate-ir \
+  --arch-dir docs/architecture/<feature>.arch
+```
+
+Import an architect-edited OEF into IR before Build when OEF is fresher:
+
+```bash
+bash references/scripts/arch-layout.sh import-oef \
+  --oef docs/architecture/<feature>.oef.xml \
+  --arch-dir docs/architecture/<feature>.arch
+```
+
+Compile IR views into normalized layout requests:
+
+```bash
+bash references/scripts/arch-layout.sh compile-ir \
+  --arch-dir docs/architecture/<feature>.arch
+```
+
+Run authoritative layout, route repair, global polish, result validation, and
+per-view provenance generation for the IR package:
+
+```bash
+bash references/scripts/arch-layout.sh build-ir-artifacts \
+  --arch-dir docs/architecture/<feature>.arch
+```
+
+Export current semantic IR plus current layout results to OEF:
+
+```bash
+bash references/scripts/arch-layout.sh export-oef \
+  --arch-dir docs/architecture/<feature>.arch \
+  --out docs/architecture/<feature>.oef.xml
+```
+
+Report drift between IR, generated layout artifacts, and OEF without mutation:
+
+```bash
+bash references/scripts/arch-layout.sh freshness \
+  --arch-dir docs/architecture/<feature>.arch \
+  --oef docs/architecture/<feature>.oef.xml \
+  --mode review
+```
+
+`freshness` is advisory in Review and Lookup. In Build, a newer OEF means
+`import-oef` must run before editing IR so architect changes and geometry locks
+are not overwritten.
+
 ## Request fields
 
 `layoutRequest` contains the fields encoded by

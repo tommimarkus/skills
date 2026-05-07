@@ -6,17 +6,31 @@ procedures that are intentionally not always loaded by the skill router.
 
 ## Mode Dispatch
 
+When `docs/architecture/<feature>.arch/` exists, treat it as the agent working
+source. The package contains semantic model, view curation, layout intent, and
+locks. Generated JSON and OEF XML are derived artifacts unless freshness reports
+that an architect-edited OEF is newer and must be imported first.
+
 ### Build
 
 Use Build for new or edited ArchiMate® diagrams from architect intent:
 "design the architecture", "model the system", "sketch an ArchiMate view",
 "build a capability map", "draw how this fits in the enterprise".
 
+Build mutates the Architecture IR package. Before changing IR, run freshness
+against the canonical OEF; if the OEF is newer, import it so architect edits and
+geometry locks become the working source. After IR edits, generate layout
+artifacts and export the final OEF.
+
 ### Extract
 
 Use Extract for lifting a model from existing code, IaC, and workflow
 definitions: "lift architecture from the repo", "reverse-engineer the
 architecture", "generate an Application Cooperation view from the project set".
+
+Extract is source-driven. Existing OEF may be read to preserve stable
+identifiers, labels, and architect-owned geometry locks, but source/IaC/workflow
+truth drives the IR update.
 
 Refuse Extract when the requested layers are entirely forward-only:
 Business/Motivation/Strategy/Physical from source or IaC. Explain that only
@@ -29,6 +43,11 @@ intent.
 Use Review for an existing `.oef.xml`, professional-readiness review,
 well-formedness, render artifacts, external validation handoff, route repair,
 global polish, PNG validation, or drift detection.
+
+Review is report-only unless the user explicitly asks to repair or rebuild.
+When IR and generated artifacts are present, run freshness and report whether
+IR, layout request/result/provenance JSON, and OEF are current, stale, or
+missing.
 
 Sub-behaviours:
 
@@ -48,10 +67,18 @@ element/relationship meaning, Appendix B validity, OEF `xsi:type`, domain
 discovery across canonical OEF files, or reverse lookup from symbol/file/UI/API
 artifact to owning Business Process. Lookup does not mutate the model.
 
+Lookup reads the freshest trustworthy source without mutation: current IR first,
+then current OEF when no IR exists, and reports stale or conflicting sources
+instead of silently choosing one.
+
 ### Render Polish Loop
 
 Use only when the user explicitly asks to iterate until rendered diagrams are
 visually pristine or to compose all modes for render quality.
+
+Before rendering, require a current OEF export from IR when an IR package is
+present. If freshness reports stale or missing OEF, rebuild artifacts and export
+before invoking the renderer.
 
 Sequence per iteration:
 
@@ -90,8 +117,10 @@ inputs. Ask only for missing answers that cannot be inferred safely.
    orchestrator, and Logic Apps workflow signals. Fully forward-only layers are
    emitted only as architect-owned stubs when the diagram kind requires them.
 4. **Feature name and canonical path.** Default to
-   `docs/architecture/<feature>.oef.xml`, where `<feature>` is a short snake or
-   kebab-case slug derived from the prompt, solution, or architect instruction.
+   `docs/architecture/<feature>.arch/` for the IR package and
+   `docs/architecture/<feature>.oef.xml` for the exported OEF, where
+   `<feature>` is a short snake or kebab-case slug derived from the prompt,
+   solution, or architect instruction.
 5. **Process scope.** In Build, ask only when the §9.7 or §9.3 process scope is
    ambiguous. Use `single-process` when exactly one Business Process is named;
    otherwise default to `all-processes-in-feature`. `multi-feature` requires an
@@ -116,6 +145,11 @@ inputs. Ask only for missing answers that cannot be inferred safely.
     `generated-layout-recreate`; prior coordinates are comparison input, not
     locks, unless explicitly locked. Backup before overwrite and include the
     per-view backend report.
+11. **Architecture source freshness.** When IR, generated layout artifacts, or
+    OEF exist, run `arch-layout.sh freshness` before deciding mutation. Build
+    imports fresher OEF before editing IR. Extract may reuse existing OEF only
+    for identifiers, labels, and architect-owned locks. Review and Lookup
+    report drift without mutation.
 
 State deviations from defaults in the footer.
 
@@ -128,25 +162,30 @@ non-negotiable.
 
 Run lightweight discovery from canonical locations only:
 
-1. Existing model at `docs/architecture/<feature>.oef.xml`. Parse identifiers,
+1. Architecture IR package at `docs/architecture/<feature>.arch/`. When
+   present, parse `model.yaml`, `views.yaml`, `layout.yaml`, and generated
+   layout artifacts. Treat stale or missing generated files as build evidence
+   gaps, not semantic source.
+2. Existing model at `docs/architecture/<feature>.oef.xml`. Parse identifiers,
    names, relationships, view coordinates, documentation, and properties. Reuse
-   valid content and treat absence as greenfield.
-2. `.NET` solution surface: `*.sln`, `*.csproj`, Azure Functions isolated
+   valid content and treat absence as greenfield. If OEF is fresher than IR in
+   Build, import it before changing IR.
+3. `.NET` solution surface: `*.sln`, `*.csproj`, Azure Functions isolated
    worker, Blazor WebAssembly, Blazor Web App `.Client`, top-level class
    libraries, and `<ProjectReference>` topology.
-3. Azure Functions `host.json`: bindings become Application Interfaces; host
+4. Azure Functions `host.json`: bindings become Application Interfaces; host
    runtime implies System Software on a Function App/App Service Node.
-4. `staticwebapp.config.json`: maps to Azure Static Web Apps Node, hosted UI
+5. `staticwebapp.config.json`: maps to Azure Static Web Apps Node, hosted UI
    Application Component, routes, and auth provider interfaces.
-5. Bicep IaC: supported Microsoft resource types map through
+6. Bicep IaC: supported Microsoft resource types map through
    `lifting-rules-bicep.md`.
-6. GitHub Actions workflows: deployment/release jobs become Work Packages;
+7. GitHub Actions workflows: deployment/release jobs become Work Packages;
    environments become Plateaus; successful deploys become Implementation
    Events.
-7. Durable Functions and Logic Apps workflow definitions: load
+8. Durable Functions and Logic Apps workflow definitions: load
    `lifting-rules-process.md` for Business Process/Event/Interaction
    `LIFT-CANDIDATE` evidence.
-8. Render contracts, disclosure only: detect committed architecture PNG/SVG
+9. Render contracts, disclosure only: detect committed architecture PNG/SVG
    files, gallery sections, and render commands. If OEF changes and committed
    renders/galleries exist, disclose that they may need refresh. Do not update
    project packaging unless explicitly requested or render-polish is in scope.
@@ -175,34 +214,45 @@ sources read, drift/well-formedness issues, and render contracts detected.
    kind, element palette, relationships, OEF serialization, and checklist.
    Output must obey layer separation, aspect rules, Core-vs-extension
    discipline, and Appendix B relationship well-formedness.
-4. Compose elements and relationships. Use correct `xsi:type` values from the
-   ArchiMate® catalog. Never emit a relationship not valid for the element pair.
-   Preserve view-specific curation only when the model relationship remains and
-   the view documents why the visible connection is hidden.
-5. When the diagram kind and process scope require it, load and apply
+4. Establish the IR working state. Run
+   `arch-layout.sh freshness --arch-dir docs/architecture/<feature>.arch --oef docs/architecture/<feature>.oef.xml --mode build`
+   when either path exists. If freshness reports a newer OEF, run
+   `arch-layout.sh import-oef` before editing IR. If no IR exists, create
+   `model.yaml`, `views.yaml`, and `layout.yaml` from the architect intent.
+5. Compose elements and relationships in `model.yaml`, views and curation in
+   `views.yaml`, and semantic layout intent and locks in `layout.yaml`. Use
+   correct ArchiMate® types. Never emit a relationship not valid for the
+   element pair. Preserve view-specific curation only when the model
+   relationship remains and the view documents why the visible connection is
+   hidden.
+6. Run `arch-layout.sh validate-ir`. Fix schema or cross-file reference
+   diagnostics before compiling layout requests.
+7. When the diagram kind and process scope require it, load and apply
    `process-view-emission.md` before layout.
-6. Load `layout-strategy.md` and only the applicable layout sub-procedures.
+8. Load `layout-strategy.md` and only the applicable layout sub-procedures.
+   Run `arch-layout.sh compile-ir` and `arch-layout.sh build-ir-artifacts`.
    Create a layout decision record per emitted view: view id, viewpoint,
    layout intent, backend eligibility, selected command/fallback, request and
    result validation state, materialization state, and blockers. For
-   `generated-layout-recreate`, prior coordinates are not locks. Materialize
-   every view with `<node>` and `<connection>` geometry.
-7. Load `professional-readiness.md`. Every emitted view names the architecture
+   `generated-layout-recreate`, prior coordinates are not locks. If required
+   locks prevent a valid result, report the conflict and cap quality instead of
+   hand-authoring around the runtime.
+9. Run `arch-layout.sh export-oef` to write the canonical OEF. The exported OEF
+   must obey the serialization contract, include materialized `<node>` and
+   `<connection>` geometry for every visible view story, avoid
+   `propid-archi-model-banded` and model-root `<properties>`, include the
+   default Dublin Core `<metadata>` block, and preserve the top-level child
+   order: `name`, `documentation`, `metadata`, `elements`, `relationships`,
+   `organizations`, `propertyDefinitions`, `views`.
+10. Load `professional-readiness.md`. Every emitted view names the architecture
    question it answers, curates extraction noise, and receives a readiness and
    authority classification.
-8. Write the OEF to the canonical path unless the architect specified another.
-   Do not emit `propid-archi-model-banded` or model-root `<properties>`.
-   Include the default Dublin Core `<metadata>` block; set `dc:title` to the
-   feature and `dc:creator` to `architecture-design <plugin-version>` from the
-   live architecture plugin manifest. The OEF top-level child order is:
-   `name`, `documentation`, `metadata`, `elements`, `relationships`,
-   `organizations`, `propertyDefinitions`, `views`.
-9. Validate before delivery. Run `validate-oef-layout.sh` for local OEF files.
+11. Validate before delivery. Run `validate-oef-layout.sh` for local OEF files.
    Treat emitted lines as source-geometry `AD-L*` findings. If rendering was
    requested, run `archi-render.sh`, require Validate Model marker output, then
    validate every PNG with `arch-layout.sh validate-png`. Consume supplied
    external validation through `external-validation-handoff.md`.
-10. Emit the output contract and footer.
+12. Emit the output contract and footer.
 
 ## Extract Workflow
 
@@ -216,12 +266,17 @@ sources read, drift/well-formedness issues, and render contracts detected.
    `process-view-emission.md` before layout. If Strategy/Motivation or
    forward-only Business Service stubs are emitted, load `seed-views.md` before
    layout.
-6. Load `layout-strategy.md` and applicable sub-procedures. Apply the selected
-   layout intent per view. `global-reflow` attempts route repair first, then
-   `global-polish` only when route-only repair cannot reach the requested
-   quality. `preserve-authored` repairs or generates only invalid/missing
-   geometry.
-7. Emit forward-only stub blocks only when the diagram kind requires them. Use
+6. Build or update the IR package from source truth. Existing OEF may seed
+   identifiers, labels, and architect-owned node or route locks, but source
+   evidence decides extractable elements and relationships. Run
+   `arch-layout.sh validate-ir` before layout compilation.
+7. Load `layout-strategy.md` and applicable sub-procedures. Apply the selected
+   layout intent per view. Run `arch-layout.sh compile-ir`,
+   `arch-layout.sh build-ir-artifacts`, and `arch-layout.sh export-oef`.
+   `global-reflow` attempts route repair first, then `global-polish` only when
+   route-only repair cannot reach the requested quality. `preserve-authored`
+   repairs or generates only invalid/missing geometry.
+8. Emit forward-only stub blocks only when the diagram kind requires them. Use
    the mandatory marker:
 
    ```xml
@@ -234,13 +289,13 @@ sources read, drift/well-formedness issues, and render contracts detected.
    -->
    ```
 
-8. Merge with an existing canonical model rather than gratuitously overwriting
+9. Merge with an existing canonical model rather than gratuitously overwriting
    it. Preserve valid identifiers, labels, documentation, properties,
-   forward-only content, and stable placements. Remove missing extracted
-   elements only with drift disclosure. Reroute when a preserved bendpoint is
-   stale, inverted, crosses unrelated nodes, or starts/ends inside endpoint
-   bodies. Report `AD-L11` if no clean route exists.
-9. Load `professional-readiness.md`, classify each view and artifact rollup,
+   forward-only content, and stable placements through IR import/lock fields.
+   Remove missing extracted elements only with drift disclosure. Reroute when a
+   preserved bendpoint is stale, inverted, crosses unrelated nodes, or
+   starts/ends inside endpoint bodies. Report `AD-L11` if no clean route exists.
+10. Load `professional-readiness.md`, classify each view and artifact rollup,
    validate source geometry, run requested render/PNG checks, and emit the
    per-layer lift/stub breakdown in the footer.
 
@@ -249,8 +304,10 @@ sources read, drift/well-formedness issues, and render contracts detected.
 1. Confirm Review mode. Read and run `self-check.md`. Missing
    `architecture.md`, `smell-catalog.md`, `validate-oef-layout.sh`, or an
    applicable procedure is `not run (blocker)` for affected findings.
-2. Run pre-flight, classify requested or observed changes, and identify
-   sub-behaviours.
+2. Run pre-flight, classify requested or observed changes, identify
+   sub-behaviours, and run `arch-layout.sh freshness` when IR or generated
+   layout artifacts are present. Report freshness; do not import, regenerate,
+   export, or mutate unless the user explicitly asked for repair or rebuild.
 
 ### Artefact Review
 
@@ -286,10 +343,12 @@ Per-finding format:
 
 ### Render Request
 
-Run static artifact checks first. Then run `archi-render.sh` only when render,
-PNG, visual inspection, or refresh is requested. Pass through caller-supplied
-`--archi-bin`, `--cache-root`, `--config`, `--output-root`, and
-`--validate-model-script`.
+Run static artifact checks first. When an IR package is present, require a
+current OEF export before rendering; stale or missing OEF is a render blocker
+until the user asks for Build/Repair or explicit export. Then run
+`archi-render.sh` only when render, PNG, visual inspection, or refresh is
+requested. Pass through caller-supplied `--archi-bin`, `--cache-root`,
+`--config`, `--output-root`, and `--validate-model-script`.
 
 The render script imports OEF through Archi's headless CLI, runs
 `validate-model.ajs`, requires `ARCHI_VALIDATE_MODEL:` marker output, and then
@@ -313,7 +372,9 @@ classification.
 
 1. Load `drift-detection.md`.
 2. Re-run project assimilation against current source/IaC/workflows.
-3. Compare discovered elements/relationships to the OEF.
+3. Compare discovered elements/relationships to current IR when present, or to
+   OEF when no IR package exists. If OEF is newer than IR, report that import is
+   needed before a build can claim current semantics.
 4. Report deltas as `AD-DR-*` findings with `layer: runtime`.
 5. Suggest either updating the diagram to match current source truth or updating
    code to match an intentional architect-owned model.
@@ -329,11 +390,12 @@ or two sentences with reference anchors.
 
 ### Domain Discovery
 
-Enumerate `docs/architecture/**/*.oef.xml`. Parse views whose diagram kind is
-§9.7 Business Process Cooperation or §9.3 Service Realization. List each
-Business Process/Event/Interaction with its name, owning view identifier, and
-file path. Filter by feature basename when the question narrows the area.
-Rank by feature proximity, then incoming Triggering edge count.
+Enumerate `docs/architecture/**/*.arch/` first, then
+`docs/architecture/**/*.oef.xml` for features without IR. Parse views whose
+diagram kind is §9.7 Business Process Cooperation or §9.3 Service Realization.
+List each Business Process/Event/Interaction with its name, owning view
+identifier, and file path. Filter by feature basename when the question narrows
+the area. Rank by feature proximity, then incoming Triggering edge count.
 
 ### Reverse Lookup
 
@@ -341,8 +403,9 @@ Backend symbol path:
 
 1. Locate the symbol in source.
 2. Find the enclosing Durable Functions orchestrator or Logic Apps workflow.
-3. Search canonical OEF files for a Business Process whose XML comment,
-   `source=` property, or normalized name matches.
+3. Search current IR first, then canonical OEF files without IR, for a Business
+   Process whose `sourceRefs`, XML comment, `source=` property, or normalized
+   name matches.
 4. Return the process name, owning view, and file path. Follow one-hop parent
    process back-pointers from §9.3 sub-process views when present.
 
@@ -350,8 +413,9 @@ UI path:
 
 1. Locate Blazor `*.razor`, Next.js `app/**/page.tsx` or `pages/*.tsx`, or React
    Router component files.
-2. Search canonical OEF files for a UI Application Component in a §9.3 view
-   whose name, `source=` property, or documentation matches.
+2. Search current IR first, then canonical OEF files without IR, for a UI
+   Application Component in a §9.3 view whose name, `sourceRefs`, `source=`
+   property, or documentation matches.
 3. Walk outgoing Realisation to the top Business Process and return name, view,
    and file path.
 
@@ -371,7 +435,8 @@ Validation layers:
 - `[runtime]`: compare source/IaC/workflow state for drift when in scope.
 
 Use `validate-oef-layout.sh` for local materialized views before claiming
-`diagram-readable` or `review-ready`. Use `arch-layout.sh` for
+`diagram-readable` or `review-ready`. Use `arch-layout.sh` for `validate-ir`,
+`import-oef`, `compile-ir`, `build-ir-artifacts`, `export-oef`, `freshness`,
 `validate-request`, `validate-result`, `layout-elk`, `route-repair`,
 `global-polish`, `materialize-oef`, `layout-provenance`, and `validate-png`
 when those runtime paths apply.
@@ -391,8 +456,10 @@ claim artifact-level `review-ready` while model-level blockers remain.
 
 ## Render Artifacts
 
-Rendered PNGs are deployment/publication artifacts derived from OEF, not the
-architecture source of truth. OEF XML remains the model.
+Rendered PNGs are deployment/publication artifacts derived from exported OEF,
+not the architecture source of truth. When an IR package exists, IR YAML is the
+agent working source and OEF XML is the current delivery artifact. Without IR,
+OEF XML remains the model artifact.
 
 When rendering succeeds, classify changed PNGs, README rows, galleries, or
 provenance text as `documentation/render inventory change`. Do not classify a

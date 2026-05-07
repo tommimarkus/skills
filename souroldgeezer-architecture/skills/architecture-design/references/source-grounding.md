@@ -5,6 +5,12 @@ the local architecture workflow, reference, procedures, and fixture contracts.
 They do not copy external diagrams, schemas, screenshots, specification text,
 tool output, or example models.
 
+The Architecture IR package exists because OEF XML is too heavy as an agent
+working artifact. Agents work on compact YAML so architecture edits stay
+efficient and robust during the run. OEF remains the user-facing delivery and
+architect handoff artifact, and `arch-layout` remains the authority for
+production layout and edge routing.
+
 - Source: `../../../docs/architecture-reference/architecture.md`.
   Handling: local bundled reference owned by this repo; eval prompts are
   original synthetic scenarios for mode selection, OEF materialization,

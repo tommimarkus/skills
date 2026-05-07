@@ -84,6 +84,12 @@ Two to four lines of prose + one footer line.
 Mode: build | extract | review | lookup
 Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.md
 Canonical path: docs/architecture/<feature>.oef.xml
+Architecture source: OEF-only | IR package current | IR package stale | OEF newer than IR
+IR validation: not run | passed | failed <n> diagnostics
+Generated layout evidence: current | stale | missing
+OEF export freshness: current | stale | missing
+OEF import handoff: not needed | imported architect-edited OEF | blocked <reason>
+Layout authority: arch-layout current | arch-layout unavailable | arch-layout conflict <lock ids>
 Diagram kind: <reference §9 kind name — primary kind in scope this run>
 Diagram kinds present: <M> of 7 (<comma-separated canonical viewpoint names>)
 Diagram kinds missing: <comma-separated canonical viewpoint names, or "none">

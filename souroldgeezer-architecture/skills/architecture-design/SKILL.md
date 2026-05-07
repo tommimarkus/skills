@@ -8,9 +8,11 @@ description: Use when building, extracting, reviewing, rendering, validating, re
 ## Purpose
 
 Produce, extract, review, render, validate, repair, and look up ArchiMate®
-architecture models in tool-neutral OEF XML. This skill answers what the
-enterprise consists of: capabilities, services, components, technology nodes,
-relationships, motivation, and process ownership.
+architecture models. When a `.arch/` package is present, Architecture IR YAML is
+the agent working contract; OEF XML remains the user-facing delivery and
+architect handoff artifact. This skill answers what the enterprise consists of:
+capabilities, services, components, technology nodes, relationships, motivation,
+and process ownership.
 
 The canonical architecture reference is
 [../../docs/architecture-reference/architecture.md](../../docs/architecture-reference/architecture.md).
@@ -23,10 +25,12 @@ Owns:
 
 - ArchiMate® 3.2 notation decisions, OEF XML authoring, and architecture model
   quality.
+- Architecture IR `.arch/` working packages: `model.yaml`, `views.yaml`, and
+  `layout.yaml`.
 - Build, Extract, Review, Render, Validate, Repair, Drift, and Lookup workflows
   for architecture models.
-- Materialized OEF views with concrete node geometry and relationship
-  connections.
+- Generated layout request/result/provenance JSON and final materialized OEF
+  views with concrete node geometry and relationship connections.
 - Layout runtime orchestration, source-geometry gates, route repair,
   global polish, layout-result materialization, layout provenance, rendered PNG
   validation, and per-view readiness reporting.
@@ -122,13 +126,19 @@ architect intent instead.
    identifiers, labels, documentation, properties, forward-only content, and
    architect-authored geometry. Report non-compliance and drift instead of
    copying broken relationships or layout.
-5. Load only the procedure references whose conditions apply. Build/Extract must
-   emit materialized views; Review must classify each view before artifact
-   rollup; Lookup must not mutate the model.
-6. Validate before claiming quality. Use source geometry, layout runtime,
+5. Load only the procedure references whose conditions apply. When an
+   Architecture IR package exists, agents edit YAML only; generated JSON and OEF
+   are refreshed through `arch-layout`. Build imports architect-edited OEF before
+   changing IR when the OEF is fresher. Extract is source-driven and may reuse
+   OEF identifiers and architect-owned geometry locks. Review and Lookup do not
+   mutate by default.
+6. Treat `arch-layout` as the authority for production layout and edge routing.
+   The IR expresses semantic layout intent and locks; the runtime produces final
+   coordinates, ports, bendpoints, route repair, global polish, and provenance.
+7. Validate before claiming quality. Use source geometry, layout runtime,
    external handoff, render, PNG, and drift checks according to the request and
    available tooling.
-7. Return the required output contract and disclosure footer from
+8. Return the required output contract and disclosure footer from
    [references/output-format.md](references/output-format.md).
 
 ## Reference Load Map
@@ -163,9 +173,11 @@ Load only the files whose conditions apply:
 - For local materialized OEF views, run
   `references/scripts/validate-oef-layout.sh`.
 - For layout runtime work, run `references/scripts/arch-layout.sh`
-  (`--version`, `validate-request`, `validate-result`, `layout-elk`,
-  `route-repair`, `global-polish`, `materialize-oef`, `layout-provenance`,
-  `validate-png`); use `references/bin/arch-layout.jar` only through that script.
+  (`--version`, `validate-ir`, `import-oef`, `compile-ir`,
+  `build-ir-artifacts`, `export-oef`, `freshness`, `validate-request`,
+  `validate-result`, `layout-elk`, `route-repair`, `global-polish`,
+  `materialize-oef`, `layout-provenance`, `validate-png`); use
+  `references/bin/arch-layout.jar` only through that script.
 - For explicit render/visual gates, run `references/scripts/archi-render.sh`
   and `references/scripts/validate-model.ajs`.
 - For plugin release packaging or Java runtime refresh, run `references/scripts/package-arch-layout.sh`.
@@ -174,6 +186,8 @@ Load only the files whose conditions apply:
   `references/fixtures/validate-render-fixtures.sh`, and the matching fixture
   family.
 - Use `references/fixtures/global-polish` when global polish fixtures are in scope.
+- Use `references/fixtures/architecture-ir` when Architecture IR package
+  validation, OEF import/export, freshness, or round-trip behavior is in scope.
 - Use `references/fixtures/layout-backend-contract` when backend contract fixtures are in scope.
 - Use `references/fixtures/layout-contract` when request/result schema fixtures are in scope.
 - Use `references/fixtures/layout-elk-java` when Java ELK layout fixtures are in scope.
@@ -206,6 +220,8 @@ Minimum footer fields:
 - Project assimilation disclosure, including existing diagram reuse,
   preserved labels, drift findings, forward-only/process-view emission notes,
   and detected render contracts when relevant.
+- Architecture source, IR validation, generated layout evidence, OEF import
+  handoff, OEF export freshness, and layout authority.
 
 ## Stop Conditions
 
