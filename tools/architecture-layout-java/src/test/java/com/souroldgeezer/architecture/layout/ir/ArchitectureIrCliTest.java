@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.souroldgeezer.architecture.layout.ArchLayoutCli;
+import com.souroldgeezer.architecture.layout.JsonFiles;
 import com.souroldgeezer.architecture.layout.LayoutPaths;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -47,6 +48,20 @@ class ArchitectureIrCliTest {
         assertTrue(layout.toString().contains("architect-edited-oef"));
         assertTrue(layout.toString().contains("id-node-process"));
         assertTrue(layout.toString().contains("id-conn-page-route"));
+    }
+
+    @Test
+    void compileIrEmitsSchemaValidLayoutRequest() throws Exception {
+        Path archDir = fixture("architecture-ir/service-realization");
+
+        assertEquals(0, cli().execute("compile-ir", "--arch-dir", archDir.toString()));
+        Path request = archDir.resolve("layout-requests/id-view-service-realization.request.json");
+
+        assertTrue(Files.exists(request));
+        assertEquals(0, cli().execute("validate-request", "--request", request.toString()));
+        JsonNode requestJson = JsonFiles.read(request);
+        assertEquals("Service Realization", requestJson.path("view").path("viewpoint").asText());
+        assertEquals("layout-elk", requestJson.path("selectedGeometryPath").asText(""));
     }
 
     private ArchLayoutCli cli() {

@@ -3,6 +3,7 @@ package com.souroldgeezer.architecture.layout;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.souroldgeezer.architecture.layout.elk.ElkLayoutBackend;
+import com.souroldgeezer.architecture.layout.ir.ArchitectureIrCompiler;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrOefImporter;
 import com.souroldgeezer.architecture.layout.ir.ArchitectureIrValidator;
 import com.souroldgeezer.architecture.layout.png.PngAnalysisResult;
@@ -37,7 +38,8 @@ import picocli.CommandLine.Spec;
                 ArchLayoutCli.LayoutProvenanceCommand.class,
                 ArchLayoutCli.ValidatePngCommand.class,
                 ArchLayoutCli.ValidateIrCommand.class,
-                ArchLayoutCli.ImportOefCommand.class
+                ArchLayoutCli.ImportOefCommand.class,
+                ArchLayoutCli.CompileIrCommand.class
         })
 public final class ArchLayoutCli implements Callable<Integer> {
     private final PrintStream out;
@@ -120,6 +122,21 @@ public final class ArchLayoutCli implements Callable<Integer> {
                 return 1;
             }
             System.out.println("wrote architecture IR: " + archDir);
+            return 0;
+        }
+    }
+
+    @Command(name = "compile-ir", description = "Compile architecture IR into layout request JSON files.")
+    static final class CompileIrCommand implements Callable<Integer> {
+        @Option(names = "--arch-dir", required = true)
+        Path archDir;
+
+        @Override
+        public Integer call() throws IOException {
+            var requests = new ArchitectureIrCompiler().compile(archDir);
+            for (Path request : requests) {
+                System.out.println("wrote layoutRequest: " + request);
+            }
             return 0;
         }
     }
