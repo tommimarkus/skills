@@ -12,3 +12,10 @@ or documentation.
 - Source: `references/smell-catalog.md` and `extensions/*.md`.
   Handling: local smell and extension contracts; eval cases exercise extension
   selection and output shape without reproducing project code.
+
+- Source: `references/pattern-catalog.md`.
+  Handling: local bundled reference owned by this repo; pattern descriptions are
+  paraphrased in repo-authored language and anchored to the existing
+  software-design source basis. Synthetic evals exercise pattern selection,
+  pattern rejection, and ceremony review without copying third-party pattern
+  descriptions, diagrams, tables, or examples.

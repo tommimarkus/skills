@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test-quality work.
+  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, design-pattern tradeoffs, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test-quality work.
 ---
 
 # Software Design
@@ -9,13 +9,16 @@ description: >-
 ## Purpose
 
 Shape code-, script-, and module-level design so changes stay coherent. Use
-[../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md)
-and [references/smell-catalog.md](references/smell-catalog.md).
+[../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md),
+[references/smell-catalog.md](references/smell-catalog.md), and
+[references/pattern-catalog.md](references/pattern-catalog.md) when pattern
+selection or pattern ceremony is in scope.
 
 ## Contract
 
 Own Build, Extract, Review, and Lookup for boundaries, dependencies,
-responsibilities, state/data ownership, semantics, coupling, evolution, and debt.
+responsibilities, state/data ownership, semantics, coupling, evolution, design
+pattern tradeoffs, and debt.
 Delegate app/UI, API, infra/IaC, ArchiMate/OEF, security, and test quality to
 `app-design`, `api-design`, `infra-design`, `architecture-design`,
 `devsecops-audit`, and `test-quality-audit`.
@@ -32,35 +35,44 @@ proposals, or plans; Lookup narrow principles/tradeoffs.
 
 Load what applies: core reference sections 2-7 and 9;
 [references/smell-catalog.md](references/smell-catalog.md) for `SD-*` findings;
-[extensions/dotnet.md](extensions/dotnet.md) for .NET solution/project signals;
-[extensions/shell-script.md](extensions/shell-script.md) for shell or portability
-signals; [extensions/python.md](extensions/python.md) for repo-internal Python
-tooling signals; and [extensions/README.md](extensions/README.md) only when
-editing extensions. Skip Python web/ASGI apps and delegate app/API concerns.
+[references/pattern-catalog.md](references/pattern-catalog.md) when the user
+asks about design patterns, proposes a named pattern, or source shows pattern
+ceremony such as adapter, facade, factory, builder, strategy, policy object,
+specification, pipeline, chain of responsibility, state machine, observer,
+event bus, repository, unit of work, shared kernel, plugin, extension point,
+strangler, or branch by abstraction; [extensions/dotnet.md](extensions/dotnet.md)
+for .NET solution/project signals; [extensions/shell-script.md](extensions/shell-script.md)
+for shell or portability signals; [extensions/python.md](extensions/python.md)
+for repo-internal Python tooling signals; and [extensions/README.md](extensions/README.md)
+only when editing extensions. Skip Python web/ASGI apps and delegate app/API
+concerns. Unknown stacks use core only; do not load the pattern catalog for
+ordinary stack review when no pattern question or pattern-shaped structure is
+in scope.
 
 Before changing trigger metadata, workflow, extension selection, grounding, or
 evals, load [references/evals](references/evals) and
 [references/source-grounding.md](references/source-grounding.md); keep evals
-synthetic/paraphrased. Unknown stacks use core only.
+synthetic/paraphrased.
 
 ## Workflow
 
 1. Select mode, scope, and design question.
 2. Prefer `rg`; inspect inputs, detect stack, and announce extensions.
 3. Assimilate modules, refs/imports, adapters, shared code, terms, duplicated
-   models, state owners, seams, and debt.
+   models, state owners, pattern-shaped ceremony, seams, and debt.
 4. Separate fact from inference, choose the smallest coherent move, include
    available mandatory extension validation, then emit contract/footer.
 
 ## Mode Outputs
 
-- Build: scope/forces, pattern, responsibilities, dependencies, state owner,
-  deferred decisions, rejected abstractions, validation, delegations.
+- Build: scope/forces, pattern only when justified by a current force,
+  responsibilities, dependencies, state owner, deferred decisions, rejected
+  abstractions, validation, delegations.
 - Extract: modules, boundaries, ownership, dependencies, clusters, hotspots,
   seams, debt, next move.
 - Review: actionable findings only; `block` fragmentation, unsafe path, cycle,
-  inversion, duplicate model, shared state, speculation, or load-bearing legacy;
-  `warn` risk, `info` note/deferred check.
+  inversion, duplicate model, shared state, unjustified pattern ceremony,
+  speculation, or load-bearing legacy; `warn` risk, `info` note/deferred check.
 - Lookup: direct rule, exception, citation, delegation, one-line footer.
 
 Every final answer reports mode, extensions, reference path, verification layers
@@ -68,9 +80,15 @@ Every final answer reports mode, extensions, reference path, verification layers
 and limits. Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer,
 severity, evidence, action, and citation. If none, say so with limits.
 
+When recommending, rejecting, or reviewing a named pattern, report the current
+force, fit, avoid case, likely smell prevented, likely smell introduced, and
+cheapest validation layer. Treat pattern names as tradeoff vocabulary, not
+authority.
+
 ## Stop Conditions
 
 Stop when source/scope is missing, sibling ownership dominates, required
 non-static facts are absent, load-bearing debt has no smaller safe move,
-extension validation is unavailable, or a generic interface/base/repository/bus/
-mediator/shared-kernel/plugin/framework layer lacks current evidence.
+extension validation is unavailable, a generic interface/base/repository/bus/
+mediator/shared-kernel/plugin/framework layer lacks current evidence, or a
+pattern recommendation cannot name the current force it serves.

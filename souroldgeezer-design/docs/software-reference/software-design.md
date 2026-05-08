@@ -104,47 +104,41 @@ Default: align code boundaries with stable ownership where that does not weaken 
 
 ## 6. Patterns
 
-### 6.1 Thin Adapter, Stable Policy
+Patterns are tactics for forces, not goals. Apply the Lean value and waste
+discipline from section 3.1 before reaching for a named pattern: start from a
+current use case, identify the volatility or propagation cost, prefer the
+smallest coherent move, and record the simpler design that was rejected.
 
-Use when framework, transport, persistence, or vendor details are likely to change independently from domain policy. Keep adapters replaceable and policy testable without the external mechanism.
+Load [../../skills/software-design/references/pattern-catalog.md](../../skills/software-design/references/pattern-catalog.md)
+when a user asks about patterns, proposes a named pattern, or the source shows
+pattern ceremony whose fit must be judged.
 
-Avoid when the app is a simple script or the adapter/policy split creates more moving parts than the known change requires.
+Every pattern recommendation must state:
 
-### 6.2 Explicit Boundary Translation
+1. The current force it addresses.
+2. Where the responsibility and dependency boundary sits.
+3. When to avoid the pattern.
+4. Which `SD-*` smell family it can reduce.
+5. Which `SD-*` smell family it may introduce.
+6. The cheapest evidence layer needed before treating the pattern as justified.
 
-Use when two modules use different meanings, lifecycles, or ownership for similar data. Mapping is cheaper than letting one model leak everywhere.
+Core pattern families:
 
-Avoid when the boundary is artificial and both sides are owned, changed, and understood together.
+- Boundary and translation: Adapter, Facade, Anti-Corruption Boundary, Mapper.
+- Variation and policy selection: Strategy, Policy Object, Specification.
+- Workflow and orchestration: Pipeline, Chain of Responsibility, State Machine,
+  Saga / Process Manager.
+- Creation and composition: Factory Method, Abstract Factory, Builder,
+  Composition Root.
+- Collaboration and events: Observer, Domain Events, Message Bus.
+- Persistence and domain shape: Repository, Unit of Work, Aggregate,
+  Shared Kernel.
+- Evolution: Strangler, Branch by Abstraction, Plugin / Extension Point.
 
-### 6.3 Vertical Slice With Local Policy
-
-Use when a feature owns its request, workflow, validation, and local persistence behavior without broad reuse pressure. This reduces cross-layer edits for feature changes.
-
-Avoid when independent features genuinely share complex domain policy that needs one authoritative home.
-
-### 6.4 Layered Core With Inward Dependencies
-
-Use when shared domain policy is stable enough to justify a core and adapters are clearly outside it.
-
-Avoid when layers merely mirror folder names and every change still crosses all layers.
-
-### 6.5 Anti-Corruption Boundary
-
-Use when integrating with an external system, legacy model, or partner vocabulary that must not define internal concepts.
-
-Avoid when the integration is small and a local adapter function is sufficient.
-
-### 6.6 Shared Kernel With Ownership Contract
-
-Use only when multiple teams or modules truly share stable concepts and can coordinate changes.
-
-Avoid when "shared" means "convenient place to put code no one owns."
-
-### 6.7 Strangler Refactor
-
-Use when replacing a design incrementally while keeping behavior stable.
-
-Avoid when the new and old designs would run indefinitely without a retirement path.
+Default: recommend no pattern when direct code, deletion, or narrowing solves
+the known problem with less propagation cost. Transitional patterns need an exit
+condition; extension points need current implementers or an explicit ownership
+force.
 
 ## 7. Design Smells
 
