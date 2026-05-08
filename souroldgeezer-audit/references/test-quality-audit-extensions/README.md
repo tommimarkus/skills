@@ -41,6 +41,7 @@ The shipped core + addon extensions use this shape:
 - `nextjs-core.md` / `nextjs-unit.md` / `nextjs-integration.md` / `nextjs-e2e.md` — Next.js-specific overlays loaded after `nodejs-core.md`.
 - `python-core.md` / `python-unit.md` / `python-integration.md` / `python-e2e.md` — Python detection, pytest / unittest / Hypothesis / async-test patterns, web-framework integration routing, Python browser-runner E2E signals, SUT surface enumeration, determinism verification, and Mutmut mutation-tool declaration.
 - `robotframework-core.md` / `robotframework-unit.md` / `robotframework-integration.md` / `robotframework-e2e.md` — Robot Framework detection, keyword/library boundary classification, keyword-layer SUT enumeration, determinism verification, Robot-level mutation skip, and rubric-specific keyword/API/browser/mobile patterns.
+- `rust-core.md` / `rust-unit.md` / `rust-integration.md` / `rust-e2e.md` — Rust detection, Cargo/libtest/nextest routing, trait fake and mock semantics, CLI/service/browser boundary classification, SUT surface enumeration, determinism verification, and cargo-mutants mutation-tool declaration.
 
 **Loading rule for core + addon extensions:** always load the `-core.md` file (it owns detection and test-type dispatch). After step 0b selects the rubric(s), load the addon that matches each selected rubric. Load multiple addons for mixed-rubric audit targets.
 

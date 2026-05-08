@@ -5,6 +5,7 @@ Extensions add stack-specific evidence and smell codes to the core software-desi
 Current extensions:
 
 - [dotnet.md](dotnet.md) - .NET solution/project design signals.
+- [rust.md](rust.md) - Rust crate/workspace design signals.
 - [shell-script.md](shell-script.md) - Bash/zsh shell-script design signals,
   including Linux, macOS, and WSL compatibility boundaries.
 - [python.md](python.md) - Repo-internal Python tooling design signals

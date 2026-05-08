@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, pattern tradeoffs, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test quality.
+  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, pattern tradeoffs, and .NET™, Rust®, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test quality.
 ---
 
 # Software Design
@@ -27,6 +27,7 @@ Load what applies: core reference
 sections 2-7 and 9; [references/smell-catalog.md](references/smell-catalog.md)
 for findings; [references/pattern-catalog.md](references/pattern-catalog.md)
 for pattern questions/ceremony; [extensions/dotnet.md](extensions/dotnet.md),
+[extensions/rust.md](extensions/rust.md),
 [extensions/shell-script.md](extensions/shell-script.md), or
 [extensions/python.md](extensions/python.md) for matching stack signals;
 [extensions/README.md](extensions/README.md) only when editing extensions.

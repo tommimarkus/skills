@@ -18,16 +18,20 @@ Core signals:
   Alembic -> `python-core.md`
 - Robot Framework: `.robot`, `.resource`, `.tsv`, Robot packages, `robot`,
   `rebot`, `pabot`, or Robot XML / xUnit artifacts -> `robotframework-core.md`
+- Rust: `Cargo.toml`, `Cargo.lock`, `rust-toolchain*`, `.cargo/config.toml`,
+  `src/**/*.rs`, `tests/**/*.rs`, `#[test]`, `#[tokio::test]`,
+  `cargo test`, `cargo nextest`, `proptest`, `quickcheck`, `mockall`,
+  `testcontainers`, `assert_cmd`, or `cargo-mutants` -> `rust-core.md`
 
 After rubric selection, load the matching addon pack:
 
 - Unit/component: `dotnet-unit.md`, `nodejs-unit.md`, `nextjs-unit.md`,
-  `python-unit.md`, `robotframework-unit.md`
+  `python-unit.md`, `robotframework-unit.md`, `rust-unit.md`
 - Integration: `dotnet-integration.md`, `nodejs-integration.md`,
   `nextjs-integration.md`, `python-integration.md`,
-  `robotframework-integration.md`
+  `robotframework-integration.md`, `rust-integration.md`
 - E2E: `dotnet-e2e.md`, `nodejs-e2e.md`, `nextjs-e2e.md`, `python-e2e.md`,
-  `robotframework-e2e.md`
+  `robotframework-e2e.md`, `rust-e2e.md`
 
 When several layers apply, compose them: test-artifact packs own runner/test
 semantics, SUT-stack packs own source-level gaps and mutation tools, and

@@ -23,3 +23,10 @@ or documentation.
   Handling: local calibration notes and synthetic pressure prompts. Use this
   file before expanding pattern or stack guidance so generic base-model
   knowledge does not get repackaged as bundled skill prose.
+- Source: Rust Project docs at `https://doc.rust-lang.org/cargo/reference/workspaces.html`,
+  `https://doc.rust-lang.org/cargo/reference/features.html`, and
+  `https://doc.rust-lang.org/reference/visibility-and-privacy.html`, and Rust
+  API Guidelines at `https://rust-lang.github.io/api-guidelines/`.
+  Handling: linked for Rust crate/workspace/API platform facts; extension
+  smells are original repo-authored design heuristics and do not copy examples,
+  tables, or prose.

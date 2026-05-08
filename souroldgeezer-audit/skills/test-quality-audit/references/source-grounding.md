@@ -15,3 +15,12 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   `references/golden-corpus/test-quality-audit-cases.jsonl`.
   Handling: local maintenance evidence; behavioral evals are separate synthetic
   cases and do not copy corpus prompts or expected outputs.
+- Source: Rust Project docs at `https://doc.rust-lang.org/cargo/guide/tests.html`,
+  `https://doc.rust-lang.org/cargo/commands/cargo-test.html`, and
+  `https://doc.rust-lang.org/rustc/tests/index.html`; cargo-nextest docs at
+  `https://nexte.st/` and `https://nexte.st/docs/running/`; and cargo-mutants
+  docs at `https://mutants.rs/`, `https://mutants.rs/mutants-out.html`, and
+  `https://mutants.rs/mutants.html`.
+  Handling: linked for Rust test-runner and mutation-tool facts; extension
+  rules are original repo-authored quality heuristics and do not copy examples
+  or prose.
