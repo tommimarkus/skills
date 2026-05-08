@@ -30,3 +30,11 @@ or documentation.
   Handling: linked for Rust crate/workspace/API platform facts; extension
   smells are original repo-authored design heuristics and do not copy examples,
   tables, or prose.
+- Source: Oracle Java Language Specification chapter 7 at
+  `https://docs.oracle.com/javase/specs/jls/se21/html/jls-7.html`, Apache Maven
+  POM reference at `https://maven.apache.org/pom.html`, and Gradle Java Plugin /
+  Java testing docs at `https://docs.gradle.org/current/userguide/java_plugin.html`
+  and `https://docs.gradle.org/current/userguide/java_testing.html`.
+  Handling: linked for Java package, module, build, source-set, and dependency
+  facts; extension smells are original repo-authored design heuristics and do
+  not copy examples, tables, or prose.

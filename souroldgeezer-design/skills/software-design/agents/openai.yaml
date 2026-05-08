@@ -4,8 +4,8 @@ interface:
     Use when building, extracting, reviewing, or looking up
     code/module/service/refactor design: boundaries, dependencies,
     responsibilities, semantics, coupling, evolution, pattern
-    tradeoffs, and .NET™, Rust®, shell, or Python® tooling. Defer app/UI, API,
-    infra, architecture, security, and test quality.
+    tradeoffs, and .NET™, Java™, Rust®, shell, or Python® tooling. Defer
+    app/UI, API, infra, architecture, security, and test quality.
   default_prompt: "Use $software-design to review this code or pattern choice for sustainable design."
 policy:
   allow_implicit_invocation: true

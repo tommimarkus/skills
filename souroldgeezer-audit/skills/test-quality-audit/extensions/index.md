@@ -7,6 +7,10 @@ Core signals:
 
 - .NET: `.csproj`, `.sln`, xUnit, NUnit, MSTest, Moq, bUnit, Playwright,
   Selenium, or Stryker.NET -> `dotnet-core.md`
+- Java: `pom.xml`, `build.gradle*`, `settings.gradle*`, `src/test/java`,
+  JUnit, TestNG, Mockito, AssertJ, Hamcrest, Testcontainers, REST Assured,
+  Playwright Java, Selenium, Maven Surefire/Failsafe, Gradle `Test` tasks, or
+  PIT -> `java-core.md`
 - Node.js / TypeScript: `package.json`, Jest, Vitest, Mocha, `node:test`,
   Testing Library, Playwright, Cypress, WebdriverIO, Supertest, MSW,
   Testcontainers, fast-check, or Stryker JS -> `nodejs-core.md`
@@ -25,13 +29,14 @@ Core signals:
 
 After rubric selection, load the matching addon pack:
 
-- Unit/component: `dotnet-unit.md`, `nodejs-unit.md`, `nextjs-unit.md`,
-  `python-unit.md`, `robotframework-unit.md`, `rust-unit.md`
-- Integration: `dotnet-integration.md`, `nodejs-integration.md`,
-  `nextjs-integration.md`, `python-integration.md`,
+- Unit/component: `dotnet-unit.md`, `java-unit.md`, `nodejs-unit.md`,
+  `nextjs-unit.md`, `python-unit.md`, `robotframework-unit.md`,
+  `rust-unit.md`
+- Integration: `dotnet-integration.md`, `java-integration.md`,
+  `nodejs-integration.md`, `nextjs-integration.md`, `python-integration.md`,
   `robotframework-integration.md`, `rust-integration.md`
-- E2E: `dotnet-e2e.md`, `nodejs-e2e.md`, `nextjs-e2e.md`, `python-e2e.md`,
-  `robotframework-e2e.md`, `rust-e2e.md`
+- E2E: `dotnet-e2e.md`, `java-e2e.md`, `nodejs-e2e.md`,
+  `nextjs-e2e.md`, `python-e2e.md`, `robotframework-e2e.md`, `rust-e2e.md`
 
 When several layers apply, compose them: test-artifact packs own runner/test
 semantics, SUT-stack packs own source-level gaps and mutation tools, and
