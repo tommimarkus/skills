@@ -109,9 +109,13 @@ discipline from section 3.1 before reaching for a named pattern: start from a
 current use case, identify the volatility or propagation cost, prefer the
 smallest coherent move, and record the simpler design that was rejected.
 
-Load [../../skills/software-design/references/pattern-catalog.md](../../skills/software-design/references/pattern-catalog.md)
+Load the compact decision aid at
+[../../skills/software-design/references/pattern-catalog.md](../../skills/software-design/references/pattern-catalog.md)
 when a user asks about patterns, proposes a named pattern, or the source shows
-pattern ceremony whose fit must be judged.
+pattern ceremony whose fit must be judged. Do not expand this reference into a
+generic pattern tutorial; rely on the base model for mechanics and keep bundled
+guidance focused on Lean selection, smell mapping, evidence layers, and
+delegation.
 
 Every pattern recommendation must state:
 

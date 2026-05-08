@@ -11,4 +11,7 @@ Current extensions:
   (scripts, dev tools, CI helpers, generators, validators); skips Python
   web/ASGI applications.
 
-Add a new extension only when the stack has repeated design signals that cannot be expressed cleanly by the core catalog. Keep extension claims about platform facts anchored to official runtime documentation and design-goodness claims anchored to the core reference.
+Add or expand an extension only when repeated pressure cases show the core
+workflow plus a strong base model misses stack-specific design signals. Keep
+extension claims about platform facts anchored to official runtime
+documentation and design-goodness claims anchored to the core reference.

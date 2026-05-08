@@ -3,9 +3,9 @@ interface:
   short_description: >-
     Use when building, extracting, reviewing, or looking up
     code/module/service/refactor design: boundaries, dependencies,
-    responsibilities, semantics, coupling, evolution, design-pattern
+    responsibilities, semantics, coupling, evolution, pattern
     tradeoffs, and .NET™, shell, or Python® tooling. Defer app/UI, API,
-    infra, architecture, security, and test-quality work.
+    infra, architecture, security, and test quality.
   default_prompt: "Use $software-design to review this code or pattern choice for sustainable design."
 policy:
   allow_implicit_invocation: true

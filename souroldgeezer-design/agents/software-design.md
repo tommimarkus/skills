@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, design-pattern tradeoffs, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test-quality work.
+  Use when building, extracting, reviewing, or looking up code/module/service/refactor design: boundaries, dependencies, responsibilities, semantics, coupling, evolution, pattern tradeoffs, and .NET™, shell, or Python® tooling. Defer app/UI, API, infra, architecture, security, and test quality.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

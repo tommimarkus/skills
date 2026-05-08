@@ -15,7 +15,11 @@ or documentation.
 
 - Source: `references/pattern-catalog.md`.
   Handling: local bundled reference owned by this repo; pattern descriptions are
-  paraphrased in repo-authored language and anchored to the existing
+  limited to repo-authored decision criteria and anchored to the existing
   software-design source basis. Synthetic evals exercise pattern selection,
   pattern rejection, and ceremony review without copying third-party pattern
   descriptions, diagrams, tables, or examples.
+- Source: `references/evals/model-pressure.md`.
+  Handling: local calibration notes and synthetic pressure prompts. Use this
+  file before expanding pattern or stack guidance so generic base-model
+  knowledge does not get repackaged as bundled skill prose.
