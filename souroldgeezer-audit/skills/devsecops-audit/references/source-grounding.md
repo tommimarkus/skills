@@ -17,3 +17,12 @@ tables, diagrams, screenshots, or documentation.
   `codex-security:security-scan` workflow name.
   Handling: local runtime capability reference only; the eval case is original
   synthetic prose and does not copy the plugin workflow body.
+- Source:
+  https://codeql.github.com/codeql-query-help/csharp/cs-log-forging/.
+  Handling: external source anchor for the C# log-forging concern, CWE-117
+  mapping, and remediation direction. The bundled `dns.HC-15` wording and
+  behavior eval are original repo-authored paraphrase; no CodeQL examples,
+  query code, or prose are copied.
+- Source: https://github.com/tommimarkus/skills/issues/46.
+  Handling: local issue records the repo-specific coverage gap and acceptance
+  direction. The behavior eval is synthetic and does not copy issue text.

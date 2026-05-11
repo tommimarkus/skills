@@ -247,6 +247,7 @@ See [devsecops-extensions/dotnet-security.md](devsecops-extensions/dotnet-securi
 | `dns.HC-12` | `BinaryFormatter` usage |
 | `dns.HC-13` | Data Protection keys not persisted to a durable store |
 | `dns.HC-14` | `DefaultAzureCredential` used without explicit managed identity |
+| `dns.HC-15` | Log forging / log injection in structured logs |
 | `dns.LC-1` | Shadow / zombie function endpoint (registered, not in route inventory) |
 | `dns.LC-2` | Mass assignment / BOPLA risk (deserialization into undocumented fields) |
 | `dns.LC-3` | `new HttpClient(...)` without `IHttpClientFactory` / `PooledConnectionLifetime` |

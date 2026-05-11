@@ -245,6 +245,48 @@ Then check whether the call is wrapped with options setting `ManagedIdentityClie
 **Remediation action:**
 > Production: replace with `new ManagedIdentityCredential(clientId: "<uami-client-id>")`. Dev: keep `DefaultAzureCredential` but pass `new DefaultAzureCredentialOptions { ManagedIdentityClientId = "<id>" }`.
 
+### `dns.HC-15` — Log forging / log injection in structured logs
+
+**Pattern:** user-controlled strings are passed to C# logging sinks without a
+visible log-safe transform. This covers direct `ILogger.Log*` calls and central
+audit/security wrappers such as `AuditLog.Emit`, `EmitAudit`,
+`LogAudit`, `AppendAudit`, or `WriteAudit` when the wrapper forwards values to
+`ILogger.Log*`. Treat route, query, form, body, header, claim, and external
+identifier values as tainted unless a strict source constraint is visible.
+Audit event target/detail fields are tainted when they can carry route/query
+IDs or user-supplied detail strings.
+
+Structured logging is not a carve-out by itself. A forged line break can still
+survive in structured property values or rendered text if the sink, formatter,
+exporter, or downstream viewer emits plain text. This rule is aligned with
+CodeQL `cs/log-forging` and is strongest for audit/security logs because those
+logs are investigation evidence.
+
+**Detection (ripgrep):**
+```
+rg -nE 'Log(Trace|Debug|Information|Warning|Error|Critical)\s*\(' api app shared
+rg -nE '(AuditLog\.Emit|EmitAudit|LogAudit|AppendAudit|WriteAudit)\s*\(' api app shared
+rg -nE '(RouteValues|Query|Form|Headers|\[From(Route|Query|Body)\]|HttpRequest|Audit(Event|Target|Detail))' api app shared
+```
+Then trace arguments into the logging call or wrapper. Flag values that may
+contain `\r`, `\n`, or other display-control characters and reach the log
+without an explicit safety transform.
+
+**Severity:** `block` for audit/security logs or confirmed CR/LF-capable input;
+`warn` for likely user-controlled application logs when reachability is
+plausible but not proven.
+
+**Rubric:** devsecops.md §6.6; CICD-SEC-10; CWE-117.
+
+**Remediation action:**
+> Normalize or remove CR/LF and other line-breaking display controls at the
+> logging boundary, for example with `ReplaceLineEndings(" ")` plus explicit
+> `\r`/`\n` replacement when needed by the target framework. For stable IDs,
+> prefer a strict identifier allowlist. For sensitive or high-entropy values,
+> use hashing/tokenization and log only the derived token. Add a regression test
+> proving forged line breaks do not survive in structured properties or rendered
+> log text.
+
 ### `dns.LC-1` — Shadow / zombie function endpoint
 
 **Pattern:** a `[Function]` or `[HttpTrigger]` handler registered in `api/Functions/` whose route does not appear in any OpenAPI / route inventory document.
@@ -342,3 +384,4 @@ new\s+X509Certificate2\s*\(\s*"[^"]+\.pfx"\s*,\s*"
 - **Do not flag `dns.HC-2` on endpoints explicitly listed in `SECURITY.md`** as public.
 - **Do not flag `dns.HC-3` on Static Web Apps routes** — SWA handles auth at the edge via `staticwebapp.config.json` (the legacy `routes.json` is ignored when `staticwebapp.config.json` exists), not via `[Authorize]`. See https://learn.microsoft.com/azure/static-web-apps/configuration.
 - **Do not flag `dns.HC-5` on Blazor WASM projects** — the host (SWA / Functions) is responsible for headers, not the WASM client. For Blazor **Server** / **Web App**, the framework auto-emits `Content-Security-Policy: frame-ancestors 'self'` and Antiforgery emits `X-Frame-Options: SAMEORIGIN`; do not double-flag those specific headers as missing.
+- **Do not flag `dns.HC-15`** when the logged value is sanitized at the logging boundary through explicit CR/LF normalization or removal, `ReplaceLineEndings`-style handling, hashing/tokenization, or a strict identifier allowlist that excludes display-control characters.
