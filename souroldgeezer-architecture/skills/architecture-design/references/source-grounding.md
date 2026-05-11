@@ -1,27 +1,22 @@
 # Source Grounding
 
-The architecture package exists because dediren source is the agent-editable
-model and SVG is the primary visual proof. OEF is an optional compatibility
-export. Behavioral evals are repo-authored synthetic cases derived from the
-dediren package workflow, architecture reference, source lifting rules, and
-fixture package.
+The dediren package is the agent-editable model, SVG is the primary visual
+proof, and OEF is optional compatibility output. Behavioral evals are original
+synthetic cases derived from local package workflow, references, lifting rules,
+and fixtures.
 
-- Source: `../../../docs/architecture-reference/architecture.md`.
-  Handling: local bundled reference owned by this repo; eval prompts are
-  original synthetic scenarios for mode selection, package source quality,
-  readiness classification, render evidence, and optional export evidence.
-- Source: `references/procedures/**`.
-  Handling: local procedure contracts; eval cases paraphrase the expected
-  behavior without copying model, layout, render, or export artifacts.
-- Source: `references/fixtures/dediren/basic/**`.
-  Handling: local package fixture; eval cases refer to the workflow shape and
-  not to third-party diagrams or copied examples.
-- Source: repo-local real-project feedback that Extract produced a flat
-  ungrouped model.
-  Handling: captured as original guidance requiring source-backed groups for
-  ownership, hosting, trust, environment, or dependency boundaries when source
-  evidence supports them.
-- Source: user-supplied downstream validation reports for optional OEF exports.
-  Handling: synthetic scenario only unless the user provides concrete evidence
-  in the current task; report supplied evidence in Review output without
-  bundling it into the skill.
+- `../../../docs/architecture-reference/architecture.md`: local reference;
+  evals cover mode selection, source quality, readiness, render evidence, and
+  optional export evidence.
+- `references/procedures/**`: local procedure contracts; evals paraphrase
+  behavior without copying package artifacts.
+- `references/fixtures/dediren/basic/**`: local fixture; evals reference the
+  workflow shape, not third-party diagrams or examples.
+- Repo-local Extract feedback: keep source-backed groups for evidenced
+  ownership, hosting, trust, environment, or dependency boundaries.
+- Repo-local incremental extraction feedback: locate groups in `model.json`
+  under `plugins.generic-graph.views[].groups` and avoid grouping simple linear
+  process flows unless responsibility, trust, participant, or orchestration
+  boundaries change the architectural reading.
+- User-supplied downstream OEF validation: use synthetic scenarios unless the
+  current task supplies evidence; report supplied evidence without bundling it.

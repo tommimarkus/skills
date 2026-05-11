@@ -1,126 +1,69 @@
-Use this reference after `SKILL.md` selects the mode. Copy only the relevant
-skeleton and keep runtime evidence, quality level, export readiness, and footer
-disclosures explicit.
+Use after mode selection. Always disclose runtime evidence, quality, export
+readiness, findings, and the footer.
 
-## Output Format
-
-### Build Mode
+## Build
 
 ```
-Architecture package: docs/architecture/orders.dediren/
+Package: docs/architecture/<feature>.dediren/
 Mode: build
-Quality level: source-valid | view-readable | render-ready | review-ready
-Export readiness: not requested | export-ready | export blocked (missing export-policy.json)
-
-Created or updated:
-  Source:        model.json, project.json
-  Render policy: render-policy.json, render-metadata.json
-  Generated:     generated/ ignored; recreated by dediren
-
-Views:
-  1 actual view; missing diagram kinds: Capability Map, Migration, Motivation,
-  Business Process Cooperation, Service Realization, Technology Usage
-
+Quality level: <quality>
+Export readiness: <export-readiness>
 Evidence:
-  Dediren runtime: souroldgeezer-architecture/tools/dediren-linux/bin/dediren
-  Source validation: passed | failed | not run (missing dediren bundle)
-  SVG render: passed | failed | not run (dediren render returned error envelope)
-  Optional OEF export: not requested | passed | failed | blocked
-  Findings: 0 blocking ARCH-* findings
-```
-
-### Extract Mode
-
-```
-Architecture package: docs/architecture/<feature>.dediren/
-Mode: extract
-Quality level: source-valid | view-readable | render-ready | review-ready
-Export readiness: not requested | export-ready | export blocked (missing export-policy.json)
-
-Extraction summary:
-  Sources read: <files>
-  Layers lifted: Application <n>, Technology <n>, Implementation & Migration <n>,
-    Business Process candidates <n>
-  View groups: <n> source-backed groups; unsupported grouping candidates <n>|none
-  Architect-owned layers: Business-other, Motivation, Strategy, Physical
-  Source evidence: <source refs preserved in model.json, or "none">
-
-Evidence:
-  Dediren runtime: <path> | not run (missing dediren-linux bundle)
+  Dediren runtime: <path> | not run (missing dediren bundle)
+  Views: <n> actual; missing diagram kinds: <list|none>
   Source validation: passed | failed | not run
-  Views: <n> actual views; missing diagram kinds: <list or "none">
   SVG render: passed | failed | not run
-  Drift against existing package: <added / removed / changed counts, or n/a>
+  OEF export: not requested | passed | failed | blocked
   Findings: <n> blocking ARCH-* findings
 ```
 
-### Review Mode
-
-Lead with findings, then the rollup:
+## Extract
 
 ```
-Findings:
-  [ARCH-M-1] <one-line finding>
-    evidence: <file, node id, edge id, command, or render artifact>
-    severity: block | warn | info
-    action: <specific correction>
-
-Readiness:
-  Quality level: source-valid | view-readable | render-ready | review-ready
-  Export readiness: not requested | export-ready | export blocked (missing export-policy.json)
-  Change classification: semantic model yes|no; view membership or layout policy yes|no; render policy or metadata yes|no; export policy yes|no
-
-Evidence:
-  Architecture package: docs/architecture/<feature>.dediren/
-  Dediren runtime: <path> | not run (missing dediren bundle)
-  Source validation: passed | failed | not run
-  Layout validation: passed | failed | not run
-  SVG render: passed | failed | not run
-  Optional OEF export: not requested | passed | failed | blocked
+Package: docs/architecture/<feature>.dediren/
+Mode: extract
+Quality level: <quality>
+Export readiness: <export-readiness>
+Sources read: <files>
+Layers lifted: Application <n>, Technology <n>, Implementation & Migration <n>, Business Process candidates <n>
+View groups: <n> source-backed groups; unsupported grouping candidates <n>|none
+Architect-owned layers: Business-other, Motivation, Strategy, Physical
+Evidence: runtime <path|missing>; validation <state>; views <n>; render <state>; drift <summary>; findings <n>
 ```
 
-Every finding cites an `ARCH-*` code from `smell-catalog.md`. Use one severity
-per finding. Do not claim `review-ready` while any blocking finding remains.
+## Review
 
-### Lookup Mode
+Lead with findings:
 
-Two to four lines of prose plus the footer. Do not mutate the package.
+```
+[ARCH-M-1] <one-line finding>
+  evidence: <file, id, command, render artifact, or supplied downstream evidence>
+  severity: block | warn | info
+  action: <specific correction>
+```
 
-### Footer (All Modes)
+Then report quality, export readiness, change classification, package path,
+runtime, validation, layout validation, SVG render, and optional OEF export.
+Each finding uses one `ARCH-*` code; do not claim `review-ready` with a block.
+
+## Lookup
+
+Answer in two to four lines and include the footer. Do not mutate the package.
+
+## Footer
 
 ```
 Mode: build | extract | review | lookup
 Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.md
-Architecture package: docs/architecture/<feature>.dediren/
-Dediren runtime: souroldgeezer-architecture/tools/dediren-linux/bin/dediren | souroldgeezer-architecture/tools/dediren-macos/bin/dediren | not run (missing dediren bundle)
+Package: docs/architecture/<feature>.dediren/
+Dediren runtime: <linux path> | <macos path> | not run (missing dediren bundle)
 Quality level: source-valid | view-readable | render-ready | review-ready | not assessed
-Export readiness: not requested | export-ready | export blocked (missing export-policy.json)
+Export readiness: not requested | export-ready | blocked (missing export-policy.json)
 Diagram kind: <primary kind>
-Views: <n> actual views; missing diagram kinds: <comma-separated supported kinds, or "none">
+Views: <n> actual; missing diagram kinds: <list|none>
 View groups: <n> source-backed groups | none | not assessed
-Source validation: passed | failed <n> diagnostics | not run
-Projection: passed | failed | not run
-Layout: passed | failed | not run
-Layout validation: passed | failed | not run
-SVG render: passed | failed | not run
-Optional OEF export: not requested | passed | failed | blocked
-Runtime-verified drift: <n findings, or "drift detection not run">
+Validation: source <state>; projection <state>; layout <state>; layout validation <state>; SVG <state>; OEF <state>
+Runtime-verified drift: <n findings|not run>
 Findings: <n> blocking ARCH-* findings
-Change classification:
-  Semantic model change: yes | no
-  View membership or layout policy change: yes | no
-  Render policy or metadata change: yes | no
-  Export policy change: yes | no
-  Documentation only: yes | no
+Change classification: semantic model <yes|no>; view/layout <yes|no>; render metadata/policy <yes|no>; export policy <yes|no>; docs only <yes|no>
 ```
-
-### Quality Levels
-
-- `source-valid`: package source validates and relationships are coherent.
-- `view-readable`: each listed view can be projected and has validated layout.
-- `render-ready`: SVG render ran for changed views and the output is
-  nonblank, framed, and carries dediren node/edge markers.
-- `review-ready`: render-ready plus no blocking `ARCH-*` findings for the
-  audience and diagram kind.
-
-The artifact rollup is the weakest applicable level across actual views.

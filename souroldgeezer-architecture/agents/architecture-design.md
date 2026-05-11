@@ -1,7 +1,6 @@
 ---
 name: architecture-design
-description: >-
-  Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® 3.2 architecture models as dediren packages, especially dediren package source, SVG render quality, optional OEF export, readiness review, drift detection, or reverse lookup from code, UI, API, or workflows to Business Processes.
+description: Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® dediren packages, SVG/OEF evidence, drift, or code/IaC/API/UI/workflow reverse lookup.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

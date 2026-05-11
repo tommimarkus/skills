@@ -1,10 +1,6 @@
 # Dediren Self-Check
 
-Run this before claiming runtime evidence.
-
-## Select Runtime
-
-Use the first executable that exists:
+Run this before claiming runtime evidence. Use the first executable that exists:
 
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
@@ -12,25 +8,16 @@ Use the first executable that exists:
 If neither exists, disclose `not run (missing dediren bundle)` and cap quality
 at `source-valid` unless the user only asked for Lookup.
 
-## Verify Bundle
-
-Run:
+Verify the bundle:
 
 ```
 <dediren> --version
 jq . souroldgeezer-architecture/tools/<bundle>/bundle.json
 ```
 
-Confirm the bundle declares the required plugins for the package:
-
-- `generic-graph` for the current fixture projection;
-- `elk-layout` for layout;
-- `svg-render` for SVG evidence;
-- `archimate-oef` only when optional export is requested.
-
-## Evidence Commands
-
-Run only the commands needed for the request:
+Confirm required plugins: `generic-graph`, `elk-layout`, `svg-render`, and
+`archimate-oef` only when optional export is requested. Run only commands needed
+for the request:
 
 ```
 <dediren> validate --input <package>/model.json

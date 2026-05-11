@@ -223,12 +223,15 @@ workflow sources only as candidates with source path, symbol/workflow name,
 confidence, and unresolved questions. Missing evidence is `ARCH-X-2`.
 
 Extracted views should use source-backed groups when source structure supports
-ownership, hosting, trust, environment, or dependency boundaries. In dediren
-source, put groups under the view definition, not as top-level nodes: each group
-needs a stable id, human label, and member ids that are also present in the
-view. Do not create decorative groups just to make a flat inventory prettier;
-if the boundary comes from architect intent rather than source evidence, label
-it as architect-owned.
+ownership, hosting, trust, environment, dependency, system responsibility, or
+orchestration boundaries. In dediren source, put groups in `model.json` under
+`plugins.generic-graph.views[].groups`, not `project.json`: each group needs a
+stable id, human label, and member ids that are also present in the view. Do
+not create decorative groups just to make a flat inventory prettier. Do not add
+groups to small linear process views unless a participant, system
+responsibility, trust boundary, or orchestration boundary changes the
+architectural reading. If the boundary comes from architect intent rather than
+source evidence, label it as architect-owned.
 
 Drift review compares source evidence in the package with current repo state.
 When source and package disagree, report whether the likely action is to update

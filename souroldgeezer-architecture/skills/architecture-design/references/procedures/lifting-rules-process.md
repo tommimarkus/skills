@@ -30,3 +30,7 @@ Use source-backed groups when related process steps share a participant,
 orchestrator, queue, service boundary, or system responsibility. If the group
 would only name a human theme inferred by the agent, leave it as architect-owned
 intent instead.
+
+Do not add groups to small linear process views unless a participant, system
+responsibility, trust boundary, or orchestration boundary changes the
+architectural reading.

@@ -115,6 +115,45 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
                 self.assertIn(expected_phrase, surface.read_text(encoding="utf-8"))
 
+    def test_extract_group_guidance_names_generic_graph_model_location(self) -> None:
+        expected_phrase = "model.json` under `plugins.generic-graph.views[].groups`, not `project.json`"
+        surfaces = [
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        ]
+
+        for surface in surfaces:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                content = " ".join(surface.read_text(encoding="utf-8").split())
+                self.assertIn(expected_phrase, content)
+
+    def test_process_lifting_guidance_prevents_overgrouping_small_linear_views(self) -> None:
+        expected_phrase = (
+            "Do not add groups to small linear process views unless a participant, "
+            "system responsibility, trust boundary, or orchestration boundary "
+            "changes the architectural reading."
+        )
+        surfaces = [
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "lifting-rules-process.md",
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        ]
+
+        for surface in surfaces:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                content = " ".join(surface.read_text(encoding="utf-8").split())
+                self.assertIn(expected_phrase, content)
+
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (
             ARCH_PLUGIN
