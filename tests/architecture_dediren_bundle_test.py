@@ -42,7 +42,15 @@ def run_dediren(*args: str | Path) -> subprocess.CompletedProcess[str]:
 
 
 def envelope(result: subprocess.CompletedProcess[str]) -> dict:
-    return json.loads(result.stdout)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise AssertionError(
+            f"stdout was not JSON\n"
+            f"returncode={result.returncode}\n"
+            f"stdout={result.stdout}\n"
+            f"stderr={result.stderr}"
+        ) from exc
 
 
 class ArchitectureDedirenBundleTest(unittest.TestCase):
@@ -85,7 +93,7 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["data"]["model_schema_version"], "model.schema.v1")
 
-    def test_fixture_projects_layout_renders_and_optionally_exports(self) -> None:
+    def test_fixture_manifest_drives_dediren_command_smoke(self) -> None:
         bundle = selected_bundle()
         project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
         view = project["views"][0]

@@ -104,7 +104,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         for retired_path in retired_paths:
             with self.subTest(retired_path=retired_path.relative_to(REPO_ROOT)):
-                self.assertFalse(retired_path.exists())
+                self.assertFalse(retired_path.exists() or retired_path.is_symlink())
 
 
 if __name__ == "__main__":
