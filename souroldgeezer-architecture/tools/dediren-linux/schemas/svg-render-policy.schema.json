@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dediren.dev/schemas/svg-render-policy.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["svg_render_policy_schema_version", "page", "margin"],
+  "properties": {
+    "svg_render_policy_schema_version": { "const": "svg-render-policy.schema.v1" },
+    "semantic_profile": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "margin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["top", "right", "bottom", "left"],
+      "properties": {
+        "top": { "type": "number", "minimum": 0 },
+        "right": { "type": "number", "minimum": 0 },
+        "bottom": { "type": "number", "minimum": 0 },
+        "left": { "type": "number", "minimum": 0 }
+      }
+    },
+    "style": { "$ref": "#/$defs/style" }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "font": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 96
+        }
+      }
+    },
+    "background": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": { "$ref": "#/$defs/color" }
+      }
+    },
+    "nodeStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": { "$ref": "#/$defs/color" },
+        "stroke": { "$ref": "#/$defs/color" },
+        "stroke_width": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 24
+        },
+        "rx": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80
+        },
+        "label_fill": { "$ref": "#/$defs/color" },
+        "decorator": {
+          "type": "string",
+          "enum": [
+            "archimate_plateau",
+            "archimate_work_package",
+            "archimate_deliverable",
+            "archimate_implementation_event",
+            "archimate_gap",
+            "archimate_grouping",
+            "archimate_location",
+            "archimate_stakeholder",
+            "archimate_driver",
+            "archimate_assessment",
+            "archimate_goal",
+            "archimate_outcome",
+            "archimate_value",
+            "archimate_meaning",
+            "archimate_constraint",
+            "archimate_requirement",
+            "archimate_principle",
+            "archimate_course_of_action",
+            "archimate_resource",
+            "archimate_value_stream",
+            "archimate_capability",
+            "archimate_business_interface",
+            "archimate_business_collaboration",
+            "archimate_business_actor",
+            "archimate_business_role",
+            "archimate_business_service",
+            "archimate_business_interaction",
+            "archimate_business_function",
+            "archimate_business_process",
+            "archimate_business_event",
+            "archimate_product",
+            "archimate_business_object",
+            "archimate_contract",
+            "archimate_representation",
+            "archimate_application_interface",
+            "archimate_application_collaboration",
+            "archimate_application_component",
+            "archimate_application_service",
+            "archimate_application_interaction",
+            "archimate_application_function",
+            "archimate_application_process",
+            "archimate_application_event",
+            "archimate_data_object",
+            "archimate_technology_interface",
+            "archimate_technology_collaboration",
+            "archimate_technology_node",
+            "archimate_system_software",
+            "archimate_device",
+            "archimate_facility",
+            "archimate_equipment",
+            "archimate_path",
+            "archimate_technology_service",
+            "archimate_technology_interaction",
+            "archimate_technology_function",
+            "archimate_technology_process",
+            "archimate_technology_event",
+            "archimate_artifact",
+            "archimate_material",
+            "archimate_communication_network",
+            "archimate_distribution_network"
+          ]
+        }
+      }
+    },
+    "edgeStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stroke": { "$ref": "#/$defs/color" },
+        "stroke_width": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 24
+        },
+        "label_fill": { "$ref": "#/$defs/color" },
+        "line_style": {
+          "type": "string",
+          "enum": ["solid", "dashed"]
+        },
+        "marker_start": {
+          "type": "string",
+          "enum": [
+            "filled_arrow",
+            "open_arrow",
+            "hollow_triangle",
+            "filled_diamond",
+            "hollow_diamond",
+            "filled_circle",
+            "hollow_circle",
+            "none"
+          ]
+        },
+        "marker_end": {
+          "type": "string",
+          "enum": [
+            "filled_arrow",
+            "open_arrow",
+            "hollow_triangle",
+            "filled_diamond",
+            "hollow_diamond",
+            "filled_circle",
+            "hollow_circle",
+            "none"
+          ]
+        },
+        "label_horizontal_position": {
+          "type": "string",
+          "enum": ["near_start", "center", "near_end"]
+        },
+        "label_horizontal_side": {
+          "type": "string",
+          "enum": ["auto", "above", "below"]
+        },
+        "label_vertical_position": {
+          "type": "string",
+          "enum": ["near_start", "center", "near_end"]
+        },
+        "label_vertical_side": {
+          "type": "string",
+          "enum": ["left", "right"]
+        }
+      }
+    },
+    "groupStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": { "$ref": "#/$defs/color" },
+        "stroke": { "$ref": "#/$defs/color" },
+        "stroke_width": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 24
+        },
+        "rx": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80
+        },
+        "label_fill": { "$ref": "#/$defs/color" },
+        "label_size": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 96
+        }
+      }
+    },
+    "nodeOverrideMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/nodeStyle" }
+    },
+    "edgeOverrideMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/edgeStyle" }
+    },
+    "groupOverrideMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/groupStyle" }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/$defs/background" },
+        "font": { "$ref": "#/$defs/font" },
+        "node": { "$ref": "#/$defs/nodeStyle" },
+        "edge": { "$ref": "#/$defs/edgeStyle" },
+        "group": { "$ref": "#/$defs/groupStyle" },
+        "node_type_overrides": { "$ref": "#/$defs/nodeOverrideMap" },
+        "edge_type_overrides": { "$ref": "#/$defs/edgeOverrideMap" },
+        "node_overrides": { "$ref": "#/$defs/nodeOverrideMap" },
+        "edge_overrides": { "$ref": "#/$defs/edgeOverrideMap" },
+        "group_overrides": { "$ref": "#/$defs/groupOverrideMap" }
+      }
+    }
+  }
+}
