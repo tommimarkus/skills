@@ -16,6 +16,11 @@ fixture package.
 - Source: `references/fixtures/dediren/basic/**`.
   Handling: local package fixture; eval cases refer to the workflow shape and
   not to third-party diagrams or copied examples.
+- Source: repo-local real-project feedback that Extract produced a flat
+  ungrouped model.
+  Handling: captured as original guidance requiring source-backed groups for
+  ownership, hosting, trust, environment, or dependency boundaries when source
+  evidence supports them.
 - Source: user-supplied downstream validation reports for optional OEF exports.
   Handling: synthetic scenario only unless the user provides concrete evidence
   in the current task; report supplied evidence in Review output without

@@ -41,6 +41,7 @@ Extraction summary:
   Sources read: <files>
   Layers lifted: Application <n>, Technology <n>, Implementation & Migration <n>,
     Business Process candidates <n>
+  View groups: <n> source-backed groups; unsupported grouping candidates <n>|none
   Architect-owned layers: Business-other, Motivation, Strategy, Physical
   Source evidence: <source refs preserved in model.json, or "none">
 
@@ -96,6 +97,7 @@ Quality level: source-valid | view-readable | render-ready | review-ready | not 
 Export readiness: not requested | export-ready | export blocked (missing export-policy.json)
 Diagram kind: <primary kind>
 Views: <n> actual views; missing diagram kinds: <comma-separated supported kinds, or "none">
+View groups: <n> source-backed groups | none | not assessed
 Source validation: passed | failed <n> diagnostics | not run
 Projection: passed | failed | not run
 Layout: passed | failed | not run

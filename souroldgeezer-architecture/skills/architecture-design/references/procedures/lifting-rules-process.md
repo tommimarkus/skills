@@ -25,3 +25,8 @@ Record:
 - unresolved architect questions.
 
 Missing evidence is `ARCH-X-2`.
+
+Use source-backed groups when related process steps share a participant,
+orchestrator, queue, service boundary, or system responsibility. If the group
+would only name a human theme inferred by the agent, leave it as architect-owned
+intent instead.

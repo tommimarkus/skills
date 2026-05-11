@@ -26,6 +26,12 @@ extractable facts into package source. Mark Business Process, Event, and
 Interaction candidates with source evidence. Leave Business-other, Motivation,
 Strategy, and Physical claims as architect-owned intent.
 
+Create source-backed groups in view definitions when source structure exposes
+ownership, hosting, trust, environment, or dependency boundaries. Put them in
+the view's `groups` array with stable ids, labels, and member ids that also
+appear in that view. Do not add decorative groups without source evidence or
+architect intent.
+
 ## Review
 
 Review the package without mutating it by default. Check:

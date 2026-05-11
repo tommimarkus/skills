@@ -22,3 +22,7 @@ Use for Extract when `.github/workflows/` is in scope.
 
 Do not invent migration intent from parallel workflow environments. Record
 source paths and job names on lifted elements.
+
+Use source-backed groups for environments, release lanes, deployment stages, or
+job clusters when workflow structure shows a boundary. Routine build/test jobs
+do not need groups unless delivery architecture is the requested view concern.

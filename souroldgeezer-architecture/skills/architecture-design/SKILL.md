@@ -99,7 +99,9 @@ architect intent instead.
 
 - **Build**: create or edit a dediren package from architect intent.
 - **Extract**: lift extractable layers from source, IaC, and workflows into a
-  dediren package while marking architect-owned content.
+  dediren package while marking architect-owned content and emitting
+  source-backed groups for ownership, hosting, trust, or dependency boundaries
+  when evidence supports them.
 - **Review**: assess source validity, view readability, SVG render quality,
   optional export evidence, and drift.
 - **Lookup**: answer a bounded notation, package, domain-discovery, or reverse

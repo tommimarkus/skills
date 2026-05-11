@@ -192,7 +192,8 @@ Good views have:
 - a small set of elements needed for the question;
 - visible primary relationships;
 - labels intended for the target audience;
-- enough layout grouping to reveal ownership, hosting, trust, or realization;
+- enough source-backed groups to reveal ownership, hosting, trust,
+  dependency, or realization boundaries;
 - render output that can be read without inspecting source.
 
 Bad views list inventory, hide the primary relationship, mix unrelated layers,
@@ -220,6 +221,14 @@ unless the user supplies explicit architecture intent or source evidence.
 Business Process, Business Event, and Business Interaction may be lifted from
 workflow sources only as candidates with source path, symbol/workflow name,
 confidence, and unresolved questions. Missing evidence is `ARCH-X-2`.
+
+Extracted views should use source-backed groups when source structure supports
+ownership, hosting, trust, environment, or dependency boundaries. In dediren
+source, put groups under the view definition, not as top-level nodes: each group
+needs a stable id, human label, and member ids that are also present in the
+view. Do not create decorative groups just to make a flat inventory prettier;
+if the boundary comes from architect intent rather than source evidence, label
+it as architect-owned.
 
 Drift review compares source evidence in the package with current repo state.
 When source and package disagree, report whether the likely action is to update

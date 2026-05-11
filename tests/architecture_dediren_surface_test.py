@@ -23,10 +23,45 @@ ACTIVE_SURFACES = [
     REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design" / "SKILL.md",
     REPO_ROOT / "souroldgeezer-design" / "skills" / "infra-design" / "SKILL.md",
 ]
+EXTRACT_GROUP_SURFACES = [
+    ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "architecture-operational-workflow.md",
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "lifting-rules-dotnet.md",
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "lifting-rules-bicep.md",
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "lifting-rules-gha.md",
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "lifting-rules-process.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+]
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
-    def test_architecture_plugin_version_is_1_0_0_everywhere(self) -> None:
+    def test_architecture_plugin_version_is_1_1_0_everywhere(self) -> None:
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_entry = next(
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-architecture"
@@ -34,9 +69,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(marketplace_entry["version"], "1.0.0")
-        self.assertEqual(claude_manifest["version"], "1.0.0")
-        self.assertEqual(codex_manifest["version"], "1.0.0")
+        self.assertEqual(marketplace_entry["version"], "1.1.0")
+        self.assertEqual(claude_manifest["version"], "1.1.0")
+        self.assertEqual(codex_manifest["version"], "1.1.0")
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
 
@@ -72,6 +107,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for surface in surfaces:
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
                 self.assertIn(expected_path, surface.read_text(encoding="utf-8"))
+
+    def test_extract_guidance_requires_source_backed_groups(self) -> None:
+        expected_phrase = "source-backed groups"
+
+        for surface in EXTRACT_GROUP_SURFACES:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertIn(expected_phrase, surface.read_text(encoding="utf-8"))
 
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (

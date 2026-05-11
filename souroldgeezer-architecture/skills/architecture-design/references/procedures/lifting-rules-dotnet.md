@@ -26,3 +26,8 @@ Use for Extract when .NET projects are in scope.
 Add source refs to `model.json`. Add or update only views that answer a clear
 architecture question. Run dediren validation and render evidence before
 claiming readiness.
+
+Use source-backed groups when solution folders, deployable hosts, bounded
+contexts, or dependency clusters reveal ownership or hosting structure. Keep
+cross-cutting shared libraries out of a group unless the source makes that
+boundary meaningful for the view.

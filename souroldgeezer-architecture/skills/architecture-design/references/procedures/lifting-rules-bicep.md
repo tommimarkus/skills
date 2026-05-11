@@ -26,3 +26,7 @@ Use for Extract when Azure Bicep or ARM-style IaC is in scope.
 
 Preserve source evidence on lifted elements. Keep future-state or policy intent
 architect-owned unless the user supplies evidence.
+
+Use source-backed groups for deployment modules, resource groups, environments,
+network/trust zones, or hosting boundaries when the IaC expresses them. Do not
+turn every resource type or tag value into a visual group.
