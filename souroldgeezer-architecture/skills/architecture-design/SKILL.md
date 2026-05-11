@@ -161,10 +161,14 @@ Load only the files whose conditions apply:
   export.
 - Use `references/procedures/drift-detection.md` when Review compares package
   source with code, IaC, UI routes, APIs, or workflows.
-- Use `lifting-rules-dotnet.md`, `lifting-rules-bicep.md`,
-  `lifting-rules-gha.md`, `lifting-rules-process.md`,
-  `process-view-emission.md`, and `seed-views.md` only for Extract, or for
-  Build when process-view emission is requested.
+- For Extract source lifting, load the matching procedure:
+  [references/procedures/lifting-rules-dotnet.md](references/procedures/lifting-rules-dotnet.md),
+  [references/procedures/lifting-rules-bicep.md](references/procedures/lifting-rules-bicep.md),
+  [references/procedures/lifting-rules-gha.md](references/procedures/lifting-rules-gha.md), or
+  [references/procedures/lifting-rules-process.md](references/procedures/lifting-rules-process.md).
+- For Build or Extract process-view emission, load
+  [references/procedures/process-view-emission.md](references/procedures/process-view-emission.md)
+  and [references/procedures/seed-views.md](references/procedures/seed-views.md).
 - Use `references/fixtures/dediren/basic/` for package fixture examples and
   runtime smoke tests.
 - Use `references/evals` and `references/source-grounding.md` for trigger
