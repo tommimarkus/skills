@@ -81,7 +81,7 @@ Before writing or reviewing code, confirm the following. If the user hasn't supp
 4. **Hosting target and performance posture.** Hosted, serverless, containerized, edge, or unknown? Default: record the target when present; do not invent a runtime-specific plan. Runtime extensions may add concrete defaults.
 5. **Reliability posture.** Idempotency required on mutations? Retry tolerance of clients? Default: idempotency on all mutations; safe retry + backoff on all outbound calls.
 6. **Observability target.** OpenTelemetry, Application Insights, another exporter, or team SLO? Default: structured logs plus W3C `traceparent` propagation; loaded extensions add runtime-specific wiring.
-7. **Architecture pairing.** Does a paired ArchiMate model exist at `docs/architecture/<feature>.oef.xml` for the feature in scope? If yes: in review mode, the skill auto-dispatches to `architecture-design` Review for drift detection (§ Review mode workflow step 6); in build mode, the architect can opt in ("also update the architecture diagram") to dispatch to `architecture-design` Extract after Build. Default: auto-detect the path for review mode; opt-in for build mode.
+7. **Architecture pairing.** Does a paired ArchiMate model package exist at `docs/architecture/<feature>.dediren/` for the feature in scope? If yes: in review mode, the skill auto-dispatches to `architecture-design` Review for drift detection (§ Review mode workflow step 6); in build mode, the architect can opt in ("also update the architecture model") to dispatch to `architecture-design` Extract after Build. Default: auto-detect the package path for review mode; opt-in for build mode.
 
 If any answer changes a decision's default (e.g., "internal only, no client SDKs generated" → §3.2 URI-path versioning becomes header versioning), state the deviation explicitly in the output.
 
@@ -205,7 +205,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
    - `[runtime]` / `[load]` / `[security-tool]` items: **never** claim a pass from static analysis; report as "not statically verifiable — run load test / RUM / API scanner for ground truth."
    If any `[static]` / `[iac]` / `[contract]` item fails, fix it and re-check.
 
-7. **Architecture diagram refresh (optional).** If the architect opted in during pre-flight (step 7), dispatch to `architecture-design` Extract targeting the feature just built. The canonical path `docs/architecture/<feature>.oef.xml` is updated with any new or changed Application Layer elements — API runtime projects become Application Components, routes become Application Interfaces, and loaded extensions contribute Technology Layer relationships where applicable. If not opted in, skip silently.
+7. **Architecture package refresh (optional).** If the architect opted in during pre-flight (step 7), dispatch to `architecture-design` Extract targeting the feature just built. The canonical package `docs/architecture/<feature>.dediren/` is updated with any new or changed Application Layer elements — API runtime projects become Application Components, routes become Application Interfaces, and loaded extensions contribute Technology Layer relationships where applicable. If not opted in, skip silently.
 
 8. **Emit footer disclosure.**
 
@@ -228,7 +228,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 3. **Layer honesty.** Mark each claim as `static`, `iac`, `contract`, or `inferred`; do not claim runtime SLOs or load behavior from source.
 
-4. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml`, dispatch to `architecture-design` Review with the drift-detection sub-behaviour and include `AD-DR-*` findings after the baseline map.
+4. **Architecture drift check (conditional).** If a paired package exists at `docs/architecture/<feature>.dediren/`, dispatch to `architecture-design` Review with the drift-detection sub-behaviour and include `ARCH-X-*` findings after the baseline map.
 
 5. **Emit footer disclosure.**
 
@@ -258,7 +258,7 @@ The legacy-debt list is the record of what the project violates; it is not a lis
 
 5. **Rollup.** After per-finding output, one paragraph per bucket summarising severity counts and the top fix.
 
-6. **Architecture drift check (conditional).** If a paired diagram exists at `docs/architecture/<feature>.oef.xml` (discovered in pre-flight step 7), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `AD-DR-*` findings in a dedicated "Architecture drift" section of the output, after the api-design rollup. If no matching diagram exists, skip silently.
+6. **Architecture drift check (conditional).** If a paired package exists at `docs/architecture/<feature>.dediren/` (discovered in pre-flight step 7), dispatch to `architecture-design` Review with the drift-detection sub-behaviour. Include any `ARCH-X-*` findings in a dedicated "Architecture drift" section of the output, after the api-design rollup. If no matching package exists, skip silently.
 
 7. **Emit footer disclosure.**
 
@@ -355,7 +355,7 @@ Output contains any of the following? Stop; fix before delivering:
   architecture, frontend state/data behavior, responsive behavior,
   accessibility, internationalization, visual behavior, and Core Web Vitals
   posture. The two skills compose; neither duplicates the other.
-- `architecture-design` (plugin `souroldgeezer-architecture`) — paired ArchiMate model at `docs/architecture/<feature>.oef.xml`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired diagram exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application and Technology Layers of the diagram current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
+- `architecture-design` (plugin `souroldgeezer-architecture`) — paired ArchiMate model package at `docs/architecture/<feature>.dediren/`. Review mode auto-dispatches to `architecture-design` for drift detection when a paired package exists (see Review mode step 6); Build mode optionally dispatches to `architecture-design` Extract to keep the Application and Technology Layers of the package current (see Build mode step 7). The canonical path is the coupling mechanism; neither skill reaches into the other's surface.
 - `devsecops-audit` (plugin `souroldgeezer-audit`) — pipeline, release, secrets scanning, IaC posture, CSP / CORS / cookie attributes on the hosting tier. This skill proves the *code and contract* are compliant; the audit skill proves the *pipeline* is compliant.
 - `test-quality-audit` (plugin `souroldgeezer-audit`) — integration / E2E test quality for the endpoints this skill produces (Node.js + .NET + Next.js extensions available).
 

@@ -16,6 +16,8 @@ Own Build/Extract/Review/Lookup for topology, IaC, envs, state, identity,
 rollout/rollback, drift, and ops handoff. Delegate API/UI/code/ArchiMate/
 security/test-quality to `api-design`, `app-design`, `software-design`,
 `architecture-design`, `devsecops-audit`, and `test-quality-audit`.
+When a paired architecture model exists, the coupling path is
+`docs/architecture/<feature>.dediren/`.
 
 Inputs: files, diffs/proposals, topology, IaC roots/modules, env/state
 constraints, deployment evidence, rollout policy, and ops signals. Do not infer
@@ -48,7 +50,10 @@ synthetic/paraphrased.
 2. Prefer `rg`; inspect IaC roots/modules, deployment entrypoints/workflows,
    env/state files, generated artifacts, identity/config/observability/rollback
    signals, and architecture model pairing.
-3. Detect/announce extensions, separate fact from inference, name verification
+3. Check for a paired `docs/architecture/<feature>.dediren/` package when
+   topology, environment, identity, or rollout changes may affect architecture
+   views.
+4. Detect/announce extensions, separate fact from inference, name verification
    layers, choose the smallest topology/IaC/env/state/rollout move, then emit
    contract/footer.
 

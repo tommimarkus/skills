@@ -21,6 +21,8 @@ interaction states, and responsive/a11y/i18n/performance.
 Delegate engineering/API/infra/ArchiMate/security/test-quality to
 `software-design`, `api-design`, `infra-design`, `architecture-design`,
 `devsecops-audit`, and `test-quality-audit`.
+When a paired architecture model exists, the coupling path is
+`docs/architecture/<feature>.dediren/`.
 
 Inputs: files, diffs/proposals, workflow, route/screen, state/data/rendering
 constraints, and runtime/visual/a11y/performance evidence. Do not infer browser,
@@ -50,7 +52,9 @@ synthetic/paraphrased.
 2. Prefer `rg`; inspect inputs, detect runtime, load and announce extensions.
 3. Assimilate routes, layouts, screens, components, state/data, forms, storage,
    navigation, baseline primitives, build config, observability.
-4. Separate fact from inference, choose the smallest move, include available
+4. Check for a paired `docs/architecture/<feature>.dediren/` package when app
+   route, screen, or workflow changes may affect architecture views.
+5. Separate fact from inference, choose the smallest move, include available
    validation, then emit contract/footer.
 
 ## Mode Outputs
