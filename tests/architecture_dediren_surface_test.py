@@ -1,0 +1,111 @@
+import json
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
+ACTIVE_SURFACES = [
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "CLAUDE.md",
+    REPO_ROOT / ".claude-plugin" / "marketplace.json",
+    ARCH_PLUGIN / ".claude-plugin" / "plugin.json",
+    ARCH_PLUGIN / ".codex-plugin" / "plugin.json",
+    ARCH_PLUGIN / "agents" / "architecture-design.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "agents" / "openai.yaml",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "red-flags.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
+    ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+    REPO_ROOT / "souroldgeezer-design" / "skills" / "app-design" / "SKILL.md",
+    REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design" / "SKILL.md",
+    REPO_ROOT / "souroldgeezer-design" / "skills" / "infra-design" / "SKILL.md",
+]
+
+
+class ArchitectureDedirenSurfaceTest(unittest.TestCase):
+    def test_architecture_plugin_version_is_1_0_0_everywhere(self) -> None:
+        marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        marketplace_entry = next(
+            plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-architecture"
+        )
+        claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(marketplace_entry["version"], "1.0.0")
+        self.assertEqual(claude_manifest["version"], "1.0.0")
+        self.assertEqual(codex_manifest["version"], "1.0.0")
+        self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
+        self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
+
+    def test_active_surfaces_do_not_reference_retired_arch_layout_contracts(self) -> None:
+        retired_terms = [
+            "arch-layout",
+            "Architecture IR",
+            "layout-provenance",
+            "layoutPolicy",
+            "route-repair",
+            "global-polish",
+            "validate-png",
+            "rendered PNG",
+            "docs/architecture/<feature>.oef.xml",
+            "docs/architecture/&lt;feature&gt;.oef.xml",
+        ]
+
+        for surface in ACTIVE_SURFACES:
+            content = surface.read_text(encoding="utf-8")
+            for term in retired_terms:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), term=term):
+                    self.assertNotIn(term, content)
+
+    def test_active_surfaces_use_dediren_package_pairing(self) -> None:
+        expected_path = "docs/architecture/<feature>.dediren/"
+        surfaces = [
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+            REPO_ROOT / "souroldgeezer-design" / "skills" / "app-design" / "SKILL.md",
+            REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design" / "SKILL.md",
+            REPO_ROOT / "souroldgeezer-design" / "skills" / "infra-design" / "SKILL.md",
+        ]
+
+        for surface in surfaces:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertIn(expected_path, surface.read_text(encoding="utf-8"))
+
+    def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
+        smell_catalog = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "smell-catalog.md"
+        ).read_text(encoding="utf-8")
+
+        for finding_prefix in ["ARCH-M-", "ARCH-V-", "ARCH-L-", "ARCH-R-", "ARCH-X-", "ARCH-E-", "ARCH-Q-"]:
+            with self.subTest(finding_prefix=finding_prefix):
+                self.assertIn(finding_prefix, smell_catalog)
+
+        for legacy_prefix in ["AD-", "AD-Q", "AD-L", "AD-B", "AD-DR"]:
+            with self.subTest(legacy_prefix=legacy_prefix):
+                self.assertNotIn(legacy_prefix, smell_catalog)
+
+    def test_old_runtime_files_are_removed(self) -> None:
+        retired_paths = [
+            ARCH_PLUGIN / "tools" / "architecture-layout-java",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "bin" / "arch-layout.jar",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "arch-layout.sh",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "package-arch-layout.sh",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "archi-render.sh",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "validate-model.ajs",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "fixtures" / "architecture-ir",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "fixtures" / "rendered-png",
+        ]
+
+        for retired_path in retired_paths:
+            with self.subTest(retired_path=retired_path.relative_to(REPO_ROOT)):
+                self.assertFalse(retired_path.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
