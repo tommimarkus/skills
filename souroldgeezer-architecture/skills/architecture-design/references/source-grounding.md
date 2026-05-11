@@ -1,39 +1,22 @@
 # Source Grounding
 
-This skill's behavioral evals are synthetic, repo-authored cases derived from
-the local architecture workflow, reference, procedures, and fixture contracts.
-They do not copy external diagrams, schemas, screenshots, specification text,
-tool output, or example models.
-
-The Architecture IR package exists because OEF XML is too heavy as an agent
-working artifact. Agents work on compact YAML so architecture edits stay
-efficient and robust during the run. OEF remains the user-facing delivery and
-architect handoff artifact, and `arch-layout` remains the authority for
-production layout and edge routing.
+The architecture package exists because dediren source is the agent-editable
+model and SVG is the primary visual proof. OEF is an optional compatibility
+export. Behavioral evals are repo-authored synthetic cases derived from the
+dediren package workflow, architecture reference, source lifting rules, and
+fixture package.
 
 - Source: `../../../docs/architecture-reference/architecture.md`.
   Handling: local bundled reference owned by this repo; eval prompts are
-  original synthetic scenarios for mode selection, OEF materialization,
-  readiness classification, and static-vs-render evidence.
-- Source: `references/procedures/**`, `references/scripts/**`, and
-  `references/fixtures/README.md`.
-  Handling: local procedure and fixture contracts; eval cases paraphrase the
-  expected behavior without copying fixture XML, JSON, or rendered images.
-- Source: architect-facing validation handoff scenarios involving downstream
-  tool reports such as import errors, model validation output, or schema
-  validation output.
-  Handling: synthetic scenario only; no vendor output, screenshots, schemas, or
-  issue text copied into eval cases.
-- Source:
-  `https://github.com/archi-contribs/jarchi-community-script-pack/blob/main/Utils/Validate%20Model.ajs`.
-  Handling: used only for validation-intent grounding; the bundled
-  `validate-model.ajs` is repo-authored, carries repo-original wording, and
-  emits local machine-readable markers instead of copying the upstream script.
-- Source:
-  `https://github.com/archimatetool/archi/wiki/Archi-Command-Line-Interface`.
-  Handling: used for the Archi CLI provider ordering and `--script.runScript`
-  invocation contract; no source text copied into eval cases.
-- Source: user-supplied Archi Validator settings screenshot naming available
-  rule categories.
-  Handling: used as factual grounding for the low-risk warning categories added
-  to `validate-model.ajs`; the screenshot itself is not bundled.
+  original synthetic scenarios for mode selection, package source quality,
+  readiness classification, render evidence, and optional export evidence.
+- Source: `references/procedures/**`.
+  Handling: local procedure contracts; eval cases paraphrase the expected
+  behavior without copying model, layout, render, or export artifacts.
+- Source: `references/fixtures/dediren/basic/**`.
+  Handling: local package fixture; eval cases refer to the workflow shape and
+  not to third-party diagrams or copied examples.
+- Source: user-supplied downstream validation reports for optional OEF exports.
+  Handling: synthetic scenario only unless the user provides concrete evidence
+  in the current task; report supplied evidence in Review output without
+  bundling it into the skill.
