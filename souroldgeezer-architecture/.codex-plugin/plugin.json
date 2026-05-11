@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-architecture",
-  "version": "0.2.0",
-  "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers Architecture IR YAML working packages, OEF XML import/export, build/extract/review/render/lookup, canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, packaged Java™ layout validation, route repair, global polish, generated layout evidence, rendered PNG validation, external validation handoff, per-view readiness, render-contract disclosure, matching Claude Code subagent, and Codex skill metadata.",
+  "version": "1.0.0",
+  "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF export, build/extract/review/render/validate/lookup, drift detection, .NET™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Sour Old Geezer Architecture",
     "shortDescription": "Reference-driven ArchiMate® architecture modeling.",
-    "longDescription": "Build, extract, review, render, validate, repair, and look up ArchiMate® Architecture IR and OEF XML models with bundled references, layout runtime wiring, schemas, fixtures, import/export, and render validation procedures.",
+    "longDescription": "Build, extract, review, render, validate, and look up ArchiMate® models as dediren packages with bundled references, package fixtures, SVG render evidence, optional OEF export, and drift procedures.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
     "capabilities": [
@@ -19,9 +19,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Review this architecture model for professional readiness.",
-      "Render this OEF model and validate the diagrams.",
-      "Extract an ArchiMate® IR and OEF architecture model from this codebase."
+      "Review this dediren architecture package for professional readiness.",
+      "Render this dediren package to SVG and validate the views.",
+      "Extract an ArchiMate® model package from this codebase."
     ]
   }
 }

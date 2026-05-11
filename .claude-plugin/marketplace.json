@@ -23,8 +23,8 @@
     {
       "name": "souroldgeezer-architecture",
       "source": "./souroldgeezer-architecture",
-      "version": "0.2.0",
-      "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers Architecture IR YAML working packages, OEF XML import/export, build/extract/review/render/lookup, canonical-path drift detection, .NET™ / Bicep™ / workflow lifting, packaged Java™ layout validation, route repair, global polish, generated layout evidence, rendered PNG validation, external validation handoff, per-view readiness, render-contract disclosure, matching Claude Code subagent, and Codex skill metadata."
+      "version": "1.0.0",
+      "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF export, build/extract/review/render/validate/lookup, drift detection, .NET™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata."
     },
     {
       "name": "souroldgeezer-ops",

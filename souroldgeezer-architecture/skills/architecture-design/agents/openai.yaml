@@ -1,11 +1,8 @@
 interface:
   display_name: "Architecture Design"
   short_description: >-
-    Use when building, extracting, reviewing, rendering, validating, repairing,
-    or looking up ArchiMate® 3.2 Architecture IR or OEF XML models, especially
-    layout/runtime checks, OEF import/export, readiness review, PNG validation,
-    drift detection, or reverse lookup from code, UI, API, or workflows to
-    Business Processes.
-  default_prompt: "Review this architecture model for professional readiness."
+    Use when building, extracting, reviewing, rendering, validating, or looking
+    up ArchiMate® 3.2 architecture models as dediren packages.
+  default_prompt: "Use $architecture-design to review this dediren architecture package for professional readiness."
 policy:
   allow_implicit_invocation: true

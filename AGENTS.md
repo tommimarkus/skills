@@ -51,9 +51,10 @@ rules change.
   workflow.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
-- Use SDKMAN for Java version management. The architecture-design layout
-  runtime source lives under `tools/architecture-layout-java/` and targets
-  Java 21.
+- Use the packaged dediren tool directly for architecture-design runtime
+  checks. The Linux bundle lives under
+  `souroldgeezer-architecture/tools/dediren-linux/`; add
+  `souroldgeezer-architecture/tools/dediren-macos/` when the macOS build exists.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,
