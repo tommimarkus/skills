@@ -88,16 +88,16 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
     def test_fixture_projects_layout_renders_and_optionally_exports(self) -> None:
         bundle = selected_bundle()
         project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
-        first_view = project["views"][0]["id"]
+        view = project["views"][0]
 
         project_result = run_dediren(
             "project",
             "--target",
-            "layout-request",
+            view["projection"]["target"],
             "--plugin",
-            "generic-graph",
+            view["projection"]["plugin"],
             "--view",
-            first_view,
+            view["id"],
             "--input",
             FIXTURE / "model.json",
         )
@@ -117,11 +117,11 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         render_result = run_dediren(
             "render",
             "--plugin",
-            "svg-render",
+            view["render"]["plugin"],
             "--policy",
-            bundle / "fixtures" / "render-policy" / "default-svg.json",
+            FIXTURE / view["render"]["policy"],
             "--metadata",
-            bundle / "fixtures" / "render-metadata" / "archimate-basic.json",
+            FIXTURE / view["render"]["metadata"],
             "--input",
             layout_result_path,
         )
@@ -134,9 +134,9 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         export_result = run_dediren(
             "export",
             "--plugin",
-            "archimate-oef",
+            project["export"]["plugin"],
             "--policy",
-            bundle / "fixtures" / "export-policy" / "default-oef.json",
+            FIXTURE / project["export"]["policy"],
             "--source",
             FIXTURE / "model.json",
             "--layout",

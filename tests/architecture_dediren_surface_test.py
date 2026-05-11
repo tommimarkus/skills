@@ -92,7 +92,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_old_runtime_files_are_removed(self) -> None:
         retired_paths = [
-            ARCH_PLUGIN / "tools" / "architecture-layout-java",
+            REPO_ROOT / "tools" / "architecture-layout-java",
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "bin" / "arch-layout.jar",
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "arch-layout.sh",
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "scripts" / "package-arch-layout.sh",
