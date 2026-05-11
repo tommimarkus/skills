@@ -1,0 +1,31 @@
+{
+  "schema": "souroldgeezer.architecture.dediren.project.v1",
+  "feature": "basic",
+  "model": "model.json",
+  "views": [
+    {
+      "id": "main",
+      "title": "Basic - Application Cooperation",
+      "diagramKind": "Application Cooperation",
+      "projection": {
+        "plugin": "generic-graph",
+        "target": "layout-request"
+      },
+      "layout": {
+        "plugin": "elk-layout",
+        "output": "generated/layout/main.json"
+      },
+      "render": {
+        "plugin": "svg-render",
+        "policy": "render-policy.json",
+        "metadata": "render-metadata.json",
+        "output": "generated/svg/main.svg"
+      }
+    }
+  ],
+  "export": {
+    "plugin": "archimate-oef",
+    "policy": "export-policy.json",
+    "output": "generated/export/basic.oef.xml"
+  }
+}
