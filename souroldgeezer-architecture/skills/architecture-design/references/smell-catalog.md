@@ -1,8 +1,7 @@
 # Architecture Design Finding Catalog
 
-Use one code and one severity (`block`, `warn`, `info`) per finding. Cite source
-path, view id, node/relationship id, command output, SVG artifact, or supplied
-downstream evidence. Prefer the narrowest code.
+Use one code and severity per finding. Cite a source path, id, command output,
+artifact, or supplied downstream evidence. Prefer the narrowest code.
 
 | Code | Default | Meaning |
 |---|---:|---|
@@ -35,18 +34,15 @@ downstream evidence. Prefer the narrowest code.
 | `ARCH-Q-3` | warn | Quality claim exceeds dediren evidence. |
 | `ARCH-Q-4` | info | Diagram-kind coverage is incomplete but disclosed. |
 
-Use `block` for invalid source, failed projection/layout/render/export, or
-unsupported claims; `warn` for review-quality defects, source drift, incomplete
-realization, and optional export problems; `info` for disclosed gaps, cosmetic
-issues, and intentional architect choices.
+Severity: `block` for invalid source, failed projection/layout/render/export, or
+unsupported claims; `warn` for quality defects, drift, incomplete realization,
+and optional export problems; `info` for disclosed gaps, cosmetic issues, and
+intentional choices.
 
 Modeling-rule routing:
 
-- Use `ARCH-M-1` when an Application Component realizes an Application
-  Interface instead of using the component-interface whole/part relationship.
-- Use `ARCH-M-3` when an API or GUI access surface is typed or named as an
-  Application Service while the service should describe exposed functionality.
-- Use `ARCH-M-3` when process handoff evidence says sequencing but the model
-  uses Serving instead of Triggering.
-- Use `ARCH-Q-2` when a view lacks a clear concern or mixes element and
-  relationship vocabularies without an explicit reason.
+- `ARCH-M-1`: Application Component realizes Application Interface, or misses
+  Composition today / Aggregation for ArchiMate 4.
+- `ARCH-M-3`: API/GUI surface is typed or named as Application Service.
+- `ARCH-M-3`: process sequencing evidence uses Serving instead of Triggering.
+- `ARCH-Q-2`: view lacks a clear concern or mixes vocabularies.

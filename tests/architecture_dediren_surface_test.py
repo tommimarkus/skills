@@ -84,9 +84,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(marketplace_entry["version"], "1.1.1")
-        self.assertEqual(claude_manifest["version"], "1.1.1")
-        self.assertEqual(codex_manifest["version"], "1.1.1")
+        self.assertEqual(marketplace_entry["version"], "1.1.2")
+        self.assertEqual(claude_manifest["version"], "1.1.2")
+        self.assertEqual(codex_manifest["version"], "1.1.2")
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
 

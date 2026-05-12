@@ -5,21 +5,19 @@ Realization views.
 
 ## Business Process Cooperation
 
-Create an actual view only when there are at least two process/event/interaction
-elements or a process plus meaningful participant/object context. Show the
-trigger or flow chain and the responsibilities needed to understand handoff.
+Create only when there are at least two process/event/interaction elements or a
+process plus meaningful participant/object context. Show trigger/flow and
+handoff responsibilities.
 
 ## Service Realization
 
-Create an actual view when a Business Process or Service needs traceability to
-Application Services, Application Components, Technology services/nodes, data,
-or identity controls. The view must show the primary realization chain.
+Create when a Business Process or Service needs traceability to application,
+technology, data, or identity controls. Show the primary realization chain.
 
 ## Consolidation
 
-Avoid one near-duplicate drill-down per process when the application,
-technology, data, security, deployment, and UI-entry story is the same. Reuse a
-single view and document the covered process set.
+Avoid near-duplicate drill-downs; reuse one view when app/tech/data/security/UI
+story is the same and document the covered process set.
 
 ## Findings
 

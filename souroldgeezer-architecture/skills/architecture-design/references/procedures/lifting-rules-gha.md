@@ -4,25 +4,18 @@ Use for Extract when `.github/workflows/` is in scope.
 
 ## Elements
 
-- Workflows that build, test, deploy, migrate, or release become Work Packages
-  when they are relevant to the feature.
-- Jobs or environments can support Plateaus, deliverables, or implementation
-  events when they represent architecture-significant states.
-- Routine CI jobs stay out of architecture views unless the user asks to model
-  delivery architecture.
+- Relevant build/test/deploy/migrate/release workflows: Work Packages.
+- Jobs/environments: Plateaus, deliverables, or implementation events only when
+  architecture-significant.
+- Routine CI stays out unless delivery architecture is requested.
 
 ## Relationships
 
-- Job dependencies and environment promotion can support Triggering or Flow
-  relationships.
-- Deployment workflows can realize or serve the technology/application state
-  they deliver when source evidence is explicit.
+- Job dependencies and environment promotion: Triggering or Flow.
+- Deployment workflows may realize/serve delivered state when evidence is clear.
 
 ## Package Output
 
-Do not invent migration intent from parallel workflow environments. Record
-source paths and job names on lifted elements.
-
-Use source-backed groups for environments, release lanes, deployment stages, or
-job clusters when workflow structure shows a boundary. Routine build/test jobs
-do not need groups unless delivery architecture is the requested view concern.
+Do not infer migration from parallel environments. Record source paths/job names.
+Use source-backed groups for environments, release lanes, stages, or job clusters
+when workflow structure shows a boundary.
