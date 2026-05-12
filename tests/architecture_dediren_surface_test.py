@@ -61,7 +61,7 @@ EXTRACT_GROUP_SURFACES = [
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
-    def test_architecture_plugin_version_is_1_1_0_everywhere(self) -> None:
+    def test_architecture_plugin_version_is_1_1_1_everywhere(self) -> None:
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_entry = next(
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-architecture"
@@ -69,9 +69,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(marketplace_entry["version"], "1.1.0")
-        self.assertEqual(claude_manifest["version"], "1.1.0")
-        self.assertEqual(codex_manifest["version"], "1.1.0")
+        self.assertEqual(marketplace_entry["version"], "1.1.1")
+        self.assertEqual(claude_manifest["version"], "1.1.1")
+        self.assertEqual(codex_manifest["version"], "1.1.1")
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
 
