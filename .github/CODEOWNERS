@@ -1,0 +1,4 @@
+# Agent hooks execute with local user permissions; require owner review.
+/.claude/settings.json @tommimarkus
+/.codex/hooks.json @tommimarkus
+/scripts/agent-hooks/ @tommimarkus
