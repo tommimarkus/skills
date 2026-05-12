@@ -17,6 +17,15 @@ Create or update `model.json`, `project.json`, render policy, and render
 metadata from architect intent. Add actual views only. Validate, project,
 layout, layout-validate, and render changed views.
 
+## Semantic Modeling Guard
+
+Before claiming readiness, check that APIs and GUIs are Application Interfaces,
+Application Services describe exposed functionality, Application Components do
+not realize Application Interfaces, process sequence uses Triggering rather than
+Serving, and each view has a declared concern with a consistent element and
+relationship vocabulary. If dediren accepts a semantically suspect model, keep
+the `ARCH-*` finding and list the gap under `Dediren tool issues`.
+
 ## Extract
 
 Read source, IaC, workflows, APIs, and UI routes that are in scope. Lift only
@@ -30,6 +39,15 @@ boundaries. Put them in `model.json` under
 `plugins.generic-graph.views[].groups`, not `project.json`, with stable ids,
 labels, and member ids that also appear in that view. Do not add decorative
 groups without source evidence or architect intent.
+
+## Grouped Layout Guard
+
+Validate grouped layout output before using it as visual evidence. If grouped
+layout validation reports connector-through-node, invalid route, or
+group-boundary warnings, rerun the same view without groups. If the ungrouped
+layout validates cleaner, keep the source-backed groups in source, use the
+cleaner layout as evidence and report the grouped-layout regression with the
+validation counts.
 
 ## Review
 

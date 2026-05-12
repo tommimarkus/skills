@@ -58,6 +58,21 @@ EXTRACT_GROUP_SURFACES = [
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
 ]
+GROUPED_LAYOUT_GUARD_SURFACES = [
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "procedures"
+    / "architecture-operational-workflow.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+    ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+]
+EA_MODELING_FEEDBACK_SURFACES = [
+    ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+]
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
@@ -153,6 +168,35 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
                 content = " ".join(surface.read_text(encoding="utf-8").split())
                 self.assertIn(expected_phrase, content)
+
+    def test_grouped_layout_guidance_requires_validation_fallback(self) -> None:
+        expected_phrases = [
+            "If grouped layout validation reports connector-through-node, invalid route, or group-boundary warnings",
+            "rerun the same view without groups",
+            "use the cleaner layout as evidence and report the grouped-layout regression",
+        ]
+
+        for surface in GROUPED_LAYOUT_GUARD_SURFACES:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            for phrase in expected_phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
+
+    def test_lead_ea_modeling_feedback_is_documented(self) -> None:
+        expected_phrases = [
+            "APIs and GUIs are Application Interfaces",
+            "Application Services model the functionality exposed through an interface",
+            "Application Components must not realize Application Interfaces",
+            "Use Triggering when the architectural claim is process sequencing",
+            "define the view concern, allowed element types, and relationship types",
+            "Dediren tool issues",
+        ]
+
+        for surface in EA_MODELING_FEEDBACK_SURFACES:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            for phrase in expected_phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (

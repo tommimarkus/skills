@@ -39,3 +39,14 @@ Use `block` for invalid source, failed projection/layout/render/export, or
 unsupported claims; `warn` for review-quality defects, source drift, incomplete
 realization, and optional export problems; `info` for disclosed gaps, cosmetic
 issues, and intentional architect choices.
+
+Modeling-rule routing:
+
+- Use `ARCH-M-1` when an Application Component realizes an Application
+  Interface instead of using the component-interface whole/part relationship.
+- Use `ARCH-M-3` when an API or GUI access surface is typed or named as an
+  Application Service while the service should describe exposed functionality.
+- Use `ARCH-M-3` when process handoff evidence says sequencing but the model
+  uses Serving instead of Triggering.
+- Use `ARCH-Q-2` when a view lacks a clear concern or mixes element and
+  relationship vocabularies without an explicit reason.

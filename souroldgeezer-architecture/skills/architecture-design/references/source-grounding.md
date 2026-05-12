@@ -20,3 +20,6 @@ and fixtures.
   boundaries change the architectural reading.
 - User-supplied downstream OEF validation: use synthetic scenarios unless the
   current task supplies evidence; report supplied evidence without bundling it.
+- Paraphrase as synthetic behavior coverage for
+  interface/service separation, process handoff relationships, focused view
+  vocabulary, and footer separation of likely dediren tool issues.

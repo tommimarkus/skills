@@ -123,6 +123,28 @@ Core relationship families:
 Every relationship must be valid for its source and target ArchiMate element
 types. Invalid type/source/target combinations are `ARCH-M-1`.
 
+### Application Interfaces, APIs, And GUIs
+
+APIs and GUIs are Application Interfaces: they are access points where
+application behavior is made available to users, application components, or
+nodes. Application Services model the functionality exposed through an
+interface. Name services for the exposed behavior or capability, not for the
+transport surface, unless the source label is quoted as evidence and the
+architecture label resolves the role.
+
+Application Components must not realize Application Interfaces. In ArchiMate
+3.2, an Application Component provides an Application Interface through
+Composition. If a target modeling profile or future export consumer does not
+support Composition, use Aggregation for the component-interface whole/part
+relationship and disclose the profile decision in the footer.
+
+### Process Handoffs
+
+Use Triggering when the architectural claim is process sequencing or one
+process/event causes the next behavior to start. Use Flow when the important
+claim is transfer of information, goods, or value. Reserve Serving for a stable
+service dependency, not for a process handoff that is meant to show order.
+
 Prefer explicit realization chains:
 
 - Business Service realized by Application Service.
@@ -186,6 +208,11 @@ A view should answer one architecture question. Examples:
 - Which process handoff creates the business outcome?
 - Which requirement or goal is realized by the design?
 - Which work package moves the architecture from current to target state?
+
+Before modeling, define the view concern, allowed element types, and
+relationship types. Keep the view consistent with that small vocabulary. If an
+out-of-set element or relationship is needed, either document why it belongs or
+split the concern into a separate view.
 
 Good views have:
 
@@ -257,6 +284,18 @@ Evidence gates:
 Each command returns an envelope. Error envelopes are findings and cap the
 quality level at the highest stage already proven.
 
+Dediren runtime validation is evidence, not the full ArchiMate review. If the
+tool accepts a relationship type, source/target combination, export shape, or
+layout artifact that the architecture review still rejects, report the
+architecture finding normally and list the validator or renderer gap under
+`Dediren tool issues` in the footer.
+
+If grouped layout validation reports connector-through-node, invalid route, or
+group-boundary warnings, rerun the same view without groups. If the ungrouped
+layout validates cleaner, keep source-backed groups in `model.json`, use the
+cleaner layout as evidence and report the grouped-layout regression with both
+validation counts.
+
 Render-ready requires inspecting SVG for:
 
 - nonblank content;
@@ -321,6 +360,14 @@ For each package:
   question.
 - Missing realization chain: service names without the elements that realize
   them.
+- API or GUI access surface modeled as an Application Service instead of an
+  Application Interface.
+- Application Component realizes an Application Interface instead of using the
+  component-interface whole/part relationship.
+- Process sequence shown with Serving where Triggering is the architectural
+  claim.
+- Unfocused view: no declared concern or inconsistent element and relationship
+  vocabulary.
 - Invisible identity or access path for security-sensitive data resources.
 - Association overuse where a typed relationship is available.
 - Process thinness: no trigger, flow, participant, object, or outcome.
