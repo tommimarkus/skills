@@ -3,10 +3,15 @@
 stop_hook_init() {
   local marker_prefix=$1
 
+  command -v git >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+
   input=$(cat)
-  session_id=$(jq -r '.session_id // empty' <<<"$input")
-  cwd=$(jq -r '.cwd // empty' <<<"$input")
-  stop_hook_active=$(jq -r '.stop_hook_active // false' <<<"$input")
+  jq -e 'type == "object"' >/dev/null 2>&1 <<<"$input" || return 1
+
+  session_id=$(jq -r 'if (.session_id | type) == "string" then .session_id else "" end' <<<"$input")
+  cwd=$(jq -r 'if (.cwd | type) == "string" then .cwd else "" end' <<<"$input")
+  stop_hook_active=$(jq -r 'if .stop_hook_active == true then "true" else "false" end' <<<"$input")
 
   [[ -z "$cwd" ]] && cwd="$PWD"
   repo_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)
@@ -14,9 +19,18 @@ stop_hook_init() {
   [[ -f "$repo_root/.claude-plugin/marketplace.json" ]] || return 1
 
   marker_dir="$repo_root/.cache/agent-hooks"
-  marker="$marker_dir/${marker_prefix}-prompted-${session_id:-unknown}"
+  marker="$marker_dir/${marker_prefix}-prompted-$(stop_hook_safe_component "${session_id:-unknown}")"
   changed=""
   targets=""
+}
+
+stop_hook_safe_component() {
+  local raw=${1:-unknown}
+  local safe
+
+  safe=$(printf '%s' "$raw" | LC_ALL=C tr -c 'A-Za-z0-9_-' '_')
+  [[ -n "$safe" ]] || safe="unknown"
+  printf '%s' "$safe"
 }
 
 debug_log() {
@@ -24,7 +38,7 @@ debug_log() {
      "${CODEX_HOOK_DEBUG:-}" == "1" ||
      "${CLAUDE_HOOK_DEBUG:-}" == "1" ]] || return 0
 
-  mkdir -p "$marker_dir" || return 0
+  mkdir -p "$marker_dir" 2>/dev/null || return 0
   {
     # hook_name is set by the entrypoint before sourcing this library.
     # shellcheck disable=SC2154
@@ -59,8 +73,11 @@ stop_hook_should_continue() {
 }
 
 stop_hook_mark_prompted() {
-  mkdir -p "$marker_dir"
-  touch "$marker"
+  if mkdir -p "$marker_dir" 2>/dev/null && touch "$marker" 2>/dev/null; then
+    debug_log "emit-block"
+    return 0
+  fi
+
   debug_log "emit-block"
 }
 

@@ -471,11 +471,13 @@ observation is reported regardless of which path it takes.
 
 ## Cross-skill integration
 
-`ip-hygiene` is invoked on file edits. It does *not* currently hook
-into other skills' Review modes (e.g., `architecture-design` Review
-does not automatically dispatch `ip-hygiene`). If a future skill
-wants to add an IP check to its Review mode, point at this skill by
-name; do not duplicate the procedure.
+`ip-hygiene` is invoked on file edits. The repo Stop hooks prompt for this
+check when skill, agent, reference, manifest, marketplace, metadata, or
+repo-guidance surfaces changed. Other skills' Review modes still do not
+automatically dispatch `ip-hygiene` internally (e.g., `architecture-design`
+Review does not run the IP check as part of its own workflow). If a future skill
+wants to add an IP check to its Review mode, point at this skill by name; do not
+duplicate the procedure.
 
 When a skill's Build mode *produces* new content — for example,
 `architecture-design` Build generating an OEF XML file from architect

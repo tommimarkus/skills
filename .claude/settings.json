@@ -5,11 +5,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/stop-evaluate-skill.sh\""
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-evaluate-skill.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
           },
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/stop-plugin-eval.sh\""
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-plugin-eval.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-ip-hygiene.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
           }
         ]
       }

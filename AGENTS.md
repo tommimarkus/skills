@@ -71,7 +71,8 @@ rules change.
 - Follow the repo-internal `ip-hygiene` guidance in
   [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
   when editing plugin manifests, skills, agents, bundled references, or
-  README / CLAUDE / AGENTS sections that describe them.
+  README / CLAUDE / AGENTS sections that describe them. Repo Stop hooks also
+  prompt for this check when those surfaces change.
 - Before finishing those same skill-related changes, apply the skill
   architecture craft standard and run `scripts/skill-architecture-report.sh`
   when it is available.
