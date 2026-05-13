@@ -151,7 +151,6 @@ tests/skill_architecture_report_test.py ← unittest coverage for report fixture
 tests/skill_architecture_report_ledger.jsonl ← one-case-per-line report-engine test ledger
 tests/generate_skill_architecture_report_ledger.py ← deterministic 500+ case ledger generator
 pyproject.toml / uv.lock               ← uv-managed repo-local tooling project
-tools/dediren-linux/                   ← packaged dediren CLI bundle used by architecture-design
 .codex/agents/*.toml                   ← project-scoped Codex custom agents
 .claude/skills/<name>/SKILL.md         ← repo-internal Claude Code skills, followed by Codex when AGENTS.md / CLAUDE.md says they apply
 .claude-plugin/marketplace.json        ← shared Claude Code + Codex marketplace manifest
@@ -183,6 +182,7 @@ souroldgeezer-architecture/            ← published architecture plugin
   .codex-plugin/plugin.json
   agents/architecture-design.md
   docs/architecture-reference/architecture.md
+  tools/dediren-linux/                 ← packaged dediren CLI bundle used by architecture-design
   skills/architecture-design/SKILL.md
                             /agents/openai.yaml
                             /references/ ← dediren package support, procedures, fixtures, evals, and source grounding

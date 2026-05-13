@@ -225,6 +225,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
 
+    def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
+        claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+
+        self.assertIn("souroldgeezer-architecture/tools/dediren-linux/", claude_guidance)
+        self.assertNotRegex(claude_guidance, r"(?m)^tools/dediren-(linux|macos)/")
+
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (
             ARCH_PLUGIN
