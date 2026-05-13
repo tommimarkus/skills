@@ -27,6 +27,11 @@ ArchiMate 4. "Use Triggering when the architectural claim is process
 sequencing"; define the view concern, allowed element types, and relationship
 types.
 
+Runtime checks: disclose the bundled dediren 0.2.0 runtime when used; it checks
+ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
+`TechnologyNode`, for technology nodes, and can report close parallel route
+channels during layout validation.
+
 If grouped layout validation reports connector-through-node, invalid route, or
 group-boundary warnings, rerun the same view without groups. If the ungrouped
 layout validates cleaner, use the cleaner layout as evidence and report the

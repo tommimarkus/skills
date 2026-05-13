@@ -272,6 +272,11 @@ available bundle:
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
+The bundled dediren 0.2.0 runtime is the current evidence baseline. Its
+ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
+legality, use the technology element name `Node`, not `TechnologyNode`, and
+layout validation can report route detours plus close parallel route channels.
+
 Evidence gates:
 
 - Source: `validate`

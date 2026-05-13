@@ -12,5 +12,9 @@ agent-editable; SVG is visual proof; OEF is optional compatibility output.
   `plugins.generic-graph.views[].groups`; avoid grouping simple linear process
   flows unless responsibility, trust, participant, or orchestration changes the
   reading.
+- Local dediren 0.2.0 release review: the bundled dediren 0.2.0 runtime
+  enforces ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
+  `TechnologyNode`, for technology nodes, and reports close parallel route
+  channels in layout validation.
 - User-supplied downstream OEF or Lead EA feedback becomes synthetic coverage;
   report supplied evidence without bundling it.

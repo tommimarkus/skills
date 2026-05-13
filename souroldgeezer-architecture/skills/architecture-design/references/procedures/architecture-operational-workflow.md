@@ -23,6 +23,10 @@ ArchiMate 4, process sequence as Triggering, and one declared concern/vocabulary
 per view. If dediren accepts a suspect model, keep the `ARCH-*` finding and list
 the gap under `Dediren tool issues`.
 
+The bundled dediren 0.2.0 runtime enforces ArchiMate® 3.2 relationship endpoint
+legality during ArchiMate® metadata/export paths. Use `Node`, not
+`TechnologyNode`, for technology nodes in ArchiMate® packages.
+
 ## Extract
 
 Read in-scope source/IaC/workflows/APIs/UI routes. Lift only extractable facts.
@@ -40,6 +44,9 @@ If grouped layout validation reports connector-through-node, invalid route, or
 group-boundary warnings, rerun the same view without groups. If cleaner, keep
 source-backed groups in source, use the cleaner layout as evidence and report
 the grouped-layout regression with validation counts.
+
+Also inspect dediren 0.2.0 layout warnings for route detours and close parallel
+route channels before claiming render-readiness.
 
 ## Review
 

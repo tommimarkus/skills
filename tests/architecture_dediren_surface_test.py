@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.1.3"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -76,7 +77,7 @@ EA_MODELING_FEEDBACK_SURFACES = [
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
-    def test_architecture_plugin_version_is_1_1_1_everywhere(self) -> None:
+    def test_architecture_plugin_version_is_synchronized_everywhere(self) -> None:
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_entry = next(
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-architecture"
@@ -84,9 +85,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(marketplace_entry["version"], "1.1.2")
-        self.assertEqual(claude_manifest["version"], "1.1.2")
-        self.assertEqual(codex_manifest["version"], "1.1.2")
+        self.assertEqual(marketplace_entry["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
+        self.assertEqual(claude_manifest["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
+        self.assertEqual(codex_manifest["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
 
@@ -193,6 +194,32 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         ]
 
         for surface in EA_MODELING_FEEDBACK_SURFACES:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            for phrase in expected_phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
+
+    def test_dediren_0_2_0_runtime_contract_is_documented(self) -> None:
+        expected_phrases = [
+            "bundled dediren 0.2.0 runtime",
+            "ArchiMate® 3.2 relationship endpoint legality",
+            "`Node`, not `TechnologyNode`",
+            "close parallel route channels",
+        ]
+        surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
+            REPO_ROOT / "CLAUDE.md",
+        ]
+
+        for surface in surfaces:
             content = " ".join(surface.read_text(encoding="utf-8").split())
             for phrase in expected_phrases:
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):

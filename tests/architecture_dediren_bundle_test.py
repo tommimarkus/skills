@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
+EXPECTED_DEDIREN_VERSION = "0.2.0"
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -65,6 +66,33 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("dediren", result.stdout.lower())
+        self.assertIn(EXPECTED_DEDIREN_VERSION, result.stdout)
+
+        bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
+        self.assertEqual(bundle_manifest["version"], EXPECTED_DEDIREN_VERSION)
+
+    def test_bundle_plugin_manifests_match_bundle_version(self) -> None:
+        bundle = selected_bundle()
+        bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
+        expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
+
+        self.assertEqual(set(expected_versions.values()), {EXPECTED_DEDIREN_VERSION})
+
+        for plugin_id, expected_version in expected_versions.items():
+            manifest = json.loads((bundle / "plugins" / f"{plugin_id}.manifest.json").read_text(encoding="utf-8"))
+            with self.subTest(plugin_id=plugin_id):
+                self.assertEqual(manifest["id"], plugin_id)
+                self.assertEqual(manifest["version"], expected_version)
+
+    def test_skill_fixture_declares_current_bundle_plugins(self) -> None:
+        bundle = selected_bundle()
+        bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
+        expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
+        fixture_model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
+
+        fixture_versions = {plugin["id"]: plugin["version"] for plugin in fixture_model["required_plugins"]}
+
+        self.assertEqual(fixture_versions, expected_versions)
 
     def test_bundle_contains_required_plugins_and_schemas(self) -> None:
         bundle = selected_bundle()
