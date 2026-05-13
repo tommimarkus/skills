@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.1.3"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.1.4"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -201,7 +201,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_dediren_0_2_0_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
-            "bundled dediren 0.2.0 runtime",
+            "bundled dediren 0.3.0 runtime",
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
             "close parallel route channels",

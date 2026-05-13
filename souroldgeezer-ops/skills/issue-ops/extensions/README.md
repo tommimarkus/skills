@@ -15,6 +15,7 @@ and escalation gates.
 | File | Provider | Notes |
 |---|---|---|
 | [github.md](github.md) | GitHub™ | Issues, lifecycle comments, MCP / `gh` / REST routing, `pr-ops` handoff, direct-main mode, linked pull requests, and closure safety. |
+| [gitlab.md](gitlab.md) | GitLab™ | Issues, lifecycle notes, GitLab integration / `glab` / REST routing, `pr-ops` handoff limits, direct integration, linked issues, related merge requests, and closure safety. |
 
 ## Required Sections
 

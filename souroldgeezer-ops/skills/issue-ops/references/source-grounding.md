@@ -12,3 +12,16 @@ external provider documentation.
 - Source: `extensions/github.md` and `extensions/README.md`.
   Handling: local provider extension mechanics; eval cases mention provider
   state and lifecycle markers without copying live tracker content.
+- Source: `extensions/gitlab.md`.
+  Handling: local GitLab provider extension mechanics; eval cases mention
+  provider state, lifecycle notes, and merge-request handoff limits without
+  copying live tracker content.
+- Source: GitLab Docs at <https://docs.gitlab.com/api/rest/authentication/>,
+  <https://docs.gitlab.com/api/issues/>,
+  <https://docs.gitlab.com/api/notes/>,
+  <https://docs.gitlab.com/api/issue_links/>,
+  <https://docs.gitlab.com/api/merge_requests/>,
+  <https://docs.gitlab.com/cli/issue/>, and
+  <https://docs.gitlab.com/user/project/issues/managing_issues/>.
+  Handling: official source anchors are linked; GitLab mechanics are
+  paraphrased in repo-authored wording.

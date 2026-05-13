@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-ops",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions.",
   "author": {
     "name": "Sour Old Geezer",
@@ -13,13 +13,16 @@
     "shortDescription": "Issue, work-item, and PR lifecycle operations.",
     "longDescription": "Handle explicit issue, work-item, and pull-request lifecycle requests with provider-agnostic cores, provider-specific extensions, lifecycle markers, escalation gates, and verification discipline.",
     "developerName": "Sour Old Geezer",
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
     "category": "Productivity",
     "capabilities": [
       "Read",
       "Write"
     ],
     "defaultPrompt": [
-      "Use issue-ops to handle this GitHub™ issue end to end, delegating pull-request lifecycle work to pr-ops.",
+      "Use issue-ops for this GitHub™ or GitLab™ issue; delegate PR/MR lifecycle work to pr-ops.",
       "Use pr-ops to create or finish this GitHub™ pull request.",
       "Use pr-ops to resume this pull request lifecycle."
     ]
