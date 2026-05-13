@@ -15,6 +15,7 @@ provider-specific merge and close rules, and cleanup gates.
 | File | Provider | Notes |
 |---|---|---|
 | [github.md](github.md) | GitHub™ | Pull requests, prepared branches, PR creation/reuse, reviews, review threads, comments, checks, branch protection, GitHub™ MCP / `gh` / REST routing, branch update, merge, close, and branch cleanup. |
+| [gitlab.md](gitlab.md) | GitLab™ | Merge requests, prepared branches, MR creation/reuse, discussions, notes, approvals, pipelines, branch protection, GitLab™ integration / `glab` / REST routing, rebase, merge, close, and branch cleanup. |
 
 ## Required Sections
 

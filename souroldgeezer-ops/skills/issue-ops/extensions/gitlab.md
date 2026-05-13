@@ -118,8 +118,8 @@ Actor: Codex
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: group/project#123
-Gate: missing GitLab merge-request provider support in pr-ops
-Evidence: implementation requires an MR lifecycle but no supported handoff route is available
+Gate: unsafe GitLab merge-request handoff
+Evidence: implementation requires an MR lifecycle but pr-ops cannot safely resolve the handoff route
 Verification: local verification passed
 Last reviewed: 2026-05-13T12:00:00+03:00
 ```
@@ -154,9 +154,10 @@ requires a merge request:
 4. Hand off to `pr-ops` with GitLab host, project path, base branch, prepared
    branch, linked issue `issue_iid`, lifecycle marker context, and local
    verification summary.
-5. If no GitLab merge-request provider extension is available in `pr-ops`,
-   escalate instead of creating, updating, monitoring, merging, or cleaning up a
-   GitLab merge request inside `issue-ops`.
+5. If `pr-ops` cannot safely load the GitLab merge-request provider extension
+   or the handoff evidence is insufficient, escalate instead of creating,
+   updating, monitoring, merging, or cleaning up a GitLab merge request inside
+   `issue-ops`.
 6. Re-read the issue after `pr-ops` reports a merged merge request, then close
    only when live issue state, notes, linked issues, and MR closure evidence are
    still safe.

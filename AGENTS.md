@@ -44,9 +44,10 @@ rules change.
   [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml)
   wrapper for that overlay.
 - When the user explicitly asks to create, review, update, fix, merge, close,
-  resume, or process GitHub™ pull requests or prepared PR branches end to end,
-  use the public `pr-ops` skill from `souroldgeezer-ops` with its GitHub™
-  provider extension. Codex can invoke the thin
+  resume, or process pull requests, merge requests, or prepared PR/MR branches end
+  to end, use the public `pr-ops` skill from `souroldgeezer-ops` with the
+  identified provider extension. In this repository, that is normally the
+  GitHub™ provider extension. Codex can invoke the thin
   [.codex/agents/pr-ops.toml](.codex/agents/pr-ops.toml) wrapper for that
   workflow.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
