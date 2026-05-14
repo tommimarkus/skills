@@ -79,6 +79,30 @@ class SkillLeanRemediationTest(unittest.TestCase):
                 self.assertNotIn(heading, skill)
                 self.assertIn(heading, core)
 
+    def test_test_quality_mutation_guidance_is_deep_only(self) -> None:
+        skill = read("souroldgeezer-audit/skills/test-quality-audit/SKILL.md")
+        node_core = read(
+            "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/core.md"
+        )
+        dotnet_core = read(
+            "souroldgeezer-audit/skills/test-quality-audit/references/extensions/dotnet/core.md"
+        )
+        node_mutation = read(
+            "souroldgeezer-audit/skills/test-quality-audit/references/procedures/mutation-nodejs.md"
+        )
+        dotnet_mutation = read(
+            "souroldgeezer-audit/skills/test-quality-audit/references/procedures/mutation-dotnet.md"
+        )
+
+        self.assertIn("mutation-nodejs.md", skill)
+        self.assertIn("mutation-dotnet.md", skill)
+        self.assertIn("../../procedures/mutation-nodejs.md", node_core)
+        self.assertIn("../../procedures/mutation-dotnet.md", dotnet_core)
+        self.assertNotIn("Stryker JS cannot mutate every", node_core)
+        self.assertNotIn("Stryker.NET cannot mutate every", dotnet_core)
+        self.assertIn("Stryker JS cannot mutate every", node_mutation)
+        self.assertIn("Stryker.NET cannot mutate every", dotnet_mutation)
+
 
 if __name__ == "__main__":
     unittest.main()
