@@ -1,8 +1,8 @@
 # Source Grounding
 
 Behavioral evals are original synthetic cases from local workflow, references,
-lifting rules, and fixtures. Dediren source is agent-editable; SVG is visual
-proof; OEF is optional compatibility output.
+lifting rules, and fixtures. Dediren source is editable; SVG is visual proof;
+OEF is optional compatibility output.
 
 - `../../../docs/architecture-reference/architecture.md`: local reference for
   mode, source quality, readiness, render, and export evidence.
@@ -12,24 +12,22 @@ proof; OEF is optional compatibility output.
   `plugins.generic-graph.views[].groups`; avoid grouping simple linear process
   flows unless responsibility, trust, participant, or orchestration changes the
   reading.
-- Local dediren 0.5.0 review: the bundled dediren 0.5.0 runtime enforces
+- Local dediren 0.6.0 review: the bundled dediren 0.6.0 runtime enforces
   ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
-  `TechnologyNode`, for technology nodes, and reports close parallel route
-  channels in layout validation.
+  `TechnologyNode`, reports close parallel route channels, and adds semantic
+  group roles plus cross-group route validation coverage.
 - User-supplied downstream OEF or Lead EA feedback becomes synthetic coverage;
   report supplied evidence without bundling it.
 - The standards review notes are local, ignored working notes under
   `docs/notes/archimate-32-conformity/`; shipped guidance paraphrases them and
   does not copy ArchiMate manual prose.
-- The agent-friendly extracted ArchiMate 3.2 reference under
-  `ARCHIMATE32_AGENT_REF/` was used as session-scoped recheck evidence for
-  conformance boundaries, viewpoint mechanism, customization, grouping,
-  relationship connectors, Business `Representation`, and Application
-  Interface/Application Service semantics. It is derived from the local PDF and
-  should not be copied into shipped artifacts.
-- Dediren 0.5.0 introduced `validate --plugin generic-graph --profile
+- The session-scoped agent-friendly extracted ArchiMate 3.2 reference
+  rechecked conformance boundaries, viewpoints, customization, grouping,
+  connectors, Business `Representation`, and Application Interface/Service
+  semantics. It must not be copied into shipped artifacts.
+- Current dediren provides `validate --plugin generic-graph --profile
   archimate` as the source-level ArchiMate semantic gate; plain `validate`
   remains structural schema validation.
-- The skill distinguishes layout/source groups from ArchiMate Grouping elements
-  and treats relationship connectors and junctions as unsupported in package
-  source until first-class runtime support exists.
+- The skill distinguishes layout-only groups from semantic-boundary groups; a
+  semantic Grouping claim needs `semantic_source_id` to a `Grouping` source node.
+  Relationship connectors and junctions remain unsupported in package source.

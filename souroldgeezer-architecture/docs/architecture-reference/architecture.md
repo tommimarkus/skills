@@ -139,13 +139,13 @@ interface. Name services for the exposed behavior or capability, not for the
 transport surface, unless the source label is quoted as evidence and the
 architecture label resolves the role.
 
-Application Component to Application Interface Realization is ArchiMate
-3.2-legal. Do not report it as endpoint-illegal. Prefer Composition or
-Aggregation for component-interface ownership when the architecture claim is
-that a component provides or owns an access point. Use Realization only when
-the model intentionally states that the component fulfills the interface
-abstraction, and disclose that choice when interoperability with stricter
-profiles is a concern.
+Endpoint legality belongs to `validate --plugin generic-graph --profile
+archimate`, not local guesswork. If validation accepts Application Component to
+Application Interface Realization, do not report it as endpoint-illegal. Prefer
+Composition or Aggregation for component-interface ownership when the
+architecture claim is that a component provides or owns an access point. Use
+Realization only when the model intentionally states that the component fulfills
+the interface abstraction.
 
 ### Process Handoffs
 
@@ -278,11 +278,12 @@ responsibility, trust boundary, or orchestration boundary changes the
 architectural reading. If the boundary comes from architect intent rather than
 source evidence, label it as architect-owned.
 
-The `plugins.generic-graph.views[].groups` field is a dediren layout/source
-grouping mechanism. These layout/source groups are not ArchiMate Grouping
-elements. If the architecture claim is a real ArchiMate Grouping concept, model
-or report that semantic grouping explicitly; do not silently encode it as a
-layout group.
+The `plugins.generic-graph.views[].groups` field is a dediren view grouping
+mechanism with explicit roles. Use `role: "layout-only"` for visual grouping
+only. Use the default `semantic-boundary` role, with `semantic_source_id`
+pointing at a `Grouping` node, when a view group represents a real ArchiMate
+Grouping element. Layout-only groups are not ArchiMate Grouping elements, and
+unbacked source groups are not enough by themselves to claim semantic Grouping.
 
 Drift review compares source evidence in the package with current repo state.
 When source and package disagree, report whether the likely action is to update
@@ -296,10 +297,12 @@ available bundle:
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
-The bundled dediren 0.5.0 runtime is the current evidence baseline. Its
+The bundled dediren 0.6.0 runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
 legality, use the technology element name `Node`, not `TechnologyNode`, and
 layout validation can report route detours plus close parallel route channels.
+It also supports semantic-backed group projection/export and improved grouped
+cross-route validation.
 
 Evidence gates:
 
@@ -323,11 +326,11 @@ layout artifact that the architecture review still rejects, report the
 architecture finding normally and list the validator or renderer gap under
 `Dediren tool issues` in the footer.
 
-If grouped layout validation reports connector-through-node, invalid route, or
-group-boundary warnings, rerun the same view without groups. If the ungrouped
-layout validates cleaner, keep source-backed groups in `model.json`, use the
-cleaner layout as evidence and report the grouped-layout regression with both
-validation counts.
+If grouped layout validation still reports connector-through-node, invalid
+route, or group-boundary warnings, rerun the same view without groups. If the
+ungrouped layout validates cleaner, keep source-backed groups in `model.json`,
+use the cleaner layout as evidence and report the grouped-layout regression
+with both validation counts.
 
 Render-ready requires inspecting SVG for:
 
@@ -411,8 +414,8 @@ For each package:
   them.
 - API or GUI access surface modeled as an Application Service instead of an
   Application Interface.
-- Application Component realizes an Application Interface instead of using the
-  component-interface whole/part relationship.
+- Application Component realizes an Application Interface when the intended
+  claim is component-interface ownership.
 - Process sequence shown with Serving where Triggering is the architectural
   claim.
 - Unfocused view: no declared concern or inconsistent element and relationship

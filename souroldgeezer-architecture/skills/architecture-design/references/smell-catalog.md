@@ -41,8 +41,10 @@ intentional choices.
 
 Modeling-rule routing:
 
-- `ARCH-M-1`: Application Component realizes Application Interface, or misses
-  Composition today / Aggregation for ArchiMate 4.
+- `ARCH-M-1`: relationship endpoint combination fails ArchiMate semantic
+  validation. Do not route accepted Component-to-Interface Realization here.
+- `ARCH-M-3`: Application Component realizes Application Interface when the
+  stated model claim is component-interface ownership.
 - `ARCH-M-3`: API/GUI surface is typed or named as Application Service.
 - `ARCH-M-3`: process sequencing evidence uses Serving instead of Triggering.
 - `ARCH-Q-2`: view lacks a clear concern or mixes vocabularies.

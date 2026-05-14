@@ -1,45 +1,43 @@
 Use after mode selection. Disclose evidence, quality, export readiness,
-findings, and the footer.
+findings, and footer.
 
 ## Build
 
-Report package path, quality, export readiness, runtime, views/missing kinds,
-validation/render/export state, and blocking finding count.
+Report package, quality, export readiness, runtime, views/missing kinds,
+validation/render/export state, and blocking findings.
 
 ## Extract
 
-Report package, sources read, lifted counts, source-backed groups, unsupported
-grouping candidates, grouped layout fallback, architect-owned layers,
-validation/render/drift state, and findings.
+Report package, sources, lifted counts, source-backed groups, unsupported
+grouping, grouped layout fallback, architect-owned layers, evidence, findings.
 
 ## Review
 
-Lead with findings: `[ARCH-*] finding; evidence; severity; action`. Then
-report quality, export readiness, change classification, package, runtime, and
+Lead with `[ARCH-*] finding; evidence; severity; action`. Then report quality,
+export readiness, change classification, package, runtime, and
 validation/layout/SVG/OEF state. One code per finding; no `review-ready` with a
 block.
 
 Semantic checks: APIs and GUIs are Application Interfaces; Application Services
-model the functionality exposed through an interface; Application Component to
-Application Interface Realization is ArchiMate 3.2-legal, not
-endpoint-illegal; Prefer Composition or Aggregation for component-interface
-ownership when that is the claim; Use Triggering when the architectural claim is
+model the functionality exposed through an interface; if semantic validation
+accepts Application Component to Application Interface Realization, do not
+report it as endpoint-illegal; Prefer Composition or Aggregation for
+component-interface ownership; Use Triggering when the architectural claim is
 process sequencing; define the view concern, allowed element types, and
 relationship types.
 
-Runtime checks: disclose the bundled dediren 0.5.0 runtime when used; it checks
+Runtime checks: disclose the bundled dediren 0.6.0 runtime; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
-`TechnologyNode`, for technology nodes, and reports close parallel route
-channels during layout validation.
+`TechnologyNode`, and reports close parallel route channels.
 
 Evidence checks: source-valid requires schema plus ArchiMate semantic validation.
 Plain `dediren validate` is not enough; run `dediren validate --plugin
 generic-graph --profile archimate`.
 
-If grouped layout validation reports connector-through-node, invalid route, or
-group-boundary warnings, rerun the same view without groups. If the ungrouped
-layout validates cleaner, use the cleaner layout as evidence and report the
-grouped-layout regression with both validation counts.
+If grouped layout validation still reports connector-through-node, invalid
+route, or group-boundary warnings, rerun the same view without groups. If
+cleaner, use the cleaner layout as evidence and report the grouped-layout
+regression plus both validation counts.
 
 ## Lookup
 
@@ -56,7 +54,7 @@ Quality level: source-valid | view-readable | render-ready | review-ready | not 
 Export readiness: not requested | export-ready | blocked (missing export-policy.json)
 Diagram kind: <primary kind>; views: <n>; missing kinds: <list|none>
 View groups: <n> source-backed groups | none | not assessed
-Semantic grouping: layout/source groups are not ArchiMate Grouping elements | semantic Grouping modeled | not assessed
+Semantic grouping: layout-only groups are not ArchiMate Grouping elements | semantic-boundary group has semantic_source_id to Grouping node | not assessed
 Customization profile: none | local properties only | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none identified
 Grouped layout fallback: not needed | used ungrouped fallback after grouped route warnings | not run

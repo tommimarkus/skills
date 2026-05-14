@@ -172,7 +172,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_grouped_layout_guidance_requires_validation_fallback(self) -> None:
         expected_phrases = [
-            "If grouped layout validation reports connector-through-node, invalid route, or group-boundary warnings",
+            "If grouped layout validation still reports connector-through-node, invalid route, or group-boundary warnings",
             "rerun the same view without groups",
             "use the cleaner layout as evidence and report the grouped-layout regression",
         ]
@@ -187,7 +187,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         expected_phrases = [
             "APIs and GUIs are Application Interfaces",
             "Application Services model the functionality exposed through an interface",
-            "Application Component to Application Interface Realization is ArchiMate 3.2-legal",
+            "Application Component to Application Interface Realization",
+            "do not report it as endpoint-illegal",
             "Prefer Composition or Aggregation for component-interface ownership",
             "Use Triggering when the architectural claim is process sequencing",
             "define the view concern, allowed element types, and relationship types",
@@ -216,10 +217,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for surface in surfaces:
             content = " ".join(surface.read_text(encoding="utf-8").split())
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                self.assertIn(
-                    "Application Component to Application Interface Realization is ArchiMate 3.2-legal",
-                    content,
-                )
+                self.assertIn("Application Component to Application Interface Realization", content)
+                self.assertIn("do not report it as endpoint-illegal", content)
                 self.assertIn(
                     "Prefer Composition or Aggregation for component-interface ownership",
                     content,
@@ -294,7 +293,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for content in [architecture_reference, workflow, output_format, behavior_cases]:
             normalized = " ".join(content.split())
             lowered = normalized.lower()
-            self.assertIn("layout/source groups are not ArchiMate Grouping elements", normalized)
+            self.assertIn("layout-only groups are not archimate grouping elements", lowered)
+            self.assertIn("semantic-boundary", lowered)
+            self.assertIn("semantic_source_id", lowered)
             self.assertIn("relationship connectors and junctions", lowered)
             self.assertIn("unsupported in dediren package source", lowered)
 
@@ -354,9 +355,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
-    def test_dediren_0_5_0_runtime_contract_is_documented(self) -> None:
+    def test_dediren_0_6_0_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
-            "bundled dediren 0.5.0 runtime",
+            "bundled dediren 0.6.0 runtime",
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
             "close parallel route channels",
