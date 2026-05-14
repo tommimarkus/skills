@@ -18,6 +18,11 @@ jq . souroldgeezer-architecture/tools/<bundle>/bundle.json
 Required plugins: `generic-graph`, `elk-layout`, `svg-render`; add
 `archimate-oef` only for export. Run only needed commands:
 
+Plain `validate` proves schema shape only. A `source-valid` claim requires
+plain `validate` plus `validate --plugin generic-graph --profile archimate`.
+Projection and requested export evidence remain separate downstream gates for
+view and export readiness.
+
 ```
 <dediren> validate --input <package>/model.json
 <dediren> project --input <package>/model.json --plugin <plugin> --view <view> --target <target>

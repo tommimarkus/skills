@@ -18,3 +18,15 @@ agent-editable; SVG is visual proof; OEF is optional compatibility output.
   channels in layout validation.
 - User-supplied downstream OEF or Lead EA feedback becomes synthetic coverage;
   report supplied evidence without bundling it.
+- The standards review notes are local, ignored working notes under
+  `docs/notes/archimate-32-conformity/`; shipped guidance paraphrases those
+  findings and does not copy ArchiMate manual prose.
+- The agent-friendly extracted ArchiMate 3.2 reference under
+  `ARCHIMATE32_AGENT_REF/` was used as session-scoped recheck evidence for
+  conformance boundaries, viewpoint mechanism, customization, grouping,
+  relationship connectors, Business `Representation`, and Application
+  Interface/Application Service semantics. It is derived from the local PDF and
+  should not be copied into shipped artifacts.
+- Dediren 0.5.0 introduced `validate --plugin generic-graph --profile
+  archimate` as the source-level ArchiMate semantic validation gate. Plain
+  `validate` remains structural schema validation.

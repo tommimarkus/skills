@@ -1,6 +1,7 @@
 import json
 import platform
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -120,6 +121,89 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         payload = envelope(result)
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["data"]["model_schema_version"], "model.schema.v1")
+
+    def test_archimate_semantic_validation_rejects_invalid_source_before_projection(self) -> None:
+        def validate_model(model: dict) -> subprocess.CompletedProcess[str]:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                model_path = Path(temp_dir) / "model.json"
+                model_path.write_text(json.dumps(model), encoding="utf-8")
+                return run_dediren(
+                    "validate",
+                    "--plugin",
+                    "generic-graph",
+                    "--profile",
+                    "archimate",
+                    "--input",
+                    model_path,
+                )
+
+        base_model = {
+            "model_schema_version": "model.schema.v1",
+            "required_plugins": [{"id": "generic-graph", "version": EXPECTED_DEDIREN_VERSION}],
+            "nodes": [
+                {"id": "component", "type": "ApplicationComponent", "label": "Component", "properties": {}},
+                {"id": "service", "type": "ApplicationService", "label": "Service", "properties": {}},
+            ],
+            "relationships": [
+                {
+                    "id": "component-realizes-service",
+                    "type": "Realization",
+                    "source": "component",
+                    "target": "service",
+                    "label": "realizes",
+                    "properties": {},
+                }
+            ],
+            "plugins": {
+                "generic-graph": {
+                    "views": [
+                        {
+                            "id": "main",
+                            "label": "Main",
+                            "nodes": ["component", "service"],
+                            "relationships": ["component-realizes-service"],
+                        }
+                    ]
+                }
+            },
+        }
+
+        unsupported_type_model = json.loads(json.dumps(base_model))
+        unsupported_type_model["relationships"][0]["type"] = "Bogus"
+        unsupported_type = validate_model(unsupported_type_model)
+        self.assertEqual(unsupported_type.returncode, 3, unsupported_type.stderr)
+        unsupported_type_payload = envelope(unsupported_type)
+        self.assertEqual(unsupported_type_payload["status"], "error")
+        self.assertEqual(
+            unsupported_type_payload["diagnostics"][0]["code"],
+            "DEDIREN_ARCHIMATE_RELATIONSHIP_TYPE_UNSUPPORTED",
+        )
+
+        invalid_endpoint_model = json.loads(json.dumps(base_model))
+        invalid_endpoint_model["relationships"][0]["type"] = "Access"
+        invalid_endpoint = validate_model(invalid_endpoint_model)
+        self.assertEqual(invalid_endpoint.returncode, 3, invalid_endpoint.stderr)
+        invalid_endpoint_payload = envelope(invalid_endpoint)
+        self.assertEqual(invalid_endpoint_payload["status"], "error")
+        self.assertEqual(
+            invalid_endpoint_payload["diagnostics"][0]["code"],
+            "DEDIREN_ARCHIMATE_RELATIONSHIP_ENDPOINT_UNSUPPORTED",
+        )
+
+        legal_component_interface_realization = json.loads(json.dumps(base_model))
+        legal_component_interface_realization["nodes"][1]["id"] = "interface"
+        legal_component_interface_realization["nodes"][1]["type"] = "ApplicationInterface"
+        legal_component_interface_realization["nodes"][1]["label"] = "Interface"
+        legal_component_interface_realization["relationships"][0]["target"] = "interface"
+        legal_component_interface_realization["plugins"]["generic-graph"]["views"][0]["nodes"][1] = "interface"
+        legal_realization = validate_model(legal_component_interface_realization)
+        self.assertEqual(legal_realization.returncode, 0, legal_realization.stderr)
+        legal_realization_payload = envelope(legal_realization)
+        self.assertEqual(legal_realization_payload["status"], "ok")
+        self.assertEqual(
+            legal_realization_payload["data"]["semantic_validation_result_schema_version"],
+            "semantic-validation-result.schema.v1",
+        )
 
     def test_fixture_manifest_drives_dediren_command_smoke(self) -> None:
         bundle = selected_bundle()
