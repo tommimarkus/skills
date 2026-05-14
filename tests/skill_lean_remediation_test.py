@@ -103,6 +103,24 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("Stryker JS cannot mutate every", node_mutation)
         self.assertIn("Stryker.NET cannot mutate every", dotnet_mutation)
 
+    def test_github_issue_lifecycle_points_to_repo_guidance_for_sync_surfaces(
+        self,
+    ) -> None:
+        overlay = read(".claude/skills/github-issue-lifecycle/SKILL.md")
+
+        self.assertIn("AGENTS.md", overlay)
+        self.assertIn("CLAUDE.md", overlay)
+        self.assertIn("docs/skill-architecture.md", overlay)
+        repeated_surface_names = [
+            "skills/<skill>/agents/openai.yaml",
+            "both plugin manifests",
+            ".claude-plugin/marketplace.json",
+            "AGENTS.md when Codex entry rules change",
+        ]
+        for text in repeated_surface_names:
+            with self.subTest(text=text):
+                self.assertNotIn(text, overlay)
+
 
 if __name__ == "__main__":
     unittest.main()

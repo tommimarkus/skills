@@ -121,18 +121,12 @@ extension, manifest, marketplace, internal authoring skill, or repo-doc changes,
 apply `docs/skill-architecture.md` and run `scripts/skill-architecture-report.sh`
 when available.
 
-Keep these surfaces synchronized when touched by an issue:
-
-- public skill `SKILL.md`;
-- provider extension files;
-- matching Claude Code subagent;
-- project-scoped Codex wrapper;
-- `skills/<skill>/agents/openai.yaml`;
-- both plugin manifests;
-- `.claude-plugin/marketplace.json`;
-- `README.md`;
-- `CLAUDE.md`;
-- `AGENTS.md` when Codex entry rules change.
+For sync-surface decisions, follow `AGENTS.md`, `CLAUDE.md`, and
+`docs/skill-architecture.md` instead of duplicating the repo-wide list here.
+This overlay adds only lifecycle-specific gates: re-read live issue state before
+closure, apply `ip-hygiene` when touched paths hit skill/reference/manifest
+surfaces, and run `scripts/skill-architecture-report.sh` when those surfaces
+change.
 
 ## Completion Output
 
