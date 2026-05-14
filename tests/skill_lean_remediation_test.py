@@ -58,6 +58,27 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("Ask only when a default would be unsafe", preflight)
         self.assertIn("api-design-behavior-greenfield-defaults", case_ids)
 
+    def test_pr_ops_uses_reference_core_workflow(self) -> None:
+        skill = read("souroldgeezer-ops/skills/pr-ops/SKILL.md")
+        core = read("souroldgeezer-ops/skills/pr-ops/references/core-workflow.md")
+
+        self.assertLessEqual(len(skill.splitlines()), 125)
+        self.assertIn("references/core-workflow.md", skill)
+
+        moved_headings = [
+            "## Evidence Contract",
+            "## Queue Limits",
+            "## Authority And Ledger",
+            "## Normal Flow",
+            "## Ask Vs Continue",
+            "## Escalation Gates",
+            "## Output",
+        ]
+        for heading in moved_headings:
+            with self.subTest(heading=heading):
+                self.assertNotIn(heading, skill)
+                self.assertIn(heading, core)
+
 
 if __name__ == "__main__":
     unittest.main()
