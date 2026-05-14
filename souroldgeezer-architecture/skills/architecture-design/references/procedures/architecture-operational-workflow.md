@@ -18,10 +18,12 @@ layout-validate, and render changed views.
 ## Semantic Modeling Guard
 
 Before readiness, check APIs/GUIs as Application Interfaces, services as exposed
-functionality, component-interface Composition today or Aggregation for
-ArchiMate 4, process sequence as Triggering, and one declared concern/vocabulary
-per view. If dediren accepts a suspect model, keep the `ARCH-*` finding and list
-the gap under `Dediren tool issues`.
+functionality, Application Component to Application Interface Realization is
+ArchiMate 3.2-legal but usually less expressive than whole/part interface
+ownership, process sequence as Triggering, and one declared concern/vocabulary
+per view. Prefer Composition or Aggregation for component-interface ownership
+when that is the model claim. If dediren accepts a suspect model, keep the
+`ARCH-*` finding and list the gap under `Dediren tool issues`.
 
 The bundled dediren 0.3.0 runtime enforces ArchiMate® 3.2 relationship endpoint
 legality during ArchiMate® metadata/export paths. Use `Node`, not

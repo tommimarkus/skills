@@ -21,11 +21,12 @@ validation/layout/SVG/OEF state. One code per finding; no `review-ready` with a
 block.
 
 Semantic checks: APIs and GUIs are Application Interfaces; Application Services
-model the functionality exposed through an interface; Application Components
-must not realize Application Interfaces; compose today and aggregate for
-ArchiMate 4. "Use Triggering when the architectural claim is process
-sequencing"; define the view concern, allowed element types, and relationship
-types.
+model the functionality exposed through an interface; Application Component to
+Application Interface Realization is ArchiMate 3.2-legal but should not be
+reported as endpoint-illegal; Prefer Composition or Aggregation for
+component-interface ownership when that is the model claim. "Use Triggering
+when the architectural claim is process sequencing"; define the view concern,
+allowed element types, and relationship types.
 
 Runtime checks: disclose the bundled dediren 0.3.0 runtime when used; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not

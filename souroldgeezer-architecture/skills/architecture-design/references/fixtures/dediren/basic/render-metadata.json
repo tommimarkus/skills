@@ -1,1 +1,36 @@
-{"render_metadata_schema_version":"render-metadata.schema.v1","semantic_profile":"archimate","nodes":{"client":{"type":"ApplicationComponent","source_id":"client"},"api":{"type":"ApplicationService","source_id":"api"}},"edges":{"client-calls-api":{"type":"Serving","source_id":"client-calls-api"}}}
+{
+  "render_metadata_schema_version": "render-metadata.schema.v1",
+  "semantic_profile": "archimate",
+  "nodes": {
+    "client": {
+      "type": "ApplicationComponent",
+      "source_id": "client"
+    },
+    "orders-component": {
+      "type": "ApplicationComponent",
+      "source_id": "orders-component"
+    },
+    "orders-api": {
+      "type": "ApplicationInterface",
+      "source_id": "orders-api"
+    },
+    "orders-service": {
+      "type": "ApplicationService",
+      "source_id": "orders-service"
+    }
+  },
+  "edges": {
+    "orders-component-provides-api": {
+      "type": "Composition",
+      "source_id": "orders-component-provides-api"
+    },
+    "orders-component-realizes-service": {
+      "type": "Realization",
+      "source_id": "orders-component-realizes-service"
+    },
+    "orders-service-serves-client": {
+      "type": "Serving",
+      "source_id": "orders-service-serves-client"
+    }
+  }
+}
