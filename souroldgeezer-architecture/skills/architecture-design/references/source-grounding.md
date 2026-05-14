@@ -30,3 +30,6 @@ agent-editable; SVG is visual proof; OEF is optional compatibility output.
 - Dediren 0.5.0 introduced `validate --plugin generic-graph --profile
   archimate` as the source-level ArchiMate semantic validation gate. Plain
   `validate` remains structural schema validation.
+- The skill distinguishes dediren layout/source groups from ArchiMate Grouping
+  elements, and treats relationship connectors and junctions as unsupported in
+  package source until first-class runtime support exists.

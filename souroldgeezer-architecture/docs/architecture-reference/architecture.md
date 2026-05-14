@@ -165,8 +165,9 @@ Prefer explicit realization chains:
 
 ## 6. Supported Diagram Kinds
 
-The skill reports coverage for seven diagram kinds. The package may contain any
-subset; missing kinds are disclosed, not stubbed.
+The skill reports coverage for seven seed diagram kinds. Seed diagram kinds are
+starter coverage, not the full ArchiMate viewpoint mechanism. The package may
+contain any subset; missing kinds are disclosed, not stubbed.
 
 ### Capability Map
 
@@ -207,6 +208,14 @@ architecture elements they influence or are realized by.
 Use for process handoffs, participants, business objects, events, and outcomes.
 Show Triggering or Flow where the sequence matters. A single process without a
 handoff or participant context rarely justifies this view.
+
+### Custom Viewpoint Path
+
+Custom viewpoint path: when the requested concern does not fit a seed diagram
+kind, define the stakeholder concern, allowed element types, allowed
+relationship types, audience, and quality target before editing source. Store
+the resulting view as an actual view in `project.json`; do not create empty
+placeholder views for viewpoint coverage.
 
 ## 7. View Design Rules
 
@@ -269,6 +278,12 @@ responsibility, trust boundary, or orchestration boundary changes the
 architectural reading. If the boundary comes from architect intent rather than
 source evidence, label it as architect-owned.
 
+The `plugins.generic-graph.views[].groups` field is a dediren layout/source
+grouping mechanism. These layout/source groups are not ArchiMate Grouping
+elements. If the architecture claim is a real ArchiMate Grouping concept, model
+or report that semantic grouping explicitly; do not silently encode it as a
+layout group.
+
 Drift review compares source evidence in the package with current repo state.
 When source and package disagree, report whether the likely action is to update
 the package or update the source.
@@ -322,6 +337,14 @@ Render-ready requires inspecting SVG for:
 - expected `data-dediren-edge-id` markers for visible relationships;
 - labels and markers that do not obscure the main architecture path.
 
+### Relationship Connectors And Junctions
+
+ArchiMate relationship connectors and junctions are valid ArchiMate concepts.
+In this skill, relationship connectors and junctions are unsupported in
+dediren package source until the runtime exposes first-class source, render,
+and export support. Do not replace a connector or junction with an ordinary
+element without disclosing the simplification and its effect on the model.
+
 ## 10. Optional OEF Export
 
 OEF export exists for tool compatibility and external validation. It is useful
@@ -337,7 +360,15 @@ Rules:
   narrower model, view, layout, render, or quality code applies.
 - Fix source and policy, then recreate export output.
 
-## 11. Finding Taxonomy
+## 11. Customization Profile
+
+Customization profile support is implementation-defined in this skill. The
+profile, attribute, and specialization choices must be documented in package
+properties or render/export policy before claiming customization support. If
+the package uses custom properties only as local annotations, report them as
+local metadata rather than as an ArchiMate customization profile.
+
+## 12. Finding Taxonomy
 
 The active finding namespaces are:
 
@@ -353,7 +384,7 @@ Use the narrowest code from
 [../../skills/architecture-design/references/smell-catalog.md](../../skills/architecture-design/references/smell-catalog.md).
 Do not claim `review-ready` while any blocking finding remains.
 
-## 12. Package Review Checklist
+## 13. Package Review Checklist
 
 For each package:
 
@@ -370,7 +401,7 @@ For each package:
 10. Report quality level, export readiness, evidence, missing diagram kinds,
     and findings.
 
-## 13. Modeling Pitfalls
+## 14. Modeling Pitfalls
 
 - Layer soup: mixing Business, Application, Technology, Motivation, and
   Strategy without one view concern.
