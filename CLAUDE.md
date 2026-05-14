@@ -91,6 +91,30 @@ Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
 one-liners or `python3 -m json.tool` for structured JSON / YAML / TOML / XML
 checks unless `jq` or `yq` cannot express the check.
 
+## Git ignore hygiene (MUST)
+
+Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files
+with `git add -f`, `git add --force`, `git update-index --add`, or equivalent
+unless the user explicitly names the exact ignored path and says it should be
+tracked. Broad approval to stage or commit changes is not approval to bypass
+`.gitignore`.
+
+Before committing, run:
+
+```bash
+git ls-files -ci --exclude-standard
+```
+
+The output must be empty unless the same task documents a deliberate,
+path-specific tracked exception. If the command lists a tracked ignored path,
+that file must be uncommitted immediately with `git rm --cached -- <path>` so
+the local working-tree copy remains but Git stops tracking it. Do not leave
+committed `.gitignore` matches for later cleanup.
+
+Ignored local state and scratch trees such as `docs/superpowers/**`,
+`.cache/**`, `.worktrees/**`, `.venv/**`, `.codex/config.toml`, and `.mcp.json`
+are local-only by default.
+
 ## Repo-local Python® tooling
 
 The public skill architecture validation command remains

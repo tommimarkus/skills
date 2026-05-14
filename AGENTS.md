@@ -52,6 +52,12 @@ rules change.
   workflow.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
+- Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files
+  with `git add -f`, `git add --force`, `git update-index --add`, or
+  equivalents unless the user explicitly names the exact ignored path and says
+  it should be tracked. Before committing, `git ls-files -ci --exclude-standard`
+  must be empty; any tracked ignored path must be uncommitted with
+  `git rm --cached -- <path>` while keeping the local file.
 - Use the packaged dediren tool directly for architecture-design runtime
   checks. The Linux bundle lives under
   `souroldgeezer-architecture/tools/dediren-linux/`; add
