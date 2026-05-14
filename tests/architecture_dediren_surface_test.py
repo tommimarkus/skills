@@ -264,6 +264,56 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         self.assertIn("Representation", architecture_reference)
 
+    def test_grouping_connectors_viewpoints_and_customization_guidance_is_documented(self) -> None:
+        architecture_reference = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        ).read_text(encoding="utf-8")
+        workflow = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md"
+        ).read_text(encoding="utf-8")
+        seed_views = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "seed-views.md"
+        ).read_text(encoding="utf-8")
+        output_format = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
+        ).read_text(encoding="utf-8")
+        behavior_cases = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl"
+        ).read_text(encoding="utf-8")
+
+        for content in [architecture_reference, workflow, output_format, behavior_cases]:
+            normalized = " ".join(content.split())
+            lowered = normalized.lower()
+            self.assertIn("layout/source groups are not ArchiMate Grouping elements", normalized)
+            self.assertIn("relationship connectors and junctions", lowered)
+            self.assertIn("unsupported in dediren package source", lowered)
+
+        for content in [architecture_reference, seed_views, behavior_cases]:
+            normalized = " ".join(content.split())
+            self.assertIn(
+                "Seed diagram kinds are starter coverage, not the full ArchiMate viewpoint mechanism",
+                normalized,
+            )
+            self.assertIn("Custom viewpoint path", normalized)
+
+        for content in [architecture_reference, output_format, behavior_cases]:
+            normalized = " ".join(content.split())
+            self.assertIn("Customization profile", normalized)
+
+        for content in [architecture_reference, behavior_cases]:
+            normalized = " ".join(content.split())
+            self.assertIn("profile, attribute, and specialization choices", normalized)
+
     def test_archimate_32_conformance_boundary_and_source_valid_semantics(self) -> None:
         architecture_reference = (
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"

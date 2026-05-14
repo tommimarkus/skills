@@ -25,6 +25,11 @@ per view. Prefer Composition or Aggregation for component-interface ownership
 when that is the model claim. If dediren accepts a suspect model, keep the
 `ARCH-*` finding and list the gap under `Dediren tool issues`.
 
+Relationship connectors and junctions are unsupported in dediren package
+source. If the requested model needs them, report the limitation and the
+nearest explicit repair path instead of inventing ordinary elements as
+stand-ins.
+
 The bundled dediren 0.3.0 runtime enforces ArchiMate® 3.2 relationship endpoint
 legality during ArchiMate® metadata/export paths. Use `Node`, not
 `TechnologyNode`, for technology nodes in ArchiMate® packages.
@@ -39,6 +44,10 @@ Create source-backed groups for ownership, hosting, trust, environment,
 dependency, system responsibility, or orchestration boundaries. Put them in
 `model.json` under `plugins.generic-graph.views[].groups`, not `project.json`,
 with stable ids, labels, and view-member ids. No decorative groups.
+
+These layout/source groups are not ArchiMate Grouping elements. If the
+architecture claim is a real ArchiMate Grouping concept, model or report the
+semantic grouping explicitly rather than encoding it only as a layout group.
 
 ## Grouped Layout Guard
 

@@ -57,6 +57,9 @@ Quality level: source-valid | view-readable | render-ready | review-ready | not 
 Export readiness: not requested | export-ready | blocked (missing export-policy.json)
 Diagram kind: <primary kind>; views: <n>; missing kinds: <list|none>
 View groups: <n> source-backed groups | none | not assessed
+Semantic grouping: layout/source groups are not ArchiMate Grouping elements | semantic Grouping modeled | not assessed
+Customization profile: none | local properties only | profile/attribute/specialization documented
+Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none identified
 Grouped layout fallback: not needed | used ungrouped fallback after grouped route warnings | not run
 Validation: source <state>; projection <state>; layout <state>; layout validation <state>; SVG <state>; OEF <state>
 Runtime-verified drift: <n findings|not run>
