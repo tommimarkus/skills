@@ -30,7 +30,7 @@ source. If the requested model needs them, report the limitation and the
 nearest explicit repair path instead of inventing ordinary elements as
 stand-ins.
 
-The bundled dediren 0.3.0 runtime enforces ArchiMate® 3.2 relationship endpoint
+The bundled dediren 0.5.0 runtime enforces ArchiMate® 3.2 relationship endpoint
 legality during ArchiMate® metadata/export paths. Use `Node`, not
 `TechnologyNode`, for technology nodes in ArchiMate® packages.
 
@@ -56,7 +56,7 @@ group-boundary warnings, rerun the same view without groups. If cleaner, keep
 source-backed groups in source, use the cleaner layout as evidence and report
 the grouped-layout regression with validation counts.
 
-Also inspect dediren 0.3.0 layout warnings for route detours and close parallel
+Also inspect dediren 0.5.0 layout warnings for route detours and close parallel
 route channels before claiming render-readiness.
 
 ## Review
