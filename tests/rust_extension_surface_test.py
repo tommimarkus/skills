@@ -27,19 +27,19 @@ class RustExtensionSurfaceTest(unittest.TestCase):
         index = read("souroldgeezer-audit/skills/test-quality-audit/extensions/index.md")
 
         self.assertIn("Rust", index)
-        self.assertIn("rust-core.md", index)
-        self.assertIn("rust-unit.md", index)
-        self.assertIn("rust-integration.md", index)
-        self.assertIn("rust-e2e.md", index)
+        self.assertIn("references/extensions/rust/core.md", index)
+        self.assertIn("references/extensions/rust/unit.md", index)
+        self.assertIn("references/extensions/rust/integration.md", index)
+        self.assertIn("references/extensions/rust/e2e.md", index)
 
         for name in ("core", "unit", "integration", "e2e"):
-            path = REPO_ROOT / f"souroldgeezer-audit/references/test-quality-audit-extensions/rust-{name}.md"
+            path = REPO_ROOT / f"souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/{name}.md"
             self.assertTrue(path.exists(), path)
 
-        core = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-core.md")
-        unit = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-unit.md")
-        integration = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-integration.md")
-        e2e = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-e2e.md")
+        core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/core.md")
+        unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/unit.md")
+        integration = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/integration.md")
+        e2e = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/e2e.md")
 
         self.assertIn("Cargo.toml", core)
         self.assertIn("cargo-mutants", core)
@@ -50,8 +50,8 @@ class RustExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("rust.E-HC-", e2e)
 
     def test_rust_test_quality_guidance_is_grounded_in_authoritative_docs(self) -> None:
-        core = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-core.md")
-        unit = read("souroldgeezer-audit/references/test-quality-audit-extensions/rust-unit.md")
+        core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/core.md")
+        unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/unit.md")
 
         self.assertIn("doc.rust-lang.org/cargo/commands/cargo-test.html", core)
         self.assertIn("doc.rust-lang.org/rustc/tests/index.html", core)

@@ -289,6 +289,28 @@ def case_plugin_doc_unadvertised(complexity: str, index: str, scenario: str) -> 
     }
 
 
+def case_ref_private_plugin_root(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    reference_path = f"example-plugin/references/{scenario}-procedures/check.md"
+    body = clean_body(scenario) + f"\nRead ../../references/{scenario}-procedures/check.md when the detailed procedure is in scope.\n"
+    return skill_case(
+        "SAC-REF-PRIVATE-PLUGIN-ROOT",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} support ownership locality.",
+        body,
+        skill_name=name,
+        extra_files=[{"path": reference_path, "content": "# Private Procedure\n"}],
+        expected_findings=[
+            {
+                "code": "SAC-REF-PRIVATE-PLUGIN-ROOT",
+                "path": reference_path,
+            }
+        ],
+    )
+
+
 def case_script_unadvertised(complexity: str, index: str, scenario: str) -> dict:
     name = f"{scenario}-skill"
     return skill_case(
@@ -935,6 +957,7 @@ BUILDERS: list[tuple[str, CaseBuilder]] = [
     ("unadvertised-support", case_ref_unadvertised_support),
     ("unconditional-reference", case_ref_unconditional_load),
     ("unadvertised-plugin-doc", case_plugin_doc_unadvertised),
+    ("private-plugin-root-reference", case_ref_private_plugin_root),
     ("unadvertised-script", case_script_unadvertised),
     ("unadvertised-fixture", case_fixture_unadvertised),
     ("unadvertised-template", case_template_unadvertised),
@@ -1057,6 +1080,22 @@ def build_guard_cases() -> list[dict]:
             ["SAC-REF-UNADVERTISED-SUPPORT"],
             "support path followed by punctuation remains advertised",
             extra_files=[{"path": "example-plugin/skills/guard-punctuated-support-skill/references/procedure.md", "content": "# Procedure\n"}],
+        ),
+        guard_skill(
+            "guard-shared-plugin-root-reference",
+            "Inputs: files.\nEvidence: cite files.\nOutput: report.\nIf ambiguous, ask the user.\nStop when complete.\nRerun validation after edits.\nRead ../../references/shared-guidance/check.md when shared plugin guidance applies.\n",
+            ["SAC-REF-PRIVATE-PLUGIN-ROOT"],
+            "documented shared plugin-root reference is allowed",
+            extra_files=[
+                {
+                    "path": "example-plugin/references/README.md",
+                    "content": "# Plugin References\n\n`shared-guidance/check.md` is shared plugin-level canonical guidance for all skills.\n",
+                },
+                {
+                    "path": "example-plugin/references/shared-guidance/check.md",
+                    "content": "# Shared Guidance\n",
+                },
+            ],
         ),
         guard_skill(
             "guard-template-folder",

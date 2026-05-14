@@ -7,21 +7,20 @@ description: >-
 # Test Quality Audit
 
 Audit whether tests prove the intended contract at the right layer. Use
-`../../docs/quality-reference/` rubrics and cite codes from
-`../../references/test-quality-audit-smell-catalog.md`.
+`../../docs/quality-reference/` rubrics. Cite `references/smell-catalog.md`
+codes.
 
 ## Contract
 
 Own read-only unit/component, integration, and E2E audits; delegate non-test
-work to sibling skills. Judge unit by requirement-derived behavior, integration
-by named seams, and E2E by user-observable outcomes cheaper tests cannot prove.
+work. Judge unit by requirement-derived behavior, integration by named seams,
+and E2E by user-observable outcomes cheaper tests cannot prove.
 
-Inputs: target/diff/suite, mode, stack/runner signals, specs/contracts,
-helpers/fixtures, optional coverage/mutation/flake evidence. Ask/stop when
+Inputs: target/diff/suite, mode, stack signals, specs/contracts,
+helpers/fixtures, and optional coverage/mutation/flake evidence. Ask/stop when
 target, mode, rubric, files, sibling ownership, requested edits, or confidence
-lack a safe default. Reject unsupported findings: separate fact from inference,
-state confidence and honest limits, downgrade static-only gaps, and avoid false
-positives/negatives.
+lack a safe default. Separate fact from inference, state limits, downgrade
+static-only gaps, and avoid false positives/negatives.
 
 ## Load Map
 
@@ -31,19 +30,30 @@ Load the selected rubric before judging:
 - Load `../../docs/quality-reference/integration-testing.md` for integration.
 - Load `../../docs/quality-reference/e2e-testing.md` for E2E.
 
-Load `extensions/index.md` for stack signals and full rule packs under
-`../../references/test-quality-audit-extensions/`.
+Load `extensions/index.md` for stack signals. When stack signals match, load
+the corresponding core pack and selected rubric addons:
 
-Load procedures only when needed from `../../references/test-quality-audit-procedures/`:
-finding fields, guardrails, deep output, and gates for SUT surface, auth matrix,
-migrations, mutation, or determinism.
+| Stack | Load |
+|---|---|
+| .NET | `references/extensions/dotnet/` |
+| Java | `references/extensions/java/` |
+| Node.js / TypeScript | `references/extensions/nodejs/` |
+| Next.js | `references/extensions/nodejs/`, then `references/extensions/nextjs/` |
+| Python | `references/extensions/python/` |
+| Robot Framework | `references/extensions/robotframework/` |
+| Rust | `references/extensions/rust/` |
+
+Load `references/extensions/authoring.md` only when editing extension structure.
+
+Load procedures only when needed from `references/procedures/`
+for finding fields, guardrails, deep output, and SUT/auth/migration/mutation/
+determinism gates.
 
 ## Modes
 
-Quick audits one file, one test, or a PR diff and emits per-test findings.
-Deep mode audits a suite/module, enumerates tests, then adds rollups and a
-remediation worklist. Ask when mode is ambiguous; do not deep-enumerate ordinary
-single-file or PR-diff requests.
+Quick audits one file, one test, or a PR diff with per-test findings only.
+Deep audits a suite/module, enumerates tests, then adds rollups and a worklist.
+Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 
 ## Workflow
 
@@ -53,9 +63,9 @@ single-file or PR-diff requests.
    sub-lane (`A`, `P`, `S`, else `F`). Ask if dispatch is unsafe.
 3. Establish target; inspect bases, fixtures, helpers, page objects, factories,
    keyword resources, and runner config before judging.
-4. Apply core smells, extension smells filtered by `Applies to:`, then exact
+4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
-   and choose the highest applicable severity.
+   and use the highest applicable severity.
 5. Deep only: run gated suite checks when extension support exists and cost is
    acceptable; never run them in Quick mode, and never mutate E2E targets.
 6. Report. Quick emits per-test findings only. Deep adds rollup, suite
@@ -73,9 +83,8 @@ single-file or PR-diff requests.
 
 ## Skill Maintenance
 
-Maintenance: for rubric, dispatch, output, extension, or example edits, run
-`../../references/test-quality-audit-procedures/golden-corpus-evals.md`
-and use `references/golden-corpus/`. For trigger, workflow,
-grounding, or eval edits, read `references/evals` and
-`references/source-grounding.md`; keep evals synthetic. After skill-surface
-edits, rerun `scripts/skill-architecture-report.sh .` until clean.
+Maintenance: for rubric/dispatch/output/extension/example edits, run
+`references/procedures/golden-corpus-evals.md` and use
+`references/golden-corpus/`. For trigger/workflow/grounding/eval edits, read `references/evals`.
+For those edits, read `references/source-grounding.md`; keep evals synthetic. After skill-surface edits, rerun
+`scripts/skill-architecture-report.sh .`.

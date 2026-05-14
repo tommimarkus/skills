@@ -51,19 +51,19 @@ class JavaExtensionSurfaceTest(unittest.TestCase):
         index = read("souroldgeezer-audit/skills/test-quality-audit/extensions/index.md")
 
         self.assertIn("Java", index)
-        self.assertIn("java-core.md", index)
-        self.assertIn("java-unit.md", index)
-        self.assertIn("java-integration.md", index)
-        self.assertIn("java-e2e.md", index)
+        self.assertIn("references/extensions/java/core.md", index)
+        self.assertIn("references/extensions/java/unit.md", index)
+        self.assertIn("references/extensions/java/integration.md", index)
+        self.assertIn("references/extensions/java/e2e.md", index)
 
         for name in ("core", "unit", "integration", "e2e"):
-            path = REPO_ROOT / f"souroldgeezer-audit/references/test-quality-audit-extensions/java-{name}.md"
+            path = REPO_ROOT / f"souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/{name}.md"
             self.assertTrue(path.exists(), path)
 
-        core = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-core.md")
-        unit = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-unit.md")
-        integration = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-integration.md")
-        e2e = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-e2e.md")
+        core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/core.md")
+        unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/unit.md")
+        integration = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/integration.md")
+        e2e = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/e2e.md")
 
         self.assertIn("JUnit", core)
         self.assertIn("Mockito", core)
@@ -75,8 +75,8 @@ class JavaExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("java.E-HC-", e2e)
 
     def test_test_quality_java_guidance_is_grounded_in_authoritative_docs(self) -> None:
-        core = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-core.md")
-        e2e = read("souroldgeezer-audit/references/test-quality-audit-extensions/java-e2e.md")
+        core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/core.md")
+        e2e = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/java/e2e.md")
 
         self.assertIn("docs.junit.org", core)
         self.assertIn("maven.apache.org/surefire/maven-surefire-plugin/examples/junit-platform.html", core)

@@ -8,7 +8,7 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
 - Source: `../../../docs/quality-reference/unit-testing.md`,
   `../../../docs/quality-reference/integration-testing.md`,
   `../../../docs/quality-reference/e2e-testing.md`, and
-  `../../../references/test-quality-audit-*`.
+  `references/`.
   Handling: local bundled references owned by this repo; eval prompts are
   original synthetic scenarios for rubric selection, scope, and evidence limits.
 - Source: `references/golden-corpus/index.md` and

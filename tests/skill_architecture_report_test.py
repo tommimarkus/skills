@@ -155,6 +155,33 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertIn("No target groups.", result.stdout)
         self.assertIn("No current advisory findings.", result.stdout)
 
+    def test_private_plugin_root_reference_is_reported(self) -> None:
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "repo"
+            self.make_private_plugin_root_reference_fixture(fixture)
+
+            findings = module.collect_findings(fixture)
+
+        finding_pairs = {(finding.code, finding.path) for finding in findings}
+        self.assertIn(
+            (
+                "SAC-REF-PRIVATE-PLUGIN-ROOT",
+                "example-plugin/references/private-skill-procedures/check.md",
+            ),
+            finding_pairs,
+        )
+
+    def test_documented_shared_plugin_root_reference_is_allowed(self) -> None:
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "repo"
+            self.make_documented_shared_plugin_root_reference_fixture(fixture)
+
+            findings = module.collect_findings(fixture)
+
+        self.assertNotIn("SAC-REF-PRIVATE-PLUGIN-ROOT", {finding.code for finding in findings})
+
     def test_behavioral_evidence_adoption_is_reported_without_findings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fixture = Path(tmp) / "clean-repo"
@@ -571,6 +598,80 @@ class SkillArchitectureReportTest(unittest.TestCase):
             - `clean-fixture`: synthetic local fixture used for report-engine tests.
               Handling: original repo-authored scenario; no third-party text, code,
               fixtures, schemas, diagrams, or screenshots are bundled.
+            """,
+        )
+
+    def make_private_plugin_root_reference_fixture(self, fixture: Path) -> None:
+        write(fixture / "AGENTS.md", "fixture agents\n")
+        write(fixture / "CLAUDE.md", "fixture claude\n")
+        write(
+            fixture / "example-plugin/skills/private-skill/SKILL.md",
+            """
+            ---
+            name: private-skill
+            description: Use when checking fixture private support ownership with clear inputs, outputs, and rerun guidance.
+            ---
+
+            # Private Skill
+
+            Input: fixture files.
+            Output: a short ownership report.
+            Stop when validation is complete.
+            Rerun the report after changing references.
+
+            Read ../../references/private-skill-procedures/check.md when ownership checks require a detailed procedure.
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/private-skill/agents/openai.yaml",
+            """
+            name: private-skill
+            description: Fixture metadata.
+            """,
+        )
+        write(
+            fixture / "example-plugin/references/private-skill-procedures/check.md",
+            "# Private Procedure\n",
+        )
+
+    def make_documented_shared_plugin_root_reference_fixture(self, fixture: Path) -> None:
+        write(fixture / "AGENTS.md", "fixture agents\n")
+        write(fixture / "CLAUDE.md", "fixture claude\n")
+        write(
+            fixture / "example-plugin/references/README.md",
+            """
+            # Plugin References
+
+            `shared-guidance/check.md` is shared plugin-level canonical guidance for every skill in this plugin.
+            """,
+        )
+        write(
+            fixture / "example-plugin/references/shared-guidance/check.md",
+            "# Shared Guidance\n",
+        )
+        write(
+            fixture / "example-plugin/skills/first-skill/SKILL.md",
+            """
+            ---
+            name: first-skill
+            description: Use when checking fixture shared support ownership with clear inputs, outputs, and rerun guidance.
+            ---
+
+            # first-skill
+
+            Input: fixture files.
+            Output: a short shared support report.
+            Stop when validation is complete.
+            Rerun the report after changing references.
+
+            Read ../../references/shared-guidance/check.md when shared plugin guidance applies.
+            """,
+        )
+        write(
+            fixture / "example-plugin/skills/first-skill/agents/openai.yaml",
+            """
+            name: first-skill
+            description: Fixture metadata.
             """,
         )
 

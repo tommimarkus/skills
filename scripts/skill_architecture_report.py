@@ -329,6 +329,15 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Mention the plugin-level reference document from the owning skill workflow or remove the stale document.",
         ),
         Rule(
+            "SAC-REF-PRIVATE-PLUGIN-ROOT",
+            "On-Demand Knowledge",
+            "high",
+            "docs/skill-architecture.md#3-on-demand-knowledge",
+            "deterministic",
+            ("skill-private-plugin-root-reference", "documented-shared-plugin-root-reference"),
+            "Move skill-private support material under skills/<skill>/references/ or document why it is shared plugin-level guidance.",
+        ),
+        Rule(
             "SAC-REF-UNADVERTISED-SUPPORT",
             "On-Demand Knowledge",
             "low",
@@ -1947,6 +1956,24 @@ def skill_texts_by_plugin(repo_root: Path) -> dict[str, list[tuple[str, str]]]:
     return texts
 
 
+def advertised_skill_texts_by_plugin(repo_root: Path) -> dict[str, list[tuple[str, str]]]:
+    texts: dict[str, list[tuple[str, str]]] = {}
+    for skill_rel in find_skill_files(repo_root):
+        if "/skills/" not in skill_rel or skill_rel.startswith(".claude/skills/"):
+            continue
+        skill = load_skill(repo_root, skill_rel)
+        plugin_dir = plugin_dir_from_skill_dir(skill.skill_dir)
+        parts = [(repo_root / skill_rel).read_text(encoding="utf-8")]
+        for support_rel in support_files(repo_root, skill.skill_dir):
+            support_path = repo_root / support_rel
+            try:
+                parts.append(support_path.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                continue
+        texts.setdefault(plugin_dir, []).append((skill.skill_dir, "\n".join(parts)))
+    return texts
+
+
 def scan_plugin_reference_docs(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
     skill_texts = skill_texts_by_plugin(repo_root)
@@ -1976,6 +2003,96 @@ def scan_plugin_reference_docs(repo_root: Path) -> list[Finding]:
                 "Plugin-level reference documents should be explicitly selected by SKILL.md.",
                 "Claude/Codex may never load the bundled reference or may apply the skill without its canonical rubric.",
                 "Mention the plugin-level reference document from the owning skill workflow or remove the stale document.",
+            )
+        )
+    return findings
+
+
+def find_plugin_root_reference_files(repo_root: Path) -> list[str]:
+    references: list[str] = []
+    for path in repo_root.rglob("references"):
+        rel = path.relative_to(repo_root)
+        if path_is_ignored(rel):
+            continue
+        if not path.is_dir() or len(rel.parts) != 2:
+            continue
+        for reference in path.rglob("*"):
+            reference_rel = reference.relative_to(repo_root)
+            if reference_rel.parts[-1] == "README.md" and len(reference_rel.parts) == 3:
+                continue
+            if reference.is_file() and not path_is_ignored(reference_rel):
+                references.append(relpath(repo_root, reference))
+    return sorted(references)
+
+
+def reference_target_candidates(repo_root: Path, reference_rel: str, skill_dir: str) -> set[str]:
+    reference_path = repo_root / reference_rel
+    plugin_dir = Path(reference_rel).parts[0]
+    rel_from_skill = os.path.relpath(reference_path, repo_root / skill_dir).replace(os.sep, "/")
+    rel_from_plugin = reference_rel.removeprefix(f"{plugin_dir}/")
+    candidates = {reference_rel, rel_from_plugin, rel_from_skill}
+
+    for target in (reference_rel, rel_from_plugin, rel_from_skill):
+        current = target
+        while "/" in current:
+            current = current.rsplit("/", 1)[0]
+            candidates.add(current)
+            if current.endswith("/references") or current == "references":
+                break
+
+    return {candidate for candidate in candidates if candidate}
+
+
+def plugin_root_reference_is_documented_shared(repo_root: Path, reference_rel: str) -> bool:
+    rel_path = Path(reference_rel)
+    plugin_dir = rel_path.parts[0]
+    reference_parts = rel_path.parts[2:]
+    reference_from_root = "/".join(reference_parts)
+    shared_words = re.compile(r"\b(shared|public|canonical|plugin-level|plugin level|cross-skill|all skills)\b", re.I)
+    readme_candidates = [repo_root / plugin_dir / "references" / "README.md"]
+
+    for index in range(1, len(reference_parts)):
+        readme_candidates.append(repo_root / plugin_dir / "references" / Path(*reference_parts[:index]) / "README.md")
+
+    for readme in readme_candidates:
+        if not readme.is_file():
+            continue
+        text = readme.read_text(encoding="utf-8")
+        if not shared_words.search(text):
+            continue
+        if reference_from_root in text or "/".join(reference_parts[:1]) in text:
+            return True
+    return False
+
+
+def scan_private_plugin_root_references(repo_root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    skill_texts = advertised_skill_texts_by_plugin(repo_root)
+
+    for reference_rel in find_plugin_root_reference_files(repo_root):
+        plugin_dir = Path(reference_rel).parts[0]
+        owners: list[str] = []
+        for skill_dir, skill_text in skill_texts.get(plugin_dir, []):
+            if any(
+                support_is_advertised(skill_text, candidate)
+                for candidate in reference_target_candidates(repo_root, reference_rel, skill_dir)
+            ):
+                owners.append(skill_dir)
+
+        if len(owners) != 1 or plugin_root_reference_is_documented_shared(repo_root, reference_rel):
+            continue
+
+        owner = owners[0]
+        findings.append(
+            make_finding(
+                "On-Demand Knowledge",
+                "high",
+                "SAC-REF-PRIVATE-PLUGIN-ROOT",
+                reference_rel,
+                f"plugin-root reference is advertised only by {owner}",
+                "Skill-private support should live inside the owning skill directory so token cost and ownership stay visible.",
+                "Claude/Codex may miss ownership boundaries or load stale plugin-root material when only one skill can use it.",
+                "Move this support under the owning skill's references/ tree, or document why it is shared plugin-level guidance.",
             )
         )
     return findings
@@ -2147,6 +2264,7 @@ def collect_findings(repo_root: Path) -> list[Finding]:
     for plugin_rel in find_codex_plugins(repo_root):
         findings.extend(scan_codex_plugin(repo_root, plugin_rel))
     findings.extend(scan_plugin_reference_docs(repo_root))
+    findings.extend(scan_private_plugin_root_references(repo_root))
     findings.extend(scan_manifest_sync(repo_root))
     findings.extend(scan_repo_guidance(repo_root))
     return findings
@@ -2488,13 +2606,14 @@ NEXT_PRIORITY = {
     "SAC-TRIGGER-AGGRESSIVE": 5,
     "SAC-TRIGGER-MISSING-CONTEXT": 6,
     "SAC-REF-BROKEN-LINK": 7,
-    "SAC-SCRIPT-UNADVERTISED": 8,
-    "SAC-WORKFLOW-OUTPUT": 9,
-    "SAC-EVAL-HIDDEN-ARTIFACT": 10,
-    "SAC-EVAL-TRIGGER-SCHEMA": 11,
-    "SAC-EVAL-BEHAVIOR-SCHEMA": 12,
-    "SAC-EVAL-IP-HYGIENE": 13,
-    "SAC-WORKFLOW-RATIONALIZATION-GATE": 14,
+    "SAC-REF-PRIVATE-PLUGIN-ROOT": 8,
+    "SAC-SCRIPT-UNADVERTISED": 9,
+    "SAC-WORKFLOW-OUTPUT": 10,
+    "SAC-EVAL-HIDDEN-ARTIFACT": 11,
+    "SAC-EVAL-TRIGGER-SCHEMA": 12,
+    "SAC-EVAL-BEHAVIOR-SCHEMA": 13,
+    "SAC-EVAL-IP-HYGIENE": 14,
+    "SAC-WORKFLOW-RATIONALIZATION-GATE": 15,
 }
 
 
