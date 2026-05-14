@@ -23,13 +23,20 @@ export files can be recreated from the package. SVG render output is the primary
 visual proof for review. OEF export is optional compatibility output for
 conformant tools and is not the source of truth.
 
+This plugin is an ArchiMate-aware modeling skill and package workflow. It is
+not a certified or complete conforming ArchiMate tool. Its quality levels are
+workflow evidence claims about the package, views, render output, and optional
+export evidence that were checked in the current task.
+
 `project.json` lists only actual views. Missing supported diagram kinds are
 reported in the footer; they are not added as placeholders.
 
 ## 2. Quality Levels
 
-- `source-valid`: `model.json` validates, ids are unique, relationships resolve,
-  and relationship types are legal for their source and target element types.
+- `source-valid`: `model.json` passes schema validation, ids are unique,
+  relationships resolve, and the assessed ArchiMate relationships have passed
+  schema validation plus ArchiMate semantic validation with
+  `dediren validate --plugin generic-graph --profile archimate`.
 - `view-readable`: source-valid plus every actual view in `project.json`
   projects, lays out, and layout-validates.
 - `render-ready`: view-readable plus SVG render evidence exists for changed or
@@ -279,7 +286,8 @@ layout validation can report route detours plus close parallel route channels.
 
 Evidence gates:
 
-- Source: `validate`
+- Source schema: `validate`
+- Source semantics: `validate --plugin generic-graph --profile archimate`
 - View projection: `project`
 - Layout: `layout`
 - Layout validation: `validate-layout`
@@ -287,7 +295,10 @@ Evidence gates:
 - Optional OEF export: `export`
 
 Each command returns an envelope. Error envelopes are findings and cap the
-quality level at the highest stage already proven.
+quality level at the highest stage already proven. Plain `dediren validate` is
+schema validation only; use `validate --plugin generic-graph --profile
+archimate` before claiming ArchiMate semantic source validity. Projection,
+layout, render, and optional export remain downstream evidence gates.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or

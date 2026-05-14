@@ -50,9 +50,12 @@ route channels before claiming render-readiness.
 
 ## Review
 
-Review without mutation by default. Check source validity, `project.json`,
-projection/layout, SVG, optional export only when requested/supplied, and drift
-when requested. Lead with findings and cap quality at proven evidence.
+Review without mutation by default. Check source schema, ArchiMate semantic
+validation with `validate --plugin generic-graph --profile archimate`,
+`project.json`, projection for actual views, layout, SVG, optional export only
+when requested/supplied, and drift when requested. Lead with findings and cap
+quality at proven evidence. Do not present plain `dediren validate` alone as
+ArchiMate semantic validity.
 
 ## Lookup
 

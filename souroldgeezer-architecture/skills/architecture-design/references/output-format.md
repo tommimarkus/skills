@@ -32,6 +32,10 @@ ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
 `TechnologyNode`, for technology nodes, and can report close parallel route
 channels during layout validation.
 
+Evidence checks: source-valid requires schema plus ArchiMate semantic validation.
+Do not report source-valid from plain `dediren validate` alone; run `dediren
+validate --plugin generic-graph --profile archimate`.
+
 If grouped layout validation reports connector-through-node, invalid route, or
 group-boundary warnings, rerun the same view without groups. If the ungrouped
 layout validates cleaner, use the cleaner layout as evidence and report the

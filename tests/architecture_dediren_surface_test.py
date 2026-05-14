@@ -199,6 +199,46 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
 
+    def test_archimate_32_conformance_boundary_and_source_valid_semantics(self) -> None:
+        architecture_reference = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        ).read_text(encoding="utf-8")
+        workflow = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md"
+        ).read_text(encoding="utf-8")
+        self_check = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md"
+        ).read_text(encoding="utf-8")
+        output_format = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
+        ).read_text(encoding="utf-8")
+        source_grounding = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("ArchiMate-aware modeling skill", architecture_reference)
+        self.assertIn("not a certified or complete conforming ArchiMate tool", architecture_reference)
+        self.assertIn(
+            "schema validation plus ArchiMate semantic validation",
+            architecture_reference,
+        )
+        self.assertIn("validate --plugin generic-graph --profile archimate", architecture_reference)
+        self.assertIn("validate --plugin generic-graph --profile archimate", workflow)
+        self.assertIn("validate --plugin generic-graph --profile archimate", self_check)
+        self.assertIn("source-valid requires schema plus ArchiMate semantic validation", output_format)
+        self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
+        self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
+
     def test_dediren_0_2_0_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
             "bundled dediren 0.3.0 runtime",
