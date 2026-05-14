@@ -28,7 +28,7 @@ component-interface ownership when that is the model claim. "Use Triggering
 when the architectural claim is process sequencing"; define the view concern,
 allowed element types, and relationship types.
 
-Runtime checks: disclose the bundled dediren 0.3.0 runtime when used; it checks
+Runtime checks: disclose the bundled dediren 0.5.0 runtime when used; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
 `TechnologyNode`, for technology nodes, and can report close parallel route
 channels during layout validation.

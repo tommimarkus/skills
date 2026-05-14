@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
-EXPECTED_DEDIREN_VERSION = "0.3.0"
+EXPECTED_DEDIREN_VERSION = "0.5.0"
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -222,46 +222,54 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             FIXTURE / "model.json",
         )
         self.assertEqual(project_result.returncode, 0, project_result.stderr)
-        self.assertEqual(envelope(project_result)["status"], "ok")
+        project_payload = envelope(project_result)
+        self.assertEqual(project_payload["status"], "ok")
 
-        layout_request = bundle / "fixtures" / "layout-request" / "basic.json"
-        layout_result = run_dediren("layout", "--plugin", "elk-layout", "--input", layout_request)
-        self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
-        self.assertEqual(envelope(layout_result)["status"], "ok")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            layout_request_path = temp_path / "layout-request.json"
+            layout_request_path.write_text(json.dumps(project_payload["data"]), encoding="utf-8")
 
-        layout_result_path = bundle / "fixtures" / "layout-result" / "basic.json"
-        validation_result = run_dediren("validate-layout", "--input", layout_result_path)
-        self.assertEqual(validation_result.returncode, 0, validation_result.stderr)
-        self.assertEqual(envelope(validation_result)["status"], "ok")
+            layout_result = run_dediren("layout", "--plugin", "elk-layout", "--input", layout_request_path)
+            self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
+            layout_payload = envelope(layout_result)
+            self.assertEqual(layout_payload["status"], "ok")
 
-        render_result = run_dediren(
-            "render",
-            "--plugin",
-            view["render"]["plugin"],
-            "--policy",
-            FIXTURE / view["render"]["policy"],
-            "--metadata",
-            FIXTURE / view["render"]["metadata"],
-            "--input",
-            layout_result_path,
-        )
-        self.assertEqual(render_result.returncode, 0, render_result.stderr)
-        svg = envelope(render_result)["data"]["content"]
-        self.assertIn("<svg", svg)
-        self.assertIn('data-dediren-node-id="client"', svg)
-        self.assertIn('data-dediren-edge-id="client-calls-api"', svg)
+            layout_result_path = temp_path / "layout-result.json"
+            layout_result_path.write_text(json.dumps(layout_payload["data"]), encoding="utf-8")
 
-        export_result = run_dediren(
-            "export",
-            "--plugin",
-            project["export"]["plugin"],
-            "--policy",
-            FIXTURE / project["export"]["policy"],
-            "--source",
-            FIXTURE / "model.json",
-            "--layout",
-            bundle / "fixtures" / "layout-result" / "archimate-oef-basic.json",
-        )
+            validation_result = run_dediren("validate-layout", "--input", layout_result_path)
+            self.assertEqual(validation_result.returncode, 0, validation_result.stderr)
+            self.assertEqual(envelope(validation_result)["status"], "ok")
+
+            render_result = run_dediren(
+                "render",
+                "--plugin",
+                view["render"]["plugin"],
+                "--policy",
+                FIXTURE / view["render"]["policy"],
+                "--metadata",
+                FIXTURE / view["render"]["metadata"],
+                "--input",
+                layout_result_path,
+            )
+            self.assertEqual(render_result.returncode, 0, render_result.stderr)
+            svg = envelope(render_result)["data"]["content"]
+            self.assertIn("<svg", svg)
+            self.assertIn('data-dediren-node-id="client"', svg)
+            self.assertIn('data-dediren-edge-id="orders-service-serves-client"', svg)
+
+            export_result = run_dediren(
+                "export",
+                "--plugin",
+                project["export"]["plugin"],
+                "--policy",
+                FIXTURE / project["export"]["policy"],
+                "--source",
+                FIXTURE / "model.json",
+                "--layout",
+                layout_result_path,
+            )
         self.assertEqual(export_result.returncode, 0, export_result.stderr)
         self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "archimate-oef+xml")
 
