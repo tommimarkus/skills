@@ -1,41 +1,40 @@
-Use after mode selection. Every answer discloses evidence, quality, export
-readiness, findings, and the footer.
+Use after mode selection. Disclose evidence, quality, export readiness,
+findings, and the footer.
 
 ## Build
 
-Report package path, `build`, quality, export readiness, runtime path or
-missing-bundle disclosure, views/missing kinds, validation/render/export state,
-and blocking finding count.
+Report package path, quality, export readiness, runtime, views/missing kinds,
+validation/render/export state, and blocking finding count.
 
 ## Extract
 
-Report package, `extract`, sources read, lifted layer counts, source-backed
-groups, unsupported grouping candidates, grouped layout fallback, architect-owned
-layers, validation/render/drift state, and findings.
+Report package, sources read, lifted counts, source-backed groups, unsupported
+grouping candidates, grouped layout fallback, architect-owned layers,
+validation/render/drift state, and findings.
 
 ## Review
 
-Lead with findings in this shape: `[ARCH-*] finding; evidence; severity; action`.
-Then report quality, export readiness, change classification, package, runtime,
+Lead with findings: `[ARCH-*] finding; evidence; severity; action`. Then
+report quality, export readiness, change classification, package, runtime, and
 validation/layout/SVG/OEF state. One code per finding; no `review-ready` with a
 block.
 
 Semantic checks: APIs and GUIs are Application Interfaces; Application Services
 model the functionality exposed through an interface; Application Component to
-Application Interface Realization is ArchiMate 3.2-legal but should not be
-reported as endpoint-illegal; Prefer Composition or Aggregation for
-component-interface ownership when that is the model claim. "Use Triggering
-when the architectural claim is process sequencing"; define the view concern,
-allowed element types, and relationship types.
+Application Interface Realization is ArchiMate 3.2-legal, not
+endpoint-illegal; Prefer Composition or Aggregation for component-interface
+ownership when that is the claim; Use Triggering when the architectural claim is
+process sequencing; define the view concern, allowed element types, and
+relationship types.
 
 Runtime checks: disclose the bundled dediren 0.5.0 runtime when used; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
-`TechnologyNode`, for technology nodes, and can report close parallel route
+`TechnologyNode`, for technology nodes, and reports close parallel route
 channels during layout validation.
 
 Evidence checks: source-valid requires schema plus ArchiMate semantic validation.
-Do not report source-valid from plain `dediren validate` alone; run `dediren
-validate --plugin generic-graph --profile archimate`.
+Plain `dediren validate` is not enough; run `dediren validate --plugin
+generic-graph --profile archimate`.
 
 If grouped layout validation reports connector-through-node, invalid route, or
 group-boundary warnings, rerun the same view without groups. If the ungrouped
