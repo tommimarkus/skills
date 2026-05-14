@@ -24,7 +24,11 @@ provided evidence, and optional paired architecture package at
 security-tool results, or cloud-control-plane facts from static source. If a
 default would be unsafe, ask; otherwise continue with disclosed defaults.
 
-Modes: Build, Extract, Review, Lookup.
+Modes: Build, Extract, Review, Lookup. Existing API with no requested change
+defaults to Extract. New endpoint or feature defaults to Build.
+Review/audit/check wording defaults to Review. Narrow
+principle/status-code/header questions default to Lookup. If still ambiguous,
+ask the user which mode they want.
 
 ## Load Map
 
@@ -55,7 +59,9 @@ Load what applies:
 - [extensions/README.md](extensions/README.md) only when editing extensions.
 
 Multiple extensions compose. Unknown stacks use the core reference only; do not
-invent unsupported runtime mechanics.
+invent unsupported runtime mechanics. Extensions add rules and exact documented
+carve-outs; they never weaken the core reference. Use each extension's
+`Name and detection signals` section to decide applicability.
 
 ## Ask Vs Continue
 

@@ -28,6 +28,10 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("references/procedures/architecture-pairing.md", skill)
         self.assertIn("references/procedures/red-flags.md", skill)
         self.assertEqual(skill.count("docs/architecture/<feature>.dediren/"), 2)
+        self.assertIn("Existing API with no requested change", skill)
+        self.assertIn("defaults to Extract", skill)
+        self.assertIn("New endpoint or feature defaults to Build", skill)
+        self.assertIn("they never weaken the core reference", skill)
 
         moved_sections = [
             "### Framework-agnostic discovery",
@@ -64,6 +68,7 @@ class SkillLeanRemediationTest(unittest.TestCase):
 
         self.assertLessEqual(len(skill.splitlines()), 125)
         self.assertIn("references/core-workflow.md", skill)
+        self.assertIn("A single pending-check retry is never completion", skill)
 
         moved_headings = [
             "## Evidence Contract",

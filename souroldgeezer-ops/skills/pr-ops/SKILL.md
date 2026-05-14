@@ -65,6 +65,7 @@ user wording.
 
 - Live provider state and live git state are authoritative.
 - Pending required checks in `full-cycle` are active work, not a final state.
+  A single pending-check retry is never completion.
 - Continue autonomously only when target, repo, tooling, permissions, work area,
   verification, branch update, and merge/close authority are clear.
 - Ask only for global blockers; escalate item-local ambiguity through the
