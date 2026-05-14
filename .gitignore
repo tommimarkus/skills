@@ -10,3 +10,4 @@ __pycache__/
 tools/architecture-layout-java/.gradle/
 tools/architecture-layout-java/build/
 docs/architecture/*.dediren/generated/
+docs/notes/
