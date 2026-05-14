@@ -187,7 +187,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         expected_phrases = [
             "APIs and GUIs are Application Interfaces",
             "Application Services model the functionality exposed through an interface",
-            "Application Components must not realize Application Interfaces",
+            "Application Component to Application Interface Realization is ArchiMate 3.2-legal",
+            "Prefer Composition or Aggregation for component-interface ownership",
             "Use Triggering when the architectural claim is process sequencing",
             "define the view concern, allowed element types, and relationship types",
             "Dediren tool issues",
@@ -198,6 +199,70 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             for phrase in expected_phrases:
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
+
+    def test_application_interface_guidance_allows_realization_but_prefers_ownership(self) -> None:
+        surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+        ]
+
+        for surface in surfaces:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertIn(
+                    "Application Component to Application Interface Realization is ArchiMate 3.2-legal",
+                    content,
+                )
+                self.assertIn(
+                    "Prefer Composition or Aggregation for component-interface ownership",
+                    content,
+                )
+                self.assertNotIn("Application Components must not realize Application Interfaces", content)
+
+    def test_basic_fixture_uses_application_interface_service_split(self) -> None:
+        fixture_model = json.loads(
+            (
+                ARCH_PLUGIN
+                / "skills"
+                / "architecture-design"
+                / "references"
+                / "fixtures"
+                / "dediren"
+                / "basic"
+                / "model.json"
+            ).read_text(encoding="utf-8")
+        )
+        nodes = {node["id"]: node["type"] for node in fixture_model["nodes"]}
+        relationships = {relationship["id"]: relationship for relationship in fixture_model["relationships"]}
+        view = fixture_model["plugins"]["generic-graph"]["views"][0]
+
+        self.assertEqual(nodes["orders-api"], "ApplicationInterface")
+        self.assertEqual(nodes["orders-service"], "ApplicationService")
+        self.assertNotIn("api", nodes)
+        self.assertEqual(
+            set(view["nodes"]),
+            {"client", "orders-component", "orders-api", "orders-service"},
+        )
+        self.assertEqual(relationships["orders-component-provides-api"]["type"], "Composition")
+        self.assertEqual(relationships["orders-component-provides-api"]["source"], "orders-component")
+        self.assertEqual(relationships["orders-component-provides-api"]["target"], "orders-api")
+        self.assertEqual(relationships["orders-component-realizes-service"]["type"], "Realization")
+        self.assertEqual(relationships["orders-component-realizes-service"]["target"], "orders-service")
+        self.assertEqual(relationships["orders-service-serves-client"]["type"], "Serving")
+
+    def test_business_layer_guidance_names_representation(self) -> None:
+        architecture_reference = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Representation", architecture_reference)
 
     def test_archimate_32_conformance_boundary_and_source_valid_semantics(self) -> None:
         architecture_reference = (

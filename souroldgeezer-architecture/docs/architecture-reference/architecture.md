@@ -79,7 +79,7 @@ Primary layers:
 
 - **Strategy**: Capability, Resource, Course of Action, Value Stream.
 - **Business**: Actor, Role, Collaboration, Interface, Process, Function,
-  Interaction, Event, Service, Object, Contract, Product.
+  Interaction, Event, Service, Object, Contract, Representation, Product.
 - **Application**: Component, Collaboration, Interface, Function, Interaction,
   Process, Event, Service, Data Object.
 - **Technology**: Node, Device, System Software, Technology Collaboration,
@@ -139,11 +139,13 @@ interface. Name services for the exposed behavior or capability, not for the
 transport surface, unless the source label is quoted as evidence and the
 architecture label resolves the role.
 
-Application Components must not realize Application Interfaces. In ArchiMate
-3.2, an Application Component provides an Application Interface through
-Composition. If a target modeling profile or future export consumer does not
-support Composition, use Aggregation for the component-interface whole/part
-relationship and disclose the profile decision in the footer.
+Application Component to Application Interface Realization is ArchiMate
+3.2-legal. Do not report it as endpoint-illegal. Prefer Composition or
+Aggregation for component-interface ownership when the architecture claim is
+that a component provides or owns an access point. Use Realization only when
+the model intentionally states that the component fulfills the interface
+abstraction, and disclose that choice when interoperability with stricter
+profiles is a concern.
 
 ### Process Handoffs
 
