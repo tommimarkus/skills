@@ -28,16 +28,28 @@ relationship types.
 
 Runtime checks: disclose the bundled dediren 0.8.3 runtime; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
-`TechnologyNode`, and reports close parallel route channels.
+`TechnologyNode`, reports close parallel route channels, and needs serial
+per-view ELK layout commands for reliable evidence.
 
 Evidence checks: source-valid requires schema plus ArchiMate semantic validation.
 Plain `dediren validate` is not enough; run `dediren validate --plugin
 generic-graph --profile archimate`.
 
+Package generation checks: clean-slate packages should define per-view
+`projection`, `metadata`, `layout`, and `render` entries in `project.json`.
+Render with generated per-view metadata when declared, and keep generated
+projections, render metadata, layouts, SVGs, and optional OEF outputs out of
+source unless the repository explicitly commits selected evidence.
+
 If grouped layout validation still reports connector-through-node, invalid
 route, or group-boundary warnings, rerun the same view without groups. If
 cleaner, use the cleaner layout as evidence and report the grouped-layout
 regression plus both validation counts.
+
+Visual-readiness checks: layout-valid is not visually clean. Emit `ARCH-L-3`,
+`ARCH-R-3`, or `ARCH-Q-2` for dense, hub-heavy, label-obscured, route-congested,
+over-wide, group-imbalanced, or mixed-concern views, and recommend splitting the
+view when a narrower concern would read better.
 
 ## Lookup
 
@@ -58,7 +70,7 @@ Semantic grouping: layout-only groups are not ArchiMate Grouping elements | sema
 Customization profile: none | local properties only | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none identified
 Grouped layout fallback: not needed | used ungrouped fallback after grouped route warnings | not run
-Validation: source <state>; projection <state>; layout <state>; layout validation <state>; SVG <state>; OEF <state>
+Validation: source <state>; projection <state>; render metadata <state>; layout <state>; layout validation <state>; SVG <state>; visual readiness <state>; OEF <state>
 Runtime-verified drift: <n findings|not run>
 Findings: <n> blocking ARCH-* findings
 Dediren tool issues: <none|semantic validation, layout, render, or export gaps to raise upstream>

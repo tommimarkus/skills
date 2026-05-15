@@ -23,12 +23,18 @@ plain `validate` plus `validate --plugin generic-graph --profile archimate`.
 Projection and requested export evidence remain separate downstream gates for
 view and export readiness.
 
+Generate render metadata per view before rendering when `project.json` declares
+a `metadata` target. Run `layout --plugin elk-layout` serially for each view;
+parallel ELK layout invocations can produce invalid JSON envelopes in the
+current packaged runtime even when the same inputs pass serially.
+
 ```
 <dediren> validate --input <package>/model.json
 <dediren> project --input <package>/model.json --plugin <plugin> --view <view> --target <target>
+<dediren> project --input <package>/model.json --plugin generic-graph --view <view> --target render-metadata
 <dediren> layout --plugin <plugin> --input <projection.json>
 <dediren> validate-layout --input <layout.json>
-<dediren> render --plugin svg-render --policy <package>/render-policy.json --metadata <package>/render-metadata.json --input <layout.json>
+<dediren> render --plugin svg-render --policy <package>/render-policy.json --metadata <render-metadata.json> --input <layout.json>
 <dediren> export --plugin archimate-oef --policy <package>/export-policy.json --source <package>/model.json --layout <layout.json>
 ```
 

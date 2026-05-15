@@ -11,7 +11,29 @@ Preserve ids, labels, policies, and source evidence unless invalid/stale.
 ## Build
 
 Create/update source and policies from architect intent. Add actual views only;
-validate, project, layout, layout-validate, and render changed views.
+validate, project layout requests, project render metadata, run ELK layout
+commands serially, layout-validate, and render changed views.
+
+## Package JSON Generation
+
+For clean-slate packages, copy the basic fixture shape and then edit source
+content. Keep `model.json`, `project.json`, `render-policy.json`, package-level
+`render-metadata.json` when deliberately maintained, and optional
+`export-policy.json` as checked-in source/policy files. Treat projections,
+per-view render metadata, layout results, SVG, and optional OEF intermediates
+under `generated/` as reproducible output.
+
+Each view in `project.json` should declare:
+
+- `projection` for `generic-graph` `layout-request`;
+- `metadata` for `generic-graph` `render-metadata` with a
+  `generated/render-metadata/<view>.json` output;
+- `layout` for `elk-layout` output;
+- `render` for `svg-render` policy, metadata, and SVG output.
+
+Render with the generated per-view metadata when it is declared. Use the
+checked-in package-level `render-metadata.json` only when the package owner
+intentionally keeps one synchronized shared metadata file.
 
 ## Semantic Modeling Guard
 
@@ -50,13 +72,20 @@ only claim ArchiMate Grouping when they are backed by a `Grouping` source node.
 
 ## Grouped Layout Guard
 
+Run per-view `layout --plugin elk-layout` commands serially. Current packaged
+dediren can return invalid JSON envelopes when multiple ELK layout invocations
+start concurrently. A parallel-only layout failure must be rerun serially
+before it becomes an `ARCH-L-1` finding.
+
 If grouped layout validation still reports connector-through-node, invalid
 route, or group-boundary warnings, rerun the same view without groups. If
 cleaner, keep source-backed groups, use the cleaner layout as evidence and
 report the grouped-layout regression plus both validation counts.
 
 Also inspect dediren 0.8.3 layout warnings for route detours and close parallel
-route channels before claiming render-readiness.
+route channels before claiming render-readiness. Layout-valid is not visually
+clean: inspect density, fanout, long routes, group balance, labels, and
+viewpoint focus before claiming a view is clean enough for the audience.
 
 ## Review
 

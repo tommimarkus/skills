@@ -31,3 +31,11 @@ OEF is optional compatibility output.
 - The skill distinguishes layout-only groups from semantic-boundary groups; a
   semantic Grouping claim needs `semantic_source_id` to a `Grouping` source node.
   Relationship connectors and junctions remain unsupported in package source.
+- Recent package-review feedback showed two Dediren workflow gaps: current
+  packaged ELK layout evidence must be serialized to avoid parallel-only
+  invalid JSON envelopes, and valid nonblank SVGs still need a visual-readiness
+  pass for density, hub fanout, long routes, group balance, and mixed concerns.
+- Clean-slate package feedback showed agents need an explicit
+  `project.json` recipe that separates hand-authored source/policies from
+  generated projection, per-view render metadata, layout, SVG, and optional OEF
+  output.

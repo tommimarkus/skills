@@ -13,9 +13,9 @@ docs/architecture/<feature>.dediren/
   project.json
   model.json
   render-policy.json
-  render-metadata.json
+  render-metadata.json       # optional checked-in shared semantic metadata
   export-policy.json        # optional compatibility export policy
-  generated/                # reproducible output, ignored by default
+  generated/                # reproducible per-view output, ignored by default
 ```
 
 Agents edit package source and policies. Generated layout, SVG, and optional
@@ -38,10 +38,12 @@ reported in the footer; they are not added as placeholders.
   schema validation plus ArchiMate semantic validation with
   `dediren validate --plugin generic-graph --profile archimate`.
 - `view-readable`: source-valid plus every actual view in `project.json`
-  projects, lays out, and layout-validates.
+  projects, lays out, and layout-validates. This proves layout validity, not
+  visual cleanliness.
 - `render-ready`: view-readable plus SVG render evidence exists for changed or
-  requested views and the artifact is nonblank, framed, and carries dediren
-  node/edge markers.
+  requested views, the artifact is nonblank, framed, carries dediren node/edge
+  markers, and visual-readiness has been inspected for density, framing, label
+  risk, and audience fit.
 - `review-ready`: render-ready plus no blocking `ARCH-*` finding remains for
   the audience, diagram kind, and change scope.
 
@@ -59,9 +61,10 @@ Stable ids matter. Preserve existing ids unless they are duplicate, misleading,
 or tied to removed source evidence. Labels can be human-friendly; id and label
 must not contradict each other semantically.
 
-`project.json` binds actual views to projection, layout, render, and optional
-export policy. A view must answer a clear architecture question and should carry
-the smallest set of elements and relationships needed to answer it.
+`project.json` binds actual views to projection, per-view render metadata,
+layout, render, and optional export policy. A view must answer a clear
+architecture question and should carry the smallest set of elements and
+relationships needed to answer it.
 
 `render-policy.json` and `render-metadata.json` control SVG style and semantic
 markers. Render metadata must let reviewers map visible SVG nodes and edges back
@@ -69,6 +72,48 @@ to source ids.
 
 `export-policy.json` is required only when OEF export is requested. When export
 fails, fix package source or export policy first, then recreate output.
+
+### Package JSON Generation
+
+Start clean-slate packages from the fixture under
+`skills/architecture-design/references/fixtures/dediren/basic/`, then replace
+ids, labels, model content, view definitions, and policies with the project
+architecture.
+
+Treat these files as hand-authored and checked in: `model.json`,
+`project.json`, `render-policy.json`, package-level `render-metadata.json` when
+the package intentionally keeps one shared semantic metadata file, and optional
+`export-policy.json`. Treat `generated/` as reproducible output: projections,
+per-view render metadata, layout results, SVG, and optional OEF intermediates
+stay ignored unless the owning repository deliberately commits selected render
+evidence elsewhere.
+
+For each actual view in `project.json`, define the projection target for
+layout, the render-metadata target, the layout output, and the render output:
+
+```json
+{
+  "id": "main",
+  "projection": { "plugin": "generic-graph", "target": "layout-request" },
+  "metadata": {
+    "plugin": "generic-graph",
+    "target": "render-metadata",
+    "output": "generated/render-metadata/main.json"
+  },
+  "layout": { "plugin": "elk-layout", "output": "generated/layout/main.json" },
+  "render": {
+    "plugin": "svg-render",
+    "policy": "render-policy.json",
+    "metadata": "generated/render-metadata/main.json",
+    "output": "generated/svg/main.svg"
+  }
+}
+```
+
+Use the package-level `render-metadata.json` only when a repository chooses a
+checked-in shared metadata policy/cache and can keep it synchronized with the
+views. Otherwise render with the generated per-view metadata declared in the
+view's `metadata.output`.
 
 ## 4. ArchiMate Layers And Aspects
 
@@ -244,6 +289,22 @@ Good views have:
 Bad views list inventory, hide the primary relationship, mix unrelated layers,
 or include implementation trivia that distracts from the architecture claim.
 
+Visual-readiness is separate from layout validity. When a view validates but is
+hard to scan, report the narrowest warning instead of claiming it is clean:
+
+- `ARCH-L-3` for high edge count, high edge/node ratio, long cross-group
+  routes, extreme aspect ratio, large empty groups, or congested route channels;
+- `ARCH-R-3` for labels, icons, or markers that obscure the primary message;
+- `ARCH-Q-2` for hub fanout, mixed audience concerns, or multiple viewpoint
+  concerns in one diagram.
+
+Prefer splitting dense views into narrower concerns. Process views should stay
+linear when the story is linear. Service-realization views should keep the
+realization path easy to follow. Technology-usage views should split hosting,
+data, identity/security, and observability when one view cannot carry all of
+them. Migration views should prefer stages or lanes over a generic wide graph
+when the work sequence is the message.
+
 ## 8. Extraction And Source Evidence
 
 Extract only facts that source can support.
@@ -309,6 +370,7 @@ Evidence gates:
 - Source schema: `validate`
 - Source semantics: `validate --plugin generic-graph --profile archimate`
 - View projection: `project`
+- Per-view render metadata: `project --target render-metadata`
 - Layout: `layout`
 - Layout validation: `validate-layout`
 - SVG render: `render`
@@ -319,6 +381,13 @@ quality level at the highest stage already proven. Plain `dediren validate` is
 schema validation only; use `validate --plugin generic-graph --profile
 archimate` before claiming ArchiMate semantic source validity. Projection,
 layout, render, and optional export remain downstream evidence gates.
+
+Run per-view `layout --plugin elk-layout` commands serially. The current
+packaged runtime can return invalid JSON envelopes under concurrent ELK layout
+invocations even when the same inputs pass serially. If a parallel run has
+already failed, rerun the exact failing layouts serially before reporting
+`ARCH-L-1`; disclose repeated parallel-only failures under `Dediren tool
+issues`.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or
@@ -338,7 +407,9 @@ Render-ready requires inspecting SVG for:
 - coherent `viewBox`;
 - expected `data-dediren-node-id` markers for visible nodes;
 - expected `data-dediren-edge-id` markers for visible relationships;
-- labels and markers that do not obscure the main architecture path.
+- labels and markers that do not obscure the main architecture path;
+- density, fanout, route span, group balance, and viewpoint focus that are
+  acceptable for the audience.
 
 ### Relationship Connectors And Junctions
 
@@ -396,12 +467,15 @@ For each package:
 2. Confirm every view has a clear architecture question.
 3. Validate `model.json`.
 4. Project each actual view through its configured plugin and target.
-5. Run layout and layout validation for changed or requested views.
-6. Render SVG for changed or requested views.
-7. Inspect SVG for nonblank, marker-rich, readable output.
-8. Run optional export only when requested.
-9. Run drift detection only when source comparison is requested.
-10. Report quality level, export readiness, evidence, missing diagram kinds,
+5. Project render metadata for each actual view when the render step depends
+   on semantic node or edge metadata.
+6. Run ELK layout commands serially and layout-validate changed or requested
+   views.
+7. Render SVG for changed or requested views.
+8. Inspect SVG for nonblank, marker-rich, visually readable output.
+9. Run optional export only when requested.
+10. Run drift detection only when source comparison is requested.
+11. Report quality level, export readiness, evidence, missing diagram kinds,
     and findings.
 
 ## 14. Modeling Pitfalls

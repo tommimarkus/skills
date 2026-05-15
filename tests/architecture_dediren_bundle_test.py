@@ -225,10 +225,31 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         project_payload = envelope(project_result)
         self.assertEqual(project_payload["status"], "ok")
 
+        metadata_result = run_dediren(
+            "project",
+            "--target",
+            view["metadata"]["target"],
+            "--plugin",
+            view["metadata"]["plugin"],
+            "--view",
+            view["id"],
+            "--input",
+            FIXTURE / "model.json",
+        )
+        self.assertEqual(metadata_result.returncode, 0, metadata_result.stderr)
+        metadata_payload = envelope(metadata_result)
+        self.assertEqual(metadata_payload["status"], "ok")
+        self.assertEqual(
+            metadata_payload["data"]["render_metadata_schema_version"],
+            "render-metadata.schema.v1",
+        )
+
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             layout_request_path = temp_path / "layout-request.json"
             layout_request_path.write_text(json.dumps(project_payload["data"]), encoding="utf-8")
+            render_metadata_path = temp_path / "render-metadata.json"
+            render_metadata_path.write_text(json.dumps(metadata_payload["data"]), encoding="utf-8")
 
             layout_result = run_dediren("layout", "--plugin", "elk-layout", "--input", layout_request_path)
             self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
@@ -249,7 +270,7 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
                 "--policy",
                 FIXTURE / view["render"]["policy"],
                 "--metadata",
-                FIXTURE / view["render"]["metadata"],
+                render_metadata_path,
                 "--input",
                 layout_result_path,
             )

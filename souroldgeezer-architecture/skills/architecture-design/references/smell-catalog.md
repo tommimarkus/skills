@@ -48,3 +48,9 @@ Modeling-rule routing:
 - `ARCH-M-3`: API/GUI surface is typed or named as Application Service.
 - `ARCH-M-3`: process sequencing evidence uses Serving instead of Triggering.
 - `ARCH-Q-2`: view lacks a clear concern or mixes vocabularies.
+- `ARCH-L-3`: layout validates but is hard to scan because of density, long
+  spans, extreme aspect ratio, empty groups, or route congestion.
+- `ARCH-R-3`: SVG is nonblank and marker-rich but labels, icons, or markers
+  obscure the primary message.
+- `ARCH-Q-2`: view is hub-heavy, audience-incoherent, or mixes multiple
+  viewpoint concerns that should be split.

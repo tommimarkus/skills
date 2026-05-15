@@ -6,7 +6,9 @@ Use these levels in Build, Extract, and Review.
 
 - `source-valid`: source validates; ids and relationships resolve.
 - `view-readable`: source-valid plus actual views project, layout, validate.
-- `render-ready`: view-readable plus inspected nonblank marker-rich SVG.
+  This is layout-valid evidence, not a visually clean claim.
+- `render-ready`: view-readable plus inspected nonblank marker-rich SVG and a
+  visual-readiness pass for density, framing, label risk, and audience fit.
 - `review-ready`: render-ready plus no blocking `ARCH-*` finding.
 
 The package rollup is the weakest applicable level across actual views.
@@ -24,3 +26,11 @@ Contradictory authority claims are `ARCH-Q-3`.
 Supported kinds: Capability Map, Application Cooperation, Service Realization,
 Technology Usage, Migration, Motivation, Business Process Cooperation. Missing
 kinds are footer disclosure, not placeholder views.
+
+## Visual Readiness
+
+Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
+`ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, route-congested,
+too wide/tall, group-imbalanced, or mixes concerns from multiple audiences.
+When a process, realization, technology-usage, or migration view becomes hard
+to scan, prefer splitting the concern over accepting the first valid render.

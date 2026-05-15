@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.1.6"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.2.0"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -361,6 +361,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
             "close parallel route channels",
+            "serial",
         ]
         surfaces = [
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
@@ -375,11 +376,77 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             REPO_ROOT / "CLAUDE.md",
         ]
 
-        for surface in surfaces:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in expected_phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        combined = " ".join(
+            surface.read_text(encoding="utf-8") for surface in surfaces
+        )
+        combined = " ".join(combined.split())
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+
+    def test_package_generation_guidance_documents_metadata_and_serial_layout(self) -> None:
+        expected_phrases = [
+            "generated/render-metadata",
+            "render-metadata",
+            "layout commands serially",
+            "hand-authored",
+            "reproducible output",
+        ]
+        surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+        ]
+
+        combined = " ".join(
+            surface.read_text(encoding="utf-8") for surface in surfaces
+        )
+        combined = " ".join(combined.split())
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+
+    def test_visual_readiness_guidance_flags_dense_valid_renders(self) -> None:
+        expected_phrases = [
+            "layout-valid is not visually clean",
+            "ARCH-L-3",
+            "ARCH-R-3",
+            "ARCH-Q-2",
+            "hub fanout",
+            "mixed concerns",
+        ]
+        surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "professional-readiness.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+        ]
+
+        combined = " ".join(
+            surface.read_text(encoding="utf-8") for surface in surfaces
+        )
+        combined = " ".join(combined.split())
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
 
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
