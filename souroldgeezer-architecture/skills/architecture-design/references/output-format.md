@@ -1,6 +1,12 @@
 Use after mode selection. Disclose evidence, quality, export readiness,
 findings, and footer.
 
+For implementation-readiness review, include an implementation-readiness verdict,
+an evidence inventory, architecture-documentation findings, other source
+material findings, skill/package issue classification, ArchiMate equivalence,
+and Implementation impact; do not duplicate API, UI, auth, IaC, test, or code internals;
+point to the owning source material and describe only the architecture purpose.
+
 Modes: Build/Extract report package, evidence state, quality, export readiness,
 source-backed groups when relevant, and blockers. Review leads with
 `[ARCH-*] finding; evidence; severity; action`; Lookup is two to four lines plus
@@ -54,6 +60,9 @@ Unsupported ArchiMate concepts: relationship connectors and junctions unsupporte
 Grouped layout fallback: not needed | used ungrouped fallback | not run
 Validation: source; projection; render metadata; layout; layout validation; SVG; visual readiness; OEF
 Runtime-verified drift: <n findings|not run>
+Implementation readiness: sufficient | partial | insufficient | not assessed
+Finding split: <n> architecture-documentation findings; <n> other source material findings
+ArchiMate equivalence: direct | partial | metadata/companion | none | not assessed
 Findings: <n> blocking ARCH-* findings
 Dediren tool issues: <none|issues; upstream or blocked report>
 Change classification: semantic model; view/layout; render metadata/policy; export policy; docs only

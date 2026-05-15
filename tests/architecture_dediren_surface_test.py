@@ -499,6 +499,37 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, procedure_content)
 
+    def test_implementation_readiness_output_contract_and_codes_are_documented(self) -> None:
+        output_format = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
+        ).read_text(encoding="utf-8")
+        smell_catalog = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md"
+        ).read_text(encoding="utf-8")
+
+        output_phrases = [
+            "implementation-readiness verdict",
+            "architecture-documentation findings",
+            "other source material findings",
+            "skill/package issue classification",
+            "ArchiMate equivalence",
+            "Implementation impact",
+            "do not duplicate API, UI, auth, IaC, test, or code internals",
+        ]
+        for phrase in output_phrases:
+            with self.subTest(surface="output-format", phrase=phrase):
+                self.assertIn(phrase, output_format)
+
+        code_phrases = [
+            "`ARCH-Q-3`: implementation-readiness claim exceeds evidence",
+            "`ARCH-X-2`: required architecture evidence is absent",
+            "`ARCH-V-4`: supported implementation-handoff diagram kind is absent",
+            "`ARCH-M-4`: architect-owned content is presented as extracted fact",
+        ]
+        for phrase in code_phrases:
+            with self.subTest(surface="smell-catalog", phrase=phrase):
+                self.assertIn(phrase, smell_catalog)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 

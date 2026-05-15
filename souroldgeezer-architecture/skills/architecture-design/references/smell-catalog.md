@@ -27,6 +27,14 @@ unsupported claims; `warn` quality/drift/incomplete realization/optional export;
 
 Routing:
 
+- `ARCH-Q-3`: implementation-readiness claim exceeds evidence, such as a
+  package described as a full implementation handoff while product intent,
+  confirmed process semantics, trust boundaries, data lifecycle, environment
+  responsibility, or operational gates are absent.
+- `ARCH-X-2`: required architecture evidence is absent for the review question.
+- `ARCH-V-4`: supported implementation-handoff diagram kind is absent and should
+  be disclosed rather than created as a placeholder.
+- `ARCH-M-4`: architect-owned content is presented as extracted fact.
 - `ARCH-M-1`: endpoint combination fails ArchiMate semantic validation. Do not
   route accepted Component-to-Interface Realization here.
 - `ARCH-M-3`: Realization used for component-interface ownership, API/GUI typed
