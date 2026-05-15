@@ -2,8 +2,6 @@
 
 Use these levels in Build, Extract, and Review.
 
-## Levels
-
 - `source-valid`: source validates; ids and relationships resolve.
 - `view-readable`: source-valid plus actual views project, layout, validate.
   This is layout-valid evidence, not a visually clean claim.
@@ -13,21 +11,14 @@ Use these levels in Build, Extract, and Review.
 
 The package rollup is the weakest applicable level across actual views.
 
-## Authority
-
 Authority: `lifted-from-source` only when every visible claim has current
 evidence; `forward-only-or-inferred` for intent/future/process candidates;
 `architect-approved` or `stakeholder-validated` only when supplied.
-
 Contradictory authority claims are `ARCH-Q-3`.
-
-## Coverage
 
 Supported kinds: Capability Map, Application Cooperation, Service Realization,
 Technology Usage, Migration, Motivation, Business Process Cooperation. Missing
 kinds are footer disclosure, not placeholder views.
-
-## Visual Readiness
 
 Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
 `ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, route-congested,
