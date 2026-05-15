@@ -21,9 +21,10 @@ lifting rules, and fixtures.
   plain `validate` is schema validation. Layout-only groups are not
   semantic-boundary groups; semantic Grouping needs `semantic_source_id`;
   relationship connectors and junctions remain unsupported.
-- Package feedback: serialize ELK layout evidence; inspect valid SVGs for
-  density, hub fanout, long routes, group balance, and mixed concerns; separate
-  hand-authored source/policies from generated render metadata/layout/SVG/OEF.
+- Package feedback: dediren 0.8.4 allows parallel per-view ELK layout with
+  serial rerun as a diagnostic fallback; inspect valid SVGs for density, hub
+  fanout, long routes, group balance, and mixed concerns; separate hand-authored
+  source/policies from generated render metadata/layout/SVG/OEF.
 - Repo ownership feedback: `tools/dediren-linux/**` is an imported upstream
   artifact. Tool defects belong upstream; issue-filing mechanics are
   agent-local. This repo changes repo-owned guidance, fixtures, and docs unless
@@ -33,3 +34,7 @@ lifting rules, and fixtures.
   metadata unless `archimate-oef` is listed for an ArchiMate package. Guidance
   keeps export optional but preserves that plugin requirement when generated
   ArchiMate render metadata feeds SVG render policy.
+- Layout concurrency follow-up: skills issue `#51` refreshed the historical
+  `#47` ELK concurrency guidance after dediren 0.8.4 evidence showed parallel
+  per-view layout batches passing. Guidance now allows parallel layout on the
+  current bundle and keeps serial rerun only as a diagnostic fallback.

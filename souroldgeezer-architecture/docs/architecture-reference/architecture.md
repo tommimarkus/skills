@@ -380,7 +380,9 @@ ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoin
 legality, use the technology element name `Node`, not `TechnologyNode`, and
 layout validation can report route detours plus close parallel route channels.
 It also supports semantic-backed group projection/export and improved grouped
-cross-route validation.
+cross-route validation. ELK layout can run per-view commands in parallel in
+this runtime; keep serial rerun only as a diagnostic fallback when a parallel
+batch produces an error envelope or other parallel-only failure.
 
 The packaged bundle under `souroldgeezer-architecture/tools/dediren-linux/` is
 an imported upstream Dediren distribution artifact. Do not patch bundled
@@ -416,12 +418,11 @@ mismatch as a runtime/tool issue, not a model-readiness pass. Either include
 the current runtime, or use a verified checked-in ArchiMate-profile metadata
 file and list the generated-metadata limitation under `Dediren tool issues`.
 
-Run per-view `layout --plugin elk-layout` commands serially. The current
-packaged runtime can return invalid JSON envelopes under concurrent ELK layout
-invocations even when the same inputs pass serially. If a parallel run has
-already failed, rerun the exact failing layouts serially before reporting
-`ARCH-L-1`; disclose repeated parallel-only failures under `Dediren tool
-issues` with repro evidence.
+Per-view `layout --plugin elk-layout` commands may run in parallel with the
+bundled dediren 0.8.4 runtime. If a parallel batch fails, rerun the exact
+failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
+parallel-only failures under `Dediren tool issues` with repro evidence and
+reference the historical regression tracked in skills issue `#47`.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or
@@ -507,8 +508,9 @@ For each package:
 5. Project render metadata for each actual view when the render step depends
    on semantic node or edge metadata; verify the generated metadata
    `semantic_profile` matches the render policy.
-6. Run ELK layout commands serially and layout-validate changed or requested
-   views.
+6. Run ELK layout for changed or requested views; parallel per-view layout is
+   allowed with dediren 0.8.4, but rerun any parallel failure serially before
+   reporting it as a layout defect.
 7. Render SVG for changed or requested views.
 8. Inspect SVG for nonblank, marker-rich, visually readable output.
 9. Run optional export only when requested.

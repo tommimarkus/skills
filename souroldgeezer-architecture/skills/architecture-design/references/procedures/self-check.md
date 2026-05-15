@@ -26,10 +26,12 @@ use `semantic_profile: "generic-graph"` and render can fail with
 layout, and export evidence remain separate gates.
 
 When `project.json` declares `metadata`, generate render metadata per view
-before rendering. Run `layout --plugin elk-layout` serially; parallel ELK layout
-can produce invalid JSON envelopes even when the same inputs pass serially.
+before rendering. With bundled dediren 0.8.4, per-view
+`layout --plugin elk-layout` commands may run in parallel. If a parallel batch
+returns an error envelope or invalid output, rerun the exact failing input
+serially before reporting `ARCH-L-1`.
 
 Command order: `validate`; semantic validate; `project` projection/render
-metadata; serial `layout`; `validate-layout`; `render --plugin svg-render`;
+metadata; `layout`; `validate-layout`; `render --plugin svg-render`;
 optional `export --plugin archimate-oef`. Error envelopes block that quality
 level.

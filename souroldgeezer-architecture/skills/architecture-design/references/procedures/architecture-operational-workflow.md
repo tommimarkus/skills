@@ -13,8 +13,8 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   envelope/error, expected behavior, repro evidence; issue-filing mechanics
   stay agent-local.
 - Build: create/update source and policies from architect intent; add actual
-  views only. Validate, project layout requests and render metadata, run layout
-  commands serially, validate layout, render changed views.
+  views only. Validate, project layout requests and render metadata, run layout,
+  validate layout, render changed views.
 - Clean-slate package: start from the basic fixture, then replace content.
   Hand-authored source/policy files are `model.json`, `project.json`,
   `render-policy.json`, maintained `render-metadata.json`, optional
@@ -40,7 +40,7 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   `ARCH-*` finding and list the gap under `Dediren tool issues`.
 - Runtime semantics: the bundled dediren 0.8.4 runtime enforces ArchiMate® 3.2
   relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
-  close parallel route channels, and needs
+  close parallel route channels, allows parallel per-view ELK layout, and needs
   `validate --plugin generic-graph --profile archimate` for `source-valid`.
 - Unsupported source: relationship connectors and junctions are unsupported in
   dediren package source; report the limitation.
@@ -52,8 +52,9 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   `project.json`, with stable ids/labels/members. `role: "layout-only"` is only
   visual; semantic-boundary Grouping needs `semantic_source_id` to a `Grouping`
   source node. Layout-only groups are not ArchiMate Grouping elements.
-- Grouped layout: run `layout --plugin elk-layout` serially. Rerun
-  parallel-only failures serially before `ARCH-L-1`. If grouped layout
+- Grouped layout: parallel per-view `layout --plugin elk-layout` is allowed
+  with dediren 0.8.4. Rerun parallel-only failures serially before `ARCH-L-1`.
+  If grouped layout
   validation still reports connector-through-node, invalid route, or
   group-boundary warnings, rerun the same view without groups. If cleaner, keep
   source-backed groups, use the cleaner layout as evidence and report the

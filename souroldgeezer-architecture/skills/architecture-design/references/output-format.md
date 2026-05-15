@@ -15,7 +15,9 @@ define the view concern, allowed element types, and relationship types.
 
 Evidence: disclose the bundled dediren 0.8.4 runtime. It checks ArchiMate® 3.2
 relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
-close parallel route channels, and needs serial ELK evidence. source-valid requires schema plus ArchiMate semantic validation:
+close parallel route channels, and allows parallel per-view ELK layout with
+serial rerun as a diagnostic fallback for parallel-only failures.
+source-valid requires schema plus ArchiMate semantic validation:
 `dediren validate --plugin generic-graph --profile archimate`.
 
 Ownership/layout: `souroldgeezer-architecture/tools/dediren-linux/` is an
