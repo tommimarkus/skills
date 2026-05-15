@@ -530,6 +530,86 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(surface="smell-catalog", phrase=phrase):
                 self.assertIn(phrase, smell_catalog)
 
+    def test_implementation_readiness_eval_and_source_grounding_exist(self) -> None:
+        behavior_cases_path = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "evals"
+            / "behavior-cases.jsonl"
+        )
+        trigger_cases_path = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "evals"
+            / "trigger-cases.jsonl"
+        )
+        behavior_cases = [
+            json.loads(line)
+            for line in behavior_cases_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        trigger_cases = [
+            json.loads(line)
+            for line in trigger_cases_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        behavior_ids = {case["id"]: case for case in behavior_cases}
+        trigger_ids = {case["id"]: case for case in trigger_cases}
+        self.assertIn(
+            "architecture-design-behavior-implementation-readiness-review",
+            behavior_ids,
+        )
+        self.assertIn(
+            "architecture-design-trigger-yes-implementation-readiness",
+            trigger_ids,
+        )
+        self.assertIn("architecture-design-trigger-no-api-wire-contracts", trigger_ids)
+        behavior_case = behavior_ids[
+            "architecture-design-behavior-implementation-readiness-review"
+        ]
+
+        self.assertIn("implementation handoff", behavior_case["prompt"])
+        self.assertIn("implementation-readiness verdict", behavior_case["expected_artifacts"])
+        self.assertIn("architecture-documentation findings", behavior_case["expected_artifacts"])
+        self.assertIn("other source material findings", behavior_case["expected_artifacts"])
+        self.assertIn(
+            "include ArchiMate equivalence for every architecture-documentation finding",
+            behavior_case["required_checks"],
+        )
+        self.assertIn(
+            "route API wire contracts UI behavior auth mechanics IaC parameters tests and code internals to owning source material",
+            behavior_case["required_checks"],
+        )
+        self.assertIn(
+            "treat architecture docs as a complete implementation specification",
+            behavior_case["forbidden_behaviors"],
+        )
+        self.assertFalse(behavior_case["contains_third_party_text"])
+
+        self.assertTrue(
+            trigger_ids["architecture-design-trigger-yes-implementation-readiness"]["expected_activation"]
+        )
+        self.assertFalse(
+            trigger_ids["architecture-design-trigger-no-api-wire-contracts"]["expected_activation"]
+        )
+
+        source_grounding = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "source-grounding.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "implementation-readiness review notes are local, ignored working notes",
+            source_grounding,
+        )
+        self.assertIn("synthetic implementation-readiness eval", source_grounding)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 

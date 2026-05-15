@@ -46,3 +46,7 @@ lifting rules, and fixtures.
   `#47` ELK concurrency guidance; dediren 0.9.0 evidence confirms parallel
   per-view layout batches passing, with serial rerun kept only as a diagnostic
   fallback.
+- The implementation-readiness review notes are local, ignored working notes
+  under `docs/notes/`; shipped guidance paraphrases the outcome into
+  `implementation-readiness-review.md` and a synthetic implementation-readiness eval so agents
+  distinguish architecture-documentation gaps from source material gaps.
