@@ -8,6 +8,12 @@ Determine package, diagram kind, quality target, export need, and runtime.
 Default to `view-readable` for Build/Extract and `review-ready` for Review.
 Preserve ids, labels, policies, and source evidence unless invalid/stale.
 
+Treat the packaged Dediren bundle as upstream-owned runtime evidence. Do not
+patch files under `souroldgeezer-architecture/tools/dediren-linux/` or future
+platform bundle directories to fix tool behavior. When Dediren itself appears
+wrong, report it under `Dediren tool issues` with repro evidence; issue-filing
+mechanics belong in agent-local configuration.
+
 ## Build
 
 Create/update source and policies from architect intent. Add actual views only;
@@ -75,7 +81,9 @@ only claim ArchiMate Grouping when they are backed by a `Grouping` source node.
 Run per-view `layout --plugin elk-layout` commands serially. Current packaged
 dediren can return invalid JSON envelopes when multiple ELK layout invocations
 start concurrently. A parallel-only layout failure must be rerun serially
-before it becomes an `ARCH-L-1` finding.
+before it becomes an `ARCH-L-1` finding, and repeated parallel-only failures
+must be reported as upstream Dediren tool defects rather than patched in this
+repo's bundle.
 
 If grouped layout validation still reports connector-through-node, invalid
 route, or group-boundary warnings, rerun the same view without groups. If

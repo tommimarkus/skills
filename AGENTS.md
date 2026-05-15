@@ -62,6 +62,12 @@ rules change.
   checks. The Linux bundle lives under
   `souroldgeezer-architecture/tools/dediren-linux/`; add
   `souroldgeezer-architecture/tools/dediren-macos/` when the macOS build exists.
+  These bundle directories are imported upstream artifacts, not repo-owned
+  tool source. Do not patch files under them directly to fix Dediren runtime,
+  schema, plugin, or helper behavior; update this repo only by replacing the
+  bundle from an upstream Dediren release. When a Dediren tool issue is found,
+  disclose it under `Dediren tool issues` with repro evidence; keep
+  agent-specific issue filing mechanics in agent-local configuration.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,

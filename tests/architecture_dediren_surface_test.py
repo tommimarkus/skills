@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.2.0"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.0"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -453,6 +453,40 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         self.assertIn("souroldgeezer-architecture/tools/dediren-linux/", claude_guidance)
         self.assertNotRegex(claude_guidance, r"(?m)^tools/dediren-(linux|macos)/")
+
+    def test_dediren_bundle_is_marked_upstream_owned(self) -> None:
+        expected_phrases = [
+            "imported upstream",
+            "Do not patch",
+            "issue-filing mechanics",
+            "Dediren tool issues",
+        ]
+        surfaces = [
+            REPO_ROOT / "AGENTS.md",
+            REPO_ROOT / "CLAUDE.md",
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+        ]
+
+        combined = " ".join(surface.read_text(encoding="utf-8") for surface in surfaces)
+        combined = " ".join(combined.split())
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
 
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (

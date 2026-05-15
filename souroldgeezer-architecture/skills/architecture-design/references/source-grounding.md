@@ -39,3 +39,8 @@ OEF is optional compatibility output.
   `project.json` recipe that separates hand-authored source/policies from
   generated projection, per-view render metadata, layout, SVG, and optional OEF
   output.
+- Repo ownership feedback re-established that `tools/dediren-linux/**` is an
+  imported upstream Dediren distribution artifact. Tool defects belong upstream,
+  but issue-filing mechanics are agent-local configuration; this repo should
+  only change repo-owned skill guidance, fixtures, and documentation unless
+  importing a new upstream release bundle.

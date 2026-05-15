@@ -31,6 +31,12 @@ ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
 `TechnologyNode`, reports close parallel route channels, and needs serial
 per-view ELK layout commands for reliable evidence.
 
+Dediren ownership checks: treat `souroldgeezer-architecture/tools/dediren-linux/`
+as an imported upstream artifact. Do not propose or make direct bundle edits for
+tool defects. For runtime, schema, plugin, helper, render, layout, or export
+bugs, include the defect evidence in this report under `Dediren tool issues`.
+Keep issue-filing mechanics in agent-local configuration.
+
 Evidence checks: source-valid requires schema plus ArchiMate semantic validation.
 Plain `dediren validate` is not enough; run `dediren validate --plugin
 generic-graph --profile archimate`.
@@ -73,6 +79,6 @@ Grouped layout fallback: not needed | used ungrouped fallback after grouped rout
 Validation: source <state>; projection <state>; render metadata <state>; layout <state>; layout validation <state>; SVG <state>; visual readiness <state>; OEF <state>
 Runtime-verified drift: <n findings|not run>
 Findings: <n> blocking ARCH-* findings
-Dediren tool issues: <none|semantic validation, layout, render, or export gaps to raise upstream>
+Dediren tool issues: <none|semantic validation, layout, render, or export gaps; upstream issue reference or blocked report when available>
 Change classification: semantic model <yes|no>; view/layout <yes|no>; render metadata/policy <yes|no>; export policy <yes|no>; docs only <yes|no>
 ```

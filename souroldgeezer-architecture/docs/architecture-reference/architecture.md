@@ -365,6 +365,17 @@ layout validation can report route detours plus close parallel route channels.
 It also supports semantic-backed group projection/export and improved grouped
 cross-route validation.
 
+The packaged bundle under `souroldgeezer-architecture/tools/dediren-linux/` is
+an imported upstream Dediren distribution artifact. Do not patch bundled
+schemas, plugin manifests, binaries, Java helpers, fixtures, or `bundle.json`
+in this repository to fix tool behavior. When the runtime, schema, layout,
+render, export, or helper behavior appears wrong, report it under `Dediren tool
+issues` with the bundle version, command, input summary, error envelope,
+expected behavior, and minimal repro evidence. Change only repo-owned skill,
+fixture, or documentation guidance unless the task is explicitly to import a
+new upstream Dediren release bundle; issue-filing mechanics belong in
+agent-local configuration.
+
 Evidence gates:
 
 - Source schema: `validate`
@@ -387,7 +398,7 @@ packaged runtime can return invalid JSON envelopes under concurrent ELK layout
 invocations even when the same inputs pass serially. If a parallel run has
 already failed, rerun the exact failing layouts serially before reporting
 `ARCH-L-1`; disclose repeated parallel-only failures under `Dediren tool
-issues`.
+issues` with repro evidence.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or

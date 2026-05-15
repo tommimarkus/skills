@@ -15,6 +15,14 @@ Verify:
 jq . souroldgeezer-architecture/tools/<bundle>/bundle.json
 ```
 
+The selected bundle is an imported upstream Dediren artifact. Use it as runtime
+evidence, but do not patch files under `tools/dediren-linux/` or future platform
+bundle directories to fix tool behavior. If self-check exposes a runtime,
+schema, plugin, helper, render, layout, or export defect, report it under
+`Dediren tool issues` with version, command, input summary, envelope/error,
+expected behavior, and repro evidence. Keep issue-filing mechanics in
+agent-local configuration.
+
 Required plugins: `generic-graph`, `elk-layout`, `svg-render`; add
 `archimate-oef` only for export. Run only needed commands:
 
