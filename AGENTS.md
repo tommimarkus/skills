@@ -72,7 +72,11 @@ rules change.
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,
   plus `uv run python -m unittest tests.skill_architecture_report_test`. Do
-  not commit `.venv/`.
+  not commit `.venv/`. `pyproject.toml` configures `uv` to use `.cache/uv`
+  when run from the repo root; do not add `UV_CACHE_DIR=/tmp/codex-uv-cache`
+  to normal plans or verification commands. Confirm with `uv cache dir` and
+  only override `UV_CACHE_DIR` as a one-off fallback if the repo config is not
+  being applied or the reported cache is not writable.
 - Add report-engine cases one by one in
   `tests/skill_architecture_report_ledger.jsonl`; keep `SAC-T#####` IDs
   contiguous and let the unittest ledger checks reject duplicate intent or

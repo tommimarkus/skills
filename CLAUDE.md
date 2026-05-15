@@ -126,6 +126,14 @@ manual prompts the tool cannot decide. Use the repo-local project files
 (`pyproject.toml`, `uv.lock`) and a local `.venv/` created with `uv venv`; do
 not commit `.venv/`.
 
+`pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` commands
+from the repository root, or use wrappers such as
+`scripts/skill-architecture-report.sh` that `cd` there before invoking `uv`.
+Do not add `UV_CACHE_DIR=/tmp/codex-uv-cache` to plans or normal verification
+commands; use `uv cache dir` to confirm the repo-local cache is active and only
+override `UV_CACHE_DIR` as a one-off fallback when the repo config is not being
+applied or the reported cache path is not writable.
+
 Primary checks:
 
 ```bash
