@@ -14,19 +14,18 @@ runtime/schema/plugin/helper/render/layout/export defects, report `Dediren tool
 issues` with version, command, input summary, envelope/error, expected behavior,
 and repro evidence. Keep issue-filing mechanics agent-local.
 
-Required render-path plugins: `generic-graph`, `elk-layout`, `svg-render`.
-For ArchiMate SVG policy with generated per-view render metadata, also keep
-`archimate-oef` in `model.json.required_plugins` with the bundled dediren 0.8.4
-runtime, even when export is not requested. Without it, generated metadata can
-use `semantic_profile: "generic-graph"` and render can fail with
-`DEDIREN_RENDER_METADATA_PROFILE_MISMATCH`; tracked upstream as
-`tommimarkus/dediren#1`. Plain `validate` proves schema only.
+Runtime commands use `generic-graph`, `elk-layout`, and `svg-render`. For
+ArchiMate SVG policy with generated per-view render metadata, set
+`plugins.generic-graph.semantic_profile` to `archimate`; the bundled dediren
+0.9.0 runtime no longer requires `archimate-oef` for render metadata. Add
+`archimate-oef` only when OEF export is requested. Plain `validate` proves
+schema only.
 `source-valid` requires `validate` plus
 `validate --plugin generic-graph --profile archimate`. Projection, render,
 layout, and export evidence remain separate gates.
 
 When `project.json` declares `metadata`, generate render metadata per view
-before rendering. With bundled dediren 0.8.4, per-view
+before rendering. With bundled dediren 0.9.0, per-view
 `layout --plugin elk-layout` commands may run in parallel. If a parallel batch
 returns an error envelope or invalid output, rerun the exact failing input
 serially before reporting `ARCH-L-1`.

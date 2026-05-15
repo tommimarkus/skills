@@ -20,12 +20,10 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   `render-policy.json`, maintained `render-metadata.json`, optional
   `export-policy.json`. Generated projections, per-view render metadata,
   layouts, SVG, and optional OEF under `generated/` are reproducible output.
-- Current ArchiMate render metadata guard: with bundled dediren 0.8.4, keep
-  `archimate-oef` in `model.json.required_plugins` when an ArchiMate SVG render
-  policy consumes generated per-view metadata. Export remains optional; if
-  `archimate-oef` is absent, use a verified checked-in ArchiMate-profile
-  `render-metadata.json` or report the generated-metadata limitation under
-  `Dediren tool issues` (`tommimarkus/dediren#1`).
+- Current ArchiMate render metadata guard: with bundled dediren 0.9.0, set
+  `plugins.generic-graph.semantic_profile` to `archimate` when an ArchiMate SVG
+  render policy consumes generated per-view metadata. Export remains optional;
+  add `archimate-oef` only when OEF export is requested.
 - `project.json` view recipe: `projection` for `generic-graph`
   `layout-request`; `metadata` for `generic-graph` `render-metadata` at
   `generated/render-metadata/<view>.json`; `layout` for `elk-layout`; `render`
@@ -38,10 +36,12 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   as endpoint-illegal. Prefer Composition or Aggregation for
   component-interface ownership. If dediren accepts a suspect model, keep an
   `ARCH-*` finding and list the gap under `Dediren tool issues`.
-- Runtime semantics: the bundled dediren 0.8.4 runtime enforces ArchiMate® 3.2
+- Runtime semantics: the bundled dediren 0.9.0 runtime enforces ArchiMate® 3.2
   relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
-  close parallel route channels, allows parallel per-view ELK layout, and needs
-  `validate --plugin generic-graph --profile archimate` for `source-valid`.
+  close parallel route channels, allows parallel per-view ELK layout, supports
+  generated ArchiMate render metadata through `generic-graph.semantic_profile`,
+  and needs `validate --plugin generic-graph --profile archimate` for
+  `source-valid`.
 - Unsupported source: relationship connectors and junctions are unsupported in
   dediren package source; report the limitation.
 - Extract: lift source/IaC/workflow/API/UI facts only when evidenced.
@@ -53,7 +53,7 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   visual; semantic-boundary Grouping needs `semantic_source_id` to a `Grouping`
   source node. Layout-only groups are not ArchiMate Grouping elements.
 - Grouped layout: parallel per-view `layout --plugin elk-layout` is allowed
-  with dediren 0.8.4. Rerun parallel-only failures serially before `ARCH-L-1`.
+  with dediren 0.9.0. Rerun parallel-only failures serially before `ARCH-L-1`.
   If grouped layout
   validation still reports connector-through-node, invalid route, or
   group-boundary warnings, rerun the same view without groups. If cleaner, keep

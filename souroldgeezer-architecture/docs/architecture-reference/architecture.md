@@ -73,13 +73,10 @@ to source ids.
 `export-policy.json` is required only when OEF export is requested. When export
 fails, fix package source or export policy first, then recreate output.
 
-With the bundled dediren 0.8.4 runtime, ArchiMate SVG policy and generated
-per-view render metadata also require `archimate-oef` in
-`model.json.required_plugins`, even when OEF export is not requested. Without
-that plugin, `project --target render-metadata` emits
-`semantic_profile: "generic-graph"` and `render --plugin svg-render` fails with
-`DEDIREN_RENDER_METADATA_PROFILE_MISMATCH`. Export remains optional; the runtime
-contract ambiguity is tracked upstream as `tommimarkus/dediren#1`.
+For ArchiMate SVG policy with generated per-view render metadata, set
+`plugins.generic-graph.semantic_profile` to `archimate` in `model.json`. With
+the bundled dediren 0.9.0 runtime, generated ArchiMate render metadata no
+longer depends on the `archimate-oef` export plugin.
 
 ### Package JSON Generation
 
@@ -89,12 +86,9 @@ ids, labels, model content, view definitions, and policies with the project
 architecture.
 
 For ArchiMate packages that render with generated per-view metadata and an
-ArchiMate SVG policy, keep the fixture's `archimate-oef` plugin requirement in
-`model.json` until `tommimarkus/dediren#1` changes the runtime contract. Do not
-remove it just because OEF export is not requested. If a package intentionally
-omits `archimate-oef`, render from a checked-in `render-metadata.json` whose
-`semantic_profile` already matches `render-policy.json`, and disclose the
-generated-metadata limitation under `Dediren tool issues`.
+ArchiMate SVG policy, include `generic-graph` in `model.json.required_plugins`
+and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
+`archimate-oef` only when the package needs OEF export.
 
 Treat these files as hand-authored and checked in: `model.json`,
 `project.json`, `render-policy.json`, package-level `render-metadata.json` when
@@ -375,14 +369,15 @@ available bundle:
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
-The bundled dediren 0.8.4 runtime is the current evidence baseline. Its
+The bundled dediren 0.9.0 runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
 legality, use the technology element name `Node`, not `TechnologyNode`, and
 layout validation can report route detours plus close parallel route channels.
-It also supports semantic-backed group projection/export and improved grouped
-cross-route validation. ELK layout can run per-view commands in parallel in
-this runtime; keep serial rerun only as a diagnostic fallback when a parallel
-batch produces an error envelope or other parallel-only failure.
+It also supports explicit `generic-graph` semantic profiles for generated
+ArchiMate render metadata without requiring `archimate-oef`, semantic-backed
+group projection/export, improved grouped cross-route validation, and parallel
+per-view ELK layout. Keep serial rerun only as a diagnostic fallback when a
+parallel batch produces an error envelope or other parallel-only failure.
 
 The packaged bundle under `souroldgeezer-architecture/tools/dediren-linux/` is
 an imported upstream Dediren distribution artifact. Do not patch bundled
@@ -413,13 +408,12 @@ archimate` before claiming ArchiMate semantic source validity. Projection,
 layout, render, and optional export remain downstream evidence gates.
 
 For ArchiMate SVG render policy, treat a generated render-metadata profile
-mismatch as a runtime/tool issue, not a model-readiness pass. Either include
-`archimate-oef` in `required_plugins` before generating per-view metadata with
-the current runtime, or use a verified checked-in ArchiMate-profile metadata
-file and list the generated-metadata limitation under `Dediren tool issues`.
+mismatch as a package or policy defect until proven otherwise. Check
+`plugins.generic-graph.semantic_profile`, the generated metadata
+`semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
 Per-view `layout --plugin elk-layout` commands may run in parallel with the
-bundled dediren 0.8.4 runtime. If a parallel batch fails, rerun the exact
+bundled dediren 0.9.0 runtime. If a parallel batch fails, rerun the exact
 failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
 parallel-only failures under `Dediren tool issues` with repro evidence and
 reference the historical regression tracked in skills issue `#47`.
@@ -463,10 +457,8 @@ when downstream validation evidence is part of the review.
 Rules:
 
 - Do not require export for normal source or SVG review.
-- Do require `archimate-oef` in `model.json.required_plugins` for generated
-  ArchiMate render metadata with dediren 0.8.4; this is separate from whether
-  `export` is run.
 - If export is requested, require `export-policy.json`.
+- If export is requested, include `archimate-oef` in the package export path.
 - Treat export failure as `ARCH-E-1`.
 - Treat unresolved downstream validation evidence as `ARCH-E-2` unless a
   narrower model, view, layout, render, or quality code applies.
@@ -509,7 +501,7 @@ For each package:
    on semantic node or edge metadata; verify the generated metadata
    `semantic_profile` matches the render policy.
 6. Run ELK layout for changed or requested views; parallel per-view layout is
-   allowed with dediren 0.8.4, but rerun any parallel failure serially before
+   allowed with dediren 0.9.0, but rerun any parallel failure serially before
    reporting it as a layout defect.
 7. Render SVG for changed or requested views.
 8. Inspect SVG for nonblank, marker-rich, visually readable output.

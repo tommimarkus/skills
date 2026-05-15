@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
-EXPECTED_DEDIREN_VERSION = "0.8.4"
+EXPECTED_DEDIREN_VERSION = "0.9.0"
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -85,15 +85,28 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
                 self.assertEqual(manifest["id"], plugin_id)
                 self.assertEqual(manifest["version"], expected_version)
 
-    def test_skill_fixture_declares_current_bundle_plugins(self) -> None:
+    def test_skill_fixture_declares_current_source_and_project_plugins(self) -> None:
         bundle = selected_bundle()
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
         expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
         fixture_model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
+        fixture_project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
 
         fixture_versions = {plugin["id"]: plugin["version"] for plugin in fixture_model["required_plugins"]}
+        project_plugin_ids = {
+            fixture_project["views"][0]["projection"]["plugin"],
+            fixture_project["views"][0]["metadata"]["plugin"],
+            fixture_project["views"][0]["layout"]["plugin"],
+            fixture_project["views"][0]["render"]["plugin"],
+            fixture_project["export"]["plugin"],
+        }
 
-        self.assertEqual(fixture_versions, expected_versions)
+        self.assertEqual(fixture_versions, {"generic-graph": EXPECTED_DEDIREN_VERSION})
+        self.assertEqual(
+            fixture_model["plugins"]["generic-graph"]["semantic_profile"],
+            "archimate",
+        )
+        self.assertEqual(project_plugin_ids, set(expected_versions))
 
     def test_bundle_contains_required_plugins_and_schemas(self) -> None:
         bundle = selected_bundle()
@@ -243,6 +256,7 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             metadata_payload["data"]["render_metadata_schema_version"],
             "render-metadata.schema.v1",
         )
+        self.assertEqual(metadata_payload["data"]["semantic_profile"], "archimate")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

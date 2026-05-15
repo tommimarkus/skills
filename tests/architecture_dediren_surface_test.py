@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.4"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.5"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -355,11 +355,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
-    def test_dediren_0_8_4_runtime_contract_is_documented(self) -> None:
+    def test_dediren_0_9_0_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
-            "bundled dediren 0.8.4 runtime",
+            "bundled dediren 0.9.0 runtime",
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
+            "plugins.generic-graph.semantic_profile",
             "close parallel route channels",
             "parallel per-view ELK layout",
             "serial rerun",
@@ -393,9 +394,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "serial rerun",
             "hand-authored",
             "reproducible output",
+            "plugins.generic-graph.semantic_profile",
+            "semantic_profile",
             "archimate-oef",
-            "DEDIREN_RENDER_METADATA_PROFILE_MISMATCH",
-            "tommimarkus/dediren#1",
+            "OEF export is requested",
         ]
         surfaces = [
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
