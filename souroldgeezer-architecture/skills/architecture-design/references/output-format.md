@@ -13,7 +13,7 @@ endpoint-illegal; Prefer Composition or Aggregation for component-interface
 ownership; Use Triggering when the architectural claim is process sequencing;
 define the view concern, allowed element types, and relationship types.
 
-Evidence: disclose the bundled dediren 0.8.3 runtime. It checks ArchiMate® 3.2
+Evidence: disclose the bundled dediren 0.8.4 runtime. It checks ArchiMate® 3.2
 relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
 close parallel route channels, and needs serial ELK evidence. source-valid requires schema plus ArchiMate semantic validation:
 `dediren validate --plugin generic-graph --profile archimate`.

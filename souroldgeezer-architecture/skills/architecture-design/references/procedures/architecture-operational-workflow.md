@@ -32,7 +32,7 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   as endpoint-illegal. Prefer Composition or Aggregation for
   component-interface ownership. If dediren accepts a suspect model, keep an
   `ARCH-*` finding and list the gap under `Dediren tool issues`.
-- Runtime semantics: the bundled dediren 0.8.3 runtime enforces ArchiMate® 3.2
+- Runtime semantics: the bundled dediren 0.8.4 runtime enforces ArchiMate® 3.2
   relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
   close parallel route channels, and needs
   `validate --plugin generic-graph --profile archimate` for `source-valid`.

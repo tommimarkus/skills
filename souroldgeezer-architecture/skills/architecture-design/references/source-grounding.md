@@ -9,7 +9,7 @@ lifting rules, and fixtures.
 - Repo feedback: source-backed groups belong in `model.json` under
   `plugins.generic-graph.views[].groups`; simple linear flows stay ungrouped
   unless responsibility, trust, participant, or orchestration changes reading.
-- The bundled dediren 0.8.3 runtime enforces ArchiMate® 3.2 relationship
+- The bundled dediren 0.8.4 runtime enforces ArchiMate® 3.2 relationship
   endpoint legality, expects `Node`, not `TechnologyNode`, reports close
   parallel route channels, and validates semantic group routes.
 - The standards review notes are local, ignored working notes under
