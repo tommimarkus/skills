@@ -12,7 +12,7 @@ OEF is optional compatibility output.
   `plugins.generic-graph.views[].groups`; avoid grouping simple linear process
   flows unless responsibility, trust, participant, or orchestration changes the
   reading.
-- Local dediren 0.6.0 review: the bundled dediren 0.6.0 runtime enforces
+- Local dediren 0.8.3 review: the bundled dediren 0.8.3 runtime enforces
   ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
   `TechnologyNode`, reports close parallel route channels, and adds semantic
   group roles plus cross-group route validation coverage.
