@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.2"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.3"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -391,6 +391,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "layout commands serially",
             "hand-authored",
             "reproducible output",
+            "archimate-oef",
+            "DEDIREN_RENDER_METADATA_PROFILE_MISMATCH",
+            "tommimarkus/dediren#1",
         ]
         surfaces = [
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",

@@ -28,3 +28,8 @@ lifting rules, and fixtures.
   artifact. Tool defects belong upstream; issue-filing mechanics are
   agent-local. This repo changes repo-owned guidance, fixtures, and docs unless
   importing a new upstream release bundle.
+- Render metadata follow-up: skills issue `#50` and upstream
+  `tommimarkus/dediren#1` showed that dediren 0.8.4 emits generic render
+  metadata unless `archimate-oef` is listed for an ArchiMate package. Guidance
+  keeps export optional but preserves that plugin requirement when generated
+  ArchiMate render metadata feeds SVG render policy.

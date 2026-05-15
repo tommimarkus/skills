@@ -14,8 +14,13 @@ runtime/schema/plugin/helper/render/layout/export defects, report `Dediren tool
 issues` with version, command, input summary, envelope/error, expected behavior,
 and repro evidence. Keep issue-filing mechanics agent-local.
 
-Required plugins: `generic-graph`, `elk-layout`, `svg-render`; add
-`archimate-oef` only for export. Plain `validate` proves schema only.
+Required render-path plugins: `generic-graph`, `elk-layout`, `svg-render`.
+For ArchiMate SVG policy with generated per-view render metadata, also keep
+`archimate-oef` in `model.json.required_plugins` with the bundled dediren 0.8.4
+runtime, even when export is not requested. Without it, generated metadata can
+use `semantic_profile: "generic-graph"` and render can fail with
+`DEDIREN_RENDER_METADATA_PROFILE_MISMATCH`; tracked upstream as
+`tommimarkus/dediren#1`. Plain `validate` proves schema only.
 `source-valid` requires `validate` plus
 `validate --plugin generic-graph --profile archimate`. Projection, render,
 layout, and export evidence remain separate gates.

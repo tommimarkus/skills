@@ -73,12 +73,28 @@ to source ids.
 `export-policy.json` is required only when OEF export is requested. When export
 fails, fix package source or export policy first, then recreate output.
 
+With the bundled dediren 0.8.4 runtime, ArchiMate SVG policy and generated
+per-view render metadata also require `archimate-oef` in
+`model.json.required_plugins`, even when OEF export is not requested. Without
+that plugin, `project --target render-metadata` emits
+`semantic_profile: "generic-graph"` and `render --plugin svg-render` fails with
+`DEDIREN_RENDER_METADATA_PROFILE_MISMATCH`. Export remains optional; the runtime
+contract ambiguity is tracked upstream as `tommimarkus/dediren#1`.
+
 ### Package JSON Generation
 
 Start clean-slate packages from the fixture under
 `skills/architecture-design/references/fixtures/dediren/basic/`, then replace
 ids, labels, model content, view definitions, and policies with the project
 architecture.
+
+For ArchiMate packages that render with generated per-view metadata and an
+ArchiMate SVG policy, keep the fixture's `archimate-oef` plugin requirement in
+`model.json` until `tommimarkus/dediren#1` changes the runtime contract. Do not
+remove it just because OEF export is not requested. If a package intentionally
+omits `archimate-oef`, render from a checked-in `render-metadata.json` whose
+`semantic_profile` already matches `render-policy.json`, and disclose the
+generated-metadata limitation under `Dediren tool issues`.
 
 Treat these files as hand-authored and checked in: `model.json`,
 `project.json`, `render-policy.json`, package-level `render-metadata.json` when
@@ -113,7 +129,8 @@ layout, the render-metadata target, the layout output, and the render output:
 Use the package-level `render-metadata.json` only when a repository chooses a
 checked-in shared metadata policy/cache and can keep it synchronized with the
 views. Otherwise render with the generated per-view metadata declared in the
-view's `metadata.output`.
+view's `metadata.output`, after confirming the generated metadata profile
+matches the render policy profile.
 
 ## 4. ArchiMate Layers And Aspects
 
@@ -393,6 +410,12 @@ schema validation only; use `validate --plugin generic-graph --profile
 archimate` before claiming ArchiMate semantic source validity. Projection,
 layout, render, and optional export remain downstream evidence gates.
 
+For ArchiMate SVG render policy, treat a generated render-metadata profile
+mismatch as a runtime/tool issue, not a model-readiness pass. Either include
+`archimate-oef` in `required_plugins` before generating per-view metadata with
+the current runtime, or use a verified checked-in ArchiMate-profile metadata
+file and list the generated-metadata limitation under `Dediren tool issues`.
+
 Run per-view `layout --plugin elk-layout` commands serially. The current
 packaged runtime can return invalid JSON envelopes under concurrent ELK layout
 invocations even when the same inputs pass serially. If a parallel run has
@@ -439,6 +462,9 @@ when downstream validation evidence is part of the review.
 Rules:
 
 - Do not require export for normal source or SVG review.
+- Do require `archimate-oef` in `model.json.required_plugins` for generated
+  ArchiMate render metadata with dediren 0.8.4; this is separate from whether
+  `export` is run.
 - If export is requested, require `export-policy.json`.
 - Treat export failure as `ARCH-E-1`.
 - Treat unresolved downstream validation evidence as `ARCH-E-2` unless a
@@ -479,7 +505,8 @@ For each package:
 3. Validate `model.json`.
 4. Project each actual view through its configured plugin and target.
 5. Project render metadata for each actual view when the render step depends
-   on semantic node or edge metadata.
+   on semantic node or edge metadata; verify the generated metadata
+   `semantic_profile` matches the render policy.
 6. Run ELK layout commands serially and layout-validate changed or requested
    views.
 7. Render SVG for changed or requested views.

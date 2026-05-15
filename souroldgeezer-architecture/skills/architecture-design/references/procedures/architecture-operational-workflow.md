@@ -20,6 +20,12 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   `render-policy.json`, maintained `render-metadata.json`, optional
   `export-policy.json`. Generated projections, per-view render metadata,
   layouts, SVG, and optional OEF under `generated/` are reproducible output.
+- Current ArchiMate render metadata guard: with bundled dediren 0.8.4, keep
+  `archimate-oef` in `model.json.required_plugins` when an ArchiMate SVG render
+  policy consumes generated per-view metadata. Export remains optional; if
+  `archimate-oef` is absent, use a verified checked-in ArchiMate-profile
+  `render-metadata.json` or report the generated-metadata limitation under
+  `Dediren tool issues` (`tommimarkus/dediren#1`).
 - `project.json` view recipe: `projection` for `generic-graph`
   `layout-request`; `metadata` for `generic-graph` `render-metadata` at
   `generated/render-metadata/<view>.json`; `layout` for `elk-layout`; `render`
