@@ -19,6 +19,12 @@ lifting rules, and fixtures.
 - The session-scoped agent-friendly extracted ArchiMate 3.2 reference rechecked
   conformance boundaries, viewpoints, customization, grouping, connectors, and
   Application Interface/Service semantics; do not copy it into shipped files.
+- `references/source-weighting.md` distills real-world standards,
+  practitioner, research, artifact, and platform sources into weighted guidance
+  for ambiguous element/relation choices. It is a tie-breaker layer below
+  ArchiMate 3.2 semantic validation and source evidence. Extracted PDF corpora
+  are authoring aids only; shipped guidance carries paraphrased rules and public
+  source anchors, not local extraction paths.
 - `validate --plugin generic-graph --profile archimate` is the semantic gate;
   plain `validate` is schema validation. Layout-only groups are not
   semantic-boundary groups; semantic Grouping needs `semantic_source_id`;

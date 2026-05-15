@@ -34,8 +34,11 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
   allowed element types, and relationship types. If validation accepts
   Application Component to Application Interface Realization, do not report it
   as endpoint-illegal. Prefer Composition or Aggregation for
-  component-interface ownership. If dediren accepts a suspect model, keep an
-  `ARCH-*` finding and list the gap under `Dediren tool issues`.
+  component-interface ownership. For ambiguous element/relation/view-shape
+  choices, apply `references/source-weighting.md` and keep a compact rationale
+  with source fact, candidates, chosen concept, weighted reason, and confidence.
+  If dediren accepts a suspect model, keep an `ARCH-*` finding and list the gap
+  under `Dediren tool issues`.
 - Runtime semantics: the bundled dediren 0.9.0 runtime enforces ArchiMate® 3.2
   relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
   close parallel route channels, allows parallel per-view ELK layout, supports

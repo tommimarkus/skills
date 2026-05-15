@@ -11,7 +11,10 @@ the functionality exposed through an interface; if semantic validation accepts
 Application Component to Application Interface Realization, do not report it as
 endpoint-illegal; Prefer Composition or Aggregation for component-interface
 ownership; Use Triggering when the architectural claim is process sequencing;
-define the view concern, allowed element types, and relationship types.
+define the view concern, allowed element types, and relationship types. When a
+Build/Extract choice is non-obvious, include a short classification rationale:
+source fact, plausible candidates, chosen element/relation or view shape,
+weighted reason, and confidence.
 
 Evidence: disclose the bundled dediren 0.9.0 runtime. It checks ArchiMate® 3.2
 relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports
