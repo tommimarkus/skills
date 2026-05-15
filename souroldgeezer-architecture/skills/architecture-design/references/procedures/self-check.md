@@ -1,50 +1,30 @@
 # Dediren Self-Check
 
-Run before runtime claims. Use the first executable that exists:
+Before runtime claims, select the first existing executable:
 
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
-If neither exists, disclose `not run (missing dediren bundle)` and cap quality
-at `source-valid` unless Lookup only.
+If neither exists, disclose `not run (missing dediren bundle)` and cap quality at
+`source-valid` unless Lookup only. Record version and bundle JSON.
 
-Verify:
-
-```
-<dediren> --version
-jq . souroldgeezer-architecture/tools/<bundle>/bundle.json
-```
-
-The selected bundle is an imported upstream Dediren artifact. Use it as runtime
-evidence, but do not patch files under `tools/dediren-linux/` or future platform
-bundle directories to fix tool behavior. If self-check exposes a runtime,
-schema, plugin, helper, render, layout, or export defect, report it under
-`Dediren tool issues` with version, command, input summary, envelope/error,
-expected behavior, and repro evidence. Keep issue-filing mechanics in
-agent-local configuration.
+The selected bundle is an imported upstream Dediren artifact. Do not patch files
+under `tools/dediren-linux/` or future bundles for tool behavior. For
+runtime/schema/plugin/helper/render/layout/export defects, report `Dediren tool
+issues` with version, command, input summary, envelope/error, expected behavior,
+and repro evidence. Keep issue-filing mechanics agent-local.
 
 Required plugins: `generic-graph`, `elk-layout`, `svg-render`; add
-`archimate-oef` only for export. Run only needed commands:
+`archimate-oef` only for export. Plain `validate` proves schema only.
+`source-valid` requires `validate` plus
+`validate --plugin generic-graph --profile archimate`. Projection, render,
+layout, and export evidence remain separate gates.
 
-Plain `validate` proves schema shape only. A `source-valid` claim requires
-plain `validate` plus `validate --plugin generic-graph --profile archimate`.
-Projection and requested export evidence remain separate downstream gates for
-view and export readiness.
+When `project.json` declares `metadata`, generate render metadata per view
+before rendering. Run `layout --plugin elk-layout` serially; parallel ELK layout
+can produce invalid JSON envelopes even when the same inputs pass serially.
 
-Generate render metadata per view before rendering when `project.json` declares
-a `metadata` target. Run `layout --plugin elk-layout` serially for each view;
-parallel ELK layout invocations can produce invalid JSON envelopes in the
-current packaged runtime even when the same inputs pass serially.
-
-```
-<dediren> validate --input <package>/model.json
-<dediren> project --input <package>/model.json --plugin <plugin> --view <view> --target <target>
-<dediren> project --input <package>/model.json --plugin generic-graph --view <view> --target render-metadata
-<dediren> layout --plugin <plugin> --input <projection.json>
-<dediren> validate-layout --input <layout.json>
-<dediren> render --plugin svg-render --policy <package>/render-policy.json --metadata <render-metadata.json> --input <layout.json>
-<dediren> export --plugin archimate-oef --policy <package>/export-policy.json --source <package>/model.json --layout <layout.json>
-```
-
-Every command returns an envelope. Error envelopes are findings and block that
-quality level.
+Command order: `validate`; semantic validate; `project` projection/render
+metadata; serial `layout`; `validate-layout`; `render --plugin svg-render`;
+optional `export --plugin archimate-oef`. Error envelopes block that quality
+level.
