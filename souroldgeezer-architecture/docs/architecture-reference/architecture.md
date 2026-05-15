@@ -49,6 +49,22 @@ reported in the footer; they are not added as placeholders.
 
 The package rollup is the weakest applicable level across actual views.
 
+### Implementation-Readiness Review
+
+An implementation-readiness review asks whether the architecture package is
+enough to guide implementation. This is separate from `source-valid`,
+`view-readable`, `render-ready`, and `review-ready`: a package can validate and
+render while still lacking product intent, confirmed business process semantics,
+data lifecycle, trust boundaries, environment responsibility, or operational
+acceptance gates.
+
+For implementation-readiness review, split findings into
+architecture-documentation findings and other source material findings.
+Architecture-documentation findings need ArchiMate equivalence and an
+implementation impact. Other source material findings should be routed to API,
+app, infra, security, test, or software-design sources rather than duplicated
+inside the architecture package.
+
 ## 3. Dediren Package Source
 
 `model.json` contains nodes, relationships, source evidence, and plugin-owned

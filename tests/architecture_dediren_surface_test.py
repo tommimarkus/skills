@@ -455,6 +455,50 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, combined)
 
+    def test_implementation_readiness_reference_is_routed(self) -> None:
+        procedure = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "implementation-readiness-review.md"
+        )
+        skill = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        workflow = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md"
+        ).read_text(encoding="utf-8")
+        architecture_reference = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertTrue(procedure.exists())
+        procedure_content = " ".join(procedure.read_text(encoding="utf-8").split())
+
+        for surface in [skill, workflow, architecture_reference]:
+            with self.subTest(surface=surface[:40]):
+                self.assertIn("implementation-readiness review", surface)
+
+        expected_phrases = [
+            "implementation-readiness verdict",
+            "architecture-documentation findings",
+            "other source material",
+            "ArchiMate equivalence",
+            "Implementation impact",
+            "candidate-from-source",
+            "runtime/package readiness claims are separate from implementation-handoff completeness claims",
+        ]
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, procedure_content)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 

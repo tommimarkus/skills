@@ -63,6 +63,7 @@ suggest Build.
 | Need | Use |
 |---|---|
 | Review/readiness | `references/smell-catalog.md`, `references/red-flags.md`, `references/procedures/professional-readiness.md` |
+| implementation-readiness review | `references/procedures/implementation-readiness-review.md` |
 | Source-weighted element/relation selection | `references/source-weighting.md` |
 | Drift | `references/procedures/drift-detection.md` |
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |

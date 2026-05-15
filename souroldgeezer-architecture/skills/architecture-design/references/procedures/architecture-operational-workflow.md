@@ -65,4 +65,7 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
 - Visual readiness: layout-valid is not visually clean. Inspect density, fanout,
   long routes, group balance, labels, congestion, and viewpoint focus.
 - Review/Lookup: Review does not mutate by default and leads with findings.
-  Lookup answers only the narrow question and cites package path/source ids.
+  When the question is whether architecture docs are sufficient for an
+  implementation handoff, load `implementation-readiness-review.md` and report
+  an implementation-readiness review. Lookup answers only the narrow question
+  and cites package path/source ids.
