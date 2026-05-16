@@ -16,25 +16,27 @@ metadata, set `plugins.generic-graph.semantic_profile` to `archimate`; add
 schema only; `source-valid` requires `validate` plus
 `validate --plugin generic-graph --profile archimate`. Command order:
 `validate`; semantic validate; `project`; `layout`; `validate-layout`; `render`;
-optional export. Dediren 0.9.0 allows parallel per-view layout; rerun
+optional export. The bundled Dediren runtime allows parallel per-view layout; rerun
 parallel-only failures serially before `ARCH-L-1`.
 
 ## Command templates
 
 Run from the target repository root and replace `<pkg>` with
 `docs/architecture/<feature>.dediren`. Render metadata uses
-`dediren project --target render-metadata` with the selected project file and
-view id.
+`dediren project --target render-metadata` with the selected model file and
+view id. The CLI emits JSON envelopes to stdout; when materializing
+`generated/`, write each envelope `data` payload to the matching path declared
+by `project.json`.
 
 ```bash
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate <pkg>/model.json
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --plugin generic-graph --profile archimate <pkg>/model.json
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren project <pkg>/project.json --view <view-id>
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren project <pkg>/project.json --view <view-id> --target render-metadata
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren layout <pkg>/project.json --view <view-id> --plugin elk-layout
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate-layout <pkg>/generated/layout/<view-id>.json
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren render <pkg>/project.json --view <view-id>
-souroldgeezer-architecture/tools/dediren-linux/bin/dediren export <pkg>/project.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --input <pkg>/model.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --plugin generic-graph --profile archimate --input <pkg>/model.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren layout --plugin elk-layout --input <layout-request.json>
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate-layout --input <layout-result.json>
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
 ```
 
 Use the macOS bundle path when `tools/dediren-macos/` is the selected bundle.

@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.8"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.9"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -355,9 +355,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
-    def test_dediren_0_9_0_runtime_contract_is_documented(self) -> None:
+    def test_dediren_bundled_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
-            "bundled dediren 0.9.0 runtime",
+            "bundled Dediren runtime",
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
             "plugins.generic-graph.semantic_profile",
@@ -385,6 +385,55 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for phrase in expected_phrases:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, combined)
+
+    def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
+        surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+            REPO_ROOT / "CLAUDE.md",
+        ]
+
+        for surface in surfaces:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertNotIn("0.10.0", surface.read_text(encoding="utf-8"))
+
+    def test_self_check_command_templates_match_dediren_cli_shape(self) -> None:
+        self_check = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md"
+        ).read_text(encoding="utf-8")
+        expected_phrases = [
+            "dediren validate --input <pkg>/model.json",
+            "dediren validate --plugin generic-graph --profile archimate --input <pkg>/model.json",
+            "dediren project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json",
+            "dediren project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json",
+            "dediren layout --plugin elk-layout --input <layout-request.json>",
+            "dediren render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>",
+            "dediren export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>",
+        ]
+
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self_check)
+        self.assertNotIn("dediren project <pkg>/project.json --view <view-id>", self_check)
 
     def test_package_generation_guidance_documents_metadata_and_layout_concurrency(self) -> None:
         expected_phrases = [

@@ -91,7 +91,7 @@ fails, fix package source or export policy first, then recreate output.
 
 For ArchiMate SVG policy with generated per-view render metadata, set
 `plugins.generic-graph.semantic_profile` to `archimate` in `model.json`. With
-the bundled dediren 0.9.0 runtime, generated ArchiMate render metadata no
+the bundled Dediren runtime, generated ArchiMate render metadata no
 longer depends on the `archimate-oef` export plugin.
 
 ### Package JSON Generation
@@ -392,7 +392,7 @@ available bundle:
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
-The bundled dediren 0.9.0 runtime is the current evidence baseline. Its
+The bundled Dediren runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
 legality, use the technology element name `Node`, not `TechnologyNode`, and
 layout validation can report route detours plus close parallel route channels.
@@ -436,7 +436,7 @@ mismatch as a package or policy defect until proven otherwise. Check
 `semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
 Per-view `layout --plugin elk-layout` commands may run in parallel with the
-bundled dediren 0.9.0 runtime. If a parallel batch fails, rerun the exact
+bundled Dediren runtime. If a parallel batch fails, rerun the exact
 failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
 parallel-only failures under `Dediren tool issues` with repro evidence and
 reference the historical regression tracked in skills issue `#47`.
@@ -524,7 +524,7 @@ For each package:
    on semantic node or edge metadata; verify the generated metadata
    `semantic_profile` matches the render policy.
 6. Run ELK layout for changed or requested views; parallel per-view layout is
-   allowed with dediren 0.9.0, but rerun any parallel failure serially before
+   allowed with the bundled Dediren runtime, but rerun any parallel failure serially before
    reporting it as a layout defect.
 7. Render SVG for changed or requested views.
 8. Inspect SVG for nonblank, marker-rich, visually readable output.
