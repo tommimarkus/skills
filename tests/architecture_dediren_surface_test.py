@@ -668,6 +668,44 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, pointer)
 
+    def test_lifting_rules_have_source_family_mapping_examples(self) -> None:
+        checks = {
+            "lifting-rules-dotnet.md": [
+                "`*.sln` is repository/package context",
+                "Deployable `*.csproj`",
+                "route or GUI surface",
+                "handler/orchestrator behavior",
+                "Business Process candidates only when outcome and participant context are clear",
+            ],
+            "lifting-rules-bicep.md": [
+                "Azure resource type decides platform/technology context",
+                "App settings, connection strings, identities, RBAC, and diagnostics",
+                "Resource groups/modules/environments",
+                "Tags, parameter names, and SKU names do not create Motivation, Capability, or lifecycle claims",
+            ],
+            "lifting-rules-gha.md": [
+                "Workflow files are Work Package candidates only when delivery architecture is in scope",
+                "Jobs can be implementation steps",
+                "Artifacts and deployment packages can be Deliverables",
+                "Routine CI stays out",
+            ],
+            "lifting-rules-process.md": [
+                "UI/API sequence can be Application Process by default",
+                "Business Process stays candidate",
+                "Timers, callbacks, messages, and deploy/release occurrences are events",
+                "A small linear process should remain ungrouped",
+            ],
+        }
+
+        procedures = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures"
+        )
+        for filename, phrases in checks.items():
+            content = (procedures / filename).read_text(encoding="utf-8")
+            for phrase in phrases:
+                with self.subTest(file=filename, phrase=phrase):
+                    self.assertIn(phrase, content)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
