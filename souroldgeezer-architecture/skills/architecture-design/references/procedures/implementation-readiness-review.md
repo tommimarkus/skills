@@ -19,6 +19,16 @@ Constraint, Grouping, Serving, Access, Triggering, Flow, Realization,
 Assignment, and related ArchiMate concepts; ADRs, decisions, wire contracts,
 UI behavior, runbooks, commands, and schemas are companion material.
 
+| Architecture-owned evidence | Companion material |
+|---|---|
+| stakeholder concern, viewpoint, quality target | user stories, tickets, project plans |
+| API surface and dependency shape | exact OpenAPI schemas, payload examples, status codes |
+| data ownership/lifecycle/trust boundary | persistence schema, indexes, TTL, query plans |
+| identity and security architecture path | OAuth/cookie/token mechanics, threat model internals |
+| environment and deployment topology | exact IaC parameters, secret values, workflow variables |
+| operation gates and migration state | runbooks, exact commands, CI job scripts |
+| source-weighted rationale and ArchiMate equivalence | class design, DI, mappers, algorithms, tests |
+
 Route out unless claimed by the package: exact API shapes, persistence schemas,
 UI/browser/copy/a11y/i18n/perf behavior, OAuth/cookie/token mechanics,
 Bicep/GitHub workflow variables, tests/fixtures/CI jobs, class design, DI,

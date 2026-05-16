@@ -32,6 +32,14 @@ Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
 `ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured, route-congested,
 group-imbalanced, or mixed concerns.
 
+Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
+Use `Notable choices` only for non-obvious or challenged decisions:
+
+```text
+Notable choices:
+- <source fact> -> <chosen concept/relation/view>; rejected <alternative>; evidence <source-backed|candidate-from-source|architect-owned|weak-evidence|overlay-only>
+```
+
 ## Footer
 
 ```

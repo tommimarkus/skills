@@ -25,3 +25,19 @@ Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
 too wide/tall, group-imbalanced, or mixes concerns from multiple audiences.
 When a process, realization, technology-usage, or migration view becomes hard
 to scan, prefer splitting the concern over accepting the first valid render.
+
+## Valid But Not Useful
+
+layout-valid evidence can still fail the audience. Do not claim
+`render-ready` or `review-ready` when a valid rendered view is too dense,
+mixes unrelated concerns, hides the primary relationship, or needs source code
+inspection to understand the message.
+
+Examples:
+
+- Application Cooperation view includes every component, route, DTO, cloud
+  resource, and workflow in one graph: report `ARCH-Q-2` and split by concern.
+- Technology Usage view mixes hosting, data, identity/security, and
+  observability: report `ARCH-Q-2` or `ARCH-L-3` and split the view.
+- Service Realization view hides the realization path behind unrelated
+  dependencies: report `ARCH-V-2`.

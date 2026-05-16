@@ -5,18 +5,26 @@ source.
 
 ## Checks
 
-- New source artifact not modeled, or modeled source missing/stale: `ARCH-X-1`.
-- Lifted process/event/interaction/API/UI/resource/workflow lacks evidence:
-  `ARCH-X-2`.
-- Source implies omitted or reversed relationship: `ARCH-X-4`.
-- Source label changed but architecture label may be intentional: `ARCH-X-3`.
+Classify each difference before assigning an `ARCH-*` code:
+
+- source added or removed: `ARCH-X-1` when architecture-relevant source is not
+  modeled or modeled source disappeared.
+- source evidence changed: `ARCH-X-3` when labels or source facts changed but
+  the architecture claim may still be intentional.
+- package claim no longer has evidence: `ARCH-X-2` when lifted content has no
+  current source or architect-owned basis.
+- package claim may be architect intent: verify before treating it as drift;
+  label as `architect-owned` or `candidate-from-source`.
+
+Source implies omitted or reversed relationship: `ARCH-X-4`.
 
 ## Scope Limits
 
-Business-other, Motivation, Strategy, and Physical content are architect-owned
-unless explicit source evidence exists; report unverified intent.
+Business-other, Motivation, Strategy, portfolio, cloud-quality, and Physical
+content are architect-owned unless explicit source evidence exists; report
+unverified intent instead of deleting it.
 
 ## Output
 
 Report added/removed/changed/unverified counts and likely reconciliation:
-update package or update source.
+update package, update source, or confirm architect-owned intent.

@@ -706,6 +706,57 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 with self.subTest(file=filename, phrase=phrase):
                     self.assertIn(phrase, content)
 
+    def test_view_output_drift_and_runtime_guidance_have_decision_rules(self) -> None:
+        procedures = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures"
+        )
+        checks = {
+            procedures / "seed-views.md": [
+                "Typical elements",
+                "Typical relationships",
+                "Split trigger",
+            ],
+            procedures / "process-view-emission.md": [
+                "Keep Application Process",
+                "Emit Business Process Cooperation",
+                "Consolidate duplicate process drill-downs",
+            ],
+            procedures / "professional-readiness.md": [
+                "Valid But Not Useful",
+                "layout-valid evidence can still fail the audience",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "Source-weighted choices",
+                "Notable choices",
+                "low-confidence",
+                "architect-owned",
+            ],
+            procedures / "drift-detection.md": [
+                "source added or removed",
+                "source evidence changed",
+                "package claim no longer has evidence",
+                "package claim may be architect intent",
+            ],
+            procedures / "implementation-readiness-review.md": [
+                "Architecture-owned evidence",
+                "Companion material",
+            ],
+            procedures / "self-check.md": [
+                "Command templates",
+                "dediren validate --plugin generic-graph --profile archimate",
+                "project --target render-metadata",
+            ],
+            procedures / "architecture-operational-workflow.md": [
+                "Command templates live in `self-check.md`",
+            ],
+        }
+
+        for path, phrases in checks.items():
+            content = path.read_text(encoding="utf-8")
+            for phrase in phrases:
+                with self.subTest(path=path.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
