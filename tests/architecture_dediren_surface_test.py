@@ -757,6 +757,58 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 with self.subTest(path=path.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
 
+    def test_source_weighted_behavior_eval_cases_exist(self) -> None:
+        behavior_path = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "evals"
+            / "behavior-cases.jsonl"
+        )
+        cases = [
+            json.loads(line)
+            for line in behavior_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        ids = {case["id"] for case in cases}
+        expected_ids = {
+            "architecture-design-behavior-source-weighted-api-service-interface",
+            "architecture-design-behavior-source-weighted-cloud-overlay",
+            "architecture-design-behavior-source-weighted-business-terms",
+            "architecture-design-behavior-source-weighted-relationship-ladder",
+            "architecture-design-behavior-source-weighted-view-split",
+            "architecture-design-behavior-dotnet-lifting-specificity",
+            "architecture-design-behavior-bicep-trust-access-path",
+            "architecture-design-behavior-gha-delivery-architecture",
+            "architecture-design-behavior-drift-architect-owned-intent",
+            "architecture-design-behavior-readiness-companion-material",
+        }
+
+        self.assertTrue(expected_ids.issubset(ids), expected_ids - ids)
+
+    def test_source_grounding_mentions_refreshed_weighting_without_local_paths(self) -> None:
+        source_grounding = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "source-grounding.md"
+        ).read_text(encoding="utf-8")
+        required_phrases = [
+            "standards/method sources for semantic and viewpoint defaults",
+            "practitioner sources for app-layer and relationship defaults",
+            "enterprise-practice sources for business-claim evidence gates",
+            "portfolio/cloud sources for overlay-only guidance",
+        ]
+
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, source_grounding)
+
+        self.assertNotIn("/home/souroldgeezer/Documents", source_grounding)
+        self.assertNotIn("~/Documents", source_grounding)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
