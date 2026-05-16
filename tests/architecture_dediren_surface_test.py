@@ -610,6 +610,64 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         )
         self.assertIn("synthetic implementation-readiness eval", source_grounding)
 
+    def test_source_weighting_reference_has_operational_extraction_contract(self) -> None:
+        source_weighting = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "source-weighting.md"
+        ).read_text(encoding="utf-8")
+        required_phrases = [
+            "## Use During Extract",
+            "## Source-To-ArchiMate Selection Matrix",
+            "## Relationship Selection Ladder",
+            "## View Recipes",
+            "## Evidence Labels",
+            "## Anti-Patterns",
+            "Application Interface",
+            "Application Service",
+            "Application Component",
+            "Business Process candidate",
+            "No Business Capability/Goal/Product by default",
+            "Association is a disclosed fallback",
+            "overlay-only",
+        ]
+
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, source_weighting)
+
+    def test_extract_mode_loads_source_weighting_by_default_for_mapping(self) -> None:
+        skill = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        expected = (
+            "In Extract mode, load `references/source-weighting.md` before "
+            "selecting element, relationship, or view types unless the task is "
+            "a purely mechanical update to an existing package."
+        )
+
+        self.assertIn(expected, " ".join(skill.split()))
+
+    def test_skill_local_source_weighting_pointer_has_decision_loop(self) -> None:
+        pointer = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "source-weighting.md"
+        ).read_text(encoding="utf-8")
+        required_phrases = [
+            "Identify the source fact",
+            "List plausible ArchiMate candidates",
+            "Pick the heaviest applicable evidence lane",
+            "Reject semantically invalid candidates",
+            "Select the narrowest useful relationship and view",
+            "Label confidence",
+            "Record the rejected alternative",
+        ]
+
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, pointer)
+
     def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 

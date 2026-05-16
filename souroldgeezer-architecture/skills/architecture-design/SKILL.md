@@ -48,9 +48,12 @@ Build.
    [workflow](references/procedures/architecture-operational-workflow.md).
 2. Run [self-check](references/procedures/self-check.md) before runtime claims.
 3. Preserve ids, labels, source evidence, policies, and architect-owned intent.
-4. Load task references below. For ambiguous Build/Extract choices, load
-   `references/source-weighting.md` and keep a short rationale. Build/Extract
-   may mutate source; Review/Lookup do not mutate by default.
+4. Load task references below. In Extract mode, load
+   `references/source-weighting.md` before selecting element, relationship, or
+   view types unless the task is a purely mechanical update to an existing
+   package. Keep a compact rationale for every non-obvious
+   source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
+   do not mutate by default.
 5. Validate before quality claims; return [output](references/output-format.md).
 6. Stop when required evidence is missing, dediren returns an error envelope,
    the target is unsupported, or a blocking finding prevents requested readiness.

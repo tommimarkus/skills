@@ -334,6 +334,13 @@ when the work sequence is the message.
 
 ## 8. Extraction And Source Evidence
 
+Load `source-weighting.md` before classifying source surfaces in Extract mode
+unless the task is a purely mechanical update to an existing package. Use the
+source-to-ArchiMate selection matrix, relationship ladder, view recipes, and
+evidence labels for non-obvious choices. Record `source-backed`,
+`candidate-from-source`, `architect-owned`, `weak-evidence`, or `overlay-only`
+when a claim could be mistaken for extracted truth.
+
 Extract only facts that source can support.
 
 Common extractable sources:

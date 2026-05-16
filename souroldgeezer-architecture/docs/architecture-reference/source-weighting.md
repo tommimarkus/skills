@@ -45,6 +45,80 @@ the skill, fixtures, validation, and exports upgrade together.
 For non-obvious choices, output: source fact, plausible candidates, selected
 concept/relation/view, weighted reason, rejected alternative, confidence.
 
+## Use During Extract
+
+Use this reference before writing model source when repo evidence can map to
+multiple ArchiMate element, relationship, or view choices. The weight is an
+extraction prior, not a confidence score: start with the heaviest applicable
+lane, reject semantic invalidity, then refine with exact local evidence,
+architect intent, and view readability.
+
+For each non-obvious choice, record: source fact, plausible candidates,
+selected concept/relation/view, weighted reason, rejected alternative, and
+evidence label.
+
+## Source-To-ArchiMate Selection Matrix
+
+| Source evidence | Prefer | Avoid |
+|---|---|---|
+| Deployable app, module, service host, SPA, Function App, worker, or logical application boundary | Application Component | Business Actor, Capability, or Application Service unless the source proves that concern |
+| API route, GUI, SDK, endpoint, queue surface, protocol surface, or access point | Application Interface | Application Service when the concern is the access surface |
+| Consumed behavior exposed through an interface, such as lookup, authentication, signup, rendering, notification, or query behavior | Application Service | Application Interface unless the endpoint or access mechanism is the concern |
+| Internal handler, algorithm, orchestration step, computation, or module-owned behavior | Application Function; Application Process when ordered behavior/outcome is the view concern | Application Service if the behavior is not exposed or consumed |
+| Ordered application behavior with a meaningful outcome | Application Process | Business Process unless business ownership, actor, or stakeholder evidence exists |
+| Source-backed workflow with business actor, business outcome, or stakeholder-confirmed process semantics | Business Process candidate | Final Business Process without architect or stakeholder confirmation |
+| State change, callback, trigger, timer, queue message, webhook, or deployment occurrence | Application Event, Business Event candidate, or Implementation Event by layer | Process if the evidence only proves a state change |
+| DTO, message, database table, persisted logical data, or API payload | Data Object | Business Object unless business meaning is explicit |
+| Build artifact, package, container image, deployable file, or IaC-produced unit | Artifact or Deliverable by concern | Application Component when the evidence is physical/deployment packaging |
+| Azure/AWS resource, runtime, network, store, identity, monitor, or platform service | Technology layer element, Technology Service, System Software, Node, or Artifact by concern | Application element because a cloud product name appears |
+| GitHub Actions deployment or release workflow | Work Package, Deliverable, Implementation Event, Plateau by concern | Business Process or Technology Process by default |
+| Product/domain word in code, such as customer, run, guild, player, order, or signup | No Business Capability/Goal/Product by default | Capability, Value Stream, Goal, Product, Outcome without business-source evidence |
+
+## Relationship Selection Ladder
+
+Use the narrowest valid relationship that represents the architectural claim:
+
+1. Composition or Aggregation for whole/part.
+2. Assignment for active structure performing behavior.
+3. Realization for concrete fulfilling abstract.
+4. Serving for behavior/service used by a consumer.
+5. Access for data read/write/use.
+6. Flow for transfer.
+7. Triggering for temporal or causal sequence.
+8. Association only when no narrower valid relationship is evidenced.
+
+Association is a disclosed fallback, not a default relationship for uncertainty.
+
+## View Recipes
+
+| View concern | Preferred view shape | Split trigger |
+|---|---|---|
+| What is inside one application or application family | Application Structure | Dependencies, hosting, or flow becomes the primary message |
+| Which applications depend on exposed behavior or shared data | Application Cooperation | Data flow, protocol detail, hosting, or security dominates the view |
+| Which business or UI process uses application services | Application Usage | Exact UI behavior or API wire contracts become the detail |
+| How application components use runtime technology | Technology Usage | Hosting, data, identity/security, and observability compete for attention |
+| How deployable artifacts map to runtime technology | Implementation and Deployment | Migration sequence or governance is the concern |
+| How a service is realized by behavior and structure | Service Realization | The realization chain is hidden by unrelated dependencies |
+| How source-backed delivery changes move the landscape | Implementation and Migration | Parallel environments are shown without source-backed state transition |
+| Why a change matters | Motivation or Strategy only with architect intent or business-source evidence | Source-code names are the only evidence |
+
+## Evidence Labels
+
+- `source-backed`: directly supported by repo, package, or supplied source evidence.
+- `candidate-from-source`: plausible from source but needs architect or stakeholder confirmation.
+- `architect-owned`: supplied by user or architecture intent, not extracted from source.
+- `weak-evidence`: source hints exist but are insufficient for an accepted architecture claim.
+- `overlay-only`: portfolio, cloud, or framework context that must not decide generic ArchiMate classification.
+
+## Anti-Patterns
+
+- Inventory view: every discovered project, route, resource, or workflow is modeled without a stakeholder concern.
+- API/service collapse: access surfaces are modeled as Application Services and exposed behavior disappears.
+- Business invention: Capability, Goal, Product, Value Stream, or Outcome is inferred from code naming.
+- Cloud classifier drift: CAF, AWS Well-Architected, or vendor product names decide generic ArchiMate type.
+- Association fog: Association is used when Composition, Assignment, Realization, Serving, Access, Flow, or Triggering is evidenced.
+- Mixed-concern view: structure, dependency, flow, hosting, security, and observability compete in one diagram.
+
 ## Source Anchors
 
 These anchors identify the public sources distilled into the evaluator. Confirm
