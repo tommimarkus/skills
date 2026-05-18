@@ -392,6 +392,12 @@ available bundle:
 1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
 2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
 
+For JSON authoring, repair, and command handoff details, read the selected
+bundle's agent guide before loading schemas:
+`souroldgeezer-architecture/tools/dediren-linux/docs/agent-usage.md`. It is the
+fast contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff
+Rules, and Repair Map.
+
 The bundled Dediren runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
 legality, use the technology element name `Node`, not `TechnologyNode`, and

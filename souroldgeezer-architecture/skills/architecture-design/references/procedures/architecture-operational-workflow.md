@@ -4,6 +4,7 @@ Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
 
 - Pre-flight: identify package, kind, quality target, export need, runtime. Preserve ids, labels, policies, evidence.
 - Runtime boundary: bundles are imported upstream evidence. Do not patch `souroldgeezer-architecture/tools/dediren-linux/` or future bundles; report `Dediren tool issues` with version, command, input summary, envelope/error, expected behavior, repro evidence.
+- Agent usage: for source JSON authoring, command handoff, and repair loops, read the selected bundle guide at `souroldgeezer-architecture/tools/dediren-linux/docs/agent-usage.md` before loading schemas.
 - Build: update source/policies from architect intent; add actual views; validate, project, layout, validate-layout, render.
 - Clean slate: start from the fixture. Authored files: `model.json`, `project.json`, `render-policy.json`, maintained `render-metadata.json`, optional `export-policy.json`. `generated/` metadata, layouts, SVG, optional OEF are reproducible output. Add `archimate-oef` only when requested.
 - Project recipe: `projection`, `metadata` to `generated/render-metadata/<view>.json`, `layout`, `render`. With the bundled Dediren runtime, set `plugins.generic-graph.semantic_profile`.

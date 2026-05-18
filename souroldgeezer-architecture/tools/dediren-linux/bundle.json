@@ -1,28 +1,29 @@
 {
-  "built_at_utc": "2026-05-15T23:55:40Z",
+  "built_at_utc": "2026-05-18T18:33:13Z",
   "bundle_schema_version": "dediren-bundle.schema.v1",
+  "docs_dir": "docs",
   "elk_helper": "runtimes/elk-layout-java/bin/dediren-elk-layout-java",
   "fixtures_dir": "fixtures",
   "plugins": [
     {
       "id": "generic-graph",
-      "version": "0.10.0"
+      "version": "0.11.2"
     },
     {
       "id": "elk-layout",
-      "version": "0.10.0"
+      "version": "0.11.2"
     },
     {
       "id": "svg-render",
-      "version": "0.10.0"
+      "version": "0.11.2"
     },
     {
       "id": "archimate-oef",
-      "version": "0.10.0"
+      "version": "0.11.2"
     }
   ],
   "product": "dediren",
   "schemas_dir": "schemas",
   "target": "x86_64-unknown-linux-gnu",
-  "version": "0.10.0"
+  "version": "0.11.2"
 }

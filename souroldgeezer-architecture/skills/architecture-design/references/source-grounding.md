@@ -5,6 +5,7 @@ Behavior evals are synthetic. Local authority:
 
 - Source-backed groups belong in `model.json` under `plugins.generic-graph.views[].groups`; simple linear flows stay ungrouped unless responsibility, trust, participant, or orchestration changes reading.
 - The bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not `TechnologyNode`, reports close parallel route channels, supports `plugins.generic-graph.semantic_profile`, allows parallel per-view ELK layout, keeps serial rerun fallback.
+- The bundled `tools/dediren-linux/docs/agent-usage.md` guide is the runtime-local fast contract for source JSON authoring, command handoff, and repair loops.
 - The standards review notes are local, ignored working notes; the agent-friendly extracted ArchiMate 3.2 reference checked conformance, viewpoints, customization, grouping, connectors, Interface/Service semantics.
 - Source-weighting distills standards/practitioner/research/artifact/platform sources into a source evidence evaluator; no local corpus paths ship.
 - `validate --plugin generic-graph --profile archimate` is the semantic gate; layout-only groups are not semantic-boundary groups; semantic Grouping needs `semantic_source_id`; relationship connectors and junctions remain unsupported.

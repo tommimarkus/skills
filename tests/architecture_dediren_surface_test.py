@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.9"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.11"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -90,6 +90,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertEqual(codex_manifest["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
+        self.assertIn(
+            f"| `souroldgeezer-architecture` | `{EXPECTED_ARCHITECTURE_PLUGIN_VERSION}` |",
+            (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
+        )
 
     def test_active_surfaces_do_not_reference_retired_arch_layout_contracts(self) -> None:
         retired_terms = [
@@ -409,7 +413,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         for surface in surfaces:
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                self.assertNotIn("0.10.0", surface.read_text(encoding="utf-8"))
+                content = surface.read_text(encoding="utf-8")
+                for version in ["0.10.0", "0.11.1", "0.11.2"]:
+                    self.assertNotIn(version, content)
 
     def test_self_check_command_templates_match_dediren_cli_shape(self) -> None:
         self_check = (
@@ -434,6 +440,27 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self_check)
         self.assertNotIn("dediren project <pkg>/project.json --view <view-id>", self_check)
+
+    def test_guidance_points_to_bundled_agent_usage_guide(self) -> None:
+        self_check = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md"
+        ).read_text(encoding="utf-8")
+        architecture_reference = (
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        ).read_text(encoding="utf-8")
+
+        agent_usage_path = "tools/dediren-linux/docs/agent-usage.md"
+        for content in [self_check, architecture_reference]:
+            with self.subTest():
+                normalized = " ".join(content.split())
+                self.assertIn(agent_usage_path, content)
+                self.assertIn("Minimal Source JSON", normalized)
+                self.assertIn("Command Handoff Rules", normalized)
 
     def test_package_generation_guidance_documents_metadata_and_layout_concurrency(self) -> None:
         expected_phrases = [

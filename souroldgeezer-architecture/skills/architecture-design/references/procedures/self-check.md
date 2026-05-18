@@ -10,6 +10,12 @@ The selected bundle is an imported upstream Dediren artifact. Do not patch
 `Dediren tool issues` with version, command, input summary, envelope/error,
 expected behavior, and repro evidence.
 
+For JSON authoring, repair, and command handoff details, read the selected
+bundle guide before loading schemas:
+`souroldgeezer-architecture/tools/dediren-linux/docs/agent-usage.md`. It is the
+fast contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff
+Rules, and Repair Map.
+
 Use `generic-graph`, `elk-layout`, `svg-render`. For generated ArchiMate SVG
 metadata, set `plugins.generic-graph.semantic_profile` to `archimate`; add
 `archimate-oef` only when OEF export is requested. Plain `validate` proves

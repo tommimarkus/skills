@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
-EXPECTED_DEDIREN_VERSION = "0.10.0"
+EXPECTED_DEDIREN_VERSION = "0.11.2"
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -121,11 +121,35 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             "schemas/svg-render-policy.schema.json",
             "schemas/render-metadata.schema.json",
             "schemas/oef-export-policy.schema.json",
+            "docs/agent-usage.md",
+            "LICENSE",
         ]
 
         for relative_path in required_paths:
             with self.subTest(relative_path=relative_path):
                 self.assertTrue((bundle / relative_path).is_file())
+
+    def test_bundle_agent_usage_guide_describes_authoring_loop(self) -> None:
+        bundle = selected_bundle()
+        guide = (bundle / "docs" / "agent-usage.md").read_text(encoding="utf-8")
+
+        for phrase in [
+            "Minimal Source JSON",
+            "Artifact Authoring Map",
+            "Command Handoff Rules",
+            "Repair Map",
+            "layout_preferences",
+            "DEDIREN_RENDER_METADATA_REQUIRED",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, guide)
+
+    def test_bundle_includes_dediren_license_notice(self) -> None:
+        bundle = selected_bundle()
+        license_text = (bundle / "LICENSE").read_text(encoding="utf-8")
+
+        self.assertIn("MIT License", license_text)
+        self.assertIn("Dediren contributors", license_text)
 
     def test_fixture_model_validates(self) -> None:
         result = run_dediren("validate", "--input", FIXTURE / "model.json")
