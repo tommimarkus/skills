@@ -1,6 +1,6 @@
 interface:
   display_name: "Architecture Design"
-  short_description: "Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® dediren packages, SVG/OEF evidence, drift, or code/IaC/API/UI/workflow reverse lookup."
+  short_description: "Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup."
   default_prompt: "Use $architecture-design to review this dediren package."
 policy:
   allow_implicit_invocation: true

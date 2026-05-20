@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® dediren packages, SVG/OEF evidence, drift, or code/IaC/API/UI/workflow reverse lookup.
+description: Use when building, extracting, reviewing, rendering, validating, or looking up ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

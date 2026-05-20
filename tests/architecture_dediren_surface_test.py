@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.3.11"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.4.0"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -16,6 +16,8 @@ ACTIVE_SURFACES = [
     ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "agents" / "openai.yaml",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "archimate.md",
+    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "red-flags.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
@@ -462,6 +464,126 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn("Minimal Source JSON", normalized)
                 self.assertIn("Command Handoff Rules", normalized)
 
+    def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
+        surfaces = [
+            REPO_ROOT / "CLAUDE.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+        ]
+        expected_phrases = [
+            "ArchiMate and UML",
+            "validate --plugin generic-graph --profile uml",
+            "uml-xmi",
+            "Cross-notation links",
+        ]
+
+        combined = " ".join(surface.read_text(encoding="utf-8") for surface in surfaces)
+        combined = " ".join(combined.split())
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+
+    def test_notation_references_define_archimate_uml_boundary(self) -> None:
+        archimate_ref = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "archimate.md"
+        ).read_text(encoding="utf-8")
+        uml_ref = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md"
+        ).read_text(encoding="utf-8")
+
+        archimate_phrases = [
+            "ArchiMate frames the architectural concern",
+            "validate --plugin generic-graph --profile archimate",
+            "archimate-oef",
+            "relationship connectors and junctions unsupported",
+        ]
+        uml_phrases = [
+            "UML elaborates one bounded part",
+            "validate --plugin generic-graph --profile uml",
+            "uml-xmi",
+            "properties.uml.architecture_context",
+            "relationship: elaborates",
+            "Do not infer cross-notation links from matching labels alone",
+        ]
+
+        for phrase in archimate_phrases:
+            with self.subTest(reference="archimate", phrase=phrase):
+                self.assertIn(phrase, archimate_ref)
+        for phrase in uml_phrases:
+            with self.subTest(reference="uml", phrase=phrase):
+                self.assertIn(phrase, uml_ref)
+
+    def test_output_contract_reports_notation_and_cross_notation_links(self) -> None:
+        output_format = (
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
+        ).read_text(encoding="utf-8")
+
+        expected_phrases = [
+            "Notation: archimate | uml | mixed | unsupported",
+            "Cross-notation links: none | UML elaborates ArchiMate",
+            "Export readiness: not requested | OEF ready | XMI ready | blocked",
+            "Handoff boundary: architecture/design model | companion material required | delegated to <skill>",
+        ]
+
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, output_format)
+
+    def test_uml_handoff_eval_cases_exist(self) -> None:
+        behavior_cases = [
+            json.loads(line)
+            for line in (
+                ARCH_PLUGIN
+                / "skills"
+                / "architecture-design"
+                / "references"
+                / "evals"
+                / "behavior-cases.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        trigger_cases = [
+            json.loads(line)
+            for line in (
+                ARCH_PLUGIN
+                / "skills"
+                / "architecture-design"
+                / "references"
+                / "evals"
+                / "trigger-cases.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        behavior_ids = {case["id"]: case for case in behavior_cases}
+        trigger_ids = {case["id"]: case for case in trigger_cases}
+
+        self.assertIn("architecture-design-behavior-uml-archimate-handoff-links", behavior_ids)
+        self.assertIn("architecture-design-trigger-yes-uml-handoff", trigger_ids)
+        behavior = behavior_ids["architecture-design-behavior-uml-archimate-handoff-links"]
+        self.assertIn("Cross-notation links field", behavior["expected_artifacts"])
+        self.assertIn(
+            "verify referenced ArchiMate ids exist before claiming cross-notation readiness",
+            behavior["required_checks"],
+        )
+        self.assertIn(
+            "do not infer cross-notation links from matching labels alone",
+            behavior["required_checks"],
+        )
+        self.assertTrue(trigger_ids["architecture-design-trigger-yes-uml-handoff"]["expected_activation"])
+
     def test_package_generation_guidance_documents_metadata_and_layout_concurrency(self) -> None:
         expected_phrases = [
             "generated/render-metadata",
@@ -716,8 +838,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         expected = (
             "In Extract mode, load `references/source-weighting.md` before "
-            "selecting element, relationship, or view types unless the task is "
-            "a purely mechanical update to an existing package."
+            "selecting ArchiMate element, relationship, or view types unless "
+            "the task is a purely mechanical update to an existing package."
         )
 
         self.assertIn(expected, " ".join(skill.split()))

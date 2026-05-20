@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-architecture",
-  "version": "1.3.11",
-  "description": "Reference-driven ArchiMate® architecture modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF export, build/extract/review/render/validate/lookup, drift detection, .NET™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata.",
+  "version": "1.4.0",
+  "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"
@@ -10,8 +10,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Architecture",
-    "shortDescription": "Reference-driven ArchiMate® architecture modeling.",
-    "longDescription": "Build, extract, review, render, validate, and look up ArchiMate® models as dediren packages with bundled references, package fixtures, SVG render evidence, optional OEF export, and drift procedures.",
+    "shortDescription": "Reference-driven ArchiMate® and UML® architecture/design modeling.",
+    "longDescription": "Build, extract, review, render, validate, and look up ArchiMate® and UML® models as dediren packages with bundled references, package fixtures, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, and drift procedures.",
     "developerName": "Sour Old Geezer",
     "websiteURL": "https://github.com/tommimarkus/skills",
     "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
@@ -24,7 +24,7 @@
     "defaultPrompt": [
       "Review this dediren architecture package for professional readiness.",
       "Render this dediren package to SVG and validate the views.",
-      "Extract an ArchiMate® model package from this codebase."
+      "Extract an ArchiMate® or UML® model package from this codebase."
     ]
   }
 }

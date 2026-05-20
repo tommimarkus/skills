@@ -1,6 +1,7 @@
 # External Validation Handoff
 
-Use for optional OEF export or supplied downstream importer/schema validation.
+Use for optional OEF/XMI export or supplied downstream importer/schema
+validation.
 
 ## Rules
 
@@ -11,5 +12,5 @@ Use for optional OEF export or supplied downstream importer/schema validation.
    code when one fits.
 5. Footer: supplied, mapped, unresolved, and unmapped counts.
 
-OEF is compatibility output. Fix package source or export policy first, then
-recreate the export.
+OEF and XMI are compatibility output. Fix package source or export policy first,
+then recreate the export.

@@ -10,7 +10,20 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
-EXPECTED_DEDIREN_VERSION = "0.11.2"
+EXPECTED_DEDIREN_VERSION = "0.14.6"
+EXPECTED_BUNDLE_PLUGIN_IDS = {
+    "generic-graph",
+    "elk-layout",
+    "svg-render",
+    "archimate-oef",
+    "uml-xmi",
+}
+EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS = {
+    "generic-graph",
+    "elk-layout",
+    "svg-render",
+    "archimate-oef",
+}
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -77,6 +90,7 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
         expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
 
+        self.assertEqual(set(expected_versions), EXPECTED_BUNDLE_PLUGIN_IDS)
         self.assertEqual(set(expected_versions.values()), {EXPECTED_DEDIREN_VERSION})
 
         for plugin_id, expected_version in expected_versions.items():
@@ -102,11 +116,9 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
         }
 
         self.assertEqual(fixture_versions, {"generic-graph": EXPECTED_DEDIREN_VERSION})
-        self.assertEqual(
-            fixture_model["plugins"]["generic-graph"]["semantic_profile"],
-            "archimate",
-        )
-        self.assertEqual(project_plugin_ids, set(expected_versions))
+        self.assertEqual(fixture_model["plugins"]["generic-graph"]["semantic_profile"], "archimate")
+        self.assertEqual(project_plugin_ids, EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS)
+        self.assertTrue(project_plugin_ids.issubset(set(expected_versions)))
 
     def test_bundle_contains_required_plugins_and_schemas(self) -> None:
         bundle = selected_bundle()
@@ -115,12 +127,17 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             "plugins/elk-layout.manifest.json",
             "plugins/svg-render.manifest.json",
             "plugins/archimate-oef.manifest.json",
+            "plugins/uml-xmi.manifest.json",
             "schemas/model.schema.json",
             "schemas/layout-request.schema.json",
             "schemas/layout-result.schema.json",
             "schemas/svg-render-policy.schema.json",
             "schemas/render-metadata.schema.json",
             "schemas/oef-export-policy.schema.json",
+            "schemas/uml-xmi-export-policy.schema.json",
+            "fixtures/export-policy/default-uml-xmi.json",
+            "fixtures/source/valid-uml-basic.json",
+            "fixtures/source/valid-uml-complex.json",
             "docs/agent-usage.md",
             "LICENSE",
         ]
@@ -140,6 +157,8 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             "Repair Map",
             "layout_preferences",
             "DEDIREN_RENDER_METADATA_REQUIRED",
+            "UML Profile Authoring",
+            "uml-xmi",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, guide)
@@ -241,6 +260,37 @@ class ArchitectureDedirenBundleTest(unittest.TestCase):
             legal_realization_payload["data"]["semantic_validation_result_schema_version"],
             "semantic-validation-result.schema.v1",
         )
+
+    def test_uml_architecture_context_is_accepted_as_open_metadata(self) -> None:
+        bundle = selected_bundle()
+        source = json.loads((bundle / "fixtures" / "source" / "valid-uml-basic.json").read_text(encoding="utf-8"))
+        source["nodes"][0].setdefault("properties", {}).setdefault("uml", {})["architecture_context"] = {
+            "profile": "archimate",
+            "element_id": "application-component-billing",
+            "relationship": "elaborates",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            model_path = Path(temp_dir) / "model.json"
+            model_path.write_text(json.dumps(source), encoding="utf-8")
+
+            schema_result = run_dediren("validate", "--input", model_path)
+            semantic_result = run_dediren(
+                "validate",
+                "--plugin",
+                "generic-graph",
+                "--profile",
+                "uml",
+                "--input",
+                model_path,
+            )
+
+        self.assertEqual(schema_result.returncode, 0, schema_result.stderr)
+        self.assertEqual(envelope(schema_result)["status"], "ok")
+        self.assertEqual(semantic_result.returncode, 0, semantic_result.stderr)
+        semantic_payload = envelope(semantic_result)
+        self.assertEqual(semantic_payload["status"], "ok")
+        self.assertEqual(semantic_payload["data"]["semantic_profile"], "uml")
 
     def test_fixture_manifest_drives_dediren_command_smoke(self) -> None:
         bundle = selected_bundle()

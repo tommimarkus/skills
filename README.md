@@ -11,7 +11,7 @@ The repo currently ships four plugins:
 |---|---:|---|---|
 | `souroldgeezer-audit` | `0.7.0` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md) |
 | `souroldgeezer-design` | `2.4.0` | [software-design](souroldgeezer-design/skills/software-design/SKILL.md), [app-design](souroldgeezer-design/skills/app-design/SKILL.md), [api-design](souroldgeezer-design/skills/api-design/SKILL.md), [infra-design](souroldgeezer-design/skills/infra-design/SKILL.md) | [software](souroldgeezer-design/docs/software-reference/software-design.md), [app](souroldgeezer-design/docs/app-reference/app-design.md), [api](souroldgeezer-design/docs/api-reference/api-design.md), [infra](souroldgeezer-design/docs/infra-reference/infra-design.md) |
-| `souroldgeezer-architecture` | `1.3.11` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
+| `souroldgeezer-architecture` | `1.4.0` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
 | `souroldgeezer-ops` | `0.5.0` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
 ## Install
@@ -91,7 +91,7 @@ entries.
 1. Audit a workflow, Dockerfile, or .NET™ logging path with `devsecops-audit`.
 2. Review an API surface or extract an existing contract with `api-design`.
 3. Design or review a frontend app route, screen, or component set with `app-design`.
-4. Review or extract a dediren ArchiMate® architecture package with `architecture-design`.
+4. Review or extract a dediren ArchiMate® or UML® architecture/design package with `architecture-design`.
 5. Review infrastructure or IaC topology with `infra-design`.
 
 ## Validation

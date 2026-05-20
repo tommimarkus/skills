@@ -16,14 +16,16 @@ bundle guide before loading schemas:
 fast contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff
 Rules, and Repair Map.
 
-Use `generic-graph`, `elk-layout`, `svg-render`. For generated ArchiMate SVG
-metadata, set `plugins.generic-graph.semantic_profile` to `archimate`; add
-`archimate-oef` only when OEF export is requested. Plain `validate` proves
-schema only; `source-valid` requires `validate` plus
-`validate --plugin generic-graph --profile archimate`. Command order:
-`validate`; semantic validate; `project`; `layout`; `validate-layout`; `render`;
-optional export. The bundled Dediren runtime allows parallel per-view layout; rerun
-parallel-only failures serially before `ARCH-L-1`.
+Use `generic-graph`, `elk-layout`, `svg-render`. For generated notation SVG
+metadata, set `plugins.generic-graph.semantic_profile` to `archimate` or `uml`;
+add `archimate-oef` only when OEF export is requested and `uml-xmi` only when
+UML/XMI export is requested. Plain `validate` proves schema only; `source-valid`
+requires `validate` plus `validate --plugin generic-graph --profile archimate`
+for ArchiMate or `validate --plugin generic-graph --profile uml` for UML.
+Command order: `validate`; semantic validate; `project`; `layout`;
+`validate-layout`; `render`; optional export. The bundled Dediren runtime allows
+parallel per-view layout; rerun parallel-only failures serially before
+`ARCH-L-1`.
 
 ## Command templates
 
@@ -37,13 +39,15 @@ by `project.json`.
 ```bash
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --input <pkg>/model.json
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --plugin generic-graph --profile archimate --input <pkg>/model.json
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate --plugin generic-graph --profile uml --input <pkg>/model.json
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren layout --plugin elk-layout --input <layout-request.json>
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren validate-layout --input <layout-result.json>
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>
 souroldgeezer-architecture/tools/dediren-linux/bin/dediren export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
+souroldgeezer-architecture/tools/dediren-linux/bin/dediren export --plugin uml-xmi --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
 ```
 
 Use the macOS bundle path when `tools/dediren-macos/` is the selected bundle.
-Omit export unless OEF was requested.
+Omit export unless OEF or XMI was requested.
