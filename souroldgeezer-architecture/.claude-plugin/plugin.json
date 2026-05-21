@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-architecture",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",

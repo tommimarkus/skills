@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 LINUX_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-linux"
 MACOS_BUNDLE = ARCH_PLUGIN / "tools" / "dediren-macos"
-EXPECTED_DEDIREN_VERSION = "0.14.6"
+EXPECTED_DEDIREN_VERSION = "0.14.7"
 EXPECTED_BUNDLE_PLUGIN_IDS = {
     "generic-graph",
     "elk-layout",
