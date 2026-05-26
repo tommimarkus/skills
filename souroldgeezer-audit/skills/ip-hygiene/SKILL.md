@@ -1,15 +1,36 @@
 ---
 name: ip-hygiene
-description: Use when repo skill, agent, reference, manifest, marketplace/runtime metadata, or repo-guidance edits may touch third-party marks, copied source, licences, bundled assets, or existing IP issues.
+description: Use when skill, agent, bundled reference, manifest, marketplace/runtime metadata, plugin guidance, or bundled asset edits may touch third-party marks, copied source, licences, assets, or existing IP/source hygiene issues. Focused on plugin and skill publication surfaces; not general legal advice.
 ---
 
 # IP Hygiene
 
-Repo-internal copyright, trademark, licence, and bundled-asset check for
-skill-related or repo-guidance diffs. Not legal advice or a validator.
+Public copyright, trademark, licence, and bundled-asset hygiene check for
+plugin and skill publication surfaces. This is not legal advice or a validator.
 
-Inputs: current diff, touched paths, and referenced source/licence claims. If
-missing, inspect the working tree or ask.
+Inputs: current diff, touched paths, target repo guidance, and referenced
+source/licence claims. If inputs are missing, inspect the working tree or ask.
+
+Resolve project conventions in this order:
+
+1. explicit user instruction for the current task;
+2. target repo guidance such as `AGENTS.md`, `CLAUDE.md`, `README.md`, or a
+   project policy file;
+3. this skill's default convention.
+
+Default convention: descriptive nominative references, no default per-mark
+attribution block, and mark-symbol handling driven by public-visible context.
+Treat this as a fallback project convention, not a universal legal rule.
+
+## Scope
+
+Use this skill for skill/plugin publication surfaces: skills, agents,
+per-skill metadata, bundled references, extensions, fixtures, templates,
+scripts, assets, plugin manifests, marketplace/runtime metadata, and repo
+guidance sections that describe those surfaces.
+
+General repo-wide IP hygiene is future scope. If the task is unrelated to
+skill/plugin publication surfaces, say the skill is out of scope and stop.
 
 Load only hit buckets:
 
@@ -50,8 +71,9 @@ Before reporting an issue:
 - **False negative / unsupported evidence:** do not downgrade copied prose or
   examples, bundled third-party assets, unclear redistribution terms, or
   endorsement-like wording because the reference is useful.
-- **Confidence:** if authority, licence terms, or trademark policy are unclear
-  and load-bearing, stop and ask instead of inventing a remedy.
+- **Confidence:** if authority, licence terms, trademark policy, or target repo
+  convention is unclear and load-bearing, stop and ask instead of inventing a
+  remedy.
 
 ## Check Buckets
 
@@ -63,10 +85,12 @@ otherwise use the deferred output. Fix copies introduced by the current edit.
 
 Stop and ask before finishing when:
 
-- vendor policy, licence, or authority is ambiguous and load-bearing;
+- vendor policy, licence, source authority, or target repo convention is
+  ambiguous and load-bearing;
 - asset redistribution terms are unclear or restrictive;
 - a remedy would remove a load-bearing reference;
-- the issue is outside copyright, trademark, licence, or bundled-asset hygiene.
+- the issue is outside copyright, trademark, licence, or bundled-asset hygiene;
+- the task is outside skill/plugin publication surfaces.
 
 ## Output Contract
 
@@ -82,4 +106,5 @@ For fixes, include the source authority or reference path used.
 ## Verification
 
 After editing this skill or references, rerun
-`scripts/skill-architecture-report.sh .`.
+`scripts/skill-architecture-report.sh .` from the target repo root when
+available.
