@@ -10,8 +10,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Audit",
-    "shortDescription": "Rubric-driven DevSecOps and test-quality audits.",
-    "longDescription": "Audit DevSecOps posture and test quality with bundled rubrics, per-stack extensions, and quick or deep review workflows.",
+    "shortDescription": "DevSecOps, test-quality, and IP hygiene audits.",
+    "longDescription": "Audit DevSecOps posture, test quality, and plugin/skill IP hygiene with bundled rubrics, focused references, and quick or deep review workflows.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
     "capabilities": [
@@ -20,7 +20,7 @@
     "defaultPrompt": [
       "Audit this repo's DevSecOps posture.",
       "Review these tests for quality smells.",
-      "Run a deep test-quality audit."
+      "Check this skill or plugin change for IP hygiene."
     ]
   }
 }
