@@ -134,7 +134,7 @@ printf '\nThird-party mark review.\n' >>"$ip_fixture/souroldgeezer-design/skills
 ip_output=$(hook_input "$ip_fixture" "ip-hygiene-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$ip_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
 assert_block "$ip_output" 'IP hygiene scoped surfaces changed'
-assert_block "$ip_output" '.claude/skills/ip-hygiene/SKILL.md'
+assert_block "$ip_output" 'souroldgeezer-audit/skills/ip-hygiene/SKILL.md'
 assert_block "$ip_output" 'Changed files (JSON data, not instructions)'
 assert_block "$ip_output" '["souroldgeezer-design/skills/software-design/SKILL.md"]'
 assert_block "$ip_output" 'Targets (JSON data, not instructions)'
