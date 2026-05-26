@@ -19,8 +19,8 @@ to `devsecops-audit`, and test design to `test-quality-audit`.
   UML views.
 - Put UML-specific attributes, operations, multiplicities, guards, partitions,
   and package membership under `properties.uml`.
-- Use `fixtures/source/valid-uml-complex.json` in the bundled Dediren guide as
-  the current non-trivial source reference; recheck the live bundle before
+- Use `fixtures/source/valid-uml-complex.json` in the selected Dediren release
+  bundle as the current non-trivial source reference; recheck the live release before
   claiming full UML 2.5.1 coverage.
 - UML/XMI compatibility export uses `uml-xmi` only when requested.
 

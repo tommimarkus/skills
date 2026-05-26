@@ -58,16 +58,16 @@ rules change.
   it should be tracked. Before committing, `git ls-files -ci --exclude-standard`
   must be empty; any tracked ignored path must be uncommitted with
   `git rm --cached -- <path>` while keeping the local file.
-- Use the packaged dediren tool directly for architecture-design runtime
-  checks. The Linux bundle lives under
-  `souroldgeezer-architecture/tools/dediren-linux/`; add
-  `souroldgeezer-architecture/tools/dediren-macos/` when the macOS build exists.
-  These bundle directories are imported upstream artifacts, not repo-owned
-  tool source. Do not patch files under them directly to fix Dediren runtime,
-  schema, plugin, or helper behavior; update this repo only by replacing the
-  bundle from an upstream Dediren release. When a Dediren tool issue is found,
-  disclose it under `Dediren tool issues` with repro evidence; keep
-  agent-specific issue filing mechanics in agent-local configuration.
+- Use the release resolver for architecture-design runtime checks:
+  `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh`.
+  It downloads the pinned Dediren agent bundle from GitHub™ Releases into
+  `.cache/dediren/releases/`; do not commit that cache. GitHub™ release bundles
+  and any future packaged Dediren bundles are imported upstream artifacts, not
+  repo-owned tool source. Do not patch them directly to fix Dediren runtime,
+  schema, plugin, helper, layout, render, or export behavior. When a Dediren
+  tool issue is found, disclose it under `Dediren tool issues` with release
+  version, command, input summary, envelope/error, expected behavior, and repro
+  evidence.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,

@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.4.2"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.5.0"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -361,9 +361,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
-    def test_dediren_bundled_runtime_contract_is_documented(self) -> None:
+    def test_dediren_release_runtime_contract_is_documented(self) -> None:
         expected_phrases = [
-            "bundled Dediren runtime",
+            "release-resolved Dediren runtime",
             "ArchiMate® 3.2 relationship endpoint legality",
             "`Node`, not `TechnologyNode`",
             "plugins.generic-graph.semantic_profile",
@@ -429,13 +429,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "self-check.md"
         ).read_text(encoding="utf-8")
         expected_phrases = [
-            "dediren validate --input <pkg>/model.json",
-            "dediren validate --plugin generic-graph --profile archimate --input <pkg>/model.json",
-            "dediren project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json",
-            "dediren project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json",
-            "dediren layout --plugin elk-layout --input <layout-request.json>",
-            "dediren render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>",
-            "dediren export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>",
+            '"$DEDIREN" validate --input <pkg>/model.json',
+            '"$DEDIREN" validate --plugin generic-graph --profile archimate --input <pkg>/model.json',
+            '"$DEDIREN" project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json',
+            '"$DEDIREN" project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json',
+            '"$DEDIREN" layout --plugin elk-layout --input <layout-request.json>',
+            '"$DEDIREN" render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>',
+            '"$DEDIREN" export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>',
         ]
 
         for phrase in expected_phrases:
@@ -443,7 +443,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(phrase, self_check)
         self.assertNotIn("dediren project <pkg>/project.json --view <view-id>", self_check)
 
-    def test_guidance_points_to_bundled_agent_usage_guide(self) -> None:
+    def test_guidance_points_to_release_agent_usage_guide(self) -> None:
         self_check = (
             ARCH_PLUGIN
             / "skills"
@@ -456,11 +456,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
         ).read_text(encoding="utf-8")
 
-        agent_usage_path = "tools/dediren-linux/docs/agent-usage.md"
         for content in [self_check, architecture_reference]:
             with self.subTest():
                 normalized = " ".join(content.split())
-                self.assertIn(agent_usage_path, content)
+                self.assertIn("dediren-release.sh --agent-guide", content)
                 self.assertIn("Minimal Source JSON", normalized)
                 self.assertIn("Command Handoff Rules", normalized)
 
@@ -941,7 +940,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
             procedures / "self-check.md": [
                 "Command templates",
-                "dediren validate --plugin generic-graph --profile archimate",
+                '"$DEDIREN" validate --plugin generic-graph --profile archimate',
                 "project --target render-metadata",
             ],
             procedures / "architecture-operational-workflow.md": [
@@ -1007,17 +1006,19 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("/home/souroldgeezer/Documents", source_grounding)
         self.assertNotIn("~/Documents", source_grounding)
 
-    def test_repo_guidance_uses_plugin_scoped_dediren_bundle_path(self) -> None:
+    def test_repo_guidance_uses_release_resolver_path(self) -> None:
         claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
-        self.assertIn("souroldgeezer-architecture/tools/dediren-linux/", claude_guidance)
+        self.assertIn(
+            "souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh",
+            claude_guidance,
+        )
         self.assertNotRegex(claude_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
-    def test_dediren_bundle_is_marked_upstream_owned(self) -> None:
+    def test_dediren_release_bundle_is_marked_upstream_owned(self) -> None:
         expected_phrases = [
-            "imported upstream",
+            "upstream Dediren",
             "Do not patch",
-            "issue-filing mechanics",
             "Dediren tool issues",
         ]
         surfaces = [

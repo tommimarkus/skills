@@ -14,16 +14,17 @@ endpoint-illegal; Prefer Composition or Aggregation for component-interface
 ownership; Use Triggering when the architectural claim is process sequencing;
 define the view concern, allowed element types, and relationship types.
 
-Evidence: disclose the selected bundled Dediren runtime version; it checks
+Evidence: disclose the selected release-resolved Dediren runtime version; it checks
 ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
 `TechnologyNode`, reports close parallel route channels, allows parallel
 per-view ELK layout with serial rerun. source-valid requires schema plus ArchiMate semantic validation:
 `dediren validate --plugin generic-graph --profile archimate`. UML source-valid requires schema plus
 `dediren validate --plugin generic-graph --profile uml`.
 
-Ownership/layout: imported bundles are upstream artifacts; report `Dediren tool
-issues`. Packages define per-view `projection`, `metadata`, `layout`, `render`;
-generated metadata, layouts, SVGs, optional OEF/XMI are reproducible output.
+Ownership/layout: imported release bundles are upstream artifacts; report
+`Dediren tool issues`. Packages define per-view `projection`, `metadata`,
+`layout`, `render`; generated metadata, layouts, SVGs, optional OEF/XMI are
+reproducible output.
 If grouped layout validation still reports connector-through-node, invalid route,
 or group-boundary warnings, rerun the same view without groups. If cleaner, use
 the cleaner layout as evidence and report the grouped-layout regression plus both

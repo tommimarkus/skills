@@ -91,7 +91,7 @@ fails, fix package source or export policy first, then recreate output.
 
 For ArchiMate SVG policy with generated per-view render metadata, set
 `plugins.generic-graph.semantic_profile` to `archimate` in `model.json`. With
-the bundled Dediren runtime, generated ArchiMate render metadata no
+the release-resolved Dediren runtime, generated ArchiMate render metadata no
 longer depends on the `archimate-oef` export plugin.
 
 ### Package JSON Generation
@@ -386,19 +386,23 @@ the package or update the source.
 
 ## 9. Runtime Evidence
 
-The skill uses the repo-bundled dediren executable directly. Select the first
-available bundle:
+The skill uses the Dediren agent bundle published in GitHub™ Releases. Resolve
+the pinned release with:
 
-1. `souroldgeezer-architecture/tools/dediren-linux/bin/dediren`
-2. `souroldgeezer-architecture/tools/dediren-macos/bin/dediren`
+```bash
+DEDIREN="$(
+  souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh --ensure
+)"
+```
 
-For JSON authoring, repair, and command handoff details, read the selected
-bundle's agent guide before loading schemas:
-`souroldgeezer-architecture/tools/dediren-linux/docs/agent-usage.md`. It is the
-fast contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff
-Rules, and Repair Map.
+The resolver caches the selected platform bundle under
+`.cache/dediren/releases/`; do not commit that cache. Use
+`dediren-release.sh --agent-guide` to locate the selected release bundle's
+`docs/agent-usage.md` file, then read it before loading schemas. It is the fast
+contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff Rules,
+and Repair Map.
 
-The bundled Dediren runtime is the current evidence baseline. Its
+The release-resolved Dediren runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
 legality, use the technology element name `Node`, not `TechnologyNode`, and
 layout validation can report route detours plus close parallel route channels.
@@ -408,16 +412,15 @@ group projection/export, improved grouped cross-route validation, and parallel
 per-view ELK layout. Keep serial rerun only as a diagnostic fallback when a
 parallel batch produces an error envelope or other parallel-only failure.
 
-The packaged bundle under `souroldgeezer-architecture/tools/dediren-linux/` is
-an imported upstream Dediren distribution artifact. Do not patch bundled
-schemas, plugin manifests, binaries, Java helpers, fixtures, or `bundle.json`
-in this repository to fix tool behavior. When the runtime, schema, layout,
-render, export, or helper behavior appears wrong, report it under `Dediren tool
-issues` with the bundle version, command, input summary, error envelope,
-expected behavior, and minimal repro evidence. Change only repo-owned skill,
-fixture, or documentation guidance unless the task is explicitly to import a
-new upstream Dediren release bundle; issue-filing mechanics belong in
-agent-local configuration.
+GitHub™ release bundles and any future checked-in platform bundles are imported
+upstream Dediren distribution artifacts. Do not patch bundled schemas, plugin
+manifests, binaries, Java helpers, fixtures, or `bundle.json` in this repository
+to fix tool behavior. When the runtime, schema, layout, render, export, or
+helper behavior appears wrong, report it under `Dediren tool issues` with the
+release version, command, input summary, error envelope, expected behavior, and
+minimal repro evidence. Change only repo-owned skill, fixture, or documentation
+guidance unless the task is explicitly to move to a different upstream Dediren
+release.
 
 Evidence gates:
 
@@ -442,7 +445,7 @@ mismatch as a package or policy defect until proven otherwise. Check
 `semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
 Per-view `layout --plugin elk-layout` commands may run in parallel with the
-bundled Dediren runtime. If a parallel batch fails, rerun the exact
+release-resolved Dediren runtime. If a parallel batch fails, rerun the exact
 failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
 parallel-only failures under `Dediren tool issues` with repro evidence and
 reference the historical regression tracked in skills issue `#47`.
@@ -530,7 +533,7 @@ For each package:
    on semantic node or edge metadata; verify the generated metadata
    `semantic_profile` matches the render policy.
 6. Run ELK layout for changed or requested views; parallel per-view layout is
-   allowed with the bundled Dediren runtime, but rerun any parallel failure serially before
+   allowed with the release-resolved Dediren runtime, but rerun any parallel failure serially before
    reporting it as a layout defect.
 7. Render SVG for changed or requested views.
 8. Inspect SVG for nonblank, marker-rich, visually readable output.

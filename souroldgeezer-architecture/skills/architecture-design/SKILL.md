@@ -50,7 +50,9 @@ Build.
 
 1. Read [architecture](../../docs/architecture-reference/architecture.md) and
    [workflow](references/procedures/architecture-operational-workflow.md).
-2. Run [self-check](references/procedures/self-check.md) before runtime claims.
+2. Run [self-check](references/procedures/self-check.md) before runtime claims;
+   it uses [dediren-release.sh](references/scripts/dediren-release.sh) to
+   resolve the pinned GitHub™ release bundle.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load `references/notations/archimate.md` for
    ArchiMate, `references/notations/uml.md` for UML®, and both for mixed
@@ -79,6 +81,7 @@ Build.
 | Source-weighted ArchiMate element/relation selection | `references/source-weighting.md`; details in `../../docs/architecture-reference/source-weighting.md` |
 | Drift | `references/procedures/drift-detection.md` |
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
+| Dediren release resolver | `references/scripts/dediren-release.sh`; use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
 | .NET extraction | `references/procedures/lifting-rules-dotnet.md` |
 | Bicep extraction | `references/procedures/lifting-rules-bicep.md` |
 | GitHub Actions extraction | `references/procedures/lifting-rules-gha.md` |
