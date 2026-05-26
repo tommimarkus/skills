@@ -100,7 +100,7 @@ skill contract, unsafe existing PR state, or stale lifecycle ownership.
 
 ## Repo-Specific Gates
 
-Before implementing issue content, run `.claude/skills/ip-hygiene/SKILL.md`
+Before implementing issue content, run `souroldgeezer-audit/skills/ip-hygiene/SKILL.md`
 triage when the issue body, comments, referenced material, or likely touched
 files involve:
 

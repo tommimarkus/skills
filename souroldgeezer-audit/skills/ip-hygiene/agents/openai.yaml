@@ -1,8 +1,11 @@
 interface:
   display_name: "IP Hygiene"
   short_description: >-
-    Check plugin and skill publication surfaces for copyright, trademark,
-    licence, and bundled-asset risks.
+    Use when skill, agent, bundled reference, manifest, marketplace/runtime
+    metadata, plugin guidance, or bundled asset edits may touch third-party
+    marks, copied source, licences, assets, or existing IP/source hygiene
+    issues. Focused on plugin and skill publication surfaces; not general legal
+    advice.
   default_prompt: "Use $ip-hygiene to check this skill or plugin change for IP hygiene issues."
 policy:
   allow_implicit_invocation: true

@@ -85,8 +85,8 @@ rules change.
   recall. If cases are bulk-generated, update
   `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL
   ledger in the same change.
-- Follow the repo-internal `ip-hygiene` guidance in
-  [.claude/skills/ip-hygiene/SKILL.md](.claude/skills/ip-hygiene/SKILL.md)
+- Follow the public `ip-hygiene` skill in
+  [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md)
   when editing plugin manifests, skills, agents, bundled references, or
   README / CLAUDE / AGENTS sections that describe them. Repo Stop hooks also
   prompt for this check when those surfaces change.

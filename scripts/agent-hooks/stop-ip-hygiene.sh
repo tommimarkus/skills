@@ -70,5 +70,5 @@ stop_hook_mark_prompted
 
 stop_hook_emit_block \
   "IP hygiene scoped surfaces changed in this task." \
-  "Before finishing, run the repo-internal IP hygiene triage in \`.claude/skills/ip-hygiene/SKILL.md\` for these changed surfaces." \
+  "Before finishing, run the IP hygiene triage in \`souroldgeezer-audit/skills/ip-hygiene/SKILL.md\` for these changed surfaces." \
   "Report the resulting output contract line: \`nothing to check\`, \`checked: ...\`, \`fixed: ...\`, or \`deferred drive-by observation ...\`."

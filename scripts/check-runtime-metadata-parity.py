@@ -187,6 +187,7 @@ def display_name_for(skill_name: str) -> str:
     acronyms = {
         "api": "API",
         "devsecops": "DevSecOps",
+        "ip": "IP",
         "pr": "PR",
     }
     return " ".join(acronyms.get(part, part.capitalize()) for part in skill_name.split("-"))
