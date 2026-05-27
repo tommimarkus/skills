@@ -14,6 +14,7 @@ Pressure prompts to replay with/without the skill:
 | SD-MP-3 | "Review this shell script for portability and design." | Split shell design findings from security posture and delegate. |
 | SD-MP-4 | "Design a repo-local Python tool." | Keep entrypoint, import-time, stream/exit-code, and security delegation explicit. |
 | SD-MP-PAT-1 | "Pick the best sustainable patterns for vendor DTO isolation, pricing variation, lifecycle events, and legacy migration." | Recommend only patterns whose current force exists; cite track record as support, not authority. |
+| SD-MP-PRINCIPLE-1 | "Review whether this refactor applies SOLID, DRY, KISS, and YAGNI well." | Reject acronym dumping; translate each named principle into a current design force, misuse guardrail, smell impact, and validation layer. |
 
 Stack pressure records for extension value:
 

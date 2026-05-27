@@ -6,8 +6,9 @@ notes. They do not copy external prompts, code, examples, diagrams, tables, or
 documentation.
 
 - Core: `../../../docs/software-reference/software-design.md`,
-  `references/smell-catalog.md`, `references/pattern-catalog.md`, and
-  `references/evals/model-pressure.md`; all repo-authored.
+  `references/smell-catalog.md`, `references/principles-catalog.md`,
+  `references/pattern-catalog.md`, and `references/evals/model-pressure.md`;
+  all repo-authored.
 - .NET facts: .NET project SDK
   `https://learn.microsoft.com/en-us/dotnet/core/project-sdk/overview`,
   dependency injection
@@ -39,6 +40,7 @@ documentation.
   `https://martinfowler.com/bliki/StranglerFigApplication.html`, EIP
   `https://www.enterpriseintegrationpatterns.com/`, Microsoft Learn pattern/DI
   pages, and AWS Strangler Fig guidance.
+- Principle sources: the core reference source basis.
 
 External links ground platform mechanics only. All smell codes and design
 heuristics are repo-authored and must not reproduce source prose.

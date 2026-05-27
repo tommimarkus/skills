@@ -18,10 +18,12 @@ Rules cite source families rather than copying source prose.
 
 - Lean value and waste discipline: Mary and Tom Poppendieck, *Implementing Lean Software Development: From Concept to Cash*, Pearson, https://www.pearson.com/en-us/subject-catalog/p/implementing-lean-software-development-from-concept-to-cash/P200000009108/9780321437389
 - Information hiding and change-isolating modularity: David L. Parnas, "On the criteria to be used in decomposing systems into modules," Communications of the ACM, https://cacm.acm.org/research/on-the-criteria-to-be-used-in-decomposing-systems-into-modules/
+- Software-design principle taxonomy: IEEE Computer Society, SWEBOK Guide v4, https://www.computer.org/education/bodies-of-knowledge/software-engineering/v4
 - Domain terminology and DDD vocabulary: Eric Evans / Domain Language DDD Reference, https://www.domainlanguage.com/ddd/reference/
-- Quality-attribute tradeoff discipline: SEI Architecture Tradeoff Analysis Method, https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method/
-- Socio-technical fit and maintainability: DORA loosely coupled teams and code maintainability capabilities, https://dora.dev/capabilities/loosely-coupled-teams/ and https://dora.dev/devops-capabilities/technical/code-maintainability/
+- Quality-attribute tradeoff discipline: SEI Architecture Tradeoff Analysis Method, https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method-2/
+- Socio-technical fit and maintainability: DORA loosely coupled teams and code maintainability capabilities, https://dora.dev/capabilities/loosely-coupled-teams/ and https://dora.dev/capabilities/code-maintainability/
 - Coupling and propagation-cost calibration: MacCormack and Sturtevant, Journal of Systems and Software study page, https://www.hbs.edu/faculty/Pages/item.aspx?num=51343
+- DRY as knowledge-ownership discipline: Hunt and Thomas, *The Pragmatic Programmer*, https://www.pragmatic.org/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/
 - Code smells/refactoring calibration: Lacerda, Petrillo, Pimenta, and Gueheneuc, tertiary systematic review, https://www.sciencedirect.com/science/article/pii/S0164121220300881
 - DDD empirical calibration: systematic literature review, https://www.sciencedirect.com/science/article/pii/S0164121225002055
 
@@ -76,6 +78,25 @@ Default: state the force and the local tactic. Do not pretend one design optimiz
 Boundaries are not only technical. Ownership, cognitive load, and coordination cost are design signals. A boundary that repeatedly forces unrelated teams to coordinate is suspect.
 
 Default: align code boundaries with stable ownership where that does not weaken semantic coherence.
+
+Load the compact decision aid at
+[../../skills/software-design/references/principles-catalog.md](../../skills/software-design/references/principles-catalog.md)
+when a user asks about named principles or slogans, proposes principle-based
+justification, or the source shows visible principle claims such as SOLID, DRY,
+KISS, YAGNI, information hiding, dependency inversion, or ubiquitous language.
+Do not expand this reference into a generic principle tutorial; rely on the base
+model for definitions and keep bundled guidance focused on force, misuse
+guardrails, smell impact, evidence layers, and delegation.
+
+Every principle recommendation or rejection must state:
+
+1. The current force it addresses.
+2. The concrete rule being applied.
+3. When to avoid using that principle as justification.
+4. Which `SD-*` smell family it can reduce.
+5. Which `SD-*` smell family it may introduce.
+6. The cheapest evidence layer needed before treating the principle as
+   justified.
 
 ## 4. Decision Defaults
 
