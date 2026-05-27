@@ -296,6 +296,14 @@ Plugins follow semver, with the repo-specific interpretation below. **The versio
 - Any of the above that adds or removes a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace) → at least *minor*.
 - Any of the above that renames, removes, or breaks the contract of an existing top-level artefact → *major*.
 
+**Major/minor IP hygiene gate.** Every major or minor plugin-version change
+requires an in-depth `ip-hygiene` run before finishing. Scope that pass to the
+whole changed plugin surface, including newly added, moved, renamed, removed, or
+contract-shaping skills, agents, references, extensions, deterministic
+machinery, manifests, marketplace entries, and public repo guidance. Load every
+hit bucket from the `ip-hygiene` workflow and report its normal output contract
+in the closeout. Patch bumps still use the normal scoped IP hygiene triage.
+
 Edits that **do not** require a version bump: fixing broken links, adjusting whitespace, updating `docs/<kind>-reference/` cross-references between sections that already existed, editing repo-level `README.md` / `CLAUDE.md` outside the plugin tree, or changing packaging metadata that does not alter shipped skill behaviour and does not need to be picked up by installed-plugin update checks.
 
 **Sibling-file sync.** A plugin-version bump often implies updates in neighbouring files that must land in the same commit:
