@@ -9,6 +9,20 @@ documentation.
   `references/smell-catalog.md`, `references/principles-catalog.md`,
   `references/pattern-catalog.md`, and `references/evals/model-pressure.md`;
   all repo-authored.
+- Smell taxonomy and calibration sources: Lacerda/Petrillo/Pimenta/Gueheneuc
+  "Code smells and refactoring"
+  `https://www.sciencedirect.com/science/article/pii/S0164121220300881`,
+  Sharma/Spinellis "A survey on software smells"
+  `https://www.spinellis.gr/pubs/jrnl/2018-JSS-smells-survey/html/journal.pdf`,
+  Suryanarayana/Samarthyam/Sharma "Refactoring for Software Design Smells"
+  `https://www.oreilly.com/library/view/refactoring-for-software/9780128013977/`,
+  Fowler's refactoring catalog `https://refactoring.com/catalog/`, SEI ATAM
+  `https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method-2/`,
+  and DORA maintainability/loose-coupling
+  `https://dora.dev/capabilities/code-maintainability/` and
+  `https://dora.dev/capabilities/loosely-coupled-teams/`. External links ground
+  source roles only; smell-card wording, codes, examples, and eval prompts are
+  repo-authored.
 - .NET facts: .NET project SDK
   `https://learn.microsoft.com/en-us/dotnet/core/project-sdk/overview`,
   dependency injection
@@ -42,5 +56,6 @@ documentation.
   pages, and AWS Strangler Fig guidance.
 - Principle sources: the core reference source basis.
 
-External links ground platform mechanics only. All smell codes and design
-heuristics are repo-authored and must not reproduce source prose.
+External links ground source roles only. All smell codes, card wording, prompts,
+examples, and design heuristics are repo-authored and must not reproduce source
+prose, examples, tables, figures, or code.

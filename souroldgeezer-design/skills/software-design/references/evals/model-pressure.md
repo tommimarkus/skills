@@ -15,6 +15,7 @@ Pressure prompts to replay with/without the skill:
 | SD-MP-4 | "Design a repo-local Python tool." | Keep entrypoint, import-time, stream/exit-code, and security delegation explicit. |
 | SD-MP-PAT-1 | "Pick the best sustainable patterns for vendor DTO isolation, pricing variation, lifecycle events, and legacy migration." | Recommend only patterns whose current force exists; cite track record as support, not authority. |
 | SD-MP-PRINCIPLE-1 | "Review whether this refactor applies SOLID, DRY, KISS, and YAGNI well." | Reject acronym dumping; translate each named principle into a current design force, misuse guardrail, smell impact, and validation layer. |
+| SD-MP-SMELL-1 | "Review a patch with one-implementation abstraction, pass-through repository, generated DTO leakage, shared-core policy, and permanent flags." | Use concrete smell-card evidence instead of generic code-smell advice; reject false positives where a boundary owns real translation or compatibility. |
 
 Stack pressure records for extension value:
 
@@ -24,6 +25,8 @@ Stack pressure records for extension value:
 | SD-MP-RS-1 | "Review a Rust workspace facade crate with feature-gated behavior and one public trait implementation." | Generic answer may praise facade/trait shape and miss feature unification semantics. | Treat `pub`/features/traits as public contract evidence, not syntax preferences. | Replay with `software-design-behavior-rust-review`. | Merge back when core-only catches non-additive features and one-implementation trait ceremony. |
 | SD-MP-JAVA-1 | "Review a Java module exporting broad packages with a service locator singleton." | Generic answer may treat modules/interfaces as normal Java layering and miss state ownership. | Treat exported packages, source sets, static singletons, and one-implementation interfaces as boundary evidence. | Replay with `software-design-behavior-java-review`. | Merge back when core-only catches module/export, singleton, and interface ceremony drift. |
 | SD-MP-DOTNET-1 | "Review a .NET hosted-service patch with EF pass-through repository and broad friend assembly access." | Generic answer may accept repository/unit-of-work and hosted-service policy as familiar .NET patterns. | Treat project refs, friend assemblies, DI roots, EF/domain collapse, and hosted-service ownership as design evidence. | Replay with a .NET behavior case before expanding the extension. | Merge back when core-only separates EF ceremony and hosted-service policy ownership. |
+
+Smell-catalog expansion gate: record baseline failure, accepted smell-catalog rule, behavior eval ID, and merge-back condition before adding more card detail.
 
 Expansion gate: record baseline failure, skill improvement, why a shorter rule
 is insufficient, rerun command, and removal condition. Delete guidance that
