@@ -83,6 +83,7 @@ Build.
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
 | Dediren release resolver | `references/scripts/dediren-release.sh`; use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
 | .NET extraction | `references/procedures/lifting-rules-dotnet.md` |
+| Java extraction | `references/procedures/lifting-rules-java.md` |
 | Bicep extraction | `references/procedures/lifting-rules-bicep.md` |
 | GitHub Actions extraction | `references/procedures/lifting-rules-gha.md` |
 | Process extraction | `references/procedures/lifting-rules-process.md`, `references/procedures/process-view-emission.md`, `references/procedures/seed-views.md` |

@@ -347,6 +347,8 @@ Common extractable sources:
 
 - .NET projects, references, public clients, hosted services, and durable
   orchestrators;
+- Java builds, deployable modules, public entrypoints, typed clients,
+  scheduled/message handlers, and persistence/data models;
 - Bicep or ARM-style IaC resources, dependencies, identities, and environment
   declarations;
 - GitHub Actions workflows, jobs, environments, deployment stages, and release
