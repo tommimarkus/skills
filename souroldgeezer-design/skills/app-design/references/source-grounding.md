@@ -20,3 +20,24 @@ documentation.
   Handling: local boundary input; software-design supports app-design from the
   engineering side for decomposition, dependency direction, state-machine shape,
   adapter boundaries, and coupling risks without owning frontend app decisions.
+- Source: React official docs, including `react.dev/reference/react`,
+  `react.dev/reference/react/hooks`,
+  `react.dev/reference/rules/components-and-hooks-must-be-pure`,
+  `react.dev/reference/rules/rules-of-hooks`,
+  `react.dev/reference/react-dom/client/hydrateRoot`, and
+  `react.dev/reference/react/Suspense`.
+  Handling: React facts are linked as source anchors; extension wording is
+  original and limited to app-design implications for components, Hooks,
+  state/data ownership, rendering, hydration, browser effects, forms, and
+  responsive/accessibility/performance posture.
+- Source: Next.js official docs, including `nextjs.org/docs`,
+  `nextjs.org/docs/app`,
+  `nextjs.org/docs/app/getting-started/server-and-client-components`,
+  `nextjs.org/docs/app/guides/caching`,
+  `nextjs.org/docs/app/api-reference/file-conventions/route-segment-config`,
+  `nextjs.org/docs/app/api-reference/components`, and
+  `nextjs.org/docs/app/guides/forms`.
+  Handling: Next.js facts are linked as source anchors; extension wording is
+  original and limited to app-design implications for routing, layouts,
+  Server/Client Component boundaries, cache/freshness behavior, navigation,
+  forms, metadata/assets, and sibling-skill delegation.

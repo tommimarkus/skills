@@ -37,6 +37,8 @@ or framework sample code into an extension.
 
 | File | Applies to | Notes |
 |---|---|---|
+| `react.md` | React browser applications and component trees | Component architecture, Hooks, state/data ownership, rendering purity, hydration, Suspense/loading/error boundaries, browser effects, forms, storage, responsive/accessibility/i18n/performance posture, and React app-design finding codes |
+| `nextjs.md` | Next.js App Router and Pages Router frontend app surfaces | Loads after `react.md`; covers route/layout ownership, Server/Client Component boundaries, navigation, cache/freshness posture, forms, metadata/assets, and app-design delegation to `api-design` for Route Handlers / Server Actions used as public API contracts |
 | `blazor-wasm.md` | Blazor WebAssembly applications and components, including standalone WASM and Blazor Web App `.Client` projects | Route/layout ownership, render modes, component contracts, state containers, event callbacks, JS interop, API-client delegation, focus/navigation/forms/storage, and responsive/accessibility/i18n/performance posture |
 
 ## Adding a New Extension

@@ -1,7 +1,7 @@
 ---
 name: app-design
 description: >-
-  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, components, state/data flow, rendering, forms, navigation, browser behavior, responsive/a11y/i18n/performance, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
+  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, components, state/data flow, rendering, forms, navigation, browser behavior, responsive/a11y/i18n/performance, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
 ---
 
 # App Design
@@ -36,6 +36,9 @@ code/PRs/proposals/plans; Lookup app tradeoffs.
 ## Load Map
 
 Load what applies: core reference principles/defaults/checklist;
+[extensions/react.md](extensions/react.md) for React component, hook, state,
+rendering, hydration, or browser-runtime signals; [extensions/nextjs.md](extensions/nextjs.md)
+for Next.js App Router or Pages Router app surfaces, and load it after the React extension;
 [extensions/blazor-wasm.md](extensions/blazor-wasm.md) for `*.razor`, Blazor
 WebAssembly project/host/render-mode signals, or Blazor™ app-shell/component
 work; [extensions/README.md](extensions/README.md) only when editing extensions.

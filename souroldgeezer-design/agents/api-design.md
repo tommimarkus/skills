@@ -17,7 +17,8 @@ When invoked, run the api-design skill and present results:
    lookup), run the pre-flight questions if inputs are ambiguous, detect the
    stack, and load all matching extensions (they compose: Azure Functions .NET
    + Cosmos + Blob all load together when the target spans those layers; hosted
-   Next.js loads Node.js first, then Next.js).
+   Next.js loads Node.js first, then Next.js; frontend route/layout/screen and
+   component behavior delegates to `app-design`).
 3. For build mode: produce OpenAPI fragments, handler code, `Program.cs` DI
    wiring, and IaC snippets that embody the reference's decision defaults;
    cite the reference sections the output draws from (`§3.6`, `§5.6`, etc.)

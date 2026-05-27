@@ -13,3 +13,7 @@ screenshots.
   Handling: local extension load conditions and smell-code behavior; eval cases
   mention stack names only as nominative context and do not reproduce external
   documentation examples.
+- Source: `../app-design` public-skill boundary.
+  Handling: local sibling-skill boundary; hosted Next.js API guidance keeps
+  Route Handlers, Pages API routes, and API-like Server Actions in api-design
+  while frontend route/layout/screen/component behavior delegates to app-design.

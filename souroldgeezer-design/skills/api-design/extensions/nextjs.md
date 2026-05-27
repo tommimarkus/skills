@@ -43,6 +43,14 @@ shape. Vercel / Netlify / AWS / Azure serverless adapters can still be detected
 by `nodejs.md`, but platform-specific serverless Next.js limits are out of
 scope unless a future extension adds that platform.
 
+Frontend app concerns remain delegated to `app-design`: route layout, screen
+composition, Server/Client Component placement for UI, navigation UX, form
+interaction states, image/font/script posture, responsive behavior,
+accessibility, and browser performance posture. This extension owns Route
+Handlers, Pages API routes, Server Actions when they act as mutation/API
+surfaces, and the HTTP contract/reliability/observability implications around
+those boundaries.
+
 ## Composition rule
 
 Next.js depends on the Node.js extension:
@@ -56,6 +64,8 @@ Next.js depends on the Node.js extension:
    platform boundaries (`next/server`, Route Handlers, Pages API routes,
    Server Actions, `instrumentation.ts`, `next.config.*`). They do not weaken
    core contract, auth, reliability, or observability baselines.
+4. If the same change includes frontend app behavior, load `app-design` with
+   its React and Next.js app extensions for route/screen/component findings.
 
 ## Hosting-model surface
 
