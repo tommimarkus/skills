@@ -81,6 +81,102 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("docs/plugins/example.md", result.stdout)
         self.assertIn("[example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md)", result.stdout)
 
+    def test_codex_manifest_must_declare_skills_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / "souroldgeezer-example/.codex-plugin/plugin.json",
+                """
+                {
+                  "name": "souroldgeezer-example",
+                  "version": "0.1.0",
+                  "description": "Example plugin for runtime metadata parity tests.",
+                  "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
+                  "license": "MIT",
+                  "skills": "./wrong-skills/",
+                  "interface": {
+                    "displayName": "Sour Old Geezer Example",
+                    "shortDescription": "Example parity checks.",
+                    "defaultPrompt": ["Use example-skill."]
+                  }
+                }
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("souroldgeezer-example/.codex-plugin/plugin.json", result.stdout)
+        self.assertIn("skills", result.stdout)
+        self.assertIn("./skills/", result.stdout)
+
+    def test_missing_openai_metadata_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            (
+                repo
+                / "souroldgeezer-example"
+                / "skills"
+                / "example-skill"
+                / "agents"
+                / "openai.yaml"
+            ).unlink()
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
+            result.stdout,
+        )
+        self.assertIn("exists", result.stdout)
+
+    def test_openai_short_description_drift_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
+                """
+                interface:
+                  display_name: "Example Skill"
+                  short_description: "Drifted OpenAI metadata."
+                  default_prompt: "Use example-skill."
+                policy:
+                  allow_implicit_invocation: true
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
+            result.stdout,
+        )
+        self.assertIn("interface.short_description", result.stdout)
+
+    def test_orphan_internal_codex_agent_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / ".codex/agents/orphan.toml",
+                '''
+                name = "orphan"
+                description = "No public or internal skill owns this agent."
+                sandbox_mode = "workspace-write"
+                ''',
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".codex/agents/orphan.toml", result.stdout)
+        self.assertIn("source-of-truth", result.stdout)
+
     def make_clean_fixture(self, repo: Path) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
         skill_description = "Use when checking runtime metadata parity for an example skill."

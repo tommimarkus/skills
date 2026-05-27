@@ -78,6 +78,10 @@ EA_MODELING_FEEDBACK_SURFACES = [
 ]
 
 
+def compact_file(path: Path) -> str:
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
     def test_architecture_plugin_version_is_synchronized_everywhere(self) -> None:
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
@@ -362,35 +366,59 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
     def test_dediren_release_runtime_contract_is_documented(self) -> None:
-        expected_phrases = [
-            "release-resolved Dediren runtime",
-            "ArchiMate® 3.2 relationship endpoint legality",
-            "`Node`, not `TechnologyNode`",
-            "plugins.generic-graph.semantic_profile",
-            "close parallel route channels",
-            "parallel per-view ELK layout",
-            "serial rerun",
-        ]
-        surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        expectations = {
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
+                "release-resolved Dediren runtime",
+                "ArchiMate® 3.2 relationship endpoint legality",
+                "`Node`, not `TechnologyNode`",
+                "close parallel route channels",
+                "parallel per-view ELK layout",
+                "serial rerun only as a diagnostic fallback",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
-            REPO_ROOT / "CLAUDE.md",
-        ]
+            / "architecture-operational-workflow.md": [
+                "release-resolved Dediren runtime",
+                "plugins.generic-graph.semantic_profile",
+                "ArchiMate® 3.2 relationship endpoint legality",
+                "`Node`, not `TechnologyNode`",
+                "close parallel route channels",
+                "parallel per-view ELK layout",
+                "rerun parallel-only failures serially",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "release-resolved Dediren runtime version",
+                "ArchiMate® 3.2 relationship endpoint legality",
+                "`Node`, not `TechnologyNode`",
+                "close parallel route channels",
+                "per-view ELK layout with serial rerun",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
+                "release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
+                "`Node`, not `TechnologyNode`",
+                "reports close parallel route channels",
+                "plugins.generic-graph.semantic_profile",
+                "allows parallel per-view ELK layout",
+                "keeps serial rerun fallback",
+            ],
+            REPO_ROOT / "CLAUDE.md": [
+                "release-resolved Dediren runtime",
+                "ArchiMate® 3.2 relationship endpoint legality",
+                "`Node`, not `TechnologyNode`",
+                "close parallel route channels",
+                "parallel per-view ELK layout with serial rerun as a diagnostic fallback",
+                "plugins.generic-graph.semantic_profile",
+            ],
+        }
 
-        combined = " ".join(
-            surface.read_text(encoding="utf-8") for surface in surfaces
-        )
-        combined = " ".join(combined.split())
-        for phrase in expected_phrases:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, combined)
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
         surfaces = [
@@ -464,36 +492,54 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn("Command Handoff Rules", normalized)
 
     def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
-        surfaces = [
-            REPO_ROOT / "CLAUDE.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
+        expectations = {
+            REPO_ROOT / "CLAUDE.md": [
+                "ArchiMate® 3.2 and UML®",
+                "validate --plugin generic-graph --profile uml",
+                "uml-xmi",
+                "Cross-notation support",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
+                "ArchiMate® and UML® dediren packages",
+                "cross-notation handoff links",
+                "references/notations/uml.md",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "architecture-operational-workflow.md",
+            / "architecture-operational-workflow.md": [
+                "ArchiMate and UML are supported profiles",
+                "validate --plugin generic-graph --profile uml",
+                "uml-xmi",
+                "Cross-notation links",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "self-check.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-        ]
-        expected_phrases = [
-            "ArchiMate and UML",
-            "validate --plugin generic-graph --profile uml",
-            "uml-xmi",
-            "Cross-notation links",
-        ]
+            / "self-check.md": [
+                "validate --plugin generic-graph --profile uml",
+                "uml-xmi",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
+                "ArchiMate and UML are supported `generic-graph` semantic profiles",
+                "validate --plugin generic-graph --profile uml",
+                "uml-xmi",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "validate --plugin generic-graph --profile uml",
+                "Cross-notation links",
+            ],
+        }
 
-        combined = " ".join(surface.read_text(encoding="utf-8") for surface in surfaces)
-        combined = " ".join(combined.split())
-        for phrase in expected_phrases:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, combined)
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_notation_references_define_archimate_uml_boundary(self) -> None:
         archimate_ref = (
@@ -584,73 +630,119 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertTrue(trigger_ids["architecture-design-trigger-yes-uml-handoff"]["expected_activation"])
 
     def test_package_generation_guidance_documents_metadata_and_layout_concurrency(self) -> None:
-        expected_phrases = [
-            "generated/render-metadata",
-            "render-metadata",
-            "parallel per-view ELK layout",
-            "serial rerun",
-            "hand-authored",
-            "reproducible output",
-            "plugins.generic-graph.semantic_profile",
-            "semantic_profile",
-            "archimate-oef",
-            "OEF export is requested",
-        ]
-        surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        expectations = {
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
+                "generated/render-metadata",
+                "render-metadata",
+                "parallel per-view ELK layout",
+                "serial rerun only as a diagnostic fallback",
+                "hand-authored",
+                "reproducible output",
+                "plugins.generic-graph.semantic_profile",
+                "semantic_profile",
+                "archimate-oef",
+                "OEF export is requested",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "architecture-operational-workflow.md",
+            / "architecture-operational-workflow.md": [
+                "generated/render-metadata",
+                "render-metadata",
+                "parallel per-view ELK layout",
+                "reproducible output",
+                "plugins.generic-graph.semantic_profile",
+                "archimate-oef",
+                "requested ArchiMate OEF export",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "self-check.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-        ]
+            / "self-check.md": [
+                "render-metadata",
+                "plugins.generic-graph.semantic_profile",
+                "archimate-oef",
+                "OEF export is requested",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "`metadata`, `layout`, `render`",
+                "per-view ELK layout with serial rerun",
+                "reproducible output",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
+                "generated/render-metadata",
+                "render-metadata",
+                "parallel per-view ELK layout",
+                "serial rerun",
+                "hand-authored",
+                "reproducible output",
+                "plugins.generic-graph.semantic_profile",
+                "semantic_profile",
+                "archimate-oef",
+            ],
+        }
 
-        combined = " ".join(
-            surface.read_text(encoding="utf-8") for surface in surfaces
-        )
-        combined = " ".join(combined.split())
-        for phrase in expected_phrases:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, combined)
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_visual_readiness_guidance_flags_dense_valid_renders(self) -> None:
-        expected_phrases = [
-            "layout-valid is not visually clean",
-            "ARCH-L-3",
-            "ARCH-R-3",
-            "ARCH-Q-2",
-            "hub fanout",
-            "mixed concerns",
-        ]
-        surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        expectations = {
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
+                "ARCH-L-3",
+                "ARCH-R-3",
+                "ARCH-Q-2",
+                "hub fanout",
+                "mixed audience concerns",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "professional-readiness.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-        ]
+            / "professional-readiness.md": [
+                "ARCH-L-3",
+                "ARCH-R-3",
+                "ARCH-Q-2",
+                "dense",
+                "hub-heavy",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "smell-catalog.md": [
+                "ARCH-L-3",
+                "ARCH-R-3",
+                "ARCH-Q-2",
+                "hub fanout",
+                "mixed concerns",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "layout-valid is not visually clean",
+                "ARCH-L-3",
+                "ARCH-R-3",
+                "ARCH-Q-2",
+                "hub fanout",
+                "mixed concerns",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
+                "layout-valid versus visually clean distinction",
+                "ARCH-L-3",
+                "ARCH-R-3",
+                "ARCH-Q-2",
+                "hub fanout",
+                "mixed concerns",
+            ],
+        }
 
-        combined = " ".join(
-            surface.read_text(encoding="utf-8") for surface in surfaces
-        )
-        combined = " ".join(combined.split())
-        for phrase in expected_phrases:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, combined)
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_implementation_readiness_reference_is_routed(self) -> None:
         procedure = (
@@ -1035,37 +1127,57 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotRegex(claude_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
     def test_dediren_release_bundle_is_marked_upstream_owned(self) -> None:
-        expected_phrases = [
-            "upstream Dediren",
-            "Do not patch",
-            "Dediren tool issues",
-        ]
-        surfaces = [
-            REPO_ROOT / "AGENTS.md",
-            REPO_ROOT / "CLAUDE.md",
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+        expectations = {
+            REPO_ROOT / "AGENTS.md": [
+                "imported upstream artifacts",
+                "Do not patch",
+                "Dediren tool issues",
+            ],
+            REPO_ROOT / "CLAUDE.md": [
+                "upstream Dediren distribution artifacts",
+                "Do not fix runtime, schema, plugin, helper, or bundle behavior",
+                "Dediren tool issues",
+            ],
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
+                "upstream Dediren distribution artifacts",
+                "Do not patch",
+                "Dediren tool issues",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "architecture-operational-workflow.md",
+            / "architecture-operational-workflow.md": [
+                "imported upstream evidence",
+                "do not patch cached release files or future packaged bundles",
+                "Dediren tool issues",
+            ],
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
-            / "self-check.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-        ]
+            / "self-check.md": [
+                "imported upstream Dediren artifact",
+                "Do not patch",
+                "Dediren tool issues",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+                "Dediren tool issues",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
+                "upstream Dediren issue reference",
+                "do not edit cached schemas manifests binaries Java helpers fixtures or bundle.json",
+                "Dediren tool issues footer",
+            ],
+        }
 
-        combined = " ".join(surface.read_text(encoding="utf-8") for surface in surfaces)
-        combined = " ".join(combined.split())
-        for phrase in expected_phrases:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, combined)
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (

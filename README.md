@@ -109,6 +109,15 @@ git diff --check
 python -m unittest
 ```
 
+`scripts/validate-fragmentation.sh` includes
+`scripts/test-stop-plugin-eval-hooks.sh`.
+
+Optional release-resolved Dediren smoke lane:
+
+```text
+DEDIREN_RELEASE_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
+```
+
 ## Detailed docs
 
 - [souroldgeezer-audit/docs/security-reference/devsecops.md](souroldgeezer-audit/docs/security-reference/devsecops.md)
