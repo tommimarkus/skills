@@ -42,6 +42,9 @@ Before changing workflow, selection, grounding, evals, or scope, load
    owners, pattern ceremony, seams, and debt.
 4. Separate fact from inference, choose the smallest coherent move, add
    mandatory validation when available, then emit contract/footer.
+5. For implementation-facing Build work, record the design decision, implement
+   the smallest coherent move, review diff against the design decision, then
+   validate.
 
 ## Outputs
 

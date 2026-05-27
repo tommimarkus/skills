@@ -8,6 +8,11 @@ documentation.
 - Core: `../../../docs/software-reference/software-design.md`,
   `references/smell-catalog.md`, `references/pattern-catalog.md`, and
   `references/evals/model-pressure.md`; all repo-authored.
+- .NET facts: .NET project SDK
+  `https://learn.microsoft.com/en-us/dotnet/core/project-sdk/overview`,
+  dependency injection
+  `https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/basics`,
+  and EF Core modeling `https://learn.microsoft.com/en-us/ef/core/modeling/`.
 - Rust facts: Cargo workspaces/features
   `https://doc.rust-lang.org/cargo/reference/workspaces.html`,
   `https://doc.rust-lang.org/cargo/reference/features.html`, Rust visibility
@@ -23,6 +28,17 @@ documentation.
   TSConfig `https://www.typescriptlang.org/tsconfig/`, Node.js package metadata
   `https://nodejs.org/api/packages.html`, and npm `package.json`
   `https://docs.npmjs.com/cli/v11/configuring-npm/package-json/`.
+- Shell facts: GNU Bash manual, Z Shell manual, POSIX Shell Command Language,
+  Apple Terminal guidance, and Microsoft WSL docs for interpreter and platform
+  mechanics.
+- Python facts: Python docs, Python Packaging User Guide, PEP 621, PEP 723, and
+  uv docs for entrypoint, packaging, and script mechanics.
+- Pattern sources: GoF publisher catalog; Fowler enterprise survey
+  `https://martinfowler.com/articles/enterprisePatterns.html`, PoEAA
+  `https://martinfowler.com/eaaCatalog/`, Strangler Fig
+  `https://martinfowler.com/bliki/StranglerFigApplication.html`, EIP
+  `https://www.enterpriseintegrationpatterns.com/`, Microsoft Learn pattern/DI
+  pages, and AWS Strangler Fig guidance.
 
 External links ground platform mechanics only. All smell codes and design
 heuristics are repo-authored and must not reproduce source prose.

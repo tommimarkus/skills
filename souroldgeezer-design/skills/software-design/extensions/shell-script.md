@@ -30,5 +30,11 @@ or stdout/diagnostic mixing; `shell.SD-W-*` for dispatcher ceremony;
 `shell.SD-E-*` for portability, trap, pipeline, or cleanup fragility;
 `shell.SD-Q-*` for misplaced structured state or unsupported platform claims.
 
+Key codes: `shell.SD-B-1` shebang, suffix, docs, and syntax imply different
+shells; `shell.SD-C-1` sourced file mutates globals/options/traps without
+restore contract; `shell.SD-S-3` exit-code meanings drift or are masked;
+`shell.SD-S-4` machine-readable stdout mixes diagnostics; `shell.SD-Q-1` shell
+owns structured state better placed elsewhere.
+
 Do not flag Bash/zsh-specific syntax merely for being non-POSIX. Flag it when
 the interpreter boundary or promised platform support makes it a design risk.

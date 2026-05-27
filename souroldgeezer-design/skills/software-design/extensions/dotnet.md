@@ -31,3 +31,9 @@ public/friend, controller, worker, or hosted-service boundary drift;
 `dotnet.SD-S-*` for EF/DTO/domain or invariant leakage; `dotnet.SD-W-*` for
 pass-through repository/MediatR/CQRS ceremony; `dotnet.SD-E-*` for mixed layer
 rules; `dotnet.SD-Q-*` for reflection/generated boundary ownership gaps.
+
+Key codes: `dotnet.SD-C-1` project cycle or policy-to-adapter reference;
+`dotnet.SD-B-2` public/friend surface exposes internals; `dotnet.SD-S-1`
+EF/DTO/domain collapse hides ownership; `dotnet.SD-W-1` repository/unit-of-work
+wraps EF with pass-through CRUD; `dotnet.SD-Q-1` reflection/generated boundary
+lacks owner and validation.

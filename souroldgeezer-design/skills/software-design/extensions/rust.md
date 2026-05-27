@@ -37,3 +37,9 @@ Smell codes: `rust.SD-B-*` for crate/binary/pub/build/proc/FFI boundary drift;
 traits, or runtime/global coupling; `rust.SD-S-*` for error, stringly-state, or
 ownership contract drift; `rust.SD-E-*` for brittle public traits/enums;
 `rust.SD-Q-*` for unsafe/FFI/generated boundary width.
+
+Key codes: `rust.SD-B-3` `pub`/re-export exposes internals; `rust.SD-C-2`
+feature flags are non-additive or change public semantics; `rust.SD-C-3` trait
+wraps one implementation for tests/ceremony; `rust.SD-S-1` error type collapses
+domain/transport/infrastructure failures; `rust.SD-Q-1` unsafe/FFI/generated
+boundary is too wide to review independently.

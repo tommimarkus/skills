@@ -33,3 +33,9 @@ coupling; `python.SD-S-*` for weak records, stdout mixing, exit-code collapse,
 or subprocess string boundaries; `python.SD-W-*` for CLI/dispatcher ceremony;
 `python.SD-E-*` for undeclared version/dependency/tool pins; `python.SD-Q-*`
 for shell-style glue without typed boundaries.
+
+Key codes: `python.SD-B-4` import-time workflow/I/O/logging side effects;
+`python.SD-C-1` globals, singleton caches, env vars, or class state couple
+runs; `python.SD-S-2` machine stdout mixes diagnostics; `python.SD-S-3` exit
+codes collapse distinct failures; `python.SD-E-1` version/dependency/tool pin
+contract is undeclared.

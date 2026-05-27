@@ -43,6 +43,13 @@ error-shape drift; `typescript.SD-W-*` for generic/plugin/facade ceremony;
 changes; `typescript.SD-Q-*` for type-only validation and browser/server or
 compiler/runtime ownership gaps.
 
+Key codes: `typescript.SD-B-2` public exports, declarations, and source exports
+tell different contract stories; `typescript.SD-C-2` `paths`/relative imports
+bypass public exports; `typescript.SD-S-1` generated DTO/schema/domain types
+drift without translator; `typescript.SD-E-1` exported type is too structurally
+easy to depend on; `typescript.SD-Q-1` type-only boundary is treated as runtime
+validation.
+
 Do not flag TypeScript syntax, generics, barrels, package exports, project
 references, or path aliases by themselves. Flag the boundary, coupling,
 semantic, evolution, or tradeoff risk and name the smaller shape.

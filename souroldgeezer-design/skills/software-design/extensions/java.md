@@ -38,3 +38,9 @@ generated/reflective coupling; `java.SD-S-*` for exception, DTO/entity/domain,
 or stringly state drift; `java.SD-W-*` for one-implementation interfaces;
 `java.SD-E-*` for broad `exports`/`opens`; `java.SD-Q-*` for reflection,
 service-loading, or generated-boundary ownership gaps.
+
+Key codes: `java.SD-B-1` package, build module, and runtime module disagree;
+`java.SD-C-2` service locator/static singleton carries workflow state;
+`java.SD-S-2` DTO/entity/domain model collapse hides ownership; `java.SD-W-1`
+interface/base class wraps one implementation; `java.SD-Q-1`
+reflection/service-loading/generated boundary lacks owner and validation.
