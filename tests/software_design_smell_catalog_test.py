@@ -113,6 +113,17 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
         ):
             self.assertIn(phrase, grounding)
 
+        for source_link in (
+            "sciencedirect.com/science/article/pii/S0164121220300881",
+            "spinellis.gr/pubs/jrnl/2018-JSS-smells-survey",
+            "oreilly.com/library/view/refactoring-for-software/9780128013977",
+            "refactoring.com/catalog",
+            "sei.cmu.edu/library/the-architecture-tradeoff-analysis-method-2",
+            "dora.dev/capabilities/code-maintainability",
+            "dora.dev/capabilities/loosely-coupled-teams",
+        ):
+            self.assertIn(source_link, grounding)
+
 
 if __name__ == "__main__":
     unittest.main()
