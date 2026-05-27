@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.6.0"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.6.1"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -873,13 +873,22 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "route or GUI surface",
                 "handler/orchestrator behavior",
                 "Business Process candidates only when outcome and participant context are clear",
+                "ASP.NET Core evidence is additive",
+                "Azure Functions evidence is additive",
+                "Blazor evidence is additive",
+                "EF Core evidence is additive",
+                "Worker and hosted service evidence is additive",
             ],
             "lifting-rules-java.md": [
                 "Generic Java first",
                 "Multi-module Maven or Gradle build",
                 "Deployable JAR, WAR, service, CLI, or worker",
                 "Spring-specific evidence is additive",
+                "Spring Boot auto-configuration",
+                "Actuator endpoints",
                 "Quarkus-specific evidence is additive",
+                "Quarkus extensions and build steps",
+                "Dev Services",
             ],
             "lifting-rules-bicep.md": [
                 "Azure resource type decides platform/technology context",
@@ -983,7 +992,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "architecture-design-behavior-source-weighted-relationship-ladder",
             "architecture-design-behavior-source-weighted-view-split",
             "architecture-design-behavior-dotnet-lifting-specificity",
+            "architecture-design-behavior-dotnet-framework-evidence-specificity",
             "architecture-design-behavior-java-lifting-specificity",
+            "architecture-design-behavior-java-framework-evidence-specificity",
             "architecture-design-behavior-bicep-trust-access-path",
             "architecture-design-behavior-gha-delivery-architecture",
             "architecture-design-behavior-drift-architect-owned-intent",

@@ -32,6 +32,12 @@ has established the source fact.
 - `@Service`, `@Component`, use-case beans, and handlers can support
   Application Function or exposed Application Service by concern; the annotation
   alone does not prove a service abstraction.
+- Spring Boot auto-configuration, starters, profiles, and application
+  properties are framework and runtime evidence; use them to confirm hosting,
+  dependency, or configuration paths, not to create business architecture.
+- Actuator endpoints are management access surfaces when observability or
+  operations are in scope; otherwise keep them out of application collaboration
+  views.
 - `@Repository`, Spring Data repositories, `JdbcTemplate`, and JPA access paths
   support Access relationships to Data Objects when data use is clear.
 - `@Scheduled`, `@Async`, Spring Batch jobs, listeners, and integration flows
@@ -48,6 +54,12 @@ has established the source fact.
 - CDI beans, application services, command handlers, and Panache repositories
   can support Application Function, Application Component, or Access choices by
   boundary concern.
+- Quarkus extensions and build steps are framework/runtime evidence; use them
+  to confirm runtime capabilities or generated artifacts, not generic ArchiMate
+  element types.
+- Dev Services and profile-specific configuration are local/dev topology
+  evidence unless source or architect intent says they represent target
+  architecture.
 - Scheduler, Reactive Messaging, Kafka, AMQP, and SmallRye flows can support
   Application Event, Application Process, Flow, or Triggering when ordering or
   message movement is the claim.
