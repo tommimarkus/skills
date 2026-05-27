@@ -64,13 +64,15 @@ class RustExtensionSurfaceTest(unittest.TestCase):
 
     def test_software_design_loads_rust_extension_and_metadata_mentions_it(self) -> None:
         skill = read("souroldgeezer-design/skills/software-design/SKILL.md")
-        readme = read("souroldgeezer-design/skills/software-design/extensions/README.md")
+        extension_authoring = read(
+            "souroldgeezer-design/skills/software-design/references/procedures/extension-authoring.md"
+        )
         openai = read("souroldgeezer-design/skills/software-design/agents/openai.yaml")
         claude_agent = read("souroldgeezer-design/agents/software-design.md")
         codex_agent = read(".codex/agents/software-design.toml")
 
         self.assertIn("extensions/rust.md", skill)
-        self.assertIn("rust.md", readme)
+        self.assertIn("rust.md", extension_authoring)
         for text in (skill, openai, claude_agent, codex_agent):
             self.assertIn("Rust®", text)
 
