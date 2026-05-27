@@ -156,8 +156,9 @@ workflow semantics.
 **Signal:** A design claims better performance, reliability, operability,
 security, cost, or modifiability without naming the sacrificed quality or the
 evidence layer that supports the claim.
-**Evidence layer:** `static` for the claim; `runtime`, `security-tool`, `load`,
-or sibling-skill evidence may be needed to prove the quality.
+**Evidence layer:** `static` for the claim; `runtime` or `human` may be needed
+for proof, and specialist evidence should be delegated to the owning sibling
+skill.
 **False-positive guard:** Small local decisions do not need ceremony when no
 quality claim is being made.
 **Smallest action:** State the force, local tactic, tradeoff, validation layer,
