@@ -6,6 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOTNET_EXTENSION = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops-extensions/dotnet-security.md"
 SMELL_CATALOG = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops-smell-catalog.md"
+DEVSECOPS_REFERENCE = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops.md"
 SOURCE_GROUNDING = REPO_ROOT / "souroldgeezer-audit/skills/devsecops-audit/references/source-grounding.md"
 BEHAVIOR_CASES = REPO_ROOT / "souroldgeezer-audit/skills/devsecops-audit/references/evals/behavior-cases.jsonl"
 
@@ -44,6 +45,18 @@ class DevSecOpsAuditContentTest(unittest.TestCase):
         self.assertIn("dns.HC-15", behavior_case["required_checks"])
         self.assertIn(r"run-42\r\nforged=true", behavior_case["prompt"])
         self.assertIn("stays quiet after the safe transform", behavior_case["grader"])
+
+    def test_owasp_cicd_taxonomy_is_referenced_not_reused_verbatim(self) -> None:
+        catalog = SMELL_CATALOG.read_text(encoding="utf-8")
+        reference = DEVSECOPS_REFERENCE.read_text(encoding="utf-8")
+        combined = catalog + "\n" + reference
+
+        self.assertNotIn("Reused verbatim from OWASP", combined)
+        self.assertIn("https://owasp.org/www-project-top-10-ci-cd-security-risks/", combined)
+        self.assertIn("CC BY-SA 4.0", combined)
+        self.assertIn("Do not copy", catalog)
+        self.assertIn("upstream risk titles or prose", catalog)
+        self.assertIn("uses OWASP's public `CICD-SEC-N` identifiers", reference)
 
 
 if __name__ == "__main__":

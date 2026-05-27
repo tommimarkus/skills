@@ -76,10 +76,19 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         )
 
         for surface in (audit_entry, claude_manifest, codex_manifest):
-            self.assertEqual(surface["version"], "0.8.0")
+            self.assertEqual(surface["version"], "0.8.1")
             self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
 
         prompts = codex_manifest["interface"]["defaultPrompt"]
+        self.assertEqual(codex_manifest["interface"]["websiteURL"], "https://github.com/tommimarkus/skills")
+        self.assertEqual(
+            codex_manifest["interface"]["privacyPolicyURL"],
+            "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+        )
+        self.assertEqual(
+            codex_manifest["interface"]["termsOfServiceURL"],
+            "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+        )
         self.assertLessEqual(len(prompts), 3)
         self.assertTrue(any("IP hygiene" in prompt or "ip-hygiene" in prompt for prompt in prompts))
 

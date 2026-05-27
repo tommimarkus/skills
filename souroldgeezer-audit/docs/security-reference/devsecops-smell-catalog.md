@@ -81,7 +81,7 @@ Compact lookup table for every finding code the skill emits. The rubric prose li
 | Code | Rubric | Description |
 |---|---|---|
 | `DSO-SUB-1` | §6.1 | Hash-pinned but unverified dependency (source not reviewed) |
-| `DSO-SUB-2` | §6.2 | Indirect Poisoned Pipeline Execution (imported template from weaker repo) |
+| `DSO-SUB-2` | §6.2 | Indirect pipeline poisoning through an imported template or script from a weaker repo |
 | `DSO-SUB-3` | §6.3 | Shadow / zombie APIs (old versions still routable) |
 | `DSO-SUB-4` | §6.4 | BOLA (API1:2023) masquerading as functional auth |
 | `DSO-SUB-5` | §6.5 | Mass assignment / BOPLA (API3:2023) |
@@ -95,20 +95,13 @@ Compact lookup table for every finding code the skill emits. The rubric prose li
 
 ### CICD-SEC-* — OWASP CI/CD Security Top 10 (devsecops.md §4)
 
-Reused verbatim from OWASP. The skill cites these codes directly rather than re-namespacing them.
-
-| Code | Rubric | Description |
-|---|---|---|
-| `CICD-SEC-1` | §4.1 | Insufficient Flow Control Mechanisms |
-| `CICD-SEC-2` | §4.2 | Inadequate Identity and Access Management |
-| `CICD-SEC-3` | §4.3 | Dependency Chain Abuse |
-| `CICD-SEC-4` | §4.4 | Poisoned Pipeline Execution (Direct / Indirect) |
-| `CICD-SEC-5` | §4.5 | Insufficient Pipeline-Based Access Controls |
-| `CICD-SEC-6` | §4.6 | Insufficient Credential Hygiene |
-| `CICD-SEC-7` | §4.7 | Insecure System Configuration |
-| `CICD-SEC-8` | §4.8 | Ungoverned Usage of Third-Party Services |
-| `CICD-SEC-9` | §4.9 | Improper Artifact Integrity Validation |
-| `CICD-SEC-10` | §4.10 | Insufficient Logging and Visibility |
+This catalog uses OWASP's public `CICD-SEC-N` identifiers as external taxonomy
+labels and maps them to local audit checks. Canonical risk titles, definitions,
+and recommendations remain in the
+[OWASP CI/CD Security Top 10](https://owasp.org/www-project-top-10-ci-cd-security-risks/),
+which is published under CC BY-SA 4.0 unless otherwise specified. Do not copy
+upstream risk titles or prose into audit output; cite the upstream project when
+official wording is needed.
 
 ### CICD-SEC-* — detection hints for deep-mode step 4
 

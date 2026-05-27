@@ -109,18 +109,36 @@ Audit coverage per SDLC stage, synthesized from OWASP DevSecOps Guideline, DSOMM
 
 ## 4. What not to do — the anti-pattern catalog
 
-The OWASP CI/CD Security Top 10 (2022) is the authoritative anti-pattern catalog. None of these are hypothetical — each has a published breach history.
+The OWASP CI/CD Security Top 10 (2022) is the authoritative anti-pattern
+catalog. This reference uses OWASP's public `CICD-SEC-N` identifiers as external
+taxonomy labels and maps them to local, source-observable audit checks.
+Canonical risk titles, definitions, recommendations, and examples remain in the
+[OWASP CI/CD Security Top 10](https://owasp.org/www-project-top-10-ci-cd-security-risks/),
+which is published under CC BY-SA 4.0 unless otherwise specified. The local
+summaries below are original audit-focus notes, not substitutes for the
+upstream taxonomy.
 
-1. **CICD-SEC-1 Insufficient Flow Control Mechanisms.** Commits land without review, deploys run without approval, merges bypass branch protection via admin override or disabled required checks.
-2. **CICD-SEC-2 Inadequate Identity and Access Management.** Stale accounts, shared service principals, local accounts bypassing SSO, overly permissive PATs, no separation of duties between dev and deploy identities.
-3. **CICD-SEC-3 Dependency Chain Abuse.** Dependency confusion, typosquatting, unmaintained packages, unpinned floating-tag pulls, no checksum verification, missing internal mirror/proxy.
-4. **CICD-SEC-4 Poisoned Pipeline Execution (PPE).** Attacker modifies pipeline config (`.github/workflows`, `Jenkinsfile`, `.gitlab-ci.yml`) via a PR, causing malicious code to run in CI with full pipeline secrets. Split into *Direct-PPE* (in-repo workflow file) and *Indirect-PPE* (imported template or script from a weaker repo).
-5. **CICD-SEC-5 Insufficient PBAC (Pipeline-Based Access Controls).** Every pipeline runs with production-write credentials; no per-job scoping; no ephemeral identity; no OIDC federation.
-6. **CICD-SEC-6 Insufficient Credential Hygiene.** Secrets in source, in logs, in environment variables; long-lived static cloud keys; no rotation; no vault; no masking.
-7. **CICD-SEC-7 Insecure System Configuration.** SCM/CI server defaults, public dashboards, outdated plugins, build infrastructure co-located with production networks.
-8. **CICD-SEC-8 Ungoverned Usage of Third-Party Services.** Marketplace Actions pulled by floating tag, unvetted OAuth apps granted org-wide scopes, SaaS integrations bypassing review.
-9. **CICD-SEC-9 Improper Artifact Integrity Validation.** Unsigned artifacts, no SLSA provenance, deployment accepting any image with the right name, no admission-time verification.
-10. **CICD-SEC-10 Insufficient Logging and Visibility.** CI/CD events not forwarded to SIEM, no anomaly detection on runs, no audit of who triggered what, IR teams blind to pipeline compromise.
+1. **`CICD-SEC-1`** — change or promotion paths can bypass review, required
+   checks, branch protection, or deploy approvals.
+2. **`CICD-SEC-2`** — human, service, and automation identities retain stale,
+   shared, overbroad, or duty-conflicting access.
+3. **`CICD-SEC-3`** — build inputs can be swapped, spoofed, or pulled from
+   weakly governed sources because dependency trust is not constrained.
+4. **`CICD-SEC-4`** — pipeline definitions, imported templates, scripts, or
+   artifacts can be attacker-controlled while still running with trusted CI
+   privileges.
+5. **`CICD-SEC-5`** — pipeline jobs run with broader write, deploy, runner, or
+   environment access than the job's purpose needs.
+6. **`CICD-SEC-6`** — credentials are long-lived, broadly scoped, exposed in
+   source/logs/env, or missing rotation and vault boundaries.
+7. **`CICD-SEC-7`** — SCM, CI, runner, or deployment infrastructure is left in a
+   weak default, stale, public, or poorly segmented state.
+8. **`CICD-SEC-8`** — third-party actions, SaaS integrations, plugins, or OAuth
+   apps join the delivery path without explicit review and scope control.
+9. **`CICD-SEC-9`** — artifacts can be built, signed, promoted, or admitted
+   without proving origin, integrity, or expected provenance.
+10. **`CICD-SEC-10`** — pipeline and release activity is not logged, retained,
+    forwarded, or queried in a way incident responders can use.
 
 **Cross-cutting anti-patterns not always captured by the Top 10:**
 
@@ -205,7 +223,7 @@ The hardest class to catch because they look like functional features or legitim
 
 1. **Hash-pinned but unverified dependency.** Pinning by hash defends against tag-rewrite, not against the hash itself being malicious from a typosquat, dependency-confusion, or compromised-maintainer upload. Check the *source*, not only the digest. CICD-SEC-3.
 
-2. **Indirect Poisoned Pipeline Execution.** Your pipeline imports a shared workflow template or script from another repo; the template repo has weaker controls; the attacker modifies the template; your pipeline executes it with your secrets. CICD-SEC-4. The fact that *your* pipeline looks clean is not evidence.
+2. **Indirect pipeline poisoning.** Your pipeline imports a shared workflow template or script from another repo; the template repo has weaker controls; the attacker modifies the template; your pipeline executes it with your secrets. CICD-SEC-4. The fact that *your* pipeline looks clean is not evidence.
 
 3. **Shadow / zombie APIs.** OWASP API Security Top 10 API9:2023 (Improper Inventory Management). Old versions still routable, staging endpoints reachable from production subnets, undocumented admin routes. Inventory from the runtime, not from the repo.
 

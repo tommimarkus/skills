@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-audit",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Rubric-driven audits for DevSecOps posture, test quality, and IP hygiene, with per-stack extensions, matching Claude Code subagents, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
@@ -13,6 +13,9 @@
     "shortDescription": "DevSecOps, test-quality, and IP hygiene audits.",
     "longDescription": "Audit DevSecOps posture, test quality, and plugin/skill IP hygiene with bundled rubrics, focused references, and quick or deep review workflows.",
     "developerName": "Sour Old Geezer",
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
     "category": "Productivity",
     "capabilities": [
       "Read"
