@@ -1,0 +1,11 @@
+interface:
+  display_name: "Release Policy"
+  short_description: >-
+    Use when repo guidance initializes release-policy, or when asked to inspect,
+    adopt, or enforce release policy for automatic version bumping, version
+    strategy, notes, tags, provider releases, publication, rollback,
+    post-release checks, or release exceptions. Not for git workflow or PR/MR
+    execution.
+  default_prompt: "Inspect whether this repo initializes release-policy."
+policy:
+  allow_implicit_invocation: true

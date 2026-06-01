@@ -1,0 +1,10 @@
+interface:
+  display_name: "Git Workflow Policy"
+  short_description: >-
+    Use when repo guidance initializes git-workflow-policy, or when asked to
+    inspect, adopt, or enforce developer git policy for branches, staging,
+    commits, worktree hygiene, destructive git actions, PR/MR handoff, or
+    version-policy placement. Not for PR/MR execution or releases.
+  default_prompt: "Inspect whether this repo initializes git-workflow-policy."
+policy:
+  allow_implicit_invocation: true

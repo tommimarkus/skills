@@ -27,6 +27,12 @@
       "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata."
     },
     {
+      "name": "souroldgeezer-policy",
+      "source": "./souroldgeezer-policy",
+      "version": "0.1.0",
+      "description": "Passive policy skills for repo-initialized git workflow and release versioning."
+    },
+    {
       "name": "souroldgeezer-ops",
       "source": "./souroldgeezer-ops",
       "version": "0.5.0",

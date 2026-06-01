@@ -1,0 +1,10 @@
+{
+  "name": "souroldgeezer-policy",
+  "version": "0.1.0",
+  "description": "Passive policy skills for repo-initialized git workflow and release versioning.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT"
+}

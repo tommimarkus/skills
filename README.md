@@ -5,13 +5,14 @@ is the marketplace source and published plugin tree.
 
 ## What this is
 
-The repo currently ships four plugins:
+The repo currently ships five plugins:
 
 | Plugin | Version | Skills | Docs |
 |---|---:|---|---|
 | `souroldgeezer-audit` | `0.8.1` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) | [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |
 | `souroldgeezer-design` | `2.7.0` | [software-design](souroldgeezer-design/skills/software-design/SKILL.md), [app-design](souroldgeezer-design/skills/app-design/SKILL.md), [api-design](souroldgeezer-design/skills/api-design/SKILL.md), [infra-design](souroldgeezer-design/skills/infra-design/SKILL.md) | [software](souroldgeezer-design/docs/software-reference/software-design.md), [app](souroldgeezer-design/docs/app-reference/app-design.md), [api](souroldgeezer-design/docs/api-reference/api-design.md), [infra](souroldgeezer-design/docs/infra-reference/infra-design.md) |
 | `souroldgeezer-architecture` | `1.6.1` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
+| `souroldgeezer-policy` | `0.1.0` | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md) | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md) |
 | `souroldgeezer-ops` | `0.5.0` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
 ## Install
@@ -25,6 +26,7 @@ Add the shared marketplace, then install the plugins you want:
 /plugin install souroldgeezer-audit@souroldgeezer
 /plugin install souroldgeezer-design@souroldgeezer
 /plugin install souroldgeezer-architecture@souroldgeezer
+/plugin install souroldgeezer-policy@souroldgeezer
 /plugin install souroldgeezer-ops@souroldgeezer
 ```
 
@@ -42,6 +44,7 @@ For local development, point Claude at the clone instead:
     "souroldgeezer-audit@souroldgeezer": true,
     "souroldgeezer-design@souroldgeezer": true,
     "souroldgeezer-architecture@souroldgeezer": true,
+    "souroldgeezer-policy@souroldgeezer": true,
     "souroldgeezer-ops@souroldgeezer": true
   }
 }
@@ -96,6 +99,12 @@ entries.
 4. Review or extract a dediren ArchiMate® or UML® architecture/design package, including Java™ source evidence, with `architecture-design`.
 5. Review infrastructure or IaC topology with `infra-design`.
 6. Check a skill/plugin publication-surface edit with `ip-hygiene`.
+7. Initialize repository git workflow governance with `git-workflow-policy`.
+8. Initialize declarative release governance with `release-policy`, for example
+   `release-policy: calver YYYY.MM.build, git tagging`. Bare initialization
+   applies the default profiles: conservative git workflow and SemVer
+   `v<version>` release tags. Release policy includes automatic version-bump
+   tooling for SemVer, CalVer/calendar, and PEP 440-style strategies.
 
 ## Validation
 
@@ -130,6 +139,8 @@ DEDIREN_RELEASE_SMOKE=1 uv run python -m unittest tests.architecture_dediren_rel
 - [souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md)
 - [souroldgeezer-design/docs/infra-reference/infra-design.md](souroldgeezer-design/docs/infra-reference/infra-design.md)
 - [souroldgeezer-architecture/docs/architecture-reference/architecture.md](souroldgeezer-architecture/docs/architecture-reference/architecture.md)
+- [souroldgeezer-policy/skills/git-workflow-policy/SKILL.md](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md)
+- [souroldgeezer-policy/skills/release-policy/SKILL.md](souroldgeezer-policy/skills/release-policy/SKILL.md)
 - [souroldgeezer-ops/skills/issue-ops/SKILL.md](souroldgeezer-ops/skills/issue-ops/SKILL.md)
 - [souroldgeezer-ops/skills/pr-ops/SKILL.md](souroldgeezer-ops/skills/pr-ops/SKILL.md)
 - [docs/release-checklist.md](docs/release-checklist.md)

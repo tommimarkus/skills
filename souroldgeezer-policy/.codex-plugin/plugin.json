@@ -1,0 +1,29 @@
+{
+  "name": "souroldgeezer-policy",
+  "version": "0.1.0",
+  "description": "Passive policy skills for repo-initialized git workflow and release versioning.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Policy",
+    "shortDescription": "Repo-initialized git workflow and release versioning policy.",
+    "longDescription": "Provides passive git-workflow-policy and release-policy skills; repos enforce them only after their own guidance initializes policy options. Release policy includes deterministic SemVer, CalVer, and PEP 440-style version-bump tooling.",
+    "developerName": "Sour Old Geezer",
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Inspect initialized policy in this repo.",
+      "Show a policy initialization snippet."
+    ]
+  }
+}
