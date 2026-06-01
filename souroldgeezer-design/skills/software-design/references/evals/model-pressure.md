@@ -5,3 +5,7 @@ Use before adding detail. Core IDs: `SD-MP-1`, `SD-MP-2`, `SD-MP-3`, `SD-MP-4`, 
 Stack records use baseline failure, accepted extension rule, retest, and merge-back condition: `SD-MP-TS-1` DTO/export drift -> exports, translation, aliases, validation ownership -> TS case -> package/export/type-runtime drift; `SD-MP-RS-1` feature/trait drift -> `pub`, features, traits as contracts -> Rust case -> feature/trait ceremony; `SD-MP-JAVA-1` module/interface drift -> exports, source sets, singletons, one-use interfaces -> Java case -> module/export/singleton/interface drift; `SD-MP-DOTNET-1` familiar EF/hosted-service patterns -> refs, friends, DI roots, EF/domain collapse, hosted-service ownership -> .NET case -> EF ceremony and hosted-service policy.
 
 Smell-catalog expansion gate: record baseline failure, accepted smell-catalog rule, behavior eval ID, and merge-back condition. Expansion gate: record why shorter rule fails, rerun command, and removal condition.
+
+2026-06-01 smell expansion: fixed undefined ranges; added `SD-B-2`, `SD-B-4`,
+`SD-C-2`, `SD-C-4`, `SD-S-2`, `SD-E-2`, `SD-Q-2`, and .NET/Python evals.
+Merge back if fresh-agent runs show no lift or weak evidence.

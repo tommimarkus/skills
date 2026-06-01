@@ -26,6 +26,19 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
         self.assertIn("review diff against the design decision", compact)
         self.assertIn("validate", compact)
 
+    def test_build_mode_classifies_adjacent_audit_handoffs(self) -> None:
+        skill = read(f"{SOFTWARE_SKILL}/SKILL.md")
+        compact = " ".join(skill.split())
+
+        for phrase in (
+            "classify adjacent audit triggers",
+            "devsecops-audit Quick",
+            "test-quality-audit Quick",
+            "disclose unavailable",
+            "not applicable with reason",
+        ):
+            self.assertIn(phrase, compact)
+
     def test_extensions_define_concrete_smell_codes(self) -> None:
         expected_codes = {
             "dotnet": ["dotnet.SD-C-1", "dotnet.SD-W-1", "dotnet.SD-Q-1"],
@@ -70,6 +83,19 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
         self.assertIn("design decision", checks)
         self.assertIn("review the diff", checks)
         self.assertIn("jump straight to code", forbidden)
+
+        behavior = behaviors["software-design-behavior-build-audit-handoff"]
+        checks = " ".join(behavior["required_checks"])
+        forbidden = " ".join(behavior["forbidden_behaviors"])
+        for phrase in (
+            "classify adjacent audit triggers",
+            "devsecops-audit Quick",
+            "test-quality-audit Quick",
+            "disclose unavailable",
+            "not applicable with reason",
+        ):
+            self.assertIn(phrase, checks)
+        self.assertIn("duplicate security or test-quality rubric", forbidden)
 
     def test_model_pressure_justifies_stack_extensions(self) -> None:
         pressure = read(f"{SOFTWARE_SKILL}/references/evals/model-pressure.md")

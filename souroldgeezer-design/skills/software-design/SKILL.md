@@ -8,32 +8,30 @@ description: >-
 
 ## Contract
 
-Own Build, Extract, Review, and Lookup for code/module boundaries, deps,
-ownership, semantics, coupling, evolution, principle/pattern tradeoffs, and
-debt. Inputs are files, diffs/proposals, intent, and evidence. If request is
-ambiguous,
+Own Build/Extract/Review/Lookup for code/module boundaries, deps, ownership,
+semantics, coupling, evolution, principle/pattern tradeoffs, and debt. Inputs:
+files, diffs/proposals, intent, evidence. If request is ambiguous,
 scope/evidence is missing, destructive, or sibling-owned with no safe default,
-ask the user; otherwise continue. Delegate UI, API, infra/IaC, architecture,
-security, and tests to `app-design`,
+ask the user; otherwise continue.
+Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 `api-design`, `infra-design`, `architecture-design`, `devsecops-audit`, and
 `test-quality-audit`.
 
 ## Load Map
 
 Load core reference [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md)
-§§2-7,9. Load [references/smell-catalog.md](references/smell-catalog.md) for
-findings, [references/principles-catalog.md](references/principles-catalog.md)
-for principle questions or visible principle claims, and
-[references/pattern-catalog.md](references/pattern-catalog.md) for pattern
-questions. Before stack claims, load matching extensions:
-[dotnet](extensions/dotnet.md), [java](extensions/java.md),
-[rust](extensions/rust.md), [typescript](extensions/typescript.md),
-[shell](extensions/shell-script.md), [python](extensions/python.md).
+§§2-7,9. For findings, load [references/smell-catalog.md](references/smell-catalog.md)
+and [references/smell-cards.jsonl](references/smell-cards.jsonl). Load [references/principles-catalog.md](references/principles-catalog.md)
+for principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md)
+for pattern questions. Before stack claims, load matching extensions:
+[dotnet](extensions/dotnet.md), [java](extensions/java.md), [rust](extensions/rust.md),
+[typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
+[python](extensions/python.md).
 Unknown stacks use core only; Python web/ASGI delegates app/API.
 
-When editing extensions, load
+When editing extensions, read
 [references/procedures/extension-authoring.md](references/procedures/extension-authoring.md).
-Before changing workflow, selection, grounding, evals, or scope, load
+Before changing workflow/selection/grounding/evals/scope, load
 [references/evals](references/evals) and
 [references/source-grounding.md](references/source-grounding.md).
 
@@ -43,30 +41,32 @@ Before changing workflow, selection, grounding, evals, or scope, load
 2. Prefer `rg`; inspect inputs, detect stack, announce extensions.
 3. Assimilate modules/imports, adapters, shared code, terms, models, state
    owners, principle claims, pattern ceremony, seams, and debt.
-4. Separate fact from inference, choose the smallest coherent move, add
-   mandatory validation when available, then emit contract/footer.
-5. For implementation-facing Build work, record the design decision, implement
-   the smallest coherent move, review diff against the design decision, then
-   validate.
+4. Separate fact from inference, choose the smallest coherent move, validate,
+   then emit contract/footer.
+5. For Build implementation, record the design decision, implement
+   the smallest coherent move, review diff against the design decision,
+   validate, then classify adjacent audit triggers: use/request devsecops-audit
+   Quick for security-sensitive edits and test-quality-audit Quick for
+   test/fixture/assertion/coverage edits or test-dependent confidence;
+   disclose unavailable or not applicable with reason.
 
 ## Outputs
 
 Build outputs forces, principle/pattern decision, responsibilities, deps, state
-owner, validation, and delegations. Extract outputs modules, boundaries,
-ownership, deps, hotspots, debt, and next move. Review outputs actionable
-findings only: block unsafe fragmentation/cycles/inversions/duplicate
-models/shared state/speculation/load-bearing legacy; warn risks; info notes.
-Lookup gives the direct rule, exception, citation, delegation, and footer.
+owner, validation, and delegations. Extract outputs modules, boundaries, deps,
+hotspots, debt, and next move. Review outputs findings only: block unsafe
+fragmentation/cycles/inversions/duplicate models/shared state/speculation or
+load-bearing legacy; warn risks; info notes. Lookup gives rule, exception,
+citation, delegation, and footer.
 
-Every answer reports mode, extensions, reference path, layers (`static`,
+Answers report mode, extensions, reference path, layers (`static`,
 `graph`, `history`, `runtime`, `human`), assimilation, delegations, and limits.
 Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer, severity,
-evidence, action, and citation. Principle or pattern decisions must name force,
-fit/rule, avoid case, smell reduced/introduced, and cheapest validation layer.
+evidence, action, and citation. Principle/pattern decisions name force,
+fit/rule, avoid case, smell reduced/introduced, cheapest validation layer.
 
 ## Stop Conditions
 
-Stop when source/scope is missing, sibling ownership dominates, required
-runtime/human facts are absent, debt has no smaller safe move, extension
-validation is unavailable, or a principle/pattern claim cannot name its current
-force.
+Stop when source/scope is missing, sibling ownership dominates, runtime/human
+facts are absent, debt has no smaller safe move, extension validation is
+unavailable, or a principle/pattern claim lacks current force.

@@ -7,6 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOFTWARE_SKILL = "souroldgeezer-design/skills/software-design"
 SMELL_CATALOG = f"{SOFTWARE_SKILL}/references/smell-catalog.md"
+SMELL_CARDS = f"{SOFTWARE_SKILL}/references/smell-cards.jsonl"
 BEHAVIOR_CASES = f"{SOFTWARE_SKILL}/references/evals/behavior-cases.jsonl"
 MODEL_PRESSURE = f"{SOFTWARE_SKILL}/references/evals/model-pressure.md"
 SOURCE_GROUNDING = f"{SOFTWARE_SKILL}/references/source-grounding.md"
@@ -20,29 +21,39 @@ def read_jsonl(path: str) -> list[dict]:
     return [json.loads(line) for line in read(path).splitlines() if line.strip()]
 
 
-def section_for(content: str, heading: str) -> str:
-    start = content.index(heading)
-    next_heading = re.search(r"\n### `SD-[A-Z]-\d+`", content[start + 1 :])
-    if next_heading is None:
-        return content[start:]
-    return content[start : start + 1 + next_heading.start()]
-
-
 class SoftwareDesignSmellCatalogTest(unittest.TestCase):
+    def test_smell_catalog_family_table_only_advertises_defined_core_cards(self) -> None:
+        catalog = read(SMELL_CATALOG)
+        cards = {record["id"] for record in read_jsonl(SMELL_CARDS)}
+        defined_codes = set(re.findall(r"### `(SD-[A-Z]-\d+)`", catalog))
+        table = catalog[catalog.index("| Family | Codes | Signal |") : catalog.index("## Core Code Cards")]
+        advertised_codes = set(re.findall(r"`(SD-[A-Z]-\d+)`", table))
+
+        self.assertEqual(cards, defined_codes)
+        self.assertEqual(cards, advertised_codes)
+
     def test_core_smell_catalog_has_actionable_cards(self) -> None:
         catalog = read(SMELL_CATALOG)
+        cards = {record["id"]: record for record in read_jsonl(SMELL_CARDS)}
         expected_cards = {
             "SD-W-1": "Speculative abstraction",
             "SD-W-2": "Pass-through layer",
             "SD-B-1": "Responsibility drift",
+            "SD-B-2": "State owner blur",
             "SD-B-3": "Internals leakage",
+            "SD-B-4": "Adapter owns policy",
             "SD-C-1": "Dependency cycle",
+            "SD-C-2": "Policy-to-adapter dependency",
             "SD-C-3": "Shared-core gravity",
+            "SD-C-4": "Hidden mutable state",
             "SD-S-1": "Vocabulary split",
+            "SD-S-2": "Duplicate concept drift",
             "SD-S-4": "External model collapse",
             "SD-E-1": "Shotgun change",
+            "SD-E-2": "Migration without exit",
             "SD-E-3": "Flag pile-up",
             "SD-Q-1": "Unstated quality tradeoff",
+            "SD-Q-2": "Unmeasured quality tactic",
             "SD-T-1": "Ownership mismatch",
         }
 
@@ -50,15 +61,12 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
             with self.subTest(code=code):
                 heading = f"### `{code}` - {title}"
                 self.assertIn(heading, catalog)
-                card = section_for(catalog, heading)
-                for field in (
-                    "**Signal:**",
-                    "**Evidence layer:**",
-                    "**False-positive guard:**",
-                    "**Smallest action:**",
-                    "**Default severity:**",
-                ):
+                self.assertIn(code, cards)
+                card = cards[code]
+                self.assertEqual(title, card["title"])
+                for field in ("signal", "evidence_layers", "false_positive_guard", "smallest_action", "default_severity"):
                     self.assertIn(field, card)
+                    self.assertTrue(card[field])
 
     def test_smell_catalog_preserves_family_contract_and_default_blocks(self) -> None:
         catalog = read(SMELL_CATALOG)
@@ -79,10 +87,20 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
         expected = {
             "software-design-behavior-core-smell-waste-vs-force": ("SD-W-1", "SD-W-2"),
             "software-design-behavior-core-smell-boundary-policy": ("SD-B-1", "SD-B-3"),
+            "software-design-behavior-core-smell-state-policy": ("SD-B-2", "SD-B-4"),
             "software-design-behavior-core-smell-coupling": ("SD-C-1", "SD-C-3"),
+            "software-design-behavior-core-smell-adapter-global-coupling": ("SD-C-2", "SD-C-4"),
             "software-design-behavior-core-smell-semantics": ("SD-S-1", "SD-S-4"),
+            "software-design-behavior-core-smell-duplicate-semantics": ("SD-S-2",),
             "software-design-behavior-core-smell-evolution": ("SD-E-1", "SD-E-3"),
+            "software-design-behavior-core-smell-migration-quality": ("SD-E-2", "SD-Q-2"),
             "software-design-behavior-core-smell-socio-technical": ("SD-Q-1", "SD-T-1"),
+            "software-design-behavior-dotnet-ef-repository-smells": ("dotnet.SD-S-1", "dotnet.SD-W-1"),
+            "software-design-behavior-python-tooling-contract-smells": (
+                "python.SD-B-4",
+                "python.SD-S-2",
+                "python.SD-S-3",
+            ),
         }
 
         for case_id, required_codes in expected.items():
