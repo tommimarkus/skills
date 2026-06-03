@@ -55,22 +55,26 @@ rules change.
   availability as enforcement authority.
 - When target repo guidance initializes `git-workflow-policy`, or the user
   explicitly asks to inspect, adopt, or enforce developer git workflow policy,
-  apply that skill before branch, staging, commit, merge, rebase, force-push,
-  destructive git action, PR/MR handoff, or git workflow guidance edits. Codex
-  can invoke the thin
+  treat that guidance as standing enforcement authority and apply that skill
+  before branch, staging, commit, merge, rebase, force-push, destructive git
+  action, PR/MR handoff, or git workflow guidance edits. Codex can invoke the thin
   [.codex/agents/git-workflow-policy.toml](.codex/agents/git-workflow-policy.toml)
   wrapper for that policy. Bare initialization applies the policy's conservative
-  default profile.
+  default profile. Adopt mode must absorb existing related guidance into the
+  initialization/options/exceptions and remove competing workflow prose.
 - When target repo guidance initializes `release-policy`, or the user
-  explicitly asks to inspect, adopt, or enforce release policy, apply that skill
-  before automatic version bumps, changelog/release note changes, tags, provider
+  explicitly asks to inspect, adopt, or enforce release policy, treat that
+  guidance as standing enforcement authority and apply that skill before
+  automatic version bumps, changelog/release note changes, tags, provider
   releases, package or marketplace publication, rollback, or release exceptions.
   A target repo can declare options such as
   `release-policy: calver YYYY.MM.build, git tagging`. Codex can invoke the
   thin [.codex/agents/release-policy.toml](.codex/agents/release-policy.toml)
   wrapper for that policy. Bare initialization applies the policy's SemVer +
-  annotated `v<version>` tag default profile. The policy ships a deterministic
-  version-bump helper for SemVer, CalVer, and PEP 440-style versioning.
+  annotated `v<version>` tag default profile. Adopt mode must absorb existing
+  related guidance into the initialization/options/exceptions and remove
+  competing release prose. The policy ships a deterministic version-bump helper
+  for SemVer, CalVer, and PEP 440-style versioning.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
 - Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files

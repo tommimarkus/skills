@@ -1,9 +1,10 @@
 # Git Workflow Policy Core Workflow
 
 This workflow governs how code moves inside a repository. It is passive until
-repo guidance initializes `git-workflow-policy`, or until the user explicitly
-asks for lookup, adoption, or enforcement. It does not publish artifacts or
-execute PR/MR lifecycle actions.
+loaded repo guidance initializes `git-workflow-policy`, or until the user
+explicitly asks for lookup, adoption, or enforcement. Once initialized, it is a
+standing enforcement gate before matching git workflow actions. It does not
+publish artifacts or execute PR/MR lifecycle actions.
 
 ## Evidence Contract
 
@@ -23,13 +24,23 @@ Resolve workflow authority in this order:
 3. Project-local options and exceptions in the same guidance.
 4. Conservative default for lookup/preflight only.
 
-If project guidance defines a bespoke workflow, preserve genuine local
-exceptions and recommend replacing duplicate process text with a thin
-initialization pointer.
+Loaded guidance means repo instructions already in context, such as root or
+path-local `AGENTS.md`, `CLAUDE.md`, contribution guides, or workflow docs, plus
+guidance read during repo inspection. If loaded guidance contains
+`git-workflow-policy` with or without options, treat that as an explicit
+current-task trigger for matching branch, staging, commit, merge, rebase,
+force-push, destructive git, or PR/MR handoff actions. Do not downgrade an
+initialized policy to lookup because the user did not name the skill.
 
-If repo guidance initializes `git-workflow-policy` without options, apply the
-default profile below. Treat explicit repo options as overrides or additions to
-the default, and report the resolved option set.
+If project guidance defines a bespoke workflow, adopt mode must absorb the
+related rules into the initialization options or adjacent local exceptions, then
+remove or replace competing branch, staging, commit, worktree, or handoff prose.
+Keep only non-policy runbooks or evidence references that do not override the
+initialized policy, and report why they remain.
+
+If loaded repo guidance initializes `git-workflow-policy` without options,
+apply the default profile below. Treat explicit repo options as overrides or
+additions to the default, and report the resolved option set.
 
 Suggested initialization: `git-workflow-policy: feature branches, clean
 worktree, no direct main`; list project-local exceptions beside it.
@@ -39,11 +50,12 @@ worktree, no direct main`; list project-local exceptions beside it.
 - `lookup`: answer the applicable git workflow rule without changing files.
 - `inspect`: classify the current repo workflow, conflicts, exceptions, and
   next action.
-- `adopt-guidance`: edit repo guidance so developer git workflow initializes
-  this policy while retaining project-local exceptions.
+- `adopt-guidance`: consolidate existing developer git guidance into this
+  policy's initialization/options/exceptions, removing competing prose.
 - `preflight`: check whether the current repository state is ready for the next
   requested development action.
-- `enforce-initialized`: apply initialized policy before git state changes.
+- `enforce-initialized`: apply initialized policy before matching git state
+  changes.
 
 ## Developer Workflow Baseline
 

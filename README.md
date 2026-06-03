@@ -104,7 +104,11 @@ entries.
    `release-policy: calver YYYY.MM.build, git tagging`. Bare initialization
    applies the default profiles: conservative git workflow and SemVer
    `v<version>` release tags. Release policy includes automatic version-bump
-   tooling for SemVer, CalVer/calendar, and PEP 440-style strategies.
+   tooling for SemVer, CalVer/calendar, and PEP 440-style strategies. Once a
+   target repo adds either policy to root guidance such as `AGENTS.md`, matching
+   git or release actions must run that policy before changing state. Adopt mode
+   consolidates existing related guidance into the initialization/options and
+   removes competing policy prose.
 
 ## Validation
 

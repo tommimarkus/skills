@@ -1,6 +1,6 @@
 ---
 name: release-policy
-description: "Use when repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for automatic version bumping, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
+description: "Use when loaded repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for automatic version bumping, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
 ---
 
 # Release Policy
@@ -8,48 +8,45 @@ description: "Use when repo guidance initializes release-policy, or when asked t
 Own standing release and distribution rules for repositories that explicitly
 initialize this policy. Installing the plugin is passive; a consuming repo must
 opt in through its own guidance, such as `AGENTS.md` or `CLAUDE.md`.
+Once loaded repo guidance initializes this policy, that guidance is standing
+enforcement authority for matching release actions.
 
-Inputs: request, repo identity, branch/worktree state, release candidate,
-version source, notes/changelog, tags, provider release state, publication
-target, tooling/auth, release guidance, verification, rollback guidance.
-Evidence: cite the initialization source or explicit request, git state,
-candidate, policy options, version source, tags/provider state, target,
-verification, delegation, and blocker.
+Inputs/evidence: inspect request, repo guidance, git state, candidate, version
+source/strategy, notes, tags/provider releases, targets/auth, verification, and
+rollback guidance. Cite source, options, actions, delegation, and blockers.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
-release decisions or writes. Use
-[references/scripts/version-bump](references/scripts/version-bump)
-`--help` before automatic version bump calculation or version-source writes.
-When editing triggers, behavior, source grounding, evals, or helper scripts,
-also inspect [references/scripts/](references/scripts/) and
-`references/scripts/version_bump/`, read `references/evals`, and read
-[references/source-grounding.md](references/source-grounding.md).
+release decisions or writes. Run [references/scripts/version-bump](references/scripts/version-bump)
+`--help` before automatic bump/source writes. When editing behavior, evals, or
+helpers, inspect `references/evals`, [references/source-grounding.md](references/source-grounding.md),
+[references/scripts/](references/scripts/), and [references/scripts/version_bump/](references/scripts/version_bump/).
 
-Modes: default `enforce-initialized` when repo guidance initializes this policy;
-otherwise default `lookup`. Narrower modes are `preflight`, `adopt-guidance`,
-`prepare-release`, `cut-release`, `publish`, `post-release`, and `resume`.
+Modes: default `enforce-initialized` when loaded guidance initializes this
+policy and the request touches release/distribution; otherwise `lookup`. Other
+modes: `preflight`, `adopt-guidance`, `prepare-release`, `cut-release`,
+`publish`, `post-release`, `resume`.
 Modes scope work; verification and publication gates remain mandatory.
 
-Rules: do not enforce just because the plugin is installed. Enforce only when
-repo guidance initializes `release-policy` or the user explicitly asks.
-Initialization may include options, for example
-`release-policy: calver YYYY.MM.build, git tagging`. Initialized options can
-grant standing authority for routine version updates and git tag creation for
-releasable changes after verification. Provider releases, publication, and
-destructive corrections still require explicit authority unless the initialized
-policy names the target and action. If initialization names no options, apply
-the default profile in `references/core-workflow.md`. For SemVer, CalVer, and
-PEP 440-style bumps, prefer the bundled `version-bump` helper over manual
-version arithmetic; it is dry-run by default and requires `--write` for source
-updates. Apply `git-workflow-policy` preflight before release writes. Delegate
-PR/MR lifecycle actions to `pr-ops`, issues to `issue-ops`, security controls
-to `devsecops-audit`, and test adequacy to `test-quality-audit`.
+Rules: plugin install alone never enforces. Enforce only when loaded guidance
+initializes `release-policy` or the user asks. Treat initialization as
+current-task authority before version, notes, tag, provider release,
+publication, rollback, or exception actions; do not wait for the user to name
+the skill. Bare initialization uses `references/core-workflow.md`. Initialized
+options can authorize routine version updates and git tags after verification;
+provider releases, publication, and destructive corrections still require named
+target/action authority. Prefer `version-bump` for supported strategies; it
+writes only with `--write`. Apply `git-workflow-policy` preflight before release
+writes. Delegate PR/MR lifecycle to `pr-ops`, issues to `issue-ops`, security to
+`devsecops-audit`, and test adequacy to `test-quality-audit`.
+
+In `adopt-guidance`, absorb existing related guidance into initialization
+options/exceptions, then remove or replace competing release prose; do not leave
+a pointer beside duplicate version/tag/publication rules.
 
 Ask vs continue: continue only for read-only preflight/lookup, local
-verification, and clearly authorized release-prep edits. If release candidate,
-version source, tag/provider release, publication target or authority,
-credentials, rollback path, or destructive correction is ambiguous, stop and ask
-instead of guessing.
+verification, and authorized release-prep edits. If candidate, version source,
+tag/provider release, publication target/authority, credentials, rollback, or
+destructive correction is ambiguous, stop and ask.
 
 Stop when required verification fails or cannot run without a documented
 substitute, or when conflicting release state cannot be reconciled safely.

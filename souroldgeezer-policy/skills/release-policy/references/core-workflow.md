@@ -1,9 +1,10 @@
 # Release Policy Core Workflow
 
-This workflow governs distribution. It is passive until repo guidance
+This workflow governs distribution. It is passive until loaded repo guidance
 initializes `release-policy`, or until the user explicitly asks for lookup,
-adoption, preflight, or release action. Code movement belongs to
-`git-workflow-policy`; PR/MR lifecycle actions belong to `pr-ops`.
+adoption, preflight, or release action. Once initialized, it is a standing
+enforcement gate before matching release and distribution actions. Code movement
+belongs to `git-workflow-policy`; PR/MR lifecycle actions belong to `pr-ops`.
 
 ## Evidence Contract
 
@@ -17,8 +18,8 @@ marketplace target, rollback/deprecation guidance, and prior lifecycle markers.
 
 - `lookup`: answer the applicable release rule without changing files.
 - `preflight`: inspect whether the repository state is ready for release work.
-- `adopt-guidance`: edit repo guidance so release work initializes this policy
-  while retaining project-local options and exceptions.
+- `adopt-guidance`: consolidate existing release guidance into this policy's
+  initialization/options/exceptions, removing competing prose.
 - `enforce-initialized`: apply initialized policy before release state changes.
 - `prepare-release`: make authorized release-preparation edits such as version
   bump files, changelog/release notes, and release PR handoff.
@@ -31,7 +32,27 @@ marketplace target, rollback/deprecation guidance, and prior lifecycle markers.
 - `resume`: re-read live git/provider/registry state and continue from the
   first incomplete release gate.
 
+## Policy Resolution
+
+Loaded guidance means repo instructions already in context, such as root or
+path-local `AGENTS.md`, `CLAUDE.md`, release docs, or packaging docs, plus
+guidance read during repo inspection. If loaded guidance contains
+`release-policy` with or without options, treat that as an explicit current-task
+trigger for matching version bump, changelog/release note, tag, provider
+release, publication, rollback, or release-exception actions. Do not downgrade
+an initialized policy to lookup because the user did not name the skill.
+
 ## Release Baseline
+
+## Adoption Consolidation
+
+In adopt mode, inspect existing version, changelog, tag, provider-release,
+publication, rollback, and post-release guidance. Absorb related rules into the
+initialization line or adjacent local options/exceptions, then remove or replace
+competing release-policy prose. Keep only non-policy runbooks or evidence
+references that do not override the initialized policy, and report why they
+remain. Stop and ask when existing release guidance conflicts and no safe
+consolidation is clear.
 
 Start from a clean, policy-compliant git state. Identify one release candidate
 and one version source of truth. Validate notes against release contents. Run
