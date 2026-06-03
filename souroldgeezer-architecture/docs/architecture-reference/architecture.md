@@ -401,8 +401,9 @@ The resolver caches the selected platform bundle under
 `.cache/dediren/releases/`; do not commit that cache. Use
 `dediren-release.sh --agent-guide` to locate the selected release bundle's
 `docs/agent-usage.md` file, then read it before loading schemas. It is the fast
-contract for Minimal Source JSON, Artifact Authoring Map, Command Handoff Rules,
-and Repair Map.
+contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
+Handoff, and Repair Rules. The current release bundle is Java™-backed and
+requires Java™ 21 or newer for runnable CLI checks.
 
 The release-resolved Dediren runtime is the current evidence baseline. Its
 ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint

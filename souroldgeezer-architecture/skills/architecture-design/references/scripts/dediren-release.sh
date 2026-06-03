@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
-DEDIREN_VERSION_DEFAULT="0.14.13"
+DEDIREN_VERSION_DEFAULT="0.18.2"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
@@ -36,8 +36,9 @@ Usage:
 
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
-  DEDIREN_VERSION    Release version without leading v, default 0.14.13
+  DEDIREN_VERSION    Release version without leading v, default 0.18.2
   DEDIREN_CACHE_DIR  Cache directory, default .cache/dediren/releases
+  JAVA_HOME/JAVACMD  Java 21+ runtime used by packaged Dediren launchers
 USAGE
 }
 
@@ -100,6 +101,59 @@ need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'Required command not found: %s\n' "$1" >&2
     return 127
+  fi
+}
+
+java_command() {
+  local cmd
+  if [ -n "${JAVACMD:-}" ]; then
+    cmd="$JAVACMD"
+  elif [ -n "${JAVA_HOME:-}" ]; then
+    cmd="$JAVA_HOME/bin/java"
+  else
+    cmd="java"
+  fi
+
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    printf 'Required Java 21+ runtime not found; set JAVA_HOME or JAVACMD.\n' >&2
+    return 127
+  fi
+
+  printf '%s\n' "$cmd"
+}
+
+java_major_version() {
+  local cmd output major
+  cmd="$(java_command)"
+  output="$("$cmd" -version 2>&1)"
+  major="$(
+    printf '%s\n' "$output" |
+      awk -F'"' '/version/ {
+        split($2, parts, ".")
+        if (parts[1] == "1") {
+          print parts[2]
+        } else {
+          sub(/[^0-9].*/, "", parts[1])
+          print parts[1]
+        }
+        exit
+      }'
+  )"
+
+  if [ -z "$major" ]; then
+    printf 'Could not determine Java version from: %s\n' "$output" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$major"
+}
+
+need_java_21() {
+  local major
+  major="$(java_major_version)"
+  if [ "$major" -lt 21 ]; then
+    printf 'Dediren %s requires Java 21 or newer; detected Java %s.\n' "$DEDIREN_VERSION" "$major" >&2
+    return 1
   fi
 }
 
@@ -192,6 +246,11 @@ ensure_bundle() {
   fi
 }
 
+ensure_runtime() {
+  ensure_bundle
+  need_java_21
+}
+
 case "${1:---ensure}" in
   --help|-h)
     usage
@@ -210,7 +269,7 @@ case "${1:---ensure}" in
     agent_guide_path
     ;;
   --ensure)
-    ensure_bundle
+    ensure_runtime
     binary_path
     ;;
   --ensure-bundle)
@@ -219,7 +278,7 @@ case "${1:---ensure}" in
     ;;
   --)
     shift
-    ensure_bundle
+    ensure_runtime
     exec "$(binary_path)" "$@"
     ;;
   *)

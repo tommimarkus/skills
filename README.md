@@ -87,7 +87,8 @@ entries.
 - Keep each plugin's Claude and Codex manifests synchronized on `name`,
   `version`, and `description`.
 - `architecture-design` resolves its Dediren runtime from GitHub™ Releases into
-  `.cache/dediren/releases/`; do not commit that cache.
+  `.cache/dediren/releases/`; do not commit that cache. The current Dediren
+  bundle is Java™-backed and needs Java™ 21 or newer for runtime checks.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 
@@ -130,6 +131,9 @@ Optional release-resolved Dediren smoke lane:
 ```text
 DEDIREN_RELEASE_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
 ```
+
+The smoke lane downloads the pinned Dediren release bundle and requires Java™ 21
+or newer on `JAVA_HOME`, `JAVACMD`, or `PATH`.
 
 ## Detailed docs
 

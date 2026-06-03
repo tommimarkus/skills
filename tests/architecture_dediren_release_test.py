@@ -27,7 +27,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "0.14.13"
+EXPECTED_DEDIREN_VERSION = "0.18.2"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -148,6 +148,41 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         )
         self.assertTrue(result.stdout.strip().endswith(expected_suffix), result.stdout)
 
+    def test_release_resolver_requires_java_21_before_returning_runnable_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            cache_dir = temp_path / "cache"
+            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}-{current_target()}"
+            bin_dir = bundle_dir / "bin"
+            fake_bin = temp_path / "fake-bin"
+            bin_dir.mkdir(parents=True)
+            fake_bin.mkdir()
+            (bundle_dir / "bundle.json").write_text("{}", encoding="utf-8")
+            fake_dediren = bin_dir / "dediren"
+            fake_dediren.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
+            fake_dediren.chmod(0o755)
+            fake_java = fake_bin / "java"
+            fake_java.write_text(
+                "#!/usr/bin/env sh\n"
+                "printf 'openjdk version \"17.0.12\"\\n' >&2\n",
+                encoding="utf-8",
+            )
+            fake_java.chmod(0o755)
+
+            result = run_resolver(
+                "--ensure",
+                env={
+                    "DEDIREN_CACHE_DIR": str(cache_dir),
+                    "JAVA_HOME": "",
+                    "JAVACMD": "",
+                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                },
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Java 21", result.stderr)
+        self.assertIn("17", result.stderr)
+
     def test_release_resolver_lists_supported_release_targets(self) -> None:
         result = run_resolver("--list-targets")
 
@@ -213,8 +248,9 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
         self.assertEqual(bundle_manifest["version"], EXPECTED_DEDIREN_VERSION)
+        self.assertEqual(bundle_manifest["elk_helper"], "bin/dediren-plugin-elk-layout")
 
-    def test_release_bundle_contains_required_plugins_schemas_and_guide(self) -> None:
+    def test_release_bundle_contains_java_runtime_plugins_schemas_and_guide(self) -> None:
         bundle = release_bundle()
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
         expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
@@ -239,6 +275,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             "fixtures/source/valid-uml-basic.json",
             "fixtures/source/valid-uml-complex.json",
             "docs/agent-usage.md",
+            "THIRD-PARTY-NOTICES.md",
+            f"lib/cli-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/core-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/elk-layout-{EXPECTED_DEDIREN_VERSION}.jar",
             "LICENSE",
         ]
 
@@ -249,16 +289,22 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         guide = (bundle / "docs" / "agent-usage.md").read_text(encoding="utf-8")
         for phrase in [
             "Minimal Source JSON",
-            "Artifact Authoring Map",
-            "Command Handoff Rules",
-            "Repair Map",
-            "layout_preferences",
-            "DEDIREN_RENDER_METADATA_REQUIRED",
-            "UML Profile Authoring",
+            "Artifact Map",
+            "Command Handoff",
+            "Repair Rules",
+            "Semantic Profiles",
+            "DEDIREN_BUNDLE_ROOT",
+            "DEDIREN_SCHEMA_CACHE_DIR",
+            "official Eclipse ELK Java libraries",
             "uml-xmi",
+            "Java 21 or newer",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, guide)
+
+        elk_manifest = json.loads((bundle / "plugins" / "elk-layout.manifest.json").read_text(encoding="utf-8"))
+        self.assertIn("JAVA_HOME", elk_manifest["allowed_env"])
+        self.assertIn("PATH", elk_manifest["allowed_env"])
 
     def test_release_fixture_model_validates_and_renders(self) -> None:
         project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))

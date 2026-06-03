@@ -86,13 +86,14 @@ rules change.
 - Use the release resolver for architecture-design runtime checks:
   `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh`.
   It downloads the pinned Dediren agent bundle from GitHub™ Releases into
-  `.cache/dediren/releases/`; do not commit that cache. GitHub™ release bundles
-  and any future packaged Dediren bundles are imported upstream artifacts, not
-  repo-owned tool source. Do not patch them directly to fix Dediren runtime,
-  schema, plugin, helper, layout, render, or export behavior. When a Dediren
-  tool issue is found, disclose it under `Dediren tool issues` with release
-  version, command, input summary, envelope/error, expected behavior, and repro
-  evidence.
+  `.cache/dediren/releases/`; do not commit that cache. The pinned Dediren
+  bundle is Java™-backed and needs Java™ 21 or newer for runnable CLI checks.
+  GitHub™ release bundles and any future packaged Dediren bundles are imported
+  upstream artifacts, not repo-owned tool source. Do not patch them directly to
+  fix Dediren runtime, schema, plugin, helper, layout, render, or export
+  behavior. When a Dediren tool issue is found, disclose it under `Dediren tool
+  issues` with release version, command, input summary, envelope/error,
+  expected behavior, and repro evidence.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,

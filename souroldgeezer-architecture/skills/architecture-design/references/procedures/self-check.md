@@ -9,9 +9,12 @@ DEDIREN="$(
 ```
 
 The resolver caches release bundles under `.cache/dediren/releases/`; do not
-commit that cache. If the resolver cannot download or select a supported
-platform, disclose `not run (missing dediren release bundle)` and cap at
-`source-valid` unless Lookup only.
+commit that cache. The pinned release bundle is Java™-backed; commands that
+return or execute the runnable Dediren CLI require Java™ 21 or newer through
+`JAVA_HOME`, `JAVACMD`, or `java` on `PATH`. If the resolver cannot download or
+select a supported platform, disclose `not run (missing dediren release
+bundle)` and cap at `source-valid` unless Lookup only. If Java™ 21+ is missing,
+disclose `not run (missing Java 21+ runtime)` for runtime steps.
 
 The selected release bundle is an imported upstream Dediren artifact. Do not
 patch cached release files or future packaged bundles. For defects, report
@@ -21,8 +24,8 @@ expected behavior, and repro evidence.
 For JSON authoring, repair, and command handoff details, read the selected
 release bundle guide before loading schemas:
 `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh --agent-guide`.
-It is the fast contract for Minimal Source JSON, Artifact Authoring Map, Command
-Handoff Rules, and Repair Map.
+It is the fast contract for Minimal Source JSON, Artifact Map, Semantic
+Profiles, Command Handoff, and Repair Rules.
 
 Use `generic-graph`, `elk-layout`, `svg-render`. For generated notation SVG
 metadata, set `plugins.generic-graph.semantic_profile` to `archimate` or `uml`;

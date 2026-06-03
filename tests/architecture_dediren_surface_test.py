@@ -489,7 +489,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 normalized = " ".join(content.split())
                 self.assertIn("dediren-release.sh --agent-guide", content)
                 self.assertIn("Minimal Source JSON", normalized)
-                self.assertIn("Command Handoff Rules", normalized)
+                self.assertIn("Command Handoff", normalized)
+                self.assertIn("Repair Rules", normalized)
 
     def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
         expectations = {
