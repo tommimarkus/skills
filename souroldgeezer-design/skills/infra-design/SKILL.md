@@ -30,6 +30,7 @@ deployment proposals/PRs/plans; Lookup narrow infra-design tradeoffs.
 
 ## Load Map
 
+Read [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md) when existing IaC, environment files, remote state, deployment workflows, plan/what-if evidence, import/move records, generated artifacts, topology documentation, architecture pairing, drift evidence, or diffs are in scope.
 Load [extensions/azure.md](extensions/azure.md) for Azure® resource/service/
 subscription/tenant/RG/CLI/PowerShell/pipeline signals;
 [extensions/terraform.md](extensions/terraform.md) for `.tf`, `.tfvars`,
@@ -49,7 +50,9 @@ synthetic/paraphrased.
 1. Select mode/scope/question/env/evidence.
 2. Prefer `rg`; inspect IaC roots/modules, deployment entrypoints/workflows,
    env/state files, generated artifacts, identity/config/observability/rollback
-   signals, and architecture model pairing.
+   signals, and architecture model pairing; apply project assimilation before
+   choosing reuse, migration, drift/debt handling, or the next topology/IaC
+   move.
 3. Check for a paired `docs/architecture/<feature>.dediren/` package when
    topology, environment, identity, or rollout changes may affect architecture
    views.
