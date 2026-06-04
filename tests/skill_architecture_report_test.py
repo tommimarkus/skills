@@ -289,6 +289,39 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertTrue(any(finding["code"] == "SAC-TRIGGER-AGGRESSIVE" for finding in payload["findings"]))
         self.assertEqual("fixed by severity; catalog entries cannot tune weights", payload["coverage"]["weight_policy"])
 
+    def test_design_skills_have_brownfield_assimilation_contract(self) -> None:
+        design_root = REPO_ROOT / "souroldgeezer-design"
+        expected_eval_ids = {
+            "software-design": "software-design-behavior-brownfield-assimilation",
+            "app-design": "app-design-behavior-brownfield-assimilation",
+            "infra-design": "infra-design-behavior-brownfield-assimilation",
+        }
+
+        for skill_name, expected_eval_id in expected_eval_ids.items():
+            with self.subTest(skill=skill_name):
+                skill_dir = design_root / "skills" / skill_name
+                procedure = skill_dir / "references" / "procedures" / "project-assimilation.md"
+                skill_body = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+                behavior_cases = (skill_dir / "references" / "evals" / "behavior-cases.jsonl").read_text(encoding="utf-8")
+
+                self.assertTrue(procedure.is_file(), f"missing {procedure.relative_to(REPO_ROOT)}")
+                procedure_body = procedure.read_text(encoding="utf-8")
+                self.assertIn("Project assimilation:", procedure_body)
+                self.assertIn("Reused:", procedure_body)
+                self.assertIn("Legacy debt:", procedure_body)
+                self.assertIn("Migrations performed:", procedure_body)
+                self.assertIn("project-assimilation.md", skill_body)
+                self.assertIn(expected_eval_id, behavior_cases)
+
+        claude_manifest = json.loads((design_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        codex_manifest = json.loads((design_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        marketplace_plugin = next(plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-design")
+
+        self.assertEqual("2.8.0", claude_manifest["version"])
+        self.assertEqual("2.8.0", codex_manifest["version"])
+        self.assertEqual("2.8.0", marketplace_plugin["version"])
+
     def test_strict_mode_exits_nonzero_when_tool_findings_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fixture = Path(tmp) / "repo"

@@ -23,7 +23,11 @@ Load core reference [../../docs/software-reference/software-design.md](../../doc
 §§2-7,9. For findings, load [references/smell-catalog.md](references/smell-catalog.md)
 and [references/smell-cards.jsonl](references/smell-cards.jsonl). Load [references/principles-catalog.md](references/principles-catalog.md)
 for principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md)
-for pattern questions. Before stack claims, load matching extensions:
+for pattern questions. Load
+[references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
+when existing source, diffs, manifests, generated clients, shared libraries,
+adapters, state owners, domain vocabulary, or module boundaries are in scope.
+Before stack claims, load matching extensions:
 [dotnet](extensions/dotnet.md), [java](extensions/java.md), [rust](extensions/rust.md),
 [typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
 [python](extensions/python.md).
@@ -40,7 +44,8 @@ Before changing workflow/selection/grounding/evals/scope, load
 1. Select Build, Extract, Review, or Lookup; name scope/question.
 2. Prefer `rg`; inspect inputs, detect stack, announce extensions.
 3. Assimilate modules/imports, adapters, shared code, terms, models, state
-   owners, principle claims, pattern ceremony, seams, and debt.
+   owners, principle claims, pattern ceremony, seams, and debt; apply project
+   assimilation before choosing reuse, migration, or legacy-debt treatment.
 4. Separate fact from inference, choose the smallest coherent move, validate,
    then emit contract/footer.
 5. For Build implementation, record the design decision, implement

@@ -36,6 +36,10 @@ code/PRs/proposals/plans; Lookup app tradeoffs.
 ## Load Map
 
 Load what applies: core reference principles/defaults/checklist;
+[references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
+when existing routes, screens, layouts, components, design tokens, state/data
+patterns, forms, browser storage, rendering boundaries, navigation shell,
+runtime evidence, or diffs are in scope;
 [extensions/react.md](extensions/react.md) for React component, hook, state,
 rendering, hydration, or browser-runtime signals; [extensions/nextjs.md](extensions/nextjs.md)
 for Next.js App Router or Pages Router app surfaces, and load it after the React extension;
@@ -54,7 +58,9 @@ synthetic/paraphrased.
 1. Select mode, scope, app type, workflow, route/screen boundary, and question.
 2. Prefer `rg`; inspect inputs, detect runtime, load and announce extensions.
 3. Assimilate routes, layouts, screens, components, state/data, forms, storage,
-   navigation, baseline primitives, build config, observability.
+   navigation, baseline primitives, build config, observability; apply project
+   assimilation before generating, reviewing, migrating, or extending app
+   structure.
 4. Check for a paired `docs/architecture/<feature>.dediren/` package when app
    route, screen, or workflow changes may affect architecture views.
 5. Separate fact from inference, choose the smallest move, include available
