@@ -27,7 +27,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "0.20.0"
+EXPECTED_DEDIREN_VERSION = "0.21.0"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -274,10 +274,15 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             "fixtures/export-policy/default-uml-xmi.json",
             "fixtures/source/valid-uml-basic.json",
             "fixtures/source/valid-uml-complex.json",
+            "fixtures/source/valid-uml-sequence-basic.json",
+            "fixtures/render-metadata/uml-sequence-basic.json",
+            "fixtures/layout-result/uml-sequence-basic.json",
+            "fixtures/export/uml-sequence-basic.xmi",
             "docs/agent-usage.md",
             "THIRD-PARTY-NOTICES.md",
             f"lib/cli-{EXPECTED_DEDIREN_VERSION}.jar",
             f"lib/core-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/uml-{EXPECTED_DEDIREN_VERSION}.jar",
             f"lib/elk-layout-{EXPECTED_DEDIREN_VERSION}.jar",
             "LICENSE",
         ]
@@ -297,6 +302,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             "DEDIREN_SCHEMA_CACHE_DIR",
             "official Eclipse ELK Java libraries",
             "uml-xmi",
+            "uml-sequence",
             "Java 21 or newer",
         ]:
             with self.subTest(phrase=phrase):

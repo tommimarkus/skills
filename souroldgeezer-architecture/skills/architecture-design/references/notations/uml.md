@@ -1,12 +1,13 @@
 # UML Notation
 
 Load when a package uses `plugins.generic-graph.semantic_profile: "uml"`, view
-kinds `uml-class`, `uml-data`, or `uml-activity`, UML/XMI export, or the user
-asks for UML design detail inside a dediren architecture/design package.
+kinds `uml-class`, `uml-data`, `uml-activity`, or `uml-sequence`, UML/XMI
+export, or the user asks for UML design detail inside a dediren
+architecture/design package.
 
 UML elaborates one bounded part of an architecture concern for implementation
-handoff. It owns package, class, interface, data type, enumeration, and activity
-detail when those facts are part of the dediren package. Delegate exact code
+handoff. It owns package, class, interface, data type, enumeration, activity,
+and sequence detail when those facts are part of the dediren package. Delegate exact code
 internals to `software-design`, HTTP contracts to `api-design`, UI behavior to
 `app-design`, infrastructure topology to `infra-design`, security/CI/IaC risk
 to `devsecops-audit`, and test design to `test-quality-audit`.
@@ -15,14 +16,24 @@ to `devsecops-audit`, and test design to `test-quality-audit`.
 
 - `source-valid` requires schema validation plus
   `validate --plugin generic-graph --profile uml`.
-- Use `kind: "uml-class"`, `kind: "uml-data"`, or `kind: "uml-activity"` on
-  UML views.
+- Use `kind: "uml-class"`, `kind: "uml-data"`, `kind: "uml-activity"`, or
+  `kind: "uml-sequence"` on UML views.
 - Put UML-specific attributes, operations, multiplicities, guards, partitions,
   and package membership under `properties.uml`.
 - Use `fixtures/source/valid-uml-complex.json` in the selected Dediren release
   bundle as the current non-trivial source reference; recheck the live release before
   claiming full UML 2.5.1 coverage.
 - UML/XMI compatibility export uses `uml-xmi` only when requested.
+
+## Sequence Views
+
+Use `fixtures/source/valid-uml-sequence-basic.json` in the selected Dediren
+release bundle as the minimum source reference for sequence diagrams. Sequence
+views use `kind: "uml-sequence"` with an `Interaction`, participating
+`Lifeline` nodes, and `Message` relationships. Put ordering under
+`properties.uml.sequence` and message category under `properties.uml.message_sort`.
+The SVG sequence path needs generated render metadata from
+`dediren project --target render-metadata --plugin generic-graph`.
 
 ## ArchiMate Handoff Links
 

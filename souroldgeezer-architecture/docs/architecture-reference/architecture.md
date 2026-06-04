@@ -106,6 +106,12 @@ ArchiMate SVG policy, include `generic-graph` in `model.json.required_plugins`
 and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
 `archimate-oef` only when the package needs OEF export.
 
+For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
+start from the selected Dediren release bundle's UML source fixture that
+matches the view concern. Current UML view kinds include class, data, activity,
+and sequence; sequence views use `uml-sequence` with `Interaction`, `Lifeline`,
+and ordered `Message` relationships.
+
 Treat these files as hand-authored and checked in: `model.json`,
 `project.json`, `render-policy.json`, package-level `render-metadata.json` when
 the package intentionally keeps one shared semantic metadata file, and optional

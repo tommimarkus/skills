@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.6.2"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "1.6.3"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -529,6 +529,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "ArchiMate and UML are supported `generic-graph` semantic profiles",
                 "validate --plugin generic-graph --profile uml",
                 "uml-xmi",
+                "uml-sequence",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
                 "validate --plugin generic-graph --profile uml",
@@ -559,6 +560,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         uml_phrases = [
             "UML elaborates one bounded part",
             "validate --plugin generic-graph --profile uml",
+            'kind: "uml-sequence"',
             "uml-xmi",
             "properties.uml.architecture_context",
             "relationship: elaborates",
@@ -571,6 +573,46 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for phrase in uml_phrases:
             with self.subTest(reference="uml", phrase=phrase):
                 self.assertIn(phrase, uml_ref)
+
+    def test_uml_sequence_guidance_is_adopted(self) -> None:
+        expectations = {
+            REPO_ROOT / "CLAUDE.md": [
+                "class/data, activity, and sequence views",
+                "view kinds `uml-class`, `uml-data`, `uml-activity`, and `uml-sequence`",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md": [
+                'kind: "uml-sequence"',
+                "Interaction",
+                "Lifeline",
+                "Message",
+                "properties.uml.sequence",
+                "message_sort",
+                "valid-uml-sequence-basic.json",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
+                "uml-sequence",
+                "Interaction",
+                "Lifeline",
+                "Message",
+                "properties.uml.sequence",
+                "message_sort",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
+                "architecture-design-behavior-uml-sequence-view",
+                "properties.uml.sequence",
+                "message_sort",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "trigger-cases.jsonl": [
+                "architecture-design-trigger-yes-uml-sequence",
+                "uml-sequence",
+            ],
+        }
+
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
 
     def test_output_contract_reports_notation_and_cross_notation_links(self) -> None:
         output_format = (
