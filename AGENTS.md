@@ -94,6 +94,12 @@ rules change.
   behavior. When a Dediren tool issue is found, disclose it under `Dediren tool
   issues` with release version, command, input summary, envelope/error,
   expected behavior, and repro evidence.
+- For Dediren release adoption, follow the checklist in [CLAUDE.md](CLAUDE.md):
+  verify the latest upstream release, update the resolver default, release-test
+  expected version, and basic fixture plugin version, bump/sync
+  `souroldgeezer-architecture` patch metadata when shipped references change,
+  smoke the release when network and Java™ 21+ are available, and never patch
+  downloaded Dediren bundles.
 - For skill architecture report tooling, use the repo-local `uv` project:
   `uv venv`, `uv run python scripts/skill_architecture_report.py .`, and
   `uv run python scripts/skill_architecture_report.py --format json --strict .`,
