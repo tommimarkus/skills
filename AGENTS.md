@@ -65,7 +65,7 @@ rules change.
 - When target repo guidance initializes `release-policy`, or the user
   explicitly asks to inspect, adopt, or enforce release policy, treat that
   guidance as standing enforcement authority and apply that skill before
-  automatic version bumps, changelog/release note changes, tags, provider
+  version updates, changelog/release note changes, tags, provider
   releases, package or marketplace publication, rollback, or release exceptions.
   A target repo can declare options such as
   `release-policy: calver YYYY.MM.build, git tagging`. Codex can invoke the
@@ -73,8 +73,7 @@ rules change.
   wrapper for that policy. Bare initialization applies the policy's SemVer +
   annotated `v<version>` tag default profile. Adopt mode must absorb existing
   related guidance into the initialization/options/exceptions and remove
-  competing release prose. The policy ships a deterministic version-bump helper
-  for SemVer, CalVer, and PEP 440-style versioning.
+  competing release prose.
 - Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah
   `yq` for YAML frontmatter, TOML, and XML.
 - Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files

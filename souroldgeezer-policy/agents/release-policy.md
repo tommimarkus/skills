@@ -1,6 +1,6 @@
 ---
 name: release-policy
-description: "Use when loaded repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for automatic version bumping, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
+description: "Use when loaded repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for version updates, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
@@ -11,6 +11,6 @@ policy, and treat initialized repo guidance as standing enforcement authority
 before matching release actions; inspect policy options, candidate, version
 source, tags, publication authority, and verification; in adopt-guidance mode
 absorb existing related guidance into initialization options or adjacent local
-exceptions and remove competing prose; use the bundled version-bump helper for
-supported automatic bumps; delegate developer git workflow, PR/MR lifecycle,
-issue, security, and test-quality work; end with the skill's output contract.
+exceptions and remove competing prose; delegate developer git workflow, PR/MR
+lifecycle, issue, security, and test-quality work; end with the skill's output
+contract.

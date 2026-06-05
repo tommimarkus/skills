@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Sour Old Geezer Policy",
     "shortDescription": "Repo-initialized git workflow and release versioning policy.",
-    "longDescription": "Provides passive git-workflow-policy and release-policy skills; installation alone does not enforce policy, but initialized repo guidance is a standing enforcement trigger for matching git and release actions. Release policy includes deterministic SemVer, CalVer, and PEP 440-style version-bump tooling.",
+    "longDescription": "Provides passive git-workflow-policy and release-policy skills; installation alone does not enforce policy, but initialized repo guidance is a standing enforcement trigger for matching git and release actions.",
     "developerName": "Sour Old Geezer",
     "websiteURL": "https://github.com/tommimarkus/skills",
     "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",

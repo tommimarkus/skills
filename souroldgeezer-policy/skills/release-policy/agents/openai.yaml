@@ -2,7 +2,7 @@ interface:
   display_name: "Release Policy"
   short_description: >-
     Use when loaded repo guidance initializes release-policy, or when asked to
-    inspect, adopt, or enforce release policy for automatic version bumping,
+    inspect, adopt, or enforce release policy for version updates,
     version strategy, notes, tags, provider releases, publication, rollback,
     post-release checks, or release exceptions. Not for git workflow or PR/MR
     execution.

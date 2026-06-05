@@ -1,6 +1,6 @@
 ---
 name: release-policy
-description: "Use when loaded repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for automatic version bumping, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
+description: "Use when loaded repo guidance initializes release-policy, or when asked to inspect, adopt, or enforce release policy for version updates, version strategy, notes, tags, provider releases, publication, rollback, post-release checks, or release exceptions. Not for git workflow or PR/MR execution."
 ---
 
 # Release Policy
@@ -16,10 +16,9 @@ source/strategy, notes, tags/provider releases, targets/auth, verification, and
 rollback guidance. Cite source, options, actions, delegation, and blockers.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
-release decisions or writes. Run [references/scripts/version-bump](references/scripts/version-bump)
-`--help` before automatic bump/source writes. When editing behavior, evals, or
-helpers, inspect `references/evals`, [references/source-grounding.md](references/source-grounding.md),
-[references/scripts/](references/scripts/), and [references/scripts/version_bump/](references/scripts/version_bump/).
+release decisions or writes. When editing behavior or evals, inspect
+`references/evals` and
+[references/source-grounding.md](references/source-grounding.md).
 
 Modes: default `enforce-initialized` when loaded guidance initializes this
 policy and the request touches release/distribution; otherwise `lookup`. Other
@@ -34,8 +33,7 @@ publication, rollback, or exception actions; do not wait for the user to name
 the skill. Bare initialization uses `references/core-workflow.md`. Initialized
 options can authorize routine version updates and git tags after verification;
 provider releases, publication, and destructive corrections still require named
-target/action authority. Prefer `version-bump` for supported strategies; it
-writes only with `--write`. Apply `git-workflow-policy` preflight before release
+target/action authority. Apply `git-workflow-policy` preflight before release
 writes. Delegate PR/MR lifecycle to `pr-ops`, issues to `issue-ops`, security to
 `devsecops-audit`, and test adequacy to `test-quality-audit`.
 
