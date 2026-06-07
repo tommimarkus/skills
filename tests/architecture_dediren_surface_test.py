@@ -577,8 +577,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
     def test_uml_sequence_guidance_is_adopted(self) -> None:
         expectations = {
             REPO_ROOT / "CLAUDE.md": [
-                "class/data, activity, and sequence views",
-                "view kinds `uml-class`, `uml-data`, `uml-activity`, and `uml-sequence`",
+                "class/data, activity, sequence, state-machine, use-case, component, and deployment views",
+                "view kinds `uml-class`, `uml-data`, `uml-activity`, `uml-sequence`, `uml-state-machine`, `uml-use-case`, `uml-component`, and `uml-deployment`",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "sequence.md": [
                 'kind: "uml-sequence"',
