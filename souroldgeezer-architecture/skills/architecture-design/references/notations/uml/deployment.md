@@ -6,12 +6,54 @@ infra-design for architecture-level hosting).
 
 ## Source Contract
 
-Use `kind: "uml-deployment"`. Primary node types: `Node`, `Device`,
-`ExecutionEnvironment`, `Artifact`, `DeploymentSpecification`. Primary
-relationship types: `CommunicationPath`, `Deployment`, `Manifestation`. Use
-`fixtures/source/valid-uml-deployment-basic.json` in the selected Dediren
-release bundle as the source reference. Full per-element guidance is a later
-phase.
+Use `kind: "uml-deployment"`. Source reference:
+`fixtures/source/valid-uml-deployment-basic.json`.
+
+Node types:
+
+- `Device` — a physical or virtual host; `properties.uml.kind: "device"`.
+- `ExecutionEnvironment` — a runtime container on a device;
+  `properties.uml.node` (owning device/node id).
+- `Node` — a generic runtime node; `properties.uml: {}`.
+- `Artifact` — a deployable unit (e.g. JAR, image); `properties.uml: {}`.
+- `DeploymentSpecification` — deployment configuration (e.g. YAML);
+  `properties.uml: {}`.
+- `Component` — the logical component an artifact manifests;
+  `properties.uml: {}`.
+
+Relationship types:
+
+- `Deployment` — an artifact (or spec) is deployed onto a node/environment;
+  `properties.uml: {}`.
+- `Manifestation` — an artifact manifests a component; `properties.uml: {}`.
+- `CommunicationPath` — a link between nodes/environments;
+  `properties.uml: {}`.
+
+## Worked Example
+
+Synthetic `uml-deployment` source (lending domain):
+
+```json
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
+  "nodes": [
+    {"id": "node-app", "type": "Device", "label": "App Host", "properties": {"uml": {"kind": "device"}}},
+    {"id": "env-jvm", "type": "ExecutionEnvironment", "label": "JVM", "properties": {"uml": {"node": "node-app"}}},
+    {"id": "art-loans", "type": "Artifact", "label": "loans.jar", "properties": {"uml": {}}},
+    {"id": "spec-loans", "type": "DeploymentSpecification", "label": "loans-deploy.yaml", "properties": {"uml": {}}},
+    {"id": "comp-loans", "type": "Component", "label": "Loans Service", "properties": {"uml": {}}},
+    {"id": "node-db", "type": "Node", "label": "DB Host", "properties": {"uml": {}}}
+  ],
+  "relationships": [
+    {"id": "dep-loans", "type": "Deployment", "source": "art-loans", "target": "env-jvm", "label": "deploys", "properties": {"uml": {}}},
+    {"id": "dep-spec", "type": "Deployment", "source": "spec-loans", "target": "env-jvm", "label": "applies", "properties": {"uml": {}}},
+    {"id": "man-loans", "type": "Manifestation", "source": "art-loans", "target": "comp-loans", "label": "manifests", "properties": {"uml": {}}},
+    {"id": "cp-app-db", "type": "CommunicationPath", "source": "env-jvm", "target": "node-db", "label": "jdbc", "properties": {"uml": {}}}
+  ],
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "loans-deployment-view", "label": "Loans Deployment View", "kind": "uml-deployment", "nodes": ["node-app", "env-jvm", "art-loans", "spec-loans", "comp-loans", "node-db"], "relationships": ["dep-loans", "dep-spec", "man-loans", "cp-app-db"]}]}}
+}
+```
 
 ## Validation, Render, Export
 
