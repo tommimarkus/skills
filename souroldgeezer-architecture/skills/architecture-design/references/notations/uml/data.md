@@ -6,9 +6,36 @@ Delegate persistence and storage decisions to `software-design` (and
 
 ## Source Contract
 
-Use `kind: "uml-data"`. Carry data-type attributes, enumeration literals, and
-multiplicities under `properties.uml`. Use the UML source fixtures in the
-selected Dediren release bundle as the reference.
+Use `kind: "uml-data"`. Source reference: `fixtures/source/valid-uml-complex.json`
+(the data types and enumerations live there alongside the class content).
+
+Node types:
+
+- `DataType` — value type; `properties.uml.attributes` (array of
+  `{name, type, visibility, multiplicity}`).
+- `Enumeration` — `properties.uml.literals` (array of strings).
+- `Package` — optional grouping via `properties.uml.package`.
+
+Relationship types:
+
+- `Dependency` — a data type depends on another type.
+
+## Worked Example
+
+Synthetic `uml-data` source (lending domain):
+
+```json
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
+  "nodes": [
+    {"id": "dt-isbn", "type": "DataType", "label": "Isbn", "properties": {"uml": {"attributes": [{"name": "value", "type": "String", "visibility": "public", "multiplicity": "1"}]}}},
+    {"id": "enum-loan-state", "type": "Enumeration", "label": "LoanState", "properties": {"uml": {"literals": ["Open", "Returned", "Overdue"]}}}
+  ],
+  "relationships": [],
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "lending-data-view", "label": "Lending Data View", "kind": "uml-data", "nodes": ["dt-isbn", "enum-loan-state"], "relationships": []}]}}
+}
+```
 
 ## Validation, Render, Export
 
