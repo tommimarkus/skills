@@ -7,11 +7,56 @@ control-flow and code decisions to `software-design`, and HTTP call contracts to
 
 ## Source Contract
 
-Use `kind: "uml-sequence"` with an `Interaction`, participating `Lifeline`
-nodes, and `Message` relationships. Put ordering under `properties.uml.sequence`
-and message category under `properties.uml.message_sort`. Use
-`fixtures/source/valid-uml-sequence-basic.json` in the selected Dediren release
-bundle as the minimum source reference.
+Use `kind: "uml-sequence"`. Source references:
+`fixtures/source/valid-uml-sequence-basic.json` (minimum) and
+`fixtures/source/valid-uml-sequence-fragments.json` (with combined fragments).
+
+Node types:
+
+- `Interaction` — the interaction container; referenced by
+  `properties.uml.interaction` on participants and messages.
+- `Lifeline` — a participant; `properties.uml.interaction`.
+- `CombinedFragment` — a structured region; `properties.uml`: `interaction`,
+  `operator` (e.g. `alt`, `opt`, `loop`, `par`), `operands` (operand ids),
+  `covered` (lifeline ids in scope).
+- `InteractionOperand` — one branch of a fragment; `properties.uml`:
+  `interaction`, `combined_fragment` (parent fragment id), `order` (operand
+  order), `guard` (branch condition), `fragments` (message ids in the operand).
+
+Relationship types:
+
+- `Message` — `properties.uml`: `interaction`, `sequence` (integer order),
+  `message_sort` (e.g. `synchCall`, `asynchCall`, `reply`).
+
+Put message order in `properties.uml.sequence` and message category in
+`message_sort`. Model alternatives/options/loops with a `CombinedFragment` plus
+its `InteractionOperand` branches; place each branch's messages in the operand's
+`fragments` list and the branch condition in the operand's `guard`.
+
+## Worked Example
+
+Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
+
+```json
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
+  "nodes": [
+    {"id": "ix-login", "type": "Interaction", "label": "Login", "properties": {"uml": {}}},
+    {"id": "user", "type": "Lifeline", "label": "User", "properties": {"uml": {"interaction": "ix-login"}}},
+    {"id": "auth", "type": "Lifeline", "label": "Auth Service", "properties": {"uml": {"interaction": "ix-login"}}},
+    {"id": "cf-result", "type": "CombinedFragment", "label": "result", "properties": {"uml": {"interaction": "ix-login", "operator": "alt", "operands": ["op-ok", "op-deny"], "covered": ["user", "auth"]}}},
+    {"id": "op-ok", "type": "InteractionOperand", "label": "valid", "properties": {"uml": {"interaction": "ix-login", "combined_fragment": "cf-result", "order": 1, "guard": "valid", "fragments": ["m-grant"]}}},
+    {"id": "op-deny", "type": "InteractionOperand", "label": "invalid", "properties": {"uml": {"interaction": "ix-login", "combined_fragment": "cf-result", "order": 2, "guard": "invalid", "fragments": ["m-deny"]}}}
+  ],
+  "relationships": [
+    {"id": "m-login", "type": "Message", "source": "user", "target": "auth", "label": "login", "properties": {"uml": {"interaction": "ix-login", "sequence": 1, "message_sort": "synchCall"}}},
+    {"id": "m-grant", "type": "Message", "source": "auth", "target": "user", "label": "token", "properties": {"uml": {"interaction": "ix-login", "sequence": 2, "message_sort": "reply"}}},
+    {"id": "m-deny", "type": "Message", "source": "auth", "target": "user", "label": "denied", "properties": {"uml": {"interaction": "ix-login", "sequence": 3, "message_sort": "reply"}}}
+  ],
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "login-sequence-view", "label": "Login Sequence View", "kind": "uml-sequence", "nodes": ["ix-login", "user", "auth", "cf-result", "op-ok", "op-deny"], "relationships": ["m-login", "m-grant", "m-deny"]}]}}
+}
+```
 
 ## Validation, Render, Export
 
