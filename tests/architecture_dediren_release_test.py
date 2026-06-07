@@ -401,6 +401,80 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(export_result.returncode, 0, export_result.stderr)
         self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "archimate-oef+xml")
 
+    def test_release_uml_source_fixtures_are_schema_and_profile_valid(self) -> None:
+        bundle = release_bundle()
+        uml_fixtures = [
+            "valid-uml-basic.json",
+            "valid-uml-complex.json",
+            "valid-uml-sequence-basic.json",
+            "valid-uml-sequence-fragments.json",
+            "valid-uml-state-machine-basic.json",
+            "valid-uml-use-case-basic.json",
+            "valid-uml-component-basic.json",
+            "valid-uml-deployment-basic.json",
+        ]
+        for name in uml_fixtures:
+            fixture = bundle / "fixtures" / "source" / name
+            with self.subTest(fixture=name):
+                self.assertTrue(fixture.is_file(), f"missing bundle fixture {name}")
+                schema_result = run_dediren("validate", "--input", fixture)
+                self.assertEqual(schema_result.returncode, 0, schema_result.stderr)
+                self.assertEqual(envelope(schema_result)["status"], "ok")
+                semantic_result = run_dediren(
+                    "validate", "--plugin", "generic-graph", "--profile", "uml", "--input", fixture
+                )
+                self.assertEqual(semantic_result.returncode, 0, semantic_result.stderr)
+                self.assertEqual(envelope(semantic_result)["status"], "ok")
+
+    def test_release_uml_sequence_fragments_full_pipeline(self) -> None:
+        bundle = release_bundle()
+        source = bundle / "fixtures" / "source" / "valid-uml-sequence-fragments.json"
+        view_id = "sequence-fragments-view"
+
+        layout_request = run_dediren(
+            "project", "--target", "layout-request", "--plugin", "generic-graph",
+            "--view", view_id, "--input", source,
+        )
+        self.assertEqual(layout_request.returncode, 0, layout_request.stderr)
+        self.assertEqual(envelope(layout_request)["status"], "ok")
+
+        render_metadata = run_dediren(
+            "project", "--target", "render-metadata", "--plugin", "generic-graph",
+            "--view", view_id, "--input", source,
+        )
+        self.assertEqual(render_metadata.returncode, 0, render_metadata.stderr)
+        self.assertEqual(envelope(render_metadata)["status"], "ok")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            layout_request_path = temp_path / "layout-request.json"
+            layout_request_path.write_text(json.dumps(envelope(layout_request)["data"]), encoding="utf-8")
+            render_metadata_path = temp_path / "render-metadata.json"
+            render_metadata_path.write_text(json.dumps(envelope(render_metadata)["data"]), encoding="utf-8")
+
+            layout_result = run_dediren("layout", "--plugin", "elk-layout", "--input", layout_request_path)
+            self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
+            self.assertEqual(envelope(layout_result)["status"], "ok")
+
+            layout_result_path = temp_path / "layout-result.json"
+            layout_result_path.write_text(json.dumps(envelope(layout_result)["data"]), encoding="utf-8")
+
+            render_result = run_dediren(
+                "render", "--plugin", "svg-render",
+                "--policy", bundle / "fixtures" / "render-policy" / "uml-svg.json",
+                "--metadata", render_metadata_path, "--input", layout_result_path,
+            )
+            self.assertEqual(render_result.returncode, 0, render_result.stderr)
+            self.assertIn("<svg", envelope(render_result)["data"]["content"])
+
+            export_result = run_dediren(
+                "export", "--plugin", "uml-xmi",
+                "--policy", bundle / "fixtures" / "export-policy" / "default-uml-xmi.json",
+                "--source", source, "--layout", layout_result_path,
+            )
+            self.assertEqual(export_result.returncode, 0, export_result.stderr)
+            self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "uml-xmi+xml")
+
 
 if __name__ == "__main__":
     unittest.main()
