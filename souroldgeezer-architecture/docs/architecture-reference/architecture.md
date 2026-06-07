@@ -108,7 +108,9 @@ and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
 
 For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
 start from the selected Dediren release bundle's UML source fixture that
-matches the view concern. Current UML view kinds are class/data, activity, sequence, state-machine, use-case, component, and deployment views; sequence views use `uml-sequence` with `Interaction`, `Lifeline`,
+matches the view concern. Current UML view kinds include class, data, activity,
+sequence, state-machine, use-case, component, and deployment; sequence views use
+`uml-sequence` with `Interaction`, `Lifeline`,
 and ordered `Message` relationships.
 
 Treat these files as hand-authored and checked in: `model.json`,
