@@ -1,41 +1,58 @@
 # UML Notation
 
-Load when a package uses `plugins.generic-graph.semantic_profile: "uml"`, view
-kinds `uml-class`, `uml-data`, `uml-activity`, or `uml-sequence`, UML/XMI
-export, or the user asks for UML design detail inside a dediren
-architecture/design package.
+Load when a package uses `plugins.generic-graph.semantic_profile: "uml"`, any
+UML view kind, UML/XMI export, or the user asks for UML design detail inside a
+dediren architecture/design package.
 
 UML elaborates one bounded part of an architecture concern for implementation
-handoff. It owns package, class, interface, data type, enumeration, activity,
-and sequence detail when those facts are part of the dediren package. Delegate exact code
-internals to `software-design`, HTTP contracts to `api-design`, UI behavior to
-`app-design`, infrastructure topology to `infra-design`, security/CI/IaC risk
-to `devsecops-audit`, and test design to `test-quality-audit`.
+handoff. It is a modeling-notation layer: it documents how to model a concern in
+a dediren package, not how to decide it. Delegate the underlying decisions to the
+owning skill (see Delegation).
 
-## Validation
+## Validation, render, export
 
 - `source-valid` requires schema validation plus
   `validate --plugin generic-graph --profile uml`.
-- Use `kind: "uml-class"`, `kind: "uml-data"`, `kind: "uml-activity"`, or
-  `kind: "uml-sequence"` on UML views.
+- The SVG path needs generated render metadata from
+  `dediren project --target render-metadata --plugin generic-graph`.
+- UML/XMI compatibility export uses `uml-xmi` only when requested.
 - Put UML-specific attributes, operations, multiplicities, guards, partitions,
   and package membership under `properties.uml`.
-- Use `fixtures/source/valid-uml-complex.json` in the selected Dediren release
-  bundle as the current non-trivial source reference; recheck the live release before
-  claiming full UML 2.5.1 coverage.
-- UML/XMI compatibility export uses `uml-xmi` only when requested.
 
-## Sequence Views
+## Kind index
 
-Use `fixtures/source/valid-uml-sequence-basic.json` in the selected Dediren
-release bundle as the minimum source reference for sequence diagrams. Sequence
-views use `kind: "uml-sequence"` with an `Interaction`, participating
-`Lifeline` nodes, and `Message` relationships. Put ordering under
-`properties.uml.sequence` and message category under `properties.uml.message_sort`.
-The SVG sequence path needs generated render metadata from
-`dediren project --target render-metadata --plugin generic-graph`.
+Load the per-kind file under `uml/` only when that kind is in play.
 
-## ArchiMate Handoff Links
+| Kind | Concern | Load |
+|---|---|---|
+| `kind: "uml-class"` | class / interface / type structure | `uml/class.md` |
+| `kind: "uml-data"` | data types and enumerations | `uml/data.md` |
+| `kind: "uml-activity"` | control / object flow | `uml/activity.md` |
+| `kind: "uml-sequence"` | one interaction over time | `uml/sequence.md` |
+| `kind: "uml-state-machine"` | states and transitions of one element | `uml/state-machine.md` |
+| `kind: "uml-use-case"` | actor goals and system scope | `uml/use-case.md` |
+| `kind: "uml-component"` | implementation components and interfaces | `uml/component.md` |
+| `kind: "uml-deployment"` | artifact-to-node deployment | `uml/deployment.md` |
+
+## Delegation
+
+UML models the artifact; the named skill owns the decision.
+
+- `uml-class`, `uml-data` → `software-design` (code / module / type internals).
+- `uml-component` → `software-design` plus ArchiMate Application Cooperation.
+- `uml-deployment` → `infra-design` plus ArchiMate Technology Usage.
+- `uml-activity` → business process / ArchiMate Business Process Cooperation.
+- `uml-use-case` → motivation / requirements.
+- `uml-sequence` → interaction handoff (this skill).
+
+## ArchiMate vs UML inside this skill
+
+Prefer ArchiMate Application Cooperation / Technology Usage for
+architecture-level structure and hosting. Reach for `uml-component` /
+`uml-deployment` only when implementation-level handoff detail (ports, artifacts,
+deployment specs) is the point.
+
+## ArchiMate handoff links
 
 Dediren supports optional cross-notation context through
 `properties.uml.architecture_context`. Treat these as package handoff evidence,
@@ -59,8 +76,7 @@ Contract:
 
 - Default direction: UML elaborates ArchiMate; relationship: elaborates.
 - Attach links to a UML package, view-level source record, or high-level UML
-  element when it gives detailed design context for an ArchiMate element or
-  view.
+  element when it gives detailed design context for an ArchiMate element or view.
 - Verify referenced ArchiMate ids exist in the same package or cited evidence;
   broken links cap cross-notation readiness.
 - Do not infer cross-notation links from matching labels alone; require source

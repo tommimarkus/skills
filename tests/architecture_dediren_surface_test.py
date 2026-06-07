@@ -580,7 +580,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "class/data, activity, and sequence views",
                 "view kinds `uml-class`, `uml-data`, `uml-activity`, and `uml-sequence`",
             ],
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md": [
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "sequence.md": [
                 'kind: "uml-sequence"',
                 "Interaction",
                 "Lifeline",
