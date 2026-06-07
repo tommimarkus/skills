@@ -76,7 +76,7 @@ rules change.
   — it downloads the pinned Java™-backed Dediren bundle from GitHub™ Releases
   into `.cache/dediren/releases/` (don't commit it; needs Java™ 21+). Release
   bundles and any future packaged bundles are imported upstream artifacts, not
-  repo-owned source — don't patch them to fix Dediren runtime / schema / plugin
+  repo-owned source — Do not patch them to fix Dediren runtime / schema / plugin
   / helper / layout / render / export behavior; disclose defects under `Dediren
   tool issues` with release version, command, input summary, envelope/error,
   expected behavior, and repro evidence.
