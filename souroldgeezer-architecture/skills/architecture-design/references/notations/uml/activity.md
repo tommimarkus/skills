@@ -11,12 +11,15 @@ Use `kind: "uml-activity"`. Source reference: `fixtures/source/valid-uml-complex
 
 Node types:
 
-- `Activity` — the behavior container; referenced by `properties.uml.activity`.
-- `Action` — a step; `properties.uml`: `activity` (activity id), `partition`
+- `Activity` — the behavior container; `properties.uml.partitions` (array of
+  swimlane label strings).
+- `Action` — a step; `properties.uml`: `activity` (the Activity id), `partition`
   (swimlane label).
-- `InitialNode` / `ActivityFinalNode` — start and end.
-- `DecisionNode` — branch; `ForkNode` / `JoinNode` — concurrency; `ObjectNode` —
-  data passed between actions.
+- `InitialNode` / `ActivityFinalNode` / `DecisionNode` — start / end / branch;
+  each carries `properties.uml`: `activity` (the Activity id) and `partition`
+  (swimlane label).
+- `ForkNode` / `JoinNode` — concurrency; `ObjectNode` — data passed between
+  actions (also carry `activity`/`partition` when present).
 
 Relationship types:
 
@@ -32,11 +35,11 @@ Synthetic `uml-activity` source (lending domain):
   "model_schema_version": "model.schema.v1",
   "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
   "nodes": [
-    {"id": "act-return", "type": "Activity", "label": "Return Book", "properties": {}},
-    {"id": "start", "type": "InitialNode", "label": "start", "properties": {"uml": {"activity": "act-return"}}},
+    {"id": "act-return", "type": "Activity", "label": "Return Book", "properties": {"uml": {"partitions": ["Desk", "Stacks"]}}},
+    {"id": "start", "type": "InitialNode", "label": "start", "properties": {"uml": {"activity": "act-return", "partition": "Desk"}}},
     {"id": "scan", "type": "Action", "label": "Scan Book", "properties": {"uml": {"activity": "act-return", "partition": "Desk"}}},
     {"id": "shelve", "type": "Action", "label": "Shelve Book", "properties": {"uml": {"activity": "act-return", "partition": "Stacks"}}},
-    {"id": "done", "type": "ActivityFinalNode", "label": "done", "properties": {"uml": {"activity": "act-return"}}}
+    {"id": "done", "type": "ActivityFinalNode", "label": "done", "properties": {"uml": {"activity": "act-return", "partition": "Stacks"}}}
   ],
   "relationships": [
     {"id": "f1", "type": "ControlFlow", "source": "start", "target": "scan", "label": "", "properties": {}},

@@ -15,7 +15,8 @@ Node types:
 - `Class` — `properties.uml`: `package` (package id), `attributes` (array of
   `{name, type, visibility, multiplicity}`), `operations` (array of
   `{name, visibility, parameters: [{name, type}], return_type}`).
-- `Interface` — same `operations` shape as `Class`; no stored state.
+- `Interface` — same `operations` shape as `Class`; MAY also carry
+  `properties.uml.package`; no stored state.
 - `DataType` — value type; `attributes` shape as `Class`.
 - `Enumeration` — `properties.uml.literals` (array of strings).
 

@@ -14,11 +14,12 @@ Node types:
 - `DataType` — value type; `properties.uml.attributes` (array of
   `{name, type, visibility, multiplicity}`).
 - `Enumeration` — `properties.uml.literals` (array of strings).
-- `Package` — optional grouping via `properties.uml.package`.
+- `Package` — a namespace grouping; the package node itself uses `properties: {}`,
+  and members reference it via their own `properties.uml.package`.
 
 Relationship types:
 
-- `Dependency` — a data type depends on another type.
+- `Dependency` — a data type depends on another type; no required `properties.uml`.
 
 ## Worked Example
 
