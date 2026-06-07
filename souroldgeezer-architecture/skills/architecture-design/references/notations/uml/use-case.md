@@ -39,13 +39,15 @@ Synthetic `uml-use-case` source (lending domain):
     {"id": "member", "type": "Actor", "label": "Member", "properties": {"uml": {}}},
     {"id": "uc-borrow", "type": "UseCase", "label": "Borrow Book", "properties": {"uml": {"subject": "system-lms"}}},
     {"id": "uc-notify", "type": "UseCase", "label": "Notify Overdue", "properties": {"uml": {"subject": "system-lms"}}},
+    {"id": "uc-verify", "type": "UseCase", "label": "Verify Membership", "properties": {"uml": {"subject": "system-lms"}}},
     {"id": "ep-overdue", "type": "ExtensionPoint", "label": "overdue", "properties": {"uml": {"use_case": "uc-borrow"}}}
   ],
   "relationships": [
     {"id": "a-member-borrow", "type": "Association", "source": "member", "target": "uc-borrow", "label": "", "properties": {"uml": {}}},
+    {"id": "inc-verify", "type": "Include", "source": "uc-borrow", "target": "uc-verify", "label": "includes", "properties": {"uml": {}}},
     {"id": "x-notify", "type": "Extend", "source": "uc-notify", "target": "uc-borrow", "label": "extends", "properties": {"uml": {"extension_point": "ep-overdue"}}}
   ],
-  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "lending-usecase-view", "label": "Lending Use Case View", "kind": "uml-use-case", "nodes": ["member", "uc-borrow", "uc-notify", "ep-overdue"], "relationships": ["a-member-borrow", "x-notify"]}]}}
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "lending-usecase-view", "label": "Lending Use Case View", "kind": "uml-use-case", "nodes": ["member", "uc-borrow", "uc-verify", "uc-notify", "ep-overdue"], "relationships": ["a-member-borrow", "inc-verify", "x-notify"]}]}}
 }
 ```
 
