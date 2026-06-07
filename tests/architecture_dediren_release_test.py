@@ -466,12 +466,22 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             layout_result_path = temp_path / "layout-result.json"
             layout_result_path.write_text(json.dumps(envelope(layout_result)["data"]), encoding="utf-8")
 
-            # Dediren tool issue: ELK layout places UML sequence-diagram Message route
-            # endpoints outside Lifeline node perimeters (DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER).
-            # validate-layout returns rc=2/status=error for all sequence fixtures with Messages.
-            # The render step is unaffected; this is a known tool geometry limitation.
+            # Known Dediren tool issue: for UML sequence layouts, validate-layout reports
+            # DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER on every Message edge (ELK
+            # routes message endpoints off the Lifeline node perimeter). Render still succeeds,
+            # so the pipeline proceeds; we pin the known diagnostic so any NEW failure mode
+            # (a different code, or a non-envelope crash) is caught here.
             validation_result = run_dediren("validate-layout", "--input", layout_result_path)
-            self.assertIn(validation_result.returncode, (0, 2), validation_result.stderr)
+            validation_envelope = envelope(validation_result)
+            self.assertIn(validation_envelope["status"], ("ok", "error"))
+            if validation_envelope["status"] == "error":
+                self.assertTrue(
+                    all(
+                        d["code"] == "DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER"
+                        for d in validation_envelope["diagnostics"]
+                    ),
+                    validation_result.stdout,
+                )
 
             render_result = run_dediren(
                 "render", "--plugin", "svg-render",
