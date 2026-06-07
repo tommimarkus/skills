@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
-DEDIREN_VERSION_DEFAULT="0.21.0"
+DEDIREN_VERSION_DEFAULT="2026.06.0"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
@@ -31,46 +31,17 @@ Usage:
   dediren-release.sh --print-path
   dediren-release.sh --bundle-dir
   dediren-release.sh --agent-guide
-  dediren-release.sh --list-targets
   dediren-release.sh -- <dediren-args...>
 
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
-  DEDIREN_VERSION    Release version without leading v, default 0.21.0
+  DEDIREN_VERSION    Release version without leading v, default 2026.06.0
   DEDIREN_CACHE_DIR  Cache directory, default .cache/dediren/releases
   JAVA_HOME/JAVACMD  Java 21+ runtime used by packaged Dediren launchers
+
+The Dediren agent bundle is a platform-independent Java distribution; a single
+release archive serves every host with a Java 21+ runtime.
 USAGE
-}
-
-supported_targets() {
-  printf '%s\n' \
-    "x86_64-unknown-linux-gnu" \
-    "aarch64-unknown-linux-gnu" \
-    "aarch64-apple-darwin"
-}
-
-target_for_host() {
-  local system machine
-  system="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  machine="$(uname -m | tr '[:upper:]' '[:lower:]')"
-
-  case "$system:$machine" in
-    linux:x86_64|linux:amd64)
-      printf '%s\n' "x86_64-unknown-linux-gnu"
-      ;;
-    linux:aarch64|linux:arm64)
-      printf '%s\n' "aarch64-unknown-linux-gnu"
-      ;;
-    darwin:aarch64|darwin:arm64)
-      printf '%s\n' "aarch64-apple-darwin"
-      ;;
-    *)
-      printf 'Unsupported Dediren release target for host %s/%s\n' "$system" "$machine" >&2
-      printf 'Supported targets:\n' >&2
-      supported_targets >&2
-      return 2
-      ;;
-  esac
 }
 
 release_base_url() {
@@ -78,15 +49,11 @@ release_base_url() {
 }
 
 archive_name() {
-  local target
-  target="$(target_for_host)"
-  printf 'dediren-agent-bundle-%s-%s.tar.gz\n' "$DEDIREN_VERSION" "$target"
+  printf 'dediren-agent-bundle-%s.tar.gz\n' "$DEDIREN_VERSION"
 }
 
 bundle_dir() {
-  local target
-  target="$(target_for_host)"
-  printf '%s/dediren-agent-bundle-%s-%s\n' "$DEDIREN_CACHE_DIR" "$DEDIREN_VERSION" "$target"
+  printf '%s/dediren-agent-bundle-%s\n' "$DEDIREN_CACHE_DIR" "$DEDIREN_VERSION"
 }
 
 binary_path() {
@@ -254,9 +221,6 @@ ensure_runtime() {
 case "${1:---ensure}" in
   --help|-h)
     usage
-    ;;
-  --list-targets)
-    supported_targets
     ;;
   --print-path)
     binary_path

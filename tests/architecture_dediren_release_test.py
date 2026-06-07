@@ -1,6 +1,5 @@
 import json
 import os
-import platform
 import subprocess
 import tempfile
 import unittest
@@ -27,7 +26,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "0.21.0"
+EXPECTED_DEDIREN_VERSION = "2026.06.0"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -42,18 +41,6 @@ EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS = {
     "svg-render",
     "archimate-oef",
 }
-
-
-def current_target() -> str:
-    system = platform.system().lower()
-    machine = platform.machine().lower()
-    if system == "linux" and machine in {"x86_64", "amd64"}:
-        return "x86_64-unknown-linux-gnu"
-    if system == "linux" and machine in {"aarch64", "arm64"}:
-        return "aarch64-unknown-linux-gnu"
-    if system == "darwin" and machine in {"aarch64", "arm64"}:
-        return "aarch64-apple-darwin"
-    return f"{machine}-{system}"
 
 
 def run_resolver(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -143,7 +130,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         expected_suffix = (
-            f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}-{current_target()}"
+            f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
             f"/bin/dediren"
         )
         self.assertTrue(result.stdout.strip().endswith(expected_suffix), result.stdout)
@@ -152,7 +139,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             cache_dir = temp_path / "cache"
-            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}-{current_target()}"
+            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
             bin_dir = bundle_dir / "bin"
             fake_bin = temp_path / "fake-bin"
             bin_dir.mkdir(parents=True)
@@ -183,13 +170,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertIn("Java 21", result.stderr)
         self.assertIn("17", result.stderr)
 
-    def test_release_resolver_lists_supported_release_targets(self) -> None:
-        result = run_resolver("--list-targets")
+    def test_release_resolver_serves_a_platform_independent_bundle(self) -> None:
+        script = RELEASE_SCRIPT.read_text(encoding="utf-8")
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("x86_64-unknown-linux-gnu", result.stdout)
-        self.assertIn("aarch64-unknown-linux-gnu", result.stdout)
-        self.assertIn("aarch64-apple-darwin", result.stdout)
+        self.assertNotIn("--list-targets", script)
+        self.assertNotIn("apple-darwin", script)
+        self.assertNotIn("unknown-linux-gnu", script)
+        self.assertIn("platform-independent", script)
 
     def test_release_resolver_preserves_download_failure_without_cleanup_masking(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
