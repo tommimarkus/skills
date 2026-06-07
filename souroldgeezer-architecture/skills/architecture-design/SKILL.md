@@ -57,6 +57,7 @@ Build.
    export request, or prompt. Load `references/notations/archimate.md` for
    ArchiMate, `references/notations/uml.md` for UML®, and both for mixed
    packages.
+   - For UML, load `references/notations/uml.md` (hub) and only the per-kind file under `references/notations/uml/` for the kind in play: `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`, `component`, or `deployment`.
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load
