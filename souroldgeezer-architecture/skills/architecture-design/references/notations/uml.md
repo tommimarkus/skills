@@ -9,17 +9,14 @@ handoff. It is a modeling-notation layer: it documents how to model a concern in
 a dediren package, not how to decide it. Delegate the underlying decisions to the
 owning skill (see Delegation).
 
-## Validation, render, export
+## Validation, Render, Export
 
-- `source-valid` requires schema validation plus
-  `validate --plugin generic-graph --profile uml`.
-- The SVG path needs generated render metadata from
-  `dediren project --target render-metadata --plugin generic-graph`.
-- UML/XMI compatibility export uses `uml-xmi` only when requested.
-- Put UML-specific attributes, operations, multiplicities, guards, partitions,
-  and package membership under `properties.uml`.
+A UML view is `source-valid` only with schema validation plus
+`validate --plugin generic-graph --profile uml`. The render
+(render-metadata → SVG) and `uml-xmi` export paths, and `properties.uml.*`
+placement, are documented per kind — load the kind's file under `uml/`.
 
-## Kind index
+## Kind Index
 
 Load the per-kind file under `uml/` only when that kind is in play.
 
@@ -43,16 +40,26 @@ UML models the artifact; the named skill owns the decision.
 - `uml-deployment` → `infra-design` plus ArchiMate Technology Usage.
 - `uml-activity` → business process / ArchiMate Business Process Cooperation.
 - `uml-use-case` → motivation / requirements.
-- `uml-sequence` → interaction handoff (this skill).
+- `uml-sequence` → interaction handoff owned here; delegate code decisions to
+  `software-design` and HTTP call contracts to `api-design`.
 
-## ArchiMate vs UML inside this skill
+Also delegate UI behavior to `app-design`, security / CI / IaC risk to
+`devsecops-audit`, and test design to `test-quality-audit`.
+
+## ArchiMate vs UML Inside This Skill
 
 Prefer ArchiMate Application Cooperation / Technology Usage for
 architecture-level structure and hosting. Reach for `uml-component` /
 `uml-deployment` only when implementation-level handoff detail (ports, artifacts,
 deployment specs) is the point.
 
-## ArchiMate handoff links
+## Findings
+
+Reuse the skill's `ARCH-*` namespaces for every UML kind: source invalidity →
+`ARCH-M-*`; view readability → `ARCH-V-*` / `ARCH-L-*` / `ARCH-R-*`; export →
+`ARCH-X-*` / `ARCH-E-*`; quality → `ARCH-Q-*`.
+
+## ArchiMate Handoff Links
 
 Dediren supports optional cross-notation context through
 `properties.uml.architecture_context`. Treat these as package handoff evidence,
