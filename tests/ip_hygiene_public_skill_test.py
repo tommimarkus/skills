@@ -76,7 +76,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         )
 
         for surface in (audit_entry, claude_manifest, codex_manifest):
-            self.assertEqual(surface["version"], "0.8.2")
+            self.assertEqual(surface["version"], "2026.06.0")
             self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
 
         prompts = codex_manifest["interface"]["defaultPrompt"]

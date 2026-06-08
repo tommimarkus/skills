@@ -82,8 +82,8 @@ rules change.
   expected behavior, and repro evidence.
 - For Dediren release adoption, follow the [CLAUDE.md](CLAUDE.md) checklist:
   verify the latest upstream release, update the resolver default + release-test
-  expected version + basic fixture plugin version, bump/sync
-  `souroldgeezer-architecture` patch metadata when shipped references change,
+  expected version + basic fixture plugin version, re-stamp/sync
+  `souroldgeezer-architecture` CalVer metadata when shipped references change,
   smoke the release when network and Java™ 21+ are available, and never patch
   downloaded bundles.
 - Skill architecture report tooling uses the repo-local `uv` project: `uv venv`,
