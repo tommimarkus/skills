@@ -178,5 +178,73 @@ class CliTest(unittest.TestCase):
             self.assertNotEqual(out.returncode, 0)
 
 
+class StatusTest(unittest.TestCase):
+    def _candidate(self, ledger, path, rule="r"):
+        rec = ledger.build_candidate(trigger="t", summary="s",
+                                     proposed_rule=rule, substrate="policy")
+        ledger.append_candidate(rec, path=path)
+        return rec
+
+    def test_build_defaults_status_pending(self):
+        ledger = load_ledger()
+        rec = ledger.build_candidate(trigger="t", summary="s",
+                                     proposed_rule="r", substrate="policy")
+        self.assertEqual(rec["status"], "pending")
+        ledger.validate_candidate(rec)  # status is part of the schema now
+
+    def test_set_status_applies_and_filters_pending(self):
+        ledger = load_ledger()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            rec = self._candidate(ledger, path)
+            self.assertEqual(len(ledger.pending_candidates(path=path)), 1)
+
+            found = ledger.set_status(rec["candidate_id"], "applied", path=path, note="placed in CLAUDE.md")
+            self.assertTrue(found)
+            self.assertEqual(ledger.pending_candidates(path=path), [])
+            rows = ledger.read_candidates(path=path)
+            self.assertEqual(rows[0]["status"], "applied")
+            self.assertEqual(rows[0]["resolve_note"], "placed in CLAUDE.md")
+
+    def test_set_status_unknown_id_returns_false(self):
+        ledger = load_ledger()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            self._candidate(ledger, path)
+            self.assertFalse(ledger.set_status("deadbeef", "applied", path=path))
+
+    def test_set_status_invalid_status_raises(self):
+        ledger = load_ledger()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            rec = self._candidate(ledger, path)
+            with self.assertRaises(ledger.LedgerError):
+                ledger.set_status(rec["candidate_id"], "bogus", path=path)
+
+
+class ResolveCliTest(unittest.TestCase):
+    def _run(self, *args, cwd):
+        return subprocess.run([sys.executable, str(MODULE), *args],
+                              cwd=str(cwd), capture_output=True, text=True)
+
+    def test_append_list_resolve_cycle(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            self._run("append", "--path", str(path), "--trigger", "revert",
+                      "--summary", "s", "--proposed-rule", "rule one",
+                      "--substrate", "policy", cwd=tmp)
+            pending = self._run("list", "--path", str(path), "--pending", cwd=tmp)
+            self.assertIn("[policy]", pending.stdout)
+            cid = pending.stdout.split()[0]
+
+            resolved = self._run("resolve", "--path", str(path), "--id", cid,
+                                 "--status", "applied", cwd=tmp)
+            self.assertEqual(resolved.returncode, 0, resolved.stderr)
+
+            summary = self._run("list", "--path", str(path), cwd=tmp)
+            self.assertIn("0 pending", summary.stdout)
+            self.assertIn("1 applied", summary.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
