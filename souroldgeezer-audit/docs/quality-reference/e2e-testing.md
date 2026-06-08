@@ -35,13 +35,10 @@ The rubric is deliberately strict on both axes because E2E is where test-suite d
 
 ### Vocabulary used throughout
 
-- **User journey** — a sequence of user-observable steps that together accomplish a stated task. The unit of specification for sub-lane F.
-- **Accessible-name selector** — a locator derived from what a user (or assistive technology) would perceive: role, label, placeholder, visible text. The opposite of an implementation selector (CSS class, xpath, internal id).
-- **Condition-based wait** — a wait that resolves when an observable state becomes true: an element is visible, a URL matches, a network response arrives, a predicate holds. The opposite of a wall-clock wait, which resolves when a fixed interval has elapsed regardless of page state.
 - **Hermetic** — the test brings every piece of state it needs with it, depends on nothing external, and produces the same result on every run. Same definition as in [integration-testing.md §1](integration-testing.md); doubly load-bearing at the E2E layer because the browser adds state surfaces the integration layer does not have (cookies, localStorage, sessionStorage, indexedDB, service workers).
 - **Cold vs. warm load** — whether the navigation under test is a first visit (no cache, no service worker, no HTTP/2 push warm-up) or a repeat visit. Perf budgets that ignore the distinction are comparing noise.
-- **Web Vitals** — the published Google metric set for page performance: LCP (Largest Contentful Paint), INP (Interaction to Next Paint), CLS (Cumulative Layout Shift). The canonical external source for perf-budget provenance in sub-lane P.
-- **WCAG conformance level** — the published W3C accessibility conformance target (A, AA, AAA for WCAG 2.1 or 2.2). The canonical external source for a11y provenance in sub-lane A.
+- **Web Vitals** — canonical perf-budget provenance source for sub-lane P (LCP, INP, CLS).
+- **WCAG conformance level** — canonical a11y provenance source for sub-lane A (A, AA, AAA for WCAG 2.1 or 2.2).
 
 ---
 
@@ -306,20 +303,13 @@ The rubric is deliberately opinionated. Soft audits produce ignorable noise — 
 
 ## 10. Directive principles
 
-Distilled from §2–§7, written as directives an audit agent can apply directly.
+Non-derivable directives (§2–§7 ground the full set; these add or sharpen):
 
-1. **An E2E test must state both its user outcome and why a cheaper test wouldn't do.** A test that fails either question is a smell regardless of how green it runs. Scope and provenance together; neither alone is sufficient.
-2. **Default to no.** The decision to add an E2E test is a decision to accept ongoing flake risk and CI cost. Route to unit or integration first; promote to E2E only when the user outcome genuinely requires the browser.
-3. **Name tests as user stories, not UI steps.** The name is the provenance check.
-4. **Use accessible-name selectors.** Implementation selectors are characterization in disguise.
-5. **Condition-based waits only.** Wall-clock waits are flake in slow motion, doubly disqualifying at the E2E layer.
-6. **Per-test browser context.** Shared browser state is the E2E analogue of shared mutable fixtures and fails in the same way.
-7. **Snapshot equals characterization, amplified.** DOM snapshots and pixel baselines are valid only with a review gate, an owner, and a drift process. Without that scaffolding, they pin today's build.
-8. **Perf budgets cite an external source.** Web Vitals thresholds, RUM baselines, or a team SLO. A threshold with no source is a pasted literal.
-9. **A11y audits cite a WCAG conformance level.** "Passes axe" without a level is not a contract. Rule suppressions carry linked justifications.
-10. **Security tests exercise browser enforcement.** Header-value assertions belong in integration sub-lane B. Sub-lane S exists to prove that the browser does what the header claims.
-11. **Quarantine is a scope signal, not a fix.** A growing quarantine list is a design finding for the suite, not a backlog item.
-12. **Be honest about what cannot be determined from source alone.** Flake rate, real-browser timing, perf achievability, visual drift ownership — ask, do not guess.
+1. **Perf budgets cite an external source.** Web Vitals thresholds, RUM baselines, or a team SLO. A threshold with no source is a pasted literal.
+2. **A11y audits cite a WCAG conformance level.** "Passes axe" without a level is not a contract. Rule suppressions carry linked justifications.
+3. **Security tests exercise browser enforcement.** Header-value assertions belong in integration sub-lane B. Sub-lane S exists to prove that the browser does what the header claims.
+4. **Quarantine is a scope signal, not a fix.** A growing quarantine list is a design finding for the suite, not a backlog item.
+5. **Be honest about what cannot be determined from source alone.** Flake rate, real-browser timing, perf achievability, visual drift ownership — ask, do not guess.
 
 ---
 

@@ -138,9 +138,9 @@ saved.Select(s => s.Name).Should().BeEquivalentTo(items);
 
 **Detection:** `\.Verify\(.*ILogger|LoggerMessage|Log\(It\.Is<.*LogLevel` combined with matching on a string literal.
 
-**Smell:** the test asserts that a log line was emitted with a particular string. Unless the log is a *published contract* (audit event, metric, structured telemetry with a schema), the log message is a development aid, not a behavior. Pinning it blocks every refactor that touches the message.
+**Smell:** log messages are development aids, not published contracts. Pinning the string blocks every refactor that touches the message.
 
-**Carve-out:** if the log call targets a structured audit-event helper (e.g. a `LoggerMessage`-generated method whose name indicates it is an audit event, or a log with a documented event-id contract), the assertion is on a published side effect — that is `POS-3`, not a smell.
+**Carve-out:** if the log targets a structured audit-event helper with a documented event-id contract, the assertion is on a published side effect — that is `POS-3`, not a smell.
 
 **Rewrite:** use a capture helper (a `TestLogger<T>`-style fake) to assert on structured properties by key, not on rendered strings.
 
@@ -152,7 +152,7 @@ saved.Select(s => s.Name).Should().BeEquivalentTo(items);
 
 **Detection:** an `Assert.NotNull(...)` or `.Should().NotBeNull()` followed by a single property-level assertion, with no further checks on an object whose contract is the whole shape.
 
-**Smell:** the method's observable behavior is the full returned object; the test only pins one field. Most of the contract is unverified.
+**Smell:** pins one field; most of the contract is unverified.
 
 **Rewrite:** assert the whole object with `.Should().BeEquivalentTo(expected)` against a spec-derived expected value, or split into multiple tests each covering one property.
 
@@ -190,9 +190,9 @@ saved.Select(s => s.Name).Should().BeEquivalentTo(items);
 
 **Detection:** a `[Fact]`-decorated method whose body is `var result = sut.Method(); Assert.NotNull(result);` (or `.Should().NotBeNull()`), nothing more.
 
-**Smell:** the test is a presence check, not a behavior check. It passes for any implementation that returns non-null, including wrong ones.
+**Smell:** presence check only; passes for any non-null return including wrong ones.
 
-**Rewrite:** either remove (if the only behavior is "doesn't crash") or add assertions on the returned value.
+**Rewrite:** remove (if the only behavior is "doesn't crash") or add assertions on the returned value.
 
 ---
 

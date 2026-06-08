@@ -21,8 +21,8 @@ Composition rules govern how `nextjs.*` smells interact with `nodejs.*` smells:
 1. **`nextjs.*` carve-outs MAY suppress `nodejs.*` smells at Next-platform boundaries.** Platform boundaries are imports from `next/navigation`, `next/headers`, `next/cache`, `next/font/*`, `server-only`, `client-only`, `next/server`, and `next/image`. A mock of any of these is *not* a `nodejs.HC-1` / `HC-5` smell — the module is a platform API from Next.js's perspective even though it's a local import from Node's. See § Carve-outs below.
 2. **`nextjs.*` smells MAY NOT override a `nodejs.*` smell.** When a pattern matches both (e.g. a test violates both `nodejs.HC-1` and `nextjs.HC-2`), emit a single finding citing both codes in the `Smells:` list, severity = max. Ordering in cites: `core → nodejs → nextjs` (left to right, most general to most specific). Example: `HC-5, nodejs.HC-1, nextjs.HC-2`.
 3. **Carve-outs cannot expand scope.** A `nextjs.*` carve-out is always of the form "do not flag X when exactly Y"; it cannot broaden a `nodejs.*` smell's reach.
-4. **Shared detection signals trigger load-once.** React Testing Library, Jest, Vitest, Playwright are all detected by `../nodejs/core.md`. `core.md` does not re-declare them; it only declares Next-specific ones (`next` dep, `next.config.*`, `app/` / `pages/`, `proxy.*` / `middleware.*`, `@next/*`, `next-router-mock`).
-5. **Mutation tool, determinism verification, and test-double classification** are inherited from `../nodejs/core.md` unchanged. Next.js-specific known-limitation caveats for Stryker JS (App Router SWC pipeline, React Server Components) are already documented in [`../nodejs/core.md § Mutation tool § Known SUT limitations § Next.js App Router`](../nodejs/core.md#5-known-sut-limitations).
+4. **Shared detection signals trigger load-once.** Next-specific detection signals only (`next` dep, `next.config.*`, `app/` / `pages/`, `proxy.*` / `middleware.*`, `@next/*`, `next-router-mock`); all others are in `../nodejs/core.md`.
+5. **Mutation tool, determinism verification, and test-double classification** are inherited from `../nodejs/core.md` unchanged — see its § Known SUT limitations for Next.js App Router / SWC / RSC caveats.
 
 ---
 
@@ -311,7 +311,7 @@ Consumed by [SKILL.md § SUT surface enumeration](../../../SKILL.md) — step 2.
 
 ### `Gap-Migration`
 
-**Defer to [`../nodejs/core.md § SUT surface enumeration § Gap-Migration`](../nodejs/core.md#grep-patterns-per-gap-class)** — Prisma / Drizzle / TypeORM / Knex patterns apply unchanged. Next.js does not introduce its own migration system.
+**Defer to [`../nodejs/core.md § Gap-Migration`](../nodejs/core.md#grep-patterns-per-gap-class)** — applies unchanged.
 
 ### `Gap-Throw` (Next.js additions)
 
@@ -326,30 +326,22 @@ For each occurrence, record the containing function and whether a test reference
 
 ### `Gap-Validate`
 
-**Defer to [`../nodejs/core.md § Gap-Validate`](../nodejs/core.md#grep-patterns-per-gap-class)** — Zod / Yup / Joi / `class-validator` patterns apply unchanged. Zod is the dominant Next.js choice; Zod schemas co-located with Route Handlers or Server Actions are a strong `HC-10` carve-out signal (see Carve-outs above).
+**Defer to [`../nodejs/core.md § Gap-Validate`](../nodejs/core.md#grep-patterns-per-gap-class)** — applies unchanged. Zod schemas co-located with Route Handlers or Server Actions are a strong `HC-10` carve-out signal (see Carve-outs above).
 
 ### Auth matrix enumeration (Next.js additions)
 
-**Extends [`../nodejs/integration.md § Auth matrix enumeration`](../nodejs/integration.md#auth-matrix-enumeration).** Next.js-specific patterns add to the `../nodejs/integration.md` endpoint-enumeration pass:
+**Extends [`../nodejs/integration.md § Auth matrix enumeration`](../nodejs/integration.md#auth-matrix-enumeration).** Next.js-specific additions:
 
 - **Proxy / middleware `matcher` config** — parsed above; enumerate the matched path classes as the protected-path envelope (every path matching a `matcher` pattern is subject to whatever auth logic the proxy / middleware implements).
 - **Auth.js v5 `auth()` call-sites** — grep Route Handlers, Server Components, Server Actions, and proxy / middleware files for `(?:const|let)\s+\w+\s*=\s*await\s+auth\s*\(\s*\)` OR `auth\s*\(\s*(req|request)` (API-route variant that takes `req`/`res`). Each call-site is an auth-enforcement point; the enclosing handler / component is a protected endpoint.
 - **Legacy NextAuth v4 `getServerSession`** — grep for `getServerSession\s*\(\s*(req|authOptions|options)` anywhere in the SUT. Record as legacy; recommend migration to `auth()` per [authjs.dev migration guide](https://authjs.dev/getting-started/migrating-to-v5).
 - **`useSession()` on the client** — hook from `next-auth/react`. Not an auth-enforcement point (runs in the browser; a determined user can bypass) but indicates the rendering branches on session state; relevant to component tests.
 
-Cross-reference against the required auth scenario columns from
-`../nodejs/integration.md` and add scheme-specific cells when applicable. For
-Next.js, pay special attention to Auth.js session cookies, proxy / middleware
-matchers, Server Actions with cookie-backed forms, CSRF protection implemented
-in route handlers or actions, logout invalidation, SameSite cross-site
-behavior, and session rotation after sign-in or privilege changes. A
-Playwright or Route Handler test that only proves valid navigation or
-valid-token success is `referenced-weak` for these negative cells. Emit
-`Gap-AuthZ` rows for uncovered cells.
+Cross-reference against `../nodejs/integration.md` auth scenario columns. Next.js attention areas: Auth.js session cookies, proxy / middleware matchers, Server Actions with cookie-backed forms, CSRF, logout invalidation, SameSite, session rotation after sign-in or privilege changes. Valid-navigation or valid-token-only tests → `referenced-weak`. Emit `Gap-AuthZ` rows for uncovered cells.
 
 ### Migration upgrade-path enumeration
 
-**Defer entirely to [`../nodejs/integration.md § Migration upgrade-path enumeration`](../nodejs/integration.md#migration-upgrade-path-enumeration).** No Next.js-specific migration system.
+**Defer to [`../nodejs/integration.md § Migration upgrade-path enumeration`](../nodejs/integration.md#migration-upgrade-path-enumeration)** — applies unchanged.
 
 ### Confidence annotations (Next.js additions)
 

@@ -185,12 +185,12 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 
 ## 6. The fidelity / test-double question — position
 
-A recurring fault line. The audit takes a position rather than equivocate.
+For the shared argument (Fowler, Khorikov, Google, Shore), see [unit-testing.md §7](unit-testing.md). Integration-specific position:
 
-- **Inside an integration test, a mock is almost always a scope leak.** If the seam you care about is faked, the test belongs in the unit lane and should be relabeled. The proof obligation: every mock in an integration test must point at a process or deployment boundary *and* a reason a contract test cannot cover it.
-- **Sub-lane A.** Use real adjacent dependencies. Real DB in a container, real filesystem, real in-memory bus, real HTTP server. Mock only outside the deployment unit — third-party APIs you do not own, payment processors, identity providers in destructive flows.
-- **Sub-lane B.** Replace mocks of downstream services with consumer-driven contracts where feasible. If a contract exists, the mock is redundant; if a contract does not exist, the mock encodes the author's possibly-wrong beliefs about a collaborator (Fowler's classic objection to mockist tests, amplified at the service boundary).
-- **Shore's nullable infrastructure** offers a third option: real components carrying an embedded off-switch for I/O. Where the platform supports it, this collapses the mock-vs-real choice into a single artifact and is preferred over either pole.
+- **Inside an integration test, a mock is almost always a scope leak.** If the seam you care about is faked, the test belongs in the unit lane. Proof obligation: every mock must point at a process or deployment boundary *and* a reason a contract test cannot cover it.
+- **Sub-lane A.** Use real adjacent dependencies (real DB in a container, real filesystem, real in-memory bus, real HTTP server). Mock only outside the deployment unit — third-party APIs you do not own, payment processors, identity providers in destructive flows.
+- **Sub-lane B.** Replace mocks of downstream services with consumer-driven contracts where feasible. If a contract exists, the mock is redundant.
+- **Shore's nullable infrastructure** collapses the mock-vs-real choice into a single artifact and is preferred over either pole.
 
 ---
 

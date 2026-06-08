@@ -114,13 +114,9 @@ Jest, Vitest, Sinon, `node:test` `mock`, and `testdouble` all produce test doubl
 
 ### Vitest
 
-API-compatible with Jest. Map `jest.*` → `vi.*` for every primitive:
+API-compatible with Jest; apply the Jest rules above substituting `vi.*` for `jest.*`. Vitest-specific addition:
 
-- **Stub:** `vi.fn().mockReturnValue(x)` / `vi.fn().mockResolvedValue(x)` / `vi.fn().mockImplementation(fn)` without verification.
-- **Spy:** `vi.spyOn(obj, 'method')` without override.
-- **Mock:** any `.toHaveBeenCalled*` on the double.
-- **Auto-mock:** `vi.mock('path', factory?)`. `vi.mocked(mod)` is the typed wrapper.
-- **Hoisted factory:** `vi.hoisted(() => ...)` — required when the factory references variables declared above `vi.mock`. Classification of the produced doubles follows the normal rules.
+- **Hoisted factory:** `vi.hoisted(() => ...)` — required when the factory references variables declared above `vi.mock`. Classification of produced doubles follows the normal rules.
 
 ### Sinon
 
@@ -147,9 +143,9 @@ Types named `Fake*`, `InMemory*`, or any custom class that implements the real i
 
 ### Interpretation rules
 
-- **Mixed use in one test.** If a test body constructs a `jest.fn()` that is treated as a stub (no `.toHaveBeenCalled*`) *and* another `jest.fn()` that is verified (mock), classify each double independently. Smells like `HC-5` apply only to the mocked collaborator.
-- **One mock per finding.** If a test has three mock collaborators and only one is over-verified, the finding names the offending collaborator rather than marking the entire test as `HC-6`.
-- **`jest.mock('path')` resolution.** The first argument of `jest.mock(...)` / `vi.mock(...)` must be resolved against the project's module graph to classify the smell. If the path resolves under `node_modules/`, the mock target is a process boundary (no smell — carve-out). If it resolves inside the repo's `src/` / `app/` / `lib/` tree, the mock target is same-layer code; apply `nodejs.HC-1` (same-package scope leak) or the unit-rubric `nodejs.LC-U1` depending on the relationship to the SUT.
+- **Mixed use in one test.** Classify each double independently; interaction-pinning smells apply only to the verified collaborator.
+- **One mock per finding.** Name the offending collaborator, not the whole test.
+- **`jest.mock('path')` resolution.** Resolve the first argument against the module graph. Path under `node_modules/` → process boundary (no smell). Path inside `src/` / `app/` / `lib/` → same-layer code; apply `nodejs.HC-1` or `nodejs.LC-U1`.
 - **Auto-mock of a module that exports only types / constants.** Not a double — suppress all interaction-pinning smells.
 
 ---
@@ -215,13 +211,7 @@ test('creates an order', async () => {
 });
 ```
 
-**Rewrite (intent):**
-```ts
-test('creates an order', async () => {
-    await service.createOrder(input);
-    expect(repo.save).toHaveBeenCalled();
-});
-```
+**Rewrite (intent):** `await` the async call before asserting.
 
 **Note:** projects using `@typescript-eslint/no-floating-promises` catch this at lint time. When that rule is configured in the project and the test file is not ignored, downgrade severity to `info` — the lint has already spoken.
 
@@ -237,7 +227,7 @@ test('creates an order', async () => {
 
 **Carve-out:** if the test calls `Date.now()` / `new Date().toISOString()` solely to generate a unique identifier (e.g. `const id = \`test-${Date.now()}\``) and the value is not used in an assertion, do not flag. The canonical unique-id generation pattern is benign.
 
-**Rewrite (intent):** install fake timers (`vi.useFakeTimers(); vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))`) and drive time explicitly — see `nodejs.POS-5`.
+**Rewrite (intent):** install fake timers and pin the clock — see `nodejs.POS-5`.
 
 ---
 
@@ -280,12 +270,7 @@ test('resolves to user', () => {
 });
 ```
 
-**Rewrite (intent):**
-```ts
-test('resolves to user', async () => {
-    await expect(getUser(1)).resolves.toEqual({ id: 1, name: 'Ada' });
-});
-```
+**Rewrite (intent):** make the test `async` and `await expect(...)`.
 
 ---
 
@@ -545,13 +530,13 @@ Exclude matches whose declaration is marked `@internal` via a preceding JSDoc co
 
 ### Cross-reference matching
 
-For each enumerated symbol, search the test project (test glob from § Detection signals, excluding `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, `StrykerOutput/` / `.stryker-tmp/`) for at least one of:
+Search the test project (test glob from § Detection signals, excluding `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, `StrykerOutput/` / `.stryker-tmp/`) for at least one of:
 
-- **`Gap-API`** — `covered-strong` only when the symbol name appears as an identifier and the same test asserts a return value, published side effect, error, state, or domain outcome. Word-boundary identifier presence (`\bcreateOrder\b`) by itself is `referenced-weak`; import/setup-only presence is `referenced-incidental`.
-- **`Gap-Route`** — `covered-strong` only when the route template appears as a string literal and the same test asserts the route's published contract: status plus body/header/auth/domain outcome, state change, validation error, or problem code. Partial route matches and status-only happy-path assertions are `referenced-weak`, not coverage.
-- **`Gap-Migration`** — the migration identifier appears as a path literal or string in any test body, or a test imports / executes the migration file directly.
-- **`Gap-Throw`** — both the error type (e.g. `NotFoundError`) *and* the containing method name appear in the same test method body, and the assertion expects that error or the public error envelope. If only one appears, or the test only awaits the happy path, the throw site is a probable gap.
-- **`Gap-Validate`** — the validated field name (e.g. `email`) appears in a test body that also references the schema's containing binding or class and intentionally omits or violates the field. For Zod, look for `<schemaName>.safeParse(...)` / `<schemaName>.parse(...)` calls with an invalid payload plus an assertion on failure. Valid-payload-only route tests are `referenced-weak`.
+- **`Gap-API`** — `covered-strong`: symbol name as identifier + assertion on return value, side effect, error, state, or domain outcome. Word-boundary presence only → `referenced-weak`; import/setup only → `referenced-incidental`.
+- **`Gap-Route`** — `covered-strong`: route template as string literal + assertion on the route's published contract (status + body/header/auth/domain outcome, validation error, or problem code). Partial match or status-only → `referenced-weak`.
+- **`Gap-Migration`** — migration identifier as path literal or string in a test body, or test imports/executes the migration file.
+- **`Gap-Throw`** — error type *and* containing method name both appear in the test body, and the assertion expects that error or public error envelope. Either alone, or happy-path only → probable gap.
+- **`Gap-Validate`** — validated field name in a test body that also references the schema binding/class and omits or violates the field. For Zod: `<schema>.safeParse(...)` / `.parse(...)` with invalid payload + failure assertion. Valid-payload-only → `referenced-weak`.
 
 ### Known indirect-coverage patterns (carve-outs)
 

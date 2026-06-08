@@ -355,21 +355,13 @@ The rubric is deliberately opinionated. Soft audits produce ignorable noise.
 
 ## 10. Directive principles
 
-Distilled from §2–§8, written as directives an audit agent can apply directly.
+Non-derivable directives (§2–§8 ground the full set; these add or sharpen):
 
-1. **A control that doesn't change what ships is decorative.** Score programs by enforcement, not by presence.
-2. **Every release must produce verifiable evidence.** SBOM, provenance, signatures, scan reports — per release, not per year.
-3. **Pin everything by digest.** Actions, base images, package versions. Floating tags are a supply-chain attack vector regardless of publisher reputation.
-4. **Least privilege is the default, not an exception.** Default-deny for tokens, permissions, network egress, deploy identities; write scopes require a written justification.
-5. **Secrets are short-lived or vault-backed.** Long-lived static cloud credentials are a bug regardless of scope.
-6. **Provenance and signing are not optional above SLSA L1.** Unsigned artifacts in production are a deployment of unknown origin.
-7. **Coverage is a floor, not a goal.** Blocked merges, blocked deploys, and remediated-within-SLA findings are the ceiling-quality signals. Scanner coverage is the floor.
-8. **The CI/CD pipeline is production infrastructure.** It holds secrets, writes to prod, and executes untrusted input. Harden it as production — including network segmentation, audit logging, and anomaly detection.
-9. **Shift-left without shift-right is half a program.** Prevention and response are non-substitutable. The absence of either is a finding.
-10. **Threat modeling is part of the diff.** A design change that introduces a new trust boundary without a threat model is incomplete, even if it compiles and tests pass.
-11. **One finding per control is better than ten.** Prioritize the highest-severity smell; don't stack.
-12. **Reward positive signals explicitly.** An audit that only complains gets tuned out.
-13. **Be honest about what cannot be determined from source alone.** Ask for run history, SIEM exports, reproducible-build comparisons, or red-team results rather than inventing certainty.
+1. **Pin everything by digest.** Actions, base images, package versions. Floating tags are a supply-chain attack vector regardless of publisher reputation.
+2. **Secrets are short-lived or vault-backed.** Long-lived static cloud credentials are a bug regardless of scope.
+3. **Shift-left without shift-right is half a program.** Prevention and response are non-substitutable. The absence of either is a finding.
+4. **Threat modeling is part of the diff.** A design change that introduces a new trust boundary without a threat model is incomplete, even if it compiles and tests pass.
+5. **Be honest about what cannot be determined from source alone.** Ask for run history, SIEM exports, reproducible-build comparisons, or red-team results rather than inventing certainty.
 
 ---
 
