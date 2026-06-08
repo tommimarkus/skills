@@ -102,4 +102,7 @@ Every answer reports mode, extensions loaded, core reference path, procedures lo
 
 ## Stop Conditions
 
-Stop when source/scope is missing, sibling ownership dominates, unsupported runtime mechanics are required, required non-static evidence is absent, legacy debt is load-bearing and outside scope, a red flag remains, or output would copy a broken pattern.
+Stop when source/scope is missing, sibling ownership dominates, unsupported
+runtime mechanics are required, required non-static evidence is absent, legacy
+debt is load-bearing and outside scope, a static/contract/IaC red flag remains,
+or output would copy a broken API/security/reliability pattern.

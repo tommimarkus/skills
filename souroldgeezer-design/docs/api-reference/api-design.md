@@ -155,7 +155,7 @@ Modern HTTP and API primitives with one-line purpose, minimal shape, and the key
 
 ### HTTP verbs
 - **`GET`** — safe, idempotent, cacheable.
-- **`POST`** — creates or runs a non-idempotent operation. Default 201 on create, 202 on async accept.
+- **`POST`** — creates a resource or runs a non-idempotent operation. Default status 201 on create, 202 on async accept, 200 on non-creating action with body.
 - **`PUT`** — replaces; idempotent. Use with `If-Match`.
 - **`PATCH`** — partial update; idempotent only if the patch document is. Use with `If-Match`.
 - **`DELETE`** — removes; idempotent (second DELETE → 404 or 204, both acceptable).
@@ -177,6 +177,8 @@ Modern HTTP and API primitives with one-line purpose, minimal shape, and the key
 - **`410 Gone`** — resource deliberately deleted; do not reintroduce.
 - **`412 Precondition Failed`** — `If-Match` / `If-None-Match` mismatch; client must retry with fresh `ETag`.
 - **`413 Payload Too Large`** — body exceeds server cap.
+- **`415 Unsupported Media Type`** — `Content-Type` not accepted.
+- **`416 Range Not Satisfiable`** — bad `Range`.
 - **`422 Unprocessable Entity`** — syntactically valid, semantically rejected.
 - **`429 Too Many Requests`** — MUST include `Retry-After`.
 - **`500`** — unexpected server fault; log correlation ID in response body. **`502/503/504`** — upstream failures.
@@ -335,7 +337,16 @@ public async Task<IActionResult> Handle(HttpRequest req, IHttpClientFactory fact
 - `GET /jobs/{id}` → `{ status: pending | running | succeeded | failed, result?, error? }`. Status endpoint is idempotent.
 
 ### 5.4 Long-running job via workflow orchestration
-Prefer §5.3 for simple async. Use orchestration for fan-out/fan-in, external events, human approval, compensation, or long-running monitors. HTTP surface still returns 202 + `Location`; same job-status shape as §5.3. Core rules: version orchestration state as an API contract; bound fan-out width; keep steps idempotent or compensatable; no non-deterministic work in replay-based orchestrators; drain in-flight instances before breaking workflow changes.
+Prefer §5.3 for simple async. Reach for orchestration when coordination is required: fan-out / fan-in, external events, human approval, compensation, or long-running monitors.
+
+**Default:** the HTTP surface still returns 202 + `Location`; orchestration status is exposed through the same job-status resource shape as §5.3. The loaded runtime extension supplies the concrete orchestration APIs and determinism rules.
+
+**Core rules:**
+- Keep orchestration state and job status versioned as an API contract.
+- Bound fan-out width so downstream dependencies are not saturated.
+- Keep orchestration steps idempotent or compensatable.
+- Do not perform non-deterministic work in replay-based orchestrators; use the loaded runtime extension's deterministic clock, ID, timer, and activity APIs.
+- For breaking workflow changes, drain in-flight instances or route old and new versions separately.
 
 ### 5.5a Webhook delivery (outbound)
 - Server-side: publish via queue-backed processor; signature header `X-Signature: t=<ts>,v1=<hmac-sha256-hex>` computed over `<ts>.<raw-body>`; retry with exponential backoff + jitter; after N failures move to DLQ.

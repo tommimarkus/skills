@@ -19,5 +19,14 @@ When invoked, run the infra-design skill and present results:
    lookup mode; detect source signals; load all matching extensions; and keep
    API, UI, code, architecture-model, security, and test-quality concerns
    delegated.
-3. Follow the skill's mode contract and footer exactly — cite `ID-*` or extension codes and verification-layer fields.
+3. For build mode: produce the compact infrastructure design brief, cite
+   reference sections, name deferred decisions and rejected abstractions, and
+   choose the cheapest validation step.
+4. For extract mode: inspect source-readable evidence first, separate facts
+   from inference, map topology/IaC/environment/state/operations signals, and
+   recommend the next smallest design move.
+5. For review mode: emit actionable findings using the required finding shape,
+   cite `ID-*` or extension codes when they match, include verification-layer
+   fields, and follow with a short rollup.
+6. For lookup mode: answer briefly with a reference citation.
 7. Always emit the footer disclosure required by the skill.

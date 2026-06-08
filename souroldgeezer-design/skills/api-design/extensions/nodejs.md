@@ -26,7 +26,10 @@ handler model is load-bearing.
 The skill loads this extension when any of the following match:
 
 - `package.json` at the target root or workspace root.
-- `package.json` with any Node.js HTTP runtime or serverless adapter dependency such as `express`, `fastify`, `koa`, `hono`, `@nestjs/core`, `@azure/functions`, `aws-lambda`, `@middy/core`, or `serverless-http`.
+- `package.json` with HTTP API runtime dependencies such as `express`,
+  `fastify`, `koa`, `hono`, `@hono/node-server`, `@nestjs/core`, `restify`,
+  `@azure/functions`, `aws-lambda`, `@middy/core`, `serverless-http`, or
+  `@vendia/serverless-express`.
 - Source files importing `node:http`, `node:https`, `http.createServer`,
   `express()`, `fastify()`, `new Koa()`, `new Hono()`, `NestFactory.create`,
   `app.http(...)` from `@azure/functions`, or `export const handler = ...`.

@@ -19,7 +19,12 @@ When invoked, run the api-design skill and present results:
    + Cosmos + Blob all load together when the target spans those layers; hosted
    Next.js loads Node.js first, then Next.js; frontend route/layout/screen and
    component behavior delegates to `app-design`).
-3. For build mode: follow the skill's mode contract — cite reference sections and RFCs named by loaded extensions; run the §7 self-check before handing back.
+3. For build mode: produce OpenAPI fragments, handler code, `Program.cs` DI
+   wiring, and IaC snippets that embody the reference's decision defaults;
+   cite the reference sections the output draws from (`§3.6`, `§5.6`, etc.)
+   plus RFCs and official runtime docs named by loaded extensions; never duplicate reference prose; run the
+   §7 self-check across the five buckets (Contract / Security / Reliability /
+   Observability / Performance) before handing back.
 4. For extract mode: follow the skill's mode contract.
 5. For review mode: walk reference §7 bucket by bucket; cite extension smell codes where they match (`afdotnet.HC-N`, `nodejs.HC-N`, `nextjs.HC-N`, `cosmos.HC-N`, `blob.HC-N`, `SAD-G-*`); include a `layer:` field and follow with a short per-bucket rollup.
 6. For lookup mode: answer in two to four lines with a reference citation.

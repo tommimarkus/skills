@@ -132,15 +132,27 @@ semantically requires it, such as wide data tables with an accessible fallback.
 
 Preserved responsive defaults:
 
-- Use `rem` for type/spacing, `ch` for measure, `%`/`fr` for layout, `cqi`/`cqb` inside container contexts, `dvh`/`svh`/`lvh` for viewport-coupled height; bare `px` only where fixed scale is semantically correct.
-- Container queries for reusable components; viewport queries for app-shell decisions (navigation, column count).
-- Derive breakpoints from content failure, not device names.
-- Gate hover affordances behind `(pointer)` / `(hover)` checks; keep touch targets usable; provide non-drag alternatives.
-- Logical spacing, sizing, borders, and positioning in new code; physical properties need a written reason.
-- Reserve layout space for media via intrinsic dimensions or `aspect-ratio`; don't lazy-load the LCP candidate; provide responsive `srcset` + `sizes`.
-- Font loading with layout-stable fallback and script-aware subsets.
-- Honor `prefers-reduced-motion`, `forced-colors`, `prefers-color-scheme`, `prefers-contrast`, `Save-Data` where available.
-- Grid for two-dimensional layout; Flexbox for one-dimensional, content-driven lists.
+- Use `rem` for type and spacing, `ch` for measure, `%`/`fr` for layout,
+  `cqi`/`cqb` inside container contexts, and `dvh`/`svh`/`lvh` for
+  viewport-coupled height. Bare `px` belongs only where fixed scale is
+  semantically correct, such as borders, canvas coordinates, or chart axes.
+- Prefer container queries for components reused in different slots; use
+  viewport queries for app-shell decisions such as primary navigation and page
+  column count.
+- Derive breakpoints from content failure, not named devices. More than a few
+  unaligned breakpoints usually means the layout needs fluid primitives.
+- Gate hover affordances behind pointer/hover capability checks, keep touch
+  targets usable, and provide non-drag alternatives.
+- Use logical spacing, sizing, borders, and positioning in new code. Physical
+  properties need a written reason.
+- Reserve layout space for media with intrinsic dimensions or `aspect-ratio`;
+  do not lazy-load the LCP candidate; provide responsive image sources and
+  `sizes`.
+- Load fonts with layout-stable fallback strategy and script-aware subsets.
+- Honor reduced motion, forced colors, color scheme, high contrast, data-saver
+  and reduced-data signals where available.
+- Prefer Grid for two-dimensional layout and Flexbox for one-dimensional,
+  content-driven lists.
 
 ### 3.11 Accessibility and WCAG 2.2 AA posture
 
@@ -186,13 +198,23 @@ platform exposes them.
   focus, draft persistence, and API delegation.
 - **Responsive layer:** container behavior, fluid sizing, input modality,
   zoom/reflow, direction, and text expansion.
-- **Fluid sizing primitives:** `clamp()`, `min()`, `max()`, `fit-content`, `minmax()`, `auto-fit`, `auto-fill`, intrinsic grid tracks.
-- **Container primitives:** `container-type`, `@container`, `cqi`/`cqb`/`cqw`/`cqh`.
-- **Viewport primitives:** `dvh`, `svh`, `lvh`, `env()` safe-area insets, `interactive-widget=resizes-content`.
-- **Input/preference primitives:** `(hover)`, `(pointer)`, `prefers-reduced-motion`, `prefers-color-scheme`, `prefers-contrast`, `forced-colors`.
-- **I18n primitives:** logical properties, `:dir()`, `:lang()`, `lang`, `dir`, `bdi`, localized form/date/number formatting.
-- **Media primitives:** `srcset`, `sizes`, `picture`, `fetchpriority`, `loading`, `decoding`, `aspect-ratio`, font preloads, `font-display`.
-- **Browser-runtime primitives:** `AbortController`, history state, storage, service worker/offline state, capability checks, frontend telemetry hooks.
+- **Fluid sizing primitives:** `clamp()`, `min()`, `max()`, intrinsic grid
+  tracks, `fit-content`, `minmax()`, `auto-fit`, and `auto-fill`.
+- **Container primitives:** `container-type`, named containers, `@container`,
+  `cqi`/`cqb`/`cqw`/`cqh`, and component-local layout decisions.
+- **Viewport primitives:** `dvh`, `svh`, `lvh`, safe-area `env()` insets, and
+  `interactive-widget=resizes-content` for keyboard-aware layouts.
+- **Input and preference primitives:** `(hover)`, `(pointer)`,
+  `prefers-reduced-motion`, `prefers-color-scheme`, `prefers-contrast`, and
+  `forced-colors`.
+- **I18n primitives:** logical properties, `:dir()`, `:lang()`, `lang`, `dir`,
+  `bdi`, script-aware wrapping, and localized form/date/number formatting.
+- **Media primitives:** `srcset`, `sizes`, `picture`, `fetchpriority`,
+  `loading`, `decoding`, `aspect-ratio`, font preloads, `font-display`, and
+  font metric overrides.
+- **Browser-runtime primitives:** `AbortController`, history state, storage,
+  service worker/offline state where present, capability checks, and frontend
+  telemetry hooks.
 - **Verification layer:** `[static]`, `[dom]`, `[behaviour]`, `[visual]`,
   `[a11y-tool]`, `[runtime]`, or `[human]`.
 
