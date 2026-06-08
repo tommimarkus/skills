@@ -55,7 +55,7 @@ Build.
    resolve the pinned GitHub™ release bundle.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load `references/notations/archimate.md` for
-   ArchiMate or both for mixed packages. For UML, load `references/notations/uml.md` and only the per-kind file under `references/notations/uml/` for the kind in play: `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`, `component`, or `deployment`.
+   ArchiMate or both for mixed packages. For UML, load `references/notations/uml.md` (hub) and only the per-kind file under `references/notations/uml/` for the kind in play: `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`, `component`, or `deployment`.
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load

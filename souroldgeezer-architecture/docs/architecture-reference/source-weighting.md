@@ -30,10 +30,14 @@ the skill, fixtures, validation, and exports upgrade together.
 
 ## Scoring Rules
 
-- Standards/method: wins the first reading unless local evidence is explicit, architect intent overrides, or semantic validation rejects it.
-- Practical notation/readability: main classifier for source-extracted Application-layer and relationship choices.
-- Enterprise practice: cannot create business architecture from code, IaC, or cloud names; mark richer claims `architect-owned` or `weak-evidence`.
-- Platform guidance: overlay only; never decides generic ArchiMate type.
+- Standards/method wins the first reading unless local source evidence is
+  explicit, architect intent says otherwise, or semantic validation rejects it.
+- Practical notation/readability is the main classifier for source-extracted
+  Application-layer and relationship choices.
+- Enterprise practice cannot create business architecture from code, IaC, or
+  cloud names alone; mark richer claims `architect-owned` or `weak-evidence`.
+- Platform guidance is overlay evidence only. Azure/AWS/CAF/WA evidence may
+  explain hosting or operational concern, not decide generic ArchiMate type.
 - Use semantic Grouping only for evidenced responsibility, trust, participant,
   environment, ownership, hosting, or orchestration boundaries; layout grouping
   stays in view/render metadata.
@@ -44,7 +48,10 @@ concept/relation/view, weighted reason, rejected alternative, confidence.
 ## Use During Extract
 
 Use this reference before writing model source when repo evidence can map to
-multiple ArchiMate element, relationship, or view choices.
+multiple ArchiMate element, relationship, or view choices. The weight is an
+extraction prior, not a confidence score: start with the heaviest applicable
+lane, reject semantic invalidity, then refine with exact local evidence,
+architect intent, and view readability.
 
 For each non-obvious choice, record: source fact, plausible candidates,
 selected concept/relation/view, weighted reason, rejected alternative, and

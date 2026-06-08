@@ -140,7 +140,11 @@ layout, the render-metadata target, the layout output, and the render output:
 }
 ```
 
-Render with per-view metadata declared in the view's `metadata.output`; confirm the generated metadata profile matches the render policy profile. Use the package-level `render-metadata.json` only when a repository deliberately keeps a checked-in shared metadata file.
+Use the package-level `render-metadata.json` only when a repository chooses a
+checked-in shared metadata policy/cache and can keep it synchronized with the
+views. Otherwise render with the generated per-view metadata declared in the
+view's `metadata.output`, after confirming the generated metadata profile
+matches the render policy profile.
 
 ## 4. ArchiMate Layers And Aspects
 
@@ -180,7 +184,8 @@ Core relationship families:
 - **Composition**: whole/part, lifecycle-strength ownership.
 - **Aggregation**: whole/part, weaker ownership.
 - **Assignment**: active structure performs behavior (or vice versa).
-- **Realization**: concrete element fulfills a more abstract service, requirement, or capability.
+- **Realization**: concrete element fulfills a more abstract service,
+  requirement, capability, or deliverable.
 - **Serving**: source behavior/service used by target.
 - **Access**: behavior reads, writes, or accesses passive structure.
 - **Influence**: Motivation element affects another element.
@@ -508,8 +513,25 @@ Do not claim `review-ready` while any blocking finding remains.
 
 ## 13. Package Review Checklist
 
-Follow the step sequence in
-`references/procedures/architecture-operational-workflow.md`.
+For each package:
+
+1. Confirm `project.json` points to existing source, policies, metadata, and
+   actual views.
+2. Confirm every view has a clear architecture question.
+3. Validate `model.json`.
+4. Project each actual view through its configured plugin and target.
+5. Project render metadata for each actual view when the render step depends
+   on semantic node or edge metadata; verify the generated metadata
+   `semantic_profile` matches the render policy.
+6. Run ELK layout for changed or requested views; parallel per-view layout is
+   allowed with the release-resolved Dediren runtime, but rerun any parallel failure serially before
+   reporting it as a layout defect.
+7. Render SVG for changed or requested views.
+8. Inspect SVG for nonblank, marker-rich, visually readable output.
+9. Run optional export only when requested.
+10. Run drift detection only when source comparison is requested.
+11. Report quality level, export readiness, evidence, missing diagram kinds,
+    and findings.
 
 ## 14. Modeling Pitfalls
 
