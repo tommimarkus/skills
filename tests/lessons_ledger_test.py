@@ -56,5 +56,47 @@ class PathResolutionTest(unittest.TestCase):
                 ledger.resolve_ledger_path(Path(tmp))
 
 
+class CandidateTest(unittest.TestCase):
+    def _valid_kwargs(self):
+        return dict(
+            trigger="user-edited-claude-output",
+            summary="manifest version triplet left out of sync",
+            proposed_rule="report rule: plugin.json/codex/marketplace versions must match",
+            substrate="deterministic",
+        )
+
+    def test_build_sets_schema_and_no_sac_id(self):
+        ledger = load_ledger()
+        rec = ledger.build_candidate(**self._valid_kwargs())
+        self.assertEqual(rec["schema_version"], ledger.SCHEMA_VERSION)
+        self.assertEqual(rec["layer"], 2)
+        self.assertEqual(rec["decision"], "review")
+        self.assertNotIn("sac_id", rec)
+        self.assertTrue(rec["candidate_id"])
+        ledger.validate_candidate(rec)  # must not raise
+
+    def test_auto_approved_requires_deterministic_substrate(self):
+        ledger = load_ledger()
+        kw = self._valid_kwargs()
+        kw.update(decision="auto-approved", substrate="prose")
+        with self.assertRaises(ledger.LedgerError):
+            ledger.build_candidate(**kw)
+
+    def test_invalid_enums_and_empty_fields_raise(self):
+        ledger = load_ledger()
+        kw = self._valid_kwargs()
+        with self.assertRaises(ledger.LedgerError):
+            ledger.build_candidate(**{**kw, "substrate": "bogus"})
+        with self.assertRaises(ledger.LedgerError):
+            ledger.build_candidate(**{**kw, "trigger": "  "})
+
+    def test_validate_rejects_record_with_sac_id(self):
+        ledger = load_ledger()
+        rec = ledger.build_candidate(**self._valid_kwargs())
+        rec["sac_id"] = "SAC-T00600"
+        with self.assertRaises(ledger.LedgerError):
+            ledger.validate_candidate(rec)
+
+
 if __name__ == "__main__":
     unittest.main()
