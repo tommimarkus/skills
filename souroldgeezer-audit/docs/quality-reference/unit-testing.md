@@ -177,7 +177,7 @@ Shared sources: Fowler ("Mocks Aren't Stubs") — mockist tests encode the autho
 
 ### 7.1 Fowler's test-double taxonomy
 
-Fowler (following Meszaros) distinguishes five kinds. Stack extensions (nodejs/core.md, dotnet/core.md, etc.) carry the per-library detection signals.
+Fowler (following Meszaros) distinguishes five kinds. Stack extensions (`nodejs/core.md`, `dotnet/core.md`) § Test double classification carry the per-library detection signals.
 
 - **Dummy** — passed but never used. Free.
 - **Stub** — canned answers; test verifies *state*. Cost: answers can drift from the real collaborator's contract silently.

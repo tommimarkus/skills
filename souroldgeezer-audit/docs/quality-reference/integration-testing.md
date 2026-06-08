@@ -189,7 +189,7 @@ For the shared argument (Fowler, Khorikov, Google, Shore), see [unit-testing.md 
 
 - **Inside an integration test, a mock is almost always a scope leak.** If the seam you care about is faked, the test belongs in the unit lane. Proof obligation: every mock must point at a process or deployment boundary *and* a reason a contract test cannot cover it.
 - **Sub-lane A.** Use real adjacent dependencies (real DB in a container, real filesystem, real in-memory bus, real HTTP server). Mock only outside the deployment unit — third-party APIs you do not own, payment processors, identity providers in destructive flows.
-- **Sub-lane B.** Replace mocks of downstream services with consumer-driven contracts where feasible. If a contract exists, the mock is redundant.
+- **Sub-lane B.** Replace mocks of downstream services with consumer-driven contracts where feasible. If a contract exists, the mock is redundant; if a contract does not exist, the mock encodes the author's possibly-wrong beliefs about a collaborator (Fowler's classic objection to mockist tests, amplified at the service boundary).
 - **Shore's nullable infrastructure** collapses the mock-vs-real choice into a single artifact and is preferred over either pole.
 
 ---
