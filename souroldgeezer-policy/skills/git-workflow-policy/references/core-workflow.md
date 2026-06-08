@@ -66,8 +66,7 @@ before edits and staging; preserve unrelated work; stage explicit paths only;
 honor `.gitignore`; run the narrowest documented verification before commit or
 PR/MR handoff; stop before destructive git actions.
 
-Do not mix unrelated tasks in one branch. Re-read live git state before
-staging, committing, pushing, rebasing, merging, or handing off to `pr-ops`.
+Do not mix unrelated tasks in one branch. Re-read live git state before any write action or `pr-ops` handoff.
 
 Version policy belongs here only as developer guidance: where the version source
 lives, when version files may change, which branches may carry version bumps,

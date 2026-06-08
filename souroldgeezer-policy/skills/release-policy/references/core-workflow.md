@@ -65,13 +65,13 @@ skill owns concrete version updates, tag naming, release metadata, and
 publication verification.
 
 Default profile when initialized without options: use SemVer intent; infer one
-version source from a workspace/package manifest, language manifest, `VERSION`,
-or documented release file; stop on conflicting sources; use annotated
-`v<version>` git tags; treat a change as releasable only when guidance says so,
-the user asks for release work, or the touched surface is explicit release
-surface; run documented verification before version writes and before tag
-creation when scope changed; do not create provider releases, publish, mutate
-tags, or yank artifacts without named authority.
+version source from a manifest, `VERSION` file, or documented release file;
+stop on conflicting sources; use annotated `v<version>` git tags; treat a
+change as releasable only when guidance says so, the user asks for release work,
+or the touched surface is explicit release surface; run documented verification
+before version writes and before tag creation when scope changed; do not create
+provider releases, publish, mutate tags, or yank artifacts without named
+authority.
 
 Initialization may be a compact declarative line, for example:
 

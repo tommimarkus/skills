@@ -6,10 +6,7 @@ description: "Use when loaded repo guidance initializes git-workflow-policy, or 
 # Git Workflow Policy
 
 Own standing developer git rules for repositories that explicitly initialize
-this policy. Installing the plugin is passive; a consuming repo must opt in
-through its own guidance, such as `AGENTS.md` or `CLAUDE.md`.
-Once loaded repo guidance initializes this policy, that guidance is standing
-enforcement authority for matching git workflow actions.
+this policy. Passive/opt-in and standing-gate semantics: see references/core-workflow.md.
 
 Inputs: request, repo identity/remotes, repo guidance, branch/worktree/upstream
 state, base/default branch, provider evidence when available, version-policy
@@ -37,21 +34,19 @@ task. Initialization may include options, for example
 `git-workflow-policy: feature branches, clean worktree, no direct main`.
 If initialization names no options, apply the default profile in
 `references/core-workflow.md`.
-In `adopt-guidance`, absorb existing related guidance into initialization
-options or adjacent local exceptions, then remove or replace competing workflow
-prose; do not leave a pointer beside duplicate branch/staging/commit rules.
+`adopt-guidance` consolidation rules: see references/core-workflow.md §Policy Resolution.
 Delegate PR/MR lifecycle writes to `pr-ops`, issues to `issue-ops`, releases to
 `release-policy`, security to `devsecops-audit`, and test adequacy to
 `test-quality-audit`.
 
-Ask vs continue: continue only when repository, target branch, policy,
-exceptions, work area, and verification are clear. If repository identity, base
-branch, integration authority, destructive git action, or policy precedence is
-ambiguous, stop and ask instead of guessing.
+Ask vs continue: stop and ask when repository identity, base branch, integration
+authority, destructive git action, or policy precedence is ambiguous; full
+conditions in references/core-workflow.md §Ask Vs Continue.
 
-Stop before history rewrites, branch deletion, force push, tags, publishing, or
-merge/close actions unless a sibling skill has authority. Stop if required
-verification cannot run and no documented substitute exists.
+Stop before history rewrites, force push, tags, publishing, and missing
+verification: see references/core-workflow.md §Escalation Gates. Also stop
+before branch deletion or merge/close actions unless a sibling skill has
+authority.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
 repo's documented skill-architecture or docs validation. End with the output
