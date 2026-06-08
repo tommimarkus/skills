@@ -27,11 +27,23 @@ into committed rules. Graduation writes committed files, so this runs on `main` 
      the ledger (never hand-edit `tests/skill_architecture_report_ledger.jsonl`). If it
      needs **new** detection, do not fake a test: record the proposed check for the user
      as engine work, and either reroute to `policy`/`prose` for now or leave it pending.
+   - **Secret-scan gate (required before committing any graduation).** Stage the change,
+     then run `git diff --cached | python3 scripts/lessons_secret_scan.py --diff`. If it
+     prints any label (exit 1), do NOT commit — unstage, report what tripped, and keep the
+     candidate pending. This is the `DSO-POS-9` control and applies to every lesson.
    Then mark it: `python3 scripts/lessons_ledger.py resolve --id <candidate_id> --status applied --note "<where it landed>"`.
 6. **Verify** nothing broke: run `uv run python -m unittest` for any touched test module
    and `bash scripts/skill-architecture-report.sh .` when a skill surface changed.
 7. **Stamp/sync if a published `souroldgeezer-*` surface changed** (CalVer + manifest/
    marketplace/README sync + IP-hygiene), per `CLAUDE.md`. Repo-internal edits need no stamp.
+
+## Auto-approve lane (default-deny)
+
+Candidates marked `auto-approved` are checked by `auto_approve_eligible()` (deterministic
+substrate + allowlisted change-class + not already graduated). The change-class allowlist
+(`AUTO_APPROVE_CHANGE_CLASSES`) is **empty by default**, so nothing skips human review yet —
+unattended commit waits on a template-synthesizable fixture path (lesson-loop Plan 4
+"Parked"). Treat every candidate as review until that lands.
 
 ## Output
 
