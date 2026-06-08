@@ -50,20 +50,8 @@ contracts.
   git state, provider extension, integration strategy, lifecycle-marker state,
   and verification run or blocker.
 - Live tracker state and live git state are authoritative.
-- For one invocation, complete at most 10 items, inspect at most 25 items, and
-  inspect each queued item at most once during initial triage.
-- Use `.cache/issue-ops/ledger.jsonl` only as an uncommitted recovery hint; do
-  not store secrets, raw tracker text, logs, or sensitive excerpts in it.
-- Continue autonomously only when target, repo, provider tooling, permissions,
-  work area, verification, and integration or handoff path are all clear.
-- Escalate item-local ambiguity through the provider when possible and continue
-  the queue; ask the user only for global blockers.
-- Implement only clear, in-scope work and auto-fix only deterministic formatter,
-  generated-file, or lint failures.
-- Delegate pull-request or merge-request creation, updates, checks, reviews,
-  merge, and cleanup to `pr-ops`.
-- Direct integration requires safe refreshed live state and rerun verification
-  whenever the base branch or tested result changes.
+- See `references/core-workflow.md` for queue limits, ledger, ask-vs-continue,
+  escalation, and integration rules.
 
 End with the output footer from `references/core-workflow.md`. Do not write a
 separate local summary file.

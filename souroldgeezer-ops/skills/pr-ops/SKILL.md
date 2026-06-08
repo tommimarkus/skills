@@ -11,9 +11,8 @@ PR/MR creation or reuse, live-state authority, reviews/comments/checks, safe
 branch update, verification, merge/close authority, cleanup, and completion
 reporting.
 
-Inputs: user request, PR/MR identifiers or URLs, prepared branch targets,
-repository remotes, current git branch/status/worktrees, provider auth/tooling,
-base/head refs, reviews, comments, checks, linked work, and lifecycle markers.
+Inspect live provider state, git state, checks, reviews, linked work, and
+lifecycle markers as detailed in references/core-workflow.md before acting.
 Evidence: cite the provider state, git refs/status, checks, review state, and
 verification commands inspected before writing, merging, closing, or reporting.
 

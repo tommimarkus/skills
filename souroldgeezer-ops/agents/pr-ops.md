@@ -17,10 +17,7 @@ When invoked:
    In full-cycle mode, keep monitoring pending required checks until terminal
    state or escalation; do not treat a single pending-check retry as
    completion.
-3. Do not hijack incidental PR mentions, issue lifecycle work without an
-   explicit prepared-branch handoff, standalone deep CI debugging, security
-   posture review, design review, test-quality audit, or general
-   project-management advice.
+3. Do not hijack incidental mentions; follow the skill's scope boundaries.
 4. Preserve the skill's completion output contract: completed, created, reused,
    merged, closed, updated, reviewed, escalated, skipped, remaining, provider
    extensions loaded, provider tooling route and MCP availability when

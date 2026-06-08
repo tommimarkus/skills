@@ -14,9 +14,7 @@ When invoked:
 2. Follow the skill exactly: identify the tracker, load the provider extension,
    resolve live tracker and git state, classify the requested mode, and use the
    skill's ask-vs-continue and escalation rules.
-3. Do not hijack incidental issue mentions, ordinary pull-request review,
-   standalone CI debugging, security posture review, design review, or general
-   project-management advice.
+3. Do not hijack incidental mentions; follow the skill's scope boundaries.
 4. Preserve the skill's completion output contract: completed, escalated,
    skipped, remaining, provider extensions loaded, provider tooling route and
    MCP availability when applicable, integration strategy, lifecycle marker
