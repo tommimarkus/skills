@@ -6,7 +6,10 @@ description: "Use when loaded repo guidance initializes release-policy, or when 
 # Release Policy
 
 Own standing release and distribution rules for repositories that explicitly
-initialize this policy. Passive/opt-in and standing-gate semantics: see references/core-workflow.md.
+initialize this policy. Installing the plugin is passive; a consuming repo must
+opt in through its own guidance, such as `AGENTS.md` or `CLAUDE.md`.
+Once loaded repo guidance initializes this policy, that guidance is standing
+enforcement authority for matching release actions.
 
 Inputs/evidence: inspect request, repo guidance, git state, candidate, version
 source/strategy, notes, tags/provider releases, targets/auth, verification, and
@@ -34,14 +37,17 @@ target/action authority. Apply `git-workflow-policy` preflight before release
 writes. Delegate PR/MR lifecycle to `pr-ops`, issues to `issue-ops`, security to
 `devsecops-audit`, and test adequacy to `test-quality-audit`.
 
-`adopt-guidance` consolidation rules: see references/core-workflow.md §Adoption Consolidation.
+In `adopt-guidance`, absorb existing related guidance into initialization
+options/exceptions, then remove or replace competing release prose; do not leave
+a pointer beside duplicate version/tag/publication rules.
 
-Ask vs continue: stop and ask when candidate, version source, tag/provider
-release, publication target/authority, credentials, or destructive correction
-is ambiguous; full conditions in references/core-workflow.md §Authority Gates.
+Ask vs continue: continue only for read-only preflight/lookup, local
+verification, and authorized release-prep edits. If candidate, version source,
+tag/provider release, publication target/authority, credentials, rollback, or
+destructive correction is ambiguous, stop and ask.
 
-Stop when verification fails or release state conflicts; full escalation
-conditions in references/core-workflow.md §Escalation Gates.
+Stop when required verification fails or cannot run without a documented
+substitute, or when conflicting release state cannot be reconciled safely.
 
 After release-prep edits, rerun structured-file checks, `git diff --check`, and
 the repo's documented release, packaging, or skill-architecture validation. End

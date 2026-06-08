@@ -51,7 +51,7 @@ contracts.
   and verification run or blocker.
 - Live tracker state and live git state are authoritative.
 - See `references/core-workflow.md` for queue limits, ledger, ask-vs-continue,
-  escalation, and integration rules.
+  escalation, implementation-scope, and integration rules.
 
 End with the output footer from `references/core-workflow.md`. Do not write a
 separate local summary file.
