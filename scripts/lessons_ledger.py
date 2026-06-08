@@ -6,11 +6,13 @@ candidates before they graduate (Plan 3) into committed rules. Stdlib only.
 """
 from __future__ import annotations
 
+import argparse
 import fcntl
 import hashlib
 import json
 import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -132,3 +134,42 @@ def read_candidates(*, cwd=None, path=None) -> list[dict]:
         if line.strip():
             rows.append(json.loads(line))
     return rows
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(prog="lessons_ledger")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    add = sub.add_parser("append", help="append one candidate")
+    add.add_argument("--path")
+    add.add_argument("--trigger", required=True)
+    add.add_argument("--summary", default="")
+    add.add_argument("--proposed-rule", required=True, dest="proposed_rule")
+    add.add_argument("--substrate", required=True, choices=SUBSTRATES)
+    add.add_argument("--decision", default="review", choices=DECISIONS)
+
+    show = sub.add_parser("list", help="summarize pending candidates")
+    show.add_argument("--path")
+
+    args = parser.parse_args(argv)
+    try:
+        if args.command == "append":
+            record = build_candidate(
+                trigger=args.trigger, summary=args.summary,
+                proposed_rule=args.proposed_rule, substrate=args.substrate,
+                decision=args.decision)
+            ledger = append_candidate(record, path=args.path)
+            print(f"appended {record['candidate_id']} -> {ledger}")
+            return 0
+        rows = read_candidates(path=args.path)
+        review = sum(1 for r in rows if r["decision"] == "review")
+        auto = sum(1 for r in rows if r["decision"] == "auto-approved")
+        print(f"{len(rows)} candidate(s): {review} review, {auto} auto-approved")
+        return 0
+    except LedgerError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

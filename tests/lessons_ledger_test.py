@@ -147,5 +147,36 @@ class ConcurrencyTest(unittest.TestCase):
             self.assertEqual(len({r["proposed_rule"] for r in parsed}), procs * per)
 
 
+class CliTest(unittest.TestCase):
+    def _run(self, *args, cwd):
+        return subprocess.run(
+            [sys.executable, str(MODULE), *args],
+            cwd=str(cwd), capture_output=True, text=True)
+
+    def test_append_then_list_reports_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            out = self._run(
+                "append", "--path", str(path),
+                "--trigger", "failed-then-passed",
+                "--summary", "missing version sync test",
+                "--proposed-rule", "report rule: version triplet must match",
+                "--substrate", "deterministic",
+                cwd=tmp)
+            self.assertEqual(out.returncode, 0, out.stderr)
+
+            listed = self._run("list", "--path", str(path), cwd=tmp)
+            self.assertEqual(listed.returncode, 0, listed.stderr)
+            self.assertIn("1 candidate", listed.stdout)
+
+    def test_append_rejects_bad_substrate_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self._run(
+                "append", "--path", str(Path(tmp) / "p.jsonl"),
+                "--trigger", "t", "--summary", "s",
+                "--proposed-rule", "r", "--substrate", "bogus", cwd=tmp)
+            self.assertNotEqual(out.returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
