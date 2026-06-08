@@ -108,10 +108,7 @@ and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
 
 For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
 start from the selected Dediren release bundle's UML source fixture that
-matches the view concern. Current UML view kinds include class, data, activity,
-sequence, state-machine, use-case, component, and deployment; sequence views use
-`uml-sequence` with `Interaction`, `Lifeline`,
-and ordered `Message` relationships.
+matches the kind in play (see SKILL.md step 3 for the current kind list).
 
 Treat these files as hand-authored and checked in: `model.json`,
 `project.json`, `render-policy.json`, package-level `render-metadata.json` when
@@ -143,11 +140,7 @@ layout, the render-metadata target, the layout output, and the render output:
 }
 ```
 
-Use the package-level `render-metadata.json` only when a repository chooses a
-checked-in shared metadata policy/cache and can keep it synchronized with the
-views. Otherwise render with the generated per-view metadata declared in the
-view's `metadata.output`, after confirming the generated metadata profile
-matches the render policy profile.
+Render with per-view metadata declared in the view's `metadata.output`; confirm the generated metadata profile matches the render policy profile. Use the package-level `render-metadata.json` only when a repository deliberately keeps a checked-in shared metadata file.
 
 ## 4. ArchiMate Layers And Aspects
 
@@ -159,17 +152,11 @@ Primary layers:
 - **Strategy**: Capability, Resource, Course of Action, Value Stream.
 - **Business**: Actor, Role, Collaboration, Interface, Process, Function,
   Interaction, Event, Service, Object, Contract, Representation, Product.
-- **Application**: Component, Collaboration, Interface, Function, Interaction,
-  Process, Event, Service, Data Object.
-- **Technology**: Node, Device, System Software, Technology Collaboration,
-  Technology Interface, Technology Function, Technology Process, Technology
-  Interaction, Technology Event, Technology Service, Artifact, Communication
-  Network, Path.
+- **Application**: Component, Collaboration, Interface, Function, Interaction, Process, Event, Service, Data Object.
+- **Technology**: Node, Device, System Software, and related Technology* elements, Artifact, Communication Network, Path.
 - **Physical**: Equipment, Facility, Distribution Network, Material.
-- **Motivation**: Stakeholder, Driver, Assessment, Goal, Outcome, Principle,
-  Requirement, Constraint, Meaning, Value.
-- **Implementation & Migration**: Work Package, Deliverable, Implementation
-  Event, Plateau, Gap.
+- **Motivation**: Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value.
+- **Implementation & Migration**: Work Package, Deliverable, Implementation Event, Plateau, Gap.
 
 Primary aspects:
 
@@ -190,19 +177,15 @@ Use the narrowest valid relationship type that represents the claim.
 
 Core relationship families:
 
-- **Composition**: whole/part with lifecycle-strength ownership.
-- **Aggregation**: whole/part with weaker ownership.
-- **Assignment**: active structure performs behavior, or behavior uses active
-  structure as its performer.
-- **Realization**: concrete element fulfills a more abstract service,
-  requirement, capability, or deliverable.
-- **Serving**: source provides behavior or service used by target.
-- **Access**: behavior reads, writes, or otherwise accesses passive structure.
-- **Influence**: Motivation element affects another Motivation or architecture
-  element.
-- **Triggering**: temporal or causal start of another behavior.
-- **Flow**: transfer of information, goods, or value between behaviors or
-  active structures.
+- **Composition**: whole/part, lifecycle-strength ownership.
+- **Aggregation**: whole/part, weaker ownership.
+- **Assignment**: active structure performs behavior (or vice versa).
+- **Realization**: concrete element fulfills a more abstract service, requirement, or capability.
+- **Serving**: source behavior/service used by target.
+- **Access**: behavior reads, writes, or accesses passive structure.
+- **Influence**: Motivation element affects another element.
+- **Triggering**: causal or temporal start of another behavior.
+- **Flow**: transfer of information, goods, or value.
 - **Specialization**: source is a specialization of target.
 - **Association**: weakest allowed relationship; use sparingly.
 
@@ -404,26 +387,19 @@ DEDIREN="$(
 )"
 ```
 
-The resolver caches the selected platform bundle under
-`.cache/dediren/releases/`; do not commit that cache. Use
-`dediren-release.sh --agent-guide` to locate the selected release bundle's
+Use `dediren-release.sh --agent-guide` to locate the selected release bundle's
 `docs/agent-usage.md` file, then read it before loading schemas. It is the fast
 contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, and Repair Rules. The current release bundle is Java™-backed and
 requires Java™ 21 or newer for runnable CLI checks.
 
-The release-resolved Dediren runtime is the current evidence baseline. Its
-ArchiMate® render and export paths enforce ArchiMate® 3.2 relationship endpoint
-legality, use the technology element name `Node`, not `TechnologyNode`, and
-layout validation can report route detours plus close parallel route channels.
-It also supports explicit `generic-graph` semantic profiles for generated
-ArchiMate render metadata without requiring `archimate-oef`, semantic-backed
-group projection/export, improved grouped cross-route validation, and parallel
+The release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
+legality, uses the technology element name `Node`, not `TechnologyNode`, reports
+close parallel route channels during layout validation, and allows parallel
 per-view ELK layout. Keep serial rerun only as a diagnostic fallback when a
 parallel batch produces an error envelope or other parallel-only failure.
 
-GitHub™ release bundles and any future checked-in platform bundles are imported
-upstream Dediren distribution artifacts. Do not patch bundled schemas, plugin
+GitHub™ release bundles and any future checked-in platform bundles are upstream Dediren distribution artifacts. Do not patch bundled schemas, plugin
 manifests, binaries, Java helpers, fixtures, or `bundle.json` in this repository
 to fix tool behavior. When the runtime, schema, layout, render, export, or
 helper behavior appears wrong, report it under `Dediren tool issues` with the
@@ -532,25 +508,8 @@ Do not claim `review-ready` while any blocking finding remains.
 
 ## 13. Package Review Checklist
 
-For each package:
-
-1. Confirm `project.json` points to existing source, policies, metadata, and
-   actual views.
-2. Confirm every view has a clear architecture question.
-3. Validate `model.json`.
-4. Project each actual view through its configured plugin and target.
-5. Project render metadata for each actual view when the render step depends
-   on semantic node or edge metadata; verify the generated metadata
-   `semantic_profile` matches the render policy.
-6. Run ELK layout for changed or requested views; parallel per-view layout is
-   allowed with the release-resolved Dediren runtime, but rerun any parallel failure serially before
-   reporting it as a layout defect.
-7. Render SVG for changed or requested views.
-8. Inspect SVG for nonblank, marker-rich, visually readable output.
-9. Run optional export only when requested.
-10. Run drift detection only when source comparison is requested.
-11. Report quality level, export readiness, evidence, missing diagram kinds,
-    and findings.
+Follow the step sequence in
+`references/procedures/architecture-operational-workflow.md`.
 
 ## 14. Modeling Pitfalls
 

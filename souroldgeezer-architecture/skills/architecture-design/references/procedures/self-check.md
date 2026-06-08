@@ -8,13 +8,7 @@ DEDIREN="$(
 )"
 ```
 
-The resolver caches release bundles under `.cache/dediren/releases/`; do not
-commit that cache. The pinned release bundle is Java™-backed; commands that
-return or execute the runnable Dediren CLI require Java™ 21 or newer through
-`JAVA_HOME`, `JAVACMD`, or `java` on `PATH`. If the resolver cannot download or
-select a supported platform, disclose `not run (missing dediren release
-bundle)` and cap at `source-valid` unless Lookup only. If Java™ 21+ is missing,
-disclose `not run (missing Java 21+ runtime)` for runtime steps.
+The pinned release bundle is Java™-backed and requires Java™ 21 or newer (`JAVA_HOME`, `JAVACMD`, or `java` on `PATH`). If the resolver cannot download a supported platform, disclose `not run (missing dediren release bundle)` and cap at `source-valid` unless Lookup only. If Java™ 21+ is missing, disclose `not run (missing Java 21+ runtime)` for runtime steps.
 
 The selected release bundle is an imported upstream Dediren artifact. Do not
 patch cached release files or future packaged bundles. For defects, report
