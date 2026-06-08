@@ -75,5 +75,15 @@ class HookTest(unittest.TestCase):
             self.assertEqual(out.stdout.strip(), "")
 
 
+class WiringTest(unittest.TestCase):
+    def test_settings_registers_the_hook(self):
+        data = json.loads((REPO_ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        commands = [h["command"]
+                    for group in data["hooks"]["Stop"]
+                    for h in group["hooks"]]
+        self.assertTrue(any("stop-lesson-capture.sh" in c for c in commands),
+                        "stop-lesson-capture.sh not registered in .claude/settings.json")
+
+
 if __name__ == "__main__":
     unittest.main()
