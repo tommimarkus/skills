@@ -246,5 +246,49 @@ class ResolveCliTest(unittest.TestCase):
             self.assertIn("1 applied", summary.stdout)
 
 
+class AutoApproveTest(unittest.TestCase):
+    def _auto_record(self, ledger, change_class="add-fixture-existing-smell"):
+        rec = ledger.build_candidate(trigger="t", summary="s", proposed_rule="r",
+                                     substrate="deterministic", decision="auto-approved",
+                                     change_class=change_class)
+        return rec
+
+    def test_build_sets_change_class(self):
+        ledger = load_ledger()
+        rec = self._auto_record(ledger)
+        self.assertEqual(rec["change_class"], "add-fixture-existing-smell")
+
+    def test_default_allowlist_denies_everything(self):
+        ledger = load_ledger()
+        self.assertEqual(ledger.AUTO_APPROVE_CHANGE_CLASSES, ())
+        ok, reason = ledger.auto_approve_eligible(self._auto_record(ledger))
+        self.assertFalse(ok)
+        self.assertIn("allowlist", reason)
+
+    def test_eligible_with_explicit_allowlist(self):
+        ledger = load_ledger()
+        rec = self._auto_record(ledger)
+        ok, reason = ledger.auto_approve_eligible(
+            rec, allowlist=("add-fixture-existing-smell",))
+        self.assertTrue(ok, reason)
+
+    def test_review_candidate_is_not_eligible(self):
+        ledger = load_ledger()
+        rec = ledger.build_candidate(trigger="t", summary="s", proposed_rule="r",
+                                     substrate="deterministic")  # decision defaults to review
+        ok, reason = ledger.auto_approve_eligible(rec, allowlist=("x",))
+        self.assertFalse(ok)
+        self.assertIn("auto-approved", reason)
+
+    def test_already_graduated_is_not_eligible(self):
+        ledger = load_ledger()
+        rec = self._auto_record(ledger)
+        ok, reason = ledger.auto_approve_eligible(
+            rec, allowlist=("add-fixture-existing-smell",),
+            graduated_ids=(rec["candidate_id"],))
+        self.assertFalse(ok)
+        self.assertIn("graduated", reason)
+
+
 if __name__ == "__main__":
     unittest.main()

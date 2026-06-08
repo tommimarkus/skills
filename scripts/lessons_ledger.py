@@ -25,6 +25,9 @@ SCHEMA_VERSION = 1
 DECISIONS = ("review", "auto-approved")
 SUBSTRATES = ("deterministic", "policy", "prose")
 STATUSES = ("pending", "applied", "rejected")
+# Default-deny: no change-class is eligible for unattended auto-commit until a
+# template-synthesizable fixture path exists for it (see lesson-loop Plan 4 "Parked").
+AUTO_APPROVE_CHANGE_CLASSES = ()
 _REQUIRED = (
     "schema_version", "captured_at", "layer", "decision", "substrate",
     "status", "trigger", "summary", "proposed_rule", "payload", "candidate_id",
@@ -40,7 +43,7 @@ def _fingerprint(record: dict) -> str:
 
 
 def build_candidate(*, trigger, summary, proposed_rule, substrate,
-                    decision="review", payload=None, now=None) -> dict:
+                    decision="review", payload=None, change_class=None, now=None) -> dict:
     """Construct a schema-valid, ID-less candidate record."""
     if substrate not in SUBSTRATES:
         raise LedgerError(f"invalid substrate: {substrate!r}")
@@ -63,6 +66,7 @@ def build_candidate(*, trigger, summary, proposed_rule, substrate,
         "summary": summary if isinstance(summary, str) else "",
         "proposed_rule": proposed_rule,
         "payload": payload,
+        "change_class": change_class,
     }
     record["candidate_id"] = _fingerprint(record)
     return record
@@ -177,6 +181,25 @@ def pending_candidates(*, cwd=None, path=None) -> list[dict]:
     """Return candidates whose status is pending (default for legacy records)."""
     return [r for r in read_candidates(cwd=cwd, path=path)
             if r.get("status", "pending") == "pending"]
+
+
+def auto_approve_eligible(record, *, graduated_ids=(), allowlist=None):
+    """Structural auto-approve gate (criteria 1-4). Returns (eligible, reason).
+
+    Default-deny: with the module's empty allowlist, nothing is eligible. The
+    secret scan (criterion 6) and the report-suite net run separately at flush.
+    """
+    allow = AUTO_APPROVE_CHANGE_CLASSES if allowlist is None else tuple(allowlist)
+    if record.get("decision") != "auto-approved":
+        return False, "not marked auto-approved"
+    if record.get("substrate") != "deterministic":
+        return False, "auto-approve requires the deterministic substrate"
+    change_class = record.get("change_class")
+    if change_class not in allow:
+        return False, f"change_class {change_class!r} not in auto-approve allowlist"
+    if record.get("candidate_id") in set(graduated_ids):
+        return False, "already graduated"
+    return True, "eligible"
 
 
 def main(argv=None) -> int:
