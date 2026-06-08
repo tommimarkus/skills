@@ -6,6 +6,7 @@ candidates before they graduate (Plan 3) into committed rules. Stdlib only.
 """
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -98,3 +99,36 @@ def resolve_ledger_path(cwd: os.PathLike[str] | str | None = None) -> Path:
         common = (base / common).resolve()
     main_root = common.parent
     return main_root / ".cache" / "lessons" / "pending.jsonl"
+
+
+def append_candidate(record: dict, *, cwd=None, path=None) -> Path:
+    """Validate then append one record as a single line under an exclusive lock.
+
+    The flock spans the whole write, so concurrent appenders (multiple agents,
+    any worktree) never interleave or lose a record.
+    """
+    validate_candidate(record)
+    ledger = Path(path) if path is not None else resolve_ledger_path(cwd)
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(record, ensure_ascii=False) + "\n"
+    with open(ledger, "a", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.write(line)
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    return ledger
+
+
+def read_candidates(*, cwd=None, path=None) -> list[dict]:
+    """Return all candidate records, or [] if the ledger does not exist yet."""
+    ledger = Path(path) if path is not None else resolve_ledger_path(cwd)
+    if not ledger.exists():
+        return []
+    rows = []
+    for line in ledger.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows

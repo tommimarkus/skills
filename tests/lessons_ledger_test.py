@@ -98,5 +98,54 @@ class CandidateTest(unittest.TestCase):
             ledger.validate_candidate(rec)
 
 
+class AppendTest(unittest.TestCase):
+    def test_append_then_read_round_trips(self):
+        ledger = load_ledger()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sub" / "pending.jsonl"
+            rec = ledger.build_candidate(
+                trigger="t", summary="s", proposed_rule="r", substrate="policy")
+            ledger.append_candidate(rec, path=path)
+            rows = ledger.read_candidates(path=path)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["candidate_id"], rec["candidate_id"])
+
+    def test_read_missing_file_returns_empty(self):
+        ledger = load_ledger()
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(ledger.read_candidates(path=Path(tmp) / "none.jsonl"), [])
+
+
+class ConcurrencyTest(unittest.TestCase):
+    def test_parallel_appends_are_not_torn_or_lost(self):
+        procs, per = 20, 10
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pending.jsonl"
+            worker = Path(tmp) / "worker.py"
+            worker.write_text(
+                "import importlib.util, sys\n"
+                f"spec = importlib.util.spec_from_file_location('l', {str(MODULE)!r})\n"
+                "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
+                "path, tag, n = sys.argv[1], sys.argv[2], int(sys.argv[3])\n"
+                "from pathlib import Path\n"
+                "for i in range(n):\n"
+                "    rec = m.build_candidate(trigger='t', summary='s',\n"
+                "        proposed_rule=f'{tag}-{i}', substrate='policy')\n"
+                "    m.append_candidate(rec, path=Path(path))\n",
+                encoding="utf-8",
+            )
+            running = [
+                subprocess.Popen([sys.executable, str(worker), str(path), f"p{p}", str(per)])
+                for p in range(procs)
+            ]
+            for proc in running:
+                self.assertEqual(proc.wait(), 0)
+
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), procs * per)          # nothing lost
+            parsed = [json.loads(line) for line in lines]      # nothing torn
+            self.assertEqual(len({r["proposed_rule"] for r in parsed}), procs * per)
+
+
 if __name__ == "__main__":
     unittest.main()
