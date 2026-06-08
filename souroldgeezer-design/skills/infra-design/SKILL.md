@@ -40,10 +40,7 @@ backend, provider, module, plan/apply, or state; and
 Azure+Terraform compose. Load [extensions/README.md](extensions/README.md) only
 when editing extensions.
 
-Before editing triggers/workflow/extensions/grounding/evals, load
-[references/evals](references/evals) and
-[references/source-grounding.md](references/source-grounding.md); keep evals
-synthetic/paraphrased.
+Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic/paraphrased.
 
 ## Workflow
 
@@ -83,5 +80,3 @@ Stop when source/scope/env is missing, sibling ownership dominates, non-static
 evidence is needed but absent, load-bearing drift has no smaller move, extension
 validation is unavailable, or output extends local/committed state, ambient env
 selection, portal-only drift, or prose architecture modeling.
-
-Rerun `scripts/skill-architecture-report.sh .` after skill edits.

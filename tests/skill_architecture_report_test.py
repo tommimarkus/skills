@@ -318,9 +318,9 @@ class SkillArchitectureReportTest(unittest.TestCase):
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_plugin = next(plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-design")
 
-        self.assertEqual("2.8.0", claude_manifest["version"])
-        self.assertEqual("2.8.0", codex_manifest["version"])
-        self.assertEqual("2.8.0", marketplace_plugin["version"])
+        self.assertEqual("2.8.1", claude_manifest["version"])
+        self.assertEqual("2.8.1", codex_manifest["version"])
+        self.assertEqual("2.8.1", marketplace_plugin["version"])
 
     def test_strict_mode_exits_nonzero_when_tool_findings_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

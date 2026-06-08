@@ -100,7 +100,7 @@ HTTP POST trigger reads `Idempotency-Key` header, checks a replay cache, writes 
 HTTP starter with `[DurableClient]` schedules an orchestration via `ScheduleNewOrchestrationInstanceAsync(...)`; returns 202 + `Location: <statusQueryGetUri>` from `CreateCheckStatusResponse(...)`. The orchestrator coordinates activities; activities do the non-deterministic work. Maps §5.4.
 
 ### `afdotnet.PAT-durable-fanout` `[Both]`
-Orchestrator fans out N activities and waits for all:
+Fan out N activities and wait for all. Cap width (`items.Chunk(50)`) to avoid saturating downstream. Maps §5.4.
 ```csharp
 [Function(nameof(ProcessBatch))]
 public static async Task<Result> Run([OrchestrationTrigger] TaskOrchestrationContext ctx)
@@ -111,13 +111,16 @@ public static async Task<Result> Run([OrchestrationTrigger] TaskOrchestrationCon
     return new Result(results);
 }
 ```
-Cap fan-out width (`items.Chunk(50)`) to avoid saturating downstream. Maps §5.4.
 
 ### `afdotnet.PAT-durable-monitor` `[Both]`
-Orchestrator polls an external condition via activity + timer loop, with an upper-bound iteration count. At each iteration, check the condition; if not met, `await ctx.CreateTimer(ctx.CurrentUtcDateTime.AddMinutes(1), CancellationToken.None);` and loop. Past a threshold (e.g., 60 iterations), the orchestrator calls `ctx.ContinueAsNew(newState)` to reset history — the eternal-orchestration shape. Maps §5.4.
+Poll an external condition via activity + timer loop; call `ctx.ContinueAsNew(newState)` after a threshold (e.g., 60 iterations) to reset history (eternal-orchestration shape). Maps §5.4.
+```csharp
+// in loop body:
+await ctx.CreateTimer(ctx.CurrentUtcDateTime.AddMinutes(1), CancellationToken.None);
+```
 
 ### `afdotnet.PAT-durable-approval` `[Both]`
-Orchestrator awaits a human decision with a timeout:
+Await human decision with timeout; cancel the losing task's CTS to release resources. External systems POST via `sendEventPostUri`. Maps §5.4.
 ```csharp
 using var cts = new CancellationTokenSource();
 var approval = ctx.WaitForExternalEvent<Decision>("Approval");
@@ -126,10 +129,9 @@ var winner   = await Task.WhenAny(approval, timeout);
 if (winner == approval) { cts.Cancel(); /* proceed */ }
 else                    { /* handle expiry */ }
 ```
-External systems POST the decision via `sendEventPostUri`. The losing task's CTS is cancelled to release resources. Maps §5.4.
 
 ### `afdotnet.PAT-durable-saga` `[Both]`
-Sequential steps with per-step compensation on failure:
+Sequential steps with per-step compensation; compensating activities must be idempotent (orchestrator may replay). Maps §5.4.
 ```csharp
 var completed = new Stack<Func<Task>>();
 try
@@ -146,7 +148,6 @@ catch
     throw;
 }
 ```
-Compensating activities must themselves be idempotent — the orchestrator may replay during recovery. Maps §5.4.
 
 ### `afdotnet.PAT-webhook-receive` `[AspNetCore]`
 Inbound webhook handler with raw-body signature verification, timestamp window, and dedup:

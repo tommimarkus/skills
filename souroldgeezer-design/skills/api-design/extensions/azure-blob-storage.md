@@ -61,7 +61,7 @@ Signatures and limits below are cited from the current `Azure.Storage.Blobs` v12
 
 - **`BlobClient.UploadAsync(stream, options)`** — single-PUT for small payloads, auto-chunked for large ones via `StorageTransferOptions` (`InitialTransferSize`, `MaximumTransferSize`, `MaximumConcurrency`).
 - **`BlockBlobClient.StageBlockAsync(blockId, stream)`** + **`CommitBlockListAsync(blockIds)`** — explicit Put Block / Put Block List for client-driven resumable uploads. Block IDs are stable and client-assigned; a retry of the same block ID is idempotent.
-- Limits per `azure/storage/blobs/scalability-targets`: **block size ≤ 4000 MiB**, up to **50,000 blocks** per blob, max block blob size **~190.7 TiB** (50,000 × 4000 MiB).
+- Service limits: see `azure/storage/blobs/scalability-targets` for current block size, block count, and max blob size ceilings (historically raised; re-check when a workload is near a ceiling).
 
 ### Range requests
 

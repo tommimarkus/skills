@@ -9,16 +9,11 @@ This extension covers Bicep design shape. Azure platform topology findings use
 
 ## Source Anchors
 
-- Bicep documentation:
-  https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/
-- Bicep modules:
-  https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/modules
-- Bicep CLI:
-  https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-cli
-- Bicep parameters:
-  https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters
-- Deployment what-if:
-  https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if
+- https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/
+- https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/modules
+- https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-cli
+- https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters
+- https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if
 
 Use these anchors for Bicep facts only. Design quality is judged against the
 core infrastructure reference.

@@ -10,16 +10,11 @@ compatibility claims in v1.
 
 ## Source Anchors
 
-- Terraform modules:
-  https://developer.hashicorp.com/terraform/language/modules/develop
-- Terraform state:
-  https://developer.hashicorp.com/terraform/language/state
-- Terraform dependency lock file:
-  https://developer.hashicorp.com/terraform/language/files/dependency-lock
-- Terraform module composition:
-  https://developer.hashicorp.com/terraform/language/modules/develop/composition
-- Terraform moved blocks:
-  https://developer.hashicorp.com/terraform/language/modules/develop/refactoring
+- https://developer.hashicorp.com/terraform/language/modules/develop
+- https://developer.hashicorp.com/terraform/language/state
+- https://developer.hashicorp.com/terraform/language/files/dependency-lock
+- https://developer.hashicorp.com/terraform/language/modules/develop/composition
+- https://developer.hashicorp.com/terraform/language/modules/develop/refactoring
 
 Use these anchors for Terraform facts only. Design quality is judged against
 the core infrastructure reference.

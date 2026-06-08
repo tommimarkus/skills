@@ -53,19 +53,7 @@ those boundaries.
 
 ## Composition rule
 
-Next.js depends on the Node.js extension:
-
-1. Load `nodejs.md` first for runtime, package, observability, body-size,
-   hosted-process, and generic serverless-handler rules.
-2. Load `nextjs.md` second for file-system routing, Route Handler semantics,
-   Server Actions, Next instrumentation, cache/deployment mechanics, and
-   hosted Next.js carve-outs.
-3. `nextjs.*` smells may carve out `nodejs.*` smells only at exact Next.js
-   platform boundaries (`next/server`, Route Handlers, Pages API routes,
-   Server Actions, `instrumentation.ts`, `next.config.*`). They do not weaken
-   core contract, auth, reliability, or observability baselines.
-4. If the same change includes frontend app behavior, load `app-design` with
-   its React and Next.js app extensions for route/screen/component findings.
+Load `nodejs.md` first, then `nextjs.md`. `nextjs.*` smells may carve out `nodejs.*` smells only at exact Next.js platform boundaries; they do not weaken core baselines. If the same change includes frontend app behavior, load `app-design` with React and Next.js extensions.
 
 ## Hosting-model surface
 

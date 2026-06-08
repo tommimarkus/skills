@@ -75,12 +75,9 @@ Inspect:
 
 ## Review Notes
 
-- Do not report least-privilege or secret exposure as `infra-design` findings;
-  record a `devsecops-audit` delegation.
-- Static IaC can show topology intent. It cannot prove availability, latency,
-  cost, failover, backup success, or alert usefulness.
-- When paired with Bicep or Terraform, report IaC-tool findings under the tool
-  namespace and Azure topology findings under `azure.ID-*`.
+- Least-privilege and secret-exposure findings → `devsecops-audit` delegation.
+- Static IaC shows topology intent only; runtime, availability, cost, and backup facts need separate verification.
+- When paired with Bicep or Terraform, use the tool namespace for IaC findings and `azure.ID-*` for topology findings.
 
 ## Applies To Reference Sections
 

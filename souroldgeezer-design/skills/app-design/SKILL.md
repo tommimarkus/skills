@@ -89,5 +89,3 @@ Stop when source/scope is missing, sibling ownership dominates, required
 runtime/visual/a11y/performance evidence is absent, load-bearing debt has no
 smaller safe move, extension validation is unavailable, or output would copy a
 broken legacy route/component/state/rendering pattern.
-
-Rerun `scripts/skill-architecture-report.sh .` after skill edits.

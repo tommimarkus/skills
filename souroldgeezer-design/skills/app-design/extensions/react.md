@@ -53,31 +53,13 @@ module/package design belongs to `software-design`.
 
 ## Project Assimilation
 
-Inspect these React-specific signals after core app-design assimilation:
+After core app-design assimilation, inspect these React-specific signals:
 
-- `package.json` and lockfile: React version, framework, router, form library,
-  data-fetching/cache library, state libraries, component library, compiler,
-  lint scripts, and build/test commands.
-- Entry points: `createRoot`, `hydrateRoot`, provider tree, strict mode, router,
-  query client, i18n provider, theme provider, error reporting, and Web Vitals
-  hooks.
-- Route/screen files: route ownership, loading/error/empty/unauthorized states,
-  route params, data source, and layout ownership.
-- Components: prop contracts, composition shape, key usage, controlled versus
-  uncontrolled inputs, event ownership, and whether a leaf component owns too
-  many concerns.
-- Hooks and state: custom Hook boundaries, reducer ownership, context scope,
-  external store subscription semantics, query cache invalidation, optimistic
-  update rollback, and cleanup.
-- Browser/runtime code: `useEffect`, `useLayoutEffect`, portals, focus helpers,
-  storage, media queries, resize/scroll listeners, timers, and observer cleanup.
-- CSS and assets: logical properties, container-aware sizing, focus states,
-  reduced-motion handling, text expansion, RTL, image/font loading, and
-  component-library theme overrides.
+- Entry points: `createRoot` / `hydrateRoot`, provider tree (router, query client, i18n, theme, error reporting), strict mode, and Web Vitals hooks.
+- Hooks and state: custom Hook boundaries, reducer ownership, context scope, query cache invalidation, optimistic update rollback, and effect cleanup.
+- Browser code: `useEffect` / `useLayoutEffect`, portals, focus helpers, storage, observer cleanup.
 
-Reuse existing project providers, components, hooks, and state libraries only
-when they satisfy the core app-design rule. A component library primitive is
-not compliant merely because it exists.
+Reuse existing providers, components, hooks, and libraries only when they satisfy the core app-design rule. A component library primitive is not compliant merely because it exists.
 
 ## App Architecture Defaults
 

@@ -13,23 +13,13 @@ delegated to their sibling skills.
 
 ## 2. Principles
 
-1. **Topology is a contract.** Resource placement, dependency direction, and
-   ownership boundaries should be visible in source or deployment records.
-2. **IaC expresses intent, not inventory.** Modules should name workload or
-   platform concepts, not wrap single resources without a design force.
-3. **Environment strategy is explicit.** Dev, test, staging, production, and
-   ephemeral environments must differ by declared parameters and policy, not by
-   unreviewed copies.
-4. **State has one owner.** Remote state, migration records, imports, and
-   generated artifacts need clear custody and rollback paths.
-5. **Identity is part of the design.** Managed/workload identity, secret
-   handoff, and role-assignment boundaries shape the topology even when a
-   security audit owns least-privilege findings.
-6. **Operations are designed, not appended.** Monitoring, alerting, restore
-   paths, what-if/plan reviews, and rollback hooks must be named before
-   rollout.
-7. **Drift is expected.** The design should state how source, state, cloud
-   control-plane truth, and architecture models are reconciled.
+1. **Topology is a contract.** Resource placement and ownership boundaries must be visible in source or deployment records.
+2. **IaC expresses intent, not inventory.** Modules name workload or platform concepts, not single-resource wrappers.
+3. **Environment strategy is explicit.** Environments differ by declared parameters and policy, not unreviewed copies.
+4. **State has one owner.** Remote state, migration records, and generated artifacts need clear custody and rollback paths.
+5. **Identity is part of the design.** Managed/workload identity and role-assignment boundaries shape topology.
+6. **Operations are designed, not appended.** Monitoring, restore paths, what-if reviews, and rollback hooks are named before rollout.
+7. **Drift is expected.** The design states how source, state, cloud control-plane truth, and architecture models are reconciled.
 
 ## 3. Decision Defaults
 

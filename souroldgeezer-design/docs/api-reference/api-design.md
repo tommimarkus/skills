@@ -2,50 +2,21 @@
 
 ## 1. Context
 
-A deployed endpoint that returns 200 OK is not the same as a production HTTP API. The central problem of API design is **presence vs. efficacy**: an endpoint that responds to a curl command is not evidence that the API holds up under retries, ships a stable error contract, survives key rotation, emits correlated telemetry, handles 429 from its own data store, stays inside its latency budget, or degrades sensibly when the downstream dependency is the one throttling. An HTTP status code is not a contract.
+This reference treats contract, security, reliability, and observability as baselines, not options. Every endpoint ships with an OpenAPI 3.1 definition, RFC 9457 `application/problem+json` on every error path, an explicit versioning strategy, RFC 9110 conditional requests (`ETag`, `If-Match`, `If-None-Match`) on mutable resources, and idempotency semantics that match the HTTP verb.
 
-API design in 2026 is less about wiring a route than about writing an API whose **contract, security posture, reliability envelope, and observability** are correct by construction — before the first load test, and regardless of which hosting model, runtime, or data service sits underneath. This reference is a playbook for that practice: principles, decisions with defaults, a cheatsheet of primitives and status codes, worked patterns, named gotchas, and a review checklist — organized for the person building, extracting, or reviewing an API, not for a scanner.
-
-**Security is enforced throughout, not referenced.** Every decision, pattern, and checklist item that touches authentication, authorization, secrets, or data access names the specific discipline it protects: HTTPS-only, OAuth 2.0 / OIDC through maintained middleware, managed or workload identity where the platform supports it, platform secret managers over literals, data-plane RBAC for managed data services, least-privilege scopes, input validation at the boundary. A design choice that compromises any of these is called out, never silently accepted.
-
-**Contract discipline is a baseline, not a future concern.** Every endpoint here ships with an OpenAPI 3.1 definition, RFC 9457 `application/problem+json` on every error path, an explicit versioning strategy (no implicit v1), RFC 9110 conditional requests (`ETag`, `If-Match`, `If-None-Match`) on mutable resources, and idempotency semantics that match the HTTP verb. POSTs that retry without an `Idempotency-Key` are a smell; PUT / DELETE without `If-Match` on concurrently-writable resources is a smell.
-
-**Reliability is baseline.** Mutations are idempotent (by verb or by idempotency key). Outbound calls retry with exponential backoff and jitter. Throttle responses are `429 Too Many Requests` with `Retry-After`. Async workers carry bounded retry plus poison / dead-letter handling. Long-running work does not block a synchronous HTTP request past the runtime's timeout budget.
-
-**Observability is baseline.** Every request carries a W3C `traceparent`; every log is structured; every error carries a correlation ID (`traceparent`-derived or explicit); every outbound call propagates `traceparent` downstream. Application Insights / OpenTelemetry is wired at the worker level, not retrofitted per endpoint.
-
-**Performance is responsiveness for APIs.** Responsive here means responsive to startup latency, connection exhaustion, dependency latency, throttling, and scale events — not just to a raw RPS number. The reference environment is mobile-client p95 over public internet; the hosting choice is a design-time decision governed by latency tolerance, workload shape, operations model, and cost, not a deployment afterthought.
-
-**Scope.** HTTP APIs in 2026, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Node.js hosted/serverless APIs, hosted Next.js API surfaces, Cosmos DB, and Azure Blob Storage. gRPC, GraphQL, SOAP, and runtimes without a bundled extension are out of scope — see §8. Data-model design (schema, DDD, event-sourcing) is also out of scope; this reference covers the contract and the runtime around it, not the domain model.
+**Scope.** HTTP APIs, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Node.js hosted/serverless APIs, hosted Next.js API surfaces, Cosmos DB, and Azure Blob Storage. See §8 for out-of-scope items.
 
 ## 2. Principles
 
-### 2.1 Contract-first, not code-first
-The OpenAPI 3.1 definition is the source of truth. Endpoint signatures, request and response shapes, error types, and auth requirements are decided in the contract before a handler is written, and the handler is verified against the contract. Generated SDKs, client codecs, mocks, and API Management / Front Door policies all consume the same document.
-
-### 2.2 Semantic HTTP
-HTTP verbs carry meaning and HTTP status codes are part of the contract. `GET` is safe and cacheable; `PUT` and `DELETE` are idempotent; `POST` is neither unless explicitly made so. 200 is not a catch-all: `201 Created` ships `Location`; `202 Accepted` ships `Location` pointing at a status endpoint; `204 No Content` means a body is never sent; 400 is client error; 409 is conflict; 412 is precondition; 422 is semantically-invalid-but-syntactically-valid; 429 is throttle; 5xx is server fault. Status code is not a log level.
-
-### 2.3 Errors are data
-Every error response is `application/problem+json` per RFC 9457 — `type` (URI identifying the error class), `title`, `status`, `detail`, `instance`, plus any extension members the error family needs. Error `type` URIs are stable across versions; the set of types is documented in the OpenAPI. A client that sees `{ "type": "https://api.example.com/errors/rate-limited" }` never has to parse an English string.
-
-### 2.4 Versioning is mandatory and explicit
-Every endpoint belongs to a version. New APIs default to URI-path versioning (`/v1/...`); the alternative — header or media-type versioning — is chosen explicitly and with a documented reason. "Implicit v1" is a smell; clients must not be able to tell which version they are speaking by omission.
-
-### 2.5 Security is baseline
-HTTPS-only, TLS 1.2+. Use OAuth 2.0 / OIDC through maintained middleware for end-user and service-to-service auth; use managed identities or workload identities for cloud-to-cloud hops where the hosting platform supports them; use platform secret managers for the few remaining secrets; use data-plane RBAC for managed data stores. Azure extensions map this to Entra ID, managed identities, Key Vault references, Cosmos `disableLocalAuth=true`, and Storage `allowSharedKeyAccess=false`. Input is validated at the boundary, not in the handler body. Authorization is explicit and scope-based — "the function key or API key proves anything about the caller" is false.
-
-### 2.6 Reliability is baseline
-Mutations are idempotent by verb (PUT, DELETE) or by idempotency key (POST with `Idempotency-Key` + a replay cache). Outbound calls retry with exponential backoff and jitter, capped, and honour server-supplied `Retry-After`. Throttle responses are 429 with `Retry-After` (seconds or HTTP-date). Async workers carry bounded retry plus poison / dead-letter handling. Long-running work does not live inside the synchronous HTTP request — it moves to a queue-backed processor or workflow runtime.
-
-### 2.7 Observability is baseline
-Every request carries a W3C `traceparent` header (`00-<trace-id>-<span-id>-<flags>`); the runtime propagates it into request-local context / logger scopes and onto outbound HTTP calls. Logs are structured — named fields, not interpolated strings. Every error response carries a correlation identifier the client can quote back (the `traceparent` trace-id is sufficient). OpenTelemetry or the platform-native telemetry bridge is wired at worker / process startup, not inside individual handlers. Per-request cost signals (Cosmos RU charge, Blob Storage request count, external dependency count / latency) are emitted as structured fields so dashboards are one query away.
-
-### 2.8 Performance is responsiveness for APIs
-Responsive means responsive to startup latency, connection overhead, dependency latency, and scale events — not raw throughput. HTTP and data clients (`HttpClient`, Undici / `fetch` dispatcher, CosmosClient, BlobServiceClient, database pools, queue clients) live in DI, module scope, or an app container, never in handler bodies. Hosting selection is a design-time decision keyed to latency tolerance, scale shape, operational ownership, and cost; runtime extensions supply concrete platform defaults.
-
-### 2.9 Progressive enhancement across capability axes
-Sync HTTP is the baseline; async patterns (202 + polling, webhook delivery, workflow orchestration, queue-backed processor) are additive. Reach for the simplest pattern that satisfies the requirement and move up only when it doesn't: if a queue + 202 will do, don't reach for a full orchestration runtime; if a broker or worker platform gives you dead-lettering for free, don't hand-roll retry loops.
+- **2.1 Contract-first:** OpenAPI 3.1 is the source of truth; handlers are verified against it; generated SDKs, mocks, and gateway policies all consume the same document.
+- **2.2 Semantic HTTP:** verbs carry meaning; status codes are part of the contract; `201 Created` ships `Location`; `202 Accepted` ships `Location` pointing at a status endpoint; 429 is throttle; 5xx is server fault.
+- **2.3 Errors are data:** every error path returns `application/problem+json` (RFC 9457) with a stable `type` URI; error type URIs are documented in the OpenAPI.
+- **2.4 Versioning is explicit:** every endpoint belongs to a version; "implicit v1" is a smell; default is URI-path versioning (`/v1/...`).
+- **2.5 Security is baseline:** HTTPS-only, TLS 1.2+; OAuth 2.0 / OIDC through maintained middleware; managed/workload identity for cloud hops; platform secret managers; data-plane RBAC; input validated at the boundary.
+- **2.6 Reliability is baseline:** mutations idempotent by verb or `Idempotency-Key`; outbound calls retry with exponential backoff + jitter + `Retry-After`; 429 with `Retry-After`; bounded retry + dead-letter on async workers; long-running work moves off the synchronous HTTP request.
+- **2.7 Observability is baseline:** W3C `traceparent` on every request; structured logs; correlation ID in every error response; OpenTelemetry / platform telemetry at worker startup; per-request cost signals (Cosmos RU, storage request count) as structured fields.
+- **2.8 Performance is responsiveness:** HTTP and data clients live in DI / module scope, not handler bodies; hosting selection is a design-time decision keyed to latency, scale, and cost.
+- **2.9 Progressive enhancement:** sync HTTP is baseline; 202+polling, webhooks, orchestration, and queue-backed processors are additive — reach for the simplest pattern that satisfies the requirement.
 
 ## 3. Decisions
 
@@ -56,14 +27,14 @@ Resource-oriented URLs and verbs scale better than function-style endpoints. `PO
 
 **Default:** REST. URLs name resources; verbs name operations; state transitions are `POST` sub-resources (`/orders/{id}/cancel`), not verbs in paths.
 
-*When to deviate:* genuinely RPC-style internal endpoints (e.g., `POST /rpc/recomputeCache`) where there is no resource being mutated and the caller is a trusted internal service. Document the RPC-style endpoint as such.
+*When to deviate:* genuinely RPC-style internal endpoints with no resource being mutated and a trusted internal caller — document as such.
 
 ### 3.2 Versioning scheme
 URI-path versioning is the most discoverable for public APIs and the easiest to route at the edge.
 
 **Default:** URI path — `/v1/...`, `/v2/...`. New v2 coexists with v1 until v1 is sunset per §5.10.
 
-*When to deviate:* internal APIs where a single client controls both sides and header versioning reduces churn; public APIs that must preserve exact existing URLs across schema changes and choose `api-version=` query parameter for compatibility with the existing clients. Media-type versioning (`Accept: application/vnd.example.v2+json`) is rarely warranted; pick it only when content negotiation is the clearest expression of the contract.
+*When to deviate:* internal APIs where a single client controls both sides and header versioning reduces churn; public APIs needing `api-version=` for URL compatibility. Media-type versioning only when content negotiation is the clearest expression of the contract.
 
 ### 3.3 Authentication model
 End-user calls authenticate with OAuth 2.0 / OIDC through maintained middleware. Service-to-service calls use OAuth 2.0 client credentials or platform managed/workload identity when available. Azure targets use Microsoft Entra ID and managed identities. Function keys and API keys are a narrow fallback for tightly-scoped service-to-service with a single trusted caller.
@@ -77,16 +48,7 @@ Authentication proves who. Authorization proves what they can do. Never use "hol
 
 **Default:** scope-based or app-role-based authorization on every endpoint; deny-by-default; explicit route/handler policy metadata. Anonymous runtime-level access is allowed only if the endpoint is genuinely public (e.g., a health probe).
 
-**OAuth 2.0 flow matrix.** Pick the flow by caller type, not by token shape:
-
-| Flow | Use when | Caller holds |
-|---|---|---|
-| **Authorization Code + PKCE** | Interactive end-user via SPA, mobile, or native client | User identity (OID claim) + delegated scopes |
-| **Client Credentials** | Service-to-service, no user present | App identity (AppId) + app roles (`roles` claim) |
-| **On-Behalf-Of (OBO)** | Downstream API calls that must preserve the user's identity | User identity *and* app identity (dual token exchange) |
-| **Device Code** | Headless / constrained input (CLI, smart TV) | User identity + delegated scopes (fallback when browser flow is impractical) |
-
-Resource Owner Password Credentials (ROPC) is **disallowed** for Entra ID per Microsoft's guidance — do not add it to the matrix.
+**OAuth 2.0 flows.** Authorization Code+PKCE (interactive user/SPA), Client Credentials (service-to-service), On-Behalf-Of (downstream API preserving user identity), Device Code (CLI/headless). ROPC is **disallowed** for Entra ID.
 
 **Scope vs app role:** scopes (`scp` claim) are delegated permissions tied to the signed-in user ("this user consented to this app acting on their behalf"). App roles (`roles` claim) are application permissions granted to the app identity directly. An endpoint that a user invokes checks `scp`; an endpoint that only other services invoke checks `roles`. An endpoint that accepts both (end-user *and* service caller) checks whichever is present.
 
@@ -122,7 +84,7 @@ Filters and field projections that trust client-supplied names expand the API su
 
 **Default:** explicit allowlist. Filter fields and projection fields are enumerated in the OpenAPI; anything outside the list is 400 Bad Request with a problem+json `type` of `invalid-parameter`.
 
-*When to deviate:* internal admin endpoints where the caller is trusted and the cost of maintaining an allowlist exceeds the value. Document the trust boundary.
+*When to deviate:* internal admin endpoints with trusted callers where maintaining an allowlist exceeds the value — document the trust boundary.
 
 ### 3.9 Async patterns
 Long-running or deferred work is an explicit design choice with a named pattern; it is never achieved by blocking a synchronous HTTP request past the runtime timeout.
@@ -192,36 +154,32 @@ Secrets live in the platform secret manager and are referenced from runtime conf
 Modern HTTP and API primitives with one-line purpose, minimal shape, and the key pitfall. If a primitive is cited in §5 patterns, this is where the signature lives.
 
 ### HTTP verbs
-- **`GET`** — safe, idempotent, cacheable. Never mutates server state.
-- **`POST`** — creates a resource or runs a non-idempotent operation. Default status 201 on create, 202 on async accept, 200 on non-creating action with body.
-- **`PUT`** — replaces a resource. Idempotent by spec. Use with `If-Match` for concurrent safety.
-- **`PATCH`** — partial update. Idempotent only if the patch document is (e.g., JSON Merge Patch). Use with `If-Match`.
-- **`DELETE`** — removes a resource. Idempotent: second DELETE returns 404 or 204, both acceptable.
-- **`HEAD`** — `GET` without body. For cache validation and existence checks.
-- **`OPTIONS`** — CORS preflight; not a general-purpose metadata endpoint.
+- **`GET`** — safe, idempotent, cacheable.
+- **`POST`** — creates or runs a non-idempotent operation. Default 201 on create, 202 on async accept.
+- **`PUT`** — replaces; idempotent. Use with `If-Match`.
+- **`PATCH`** — partial update; idempotent only if the patch document is. Use with `If-Match`.
+- **`DELETE`** — removes; idempotent (second DELETE → 404 or 204, both acceptable).
+- **`HEAD`** — GET without body (cache validation, existence checks).
+- **`OPTIONS`** — CORS preflight only.
 
 ### Status codes (the ones that recur)
-- **`200 OK`** — success with body.
-- **`201 Created`** — resource created. MUST include `Location` header pointing at the new resource.
-- **`202 Accepted`** — async work started. MUST include `Location` header pointing at the status endpoint.
-- **`204 No Content`** — success, no body. Used on `DELETE` and successful `PUT` without return representation.
-- **`206 Partial Content`** — response to a `Range` request. Include `Content-Range`.
-- **`301 / 302`** — redirect (permanent / temporary). Prefer 308 / 307 if method preservation matters.
-- **`400 Bad Request`** — syntactically invalid request (malformed JSON, unknown field, bad type). problem+json with `invalid-parameter` or similar.
-- **`401 Unauthorized`** — missing or invalid credentials. Include `WWW-Authenticate`.
-- **`403 Forbidden`** — valid credentials, insufficient authorization. Never use when 404 would leak existence of a resource the caller cannot see.
-- **`404 Not Found`** — resource does not exist (or exists but caller cannot see it, when existence itself is sensitive).
-- **`405 Method Not Allowed`** — verb is unsupported on this resource. Include `Allow` header.
-- **`409 Conflict`** — request conflicts with current state (duplicate unique-key insert, concurrent update without If-Match).
-- **`410 Gone`** — resource was deliberately deleted; do not reintroduce.
+- **`200`** — success with body. **`204`** — success, no body.
+- **`201 Created`** — MUST include `Location` pointing at the new resource.
+- **`202 Accepted`** — MUST include `Location` pointing at the status endpoint.
+- **`206 Partial Content`** — response to a `Range` request; include `Content-Range`.
+- **`301 / 302`** — redirect; prefer 308 / 307 if method preservation matters.
+- **`400 Bad Request`** — syntactically invalid; problem+json `invalid-parameter`.
+- **`401 Unauthorized`** — missing/invalid credentials; include `WWW-Authenticate`.
+- **`403 Forbidden`** — valid credentials, insufficient authorization.
+- **`404 Not Found`** — resource does not exist (or caller cannot see it when existence is sensitive).
+- **`405 Method Not Allowed`** — include `Allow` header.
+- **`409 Conflict`** — duplicate unique-key or concurrent update without `If-Match`.
+- **`410 Gone`** — resource deliberately deleted; do not reintroduce.
 - **`412 Precondition Failed`** — `If-Match` / `If-None-Match` mismatch; client must retry with fresh `ETag`.
-- **`413 Payload Too Large`** — request body exceeds server cap.
-- **`415 Unsupported Media Type`** — `Content-Type` not accepted.
-- **`416 Range Not Satisfiable`** — bad `Range`.
-- **`422 Unprocessable Entity`** — syntactically valid, semantically rejected (business rule failure).
-- **`429 Too Many Requests`** — throttled. MUST include `Retry-After`.
-- **`500 Internal Server Error`** — unexpected server fault. Log the correlation ID in the response body.
-- **`502 / 503 / 504`** — upstream dependency failures.
+- **`413 Payload Too Large`** — body exceeds server cap.
+- **`422 Unprocessable Entity`** — syntactically valid, semantically rejected.
+- **`429 Too Many Requests`** — MUST include `Retry-After`.
+- **`500`** — unexpected server fault; log correlation ID in response body. **`502/503/504`** — upstream failures.
 
 ### Headers that matter
 - **`Location`** — where to go next. 201 points at new resource; 202 points at status endpoint.
@@ -373,23 +331,11 @@ public async Task<IActionResult> Handle(HttpRequest req, IHttpClientFactory fact
 - Optionally mirror pagination in an RFC 8288 `Link` header: `Link: </resources?cursor=xyz>; rel="next", </resources/{id}>; rel="self"`. Useful for clients that follow hypermedia.
 
 ### 5.3 Long-running job via 202 + `Location` + polling
-- Client: `POST /jobs` with payload → 202 + `Location: /jobs/{id}`.
-- Worker: processes asynchronously (queue-backed processor, Durable activity, change-feed).
-- Client: `GET /jobs/{id}` → 200 with `{ status: pending | running | succeeded | failed, result?, error? }`.
-- Terminal statuses include the result (succeeded) or a problem+json under `error` (failed).
-- Status endpoint is idempotent and cheap to call.
+- `POST /jobs` → 202 + `Location: /jobs/{id}`; worker processes async (queue, Durable activity, change-feed).
+- `GET /jobs/{id}` → `{ status: pending | running | succeeded | failed, result?, error? }`. Status endpoint is idempotent.
 
 ### 5.4 Long-running job via workflow orchestration
-Prefer §5.3 for simple async. Reach for orchestration when coordination is required: fan-out / fan-in, external events, human approval, compensation, or long-running monitors.
-
-**Default:** the HTTP surface still returns 202 + `Location`; orchestration status is exposed through the same job-status resource shape as §5.3. The loaded runtime extension supplies the concrete orchestration APIs and determinism rules.
-
-**Core rules:**
-- Keep orchestration state and job status versioned as an API contract.
-- Bound fan-out width so downstream dependencies are not saturated.
-- Keep orchestration steps idempotent or compensatable.
-- Do not perform non-deterministic work in replay-based orchestrators; use the loaded runtime extension's deterministic clock, ID, timer, and activity APIs.
-- For breaking workflow changes, drain in-flight instances or route old and new versions separately.
+Prefer §5.3 for simple async. Use orchestration for fan-out/fan-in, external events, human approval, compensation, or long-running monitors. HTTP surface still returns 202 + `Location`; same job-status shape as §5.3. Core rules: version orchestration state as an API contract; bound fan-out width; keep steps idempotent or compensatable; no non-deterministic work in replay-based orchestrators; drain in-flight instances before breaking workflow changes.
 
 ### 5.5a Webhook delivery (outbound)
 - Server-side: publish via queue-backed processor; signature header `X-Signature: t=<ts>,v1=<hmac-sha256-hex>` computed over `<ts>.<raw-body>`; retry with exponential backoff + jitter; after N failures move to DLQ.
@@ -398,27 +344,21 @@ Prefer §5.3 for simple async. Reach for orchestration when coordination is requ
 - Expose `GET /webhook-deliveries/{id}` for operators to inspect delivery status, retry count, DLQ reason.
 
 ### 5.5b Webhook receipt (inbound)
-Receiving a webhook is not just "process a POST." A production-grade receiver:
+A production-grade receiver:
 
-1. **Read the raw body once, before model binding.** Signature is computed over bytes, and most frameworks canonicalize whitespace / JSON ordering when they deserialize. Use `HttpRequest.Body` with buffering enabled (`EnableBuffering()` + `ReadAsync` into a `byte[]` or `MemoryStream`) so both signature verification and handler can read it.
-2. **Verify timestamp freshness** against a ±5-minute window (`|now - ts| ≤ 300`). Reject older with 401. This blocks replay of captured requests.
-3. **Constant-time HMAC compare** (`CryptographicOperations.FixedTimeEquals`) against the expected signature; never `string ==`.
-4. **Idempotent handler** via `(source, event-id)` dedup. Store processed event IDs in Cosmos (`cosmos.PAT-idempotency-container`) with TTL covering the provider's retry window (typically 24 h). Duplicate → return the same 200 / 202 that the first call returned, don't re-process.
-5. **Respond fast.** Acknowledge receipt with 202 + enqueue to an internal processor; don't do the work synchronously in the receiver. Webhook senders interpret slow 200s as failures and retry, creating double-processing.
-6. **Never block on signature secret lookup in the hot path** — cache the Key Vault secret with a short TTL; on rotation, fall back to trying the previous secret once before rejecting.
+1. **Read raw body before model binding** — signature is over bytes; use buffered read so both verification and handler can consume it.
+2. **Verify timestamp freshness** — reject requests outside ±5 minutes (`|now - ts| ≤ 300`) with 401 to block replay.
+3. **Constant-time HMAC compare** (`CryptographicOperations.FixedTimeEquals`); never `string ==`.
+4. **Idempotent handler** — dedup via `(source, event-id)` stored in Cosmos (`cosmos.PAT-idempotency-container`) with TTL ≥ provider retry window (typically 24 h); duplicate → return same 200 / 202.
+5. **Respond fast** — return 202 and enqueue; doing work synchronously causes webhook senders to retry on timeout, creating double-processing.
+6. **Cache the signing secret** with a short TTL; on rotation fall back to the previous secret once before rejecting.
 
 ### 5.6 Idempotent POST with `Idempotency-Key` + replay cache
-- Client: `POST /resources` with `Idempotency-Key: <uuid>`.
-- Server: look up `(key)` in replay cache; hit → return cached response; miss → process, store `(key, status, body, headers)` with TTL (24 h typical), return response.
-- Same key with different body → 409 (client bug).
-- Cache implementation: dedicated Cosmos container with `DefaultTimeToLive` + unique-key policy on the idempotency key, or Redis with TTL.
+- Client sends `Idempotency-Key: <uuid>`; server looks up key: hit → return cached response, miss → process and store `(key, status, body, headers)` with TTL (24 h typical).
+- Same key, different body → 409 (client bug). Cache: Cosmos container with `DefaultTimeToLive` + unique-key policy, or Redis with TTL.
 
 ### 5.7 Bulk / batch endpoint with partial-success semantics
-- `POST /resources/batch` with an array of up to N items.
-- Response: 207 Multi-Status (HTTP non-standard but widely used in APIs) or 200 with per-item result array: `{ results: [{ status, id?, error? }] }`.
-- Size cap documented (e.g., 100 items or 2 MB).
-- Per-item failures do not fail the whole request unless atomicity was requested.
-- Combine with `Idempotency-Key` so whole-batch retries are safe.
+- `POST /resources/batch` → 207 or 200 with per-item `{ results: [{ status, id?, error? }] }`. Size cap documented. Per-item failures do not fail the batch unless atomicity was requested. Combine with `Idempotency-Key` for safe retries.
 
 ### 5.8 Fan-out via queue-backed handler
 - HTTP endpoint enqueues; returns 202 with `Location` pointing at status endpoint.
@@ -429,10 +369,7 @@ Receiving a webhook is not just "process a POST." A production-grade receiver:
 - **Dedup:** Service Bus has **broker-side duplicate detection** (`requiresDuplicateDetection: true`, `duplicateDetectionHistoryTimeWindow: PT10M` in Bicep) keyed on `MessageId`. Set `MessageId` to a stable, deterministic value for your event (not a random Guid) so retries on the producer side are discarded by the broker. Dedup window is ≤ 7 days; for longer windows, dedup on the consumer side via an idempotency-key container.
 
 ### 5.9 Backend-for-frontend (BFF) aggregation endpoint
-- Client-facing endpoint composes several downstream calls; returns a shape tuned for the UI.
-- Emit `traceparent` to every downstream; aggregate errors into problem+json extension members.
-- Cache-per-request (request-scoped DI services) to avoid duplicate downstream fetches.
-- If aggregation is slow, switch to async 202 + polling.
+- Composes downstream calls; returns shape tuned for the UI. Emit `traceparent` to every downstream; aggregate errors into problem+json. Cache-per-request to avoid duplicate fetches; if aggregation is slow, switch to async 202 + polling.
 
 ### 5.10 Versioned endpoint rollout
 - Introduce `/v2/...` alongside `/v1/...`; both live.
@@ -537,13 +474,4 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 
 ## 8. Out of scope
 
-- **Non-HTTP wire formats.** gRPC, GraphQL, SOAP, JSON-RPC — separate disciplines with their own contracts; this reference is HTTP APIs.
-- **Runtimes without bundled extensions.** Edge, gateway, mobile backend, and non-Node hosted/serverless runtimes need their own extension when their primitives differ; the core principles here are portable but runtime mechanics are not.
-- **Other Azure data layers.** Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Azure Cache for Redis — future per-service extensions; the Cosmos + Blob pair is the current scope.
-- **Cosmos DB non-NoSQL APIs.** MongoDB API, Cassandra API, Gremlin, Table — separate SDK surfaces with different idioms.
-- **Data-model design.** Schema design, DDD, event-sourcing, CQRS — this reference covers the HTTP contract and runtime around the model, not the model itself.
-- **General .NET / Node.js / Next.js code quality.** Null-safety, LINQ style, async-correctness lint, module-structure lint, React component design — out of scope; `devsecops-audit` and `test-quality-audit` in the `souroldgeezer-audit` plugin cover the audit side.
-- **Web frontend app or UI on top of the API.** Routes, screens, component
-  architecture, frontend state/data behavior, responsive layout, accessibility,
-  and i18n belong to the `app-design` sibling skill.
-- **Runtime SLO verification.** p95, cold-start, error rate, RU charges — these require load / RUM and are out of scope for static review; §7 tags these as `[load]` / `[runtime]` and defers to the appropriate tool.
+Not covered: gRPC / GraphQL / SOAP / JSON-RPC; runtimes without a bundled extension; Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Redis (future extensions); Cosmos DB non-NoSQL APIs (MongoDB, Cassandra, Gremlin, Table); data-model design (schema, DDD, event-sourcing, CQRS); general .NET / Node.js / Next.js code quality (→ `devsecops-audit`, `test-quality-audit`); web frontend app / UI (→ `app-design`); runtime SLO verification (p95, cold-start, error rate, RU charges — require load test / RUM; tagged `[load]` / `[runtime]` in §7).

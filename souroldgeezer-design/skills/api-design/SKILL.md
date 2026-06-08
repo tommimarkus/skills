@@ -98,14 +98,8 @@ paraphrased.
   evidence, action, and reference/extension citation.
 - Lookup: direct rule, exception, citation, verification layer, one-line footer.
 
-Every answer reports mode, extensions loaded, core reference path, procedures
-loaded, evidence layers (`static`, `iac`, `contract`, `runtime`,
-`security-tool`, `load`, `human`), project assimilation, architecture pairing,
-delegations, and limits. If no findings, say so with verification limits.
+Every answer reports mode, extensions loaded, core reference path, procedures loaded, evidence layers, project assimilation, architecture pairing, delegations, and limits. If no findings, say so with verification limits.
 
 ## Stop Conditions
 
-Stop when source/scope is missing, sibling ownership dominates, unsupported
-runtime mechanics are required, required non-static evidence is absent, legacy
-debt is load-bearing and outside scope, a static/contract/IaC red flag remains,
-or output would copy a broken API/security/reliability pattern.
+Stop when source/scope is missing, sibling ownership dominates, unsupported runtime mechanics are required, required non-static evidence is absent, legacy debt is load-bearing and outside scope, a red flag remains, or output would copy a broken pattern.

@@ -27,13 +27,7 @@ Rules cite source families rather than copying source prose.
 - Code smells/refactoring calibration: Lacerda, Petrillo, Pimenta, and Gueheneuc, tertiary systematic review, https://www.sciencedirect.com/science/article/pii/S0164121220300881
 - DDD empirical calibration: systematic literature review, https://www.sciencedirect.com/science/article/pii/S0164121225002055
 
-Source roles:
-
-- Principle authorities define rules.
-- Empirical calibration sources tune severity and confidence.
-- Runtime/platform authorities define extension-specific facts.
-
-Discovery sources such as blogs, vendor summaries, conference slides, and AI summaries can help search, but they do not anchor reference rules when primary or official sources are available.
+Source roles: principle authorities define rules; empirical calibration sources tune severity and confidence; runtime/platform authorities define extension-specific facts. Blogs, vendor summaries, and AI summaries do not anchor rules when primary sources are available.
 
 ## 3. Principles
 
@@ -125,27 +119,9 @@ Every principle recommendation or rejection must state:
 
 ## 6. Patterns
 
-Patterns are tactics for forces, not goals. Apply the Lean value and waste
-discipline from section 3.1 before reaching for a named pattern: start from a
-current use case, identify the volatility or propagation cost, prefer the
-smallest coherent move, and record the simpler design that was rejected.
+Patterns are tactics for forces, not goals. Apply §3.1 Lean discipline first: start from a current use case, prefer the smallest move, record the simpler design that was rejected.
 
-Load the compact decision aid at
-[../../skills/software-design/references/pattern-catalog.md](../../skills/software-design/references/pattern-catalog.md)
-when a user asks about patterns, proposes a named pattern, or the source shows
-pattern ceremony whose fit must be judged. Do not expand this reference into a
-generic pattern tutorial; rely on the base model for mechanics and keep bundled
-guidance focused on Lean selection, smell mapping, evidence layers, and
-delegation.
-
-Every pattern recommendation must state:
-
-1. The current force it addresses.
-2. Where the responsibility and dependency boundary sits.
-3. When to avoid the pattern.
-4. Which `SD-*` smell family it can reduce.
-5. Which `SD-*` smell family it may introduce.
-6. The cheapest evidence layer needed before treating the pattern as justified.
+Load [../../skills/software-design/references/pattern-catalog.md](../../skills/software-design/references/pattern-catalog.md) for pattern decisions. Every recommendation must state the force, boundary, avoid-when, `SD-*` smell reduced, `SD-*` smell introduced, and cheapest evidence layer.
 
 Core pattern families:
 

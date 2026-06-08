@@ -19,42 +19,18 @@ When invoked, run the api-design skill and present results:
    + Cosmos + Blob all load together when the target spans those layers; hosted
    Next.js loads Node.js first, then Next.js; frontend route/layout/screen and
    component behavior delegates to `app-design`).
-3. For build mode: produce OpenAPI fragments, handler code, `Program.cs` DI
-   wiring, and IaC snippets that embody the reference's decision defaults;
-   cite the reference sections the output draws from (`§3.6`, `§5.6`, etc.)
-   plus RFCs and official runtime docs named by loaded extensions; never duplicate reference prose; run the
-   §7 self-check across the five buckets (Contract / Security / Reliability /
-   Observability / Performance) before handing back.
-4. For extract mode: produce the API baseline map: contract shape, route
-   surface, auth model, error shape, versioning, runtime stack, loaded
-   data/storage extensions, legacy debt, and next smallest migration move.
-5. For review mode: walk reference §7 bucket by bucket. Emit per-finding
-   output citing the reference section plus the extension smell code where
-   one matches (`afdotnet.HC-N`, `nodejs.HC-N`, `nextjs.HC-N`, `cosmos.HC-N`,
-   `blob.HC-N`, `SAD-G-*`).
-   Include a `layer:` field (`static` / `iac` / `contract` / `runtime` /
-   `security-tool` / `load`) so the reader knows how to confirm. Follow with
-   a short per-bucket rollup.
+3. For build mode: follow the skill's mode contract — cite reference sections and RFCs named by loaded extensions; run the §7 self-check before handing back.
+4. For extract mode: follow the skill's mode contract.
+5. For review mode: walk reference §7 bucket by bucket; cite extension smell codes where they match (`afdotnet.HC-N`, `nodejs.HC-N`, `nextjs.HC-N`, `cosmos.HC-N`, `blob.HC-N`, `SAD-G-*`); include a `layer:` field and follow with a short per-bucket rollup.
 6. For lookup mode: answer in two to four lines with a reference citation.
-7. Red flags — stop and fix before delivering: loaded extension high-confidence
-   smells in added or modified code; secrets in app-settings literals, committed
-   `local.settings.json`, or code literals; per-invocation `HttpClient`
-   construction; anonymous or key-only auth on a non-public endpoint; errors
-   without `application/problem+json`; POST mutation without
-   `Idempotency-Key` support where retries matter; 429 without `Retry-After`;
-   outbound `HttpClient` without `traceparent` propagation; Durable
-   orchestration where a queue would suffice; long-running work on an HTTP
-   trigger past the plan timeout; missing OpenAPI for an added endpoint;
-   CORS wildcard on an authenticated endpoint; `CosmosClient` constructed
-   per invocation or account key in code; Node.js handler `app.listen` in a
-   serverless entrypoint; hosted Node.js / Next.js app with no reverse-proxy
-   or request-size contract; Next.js Server Action exposed as a public API
-   instead of a Route Handler; Cosmos GET-by-id as a
-   cross-partition query instead of a point read; Storage
-   `allowSharedKeyAccess=true` on a newly-deployed account; account-key /
-   service-SAS auth; an API streaming a large upload through the runtime
-   without a documented memory/timeout budget; claiming p95 / cold-start
-   / error-rate / RU-charge pass from a static review.
+7. Extension-specific stop-checks — also consult `references/procedures/red-flags.md` (loaded automatically before final output in Build and Review). Stop and fix before delivering:
+   - `CosmosClient` constructed per invocation or account key in code.
+   - Node.js handler `app.listen` called inside a serverless entrypoint.
+   - Hosted Node.js / Next.js app with no reverse-proxy or request-size contract.
+   - Next.js Server Action exposed as a public API instead of a Route Handler.
+   - Cosmos GET-by-id issued as a cross-partition query instead of a point read.
+   - Storage `allowSharedKeyAccess=true` on a newly-deployed account; account-key / service-SAS auth.
+   - API streaming a large upload through the runtime without a documented memory/timeout budget.
 8. Always emit the footer disclosure: mode, extensions loaded (subset of
    `azure-functions-dotnet`, `nodejs`, `nextjs`, `azure-cosmosdb`,
    `azure-blob-storage`),
