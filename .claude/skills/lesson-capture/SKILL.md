@@ -43,8 +43,8 @@ user**, or a wrong path you took and **corrected yourself** — treat both the s
      --substrate "<deterministic|policy|prose>"
    ```
 
-   Omit `--decision` (defaults to `review`). The auto-approve fast-path is not enabled
-   until Plan 3 ships its template-synthesis + secret-scan controls.
+   Omit `--decision` (defaults to `review`). The auto-approve fast-path is gated by
+   `auto_approve_eligible()` and defaults to denying; unattended auto-commit is parked.
 
 ## Output
 

@@ -43,7 +43,7 @@ if [[ -n "$transcript_path" ]]; then
   signals=$(python3 "$hook_dir/../lessons_capture_signals.py" "$transcript_path" 2>/dev/null || true)
 fi
 
-targets="$signals"
+targets=""
 if [[ -n "$signals" ]]; then
   phrase_hint="Explicit correction phrases seen this session (hint, not a gate): ${signals//$'\n'/, }."
 else
