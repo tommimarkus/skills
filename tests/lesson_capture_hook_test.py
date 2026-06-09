@@ -56,14 +56,28 @@ class HookTest(unittest.TestCase):
             self.assertIn('"decision": "block"', out.stdout)
             self.assertIn("lesson-capture", out.stdout)
 
-    def test_silent_without_correction(self):
+    def test_fires_on_authoring_change_without_correction(self):
         with tempfile.TemporaryDirectory() as t:
             tmp = Path(t)
             _repo(tmp)
             _authoring_change(tmp)
             out = _run(tmp, _transcript(tmp, "add another validation case please"))
             self.assertEqual(out.returncode, 0, out.stderr)
-            self.assertEqual(out.stdout.strip(), "")
+            self.assertIn('"decision": "block"', out.stdout)
+            self.assertIn("lesson-capture", out.stdout)
+
+    def test_fires_on_authoring_change_without_transcript(self):
+        with tempfile.TemporaryDirectory() as t:
+            tmp = Path(t)
+            _repo(tmp)
+            _authoring_change(tmp)
+            stdin = json.dumps({"session_id": "s1", "cwd": str(tmp),
+                                "stop_hook_active": False})
+            out = subprocess.run(["bash", str(HOOK)], input=stdin,
+                                 capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertIn('"decision": "block"', out.stdout)
+            self.assertIn("lesson-capture", out.stdout)
 
     def test_silent_without_authoring_change(self):
         with tempfile.TemporaryDirectory() as t:
