@@ -141,6 +141,10 @@ or important enough to rerun after every change. Prose should explain why a
 rule matters and how to interpret edge cases; scripts should calculate what can
 be calculated.
 
+When a gate or pre-filter is meant to widen what gets caught, check it against
+each subclass of the target signal: a heuristic can silently exclude the very
+case it was added for (e.g. a turn-count filter drops single-turn self-correction).
+
 Skill-local scripts should be usable without an agent reverse-engineering them:
 provide noninteractive help, stable exit codes, and structured output when a
 downstream check needs machine-readable results. Stateful scripts should expose
