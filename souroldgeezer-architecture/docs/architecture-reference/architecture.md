@@ -108,7 +108,9 @@ and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
 
 For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
 start from the selected Dediren release bundle's UML source fixture that
-matches the kind in play (see SKILL.md step 3 for the current kind list).
+matches the kind in play (see the UML notation hub at
+`skills/architecture-design/references/notations/uml.md` for the current kind
+list).
 
 Treat these files as hand-authored and checked in: `model.json`,
 `project.json`, `render-policy.json`, package-level `render-metadata.json` when
@@ -439,8 +441,9 @@ mismatch as a package or policy defect until proven otherwise. Check
 Per-view `layout --plugin elk-layout` commands may run in parallel with the
 release-resolved Dediren runtime. If a parallel batch fails, rerun the exact
 failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
-parallel-only failures under `Dediren tool issues` with repro evidence and
-reference the historical regression tracked in skills issue `#47`.
+parallel-only failures under `Dediren tool issues` with repro evidence. This
+parallel-only layout failure has regressed before, so include the serial-rerun
+comparison in the repro evidence.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or
