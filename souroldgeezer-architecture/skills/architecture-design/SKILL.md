@@ -52,10 +52,14 @@ Build.
    [workflow](references/procedures/architecture-operational-workflow.md).
 2. Run [self-check](references/procedures/self-check.md) before runtime claims;
    it uses [dediren-release.sh](references/scripts/dediren-release.sh) to
-   resolve the pinned GitHub™ release bundle.
+   resolve the pinned GitHub™ release bundle. Lookup may skip this step when
+   the answer makes no runtime claim.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load `references/notations/archimate.md` for
-   ArchiMate or both for mixed packages. For UML, load `references/notations/uml.md` (hub) and only the per-kind file under `references/notations/uml/` for the kind in play: `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`, `component`, or `deployment`.
+   ArchiMate. For UML, load `references/notations/uml.md` (hub) plus only the
+   per-kind file under `references/notations/uml/` for the kind in play:
+   `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`,
+   `component`, or `deployment`. For mixed packages, load both notation files.
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load
