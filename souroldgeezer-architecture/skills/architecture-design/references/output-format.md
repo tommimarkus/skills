@@ -7,28 +7,20 @@ inventory, architecture-documentation findings, other source material findings,
 skill/package issue classification, ArchiMate equivalence, Implementation impact;
 do not duplicate API, UI, auth, IaC, test, or code internals.
 
-Guards: APIs and GUIs are Application Interfaces; Application Services model the
-functionality exposed through an interface; if semantic validation accepts
-Application Component to Application Interface Realization, do not report it as
-endpoint-illegal; Prefer Composition or Aggregation for component-interface
-ownership; Use Triggering when the architectural claim is process sequencing;
-define the view concern, allowed element types, and relationship types.
+Guards: apply `architecture.md` §5 (interface/service semantics,
+component-interface ownership, Triggering for process sequencing); define the
+view concern, allowed element types, and relationship types.
 
-Evidence: disclose the selected release-resolved Dediren runtime version; it checks
-ArchiMate® 3.2 relationship endpoint legality, expects `Node`, not
-`TechnologyNode`, reports close parallel route channels, allows parallel
-per-view ELK layout with serial rerun. source-valid requires schema plus ArchiMate semantic validation:
-`dediren validate --plugin generic-graph --profile archimate`. UML source-valid requires schema plus
-`dediren validate --plugin generic-graph --profile uml`.
+Evidence: disclose the selected release-resolved Dediren runtime version.
+Runtime semantics and the notation-specific `source-valid` validation commands
+are defined in `architecture.md` §9.
 
 Ownership/layout: imported release bundles are upstream artifacts; report
 `Dediren tool issues`. Packages define per-view `projection`, `metadata`,
 `layout`, `render`; generated metadata, layouts, SVGs, optional OEF/XMI are
 reproducible output.
-If grouped layout validation still reports connector-through-node, invalid route,
-or group-boundary warnings, rerun the same view without groups. If cleaner, use
-the cleaner layout as evidence and report the grouped-layout regression plus both
-validation counts.
+When the `architecture.md` §9 grouped-layout fallback was used, report the
+regression plus both validation counts.
 
 Cross-notation: report UML to ArchiMate `properties.uml.architecture_context`
 links as handoff evidence. Broken targets, missing source evidence, or UML detail

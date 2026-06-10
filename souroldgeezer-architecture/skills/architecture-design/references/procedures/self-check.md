@@ -20,9 +20,8 @@ bundle)` and cap at `source-valid` unless Lookup only. If Java™ 21+ is missing
 disclose `not run (missing Java 21+ runtime)` for runtime steps.
 
 The selected release bundle is an imported upstream Dediren artifact. Do not
-patch cached release files or future packaged bundles. For defects, report
-`Dediren tool issues` with version, command, input summary, envelope/error,
-expected behavior, and repro evidence.
+patch cached release files or future packaged bundles; report defects under
+`Dediren tool issues` per `architecture.md` §9.
 
 For JSON authoring, repair, and command handoff details, read the selected
 release bundle guide before loading schemas:
