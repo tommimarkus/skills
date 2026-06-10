@@ -1,11 +1,14 @@
 # Dediren Self-Check
 
-Before runtime claims, resolve the pinned Dediren GitHub™ release:
+Before runtime claims, resolve the pinned Dediren GitHub™ release. Set
+`SKILL_DIR` to the architecture-design skill directory — the directory that
+contains this skill's `SKILL.md`. In this marketplace repo that is
+`souroldgeezer-architecture/skills/architecture-design`; in an installed
+plugin it is the `skills/architecture-design/` directory inside the plugin
+cache.
 
 ```bash
-DEDIREN="$(
-  souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh --ensure
-)"
+DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"
 ```
 
 The resolver caches release bundles under `.cache/dediren/releases/`; do not
@@ -23,7 +26,11 @@ expected behavior, and repro evidence.
 
 For JSON authoring, repair, and command handoff details, read the selected
 release bundle guide before loading schemas:
-`souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh --agent-guide`.
+
+```bash
+"$SKILL_DIR"/references/scripts/dediren-release.sh --agent-guide
+```
+
 It is the fast contract for Minimal Source JSON, Artifact Map, Semantic
 Profiles, Command Handoff, and Repair Rules.
 

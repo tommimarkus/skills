@@ -383,13 +383,14 @@ the package or update the source.
 
 ## 9. Runtime Evidence
 
-The skill uses the Dediren agent bundle published in GitHub™ Releases. Resolve
-the pinned release with:
+The skill uses the Dediren agent bundle published in GitHub™ Releases. Set
+`SKILL_DIR` to the architecture-design skill directory (the directory that
+contains the skill's `SKILL.md`; in this repo that is
+`souroldgeezer-architecture/skills/architecture-design`, in an installed
+plugin it is inside the plugin cache), then resolve the pinned release with:
 
 ```bash
-DEDIREN="$(
-  souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh --ensure
-)"
+DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"
 ```
 
 Use `dediren-release.sh --agent-guide` to locate the selected release bundle's

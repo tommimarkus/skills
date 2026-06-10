@@ -3,7 +3,7 @@
 Use after `SKILL.md` selects Build, Extract, Review, or Lookup.
 
 - Pre-flight: identify package, notation/profile, kind, quality target, export need, runtime. Preserve ids, labels, policies, evidence.
-- Runtime boundary: GitHub™ release bundles are imported upstream evidence. Resolve them with `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh`; do not patch cached release files or future packaged bundles. Report `Dediren tool issues` with version, command, input summary, envelope/error, expected behavior, repro evidence.
+- Runtime boundary: GitHub™ release bundles are imported upstream evidence. Resolve them with the skill's `references/scripts/dediren-release.sh` (path resolution in `self-check.md`); do not patch cached release files or future packaged bundles. Report `Dediren tool issues` with version, command, input summary, envelope/error, expected behavior, repro evidence.
 - Agent usage: for source JSON authoring, command handoff, and repair loops, read the selected release guide from `dediren-release.sh --agent-guide` before loading schemas.
 - Notation guard: ArchiMate and UML are supported profiles. Load the selected notation reference; stop on unsupported notation instead of degrading into an ArchiMate review. Add `archimate-oef` only for requested ArchiMate OEF export and `uml-xmi` only for requested UML XMI export.
 - Build: update source/policies from architect intent; add actual views; validate, project, layout, validate-layout, render.
