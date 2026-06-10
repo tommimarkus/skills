@@ -20,3 +20,20 @@ Severity: `block` invalid source or failed projection/layout/render/export;
 - `ARCH-Q-2`: unclear concern, hub fanout, mixed concerns, audience incoherence, or vocabulary mixing.
 - `ARCH-L-3`: valid layout but hard to scan: density, route congestion, empty groups, long spans, extreme aspect ratio.
 - `ARCH-R-3`: nonblank SVG but labels, icons, or markers obscure the message.
+- `ARCH-M-2`: package source fails schema validation (`validate` error envelope).
+- `ARCH-V-1`: `project.json` declares a view with no model content or whose projection fails.
+- `ARCH-L-2`: layout validation reports connector-through-node, invalid route, or group-boundary errors.
+- `ARCH-L-4`: grouped layout regresses against its ungrouped rerun; fallback layout used as evidence.
+- `ARCH-R-1`: SVG render fails, or produces blank content or an incoherent `viewBox`.
+- `ARCH-R-2`: rendered SVG is missing expected `data-dediren-node-id` or `data-dediren-edge-id` markers.
+- `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
+- `ARCH-E-4`: committed export output is stale against current package source or layout evidence.
+- `ARCH-Q-1`: claimed quality level exceeds the validation stages actually proven.
+- `ARCH-Q-4`: required output footer fields are missing or mutually inconsistent (a quality-level over-claim is `ARCH-Q-1`).
+
+Remaining codes are defined where they are used: `ARCH-X-1`, `ARCH-X-3`,
+`ARCH-X-4` in `procedures/drift-detection.md`; `ARCH-E-1`, `ARCH-E-2`,
+`ARCH-E-3` in `procedures/external-validation-handoff.md`; `ARCH-V-2` in
+`procedures/process-view-emission.md`; `ARCH-V-3` in
+`procedures/implementation-readiness-review.md`; `ARCH-L-1` in
+`../../../docs/architecture-reference/architecture.md` §9 and `procedures/self-check.md`.
