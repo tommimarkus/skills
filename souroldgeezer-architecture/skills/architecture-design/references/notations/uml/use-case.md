@@ -6,7 +6,8 @@ motivation ownership to ArchiMate Motivation / requirements work.
 ## Source Contract
 
 Use `kind: "uml-use-case"`. Source reference:
-`fixtures/source/valid-uml-use-case-basic.json`.
+`fixtures/source/valid-uml-use-case-basic.json` in the selected Dediren
+release bundle.
 
 Node types:
 

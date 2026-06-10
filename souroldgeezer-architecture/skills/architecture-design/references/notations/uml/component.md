@@ -7,7 +7,8 @@ Cooperation (prefer ArchiMate for architecture-level structure).
 ## Source Contract
 
 Use `kind: "uml-component"`. Source reference:
-`fixtures/source/valid-uml-component-basic.json`.
+`fixtures/source/valid-uml-component-basic.json` in the selected Dediren
+release bundle.
 
 Node types:
 

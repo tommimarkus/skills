@@ -6,7 +6,8 @@ detail. Delegate the behavior implementation to `software-design`.
 ## Source Contract
 
 Use `kind: "uml-state-machine"`. Source reference:
-`fixtures/source/valid-uml-state-machine-basic.json`.
+`fixtures/source/valid-uml-state-machine-basic.json` in the selected Dediren
+release bundle.
 
 Node types:
 

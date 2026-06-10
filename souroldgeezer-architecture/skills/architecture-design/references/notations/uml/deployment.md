@@ -7,7 +7,8 @@ infra-design for architecture-level hosting).
 ## Source Contract
 
 Use `kind: "uml-deployment"`. Source reference:
-`fixtures/source/valid-uml-deployment-basic.json`.
+`fixtures/source/valid-uml-deployment-basic.json` in the selected Dediren
+release bundle.
 
 Node types:
 

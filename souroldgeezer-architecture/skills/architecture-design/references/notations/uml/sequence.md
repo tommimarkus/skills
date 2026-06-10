@@ -7,8 +7,8 @@ control-flow and code decisions to `software-design`, and HTTP call contracts to
 
 ## Source Contract
 
-Use `kind: "uml-sequence"`. Source references:
-`fixtures/source/valid-uml-sequence-basic.json` (minimum) and
+Use `kind: "uml-sequence"`. Source references in the selected Dediren release
+bundle: `fixtures/source/valid-uml-sequence-basic.json` (minimum) and
 `fixtures/source/valid-uml-sequence-fragments.json` (with combined fragments).
 
 Node types:
