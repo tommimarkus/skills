@@ -33,7 +33,7 @@ Synthetic `uml-activity` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.06.4"}],
   "nodes": [
     {"id": "act-return", "type": "Activity", "label": "Return Book", "properties": {"uml": {"partitions": ["Desk", "Stacks"]}}},
     {"id": "start", "type": "InitialNode", "label": "start", "properties": {"uml": {"activity": "act-return", "partition": "Desk"}}},

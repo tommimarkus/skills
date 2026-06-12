@@ -26,7 +26,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "2026.06.0"
+EXPECTED_DEDIREN_VERSION = "2026.06.4"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -96,6 +96,17 @@ def envelope(result: subprocess.CompletedProcess[str]) -> dict:
             f"stdout={result.stdout}\n"
             f"stderr={result.stderr}"
         ) from exc
+
+
+def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
+    # render-result.schema.v2 (Dediren 2026.06.4+) returns data.artifacts[]; the SVG
+    # moved out of the v1 data.content scalar. Mirror the bundle's documented extraction:
+    # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
+    data = envelope(result)["data"]
+    for artifact in data["artifacts"]:
+        if artifact.get("artifact_kind") == "svg":
+            return artifact["content"]
+    raise AssertionError(f"no svg artifact in render result: {data}")
 
 
 class ArchitectureDedirenReleaseTest(unittest.TestCase):
@@ -387,7 +398,11 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 layout_result_path,
             )
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
-            svg = envelope(render_result)["data"]["content"]
+            self.assertEqual(
+                envelope(render_result)["data"]["render_result_schema_version"],
+                "render-result.schema.v2",
+            )
+            svg = svg_render_content(render_result)
             self.assertIn("<svg", svg)
             self.assertIn('data-dediren-node-id="client"', svg)
             self.assertIn('data-dediren-edge-id="orders-service-serves-client"', svg)
@@ -489,7 +504,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 "--metadata", render_metadata_path, "--input", layout_result_path,
             )
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
-            self.assertIn("<svg", envelope(render_result)["data"]["content"])
+            self.assertIn("<svg", svg_render_content(render_result))
 
             # uml-xmi export validates against the OMG XMI schema; the runtime fetches it
             # from www.omg.org on first run and caches it under DEDIREN_SCHEMA_CACHE_DIR,

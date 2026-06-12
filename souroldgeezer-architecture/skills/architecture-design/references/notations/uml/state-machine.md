@@ -38,7 +38,7 @@ Synthetic `uml-state-machine` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.06.0"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.06.4"}],
   "nodes": [
     {"id": "sm-loan", "type": "StateMachine", "label": "Loan", "properties": {"uml": {}}},
     {"id": "r-main", "type": "Region", "label": "main", "properties": {"uml": {"state_machine": "sm-loan"}}},
