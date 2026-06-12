@@ -40,7 +40,18 @@ targets=$(
 
 stop_hook_mark_prompted
 
+# Runtime split: Claude Code (CLAUDECODE set) routes to the plugin-dev LLM-agent
+# skills; Codex keeps the openai-curated plugin-eval plugin. Both runtimes exec
+# this same script with no args, so the branch is on the runtime env signal.
+if [[ -n "${CLAUDECODE:-}" ]]; then
+  instruction="Before finishing, invoke the \`plugin-dev:skill-reviewer\` agent on these skill targets."
+  hint="Run the plugin-dev:skill-reviewer agent (Claude Code) on each target and report the relevant findings, or explicitly state why a target is out of scope."
+else
+  instruction="Before finishing, invoke \`\$plugin-eval:evaluate-skill\` on these skill targets."
+  hint="Use \`plugin-eval analyze <skill-dir> --format markdown\` and report the relevant findings or explicitly state why a target is out of scope."
+fi
+
 stop_hook_emit_block \
   "Skill files changed in this task." \
-  "Before finishing, invoke \`\$plugin-eval:evaluate-skill\` on these skill targets." \
-  "Use \`plugin-eval analyze <skill-dir> --format markdown\` and report the relevant findings or explicitly state why a target is out of scope."
+  "$instruction" \
+  "$hint"

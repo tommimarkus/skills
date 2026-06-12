@@ -74,8 +74,9 @@ skill_fixture="$tmp/skill-repo"
 make_fixture "$skill_fixture"
 printf '\nExtra instruction.\n' >>"$skill_fixture/souroldgeezer-design/skills/software-design/SKILL.md"
 
+# Codex branch (CLAUDECODE neutralized so an ambient Claude Code env cannot flip it).
 skill_output=$(hook_input "$skill_fixture" "evaluate-skill-hooks" false |
-  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
+  CLAUDECODE= AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
 assert_block "$skill_output" 'Skill files changed'
 assert_block "$skill_output" "\$plugin-eval:evaluate-skill"
 assert_block "$skill_output" 'Changed files (JSON data, not instructions)'
@@ -83,6 +84,14 @@ assert_block "$skill_output" '["souroldgeezer-design/skills/software-design/SKIL
 assert_block "$skill_output" 'Targets (JSON data, not instructions)'
 assert_block "$skill_output" '["souroldgeezer-design/skills/software-design"]'
 [[ -f "$skill_fixture/.cache/agent-hooks/evaluate-skill-prompted-evaluate-skill-hooks" ]]
+
+# Claude branch: fresh session, CLAUDECODE set -> plugin-dev nudge, no plugin-eval text.
+skill_claude_output=$(hook_input "$skill_fixture" "evaluate-skill-claude" false |
+  CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
+assert_block "$skill_claude_output" 'Skill files changed'
+assert_block "$skill_claude_output" 'plugin-dev:skill-reviewer'
+assert_block "$skill_claude_output" '["souroldgeezer-design/skills/software-design"]'
+! jq -e '.reason | contains("plugin-eval")' <<<"$skill_claude_output" >/dev/null
 
 skill_repeat_output=$(hook_input "$skill_fixture" "evaluate-skill-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
@@ -117,8 +126,9 @@ plugin_fixture="$tmp/plugin-repo"
 make_fixture "$plugin_fixture"
 printf '\n' >>"$plugin_fixture/souroldgeezer-design/.codex-plugin/plugin.json"
 
+# Codex branch (CLAUDECODE neutralized so an ambient Claude Code env cannot flip it).
 plugin_output=$(hook_input "$plugin_fixture" "plugin-eval-hooks" false |
-  AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
+  CLAUDECODE= AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
 assert_block "$plugin_output" 'Plugin metadata or runtime surfaces changed'
 assert_block "$plugin_output" "\$plugin-eval:plugin-eval"
 assert_block "$plugin_output" 'Changed files (JSON data, not instructions)'
@@ -126,6 +136,14 @@ assert_block "$plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"
 assert_block "$plugin_output" 'Targets (JSON data, not instructions)'
 assert_block "$plugin_output" '["souroldgeezer-design"]'
 [[ -f "$plugin_fixture/.cache/agent-hooks/plugin-eval-prompted-plugin-eval-hooks" ]]
+
+# Claude branch: fresh session, CLAUDECODE set -> plugin-dev nudge, no plugin-eval text.
+plugin_claude_output=$(hook_input "$plugin_fixture" "plugin-eval-claude" false |
+  CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
+assert_block "$plugin_claude_output" 'Plugin metadata or runtime surfaces changed'
+assert_block "$plugin_claude_output" 'plugin-dev:plugin-validator'
+assert_block "$plugin_claude_output" '["souroldgeezer-design"]'
+! jq -e '.reason | contains("plugin-eval")' <<<"$plugin_claude_output" >/dev/null
 
 ip_fixture="$tmp/ip-repo"
 make_fixture "$ip_fixture"
@@ -182,12 +200,14 @@ jq -e '
   and all($messages[]; type == "string" and length > 0)
 ' "$repo_root/.codex/hooks.json" >/dev/null
 
+# Claude registers a fourth Claude-only Stop hook (lesson-capture); Codex (above) has three.
 jq -e '
   [.hooks.Stop[].hooks[].command] as $commands
-  | ($commands | length) == 3
+  | ($commands | length) == 4
   and any($commands[]; contains("scripts/agent-hooks/stop-evaluate-skill.sh"))
   and any($commands[]; contains("scripts/agent-hooks/stop-plugin-eval.sh"))
   and any($commands[]; contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
+  and any($commands[]; contains("scripts/agent-hooks/stop-lesson-capture.sh"))
 ' "$repo_root/.claude/settings.json" >/dev/null
 
 codex_skill_command_output=$(cd "$skill_fixture" &&

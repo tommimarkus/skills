@@ -46,7 +46,18 @@ targets=$(
 
 stop_hook_mark_prompted
 
+# Runtime split: Claude Code (CLAUDECODE set) routes to the plugin-dev LLM-agent
+# skills; Codex keeps the openai-curated plugin-eval plugin. Both runtimes exec
+# this same script with no args, so the branch is on the runtime env signal.
+if [[ -n "${CLAUDECODE:-}" ]]; then
+  instruction="Before finishing, invoke the \`plugin-dev:plugin-validator\` agent and evaluate these targets."
+  hint="Run the plugin-dev:plugin-validator agent (Claude Code) to check plugin structure and manifest sync, and report the findings or route to the right plugin-dev workflow."
+else
+  instruction="Before finishing, invoke \`\$plugin-eval:plugin-eval\` and evaluate these targets or use it to route to the right plugin-eval workflow."
+  hint="Use \`plugin-eval start <target> --request \"What should I run next?\" --format markdown\` when the target is ambiguous."
+fi
+
 stop_hook_emit_block \
   "Plugin metadata or runtime surfaces changed in this task." \
-  "Before finishing, invoke \`\$plugin-eval:plugin-eval\` and evaluate these targets or use it to route to the right plugin-eval workflow." \
-  "Use \`plugin-eval start <target> --request \"What should I run next?\" --format markdown\` when the target is ambiguous."
+  "$instruction" \
+  "$hint"
