@@ -110,7 +110,9 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("[ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md)", readme)
 
         claude = read("CLAUDE.md")
-        self.assertIn("**`ip-hygiene`** (plugin `souroldgeezer-audit`)", claude)
+        # CLAUDE.md was slimmed (0d28964); it now states the migration in prose
+        # rather than the old bolded "(plugin ...)" list format.
+        self.assertIn("now a public skill in `souroldgeezer-audit`", claude)
         self.assertNotIn("**`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md]", claude)
 
 

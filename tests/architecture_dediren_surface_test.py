@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "2026.06.2"
+EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "2026.06.3"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -61,23 +61,6 @@ EXTRACT_GROUP_SURFACES = [
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
 ]
-GROUPED_LAYOUT_GUARD_SURFACES = [
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "architecture-operational-workflow.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-    ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-]
-EA_MODELING_FEEDBACK_SURFACES = [
-    ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-]
-
-
 def compact_file(path: Path) -> str:
     return " ".join(path.read_text(encoding="utf-8").split())
 
@@ -181,20 +164,42 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(expected_phrase, content)
 
     def test_grouped_layout_guidance_requires_validation_fallback(self) -> None:
-        expected_phrases = [
+        # The grouped-layout validation fallback prose lives canonically in
+        # architecture.md §9. output-format.md and the operational workflow cite
+        # that section instead of duplicating the prose (refactor ad4db28).
+        canonical = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+        canonical_content = " ".join(canonical.read_text(encoding="utf-8").split())
+        for phrase in [
             "If grouped layout validation still reports connector-through-node, invalid route, or group-boundary warnings",
             "rerun the same view without groups",
             "use the cleaner layout as evidence and report the grouped-layout regression",
-        ]
+        ]:
+            with self.subTest(surface=canonical.relative_to(REPO_ROOT), phrase=phrase):
+                self.assertIn(phrase, canonical_content)
 
-        for surface in GROUPED_LAYOUT_GUARD_SURFACES:
+        for surface in [
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+        ]:
             content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in expected_phrases:
+            for phrase in ["architecture.md` §9", "grouped-layout fallback", "report the regression"]:
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
 
     def test_lead_ea_modeling_feedback_is_documented(self) -> None:
-        expected_phrases = [
+        # The lead-EA modeling feedback lives canonically in architecture.md §5 and
+        # is exercised by the behavioral evals. output-format.md cites §5 rather
+        # than duplicating the prose (refactor ad4db28).
+        canonical_surfaces = [
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+        ]
+        canonical_phrases = [
             "APIs and GUIs are Application Interfaces",
             "Application Services model the functionality exposed through an interface",
             "Application Component to Application Interface Realization",
@@ -204,27 +209,38 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "define the view concern, allowed element types, and relationship types",
             "Dediren tool issues",
         ]
-
-        for surface in EA_MODELING_FEEDBACK_SURFACES:
+        for surface in canonical_surfaces:
             content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in expected_phrases:
+            for phrase in canonical_phrases:
                 with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
                     self.assertIn(phrase, content)
 
+        output_format = " ".join(
+            (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        for phrase in [
+            "architecture.md` §5",
+            "interface/service semantics",
+            "component-interface ownership",
+            "Triggering for process sequencing",
+            "define the view concern, allowed element types, and relationship types",
+        ]:
+            with self.subTest(surface="output-format.md", phrase=phrase):
+                self.assertIn(phrase, output_format)
+
     def test_application_interface_guidance_allows_realization_but_prefers_ownership(self) -> None:
-        surfaces = [
+        # The realization-vs-ownership guidance lives canonically in
+        # architecture.md §5 and the behavioral evals; the operational workflow
+        # and output-format cite §5 component-interface ownership rather than
+        # restating it (refactor ad4db28). The forbidden phrasing is barred
+        # everywhere.
+        canonical_surfaces = [
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
         ]
-
-        for surface in surfaces:
+        for surface in canonical_surfaces:
             content = " ".join(surface.read_text(encoding="utf-8").split())
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
                 self.assertIn("Application Component to Application Interface Realization", content)
@@ -233,6 +249,22 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                     "Prefer Composition or Aggregation for component-interface ownership",
                     content,
                 )
+                self.assertNotIn("Application Components must not realize Application Interfaces", content)
+
+        citing_surfaces = [
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "architecture-operational-workflow.md",
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+        ]
+        for surface in citing_surfaces:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertIn("architecture.md` §5", content)
+                self.assertIn("component-interface ownership", content)
                 self.assertNotIn("Application Components must not realize Application Interfaces", content)
 
     def test_basic_fixture_uses_application_interface_service_split(self) -> None:
@@ -329,14 +361,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         architecture_reference = (
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
         ).read_text(encoding="utf-8")
-        workflow = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md"
-        ).read_text(encoding="utf-8")
         self_check = (
             ARCH_PLUGIN
             / "skills"
@@ -359,9 +383,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             architecture_reference,
         )
         self.assertIn("validate --plugin generic-graph --profile archimate", architecture_reference)
-        self.assertIn("validate --plugin generic-graph --profile archimate", workflow)
+        # workflow.md cites self-check.md for command templates rather than
+        # duplicating them; the command itself is asserted in self_check below.
         self.assertIn("validate --plugin generic-graph --profile archimate", self_check)
-        self.assertIn("source-valid requires schema plus ArchiMate semantic validation", output_format)
+        # output-format.md cites architecture.md §9 for the source-valid commands
+        # rather than restating them (refactor ad4db28).
+        self.assertIn("`source-valid` validation commands", output_format)
+        self.assertIn("`architecture.md` §9", output_format)
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
@@ -375,6 +403,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "parallel per-view ELK layout",
                 "serial rerun only as a diagnostic fallback",
             ],
+            # The operational workflow and output-format cite architecture.md §9
+            # for endpoint/Node/route semantics instead of restating them
+            # (refactor ad4db28).
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
@@ -383,18 +414,16 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "architecture-operational-workflow.md": [
                 "release-resolved Dediren runtime",
                 "plugins.generic-graph.semantic_profile",
-                "ArchiMate® 3.2 relationship endpoint legality",
-                "`Node`, not `TechnologyNode`",
-                "close parallel route channels",
+                "architecture.md` §9",
+                "endpoint legality",
+                "`Node` naming",
                 "parallel per-view ELK layout",
                 "rerun parallel-only failures serially",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
                 "release-resolved Dediren runtime version",
-                "ArchiMate® 3.2 relationship endpoint legality",
-                "`Node`, not `TechnologyNode`",
-                "close parallel route channels",
-                "per-view ELK layout with serial rerun",
+                "Runtime semantics",
+                "are defined in `architecture.md` §9",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
                 "release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
@@ -404,13 +433,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "allows parallel per-view ELK layout",
                 "keeps serial rerun fallback",
             ],
+            # CLAUDE.md is kept lean; it delegates runtime-evidence depth to the
+            # skill rather than restating the contract (restructure 0d28964).
             REPO_ROOT / "CLAUDE.md": [
-                "release-resolved Dediren runtime",
-                "ArchiMate® 3.2 relationship endpoint legality",
-                "`Node`, not `TechnologyNode`",
-                "close parallel route channels",
-                "parallel per-view ELK layout with serial rerun as a diagnostic fallback",
-                "plugins.generic-graph.semantic_profile",
+                "runtime-evidence rules live in the architecture-design `SKILL.md`",
             ],
         }
 
@@ -494,11 +520,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
         expectations = {
+            # CLAUDE.md carries multi-notation scope at orientation level only;
+            # profile commands and uml-xmi depth live in the skill surfaces below.
             REPO_ROOT / "CLAUDE.md": [
-                "ArchiMate® 3.2 and UML®",
-                "validate --plugin generic-graph --profile uml",
-                "uml-xmi",
-                "Cross-notation support",
+                "ArchiMate® 3.2 + UML®",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
                 "ArchiMate® and UML® dediren packages",
@@ -512,7 +537,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "procedures"
             / "architecture-operational-workflow.md": [
                 "ArchiMate and UML are supported profiles",
-                "validate --plugin generic-graph --profile uml",
                 "uml-xmi",
                 "Cross-notation links",
             ],
@@ -531,8 +555,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "uml-xmi",
                 "uml-sequence",
             ],
+            # output-format.md surfaces notation in its footer; profile commands
+            # live in self-check.md, not here.
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
-                "validate --plugin generic-graph --profile uml",
+                "Notation: archimate | uml | mixed",
                 "Cross-notation links",
             ],
         }
@@ -575,11 +601,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(phrase, uml_ref)
 
     def test_uml_sequence_guidance_is_adopted(self) -> None:
+        # The full UML kind enumeration lives in the skill surfaces below; lean
+        # CLAUDE.md keeps only orientation-level "ArchiMate® 3.2 + UML®" scope
+        # (asserted in test_multi_notation_scope_includes_archimate_and_uml).
         expectations = {
-            REPO_ROOT / "CLAUDE.md": [
-                "class/data, activity, sequence, state-machine, use-case, component, and deployment views",
-                "view kinds `uml-class`, `uml-data`, `uml-activity`, `uml-sequence`, `uml-state-machine`, `uml-use-case`, `uml-component`, and `uml-deployment`",
-            ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "sequence.md": [
                 'kind: "uml-sequence"',
                 "Interaction",
@@ -711,9 +736,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "archimate-oef",
                 "OEF export is requested",
             ],
+            # output-format.md cites architecture.md §9 for layout concurrency
+            # rather than restating the per-view/serial-rerun detail (ad4db28).
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
                 "`metadata`, `layout`, `render`",
-                "per-view ELK layout with serial rerun",
+                "`architecture.md` §9",
                 "reproducible output",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
@@ -1176,10 +1203,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "Do not patch",
                 "Dediren tool issues",
             ],
+            # CLAUDE.md states the don't-patch rule in slimmed form and delegates
+            # depth to the skill (restructure 0d28964).
             REPO_ROOT / "CLAUDE.md": [
-                "upstream Dediren distribution artifacts",
-                "Do not fix runtime, schema, plugin, helper, or bundle behavior",
-                "Dediren tool issues",
+                "Never patch the downloaded bundle",
+                "report runtime defects upstream",
             ],
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
                 "upstream Dediren distribution artifacts",
