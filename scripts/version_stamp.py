@@ -13,8 +13,12 @@ Two stdlib-only responsibilities (see CLAUDE.md "Plugin versioning (MUST)"):
 """
 from __future__ import annotations
 
+import argparse
 import datetime
+import json
 import re
+import sys
+from pathlib import Path
 
 PLUGINS = (
     "souroldgeezer-audit",
@@ -72,3 +76,40 @@ def version_diff(
 def current_month() -> str:
     today = datetime.date.today()
     return f"{today.year:04d}.{today.month:02d}"
+
+
+def read_version(repo_root: Path, plugin: str) -> str:
+    manifest = repo_root / plugin / ".claude-plugin" / "plugin.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    return data["version"]
+
+
+def cmd_compute(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    month = args.month or current_month()
+    current = read_version(repo_root, args.plugin)
+    print(compute_next(current, month))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Worktree-deferred CalVer stamping.")
+    parser.add_argument("--repo-root", default=".", help="repo root (default: .)")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    compute = sub.add_parser("compute", help="print a plugin's next CalVer stamp")
+    compute.add_argument("--plugin", required=True, choices=PLUGINS)
+    compute.add_argument("--month", help='target month "YYYY.MM" (default: this month)')
+    compute.set_defaults(func=cmd_compute)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,5 +1,9 @@
+import contextlib
 import importlib.util
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -65,6 +69,31 @@ class ParseVersionTest(unittest.TestCase):
 class CurrentMonthTest(unittest.TestCase):
     def test_format(self):
         self.assertRegex(vs.current_month(), r"^\d{4}\.\d{2}$")
+
+
+def _write_plugin_manifest(root: Path, plugin: str, version: str) -> None:
+    manifest_dir = root / plugin / ".claude-plugin"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    (manifest_dir / "plugin.json").write_text(
+        json.dumps({"name": plugin, "version": version}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+class ComputeCliTest(unittest.TestCase):
+    def test_compute_prints_next_stamp(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = vs.main([
+                    "--repo-root", str(root),
+                    "compute", "--plugin", "souroldgeezer-audit",
+                    "--month", "2026.06",
+                ])
+            self.assertEqual(rc, 0)
+            self.assertEqual(buf.getvalue().strip(), "2026.06.4")
 
 
 if __name__ == "__main__":
