@@ -26,3 +26,7 @@ tables, diagrams, screenshots, or documentation.
 - Source: https://github.com/tommimarkus/skills/issues/46.
   Handling: local issue records the repo-specific coverage gap and acceptance
   direction. The behavior eval is synthetic and does not copy issue text.
+- Source: `../../../docs/audit-reference/audit-craft.md` and
+  `../../../docs/audit-reference/materiality.md`.
+  Handling: local bundled references owned by this repo; eval cases exercise
+  audit craft and materiality output contracts and do not reproduce rubric prose.

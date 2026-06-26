@@ -15,3 +15,6 @@ external docs.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/authority-index.md`.
   Handling: URL-level source notes only; eval prompts do not copy legal source
   language or vendor policy text.
+- Source: `souroldgeezer-audit/docs/audit-reference/audit-craft.md`.
+  Handling: local bundled reference owned by this repo; eval cases exercise
+  audit craft output contracts and do not reproduce rubric prose.

@@ -58,6 +58,8 @@ Compare output with the corpus entry:
 - **Coverage-strength pass:** `expected_coverage_strength`, when present,
   matches.
 - **Gap-state pass:** `expected_gap_state`, when present, matches.
+- **Risk-tier pass:** `expected_risk_tier`, when present, matches.
+- **Worklist-priority pass:** `expected_worklist_priority`, when present, matches.
 - **Verdict pass:** `expected_verdict`, `expected_severity`, and
   `expected_action` match.
 - **False-positive note:** any extra smell code must be justified by evidence
@@ -91,8 +93,9 @@ Record results in the change discussion or closeout notes:
   `expected_smells`, `expected_positives`, `expected_verdict`,
   `expected_severity`, and `expected_action`.
 - Include `expected_boundary_evidence`, `expected_coverage_strength`,
-  `expected_gap_state`, or `deep_mode_context` when the case is about boundary
-  or gap behavior.
+  `expected_gap_state`, `expected_risk_tier`, `expected_worklist_priority`, or
+  `deep_mode_context` when the case is about boundary, gap, risk-tier, or
+  worklist-priority behavior.
 - Use `forbidden_smells` to pin known false-positive regressions.
 - When changing expected outcomes, state whether the change reflects a rubric
   improvement or a deliberate behavior change.

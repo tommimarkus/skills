@@ -15,6 +15,12 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   `references/golden-corpus/test-quality-audit-cases.jsonl`.
   Handling: local maintenance evidence; behavioral evals are separate synthetic
   cases and do not copy corpus prompts or expected outputs.
+- Source: `../../../docs/audit-reference/audit-craft.md`,
+  `../../../docs/audit-reference/materiality.md`, and
+  `../../../docs/audit-reference/sampling-projection.md`.
+  Handling: local bundled references owned by this repo; eval cases exercise
+  audit craft, materiality, and sampling projection output contracts and do not
+  reproduce rubric prose.
 - Source: Rust Project docs at `https://doc.rust-lang.org/cargo/guide/tests.html`,
   `https://doc.rust-lang.org/cargo/commands/cargo-test.html`, and
   `https://doc.rust-lang.org/rustc/tests/index.html`; cargo-nextest docs at

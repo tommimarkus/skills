@@ -12,4 +12,5 @@ contract-derived boundary coverage, too-narrow happy scenarios, weak SUT
 references, auth/session matrix gaps, and static/delegated gap dismissals.
 
 Add minimal original examples with expected routing, smells, positives,
-boundary evidence, coverage strength, verdict, severity, and action.
+boundary evidence, coverage strength, verdict, severity, and action;
+optionally risk tier and worklist priority.
