@@ -20,8 +20,7 @@ Own read-only duplication/waste audits of markdown prose and skill surfaces
 `test-quality-audit`; copyright / marks / licence → `ip-hygiene`; code or design
 structure → the design skills. Prose surfaces only in v1 (not code duplication).
 
-Inputs: a scope (file, diff, or repo) and an optional `.lean-audit.toml`
-canonical-home / must-sync registry. Ask or stop when the scope, the intended
+Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / must-sync registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see `../../docs/audit-reference/audit-craft.md`
 §2–§3.
@@ -41,22 +40,13 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
   full enumeration exceeds budget.
 - Load `references/procedures/fuzzy-waste.md` for the judgment-only `LA-STALE-2`
   and `LA-BLOAT-2` checks (the engine does not emit these).
+- Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
 - Cite codes from `references/smell-catalog.md`; never restate catalog prose.
 
 ## Workflow
 
-1. Establish the scope (file / diff / repo). If a `.lean-audit.toml` exists at the
-   scanned root the engine reads it; otherwise it runs heuristic-only — disclose
-   which.
-2. Run the bundled engine and parse its JSON (resolve the path from this skill's
-   directory; under Claude Code that is
-   `${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py`):
-   `python3 references/scripts/lean_engine.py <scope> --format json`.
-   It emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`,
-   `LA-BLOAT-1`. Exit 1 = a block-severity duplication is present; exit 2 = engine
-   error (report the limit, continue with the judgment-only checks). Treat the
-   output as evidence, not verdict: do not invent findings it did not produce, and
-   do not suppress one without a cited reason.
+1. Establish the scope: the whole repo, a single file, a set of named files, or a diff (its changed files). The bundled engine has no single-file or diff mode — it always scans the markdown tree rooted at a DIRECTORY — so pick the directory to run it in and the in-scope path set to keep. If a `.lean-audit.toml` exists at the scanned root the engine reads it; otherwise it runs heuristic-only — disclose which.
+2. Run the bundled engine and parse its JSON. Use the portable absolute path: `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` — `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`; exit 1 = a block-severity duplication is present, exit 2 = engine error (report the limit, continue with the judgment-only checks). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
 3. Add the judgment-only checks from `references/procedures/fuzzy-waste.md` —
    `LA-STALE-2` (prose describing a removed/renamed structure) and `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context). Mark these
@@ -64,9 +54,7 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 4. Assign each finding a risk tier per `materiality.md` (a smell on a high-fan-in
    surface such as CLAUDE.md outranks the same smell on a leaf file). Combine
    severity × risk into the P0–P3 worklist (audit-craft §3 grid).
-5. Report. A file or diff scope emits per-finding output; a repo scope adds a
-   sectioned rollup by `LA-*` band and a remediation worklist. For each
-   duplication, cite the matched code and the canonical target.
+5. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target.
 
 ## Rules and Stop Conditions
 
@@ -77,16 +65,17 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
   as a finding.
 - Suppress false positives: before asserting a finding, confirm the matched
   passage is independent duplication, not a quote, cross-reference, or code
-  example; if unsupported, note it as a non-finding with reason.
+  example; if the duplication claim is not supported by evidence, note it as a non-finding with the reason.
 - Disclose every "covered elsewhere" claim against its canonical target; never
   assert a citation without confirming the target exists.
 - If the engine is unavailable or errors, disclose the reduced coverage and
   continue with the judgment-only checks; do not fabricate the deterministic
   findings.
+- When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
 
 ## Output footer (audit-craft §5)
 
-End every output with: registry used (path or `heuristic-only`) · engine
+End every output with: extensions loaded (none in v1) · registry used (path or `heuristic-only`) · engine
 availability · reference path(s) · evidence limits · independence
 (independent | self-review | unknown) · assurance level (derived: limited |
 reasonable).
