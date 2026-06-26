@@ -46,6 +46,17 @@ When changing this skill's trigger/workflow/gates/source/evals, inspect
 `references/evals/` and [references/source-grounding.md](references/source-grounding.md).
 Evals stay synthetic or originally paraphrased.
 
+## Core Conformance
+
+Apply audit core principles before judging:
+- Conform to `../../docs/audit-reference/audit-craft.md` §2 (skepticism,
+  criteria-citation, independence/self-review, false-positive discipline), §3
+  (findings carry cause + consequence + recommendation + severity), and §5
+  (disclosure footer). This skill keeps its IP-issue finding shape and
+  triage/in-depth modes in place of §4's Quick/Deep names or a smell catalog.
+- Apply `../../docs/audit-reference/materiality.md` risk tier where an IP
+  issue's consequence varies (e.g. published trademark vs internal note).
+
 ## Triage
 
 Before finishing, answer:
@@ -98,10 +109,14 @@ Return exactly one of:
 
 - `nothing to check`
 - `checked: <bucket list>; no IP hygiene changes needed`
-- `fixed: <path:line> - <remedy summary>`
+- `fixed: <path:line> - <remedy summary>; consequence: <effect if unaddressed>`
 - `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit`
 
 For fixes, include the source authority or reference path used.
+
+Every output ends with a disclosure footer: check bucket(s) used · assurance
+level (limited for triage / reasonable for in-depth) · independence
+(independent | self-review | unknown) · evidence limits.
 
 ## Verification
 
