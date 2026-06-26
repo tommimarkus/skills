@@ -168,7 +168,7 @@ Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-p
 **No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
 
 **Sibling-file sync** (same commit):
-- `.claude-plugin/plugin.json#version`, `.codex-plugin/plugin.json#version`, `marketplace.json#plugins[].version` — always all three.
+- `.claude-plugin/plugin.json#version`, `.codex-plugin/plugin.json#version`, `marketplace.json#plugins[].version`, and the plugin's `README.md` version-table cell — always all four; the README cell must equal the manifest version per plugin.
 - the three `#description` fields — when the change alters the plugin's surface (new skill, new mode).
 - `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").
 - `README.md` and `CLAUDE.md` — per the currency rule above; one commit.
