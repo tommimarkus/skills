@@ -98,6 +98,20 @@ class WiringTest(unittest.TestCase):
         self.assertTrue(any("stop-lesson-capture.sh" in c for c in commands),
                         "stop-lesson-capture.sh not registered in .claude/settings.json")
 
+    def test_codex_hooks_registers_the_hook(self):
+        data = json.loads((REPO_ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        hooks = [h
+                 for group in data["hooks"]["Stop"]
+                 for h in group["hooks"]]
+        commands = [h["command"] for h in hooks]
+        self.assertTrue(any("stop-lesson-capture.sh" in c for c in commands),
+                        "stop-lesson-capture.sh not registered in .codex/hooks.json")
+        self.assertTrue(
+            any(h.get("statusMessage") == "Checking skill-authoring sessions for lesson-capture prompt"
+                for h in hooks),
+            "lesson-capture Codex hook statusMessage is missing",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

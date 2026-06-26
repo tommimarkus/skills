@@ -17,6 +17,11 @@
             "type": "command",
             "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-ip-hygiene.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
             "statusMessage": "Checking skill surfaces for ip-hygiene prompt"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-lesson-capture.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
+            "statusMessage": "Checking skill-authoring sessions for lesson-capture prompt"
           }
         ]
       }

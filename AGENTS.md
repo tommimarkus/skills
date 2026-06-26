@@ -40,6 +40,14 @@ rules change.
   extension, and this repo's extra gates). Codex can invoke the thin
   [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml)
   wrapper.
+- Repo-internal lesson capture: when the lesson-capture Stop hook fires, follow
+  [.claude/skills/lesson-capture/SKILL.md](.claude/skills/lesson-capture/SKILL.md);
+  the hook is registered for both Claude Code and Codex. Codex can invoke
+  [.codex/agents/lesson-capture.toml](.codex/agents/lesson-capture.toml).
+- Repo-internal lesson review: when the user runs `/lessons` or asks to review
+  captured lessons, follow
+  [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md). Codex can
+  invoke [.codex/agents/lessons.toml](.codex/agents/lessons.toml).
 - PR/MR work (create / review / update / fix / merge / close / resume / process
   end to end, including prepared branches): use the public `pr-ops` skill from
   `souroldgeezer-ops` with the identified provider extension — normally the

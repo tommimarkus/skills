@@ -193,14 +193,15 @@ clean_ip_output=$(hook_input "$clean_fixture" "clean-ip" false |
 
 jq -e '
   [.hooks.Stop[].hooks[].statusMessage] as $messages
-  | ($messages | length) == 3
+  | ($messages | length) == 4
   and any($messages[]; . == "Checking changed skills for plugin-eval evaluate-skill prompt")
   and any($messages[]; . == "Checking plugin metadata for plugin-eval prompt")
   and any($messages[]; . == "Checking skill surfaces for ip-hygiene prompt")
+  and any($messages[]; . == "Checking skill-authoring sessions for lesson-capture prompt")
   and all($messages[]; type == "string" and length > 0)
 ' "$repo_root/.codex/hooks.json" >/dev/null
 
-# Claude registers a fourth Claude-only Stop hook (lesson-capture); Codex (above) has three.
+# Both runtimes register lesson-capture.
 jq -e '
   [.hooks.Stop[].hooks[].command] as $commands
   | ($commands | length) == 4
@@ -214,6 +215,11 @@ codex_skill_command_output=$(cd "$skill_fixture" &&
   hook_input "$skill_fixture" "codex-skill-command" false |
     bash -c "$(hook_command ".codex/hooks.json" 0)")
 assert_block "$codex_skill_command_output" 'Skill files changed'
+
+codex_lesson_command_output=$(cd "$skill_fixture" &&
+  hook_input "$skill_fixture" "codex-lesson-command" false |
+    bash -c "$(hook_command ".codex/hooks.json" 3)")
+assert_block "$codex_lesson_command_output" 'lesson-capture'
 
 claude_ip_command_output=$(cd "$ip_fixture" &&
   hook_input "$ip_fixture" "claude-ip-command" false |
