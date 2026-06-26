@@ -207,11 +207,12 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
                 continue
 
             skill = read_frontmatter(skill_path)
+            skill_dir_name = skill_dir.name
             skill_name = normalize_text(skill.get("name"))
             skill_description = normalize_text(skill.get("description"))
-            public_skill_names.add(skill_name)
+            public_skill_names.add(skill_dir_name)
 
-            compare(findings, repo, skill_path, "name", skill_dir.name, skill_name)
+            compare(findings, repo, skill_path, "name", skill_dir_name, skill_name)
 
             agent_path = plugin_dir / "agents" / f"{skill_name}.md"
             if agent_path.exists():
@@ -221,10 +222,10 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
             else:
                 findings.append(Finding(repo_relative(repo, agent_path), "exists", "present", "missing"))
 
-            codex_agent_path = repo / ".codex" / "agents" / f"{skill_name}.toml"
+            codex_agent_path = repo / ".codex" / "agents" / f"{skill_dir_name}.toml"
             if codex_agent_path.exists():
                 codex_agent = read_toml(codex_agent_path)
-                compare(findings, repo, codex_agent_path, "name", skill_name, codex_agent.get("name"))
+                compare(findings, repo, codex_agent_path, "name", skill_dir_name, codex_agent.get("name"))
                 compare(findings, repo, codex_agent_path, "description", skill_description, codex_agent.get("description"))
             else:
                 findings.append(Finding(repo_relative(repo, codex_agent_path), "exists", "present", "missing"))
@@ -280,36 +281,50 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
 
 def check_internal_codex_agents(repo: Path, public_skill_names: set[str], findings: list[Finding]) -> None:
     agents_dir = repo / ".codex" / "agents"
+    internal_skill_names: set[str] = set()
+    internal_skills_dir = repo / ".claude" / "skills"
+
+    if internal_skills_dir.exists():
+        for internal_skill_path in sorted(internal_skills_dir.glob("*/SKILL.md")):
+            internal_skill = read_frontmatter(internal_skill_path)
+            internal_dir_name = internal_skill_path.parent.name
+            internal_name = normalize_text(internal_skill.get("name"))
+            internal_description = normalize_text(internal_skill.get("description"))
+            internal_skill_names.add(internal_dir_name)
+
+            compare(findings, repo, internal_skill_path, "name", internal_dir_name, internal_name)
+
+            codex_agent_path = agents_dir / f"{internal_dir_name}.toml"
+            if codex_agent_path.exists():
+                codex_agent = read_toml(codex_agent_path)
+                compare(findings, repo, codex_agent_path, "name", internal_dir_name, codex_agent.get("name"))
+                compare(
+                    findings,
+                    repo,
+                    codex_agent_path,
+                    "description",
+                    internal_description,
+                    codex_agent.get("description"),
+                )
+            else:
+                findings.append(Finding(repo_relative(repo, codex_agent_path), "exists", "present", "missing"))
+
     if not agents_dir.exists():
         return
 
+    expected_codex_agent_stems = public_skill_names | internal_skill_names
     for codex_agent_path in sorted(agents_dir.glob("*.toml")):
-        codex_agent = read_toml(codex_agent_path)
-        agent_name = normalize_text(codex_agent.get("name"))
-        if agent_name in public_skill_names:
+        if codex_agent_path.stem in expected_codex_agent_stems:
             continue
 
-        internal_skill_path = repo / ".claude" / "skills" / agent_name / "SKILL.md"
-        if internal_skill_path.exists():
-            internal_skill = read_frontmatter(internal_skill_path)
-            compare(findings, repo, codex_agent_path, "name", internal_skill.get("name"), codex_agent.get("name"))
-            compare(
-                findings,
-                repo,
-                codex_agent_path,
-                "description",
-                internal_skill.get("description"),
-                codex_agent.get("description"),
+        findings.append(
+            Finding(
+                repo_relative(repo, codex_agent_path),
+                "source-of-truth",
+                "public skill or .claude/skills/<name>/SKILL.md",
+                "missing",
             )
-        else:
-            findings.append(
-                Finding(
-                    repo_relative(repo, codex_agent_path),
-                    "source-of-truth",
-                    "public skill or .claude/skills/<name>/SKILL.md",
-                    "missing",
-                )
-            )
+        )
 
 
 def check_repo(repo: Path) -> list[Finding]:
