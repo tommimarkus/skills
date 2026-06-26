@@ -85,5 +85,32 @@ class Sections(unittest.TestCase):
         self.assertIn(("one", "two", "three", "four"), h.shingles)
 
 
+class RegistryAndOverride(unittest.TestCase):
+    def test_load_registry(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text(
+                '[[canonical_home]]\npath = "CLAUDE.md"\nheading = "Git ignore hygiene (MUST)"\n'
+                '[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n',
+                encoding="utf-8",
+            )
+            reg = eng.load_registry(p)
+            self.assertIn(("CLAUDE.md", "Git ignore hygiene (MUST)"), reg.canonical_homes)
+            self.assertTrue(eng.must_sync_pair(reg, "x/SKILL.md", "x/agents/y.md"))
+            self.assertFalse(eng.must_sync_pair(reg, "x/SKILL.md", "x/README.md"))
+
+    def test_missing_registry_is_empty(self):
+        eng = load_engine()
+        reg = eng.load_registry(None)
+        self.assertEqual(reg.canonical_homes, ())
+        self.assertEqual(reg.must_sync, ())
+
+    def test_override_marker(self):
+        eng = load_engine()
+        self.assertTrue(eng.has_override("text <!-- lean-audit:sync-intentional: mirrors manifest -->"))
+        self.assertFalse(eng.has_override("plain text"))
+
+
 if __name__ == "__main__":
     unittest.main()

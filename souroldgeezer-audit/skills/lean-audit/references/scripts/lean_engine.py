@@ -1,14 +1,18 @@
 """lean-audit deterministic duplication engine (stdlib-only)."""
 from __future__ import annotations
 
+import fnmatch
 import re
+import tomllib
 from dataclasses import dataclass
+from pathlib import Path
 
 _FENCE = re.compile(r"```.*?```", re.DOTALL)
 _INLINE_CODE = re.compile(r"`[^`]*`")
 _LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
 _WORD = re.compile(r"[a-z0-9]+")
 _HEADING = re.compile(r"^#{1,6}\s+(.*)$")
+OVERRIDE = re.compile(r"<!--\s*lean-audit:sync-intentional:?.*?-->", re.IGNORECASE | re.DOTALL)
 
 DEFAULT_K = 4
 
@@ -61,3 +65,31 @@ def build_index(files: dict[str, str]) -> list[Section]:
             shingles = frozenset(shingle_set(normalize(body)))
             index.append(Section(path=path, heading=heading, body=body, shingles=shingles))
     return index
+
+
+@dataclass(frozen=True)
+class Registry:
+    canonical_homes: tuple[tuple[str, str], ...]
+    must_sync: tuple[tuple[str, ...], ...]
+
+
+def load_registry(path: Path | None) -> Registry:
+    if path is None or not Path(path).is_file():
+        return Registry(canonical_homes=(), must_sync=())
+    data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    homes = tuple(
+        (h["path"], h["heading"]) for h in data.get("canonical_home", []) if "path" in h and "heading" in h
+    )
+    syncs = tuple(tuple(g["globs"]) for g in data.get("must_sync", []) if g.get("globs"))
+    return Registry(canonical_homes=homes, must_sync=syncs)
+
+
+def has_override(text: str) -> bool:
+    return OVERRIDE.search(text) is not None
+
+
+def must_sync_pair(reg: Registry, a: str, b: str) -> bool:
+    for globs in reg.must_sync:
+        if any(fnmatch.fnmatch(a, g) for g in globs) and any(fnmatch.fnmatch(b, g) for g in globs):
+            return True
+    return False
