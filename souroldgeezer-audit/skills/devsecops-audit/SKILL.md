@@ -17,11 +17,17 @@ evidence, and security code smells. Delegate non-security design/test work.
 
 Inputs: scope, mode, cost stance, release/live evidence, and tools. If ambiguous,
 ask the user when mode/scope/cost stance/MCP/network/destructive
-action/sibling boundary lacks a safe default; otherwise continue. Reject false
-positives; state confidence and honest limits. Never claim enforcement,
-reachability, account control, rotation, or provenance without evidence.
+action/sibling boundary lacks a safe default; otherwise continue. Never claim enforcement,
+reachability, account control, rotation, or provenance without evidence. For discipline on
+false positives, limits, and severity, see `../../docs/audit-reference/audit-craft.md` §2–§3.
 
 ## Load Map
+
+Apply the shared core before loading extensions:
+- Load `../../docs/audit-reference/audit-craft.md` (discipline + output contract).
+- Load `../../docs/audit-reference/materiality.md` (risk tier).
+- Load `../../docs/audit-reference/sampling-projection.md` (scale).
+This skill adds the DevSecOps rubric and `DSO-*` namespace on top; it does not restate craft.
 
 Load `extensions/github-actions.md` and `docs/security-reference/devsecops-extensions/github-actions.md` when workflows/actions match.
 Load `extensions/bicep.md` and `docs/security-reference/devsecops-extensions/bicep.md` when Bicep/Azure IaC matches.
@@ -53,10 +59,12 @@ Before editing triggers/workflow/extensions/grounding/evals, load `references/ev
   framework coupling, live-state block, verdict, honest limits.
 
 Findings use `[CODE] type: path:line` with severity (`block`, `warn`, `info`),
-stage, evidence, action, and citation. If none, say so with limits. Every answer
-reports extensions, cost stance/source, Codex Security, rubric path, and
-evidence limits. Deep also reports MCP GitHub, verdict (`enforcing`, `partial`,
-`decorative`), and rubric §8 limits.
+stage, evidence, action, citation, **SUT risk tier** (materiality.md; cite signal —
+auth/secrets/IaC-priv → high), and **Consequence** (audit-craft.md §3). Deep worklist
+priority is `severity × risk tier` per the §3 table. If none, say so with limits. Every
+answer reports extensions, cost stance/source, Codex Security, rubric path, evidence
+limits, independence, and assurance level. Deep also reports MCP GitHub, verdict
+(`enforcing`, `partial`, `decorative`), and rubric §8 limits.
 
 ## Stop Conditions
 
