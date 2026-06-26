@@ -303,5 +303,30 @@ class DeadRefs(unittest.TestCase):
         self.assertEqual(eng.find_dead_refs(files), [])
 
 
+class Bloat(unittest.TestCase):
+    def test_oversized_skill_flagged(self):
+        eng = load_engine()
+        body = "\n".join(f"line {i}" for i in range(eng.BLOAT_BUDGET_LINES + 5))
+        files = {"x/SKILL.md": f"---\nname: x\n---\n{body}"}
+        self.assertIn("LA-BLOAT-1", {f.code for f in eng.scan_bloat(files)})
+
+    def test_compact_skill_ok(self):
+        eng = load_engine()
+        files = {"x/SKILL.md": "---\nname: x\n---\n# X\nshort body"}
+        self.assertEqual(eng.scan_bloat(files), [])
+
+    def test_frontmatter_excluded(self):
+        eng = load_engine()
+        fm = "\n".join(f"k{i}: v" for i in range(300))
+        files = {"x/SKILL.md": f"---\n{fm}\n---\n# X\nshort"}
+        self.assertEqual(eng.scan_bloat(files), [])
+
+    def test_non_skill_ignored(self):
+        eng = load_engine()
+        big = "\n".join(f"l{i}" for i in range(300))
+        files = {"x/references/r.md": big}
+        self.assertEqual(eng.scan_bloat(files), [])
+
+
 if __name__ == "__main__":
     unittest.main()

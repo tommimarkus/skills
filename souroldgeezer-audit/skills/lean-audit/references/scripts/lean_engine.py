@@ -234,6 +234,29 @@ def find_dead_refs(files: dict[str, str]) -> list[Finding]:
     return findings
 
 
+BLOAT_BUDGET_LINES = 250
+
+
+def strip_frontmatter(text: str) -> str:
+    if text.startswith("---\n"):
+        end = text.find("\n---", 4)
+        if end != -1:
+            return text[end + 4:].lstrip("\n")
+    return text
+
+
+def scan_bloat(files: dict[str, str]) -> list[Finding]:
+    findings: list[Finding] = []
+    for path, text in files.items():
+        if posixpath.basename(path) != "SKILL.md":
+            continue
+        lines = len(strip_frontmatter(text).splitlines())
+        if lines > BLOAT_BUDGET_LINES:
+            findings.append(Finding("LA-BLOAT-1", "warn", path, "", 0.0, "", "",
+                f"SKILL.md body is {lines} lines (> {BLOAT_BUDGET_LINES}); move heavy detail to references/."))
+    return findings
+
+
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))
