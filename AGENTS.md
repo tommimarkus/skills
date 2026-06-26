@@ -18,6 +18,12 @@ rules change.
   skills docs) — one runtime's docs aren't enough for this cross-agent repo.
 - Keep each plugin's `.codex-plugin/plugin.json`, `.claude-plugin/plugin.json`,
   and the shared marketplace entry synced on `name`, `version`, `description`.
+- Do not stamp a plugin's version cells inside a worktree / feature branch.
+  Worktree commits carry content only; the CalVer stamp is applied at
+  integration directly on `main` (canonical rule in [CLAUDE.md](CLAUDE.md),
+  "Plugin versioning"). Before integrating, run
+  `uv run python scripts/version_stamp.py guard`; at integration,
+  `uv run python scripts/version_stamp.py compute --plugin <name>`.
 - Codex consumes bundled skills via `.codex-plugin/plugin.json` with
   `"skills": "./skills/"`.
 - For any work on skills, agents, runtime metadata, bundled references,
