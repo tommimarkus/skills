@@ -167,5 +167,40 @@ class Scoring(unittest.TestCase):
         self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
 
 
+class Cli(unittest.TestCase):
+    def _repo(self, d):
+        words = " ".join(f"w{i}" for i in range(40))
+        (Path(d) / "CLAUDE.md").write_text(f"# Home\n{words}\n", encoding="utf-8")
+        sk = Path(d) / "p/skills/x"
+        sk.mkdir(parents=True)
+        (sk / "SKILL.md").write_text(f"# A\n{words}\n", encoding="utf-8")
+        return d
+
+    def test_full_path_json_and_exit1(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._repo(d)
+            r = run_engine(d, "--format", "json")
+            self.assertEqual(r.returncode, 1)
+            payload = json.loads(r.stdout)
+            codes = {f["code"] for f in payload["findings"]}
+            self.assertIn("LA-DUP-1", codes)
+
+    def test_clean_repo_exit0(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "CLAUDE.md").write_text("# Home\nunique alpha bravo charlie\n", encoding="utf-8")
+            r = run_engine(d, "--format", "json")
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(json.loads(r.stdout)["findings"], [])
+
+    def test_added_text_stdin(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._repo(d)
+            block = "# A\n" + " ".join(f"w{i}" for i in range(40))
+            r = run_engine("--added-text", "-", "--source", "p/skills/x/SKILL.md",
+                           "--corpus-root", d, "--format", "json", stdin=block)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("LA-DUP-1", {f["code"] for f in json.loads(r.stdout)["findings"]})
+
+
 if __name__ == "__main__":
     unittest.main()

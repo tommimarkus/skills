@@ -1,8 +1,11 @@
 """lean-audit deterministic duplication engine (stdlib-only)."""
 from __future__ import annotations
 
+import argparse
 import fnmatch
+import json
 import re
+import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -144,3 +147,87 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
     return Finding("LA-DUP-1", "info", sec.path, sec.heading, round(best_c, 3),
                    best.path, best.heading,
                    f'Overlaps {best.path} §"{best.heading}" (advisory).')
+
+
+_GUARD_GLOBS = (
+    "CLAUDE.md", "AGENTS.md", "README.md",
+    "**/SKILL.md", "**/agents/*.md",
+    "**/docs/*-reference/**/*.md", "**/references/**/*.md", "**/extensions/**/*.md",
+)
+_EXCLUDE = (".worktrees/", "docs/superpowers/", ".cache/", ".git/", "node_modules/")
+
+
+def is_guarded(rel: str) -> bool:
+    if any(seg in rel for seg in _EXCLUDE):
+        return False
+    return any(fnmatch.fnmatch(rel, g) for g in _GUARD_GLOBS)
+
+
+def read_repo(root: Path, scope: Path) -> dict[str, str]:
+    files: dict[str, str] = {}
+    base = scope if scope.is_dir() else scope.parent
+    for path in base.rglob("*.md"):
+        rel = path.relative_to(root).as_posix()
+        if is_guarded(rel):
+            files[rel] = path.read_text(encoding="utf-8", errors="replace")
+    return files
+
+
+def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
+    index = build_index(files)
+    findings = []
+    for sec in index:
+        f = score_section(sec, index, reg)
+        if f is not None:
+            findings.append(f)
+    return findings
+
+
+def _emit(findings: list[Finding], fmt: str) -> None:
+    if fmt == "json":
+        print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))
+    else:
+        for f in findings:
+            print(f"{f.code} [{f.severity}] {f.path} §\"{f.heading}\" "
+                  f"(containment={f.containment}) -> {f.action}")
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description="lean-audit duplication engine")
+    ap.add_argument("scope", nargs="?", help="file or directory to scan")
+    ap.add_argument("--added-text", metavar="-", help="read one block from stdin ('-')")
+    ap.add_argument("--source", help="repo-relative path the stdin block belongs to")
+    ap.add_argument("--corpus-root", default=".", help="repo root for the corpus")
+    ap.add_argument("--registry", help="path to .lean-audit.toml")
+    ap.add_argument("--format", choices=("text", "json"), default="text")
+    args = ap.parse_args(argv)
+
+    try:
+        if args.added_text == "-":
+            if not args.source:
+                ap.error("--added-text requires --source")
+            root = Path(args.corpus_root).resolve()
+            reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
+            files = read_repo(root, root)
+            block = sys.stdin.read()
+            files[args.source] = block
+            index = build_index(files)
+            target = [s for s in index if s.path == args.source]
+            findings = [f for f in (score_section(s, index, reg) for s in target) if f]
+        else:
+            if not args.scope:
+                ap.error("scope is required")
+            root = Path(args.corpus_root).resolve() if args.added_text else Path(args.scope).resolve()
+            scope = Path(args.scope).resolve()
+            reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
+            findings = scan(read_repo(root, scope), reg)
+    except OSError as exc:
+        print(f"lean-audit: {exc}", file=sys.stderr)
+        return 2
+
+    _emit(findings, args.format)
+    return 1 if any(f.severity == "block" for f in findings) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
