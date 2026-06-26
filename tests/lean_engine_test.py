@@ -45,5 +45,27 @@ class Normalize(unittest.TestCase):
         self.assertEqual(out, ["intro", "tail"])
 
 
+class Shingles(unittest.TestCase):
+    def test_kgram_set(self):
+        eng = load_engine()
+        self.assertEqual(
+            eng.shingle_set(["a", "b", "c", "d", "e"], k=3),
+            {("a", "b", "c"), ("b", "c", "d"), ("c", "d", "e")},
+        )
+
+    def test_short_token_list_returns_single_shingle(self):
+        eng = load_engine()
+        self.assertEqual(eng.shingle_set(["a", "b"], k=4), {("a", "b")})
+        self.assertEqual(eng.shingle_set([], k=4), set())
+
+    def test_containment_is_asymmetric(self):
+        eng = load_engine()
+        added = {("a", "b"), ("b", "c")}
+        other = {("a", "b"), ("b", "c"), ("x", "y"), ("y", "z")}
+        self.assertEqual(eng.containment(added, other), 1.0)   # all of added is in other
+        self.assertEqual(eng.containment(other, added), 0.5)   # half of other is in added
+        self.assertEqual(eng.containment(set(), other), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
