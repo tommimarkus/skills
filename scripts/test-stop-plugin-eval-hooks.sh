@@ -168,6 +168,30 @@ ip_active_output=$(hook_input "$ip_fixture" "ip-hygiene-active" true |
 [[ -z "$ip_active_output" ]]
 [[ ! -f "$ip_fixture/.cache/agent-hooks/ip-hygiene-prompted-ip-hygiene-active" ]]
 
+internal_fixture="$tmp/internal-repo"
+make_fixture "$internal_fixture"
+mkdir -p "$internal_fixture/internal-skills/repo-helper"
+cat >"$internal_fixture/internal-skills/repo-helper/SKILL.md" <<'MD'
+---
+name: repo-helper
+description: Use when validating internal skill hook coverage.
+---
+
+# Repo Helper
+MD
+
+internal_skill_output=$(hook_input "$internal_fixture" "internal-skill-hooks" false |
+  AGENT_HOOK_DEBUG=1 bash "$internal_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
+assert_block "$internal_skill_output" 'Skill files changed'
+assert_block "$internal_skill_output" '["internal-skills/repo-helper/SKILL.md"]'
+assert_block "$internal_skill_output" '["internal-skills/repo-helper"]'
+
+internal_ip_output=$(hook_input "$internal_fixture" "internal-ip-hooks" false |
+  AGENT_HOOK_DEBUG=1 bash "$internal_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
+assert_block "$internal_ip_output" 'IP hygiene scoped surfaces changed'
+assert_block "$internal_ip_output" '["internal-skills/repo-helper/SKILL.md"]'
+assert_block "$internal_ip_output" '["internal-skills/repo-helper"]'
+
 non_ip_fixture="$tmp/non-ip-repo"
 make_fixture "$non_ip_fixture"
 mkdir -p "$non_ip_fixture/scripts/tools"

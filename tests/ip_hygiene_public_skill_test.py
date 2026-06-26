@@ -97,7 +97,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             "README.md",
             "CLAUDE.md",
             "AGENTS.md",
-            ".claude/skills/github-issue-lifecycle/SKILL.md",
+            "internal-skills/github-issue-lifecycle/SKILL.md",
             "scripts/agent-hooks/stop-ip-hygiene.sh",
             "scripts/test-stop-plugin-eval-hooks.sh",
         ]

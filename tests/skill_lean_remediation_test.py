@@ -111,7 +111,7 @@ class SkillLeanRemediationTest(unittest.TestCase):
     def test_github_issue_lifecycle_points_to_repo_guidance_for_sync_surfaces(
         self,
     ) -> None:
-        overlay = read(".claude/skills/github-issue-lifecycle/SKILL.md")
+        overlay = read("internal-skills/github-issue-lifecycle/SKILL.md")
 
         self.assertIn("AGENTS.md", overlay)
         self.assertIn("CLAUDE.md", overlay)

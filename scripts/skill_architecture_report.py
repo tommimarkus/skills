@@ -844,7 +844,7 @@ def body_line_count(body: str) -> int:
 
 
 def skill_scope(rel: str) -> str:
-    if rel.startswith(".claude/skills/"):
+    if rel.startswith("internal-skills/"):
         return "internal"
     if "/skills/" in rel and rel.endswith("/SKILL.md"):
         return "published"
@@ -902,6 +902,11 @@ def find_skill_files(repo_root: Path) -> list[str]:
         if path_is_ignored(path.relative_to(repo_root)):
             continue
         rel = relpath(repo_root, path)
+        if rel.startswith(".claude/skills/"):
+            continue
+        if re.search(r"^internal-skills/[^/]+/SKILL\.md$", rel):
+            skill_files.add(rel)
+            continue
         if re.search(r"(^|/)skills/[^/]+/SKILL\.md$", rel):
             skill_files.add(rel)
     return sorted(skill_files)
@@ -2561,6 +2566,7 @@ def emit_group(group: str, findings: list[Finding]) -> str:
 
 def owner(path: str) -> str:
     for pattern in (
+        r"^internal-skills/[^/]+",
         r"^\.claude/skills/[^/]+",
         r"^souroldgeezer-[^/]+/skills/[^/]+",
         r"^souroldgeezer-[^/]+/\.codex-plugin/plugin\.json",

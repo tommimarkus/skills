@@ -22,6 +22,7 @@ changed=$(
       /^\.claude-plugin\/marketplace\.json$/ { print; next }
       /^\.agents\/plugins\/marketplace\.json$/ { print; next }
       /^\.codex\/agents\/[^/]+\.toml$/ { print; next }
+      /^internal-skills\/[^/]+\// { print; next }
       /^\.claude\/skills\/[^/]+\// { print; next }
       /^(CLAUDE|AGENTS|README)\.md$/ { print; next }
     ' |
@@ -43,6 +44,9 @@ targets=$(
     }
     $1 == ".agents" && $2 == "plugins" {
       print ".agents/plugins/marketplace.json"
+    }
+    $1 == "internal-skills" && NF >= 2 {
+      print "internal-skills/" $2
     }
     $1 == ".claude-plugin" && $2 == "marketplace.json" {
       print ".claude-plugin/marketplace.json"

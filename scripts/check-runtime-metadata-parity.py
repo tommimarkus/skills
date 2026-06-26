@@ -154,6 +154,18 @@ def compare(
         )
 
 
+def require_text_contains(
+    findings: list[Finding],
+    repo: Path,
+    path: Path,
+    field: str,
+    expected: str,
+    actual_text: str,
+) -> None:
+    if expected not in actual_text:
+        findings.append(Finding(repo_relative(repo, path), field, expected, "missing"))
+
+
 def marketplace_plugins(repo: Path) -> list[dict[str, Any]]:
     marketplace_path = repo / ".claude-plugin" / "marketplace.json"
     marketplace = read_json(marketplace_path)
@@ -279,24 +291,70 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
     return public_skill_names
 
 
-def check_internal_codex_agents(repo: Path, public_skill_names: set[str], findings: list[Finding]) -> None:
+def check_internal_runtime_agents(repo: Path, public_skill_names: set[str], findings: list[Finding]) -> None:
     agents_dir = repo / ".codex" / "agents"
     internal_skill_names: set[str] = set()
-    internal_skills_dir = repo / ".claude" / "skills"
+    shared_internal_skills_dir = repo / "internal-skills"
 
-    if internal_skills_dir.exists():
-        for internal_skill_path in sorted(internal_skills_dir.glob("*/SKILL.md")):
+    if shared_internal_skills_dir.exists():
+        for internal_skill_path in sorted(shared_internal_skills_dir.glob("*/SKILL.md")):
             internal_skill = read_frontmatter(internal_skill_path)
             internal_dir_name = internal_skill_path.parent.name
             internal_name = normalize_text(internal_skill.get("name"))
             internal_description = normalize_text(internal_skill.get("description"))
             internal_skill_names.add(internal_dir_name)
+            shared_skill_ref = f"internal-skills/{internal_dir_name}/SKILL.md"
 
             compare(findings, repo, internal_skill_path, "name", internal_dir_name, internal_name)
+
+            claude_wrapper_path = repo / ".claude" / "skills" / internal_dir_name / "SKILL.md"
+            if claude_wrapper_path.exists():
+                claude_wrapper = read_frontmatter(claude_wrapper_path)
+                claude_wrapper_text = claude_wrapper_path.read_text(encoding="utf-8")
+                compare(findings, repo, claude_wrapper_path, "name", internal_dir_name, claude_wrapper.get("name"))
+                compare(
+                    findings,
+                    repo,
+                    claude_wrapper_path,
+                    "description",
+                    internal_description,
+                    claude_wrapper.get("description"),
+                )
+                require_text_contains(
+                    findings,
+                    repo,
+                    claude_wrapper_path,
+                    "source-of-truth",
+                    shared_skill_ref,
+                    claude_wrapper_text,
+                )
+            else:
+                findings.append(Finding(repo_relative(repo, claude_wrapper_path), "exists", "present", "missing"))
+
+            claude_wrapper_dir = claude_wrapper_path.parent
+            if claude_wrapper_dir.exists():
+                for wrapper_file in sorted(path for path in claude_wrapper_dir.rglob("*") if path.is_file()):
+                    if wrapper_file == claude_wrapper_path:
+                        continue
+                    expected_shared_path = (
+                        repo
+                        / "internal-skills"
+                        / internal_dir_name
+                        / wrapper_file.relative_to(claude_wrapper_dir)
+                    )
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, wrapper_file),
+                            "shared-location",
+                            repo_relative(repo, expected_shared_path),
+                            repo_relative(repo, wrapper_file),
+                        )
+                    )
 
             codex_agent_path = agents_dir / f"{internal_dir_name}.toml"
             if codex_agent_path.exists():
                 codex_agent = read_toml(codex_agent_path)
+                codex_agent_text = codex_agent_path.read_text(encoding="utf-8")
                 compare(findings, repo, codex_agent_path, "name", internal_dir_name, codex_agent.get("name"))
                 compare(
                     findings,
@@ -306,8 +364,31 @@ def check_internal_codex_agents(repo: Path, public_skill_names: set[str], findin
                     internal_description,
                     codex_agent.get("description"),
                 )
+                require_text_contains(
+                    findings,
+                    repo,
+                    codex_agent_path,
+                    "source-of-truth",
+                    shared_skill_ref,
+                    codex_agent_text,
+                )
             else:
                 findings.append(Finding(repo_relative(repo, codex_agent_path), "exists", "present", "missing"))
+
+    claude_skills_dir = repo / ".claude" / "skills"
+    if claude_skills_dir.exists():
+        for claude_wrapper_path in sorted(claude_skills_dir.glob("*/SKILL.md")):
+            wrapper_name = claude_wrapper_path.parent.name
+            if wrapper_name in internal_skill_names:
+                continue
+            findings.append(
+                Finding(
+                    repo_relative(repo, claude_wrapper_path),
+                    "source-of-truth",
+                    f"internal-skills/{wrapper_name}/SKILL.md",
+                    "missing",
+                )
+            )
 
     if not agents_dir.exists():
         return
@@ -321,7 +402,7 @@ def check_internal_codex_agents(repo: Path, public_skill_names: set[str], findin
             Finding(
                 repo_relative(repo, codex_agent_path),
                 "source-of-truth",
-                "public skill or .claude/skills/<name>/SKILL.md",
+                "public skill or internal-skills/<name>/SKILL.md",
                 "missing",
             )
         )
@@ -331,7 +412,7 @@ def check_repo(repo: Path) -> list[Finding]:
     findings: list[Finding] = []
     plugin_dirs = check_plugin_metadata(repo, findings)
     public_skill_names = check_skill_metadata(repo, plugin_dirs, findings)
-    check_internal_codex_agents(repo, public_skill_names, findings)
+    check_internal_runtime_agents(repo, public_skill_names, findings)
     return findings
 
 

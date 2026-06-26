@@ -15,6 +15,7 @@ changed=$(
     git -C "$repo_root" ls-files --others --exclude-standard
   } 2>/dev/null |
     awk '
+      /^internal-skills\/[^/]+\// { print }
       /^\.claude\/skills\/[^/]+\// { print }
       /^souroldgeezer-[^/]+\/skills\/[^/]+\// { print }
     ' |
@@ -28,6 +29,9 @@ fi
 
 targets=$(
   awk -F/ '
+    $1 == "internal-skills" && NF >= 2 {
+      print "internal-skills/" $2
+    }
     $1 == ".claude" && $2 == "skills" && NF >= 3 {
       print ".claude/skills/" $3
     }

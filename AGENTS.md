@@ -22,9 +22,14 @@ rules change.
   `"skills": "./skills/"`.
 - For any work on skills, agents, runtime metadata, bundled references,
   extensions, deterministic machinery, manifests, marketplace entries,
-  repo-internal authoring skills, or repo docs describing them, read
+  shared repo-internal authoring skills, tool-specific wrappers, or repo docs describing them, read
   [docs/skill-architecture.md](docs/skill-architecture.md) before deciding scope
   or editing. This is an entry rule, not only a closeout check.
+- Shared repo-internal skill workflows live under `internal-skills/<name>/`.
+  Tool-specific folders only hold entrypoints: Claude Code wrappers in
+  `.claude/skills/<name>/SKILL.md`, Codex wrappers in `.codex/agents/*.toml`.
+  Keep every wrapper pointed at `internal-skills/<name>/SKILL.md`; do not copy
+  shared workflow or reference prose into runtime-specific folders.
 - Local Codex marketplace dev: refresh changed installed plugins through the
   plugin browser and restart Codex; `codex plugin marketplace upgrade <name>` is
   for Git-backed marketplaces and won't refresh local clone sources. Verify the
@@ -35,19 +40,24 @@ rules change.
   `skills/<skill>/agents/openai.yaml`.
 - GitHub™ issue lifecycle (handle / triage / resume / implement / close /
   process end to end here): use the repo-internal
-  [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md)
+  [internal-skills/github-issue-lifecycle/SKILL.md](internal-skills/github-issue-lifecycle/SKILL.md)
   overlay (composes the public `issue-ops` skill, the GitHub™ provider
-  extension, and this repo's extra gates). Codex can invoke the thin
+  extension, and this repo's extra gates). Claude Code can invoke the thin
+  [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md)
+  wrapper; Codex can invoke the thin
   [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml)
   wrapper.
 - Repo-internal lesson capture: when the lesson-capture Stop hook fires, follow
+  [internal-skills/lesson-capture/SKILL.md](internal-skills/lesson-capture/SKILL.md);
+  the hook is registered for both Claude Code and Codex. Claude Code can invoke
   [.claude/skills/lesson-capture/SKILL.md](.claude/skills/lesson-capture/SKILL.md);
-  the hook is registered for both Claude Code and Codex. Codex can invoke
+  Codex can invoke
   [.codex/agents/lesson-capture.toml](.codex/agents/lesson-capture.toml).
 - Repo-internal lesson review: when the user runs `/lessons` or asks to review
   captured lessons, follow
-  [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md). Codex can
-  invoke [.codex/agents/lessons.toml](.codex/agents/lessons.toml).
+  [internal-skills/lessons/SKILL.md](internal-skills/lessons/SKILL.md). Claude
+  Code can invoke [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md);
+  Codex can invoke [.codex/agents/lessons.toml](.codex/agents/lessons.toml).
 - PR/MR work (create / review / update / fix / merge / close / resume / process
   end to end, including prepared branches): use the public `pr-ops` skill from
   `souroldgeezer-ops` with the identified provider extension — normally the

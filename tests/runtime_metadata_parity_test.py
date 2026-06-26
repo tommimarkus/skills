@@ -215,26 +215,78 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn(".codex/agents/stale-internal-alias.toml", result.stdout)
         self.assertIn("source-of-truth", result.stdout)
 
-    def test_internal_skill_without_codex_agent_is_detected(self) -> None:
+    def test_shared_internal_skill_without_runtime_wrappers_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
             self.make_clean_fixture(repo)
+            (repo / ".claude" / "skills" / "internal-review" / "SKILL.md").unlink()
             (repo / ".codex" / "agents" / "internal-review.toml").unlink()
 
             result = run_checker(repo)
 
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
         self.assertIn(".codex/agents/internal-review.toml", result.stdout)
         self.assertIn("exists", result.stdout)
         self.assertIn("present", result.stdout)
         self.assertIn("missing", result.stdout)
+
+    def test_internal_claude_wrapper_must_point_to_shared_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / ".claude/skills/internal-review/SKILL.md",
+                """
+                ---
+                name: internal-review
+                description: Use when checking Codex metadata parity for an internal skill.
+                ---
+
+                # Internal Review
+
+                This wrapper accidentally duplicates workflow text instead of
+                delegating to the neutral shared source.
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
+        self.assertIn("source-of-truth", result.stdout)
+        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
+
+    def test_internal_codex_wrapper_must_point_to_shared_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / ".codex/agents/internal-review.toml",
+                '''
+                name = "internal-review"
+                description = "Use when checking Codex metadata parity for an internal skill."
+                sandbox_mode = "workspace-write"
+
+                developer_instructions = """
+                Read `.claude/skills/internal-review/SKILL.md` and follow it as the source of truth.
+                """
+                ''',
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".codex/agents/internal-review.toml", result.stdout)
+        self.assertIn("source-of-truth", result.stdout)
+        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
 
     def test_internal_skill_wrapper_is_keyed_by_directory_when_frontmatter_name_drifts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
             self.make_clean_fixture(repo)
             write(
-                repo / ".claude/skills/internal-review/SKILL.md",
+                repo / "internal-skills/internal-review/SKILL.md",
                 """
                 ---
                 name: drifted-internal
@@ -248,7 +300,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             result = run_checker(repo)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
+        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
         self.assertIn("name", result.stdout)
         self.assertNotIn(".codex/agents/drifted-internal.toml", result.stdout)
         self.assertNotIn(".codex/agents/internal-review.toml :: source-of-truth", result.stdout)
@@ -367,7 +419,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
-            repo / ".claude/skills/internal-review/SKILL.md",
+            repo / "internal-skills/internal-review/SKILL.md",
             f"""
             ---
             name: internal-review
@@ -378,6 +430,20 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
+            repo / ".claude/skills/internal-review/SKILL.md",
+            f"""
+            ---
+            name: internal-review
+            description: {internal_description}
+            ---
+
+            # Internal Review
+
+            Read `internal-skills/internal-review/SKILL.md` and follow it as the
+            source of truth.
+            """,
+        )
+        write(
             repo / ".codex/agents/internal-review.toml",
             f'''
             name = "internal-review"
@@ -385,7 +451,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             sandbox_mode = "workspace-write"
 
             developer_instructions = """
-            Read `.claude/skills/internal-review/SKILL.md` and follow it as the source of truth.
+            Read `internal-skills/internal-review/SKILL.md` and follow it as the source of truth.
             """
             ''',
         )

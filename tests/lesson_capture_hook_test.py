@@ -25,7 +25,7 @@ def _repo(tmp: Path):
 
 
 def _authoring_change(tmp: Path):
-    skill = tmp / ".claude" / "skills" / "x"
+    skill = tmp / "internal-skills" / "x"
     skill.mkdir(parents=True)
     (skill / "SKILL.md").write_text("---\nname: x\n---\n", encoding="utf-8")
 

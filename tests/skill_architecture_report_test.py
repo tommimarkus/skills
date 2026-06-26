@@ -529,7 +529,7 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / ".claude/skills/internal-helper/SKILL.md",
+            fixture / "internal-skills/internal-helper/SKILL.md",
             """
             ---
             name: internal-helper
