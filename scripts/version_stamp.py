@@ -17,6 +17,7 @@ import argparse
 import datetime
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -92,6 +93,71 @@ def cmd_compute(args: argparse.Namespace) -> int:
     return 0
 
 
+def _git_show(repo_root: Path, ref: str, path: str) -> str | None:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f"{ref}:{path}"],
+        capture_output=True, text=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def merge_base(repo_root: Path, base: str, head: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "merge-base", base, head],
+        capture_output=True, text=True, check=True,
+    )
+    return result.stdout.strip()
+
+
+def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
+    versions: dict[str, str] = {}
+    for plugin in PLUGINS:
+        for rel in (
+            f"{plugin}/.claude-plugin/plugin.json",
+            f"{plugin}/.codex-plugin/plugin.json",
+        ):
+            text = _git_show(repo_root, ref, rel)
+            if text is None:
+                continue
+            try:
+                versions[rel] = json.loads(text)["version"]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+    market = _git_show(repo_root, ref, ".claude-plugin/marketplace.json")
+    if market is not None:
+        try:
+            for entry in json.loads(market).get("plugins", []):
+                versions[f"marketplace:{entry['name']}"] = entry["version"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+    return versions
+
+
+def cmd_guard(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    base_ref = merge_base(repo_root, args.base, args.head)
+    changed = version_diff(
+        versions_at_ref(repo_root, base_ref),
+        versions_at_ref(repo_root, args.head),
+    )
+    if changed:
+        print(
+            "Version cells were stamped inside this branch/worktree:",
+            file=sys.stderr,
+        )
+        for key, was, now in changed:
+            print(f"  {key}: {was} -> {now}", file=sys.stderr)
+        print(
+            "Under the worktree-deferred rule, revert these and apply the stamp "
+            "at integration on main instead. Next stamp: "
+            "uv run python scripts/version_stamp.py compute --plugin <name>",
+            file=sys.stderr,
+        )
+        return 1
+    print("OK: this branch changed no version cells.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Worktree-deferred CalVer stamping.")
     parser.add_argument("--repo-root", default=".", help="repo root (default: .)")
@@ -101,6 +167,13 @@ def build_parser() -> argparse.ArgumentParser:
     compute.add_argument("--plugin", required=True, choices=PLUGINS)
     compute.add_argument("--month", help='target month "YYYY.MM" (default: this month)')
     compute.set_defaults(func=cmd_compute)
+
+    guard = sub.add_parser(
+        "guard", help="fail if this branch stamped a version cell"
+    )
+    guard.add_argument("--base", default="main")
+    guard.add_argument("--head", default="HEAD")
+    guard.set_defaults(func=cmd_guard)
 
     return parser
 
