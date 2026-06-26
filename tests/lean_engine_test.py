@@ -67,5 +67,23 @@ class Shingles(unittest.TestCase):
         self.assertEqual(eng.containment(set(), other), 0.0)
 
 
+class Sections(unittest.TestCase):
+    def test_split_by_heading(self):
+        eng = load_engine()
+        text = "pre\n# A\nbody a\n## B\nbody b\n"
+        self.assertEqual(
+            eng.split_sections(text),
+            [("", "pre"), ("A", "body a"), ("B", "body b")],
+        )
+
+    def test_build_index_sets_shingles(self):
+        eng = load_engine()
+        idx = eng.build_index({"f.md": "# H\none two three four five"})
+        self.assertEqual(len(idx), 1)  # empty preamble dropped; only the "H" section
+        h = [s for s in idx if s.heading == "H"][0]
+        self.assertEqual(h.path, "f.md")
+        self.assertIn(("one", "two", "three", "four"), h.shingles)
+
+
 if __name__ == "__main__":
     unittest.main()
