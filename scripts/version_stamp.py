@@ -79,16 +79,18 @@ def current_month() -> str:
     return f"{today.year:04d}.{today.month:02d}"
 
 
-def read_version(repo_root: Path, plugin: str) -> str:
-    manifest = repo_root / plugin / ".claude-plugin" / "plugin.json"
-    data = json.loads(manifest.read_text(encoding="utf-8"))
-    return data["version"]
+def read_version(repo_root: Path, plugin: str, ref: str = "main") -> str:
+    rel = f"{plugin}/.claude-plugin/plugin.json"
+    text = _git_show(repo_root, ref, rel)
+    if text is None:
+        raise FileNotFoundError(f"{rel} not found at ref {ref!r}")
+    return json.loads(text)["version"]
 
 
 def cmd_compute(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     month = args.month or current_month()
-    current = read_version(repo_root, args.plugin)
+    current = read_version(repo_root, args.plugin, args.ref)
     print(compute_next(current, month))
     return 0
 
@@ -166,6 +168,10 @@ def build_parser() -> argparse.ArgumentParser:
     compute = sub.add_parser("compute", help="print a plugin's next CalVer stamp")
     compute.add_argument("--plugin", required=True, choices=PLUGINS)
     compute.add_argument("--month", help='target month "YYYY.MM" (default: this month)')
+    compute.add_argument(
+        "--ref", default="main",
+        help="git ref to read the plugin's current version from (default: main)",
+    )
     compute.set_defaults(func=cmd_compute)
 
     guard = sub.add_parser(

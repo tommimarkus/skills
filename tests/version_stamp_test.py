@@ -82,19 +82,38 @@ def _write_plugin_manifest(root: Path, plugin: str, version: str) -> None:
 
 
 class ComputeCliTest(unittest.TestCase):
-    def test_compute_prints_next_stamp(self):
+    def _run(self, root):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = vs.main([
+                "--repo-root", str(root),
+                "compute", "--plugin", "souroldgeezer-audit", "--month", "2026.06",
+            ])
+        return rc, buf.getvalue().strip()
+
+    def test_compute_prints_next_stamp_from_main(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            _init_repo(root)
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = vs.main([
-                    "--repo-root", str(root),
-                    "compute", "--plugin", "souroldgeezer-audit",
-                    "--month", "2026.06",
-                ])
+            _git(root, "add", "-A")
+            _git(root, "commit", "-qm", "seed")
+            rc, out = self._run(root)
             self.assertEqual(rc, 0)
-            self.assertEqual(buf.getvalue().strip(), "2026.06.4")
+            self.assertEqual(out, "2026.06.4")
+
+    def test_compute_reads_main_not_stale_working_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
+            _git(root, "add", "-A")
+            _git(root, "commit", "-qm", "seed")
+            # working tree goes ahead, uncommitted — compute must ignore it
+            _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.9")
+            rc, out = self._run(root)
+            self.assertEqual(rc, 0)
+            self.assertEqual(out, "2026.06.4")
 
 
 def _git(cwd: Path, *args: str) -> None:
@@ -118,10 +137,20 @@ def _write_marketplace(root: Path, plugin: str, version: str) -> None:
     )
 
 
+def _write_codex_manifest(root: Path, plugin: str, version: str) -> None:
+    manifest_dir = root / plugin / ".codex-plugin"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    (manifest_dir / "plugin.json").write_text(
+        json.dumps({"name": plugin, "version": version}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
 class GuardTest(unittest.TestCase):
     def _seed(self, root: Path) -> None:
         _init_repo(root)
         _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
+        _write_codex_manifest(root, "souroldgeezer-audit", "2026.06.3")
         _write_marketplace(root, "souroldgeezer-audit", "2026.06.3")
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "seed")
@@ -164,6 +193,24 @@ class GuardTest(unittest.TestCase):
             _write_marketplace(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "stamp on main")
             self.assertEqual(self._guard(root), 0)
+
+    def test_fails_when_branch_stamps_codex_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._seed(root)
+            _git(root, "checkout", "-q", "-b", "feature")
+            _write_codex_manifest(root, "souroldgeezer-audit", "2026.06.4")
+            _git(root, "commit", "-qam", "stamp codex manifest")
+            self.assertEqual(self._guard(root), 1)
+
+    def test_fails_when_branch_stamps_marketplace_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._seed(root)
+            _git(root, "checkout", "-q", "-b", "feature")
+            _write_marketplace(root, "souroldgeezer-audit", "2026.06.4")
+            _git(root, "commit", "-qam", "stamp marketplace entry")
+            self.assertEqual(self._guard(root), 1)
 
 
 if __name__ == "__main__":
