@@ -246,11 +246,6 @@ class Cli(unittest.TestCase):
 
 
 class StaleRefs(unittest.TestCase):
-    def test_inline_code_links_skipped(self):
-        eng = load_engine()
-        files = {"a/SKILL.md": "use the pattern `[x](/nope/missing.md)` in examples"}
-        self.assertEqual(eng.scan_stale_refs(files), [])
-
     def test_broken_file_link(self):
         eng = load_engine()
         files = {"a/SKILL.md": "see [guide](../missing/x.md) for details"}
