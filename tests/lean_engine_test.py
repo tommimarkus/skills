@@ -286,5 +286,22 @@ class Calibration(unittest.TestCase):
         self.assertGreaterEqual(recall, 0.90, f"recall {recall:.2f}")
 
 
+class DeadRefs(unittest.TestCase):
+    def test_unreferenced_ref_is_dead(self):
+        eng = load_engine()
+        files = {"x/SKILL.md": "the workflow", "x/references/orphan.md": "# O\nstuff"}
+        self.assertIn("LA-DEAD-1", {f.code for f in eng.find_dead_refs(files)})
+
+    def test_referenced_ref_not_dead(self):
+        eng = load_engine()
+        files = {"x/SKILL.md": "load references/used.md when needed", "x/references/used.md": "# U\nstuff"}
+        self.assertEqual(eng.find_dead_refs(files), [])
+
+    def test_non_reference_file_ignored(self):
+        eng = load_engine()
+        files = {"x/SKILL.md": "body", "CLAUDE.md": "guide"}
+        self.assertEqual(eng.find_dead_refs(files), [])
+
+
 if __name__ == "__main__":
     unittest.main()

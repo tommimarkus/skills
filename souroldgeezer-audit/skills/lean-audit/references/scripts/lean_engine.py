@@ -222,6 +222,18 @@ def scan_stale_refs(files: dict[str, str], root=None) -> list[Finding]:
     return findings
 
 
+def find_dead_refs(files: dict[str, str]) -> list[Finding]:
+    findings: list[Finding] = []
+    for path in files:
+        if "/references/" not in path and "/extensions/" not in path:
+            continue
+        name = posixpath.basename(path)
+        if not any(name in text for other, text in files.items() if other != path):
+            findings.append(Finding("LA-DEAD-1", "info", path, "", 0.0, "", "",
+                f"No other guarded file mentions {name}; possibly dead weight."))
+    return findings
+
+
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))
