@@ -230,6 +230,33 @@ class Cli(unittest.TestCase):
             self.assertEqual(r.returncode, 2)
 
 
+class StaleRefs(unittest.TestCase):
+    def test_broken_file_link(self):
+        eng = load_engine()
+        files = {"a/SKILL.md": "see [guide](../missing/x.md) for details"}
+        self.assertIn("LA-STALE-1", {f.code for f in eng.scan_stale_refs(files)})
+
+    def test_resolving_link_ok(self):
+        eng = load_engine()
+        files = {"a/SKILL.md": "see [t](b.md)", "a/b.md": "# B\nbody"}
+        self.assertEqual(eng.scan_stale_refs(files), [])
+
+    def test_broken_anchor(self):
+        eng = load_engine()
+        files = {"a/SKILL.md": "see [t](b.md#nope)", "a/b.md": "# Real Heading\nx"}
+        self.assertIn("LA-STALE-1", {f.code for f in eng.scan_stale_refs(files)})
+
+    def test_valid_anchor_ok(self):
+        eng = load_engine()
+        files = {"a/SKILL.md": "see [t](b.md#real-heading)", "a/b.md": "# Real Heading\nx"}
+        self.assertEqual(eng.scan_stale_refs(files), [])
+
+    def test_url_and_mailto_skipped(self):
+        eng = load_engine()
+        files = {"a/SKILL.md": "[t](https://example.com/x) [m](mailto:a@b.c)"}
+        self.assertEqual(eng.scan_stale_refs(files), [])
+
+
 class Calibration(unittest.TestCase):
     def test_precision_recall_bar(self):
         eng = load_engine()

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import posixpath
 import re
 import sys
 import tomllib
@@ -180,6 +181,44 @@ def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
         f = score_section(sec, index, reg)
         if f is not None:
             findings.append(f)
+    return findings
+
+
+def slugify(heading: str) -> str:
+    s = re.sub(r"[^\w\s-]", "", heading.strip().lower())
+    return re.sub(r"\s+", "-", s)
+
+
+def link_targets(text: str) -> list[str]:
+    text = _FENCE.sub(" ", text)
+    return [m.group(1) for m in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text)]
+
+
+def _heading_slugs(text: str) -> set[str]:
+    return {slugify(h) for h, _ in split_sections(text) if h}
+
+
+def scan_stale_refs(files: dict[str, str], root=None) -> list[Finding]:
+    findings: list[Finding] = []
+    for path, text in files.items():
+        parent = posixpath.dirname(path)
+        for target in link_targets(text):
+            if re.match(r"[a-z][a-z0-9+.-]*:", target) or target.startswith(("<", "//")):
+                continue
+            rel, _, anchor = target.partition("#")
+            if rel == "":
+                if anchor and slugify(anchor) not in _heading_slugs(text):
+                    findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
+                        f"Anchor '#{anchor}' not found in this file."))
+                continue
+            resolved = posixpath.normpath(posixpath.join(parent, rel))
+            present = resolved in files or (root is not None and (Path(root) / resolved).exists())
+            if not present:
+                findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
+                    f"Broken reference: {target} does not resolve."))
+            elif anchor and resolved in files and slugify(anchor) not in _heading_slugs(files[resolved]):
+                findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
+                    f"Broken anchor: '#{anchor}' not found in {resolved}."))
     return findings
 
 
