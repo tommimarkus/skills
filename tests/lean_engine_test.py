@@ -201,6 +201,11 @@ class Cli(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertIn("LA-DUP-1", {f["code"] for f in json.loads(r.stdout)["findings"]})
 
+    def test_added_text_rejects_non_dash(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = run_engine("--added-text", "x", "--source", "a.md", "--corpus-root", d)
+            self.assertEqual(r.returncode, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

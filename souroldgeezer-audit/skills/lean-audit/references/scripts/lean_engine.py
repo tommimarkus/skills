@@ -202,6 +202,9 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--format", choices=("text", "json"), default="text")
     args = ap.parse_args(argv)
 
+    if args.added_text is not None and args.added_text != "-":
+        ap.error("--added-text only accepts '-' (read the block from stdin)")
+
     try:
         if args.added_text == "-":
             if not args.source:
@@ -217,7 +220,7 @@ def main(argv: list[str]) -> int:
         else:
             if not args.scope:
                 ap.error("scope is required")
-            root = Path(args.corpus_root).resolve() if args.added_text else Path(args.scope).resolve()
+            root = Path(args.scope).resolve()
             scope = Path(args.scope).resolve()
             reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
             findings = scan(read_repo(root, scope), reg)
