@@ -75,6 +75,9 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 - Intentional must-sync duplication — declared in the registry or marked
   `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not
   as a finding.
+- Suppress false positives: before asserting a finding, confirm the matched
+  passage is independent duplication, not a quote, cross-reference, or code
+  example; if unsupported, note it as a non-finding with reason.
 - Disclose every "covered elsewhere" claim against its canonical target; never
   assert a citation without confirming the target exists.
 - If the engine is unavailable or errors, disclose the reduced coverage and
