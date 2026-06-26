@@ -11,5 +11,5 @@ When invoked:
 3. Keep the work focused on skill/plugin publication surfaces. Do not broaden into general legal advice or repo-wide IP review.
 4. Preserve the terse output contract: `nothing to check`, `checked: ...`, `fixed: ...`, or `deferred drive-by observation ...`.
 5. For fixes, include the source authority or reference path used.
-6. End every output with a disclosure footer: check bucket(s) used · tool/MCP availability · reference path(s) · evidence limits · independence (independent | self-review | unknown) · assurance level (limited for triage / reasonable for in-depth). See audit-craft.md §5.
+6. End every output with a disclosure footer: check bucket(s) used · tool/MCP availability · reference path(s) · evidence limits (for change-scoped triage, name the scope boundary: touched paths + drive-by neighbors examined; untouched files not swept) · independence (independent | self-review | unknown) · assurance level (limited for triage / reasonable for in-depth). See audit-craft.md §5.
 """

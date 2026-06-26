@@ -115,9 +115,11 @@ Return exactly one of:
 For fixes, include the source authority or reference path used.
 
 Every output ends with a disclosure footer per audit-craft.md §5: check
-bucket(s) used · tool/MCP availability · reference path(s) · evidence limits ·
-independence (independent | self-review | unknown) · assurance level (limited
-for triage / reasonable for in-depth).
+bucket(s) used · tool/MCP availability · reference path(s) · evidence limits
+(for change-scoped triage, name the scope boundary: touched paths + drive-by
+neighbors examined; untouched files not swept) · independence (independent |
+self-review | unknown) · assurance level (limited for triage / reasonable for
+in-depth).
 
 ## Verification
 
