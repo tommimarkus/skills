@@ -229,6 +229,21 @@ class Cli(unittest.TestCase):
             r = run_engine(d, "--format", "json")
             self.assertEqual(r.returncode, 2)
 
+    def test_full_path_emits_waste_codes(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d) / "p/skills/x"
+            base.mkdir(parents=True)
+            body = "\n".join(f"line {i}" for i in range(260))
+            (base / "SKILL.md").write_text(f"---\nname: x\n---\nsee [gone](missing.md)\n{body}", encoding="utf-8")
+            (base / "references").mkdir()
+            (base / "references" / "orphan.md").write_text("# Orphan\nunreferenced content here", encoding="utf-8")
+            r = run_engine(d, "--format", "json")
+            codes = {f["code"] for f in json.loads(r.stdout)["findings"]}
+            self.assertIn("LA-STALE-1", codes)
+            self.assertIn("LA-DEAD-1", codes)
+            self.assertIn("LA-BLOAT-1", codes)
+            self.assertEqual(r.returncode, 0)
+
 
 class StaleRefs(unittest.TestCase):
     def test_broken_file_link(self):

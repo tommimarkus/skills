@@ -153,7 +153,9 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
 _GUARD_GLOBS = (
     "CLAUDE.md", "AGENTS.md", "README.md",
     "**/SKILL.md", "**/agents/*.md",
-    "**/docs/*-reference/**/*.md", "**/references/**/*.md", "**/extensions/**/*.md",
+    "**/docs/*-reference/**/*.md", "**/docs/*-reference/*.md",
+    "**/references/**/*.md", "**/references/*.md",
+    "**/extensions/**/*.md", "**/extensions/*.md",
 )
 _EXCLUDE = (".worktrees/", "docs/superpowers/", ".cache/", ".git/", "node_modules/")
 
@@ -297,7 +299,9 @@ def main(argv: list[str]) -> int:
             scope = Path(args.scope).resolve()
             root = scope if scope.is_dir() else scope.parent
             reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
-            findings = scan(read_repo(root, scope), reg)
+            files = read_repo(root, scope)
+            findings = (scan(files, reg) + scan_stale_refs(files, root)
+                        + find_dead_refs(files) + scan_bloat(files))
     except (OSError, tomllib.TOMLDecodeError) as exc:
         print(f"lean-audit: {exc}", file=sys.stderr)
         return 2
