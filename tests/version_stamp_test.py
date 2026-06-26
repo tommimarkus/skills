@@ -49,6 +49,18 @@ class VersionDiffTest(unittest.TestCase):
     def test_ignores_keys_absent_in_base(self):
         self.assertEqual(vs.version_diff({}, {"new": "2026.06.0"}), [])
 
+    def test_ignores_keys_absent_in_head(self):
+        self.assertEqual(vs.version_diff({"x": "2026.06.0"}, {}), [])
+
+
+class ParseVersionTest(unittest.TestCase):
+    def test_parses_calver(self):
+        self.assertEqual(vs.parse_version("2026.06.3"), (2026, 6, 3))
+
+    def test_rejects_non_calver(self):
+        with self.assertRaises(ValueError):
+            vs.parse_version("2.8.1")
+
 
 class CurrentMonthTest(unittest.TestCase):
     def test_format(self):

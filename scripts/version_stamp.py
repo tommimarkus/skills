@@ -62,9 +62,9 @@ def version_diff(
     ``base`` whose value differs in ``head``. Keys absent in ``base`` (e.g. a
     brand-new plugin's initial version) are not flagged."""
     changed: list[tuple[str, str, str]] = []
-    for key, head_value in head.items():
-        base_value = base.get(key)
-        if base_value is not None and base_value != head_value:
+    for key, base_value in base.items():
+        head_value = head.get(key)
+        if head_value is not None and head_value != base_value:
             changed.append((key, base_value, head_value))
     return changed
 
