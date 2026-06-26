@@ -59,6 +59,17 @@ Apply audit core principles before judging:
 
 ## Triage
 
+First, when a change set or target paths are available, run the objective
+pre-filter to surface bundled-asset / schema / vendored candidates:
+
+`references/scripts/ip-prefilter.sh --format text -- <touched paths>`
+
+It scans only objective filesystem facts (Q3/Q4 candidates). Use its hits as
+evidence when answering Q3 and Q4. It does NOT answer any question: an empty
+result is NOT a clean bill of health — copied prose (Q2), inline code samples
+(Q3), and public marks (Q1) are out of its reach, so still answer all five
+questions by judgment. Hits raise candidates; they never replace the triage.
+
 Before finishing, answer:
 
 1. **Public-surface trademark:** third-party mark/product/standard on a
