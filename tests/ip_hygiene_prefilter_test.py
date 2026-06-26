@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import tempfile
 import unittest
@@ -58,6 +57,7 @@ class IpPrefilterTest(unittest.TestCase):
         p = self._touch("vendor/ok/index.js", "// synthetic\n")
         r = run(str(p))
         self.assertNotIn("vendored-no-license", r.stdout)
+        self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_schema_spec_flagged(self):
         p = self._touch("api/thing.schema.json", "{}\n")
@@ -76,6 +76,14 @@ class IpPrefilterTest(unittest.TestCase):
         r = run(stdin=f"{p}\n")
         self.assertEqual(r.returncode, 1)
         self.assertIn("asset-binary", r.stdout)
+
+    def test_bad_format_exits_two(self):
+        r = run("--format", "bogus", "x")
+        self.assertEqual(r.returncode, 2)
+
+    def test_unknown_option_exits_two(self):
+        r = run("--nope")
+        self.assertEqual(r.returncode, 2)
 
 
 if __name__ == "__main__":
