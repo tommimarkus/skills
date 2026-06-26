@@ -192,7 +192,7 @@ def slugify(heading: str) -> str:
 
 
 def link_targets(text: str) -> list[str]:
-    text = _FENCE.sub(" ", text)
+    text = _INLINE_CODE.sub(" ", _FENCE.sub(" ", text))
     return [m.group(1) for m in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text)]
 
 
