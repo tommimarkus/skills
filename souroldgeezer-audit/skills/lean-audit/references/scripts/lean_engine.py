@@ -166,7 +166,7 @@ def is_guarded(rel: str) -> bool:
 def read_repo(root: Path, scope: Path) -> dict[str, str]:
     files: dict[str, str] = {}
     base = scope if scope.is_dir() else scope.parent
-    for path in base.rglob("*.md"):
+    for path in sorted(base.rglob("*.md")):
         rel = path.relative_to(root).as_posix()
         if is_guarded(rel):
             files[rel] = path.read_text(encoding="utf-8", errors="replace")
@@ -220,11 +220,11 @@ def main(argv: list[str]) -> int:
         else:
             if not args.scope:
                 ap.error("scope is required")
-            root = Path(args.scope).resolve()
             scope = Path(args.scope).resolve()
+            root = scope if scope.is_dir() else scope.parent
             reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
             findings = scan(read_repo(root, scope), reg)
-    except OSError as exc:
+    except (OSError, tomllib.TOMLDecodeError) as exc:
         print(f"lean-audit: {exc}", file=sys.stderr)
         return 2
 

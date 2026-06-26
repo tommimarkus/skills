@@ -3,7 +3,6 @@ import json
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -111,6 +110,16 @@ class RegistryAndOverride(unittest.TestCase):
         self.assertTrue(eng.has_override("text <!-- lean-audit:sync-intentional: mirrors manifest -->"))
         self.assertFalse(eng.has_override("plain text"))
 
+    @unittest.skip("Plan 2 blocker: must_sync needs counterpart (same-skill) semantics, not flat globs")
+    def test_must_sync_should_not_exempt_unrelated_skill_files(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n', encoding="utf-8")
+            reg = eng.load_registry(p)
+        # Desired (Plan 2): two UNRELATED skills' SKILL.md must NOT be treated as a sync pair.
+        self.assertFalse(eng.must_sync_pair(reg, "a/skills/x/SKILL.md", "a/skills/z/SKILL.md"))
+
 
 class Scoring(unittest.TestCase):
     def _idx(self, eng, body_a, body_b, path_a="a/SKILL.md", path_b="CLAUDE.md"):
@@ -204,6 +213,20 @@ class Cli(unittest.TestCase):
     def test_added_text_rejects_non_dash(self):
         with tempfile.TemporaryDirectory() as d:
             r = run_engine("--added-text", "x", "--source", "a.md", "--corpus-root", d)
+            self.assertEqual(r.returncode, 2)
+
+    def test_file_scope_does_not_crash(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._repo(d)
+            r = run_engine(str(Path(d) / "CLAUDE.md"), "--format", "json")
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("LA-DUP-1", {f["code"] for f in json.loads(r.stdout)["findings"]})
+
+    def test_malformed_registry_exits_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._repo(d)
+            (Path(d) / ".lean-audit.toml").write_text("this = = not valid", encoding="utf-8")
+            r = run_engine(d, "--format", "json")
             self.assertEqual(r.returncode, 2)
 
 
