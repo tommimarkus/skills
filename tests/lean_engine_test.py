@@ -207,5 +207,34 @@ class Cli(unittest.TestCase):
             self.assertEqual(r.returncode, 2)
 
 
+class Calibration(unittest.TestCase):
+    def test_precision_recall_bar(self):
+        eng = load_engine()
+        cases = [json.loads(line) for line in LEDGER.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertGreaterEqual(len(cases), 12, "ledger too small to calibrate")
+        tp = fp = fn = 0
+        for case in cases:
+            files = {f["path"]: f["content"] for f in case["files"]}
+            reg = eng.load_registry(None)
+            if case.get("registry"):
+                with tempfile.TemporaryDirectory() as d:
+                    p = Path(d) / ".lean-audit.toml"
+                    p.write_text(case["registry"], encoding="utf-8")
+                    reg = eng.load_registry(p)
+            blocks = [f for f in eng.scan(files, reg)
+                      if f.severity == "block" and f.path == case["expect_source"]]
+            fired = bool(blocks)
+            if case["expect_block"] and fired:
+                tp += 1
+            elif case["expect_block"] and not fired:
+                fn += 1
+            elif not case["expect_block"] and fired:
+                fp += 1
+        precision = tp / (tp + fp) if (tp + fp) else 1.0
+        recall = tp / (tp + fn) if (tp + fn) else 1.0
+        self.assertGreaterEqual(precision, 0.90, f"precision {precision:.2f}")
+        self.assertGreaterEqual(recall, 0.90, f"recall {recall:.2f}")
+
+
 if __name__ == "__main__":
     unittest.main()
