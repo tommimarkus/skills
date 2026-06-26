@@ -112,5 +112,60 @@ class RegistryAndOverride(unittest.TestCase):
         self.assertFalse(eng.has_override("plain text"))
 
 
+class Scoring(unittest.TestCase):
+    def _idx(self, eng, body_a, body_b, path_a="a/SKILL.md", path_b="CLAUDE.md"):
+        return eng.build_index({path_a: f"# A\n{body_a}", path_b: f"# Home\n{body_b}"})
+
+    def test_high_band_cross_file_is_block_dup1(self):
+        eng = load_engine()
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = self._idx(eng, words, words)
+        a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        reg = eng.load_registry(None)
+        f = eng.score_section(a, idx, reg)
+        self.assertIsNotNone(f)
+        self.assertEqual(f.code, "LA-DUP-1")
+        self.assertEqual(f.severity, "block")
+        self.assertEqual(f.matched_path, "CLAUDE.md")
+
+    def test_canonical_home_match_is_dup2_with_cite(self):
+        eng = load_engine()
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = self._idx(eng, words, words)
+        a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[canonical_home]]\npath = "CLAUDE.md"\nheading = "Home"\n', encoding="utf-8")
+            reg = eng.load_registry(p)
+        f = eng.score_section(a, idx, reg)
+        self.assertEqual(f.code, "LA-DUP-2")
+        self.assertIn("CLAUDE.md", f.action)
+        self.assertIn("Home", f.action)
+
+    def test_override_suppresses(self):
+        eng = load_engine()
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = self._idx(eng, words + " <!-- lean-audit:sync-intentional: ok -->", words)
+        a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
+
+    def test_must_sync_pair_exempt(self):
+        eng = load_engine()
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = eng.build_index({"x/SKILL.md": f"# A\n{words}", "x/agents/y.md": f"# B\n{words}"})
+        a = [s for s in idx if s.path == "x/SKILL.md"][0]
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n', encoding="utf-8")
+            reg = eng.load_registry(p)
+        self.assertIsNone(eng.score_section(a, idx, reg))
+
+    def test_short_block_ignored(self):
+        eng = load_engine()
+        idx = self._idx(eng, "one two three", "one two three")
+        a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
+
+
 if __name__ == "__main__":
     unittest.main()

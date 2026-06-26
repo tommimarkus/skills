@@ -93,3 +93,54 @@ def must_sync_pair(reg: Registry, a: str, b: str) -> bool:
         if any(fnmatch.fnmatch(a, g) for g in globs) and any(fnmatch.fnmatch(b, g) for g in globs):
             return True
     return False
+
+
+HIGH_BAND = 0.60
+MID_BAND = 0.35
+MIN_TOKENS = 25
+
+
+@dataclass(frozen=True)
+class Finding:
+    code: str
+    severity: str
+    path: str
+    heading: str
+    containment: float
+    matched_path: str
+    matched_heading: str
+    action: str
+
+
+def _is_home(reg: Registry, path: str, heading: str) -> bool:
+    return (path, heading) in reg.canonical_homes
+
+
+def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding | None:
+    if len(normalize(sec.body)) < MIN_TOKENS:
+        return None
+    if has_override(sec.body):
+        return None
+    best = None
+    best_c = 0.0
+    for other in index:
+        if other.path == sec.path:
+            continue
+        c = containment(sec.shingles, other.shingles)
+        if c > best_c:
+            best, best_c = other, c
+    if best is None or best_c < MID_BAND:
+        return None
+    if must_sync_pair(reg, sec.path, best.path):
+        return None
+    if best_c >= HIGH_BAND:
+        if _is_home(reg, best.path, best.heading):
+            return Finding("LA-DUP-2", "block", sec.path, sec.heading, round(best_c, 3),
+                           best.path, best.heading,
+                           f'Cite {best.path} §"{best.heading}" instead of restating it.')
+        return Finding("LA-DUP-1", "block", sec.path, sec.heading, round(best_c, 3),
+                       best.path, best.heading,
+                       f'Duplicates {best.path} §"{best.heading}" — cite it or mark sync-intentional.')
+    return Finding("LA-DUP-1", "info", sec.path, sec.heading, round(best_c, 3),
+                   best.path, best.heading,
+                   f'Overlaps {best.path} §"{best.heading}" (advisory).')
