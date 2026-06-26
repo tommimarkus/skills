@@ -31,6 +31,10 @@ For every unit or component test case, emit:
 11. **Severity** — `block`, `warn`, or `info`.
 12. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
    `split`, `delete`, `keep`, or `move-to-integration-lane`.
+13. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
+   `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+14. **Consequence** — one phrase: what ships undetected if this weak test is the
+   only guard (audit-craft.md §3 Effect).
 
 ## Integration Rubric Fields
 
@@ -59,6 +63,10 @@ For every integration test case, emit:
 13. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
     `split`, `narrow-the-seam`, `move-to-unit-lane`,
     `replace-with-contract-test`, `delete`, or `keep`.
+14. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
+    `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+15. **Consequence** — one phrase: what ships undetected if this weak test is the
+    only guard (audit-craft.md §3 Effect).
 
 ## E2E Rubric Fields
 
@@ -95,6 +103,10 @@ For every E2E test case, emit:
     `split`, `narrow-the-journey`, `move-to-integration-lane`,
     `move-to-unit-lane`, `replace-selector-strategy`,
     `replace-wait-strategy`, `delete`, or `keep`.
+16. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
+    `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+17. **Consequence** — one phrase: what ships undetected if this weak test is the
+    only guard (audit-craft.md §3 Effect).
 
 ## Finding Shape
 
@@ -112,6 +124,8 @@ For every E2E test case, emit:
 - **Positive signals:** —
 - **Verdict:** characterization
 - **Severity:** warn
+- **SUT risk tier:** high — authorization path (Gap-AuthZ surface)
+- **Consequence:** a broken authorization check would ship with no failing test.
 - **Action:** rewrite-from-requirement. Replace the internal interaction assertion with an observable return-value or state assertion.
 ```
 

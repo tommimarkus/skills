@@ -32,6 +32,8 @@ Then emit the suite-level assessment block:
 - **Overall verdict:** <strong / adequate / weak / not assessed>
 - **Top risks:** <3-5 bullets by impact>
 - **Verification limits:** <what neither static audit nor mutation testing can determine>
+- **Assurance level:** reasonable (Deep — enumerated surface; sampling noted if used)
+- **Independence:** independent / self-review / unknown (audit-craft.md §2)
 
 ### Pyramid ratio
 
@@ -75,6 +77,7 @@ Then emit the suite-level assessment block:
 
 Worklist rules:
 
+- Priority is `severity × SUT risk tier` per the audit-craft.md §3 mapping table; tag the deciding tier.
 - Static-only `probable-static` gap entries are verification work, not direct
   implementation work. Phrase them as "verify whether ..." and include the
   mutation/manual-review step needed to confirm.

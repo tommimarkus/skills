@@ -19,10 +19,17 @@ and E2E by user-observable outcomes cheaper tests cannot prove.
 Inputs: target/diff/suite, mode, stack signals, specs/contracts,
 helpers/fixtures, and optional coverage/mutation/flake evidence. Ask/stop when
 target, mode, rubric, files, sibling ownership, requested edits, or confidence
-lack a safe default. Separate fact from inference, state limits, downgrade
-static-only gaps, and avoid false positives/negatives.
+lack a safe default. For discipline on false positives, limits, and severity, see
+`../../docs/audit-reference/audit-craft.md` §2–§3.
 
 ## Load Map
+
+Apply the shared core before selecting a rubric:
+- Load `../../docs/audit-reference/audit-craft.md` (discipline + output contract).
+- Load `../../docs/audit-reference/materiality.md` (risk tier).
+- Load `../../docs/audit-reference/sampling-projection.md` (scale).
+This skill adds the test rubric and `HC-*/I-*/E-*` namespace on top; it does not
+restate craft.
 
 Load the selected rubric before judging:
 
@@ -66,6 +73,9 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
    sub-lane (`A`, `P`, `S`, else `F`). Ask if dispatch is unsafe.
 3. Establish target; inspect bases, fixtures, helpers, page objects, factories,
    keyword resources, and runner config before judging.
+3a. Deep only — risk pass: enumerate the SUT surface, assign each surface a risk
+    tier per `materiality.md`, record the tier map, and focus enumeration and
+    mutation budget on high-tier surfaces first.
 4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
    and use the highest applicable severity.

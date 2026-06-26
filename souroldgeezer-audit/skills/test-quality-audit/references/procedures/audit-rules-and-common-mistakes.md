@@ -35,6 +35,10 @@ auditor mistakes that prevent noisy or misrouted reviews.
 - **Reward positive signals explicitly.** A useful audit names what is working.
 - **Stay read-only during audits.** Do not modify tests or production code
   unless the user explicitly asks for fixes.
+- **Disclose independence.** If this session authored the tests under audit,
+  report `self-review` and prefer a separate pass; else `independent`.
+- **Ground materiality; never guess it.** Risk tier comes from observable
+  signals or an explicit declaration (materiality.md). Ungroundable → `unknown`.
 
 ## Unit-Specific Rules
 
@@ -110,3 +114,5 @@ auditor mistakes that prevent noisy or misrouted reviews.
 - Treating a high mutation score as proof that tests are specification tests.
 - Running mutation tooling without the extension's detection command first.
 - Treating mutation failure as audit failure.
+- Guessing a risk tier from vibes instead of a cited signal.
+- Letting test-quality severity, not subject risk, set worklist priority.
