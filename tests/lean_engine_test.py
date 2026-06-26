@@ -33,5 +33,17 @@ class EngineLoads(unittest.TestCase):
         self.assertIsNotNone(load_engine())
 
 
+class Normalize(unittest.TestCase):
+    def test_strips_markdown_and_lowercases(self):
+        eng = load_engine()
+        out = eng.normalize("See [the Guide](CLAUDE.md) for `jq` Rules! ")
+        self.assertEqual(out, ["see", "the", "guide", "for", "rules"])
+
+    def test_drops_code_fences(self):
+        eng = load_engine()
+        out = eng.normalize("intro\n```\nrm -rf /\n```\ntail")
+        self.assertEqual(out, ["intro", "tail"])
+
+
 if __name__ == "__main__":
     unittest.main()
