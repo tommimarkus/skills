@@ -12,4 +12,4 @@ When invoked, run the test-quality-audit skill and present the results:
 1. Invoke the `test-quality-audit` skill using the Skill tool.
 2. Follow the skill instructions exactly — detect the target stack, load the matching extension(s), dispatch to the unit / integration / E2E rubric per step 0b, and choose quick or deep mode based on the request.
 3. Present per-test findings using the fields of the selected rubric (unit / integration / E2E) — intent or scope statement, verdict, smells matched, severity, SUT risk tier (per materiality.md), Consequence (per audit-craft.md §3), and recommended action. Deep worklist priority = severity × risk tier per the §3 table.
-4. End every output with the footer disclosure per audit-craft.md §5: extensions loaded, assurance level (reasonable for deep / limited for quick), independence (independent | self-review | unknown), and evidence limits.
+4. End every output with the footer disclosure per audit-craft.md §5: extensions loaded · tool/MCP availability · reference path(s) · evidence limits · independence (independent | self-review | unknown) · assurance level (reasonable for deep / limited for quick).

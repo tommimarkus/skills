@@ -20,4 +20,4 @@ When invoked:
 5. Preserve the terse output contract: `nothing to check`, `checked: ...`,
    `fixed: ...`, or `deferred drive-by observation ...`.
 6. For fixes, include the source authority or reference path used.
-7. End every output with a disclosure footer per audit-craft.md §5: check bucket(s) used · assurance level (limited for triage / reasonable for in-depth) · independence (independent | self-review | unknown) · evidence limits.
+7. End every output with a disclosure footer per audit-craft.md §5: check bucket(s) used · tool/MCP availability · reference path(s) · evidence limits · independence (independent | self-review | unknown) · assurance level (limited for triage / reasonable for in-depth).

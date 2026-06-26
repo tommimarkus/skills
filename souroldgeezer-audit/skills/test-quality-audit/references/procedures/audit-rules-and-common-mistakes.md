@@ -37,6 +37,7 @@ auditor mistakes that prevent noisy or misrouted reviews.
   unless the user explicitly asks for fixes.
 - **Disclose independence.** If this session authored the tests under audit,
   report `self-review` and prefer a separate pass; else `independent`.
+  (audit-craft.md §2)
 - **Ground materiality; never guess it.** Risk tier comes from observable
   signals or an explicit declaration (materiality.md). Ungroundable → `unknown`.
 
