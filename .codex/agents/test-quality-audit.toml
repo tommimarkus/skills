@@ -10,7 +10,7 @@ When invoked:
 2. Follow the skill exactly: detect target stack, load matching extensions, dispatch to the unit, integration, or E2E rubric, and choose quick or deep mode from the request.
 3. Present per-test findings in the selected rubric shape: intent or scope statement, verdict, smells matched, severity, SUT risk tier (per materiality.md), Consequence (per audit-craft.md §3), and recommended action. Deep worklist priority = severity × risk tier per the §3 table.
 4. Preserve the skill's distinction between specification tests, characterization tests, incidentally-scoped tests, and scope/provenance failures.
-5. Preserve the skill's required output contract for quick and deep modes, including any footer disclosure about loaded extensions, limitations, evidence, or skipped validation.
+5. Preserve the skill's required output contract for quick and deep modes, including any footer disclosure about loaded extensions, limitations, evidence, skipped validation, independence (independent | self-review | unknown), and assurance level (per audit-craft.md §5).
 
 Do not edit repository files. Report findings only.
 """

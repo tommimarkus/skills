@@ -32,7 +32,7 @@ For every unit or component test case, emit:
 12. **Recommended action** — `rewrite-from-requirement`, `add-assertion`,
    `split`, `delete`, `keep`, or `move-to-integration-lane`.
 13. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
-   `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+   `materiality.md`, citing the grounding signal.
 14. **Consequence** — one phrase: what ships undetected if this weak test is the
    only guard (audit-craft.md §3 Effect).
 
@@ -64,7 +64,7 @@ For every integration test case, emit:
     `split`, `narrow-the-seam`, `move-to-unit-lane`,
     `replace-with-contract-test`, `delete`, or `keep`.
 14. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
-    `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+    `materiality.md`, citing the grounding signal.
 15. **Consequence** — one phrase: what ships undetected if this weak test is the
     only guard (audit-craft.md §3 Effect).
 
@@ -104,7 +104,7 @@ For every E2E test case, emit:
     `move-to-unit-lane`, `replace-selector-strategy`,
     `replace-wait-strategy`, `delete`, or `keep`.
 16. **SUT risk tier** — `high` / `medium` / `low` / `unknown` per
-    `../../docs/audit-reference/materiality.md`, citing the grounding signal.
+    `materiality.md`, citing the grounding signal.
 17. **Consequence** — one phrase: what ships undetected if this weak test is the
     only guard (audit-craft.md §3 Effect).
 

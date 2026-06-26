@@ -22,6 +22,8 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
   seek contradiction (hunt for controls that cannot fail).
 - Evidence sufficiency/appropriateness: re-performance/observed behavior >
   entity-asserted (names, comments, badges).
+- Fact vs inference: mark inferred or static-only conclusions as inference
+  requiring verification; do not present them as confirmed fact.
 - Materiality: weight by consequence of the subject being wrong (see materiality.md).
 - Independence / self-review: disclose when the auditor authored the audited
   artifact this session; prefer a separate pass. Enum: independent | self-review | unknown.

@@ -51,8 +51,8 @@ Evals stay synthetic or originally paraphrased.
 Apply audit core principles before judging:
 - Conform to `../../docs/audit-reference/audit-craft.md` §2 (skepticism,
   criteria-citation, independence/self-review, false-positive discipline), §3
-  (findings carry cause + consequence + recommendation + severity), and §5
-  (disclosure footer). This skill keeps its IP-issue finding shape and
+  (the full finding contract), and §5 (disclosure footer). This skill keeps
+  its IP-issue finding shape and
   triage/in-depth modes in place of §4's Quick/Deep names or a smell catalog.
 - Apply `../../docs/audit-reference/materiality.md` risk tier where an IP
   issue's consequence varies (e.g. published trademark vs internal note).
@@ -114,9 +114,10 @@ Return exactly one of:
 
 For fixes, include the source authority or reference path used.
 
-Every output ends with a disclosure footer: check bucket(s) used · assurance
-level (limited for triage / reasonable for in-depth) · independence
-(independent | self-review | unknown) · evidence limits.
+Every output ends with a disclosure footer per audit-craft.md §5: check
+bucket(s) used · tool/MCP availability · reference path(s) · evidence limits ·
+independence (independent | self-review | unknown) · assurance level (limited
+for triage / reasonable for in-depth).
 
 ## Verification
 
