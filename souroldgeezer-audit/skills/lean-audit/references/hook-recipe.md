@@ -25,7 +25,7 @@ When the hook denies an edit, do one of:
 - **restructure** so the added prose is not a near-duplicate;
 - add `<!-- lean-audit:sync-intentional: <reason> -->` to the duplicated block
   (intentional parallel structure the carve-outs don't yet cover);
-- declare a `[[carve_out]]` / `canonical_home` rule in `.lean-audit.toml`.
+- declare a `[[carve_out]]` or `exempt_paths` rule in `.lean-audit.toml`.
 
 ## Enable in Claude Code
 

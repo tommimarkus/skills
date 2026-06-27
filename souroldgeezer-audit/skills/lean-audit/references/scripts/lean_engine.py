@@ -369,7 +369,7 @@ def main(argv: list[str]) -> int:
             files = read_repo(root, scope)
             findings = (scan(files, reg) + scan_stale_refs(files, root)
                         + find_dead_refs(files) + scan_bloat(files))
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, tomllib.TOMLDecodeError, re.error) as exc:
         print(f"lean-audit: {exc}", file=sys.stderr)
         return 2
 

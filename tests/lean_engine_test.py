@@ -482,11 +482,36 @@ class EvaluateAddedBlock(unittest.TestCase):
         eng = load_engine()
         with tempfile.TemporaryDirectory() as tmp:
             root = self._corpus(tmp)
-            block = "## Fresh\nThis prose shares no four-word run with anything else here at all."
+            block = (
+                "## Fresh\nThis section introduces entirely original vocabulary covering "
+                "deployment pipelines caching strategies network retries observability "
+                "dashboards rollout guards and telemetry that overlaps nothing present in "
+                "the shared corpus today whatsoever."
+            )
             findings = eng.evaluate_added_block(
                 root, "aud/skills/s2/SKILL.md", block, None
             )
             self.assertEqual(findings, [])
+
+
+class MalformedCarveOut(unittest.TestCase):
+    def test_bad_carveout_capture_key_exits_2(self):
+        """A carve_out with an invalid Python group name ({bad-key}) must exit cleanly, not crash."""
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            # Two guarded files with HIGH-BAND overlap so carved_out() is actually invoked
+            words = " ".join(f"w{i}" for i in range(40))
+            (root / "CLAUDE.md").write_text(f"# Home\n{words}\n", encoding="utf-8")
+            (root / "README.md").write_text(f"# Overview\n{words}\n", encoding="utf-8")
+            # Registry with an invalid Python regex group name (hyphen in capture key)
+            bad_toml = root / ".lean-audit.toml"
+            bad_toml.write_text(
+                '[[carve_out]]\na = "{bad-key}/x.md"\nb = "{bad-key}/y.md"\n',
+                encoding="utf-8",
+            )
+            result = eng.main([str(root), "--registry", str(bad_toml)])
+            self.assertEqual(result, 2)
 
 
 if __name__ == "__main__":
