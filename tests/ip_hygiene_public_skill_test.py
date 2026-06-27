@@ -9,8 +9,9 @@ INTERNAL_SKILL = REPO_ROOT / ".claude" / "skills" / "ip-hygiene"
 PUBLIC_SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
 INTERNAL_SKILL_PATH = ".claude/skills/ip-hygiene/SKILL.md"
 AUDIT_DESCRIPTION = (
-    "Rubric-driven audits for DevSecOps posture, test quality, and IP hygiene, "
-    "with per-stack extensions, matching Claude Code subagents, and Codex skill metadata."
+    "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and "
+    "duplication/waste (Lean), with per-stack extensions, matching Claude Code "
+    "subagents, and Codex skill metadata."
 )
 
 
@@ -76,7 +77,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         )
 
         for surface in (audit_entry, claude_manifest, codex_manifest):
-            self.assertEqual(surface["version"], "2026.06.3")
+            self.assertEqual(surface["version"], "2026.06.4")
             self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
 
         prompts = codex_manifest["interface"]["defaultPrompt"]

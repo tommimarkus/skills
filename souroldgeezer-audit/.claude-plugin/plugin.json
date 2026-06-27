@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer-audit",
-  "version": "2026.06.3",
-  "description": "Rubric-driven audits for DevSecOps posture, test quality, and IP hygiene, with per-stack extensions, matching Claude Code subagents, and Codex skill metadata.",
+  "version": "2026.06.4",
+  "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions, matching Claude Code subagents, and Codex skill metadata.",
   "author": {
     "name": "Sour Old Geezer",
     "email": "claude-marketplace-a.varsity439@passmail.net"
