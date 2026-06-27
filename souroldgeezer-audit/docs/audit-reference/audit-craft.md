@@ -25,6 +25,11 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
 - Fact vs inference: mark inferred or static-only conclusions as inference
   requiring verification; do not present them as confirmed fact.
 - Materiality: weight by consequence of the subject being wrong (see materiality.md).
+- Plan from risk before fieldwork: a Deep audit opens with a risk survey
+  (enumerate the subject, tier per materiality.md, prioritize the highest-risk
+  surface) before applying the catalog. Domain-best-fit: test-quality enumerates
+  the SUT surface; devsecops threat-models crown jewels / trust boundaries /
+  attacker goals. Catalog-first with no survey is a Quick shape — disclose it.
 - Independence / self-review: disclose when the auditor authored the audited
   artifact this session; prefer a separate pass. Enum: independent | self-review | unknown.
 - False-positive discipline: one finding per item; substantiate or downgrade.
@@ -75,4 +80,13 @@ pattern. Extensions never override core rules.
 ## §8 Maintenance
 
 Behavioral evals are synthetic and repo-authored (source-grounding per skill).
-After any craft change, rerun `scripts/skill-architecture-report.sh .`.
+Keep two evidence kinds: (1) synthetic behavior/trigger evals prove routing and
+behavior; (2) a recall-calibrated accuracy corpus proves finding accuracy — that
+the skill catches what is present and does not flag what is not. Every audit
+skill SHOULD maintain a domain-best-fit accuracy corpus, scored for recall and
+false-positive rate after any rubric / dispatch / output-contract / smell-catalog
+/ extension change. Ground truth is domain-best-fit: test-quality hand-labels
+snippets (no external oracle exists); devsecops plants objectively verifiable
+defects (seeded secrets, known-CVE / CISA-KEV recall). A skill that measures only
+triggering/behavior, never recall, has no audit-of-the-audit. After any craft
+change, rerun `scripts/skill-architecture-report.sh .`.
