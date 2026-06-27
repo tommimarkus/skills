@@ -6,8 +6,8 @@ interface:
     audits and deep repo reviews. Defer non-security design and test-quality
     work to sibling skills.
   default_prompt: "Audit this repository's DevSecOps posture."
-# Output contract: Deep mode opens with the Risk plan (threat-model planning:
-# crown jewels, trust boundaries, attacker goals), followed by the
+# Output contract: Deep mode opens with the Risk plan (crown jewels,
+# trust boundaries, attacker goals), followed by the
 # twelve-section rollup, presence-vs-efficacy verdict, and honest-limits statement.
 policy:
   allow_implicit_invocation: true

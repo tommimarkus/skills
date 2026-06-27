@@ -1,7 +1,7 @@
 # Threat-Model Planning
 
 Deep-mode planning step, run BEFORE the anti-pattern and smell scans. Realizes
-`../../../docs/audit-reference/audit-craft.md` §2 (plan from risk before fieldwork)
+[audit-craft.md §2](../../../../docs/audit-reference/audit-craft.md) (plan from risk before fieldwork)
 for security. Cites rubric §3 "what to threat-model"; adds no rubric prose.
 
 ## Procedure

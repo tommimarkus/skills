@@ -57,7 +57,7 @@ Load `references/procedures/golden-corpus-evals.md` (corpus: `references/golden-
 ## Outputs
 
 - Quick: findings only; no rollup or MCP probes.
-- Deep: opens with the Risk plan; rubric §9 sections 1-12: Risk plan, scope, target levels, stage matrix,
+- Deep: opens with the Risk plan, then rubric §9 sections 1-12: scope, target levels, stage matrix,
   CICD-SEC scan, smells, positives, provenance, evidence-per-release,
   framework coupling, live-state block, verdict, honest limits.
 

@@ -2,7 +2,7 @@
 
 **When this runs:** after changing `devsecops-audit` rubric wording, smell
 catalog, output contract, extension files, or examples. Empirical accuracy
-guardrail realizing `../../../docs/audit-reference/audit-craft.md` §8; complements
+guardrail realizing [audit-craft.md §8](../../../../docs/audit-reference/audit-craft.md); complements
 `scripts/skill-architecture-report.sh .` (structure, not accuracy).
 
 ## Inputs
@@ -44,5 +44,7 @@ Record in the change discussion:
 ```
 
 ## Updating the corpus
-Add cases one at a time; keep snippets minimal and original; keep ≥1 positive and
-≥1 negative per family; use `forbidden_codes` to pin known false positives.
+Add cases one at a time; keep snippets minimal and original; keep ≥1 positive per
+family; false-positive-prone families also keep a clean negative (to pin false
+positives); detection-recall families may be positive-only; use `forbidden_codes`
+to pin known false positives.
