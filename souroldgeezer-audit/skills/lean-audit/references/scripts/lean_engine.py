@@ -262,9 +262,12 @@ def _glob_to_regex(pattern: str) -> str:
     while i < n:
         c = pattern[i]
         if c == "{":
-            j = pattern.index("}", i)
-            out.append(f"(?P<{pattern[i + 1:j]}>[^/]+)")
-            i = j + 1
+            j = pattern.find("}", i)
+            if j == -1:
+                out.append(re.escape(c)); i += 1
+            else:
+                out.append(f"(?P<{pattern[i + 1:j]}>[^/]+)")
+                i = j + 1
         elif pattern[i:i + 3] == "**/":
             out.append("(?:.*/)?"); i += 3
         elif pattern[i:i + 2] == "**":

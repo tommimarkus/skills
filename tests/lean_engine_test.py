@@ -368,6 +368,11 @@ class CaptureGlob(unittest.TestCase):
         self.assertEqual(eng.path_captures(".claude/skills/**", ".claude/skills/lessons/SKILL.md"), {})
         self.assertIsNone(eng.path_captures(".claude/skills/**", "souroldgeezer-audit/skills/x/SKILL.md"))
 
+    def test_unclosed_brace_is_literal_no_crash(self):
+        eng = load_engine()
+        self.assertEqual(eng.path_captures("{plugin/x.md", "{plugin/x.md"), {})  # no ValueError; literal match
+        self.assertIsNone(eng.path_captures("{plugin/x.md", "other/x.md"))
+
 
 class CarveOuts(unittest.TestCase):
     def test_builtin_subagent_mirror_exempts_same_skill(self):

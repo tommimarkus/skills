@@ -20,7 +20,7 @@ Own read-only duplication/waste audits of markdown prose and skill surfaces
 `test-quality-audit`; copyright / marks / licence → `ip-hygiene`; code or design
 structure → the design skills. Prose surfaces only in v1 (not code duplication).
 
-Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / must-sync registry. Ask or stop when the scope, the intended
+Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see `../../docs/audit-reference/audit-craft.md`
 §2–§3.
@@ -60,9 +60,7 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 
 - Read-only: assess and produce a worklist; do not auto-fix unless edits are
   explicitly requested. Separate audit from repair (audit-craft §2).
-- Intentional must-sync duplication — declared in the registry or marked
-  `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not
-  as a finding.
+- Intentional structural duplication — declared via `[[carve_out]]` / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding.
 - Suppress false positives: before asserting a finding, confirm the matched
   passage is independent duplication, not a quote, cross-reference, or code
   example; if the duplication claim is not supported by evidence, note it as a non-finding with the reason.
