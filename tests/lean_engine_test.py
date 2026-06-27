@@ -449,5 +449,45 @@ class RepoResidual(unittest.TestCase):
         self.assertTrue(any("quality-reference" in p and "quality-reference" in m for p, m in pairs))
 
 
+class EvaluateAddedBlock(unittest.TestCase):
+    def _corpus(self, tmp):
+        # one guarded SKILL.md with a substantial section
+        a = Path(tmp) / "aud" / "skills" / "s1" / "SKILL.md"
+        a.parent.mkdir(parents=True, exist_ok=True)
+        a.write_text(
+            "## Shared\n"
+            + "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha.\n",
+            encoding="utf-8",
+        )
+        return Path(tmp)
+
+    def test_duplicate_added_block_is_block_finding(self):
+        import tempfile
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._corpus(tmp)
+            block = (
+                "## Shared\n"
+                "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+                "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha."
+            )
+            findings = eng.evaluate_added_block(
+                root, "aud/skills/s2/SKILL.md", block, None
+            )
+            self.assertTrue(any(f.severity == "block" for f in findings))
+
+    def test_unique_added_block_has_no_finding(self):
+        import tempfile
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._corpus(tmp)
+            block = "## Fresh\nThis prose shares no four-word run with anything else here at all."
+            findings = eng.evaluate_added_block(
+                root, "aud/skills/s2/SKILL.md", block, None
+            )
+            self.assertEqual(findings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

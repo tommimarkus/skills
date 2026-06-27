@@ -173,6 +173,23 @@ def read_repo(root: Path, scope: Path) -> dict[str, str]:
     return files
 
 
+def evaluate_added_block(
+    root: Path, source: str, block: str, registry: Path | None
+) -> list[Finding]:
+    """Score one added/edited block against the guarded-markdown corpus.
+
+    Shared by the --added-text CLI path and the PreToolUse guard hook. `source`
+    is repo-relative; `registry=None` defaults to `root/.lean-audit.toml`.
+    Carve-outs and the sync-intentional override are honoured via score_section.
+    """
+    reg = load_registry(registry if registry is not None else root / ".lean-audit.toml")
+    files = read_repo(root, root)
+    files[source] = block
+    index = build_index(files)
+    targets = [s for s in index if s.path == source]
+    return [f for f in (score_section(s, index, reg) for s in targets) if f is not None]
+
+
 def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
     index = build_index(files)
     findings = []
@@ -340,13 +357,9 @@ def main(argv: list[str]) -> int:
             if not args.source:
                 ap.error("--added-text requires --source")
             root = Path(args.corpus_root).resolve()
-            reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
-            files = read_repo(root, root)
+            registry = Path(args.registry) if args.registry else None
             block = sys.stdin.read()
-            files[args.source] = block
-            index = build_index(files)
-            target = [s for s in index if s.path == args.source]
-            findings = [f for f in (score_section(s, index, reg) for s in target) if f]
+            findings = evaluate_added_block(root, args.source, block, registry)
         else:
             if not args.scope:
                 ap.error("scope is required")
