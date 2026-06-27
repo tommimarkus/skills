@@ -85,40 +85,32 @@ class Sections(unittest.TestCase):
 
 
 class RegistryAndOverride(unittest.TestCase):
-    def test_load_registry(self):
+    def test_load_registry_carveouts(self):
         eng = load_engine()
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / ".lean-audit.toml"
             p.write_text(
+                'exempt_paths = ["vendor/**"]\n'                       # root key MUST precede table-arrays in TOML
                 '[[canonical_home]]\npath = "CLAUDE.md"\nheading = "Git ignore hygiene (MUST)"\n'
-                '[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n',
-                encoding="utf-8",
-            )
+                '[[carve_out]]\na = "**/skills/{skill}/extensions/**/*.md"\nb = "**/skills/{skill}/extensions/**/*.md"\n',
+                encoding="utf-8")
             reg = eng.load_registry(p)
             self.assertIn(("CLAUDE.md", "Git ignore hygiene (MUST)"), reg.canonical_homes)
-            self.assertTrue(eng.must_sync_pair(reg, "x/SKILL.md", "x/agents/y.md"))
-            self.assertFalse(eng.must_sync_pair(reg, "x/SKILL.md", "x/README.md"))
+            self.assertEqual(reg.carve_outs,
+                (("**/skills/{skill}/extensions/**/*.md", "**/skills/{skill}/extensions/**/*.md"),))
+            self.assertEqual(reg.exempt_paths, ("vendor/**",))
 
     def test_missing_registry_is_empty(self):
         eng = load_engine()
         reg = eng.load_registry(None)
         self.assertEqual(reg.canonical_homes, ())
-        self.assertEqual(reg.must_sync, ())
+        self.assertEqual(reg.carve_outs, ())
+        self.assertEqual(reg.exempt_paths, ())
 
     def test_override_marker(self):
         eng = load_engine()
         self.assertTrue(eng.has_override("text <!-- lean-audit:sync-intentional: mirrors manifest -->"))
         self.assertFalse(eng.has_override("plain text"))
-
-    @unittest.skip("Plan 2 blocker: must_sync needs counterpart (same-skill) semantics, not flat globs")
-    def test_must_sync_should_not_exempt_unrelated_skill_files(self):
-        eng = load_engine()
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / ".lean-audit.toml"
-            p.write_text('[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n', encoding="utf-8")
-            reg = eng.load_registry(p)
-        # Desired (Plan 2): two UNRELATED skills' SKILL.md must NOT be treated as a sync pair.
-        self.assertFalse(eng.must_sync_pair(reg, "a/skills/x/SKILL.md", "a/skills/z/SKILL.md"))
 
 
 class Scoring(unittest.TestCase):

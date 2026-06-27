@@ -74,18 +74,20 @@ def build_index(files: dict[str, str]) -> list[Section]:
 @dataclass(frozen=True)
 class Registry:
     canonical_homes: tuple[tuple[str, str], ...]
-    must_sync: tuple[tuple[str, ...], ...]
+    carve_outs: tuple[tuple[str, str], ...]
+    exempt_paths: tuple[str, ...]
 
 
 def load_registry(path: Path | None) -> Registry:
     if path is None or not Path(path).is_file():
-        return Registry(canonical_homes=(), must_sync=())
+        return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
     data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     homes = tuple(
         (h["path"], h["heading"]) for h in data.get("canonical_home", []) if "path" in h and "heading" in h
     )
-    syncs = tuple(tuple(g["globs"]) for g in data.get("must_sync", []) if g.get("globs"))
-    return Registry(canonical_homes=homes, must_sync=syncs)
+    carves = tuple((c["a"], c["b"]) for c in data.get("carve_out", []) if "a" in c and "b" in c)
+    exempt = tuple(data.get("exempt_paths", []))
+    return Registry(canonical_homes=homes, carve_outs=carves, exempt_paths=exempt)
 
 
 def has_override(text: str) -> bool:
