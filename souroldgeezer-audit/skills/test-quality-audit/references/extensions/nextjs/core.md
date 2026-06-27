@@ -354,6 +354,6 @@ Cross-reference against `../nodejs/integration.md` auth scenario columns. Next.j
 
 ## Mutation tool
 
-Inherits from [`../nodejs/core.md § Mutation tool`](../nodejs/core.md#mutation-tool). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`../nodejs/core.md § 5. Known SUT limitations § Next.js App Router source files`](../nodejs/core.md#5-known-sut-limitations).
+Inherits from [`../nodejs/core.md § Mutation testing`](../nodejs/core.md#mutation-testing). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`../nodejs/core.md § 5. Known SUT limitations § Next.js App Router source files`](../nodejs/core.md#5-known-sut-limitations).
 
 **When a Next.js SUT is audited:** the limitation "probable but not officially documented" applies. First-audit workflow: attempt the run; if it succeeds, remove the caveat from `../nodejs/core.md`. If it fails with RSC-related errors (CS-type errors in the Stryker cleartext reporter, or a `transformer` failure in the Jest / Vitest runner output), report state C and recommend the extract-to-library workaround — move the server-side logic under `app/` to a plain TS library outside `app/`, reference it from Server Components / Route Handlers / Server Actions as thin adapters, and mutate the library.
