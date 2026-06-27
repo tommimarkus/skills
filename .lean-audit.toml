@@ -1,0 +1,22 @@
+# lean-audit registry for THIS repo. carve_out = intentional parallel structure.
+[[carve_out]]                                   # compact catalog restates its own plugin's rubric
+a = "{plugin}/skills/*/references/smell-catalog.md"
+b = "{plugin}/docs/*-reference/**/*.md"
+
+[[carve_out]]                                   # parallel per-stack extension packs
+a = "**/skills/{skill}/**/extensions/**/*.md"
+b = "**/skills/{skill}/**/extensions/**/*.md"
+
+[[carve_out]]                                   # parallel per-stack procedures (mutation-*)
+a = "**/skills/{skill}/references/procedures/**/*.md"
+b = "**/skills/{skill}/references/procedures/**/*.md"
+
+[[carve_out]]                                   # intentionally-shared cross-skill templates
+a = "**/references/procedures/project-assimilation.md"
+b = "**/references/procedures/project-assimilation.md"
+[[carve_out]]
+a = "**/references/core-workflow.md"
+b = "**/references/core-workflow.md"
+[[carve_out]]
+a = "**/references/source-grounding.md"
+b = "**/references/source-grounding.md"

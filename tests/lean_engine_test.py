@@ -418,5 +418,31 @@ class CarveOuts(unittest.TestCase):
             "b/skills/y/references/procedures/project-assimilation.md"))
 
 
+class RepoResidual(unittest.TestCase):
+    def _scan_repo(self, eng):
+        root = REPO_ROOT
+        files = eng.read_repo(root, root)
+        reg = eng.load_registry(root / ".lean-audit.toml")
+        return [f for f in eng.scan(files, reg) if f.severity == "block"]
+
+    def test_carveouts_suppress_intentional_categories(self):
+        eng = load_engine()
+        blocks = self._scan_repo(eng)
+        pairs = {(f.path, f.matched_path) for f in blocks}
+        # built-in subagent mirror gone:
+        self.assertNotIn(("souroldgeezer-audit/skills/lean-audit/SKILL.md",
+                          "souroldgeezer-audit/agents/lean-audit.md"), pairs)
+        # wrapper class gone:
+        self.assertFalse(any(p.startswith(".claude/skills/") or m.startswith(".claude/skills/")
+                             for p, m in pairs))
+        # same-skill extension pair gone:
+        self.assertFalse(any("/extensions/" in p and "/extensions/" in m
+                             and p.split("/skills/")[1].split("/")[0] == m.split("/skills/")[1].split("/")[0]
+                             for p, m in pairs if "/skills/" in p and "/skills/" in m))
+        # the residual stays bounded and includes a genuine rubric dup
+        self.assertLessEqual(len(blocks), 20)
+        self.assertTrue(any("quality-reference" in p and "quality-reference" in m for p, m in pairs))
+
+
 if __name__ == "__main__":
     unittest.main()
