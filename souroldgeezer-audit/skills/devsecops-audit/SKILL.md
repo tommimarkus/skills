@@ -34,6 +34,7 @@ Load `extensions/bicep.md` and `docs/security-reference/devsecops-extensions/bic
 Load `extensions/dockerfile.md` and `docs/security-reference/devsecops-extensions/dockerfile.md` when Docker/Compose/container targets match.
 Load `extensions/dotnet-security.md` and `docs/security-reference/devsecops-extensions/dotnet-security.md` when C#/.NET/appsettings targets match.
 Load `references/procedures/cost-stance-detection.md` when resolving cost stance.
+Load `references/procedures/threat-model-planning.md` first when running Deep mode.
 Load `references/procedures/stage-coverage-matrix.md`, `references/procedures/evidence-per-release.md`, and `references/procedures/mcp-github-probes.md` when running Deep mode.
 Load `references/procedures/extension-authoring.md` only when editing extensions.
 Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic.
@@ -42,20 +43,21 @@ Load `references/procedures/golden-corpus-evals.md` (corpus: `references/golden-
 ## Workflow
 
 1. Select mode, scope, target types, evidence layers, and delegations.
-2. Prefer `rg`; inspect workflow/IaC/container/code/release/security files,
+2. For Deep, run `references/procedures/threat-model-planning.md` first: enumerate crown jewels, trust boundaries, attacker goals; emit the Risk plan and prioritize fieldwork high-risk-first.
+3. Prefer `rg`; inspect workflow/IaC/container/code/release/security files,
    then load and announce extensions.
-3. Resolve cost stance from invocation, `config.yaml`, repo guidance, then
+4. Resolve cost stance from invocation, `config.yaml`, repo guidance, then
    default `full`; disclose source.
-4. Use `codex-security:security-scan` when available and app-code vulnerability
+5. Use `codex-security:security-scan` when available and app-code vulnerability
    coverage overlaps; otherwise disclose unavailable/not applicable.
-5. For Deep, probe GitHub MCP once; on failure record unavailable and continue
+6. For Deep, probe GitHub MCP once; on failure record unavailable and continue
    static-only. Never retry.
-6. Apply codes; separate fact from inference; emit output/footer.
+7. Apply codes; separate fact from inference; emit output/footer.
 
 ## Outputs
 
 - Quick: findings only; no rollup or MCP probes.
-- Deep: rubric §9 sections 1-12: scope, target levels, stage matrix,
+- Deep: opens with the Risk plan; rubric §9 sections 1-12: Risk plan, scope, target levels, stage matrix,
   CICD-SEC scan, smells, positives, provenance, evidence-per-release,
   framework coupling, live-state block, verdict, honest limits.
 
