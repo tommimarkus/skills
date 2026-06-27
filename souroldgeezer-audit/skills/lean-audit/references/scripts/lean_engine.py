@@ -94,13 +94,6 @@ def has_override(text: str) -> bool:
     return OVERRIDE.search(text) is not None
 
 
-def must_sync_pair(reg: Registry, a: str, b: str) -> bool:
-    for globs in reg.must_sync:
-        if any(fnmatch.fnmatch(a, g) for g in globs) and any(fnmatch.fnmatch(b, g) for g in globs):
-            return True
-    return False
-
-
 HIGH_BAND = 0.60
 MID_BAND = 0.35
 MIN_TOKENS = 25
@@ -127,6 +120,8 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
         return None
     if has_override(sec.body):
         return None
+    if path_exempt(reg, sec.path):
+        return None
     best = None
     best_c = 0.0
     for other in index:
@@ -137,7 +132,7 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
             best, best_c = other, c
     if best is None or best_c < MID_BAND:
         return None
-    if must_sync_pair(reg, sec.path, best.path):
+    if path_exempt(reg, best.path) or carved_out(reg, sec.path, best.path):
         return None
     if best_c >= HIGH_BAND:
         if _is_home(reg, best.path, best.heading):

@@ -150,16 +150,19 @@ class Scoring(unittest.TestCase):
         a = [s for s in idx if s.path == "a/SKILL.md"][0]
         self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
 
-    def test_must_sync_pair_exempt(self):
+    def test_carveout_exempts(self):
         eng = load_engine()
         words = " ".join(f"w{i}" for i in range(40))
-        idx = eng.build_index({"x/SKILL.md": f"# A\n{words}", "x/agents/y.md": f"# B\n{words}"})
-        a = [s for s in idx if s.path == "x/SKILL.md"][0]
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / ".lean-audit.toml"
-            p.write_text('[[must_sync]]\nglobs = ["**/SKILL.md", "**/agents/*.md"]\n', encoding="utf-8")
-            reg = eng.load_registry(p)
-        self.assertIsNone(eng.score_section(a, idx, reg))
+        idx = eng.build_index({"p/skills/x/SKILL.md": f"# A\n{words}", "p/agents/x.md": f"# B\n{words}"})
+        a = [s for s in idx if s.path == "p/skills/x/SKILL.md"][0]
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))   # built-in subagent mirror
+
+    def test_wrapper_path_exempt_no_finding(self):
+        eng = load_engine()
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = eng.build_index({".claude/skills/x/SKILL.md": f"# A\n{words}", "internal-skills/x/SKILL.md": f"# B\n{words}"})
+        a = [s for s in idx if s.path == ".claude/skills/x/SKILL.md"][0]
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
 
     def test_short_block_ignored(self):
         eng = load_engine()
