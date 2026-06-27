@@ -66,10 +66,17 @@ surface a prompt. Add a `Stop` command to `.codex/hooks.json` that runs the
 engine on the repo and prompts when it exits non-zero:
 
 ```bash
-python3 "$CODEX_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" . --format json
+python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" . --format json
 # exit 1 == a block-severity duplication is present — prompt the agent to run
 # the lean-audit skill and cite or mark it before finishing.
 ```
+
+> **Codex plugin paths:** Codex exposes `$PLUGIN_ROOT` natively and also sets
+> `$CLAUDE_PLUGIN_ROOT` for compatibility (there is no `$CODEX_PLUGIN_ROOT`). As
+> in Claude Code these resolve in plugin-defined hooks; for a manual
+> `.codex/hooks.json` entry, substitute the installed `lean_engine.py` path
+> directly (resolve it via your Codex plugin install location, or a stable env
+> var) just as in the Claude Code note above.
 
 This is advisory (a Stop prompt), not an at-edit block. Until at-edit Codex
 parity ships, Codex relies on this end-of-session check plus the `lean-audit`
