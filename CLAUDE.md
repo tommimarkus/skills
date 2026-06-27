@@ -28,11 +28,11 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
 - any statement here becomes factually wrong.
 
 **README.md** (audience: humans browsing the marketplace). Update when:
-- a plugin is added/removed/renamed (intro, the "What's in `<plugin>`" section, layout example);
-- a skill is added/removed within a plugin (that plugin's "What's in" table and its "How `<skill>` works" section);
+- a plugin is added/removed/renamed (the "What this is" intro table and the relevant "Detailed docs" pointer);
+- a skill is added/removed within a plugin (its row in the "What this is" table);
 - install commands or marketplace slugs change (→ "Install");
-- repository layout changes a new reader benefits from (→ "Repository layout");
-- a skill's audience-facing behaviour changes — new mode, output format, reference path (→ that skill's "How it works").
+- the local-development or validation workflow changes (→ "Local development" / "Validation");
+- a skill's audience-facing behaviour changes — new mode, output format, reference path (→ the "What this is" table and any "Examples" entry that shows it).
 
 **AGENTS.md** (audience: Codex and AGENTS.md-aware tooling). A thin pointer to this file, not a copy. Update only when Codex entrypoint rules change (marketplace location, Codex manifest requirements, structured-file tooling, the bundled-skills vs custom-agents boundary). Keep canonical details here.
 
