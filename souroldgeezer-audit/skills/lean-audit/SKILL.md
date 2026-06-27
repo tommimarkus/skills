@@ -41,6 +41,7 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 - Load `references/procedures/fuzzy-waste.md` for the judgment-only `LA-STALE-2`
   and `LA-BLOAT-2` checks (the engine does not emit these).
 - Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
+- For prevention-hook enablement, see `references/hook-recipe.md` (opt-in; not part of an audit run).
 - Cite codes from `references/smell-catalog.md`; never restate catalog prose.
 
 ## Workflow
@@ -77,6 +78,17 @@ End every output with: extensions loaded (none in v1) · registry used (path or 
 availability · reference path(s) · evidence limits · independence
 (independent | self-review | unknown) · assurance level (derived: limited |
 reasonable).
+
+## Prevention hook (opt-in)
+
+The same deterministic engine backs an opt-in PreToolUse guard
+(`references/scripts/lean_guard.py`) that soft-blocks an edit introducing a NEW
+block-severity duplication into guarded markdown. It ships OFF (installation ≠
+enforcement); enable it per `references/hook-recipe.md`. It is fail-open (engine
+error / timeout / non-guarded path → allow) and overridable (cite, restructure,
+or add `<!-- lean-audit:sync-intentional -->`); carve-outs are inherited from the
+engine. Codex runs the engine at the Stop hook; true at-edit Codex parity is
+future scope.
 
 ## Skill Maintenance
 
