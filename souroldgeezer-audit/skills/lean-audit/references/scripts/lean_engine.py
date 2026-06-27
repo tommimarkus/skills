@@ -288,6 +288,33 @@ def path_captures(pattern: str, path: str) -> dict | None:
     return m.groupdict() if m else None
 
 
+BUILTIN_CARVE_OUTS = (("{plugin}/skills/{skill}/SKILL.md", "{plugin}/agents/{skill}.md"),)
+BUILTIN_EXEMPT = (".claude/skills/**", ".codex/agents/**")
+
+
+def _pair_matches(a: str, b: str, x: str, y: str) -> bool:
+    for pa, pb in ((a, b), (b, a)):
+        ca = path_captures(pa, x)
+        cb = path_captures(pb, y)
+        if ca is not None and cb is not None:
+            if all(ca[k] == cb[k] for k in (set(ca) & set(cb))):
+                return True
+    return False
+
+
+def carved_out(reg: Registry, x: str, y: str) -> bool:
+    if x == y:
+        return False
+    for a, b in BUILTIN_CARVE_OUTS + reg.carve_outs:
+        if _pair_matches(a, b, x, y):
+            return True
+    return False
+
+
+def path_exempt(reg: Registry, path: str) -> bool:
+    return any(path_captures(p, path) is not None for p in BUILTIN_EXEMPT + reg.exempt_paths)
+
+
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))

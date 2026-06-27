@@ -366,5 +366,54 @@ class CaptureGlob(unittest.TestCase):
         self.assertIsNone(eng.path_captures(".claude/skills/**", "souroldgeezer-audit/skills/x/SKILL.md"))
 
 
+class CarveOuts(unittest.TestCase):
+    def test_builtin_subagent_mirror_exempts_same_skill(self):
+        eng = load_engine()
+        reg = eng.load_registry(None)
+        self.assertTrue(eng.carved_out(reg,
+            "souroldgeezer-audit/skills/lean-audit/SKILL.md",
+            "souroldgeezer-audit/agents/lean-audit.md"))
+
+    def test_builtin_subagent_mirror_does_not_exempt_unrelated(self):
+        eng = load_engine()
+        reg = eng.load_registry(None)
+        self.assertFalse(eng.carved_out(reg,
+            "souroldgeezer-audit/skills/lean-audit/SKILL.md",
+            "souroldgeezer-audit/agents/devsecops-audit.md"))   # {skill} differs
+        self.assertFalse(eng.carved_out(reg,
+            "a/skills/x/SKILL.md", "a/skills/z/SKILL.md"))       # two unrelated SKILL.md
+
+    def test_builtin_wrapper_path_exempt(self):
+        eng = load_engine()
+        reg = eng.load_registry(None)
+        self.assertTrue(eng.path_exempt(reg, ".claude/skills/lessons/SKILL.md"))
+        self.assertFalse(eng.path_exempt(reg, "souroldgeezer-audit/skills/x/SKILL.md"))
+
+    def test_registry_pair_with_shared_capture(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[carve_out]]\na = "**/skills/{skill}/**/extensions/**/*.md"\n'
+                         'b = "**/skills/{skill}/**/extensions/**/*.md"\n', encoding="utf-8")
+            reg = eng.load_registry(p)
+        self.assertTrue(eng.carved_out(reg,
+            "p/skills/tq/references/extensions/dotnet/core.md",
+            "p/skills/tq/references/extensions/nodejs/core.md"))     # same {skill}=tq
+        self.assertFalse(eng.carved_out(reg,
+            "p/skills/tq/references/extensions/dotnet/core.md",
+            "p/skills/other/references/extensions/nodejs/core.md"))  # {skill} differs
+
+    def test_registry_pair_no_capture_any_pair(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[carve_out]]\na = "**/references/procedures/project-assimilation.md"\n'
+                         'b = "**/references/procedures/project-assimilation.md"\n', encoding="utf-8")
+            reg = eng.load_registry(p)
+        self.assertTrue(eng.carved_out(reg,
+            "a/skills/x/references/procedures/project-assimilation.md",
+            "b/skills/y/references/procedures/project-assimilation.md"))
+
+
 if __name__ == "__main__":
     unittest.main()
