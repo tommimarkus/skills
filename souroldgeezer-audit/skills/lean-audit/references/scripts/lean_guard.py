@@ -65,11 +65,11 @@ def evaluate(payload: dict) -> str | None:
         return None
     try:
         rel = Path(file_path).resolve().relative_to(root).as_posix()
-    except ValueError:
-        return None  # edit is outside the repo
-    if not lean_engine.is_guarded(rel):
-        return None
+    except Exception:
+        return None  # edit is outside the repo or unresolvable path
     try:
+        if not lean_engine.is_guarded(rel):
+            return None
         findings = lean_engine.evaluate_added_block(root, rel, content, None)
     except Exception:
         return None  # fail-open on engine error

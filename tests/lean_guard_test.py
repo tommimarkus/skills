@@ -102,6 +102,17 @@ class Evaluate(unittest.TestCase):
             lean_engine.evaluate_added_block = orig
         self.assertIsNone(reason)
 
+    def test_is_guarded_error_fails_open(self):
+        orig = lean_engine.is_guarded
+        def boom(*a, **k):
+            raise RuntimeError("is_guarded exploded")
+        lean_engine.is_guarded = boom
+        try:
+            reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+        finally:
+            lean_engine.is_guarded = orig
+        self.assertIsNone(reason)
+
 
 class MainSubprocess(unittest.TestCase):
     def _run(self, stdin):
