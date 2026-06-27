@@ -4,6 +4,8 @@
 dispatch rules, output contracts, extension files, smell catalogs, or examples.
 This is an empirical guardrail for audit accuracy; it complements
 `scripts/skill-architecture-report.sh .`, which validates skill architecture.
+Realizes the self-measurement principle in
+[audit-craft.md §8](../../../../docs/audit-reference/audit-craft.md).
 
 ## Inputs
 

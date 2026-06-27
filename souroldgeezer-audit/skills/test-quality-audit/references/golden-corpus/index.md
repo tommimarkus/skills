@@ -1,5 +1,8 @@
 # Test Quality Audit Golden Corpus
 
+This corpus realizes the self-measurement principle in
+[audit-craft.md §8](../../../../docs/audit-reference/audit-craft.md).
+
 This directory contains versioned seed cases for empirical `test-quality-audit`
 accuracy checks. Run the procedure in
 [../procedures/golden-corpus-evals.md](../procedures/golden-corpus-evals.md)
