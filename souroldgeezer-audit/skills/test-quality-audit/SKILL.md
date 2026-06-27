@@ -52,9 +52,13 @@ the corresponding core pack and selected rubric addons:
 
 Load `references/extensions/authoring.md` only when editing extension structure.
 
-Load procedures only when needed from `references/procedures/` for finding
-fields, guardrails, deep output, SUT/auth/migration/determinism gates, and
-mutation evidence. Load `references/procedures/mutation-nodejs.md` or
+Load procedures only when needed from `references/procedures/`: per-test
+output fields (`per-test-output-fields.md`), audit rules and common mistakes
+(`audit-rules-and-common-mistakes.md`), auth matrix enumeration
+(`auth-matrix-enumeration.md`, step 2.6, deep integration only), migration
+upgrade-path enumeration (`migration-upgrade-path.md`, step 2.7, deep
+integration only), guardrails, deep output, and SUT/determinism gates. Load
+`references/procedures/mutation-nodejs.md` or
 `references/procedures/mutation-dotnet.md` only in Deep mode when the
 matching stack extension is active and mutation evidence is requested or
 reached.
