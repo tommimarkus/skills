@@ -1,5 +1,6 @@
 docs/superpowers/
 .worktrees/
+.claude/worktrees/
 .venv/
 .cache/
 __pycache__/
