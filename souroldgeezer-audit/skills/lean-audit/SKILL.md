@@ -10,7 +10,7 @@ Audit prose and skill surfaces for duplication and waste (Lean *muda*). A bundle
 deterministic engine computes the findings; this workflow runs it, ranks by
 materiality, and adds the judgment-only waste checks the engine cannot decide.
 Cite `references/smell-catalog.md` codes (`LA-*`). Conform to
-`../../docs/audit-reference/audit-craft.md` §2/§3/§5.
+`../../docs/audit-reference/audit-craft.md` §2/§3/§4/§5.
 
 ## Contract
 
