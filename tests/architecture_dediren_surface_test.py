@@ -5,7 +5,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-EXPECTED_ARCHITECTURE_PLUGIN_VERSION = "2026.06.3"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -74,13 +73,19 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(marketplace_entry["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
-        self.assertEqual(claude_manifest["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
-        self.assertEqual(codex_manifest["version"], EXPECTED_ARCHITECTURE_PLUGIN_VERSION)
+        # The marketplace entry is the in-test source of truth; every other surface
+        # must agree with it. The value is *not* pinned here — the calendar stamp is
+        # assigned at integration on main and owned by scripts/version_stamp.py, so
+        # pinning a literal would only add an undocumented sibling-sync cell. This
+        # test enforces the cross-surface invariant; well-formedness is checked too.
+        canonical = marketplace_entry["version"]
+        self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
+        self.assertEqual(claude_manifest["version"], canonical)
+        self.assertEqual(codex_manifest["version"], canonical)
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
         self.assertIn(
-            f"| `souroldgeezer-architecture` | `{EXPECTED_ARCHITECTURE_PLUGIN_VERSION}` |",
+            f"| `souroldgeezer-architecture` | `{canonical}` |",
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
         )
 

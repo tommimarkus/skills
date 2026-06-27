@@ -76,8 +76,15 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-audit"
         )
 
+        # The marketplace entry is the in-test source of truth for the version; the
+        # manifests must agree with it. The value is deliberately not pinned to a
+        # literal — the CalVer stamp is assigned at integration on main and owned by
+        # scripts/version_stamp.py, so a pin here would just be a sixth sync cell to
+        # hand-edit every bump. The description stays pinned because it is content.
+        canonical = audit_entry["version"]
+        self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
         for surface in (audit_entry, claude_manifest, codex_manifest):
-            self.assertEqual(surface["version"], "2026.06.5")
+            self.assertEqual(surface["version"], canonical)
             self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
 
         prompts = codex_manifest["interface"]["defaultPrompt"]
