@@ -100,7 +100,7 @@ When a single test file contains multiple patterns — some tests use only mocke
 
 ## Test double classification
 
-Required reading for auditors: [../../docs/quality-reference/unit-testing.md § 7.1](../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
+Required reading for auditors: [unit-testing.md § 7.1](../../../../../docs/quality-reference/unit-testing.md) — the Fowler taxonomy (Dummy / Stub / Spy / Mock / Fake) that core smells like `HC-5` and `HC-6` are scoped to.
 
 Jest, Vitest, Sinon, `node:test` `mock`, and `testdouble` all produce test doubles through one construction syntax but serve different roles in the taxonomy. Classify each double before applying interaction-pinning smells. The rule: **a double is a Mock only when the test body verifies it** (asserts on calls received). A double that is only set up to return values, never verified, is a Stub.
 

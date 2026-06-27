@@ -114,7 +114,7 @@ test.
 
 ## Test Double Classification
 
-Required reading for auditors: `../../docs/quality-reference/unit-testing.md`
+Required reading for auditors: `../../../../../docs/quality-reference/unit-testing.md`
 section 7.1. Classify doubles by their role before applying interaction
 pinning smells.
 

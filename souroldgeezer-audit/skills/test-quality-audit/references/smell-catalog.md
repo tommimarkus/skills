@@ -1,6 +1,6 @@
 # Smell Catalog (core, framework-neutral)
 
-Compact reference for cite-by-code usage in audit reports. Codes align 1:1 with [unit-testing.md §5](../docs/quality-reference/unit-testing.md) (unit rubric), [integration-testing.md §5](../docs/quality-reference/integration-testing.md) (integration rubric), and [e2e-testing.md §5](../docs/quality-reference/e2e-testing.md) (E2E rubric). The reference docs are the source of truth — this file exists so audit findings can cite codes like `HC-2`, `LC-3`, `I-HC-A4`, `I-LC-2`, `E-HC-F3`, `E-POS-5` instead of restating each smell.
+Compact reference for cite-by-code usage in audit reports. Codes align 1:1 with [unit-testing.md §5](../../../docs/quality-reference/unit-testing.md) (unit rubric), [integration-testing.md §5](../../../docs/quality-reference/integration-testing.md) (integration rubric), and [e2e-testing.md §5](../../../docs/quality-reference/e2e-testing.md) (E2E rubric). The reference docs are the source of truth — this file exists so audit findings can cite codes like `HC-2`, `LC-3`, `I-HC-A4`, `I-LC-2`, `E-HC-F3`, `E-POS-5` instead of restating each smell.
 
 Framework-specific smells are namespaced in their extension file (e.g. `dotnet.HC-1`). Each extension smell may declare an `Applies to:` field of `unit`, `integration`, `e2e`, or any combination; absent tag defaults to `unit` for backwards compatibility.
 
@@ -68,7 +68,7 @@ a confirmed one; extensions own the grep patterns and confidence level.
 
 ## Integration rubric
 
-Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefixed `I-` to distinguish from unit-rubric codes above. Sub-lane A is in-process; sub-lane B is out-of-process contract. See [integration-testing.md §5](../docs/quality-reference/integration-testing.md) for the full rationale.
+Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefixed `I-` to distinguish from unit-rubric codes above. Sub-lane A is in-process; sub-lane B is out-of-process contract. See [integration-testing.md §5](../../../docs/quality-reference/integration-testing.md) for the full rationale.
 
 ### High-confidence smells, sub-lane A / in-process (I-HC-A*)
 
@@ -116,7 +116,7 @@ Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefix
 
 ## E2E rubric
 
-Applies when `SKILL.md` step 0b selects the E2E rubric. Codes are prefixed `E-` to distinguish from unit-rubric (`HC-*` / `LC-*` / `POS-*`) and integration-rubric (`I-HC-*` / `I-LC-*` / `I-POS-*`) codes. High-confidence smells are split by sub-lane because the failure modes are incompatible; low-confidence smells and positive signals are shared. See [e2e-testing.md §5](../docs/quality-reference/e2e-testing.md) for the full rationale.
+Applies when `SKILL.md` step 0b selects the E2E rubric. Codes are prefixed `E-` to distinguish from unit-rubric (`HC-*` / `LC-*` / `POS-*`) and integration-rubric (`I-HC-*` / `I-LC-*` / `I-POS-*`) codes. High-confidence smells are split by sub-lane because the failure modes are incompatible; low-confidence smells and positive signals are shared. See [e2e-testing.md §5](../../../docs/quality-reference/e2e-testing.md) for the full rationale.
 
 Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** performance budget, **S** security surface.
 
