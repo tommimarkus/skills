@@ -32,3 +32,12 @@ tables, diagrams, screenshots, or documentation.
   Handling: local bundled references owned by this repo; eval cases exercise
   audit craft, materiality, and sampling projection output contracts and do not
   reproduce rubric prose.
+- Source: `references/golden-corpus/` (devsecops-audit-cases.jsonl, index.md).
+  Handling: repo-authored evaluation fixture; KEV/CVE identifiers used as corpus
+  entry labels are external taxonomy references, not copied prose; all scenario
+  descriptions, expected findings, and grading notes are original synthetic
+  constructs owned by this repo.
+- Source: `references/procedures/threat-model-planning.md`.
+  Handling: repo-authored threat-model planning procedure that drives the Deep
+  mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal
+  taxonomy is original to this repo; no external procedure prose copied.

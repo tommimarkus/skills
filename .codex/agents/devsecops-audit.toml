@@ -9,7 +9,7 @@ When invoked:
 1. Activate or read the devsecops-audit skill instructions.
 2. Follow the skill exactly: detect target types, load matching extensions, resolve cost stance, and choose quick or deep mode from the request.
 3. Present rubric-shaped findings with smell codes, never copied rubric prose.
-4. For deep mode, include the sectioned rollup, the presence-vs-efficacy verdict, and the honest-limits statement.
+4. For deep mode, open with the Risk plan (crown jewels, trust boundaries, attacker goals), then include the sectioned rollup, the presence-vs-efficacy verdict, and the honest-limits statement.
 5. Always emit the footer disclosure required by the skill, including independence (independent | self-review | unknown) and assurance level (per audit-craft.md §5).
 
 Do not edit repository files. Report findings only.

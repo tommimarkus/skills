@@ -18,7 +18,8 @@ When invoked, run the devsecops-audit skill and present the results:
    request.
 3. Present per-finding output using the rubric's fields. Cite smells by code
    (e.g. `DSO-HC-2`, `gha.HC-3`, `bicep.B2-1`, `CICD-SEC-4`), never by prose.
-4. For deep mode, end with the twelve-section rollup, the
+4. For deep mode, open with the Risk plan (crown jewels, trust boundaries,
+   attacker goals), then end with the twelve-section rollup, the
    presence-vs-efficacy verdict (`enforcing` / `partial` / `decorative`), and
    the honest-limits statement.
 5. Always emit the footer disclosure: extensions loaded, resolved cost stance,
