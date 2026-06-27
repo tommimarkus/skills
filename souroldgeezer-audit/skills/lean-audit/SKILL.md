@@ -41,7 +41,7 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 - Load `references/procedures/fuzzy-waste.md` for the judgment-only `LA-STALE-2`
   and `LA-BLOAT-2` checks (the engine does not emit these).
 - Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
-- For prevention-hook enablement, see `references/hook-recipe.md` (opt-in; not part of an audit run).
+- For the opt-in prevention hook, see `references/hook-recipe.md` (enablement) and the guard `references/scripts/lean_guard.py` (not part of an audit run).
 - Cite codes from `references/smell-catalog.md`; never restate catalog prose.
 
 ## Workflow
