@@ -37,6 +37,7 @@ Load `references/procedures/cost-stance-detection.md` when resolving cost stance
 Load `references/procedures/stage-coverage-matrix.md`, `references/procedures/evidence-per-release.md`, and `references/procedures/mcp-github-probes.md` when running Deep mode.
 Load `references/procedures/extension-authoring.md` only when editing extensions.
 Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic.
+Load `references/procedures/golden-corpus-evals.md` (corpus: `references/golden-corpus/`) after changing the rubric, smell catalog, output contract, or extensions; record recall per `audit-craft.md` §8.
 
 ## Workflow
 
