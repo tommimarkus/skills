@@ -259,6 +259,33 @@ def scan_bloat(files: dict[str, str]) -> list[Finding]:
     return findings
 
 
+def _glob_to_regex(pattern: str) -> str:
+    out: list[str] = []
+    i, n = 0, len(pattern)
+    while i < n:
+        c = pattern[i]
+        if c == "{":
+            j = pattern.index("}", i)
+            out.append(f"(?P<{pattern[i + 1:j]}>[^/]+)")
+            i = j + 1
+        elif pattern[i:i + 3] == "**/":
+            out.append("(?:.*/)?"); i += 3
+        elif pattern[i:i + 2] == "**":
+            out.append(".*"); i += 2
+        elif c == "*":
+            out.append("[^/]*"); i += 1
+        elif c == "?":
+            out.append("[^/]"); i += 1
+        else:
+            out.append(re.escape(c)); i += 1
+    return "^" + "".join(out) + "$"
+
+
+def path_captures(pattern: str, path: str) -> dict | None:
+    m = re.match(_glob_to_regex(pattern), path)
+    return m.groupdict() if m else None
+
+
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))

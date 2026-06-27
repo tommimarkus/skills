@@ -348,5 +348,31 @@ class Bloat(unittest.TestCase):
         self.assertEqual(eng.scan_bloat(files), [])
 
 
+class CaptureGlob(unittest.TestCase):
+    def test_segment_capture(self):
+        eng = load_engine()
+        self.assertEqual(eng.path_captures("{plugin}/skills/{skill}/SKILL.md",
+            "souroldgeezer-audit/skills/lean-audit/SKILL.md"),
+            {"plugin": "souroldgeezer-audit", "skill": "lean-audit"})
+
+    def test_no_match(self):
+        eng = load_engine()
+        self.assertIsNone(eng.path_captures("{plugin}/agents/{skill}.md", "x/skills/y/SKILL.md"))
+
+    def test_doublestar_zero_or_more_dirs(self):
+        eng = load_engine()
+        self.assertEqual(eng.path_captures("**/skills/{skill}/**/extensions/**/*.md",
+            "p/skills/test-quality-audit/references/extensions/dotnet/core.md"),
+            {"skill": "test-quality-audit"})
+        self.assertEqual(eng.path_captures("**/skills/{skill}/**/extensions/**/*.md",
+            "p/skills/api-design/extensions/azure-cosmosdb.md"),
+            {"skill": "api-design"})
+
+    def test_no_capture_match_returns_empty_dict(self):
+        eng = load_engine()
+        self.assertEqual(eng.path_captures(".claude/skills/**", ".claude/skills/lessons/SKILL.md"), {})
+        self.assertIsNone(eng.path_captures(".claude/skills/**", "souroldgeezer-audit/skills/x/SKILL.md"))
+
+
 if __name__ == "__main__":
     unittest.main()
