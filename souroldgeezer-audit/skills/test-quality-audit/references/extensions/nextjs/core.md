@@ -22,7 +22,7 @@ Composition rules govern how `nextjs.*` smells interact with `nodejs.*` smells:
 2. **`nextjs.*` smells MAY NOT override a `nodejs.*` smell.** When a pattern matches both (e.g. a test violates both `nodejs.HC-1` and `nextjs.HC-2`), emit a single finding citing both codes in the `Smells:` list, severity = max. Ordering in cites: `core → nodejs → nextjs` (left to right, most general to most specific). Example: `HC-5, nodejs.HC-1, nextjs.HC-2`.
 3. **Carve-outs cannot expand scope.** A `nextjs.*` carve-out is always of the form "do not flag X when exactly Y"; it cannot broaden a `nodejs.*` smell's reach.
 4. **Shared detection signals trigger load-once.** Next-specific detection signals only (`next` dep, `next.config.*`, `app/` / `pages/`, `proxy.*` / `middleware.*`, `@next/*`, `next-router-mock`); all others are in `../nodejs/core.md`.
-5. **Mutation tool, determinism verification, and test-double classification** are inherited from `../nodejs/core.md` unchanged — see its § Known SUT limitations for Next.js App Router / SWC / RSC caveats.
+5. **Mutation tool, determinism verification, and test-double classification** are inherited from `../nodejs/core.md` unchanged — see [`mutation-nodejs.md § 5. Known SUT limitations`](../../procedures/mutation-nodejs.md#5-known-sut-limitations) for Next.js App Router / SWC / RSC caveats.
 
 ---
 
@@ -354,6 +354,6 @@ Cross-reference against `../nodejs/integration.md` auth scenario columns. Next.j
 
 ## Mutation tool
 
-Inherits from [`../nodejs/core.md § Mutation testing`](../nodejs/core.md#mutation-testing). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`../nodejs/core.md § 5. Known SUT limitations § Next.js App Router source files`](../nodejs/core.md#5-known-sut-limitations).
+Inherits from [`../nodejs/core.md § Mutation testing`](../nodejs/core.md#mutation-testing). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`mutation-nodejs.md § 5. Known SUT limitations § Next.js App Router source files`](../../procedures/mutation-nodejs.md#5-known-sut-limitations).
 
 **When a Next.js SUT is audited:** the limitation "probable but not officially documented" applies. First-audit workflow: attempt the run; if it succeeds, remove the caveat from `../nodejs/core.md`. If it fails with RSC-related errors (CS-type errors in the Stryker cleartext reporter, or a `transformer` failure in the Jest / Vitest runner output), report state C and recommend the extract-to-library workaround — move the server-side logic under `app/` to a plain TS library outside `app/`, reference it from Server Components / Route Handlers / Server Actions as thin adapters, and mutate the library.
