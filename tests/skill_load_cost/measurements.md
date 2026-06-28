@@ -2,5 +2,5 @@
 
 | Scenario | Before | After | Delta |
 |---|---|---|---|
-| quick-node-unit | 23251 | _pending_ | _pending_ |
-| deep-nextjs-suite | 44360 | _pending_ | _pending_ |
+| quick-node-unit | 23251 | 19943 | -3308 |
+| deep-nextjs-suite | 44360 | 44463 | +103 |

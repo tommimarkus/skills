@@ -50,6 +50,9 @@ the corresponding core pack and selected rubric addons:
 | Robot Framework | `references/extensions/robotframework/` |
 | Rust | `references/extensions/rust/` |
 
+In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
+determinism, mutation); Quick mode never loads it.
+
 Load `references/extensions/authoring.md` only when editing extension structure.
 
 Load procedures only when needed from `references/procedures/`: per-test
