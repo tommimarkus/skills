@@ -37,5 +37,28 @@ class MeasureScenarioTest(unittest.TestCase):
         )
 
 
+CODE_PATTERNS = [r"nodejs\.(?:HC|LC|POS)-\d+", r"\bHC-\d+"]
+
+
+class ExtractInventoryTest(unittest.TestCase):
+    def test_pulls_codes_sections_and_pointers(self):
+        text = (
+            "# Title\n\n## Detection signals\n\n"
+            "nodejs.HC-1 and HC-2 here.\n\nSee [home](../nodejs/core.md).\n"
+        )
+        inv = slc.extract_inventory(text, CODE_PATTERNS)
+        self.assertIn("nodejs.HC-1", inv["codes"])
+        self.assertIn("HC-2", inv["codes"])
+        self.assertIn("Detection signals", inv["sections"])
+        self.assertIn("../nodejs/core.md", inv["pointers"])
+
+    def test_union_dedupes_across_files(self):
+        a = {"codes": ["HC-1"], "sections": ["S"], "pointers": []}
+        b = {"codes": ["HC-1", "HC-2"], "sections": ["S", "T"], "pointers": []}
+        u = slc.union_inventory([a, b])
+        self.assertEqual(u["codes"], ["HC-1", "HC-2"])
+        self.assertEqual(u["sections"], ["S", "T"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -28,3 +28,29 @@ def measure_scenario(scenario: dict, root: Path) -> dict:
         rows.append({"file": rel, "tokens": tokens})
         total += tokens
     return {"id": scenario["id"], "rows": rows, "total": total}
+
+
+SECTION_RE = re.compile(r"^#{1,6}[ \t]+(.*?)[ \t]*$", re.M)
+LINK_RE = re.compile(r"\]\(([^)]+)\)")
+
+
+def extract_inventory(text: str, code_patterns: list[str]) -> dict:
+    codes: set[str] = set()
+    for pattern in code_patterns:
+        codes.update(re.findall(pattern, text))
+    sections = SECTION_RE.findall(text)
+    pointers = LINK_RE.findall(text)
+    return {
+        "codes": sorted(codes),
+        "sections": sections,
+        "pointers": sorted(set(pointers)),
+    }
+
+
+def union_inventory(invs: list[dict]) -> dict:
+    codes: set[str] = set()
+    sections: set[str] = set()
+    for inv in invs:
+        codes.update(inv["codes"])
+        sections.update(inv["sections"])
+    return {"codes": sorted(codes), "sections": sorted(sections)}
