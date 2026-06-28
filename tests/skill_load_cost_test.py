@@ -88,5 +88,30 @@ class CheckPointersTest(unittest.TestCase):
             self.assertTrue(problems[0].startswith(str(p)))
 
 
+class CliTest(unittest.TestCase):
+    def setUp(self):
+        self.fix = Path(__file__).parent / "skill_load_cost" / "fixtures"
+        self.patterns = Path(__file__).parent / "skill_load_cost" / "code_patterns.json"
+
+    def test_diff_passes_against_self(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d) / "base.json"
+            self.assertEqual(
+                slc.main([
+                    "baseline", "--files", str(self.fix / "alpha.md"),
+                    "--code-patterns", str(self.patterns), "--out", str(base),
+                ]),
+                0,
+            )
+            self.assertEqual(
+                slc.main([
+                    "diff", "--baseline", str(base),
+                    "--files", str(self.fix / "alpha.md"),
+                    "--code-patterns", str(self.patterns),
+                ]),
+                0,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

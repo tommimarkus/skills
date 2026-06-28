@@ -77,3 +77,76 @@ def check_pointers(paths: list[Path], code_patterns: list[str]) -> list[str]:
             if not (path.parent / target).resolve().exists():
                 problems.append(f"{path}: dangling pointer: {pointer}")
     return problems
+
+
+def _read_json(path: str):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _cmd_measure(args) -> int:
+    scenarios = {s["id"]: s for s in _read_json(args.scenarios)}
+    result = measure_scenario(scenarios[args.id], Path(args.root))
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        for row in result["rows"]:
+            print(f"{row['tokens']:>8}  {row['file']}")
+        print(f"{result['total']:>8}  TOTAL ({result['id']})")
+    return 0
+
+
+def _cmd_baseline(args) -> int:
+    patterns = _read_json(args.code_patterns)
+    invs = [extract_inventory(Path(f).read_text(encoding="utf-8"), patterns)
+            for f in args.files]
+    out = union_inventory(invs)
+    text = json.dumps(out, indent=2)
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+    return 0
+
+
+def _cmd_diff(args) -> int:
+    patterns = _read_json(args.code_patterns)
+    baseline = _read_json(args.baseline)
+    paths = [Path(f) for f in args.files]
+    current = union_inventory(
+        [extract_inventory(p.read_text(encoding="utf-8"), patterns) for p in paths]
+    )
+    problems = diff_inventory(baseline, current) + check_pointers(paths, patterns)
+    for problem in problems:
+        print(f"FIDELITY REGRESSION: {problem}", file=sys.stderr)
+    return 1 if problems else 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Skill per-use load cost + fidelity gate")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    m = sub.add_parser("measure")
+    m.add_argument("--scenarios", required=True)
+    m.add_argument("--id", required=True)
+    m.add_argument("--root", default=".")
+    m.add_argument("--json", action="store_true")
+    m.set_defaults(func=_cmd_measure)
+
+    b = sub.add_parser("baseline")
+    b.add_argument("--files", nargs="+", required=True)
+    b.add_argument("--code-patterns", required=True)
+    b.add_argument("--out")
+    b.set_defaults(func=_cmd_baseline)
+
+    d = sub.add_parser("diff")
+    d.add_argument("--baseline", required=True)
+    d.add_argument("--files", nargs="+", required=True)
+    d.add_argument("--code-patterns", required=True)
+    d.set_defaults(func=_cmd_diff)
+
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

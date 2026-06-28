@@ -1,0 +1,8 @@
+[
+  "nodejs\\.(?:HC|LC|POS)-\\d+",
+  "nextjs\\.(?:HC|LC|POS)-\\d+",
+  "\\bHC-\\d+",
+  "\\bI-[A-Z]?\\d+",
+  "\\bE-[A-Z]?\\d+",
+  "DSO-[A-Z]+-\\d+"
+]
