@@ -1,0 +1,28 @@
+[
+  {
+    "id": "quick-node-unit",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/unit.md"
+    ]
+  },
+  {
+    "id": "deep-nextjs-suite",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/audit-reference/materiality.md",
+      "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
+      "souroldgeezer-audit/docs/quality-reference/integration-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/integration.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nextjs/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nextjs/integration.md"
+    ]
+  }
+]

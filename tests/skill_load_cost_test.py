@@ -1,4 +1,5 @@
 # tests/skill_load_cost_test.py
+import glob
 import importlib.util
 import json
 import tempfile
@@ -111,6 +112,29 @@ class CliTest(unittest.TestCase):
                 ]),
                 0,
             )
+
+
+class TestQualityAuditBaselineTest(unittest.TestCase):
+    def test_current_files_satisfy_committed_baseline(self):
+        repo = Path(__file__).resolve().parents[1]
+        base = json.loads(
+            (repo / "tests/skill_load_cost/baselines/test-quality-audit.json").read_text()
+        )
+        patterns = json.loads(
+            (repo / "tests/skill_load_cost/code_patterns.json").read_text()
+        )
+        roots = [
+            "souroldgeezer-audit/skills/test-quality-audit/references",
+            "souroldgeezer-audit/docs/quality-reference",
+            "souroldgeezer-audit/docs/audit-reference",
+        ]
+        files = []
+        for r in roots:
+            files += glob.glob(str(repo / r / "**" / "*.md"), recursive=True)
+        current = slc.union_inventory(
+            [slc.extract_inventory(Path(f).read_text(), patterns) for f in files]
+        )
+        self.assertEqual(slc.diff_inventory(base, current), [])
 
 
 if __name__ == "__main__":
