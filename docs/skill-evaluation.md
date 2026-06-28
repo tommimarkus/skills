@@ -5,6 +5,14 @@ evidence files one hop from `SKILL.md` and load them only when the task changes
 trigger metadata, workflow behavior, model-family extensions, source grounding,
 or high-risk rejection gates.
 
+These are runtime-neutral evidence contracts: each case describes expected skill
+activation and behavior for both Claude Code and Codex, not one runtime's
+tooling. This document defines the file format and what each case must contain,
+not an eval runner. The repository's deterministic report engine
+(`scripts/skill_architecture_report.py`) accounts for these as expected evidence
+files; an external harness or a grading agent actually executes the cases
+against the rubric or grader.
+
 ## Source Hygiene
 
 Evaluation artifacts are repo-authored evidence, not mirrors of benchmark

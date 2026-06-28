@@ -130,11 +130,13 @@ Deterministic machinery is for work that should not depend on model judgment:
 - `fixtures/**` for stable inputs that exercise behavior and regressions.
 - `templates/**` for output shapes the agent should fill rather than invent.
 - `assets/**` for redistributable files needed by the skill.
-- `references/bin/**` for redistributable deterministic runtime artifacts whose
-  source and build tooling live in a separate repo-level project (not the
-  shipped skill). Package scripts must rebuild the artifact from source, keep
-  development-only source and build outputs out of the shipped skill runtime,
-  and print enough evidence for reviewers to verify what was included.
+- packaged runtime artifacts for redistributable deterministic tools whose
+  source and build tooling live in a separate repo-level project, not the
+  shipped skill. Keep them with the skill's other deterministic machinery (for
+  example under `references/scripts/`). The package or fetch script must rebuild
+  or re-pin the artifact from its upstream source, keep development-only source
+  and build outputs out of the shipped skill runtime, and print enough evidence
+  for reviewers to verify what was included.
 
 Prefer machinery when the check is structural, repetitive, brittle under prose,
 or important enough to rerun after every change. Prose should explain why a
@@ -374,6 +376,18 @@ Classification rules:
 Do not claim improvement from prose preference alone. Tie the claim to the
 report, eval prompts, or forward-test behavior.
 
+Beyond this per-change loop, the repository runs a cross-session capture loop. A
+Stop hook invokes the `lesson-capture` skill to distill one generalizable
+(Layer-2, developing-the-skills) lesson from a session and stage it to a
+gitignored pending ledger. The `lessons` skill (`/lessons`, on `main` only) then
+reviews pending candidates and graduates approved ones into durable rules: prose
+and policy lessons into the relevant docs (this standard, `CLAUDE.md`, or a
+skill's own files), and deterministic lessons into a
+`tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when the
+report engine already detects the smell. That capture → review → graduate path
+is how a one-off correction becomes a standing rule that feeds back into this
+document.
+
 ## Degradation Checks
 
 Before finishing a skill change, inspect for these common regressions:
@@ -394,11 +408,11 @@ Use these as anchors for current authoring and validation decisions. Link to
 them; do not copy their prose into repo guidance.
 
 - Anthropic Agent Skills overview:
-  <https://docs.claude.com/en/docs/agents-and-tools/agent-skills>
+  <https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview>
 - Claude Code skills:
   <https://code.claude.com/docs/en/skills>
 - Anthropic Claude Skills best practices:
-  <https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices>
+  <https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>
 - Claude Code plugin creation:
   <https://code.claude.com/docs/en/plugins>
 - Claude Code plugin marketplace distribution:
