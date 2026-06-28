@@ -54,3 +54,26 @@ def union_inventory(invs: list[dict]) -> dict:
         codes.update(inv["codes"])
         sections.update(inv["sections"])
     return {"codes": sorted(codes), "sections": sorted(sections)}
+
+
+def diff_inventory(baseline: dict, current: dict) -> list[str]:
+    problems = []
+    for code in sorted(set(baseline["codes"]) - set(current["codes"])):
+        problems.append(f"missing code (unreachable across skill): {code}")
+    for section in baseline["sections"]:
+        if section not in set(current["sections"]):
+            problems.append(f"missing section (unreachable across skill): {section}")
+    return problems
+
+
+def check_pointers(paths: list[Path], code_patterns: list[str]) -> list[str]:
+    problems = []
+    for path in paths:
+        inv = extract_inventory(path.read_text(encoding="utf-8"), code_patterns)
+        for pointer in inv["pointers"]:
+            target = pointer.split("#", 1)[0]
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            if not (path.parent / target).resolve().exists():
+                problems.append(f"dangling pointer: {pointer}")
+    return problems

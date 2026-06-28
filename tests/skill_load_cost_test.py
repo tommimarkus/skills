@@ -1,6 +1,7 @@
 # tests/skill_load_cost_test.py
 import importlib.util
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -58,6 +59,30 @@ class ExtractInventoryTest(unittest.TestCase):
         u = slc.union_inventory([a, b])
         self.assertEqual(u["codes"], ["HC-1", "HC-2"])
         self.assertEqual(u["sections"], ["S", "T"])
+
+
+class DiffInventoryTest(unittest.TestCase):
+    def test_flags_dropped_codes_and_sections(self):
+        baseline = {"codes": ["HC-1", "HC-2"], "sections": ["S", "T"]}
+        current = {"codes": ["HC-1"], "sections": ["S"]}
+        problems = slc.diff_inventory(baseline, current)
+        self.assertTrue(any("HC-2" in p for p in problems))
+        self.assertTrue(any("T" in p for p in problems))
+
+    def test_clean_when_current_is_superset(self):
+        baseline = {"codes": ["HC-1"], "sections": ["S"]}
+        current = {"codes": ["HC-1", "HC-9"], "sections": ["S", "Z"]}
+        self.assertEqual(slc.diff_inventory(baseline, current), [])
+
+
+class CheckPointersTest(unittest.TestCase):
+    def test_flags_dangling_pointer(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "a.md"
+            p.write_text("See [x](missing.md) and [self](a.md).\n")
+            problems = slc.check_pointers([p], CODE_PATTERNS)
+            self.assertTrue(any("missing.md" in m for m in problems))
+            self.assertFalse(any("a.md" in m for m in problems))
 
 
 if __name__ == "__main__":
