@@ -24,10 +24,11 @@ lack a safe default. For discipline on false positives, limits, and severity, se
 
 ## Load Map
 
-Apply the shared core before selecting a rubric:
-- Load `../../docs/audit-reference/audit-craft.md` (discipline + output contract).
-- Load `../../docs/audit-reference/materiality.md` (risk tier).
-- Load `../../docs/audit-reference/sampling-projection.md` (scale).
+Load `../../docs/audit-reference/audit-craft.md` in all modes (discipline +
+output contract). In Deep mode only, also load
+`../../docs/audit-reference/materiality.md` (risk tier) and
+`../../docs/audit-reference/sampling-projection.md` (scale) — these are
+Deep-scale tools; Quick must not load them.
 This skill adds the test rubric and `HC-*/I-*/E-*` namespace on top; it does not
 restate craft.
 
@@ -38,17 +39,18 @@ Load the selected rubric before judging:
 - Load `../../docs/quality-reference/e2e-testing.md` for E2E.
 
 Load `extensions/index.md` for stack signals. When stack signals match, load
-the corresponding core pack and selected rubric addons:
+the stack's `core.md` and the one matching rubric addon (`unit.md`,
+`integration.md`, or `e2e.md`) — do not load the whole stack directory:
 
 | Stack | Load |
 |---|---|
-| .NET | `references/extensions/dotnet/` |
-| Java | `references/extensions/java/` |
-| Node.js / TypeScript | `references/extensions/nodejs/` |
-| Next.js | `references/extensions/nodejs/`, then `references/extensions/nextjs/` |
-| Python | `references/extensions/python/` |
-| Robot Framework | `references/extensions/robotframework/` |
-| Rust | `references/extensions/rust/` |
+| .NET | `references/extensions/dotnet/core.md` + selected addon |
+| Java | `references/extensions/java/core.md` + selected addon |
+| Node.js / TypeScript | `references/extensions/nodejs/core.md` + selected addon |
+| Next.js | `references/extensions/nodejs/core.md` + addon, then `references/extensions/nextjs/core.md` + addon |
+| Python | `references/extensions/python/core.md` + selected addon |
+| Robot Framework | `references/extensions/robotframework/core.md` + selected addon |
+| Rust | `references/extensions/rust/core.md` + selected addon |
 
 In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
 determinism, mutation); Quick mode never loads it.
