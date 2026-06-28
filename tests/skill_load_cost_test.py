@@ -81,8 +81,11 @@ class CheckPointersTest(unittest.TestCase):
             p = Path(d) / "a.md"
             p.write_text("See [x](missing.md) and [self](a.md).\n")
             problems = slc.check_pointers([p], CODE_PATTERNS)
-            self.assertTrue(any("missing.md" in m for m in problems))
-            self.assertFalse(any("a.md" in m for m in problems))
+            # Only the dangling target is reported; the valid self-link (a.md) is not.
+            self.assertEqual(len(problems), 1)
+            self.assertIn("missing.md", problems[0])
+            # Source-file path is retained in the message (needed for multi-file runs).
+            self.assertTrue(problems[0].startswith(str(p)))
 
 
 if __name__ == "__main__":

@@ -60,9 +60,9 @@ def diff_inventory(baseline: dict, current: dict) -> list[str]:
     problems = []
     for code in sorted(set(baseline["codes"]) - set(current["codes"])):
         problems.append(f"missing code (unreachable across skill): {code}")
-    for section in baseline["sections"]:
-        if section not in set(current["sections"]):
-            problems.append(f"missing section (unreachable across skill): {section}")
+    current_sections = set(current["sections"])
+    for section in sorted(s for s in baseline["sections"] if s not in current_sections):
+        problems.append(f"missing section (unreachable across skill): {section}")
     return problems
 
 
@@ -75,5 +75,5 @@ def check_pointers(paths: list[Path], code_patterns: list[str]) -> list[str]:
             if not target or target.startswith(("http://", "https://", "mailto:")):
                 continue
             if not (path.parent / target).resolve().exists():
-                problems.append(f"dangling pointer: {pointer}")
+                problems.append(f"{path}: dangling pointer: {pointer}")
     return problems
