@@ -39,8 +39,8 @@ Load the selected rubric before judging:
 - Load `../../docs/quality-reference/e2e-testing.md` for E2E.
 
 Load `extensions/index.md` for stack signals. When stack signals match, load
-the stack's `core.md` and the one matching rubric addon (`unit.md`,
-`integration.md`, or `e2e.md`) — do not load the whole stack directory:
+the stack's `core.md` and the matching rubric addon for each loaded stack layer
+(`unit.md`, `integration.md`, or `e2e.md`) — do not load the whole stack directory:
 
 | Stack | Load |
 |---|---|
