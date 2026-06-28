@@ -32,6 +32,14 @@ def measure_scenario(scenario: dict, root: Path) -> dict:
 
 SECTION_RE = re.compile(r"^#{1,6}[ \t]+(.*?)[ \t]*$", re.M)
 LINK_RE = re.compile(r"\]\(([^)]+)\)")
+FENCE_RE = re.compile(r"```.*?```", re.S)
+INLINE_CODE_RE = re.compile(r"`[^`]*`")
+
+
+def _strip_code(text: str) -> str:
+    """Remove fenced and inline code so code samples (regex, link-like syntax)
+    are not mistaken for Markdown link pointers."""
+    return INLINE_CODE_RE.sub("", FENCE_RE.sub("", text))
 
 
 def extract_inventory(text: str, code_patterns: list[str]) -> dict:
@@ -39,7 +47,7 @@ def extract_inventory(text: str, code_patterns: list[str]) -> dict:
     for pattern in code_patterns:
         codes.update(re.findall(pattern, text))
     sections = SECTION_RE.findall(text)
-    pointers = LINK_RE.findall(text)
+    pointers = LINK_RE.findall(_strip_code(text))
     return {
         "codes": sorted(codes),
         "sections": sections,

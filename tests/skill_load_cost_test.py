@@ -61,6 +61,17 @@ class ExtractInventoryTest(unittest.TestCase):
         self.assertEqual(u["codes"], ["HC-1", "HC-2"])
         self.assertEqual(u["sections"], ["S", "T"])
 
+    def test_ignores_links_inside_code_spans(self):
+        text = (
+            "Real [a](real.md).\n"
+            "Inline code: `](fake.md)` and `(?P<route>[^)]+)`.\n\n"
+            "```\n](fenced.md)\n```\n"
+        )
+        inv = slc.extract_inventory(text, CODE_PATTERNS)
+        self.assertIn("real.md", inv["pointers"])
+        self.assertNotIn("fake.md", inv["pointers"])
+        self.assertNotIn("fenced.md", inv["pointers"])
+
 
 class DiffInventoryTest(unittest.TestCase):
     def test_flags_dropped_codes_and_sections(self):
