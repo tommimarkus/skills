@@ -130,11 +130,11 @@ Deterministic machinery is for work that should not depend on model judgment:
 - `fixtures/**` for stable inputs that exercise behavior and regressions.
 - `templates/**` for output shapes the agent should fill rather than invent.
 - `assets/**` for redistributable files needed by the skill.
-- `references/bin/**` for redistributable deterministic runtime artifacts when
-  source and build tooling stay in a repo-level `tools/**` project. Package
-  scripts must rebuild the artifact from source, keep development-only source
-  and build outputs out of the shipped skill runtime, and print enough evidence
-  for reviewers to verify what was included.
+- `references/bin/**` for redistributable deterministic runtime artifacts whose
+  source and build tooling live in a separate repo-level project (not the
+  shipped skill). Package scripts must rebuild the artifact from source, keep
+  development-only source and build outputs out of the shipped skill runtime,
+  and print enough evidence for reviewers to verify what was included.
 
 Prefer machinery when the check is structural, repetitive, brittle under prose,
 or important enough to rerun after every change. Prose should explain why a
@@ -173,9 +173,9 @@ Store skill-scoped evidence under one-hop support files:
 
 Every eval case should be synthetic or originally paraphrased unless a specific
 source licence and quotation context have been reviewed. Link source material by
-URL or local path; do not copy third-party prompt text, examples, code,
-fixtures, tables, schemas, diagrams, logos, or screenshots into the plugin
-bundle.
+URL or local path, and follow the no-copy enumeration in
+[skill-evaluation.md](skill-evaluation.md) "Source Hygiene"; do not paste
+third-party material into the plugin bundle.
 
 Trigger eval packs must contain both positive and negative cases. Negative
 cases are not filler; they are the evidence that the skill does not steal work

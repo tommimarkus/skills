@@ -343,6 +343,22 @@ class Bloat(unittest.TestCase):
         self.assertEqual(eng.scan_bloat(files), [])
 
 
+class GuardGlobs(unittest.TestCase):
+    def test_top_level_authoring_docs_are_guarded(self):
+        eng = load_engine()
+        for p in ("docs/skill-architecture.md", "docs/skill-evaluation.md",
+                  "docs/release-checklist.md"):
+            self.assertTrue(eng.is_guarded(p), f"{p} should be guarded")
+
+    def test_docs_notes_drafts_not_guarded(self):
+        # fnmatch '*' crosses '/', so a blanket docs glob would slurp the draft
+        # tree; the authoring docs are listed explicitly so notes stay out.
+        eng = load_engine()
+        for p in ("docs/notes/2026-05-14-skills-lean-yagni-dry-review.md",
+                  "docs/notes/archimate-32-conformity/00-index.md"):
+            self.assertFalse(eng.is_guarded(p), f"{p} (draft) should not be guarded")
+
+
 class CaptureGlob(unittest.TestCase):
     def test_segment_capture(self):
         eng = load_engine()

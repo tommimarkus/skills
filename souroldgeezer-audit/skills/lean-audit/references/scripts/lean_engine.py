@@ -149,6 +149,12 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
 
 _GUARD_GLOBS = (
     "CLAUDE.md", "AGENTS.md", "README.md",
+    # Top-level authoring/governance docs are listed explicitly (like the root
+    # files above): a `docs/*.md` glob would slurp the whole `docs/notes/**`
+    # draft tree because fnmatch '*' crosses '/'. Add new authoritative
+    # top-level docs here by name.
+    "docs/skill-architecture.md", "docs/skill-evaluation.md",
+    "docs/release-checklist.md",
     "**/SKILL.md", "**/agents/*.md",
     "**/docs/*-reference/**/*.md", "**/docs/*-reference/*.md",
     "**/references/**/*.md", "**/references/*.md",
