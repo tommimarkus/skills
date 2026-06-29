@@ -9,7 +9,7 @@ Use with [software-design.md](../../../docs/software-reference/software-design.m
 | Coupling | `SD-C-1`, `SD-C-2`, `SD-C-3`, `SD-C-4` | cycle, inversion, shared core, hidden state |
 | Semantics | `SD-S-1`, `SD-S-2`, `SD-S-4` | vocabulary, duplicate concepts, external model collapse |
 | Evolution | `SD-E-1`, `SD-E-2`, `SD-E-3` | shotgun, migration exit, flag lifecycle |
-| Tradeoff | `SD-Q-1`, `SD-Q-2` | unsupported claim, unmeasured tactic |
+| Tradeoff | `SD-Q-1`, `SD-Q-2`, `SD-Q-3` | unsupported claim/NFR, unmeasured tactic, unallocated NFR |
 | Socio-technical | `SD-T-1` | owner/cognition mismatch |
 
 ## Core Code Cards
@@ -32,6 +32,7 @@ Use with [software-design.md](../../../docs/software-reference/software-design.m
 ### `SD-E-3` - Flag pile-up
 ### `SD-Q-1` - Unstated quality tradeoff
 ### `SD-Q-2` - Unmeasured quality tactic
+### `SD-Q-3` - Unallocated NFR
 ### `SD-T-1` - Ownership mismatch
 
 Default blocks: new dependency cycles/inversions, internals/invariant leakage, hidden mutable state, mandatory speculative framework, specialist-scope absorption.
