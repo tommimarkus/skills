@@ -42,6 +42,27 @@ def _strip_code(text: str) -> str:
     return INLINE_CODE_RE.sub("", FENCE_RE.sub("", text))
 
 
+def resolve_closure(skill_md: Path) -> list[Path]:
+    """Files a skill loads, via transitive Load-Map markdown links from SKILL.md.
+    Deterministic (link-following only); the per-mode subset is judgment, not this."""
+    skill_md = skill_md.resolve()
+    seen: set[Path] = set()
+    queue = [skill_md]
+    while queue:
+        cur = queue.pop()
+        if cur in seen or not cur.exists():
+            continue
+        seen.add(cur)
+        for link in LINK_RE.findall(_strip_code(cur.read_text(encoding="utf-8"))):
+            target = link.split("#", 1)[0]
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            nxt = (cur.parent / target).resolve()
+            if nxt.suffix == ".md" and nxt.exists() and nxt not in seen:
+                queue.append(nxt)
+    return sorted(seen)
+
+
 def extract_inventory(text: str, code_patterns: list[str]) -> dict:
     codes: set[str] = set()
     for pattern in code_patterns:

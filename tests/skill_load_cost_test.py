@@ -172,5 +172,27 @@ class ApiDesignBaselineTest(unittest.TestCase):
         self.assertEqual(slc.diff_inventory(base, current), [])
 
 
+class ResolveClosureTest(unittest.TestCase):
+    def test_follows_load_map_links_transitively(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "SKILL.md").write_text(
+                "# S\n[ref](ref.md) [ext](extensions/e.md) "
+                "[ext-only](https://x) `](not-a-link.md)`\n")
+            (root / "ref.md").write_text("# R\n[deep](deep.md)\n")
+            (root / "deep.md").write_text("# D\n")
+            (root / "extensions").mkdir()
+            (root / "extensions" / "e.md").write_text("# E\n")
+            got = {p.name for p in slc.resolve_closure(root / "SKILL.md")}
+            self.assertEqual(got, {"SKILL.md", "ref.md", "deep.md", "e.md"})
+
+    def test_ignores_links_in_code_and_missing_targets(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "SKILL.md").write_text("# S\n[gone](missing.md) `[x](nope.md)`\n")
+            got = {p.name for p in slc.resolve_closure(root / "SKILL.md")}
+            self.assertEqual(got, {"SKILL.md"})
+
+
 if __name__ == "__main__":
     unittest.main()
