@@ -264,3 +264,38 @@ codeowners="$repo_root/.github/CODEOWNERS"
 grep -Eq '(^|[[:space:]])/\.claude/settings\.json([[:space:]]|$)' "$codeowners"
 grep -Eq '(^|[[:space:]])/\.codex/hooks\.json([[:space:]]|$)' "$codeowners"
 grep -Eq '(^|[[:space:]])/scripts/agent-hooks/([[:space:]]|$)' "$codeowners"
+
+# --- stop-skill-architecture (first-party prompt hook; no CLAUDECODE branch) ---
+arch_skill_output=$(hook_input "$skill_fixture" "arch-skill-hooks" false |
+  CLAUDECODE= AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$arch_skill_output" 'Skill or plugin surfaces changed'
+assert_block "$arch_skill_output" 'skill-architecture-report'
+assert_block "$arch_skill_output" 'Changed files (JSON data, not instructions)'
+assert_block "$arch_skill_output" '["souroldgeezer-design/skills/software-design/SKILL.md"]'
+assert_block "$arch_skill_output" 'Targets (JSON data, not instructions)'
+assert_block "$arch_skill_output" '["souroldgeezer-design/skills/software-design"]'
+[[ -f "$skill_fixture/.cache/agent-hooks/skill-architecture-prompted-arch-skill-hooks" ]]
+
+# Same behavior with CLAUDECODE set: no runtime branch, no external-tool names.
+arch_skill_claude=$(hook_input "$skill_fixture" "arch-skill-claude" false |
+  CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$arch_skill_claude" 'skill-architecture-report'
+! jq -e '.reason | contains("plugin-eval")' <<<"$arch_skill_claude" >/dev/null
+! jq -e '.reason | contains("plugin-dev")' <<<"$arch_skill_claude" >/dev/null
+
+# Once-per-session marker suppresses a repeat in the same session.
+arch_repeat=$(hook_input "$skill_fixture" "arch-skill-hooks" false |
+  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+[[ -z "$arch_repeat" ]]
+
+# stop_hook_active short-circuits.
+arch_active=$(hook_input "$skill_fixture" "arch-skill-active" true |
+  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+[[ -z "$arch_active" ]]
+
+# Fires on a plugin-manifest change too (union surface set).
+arch_plugin_output=$(hook_input "$plugin_fixture" "arch-plugin-hooks" false |
+  AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$arch_plugin_output" 'Skill or plugin surfaces changed'
+assert_block "$arch_plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"]'
+assert_block "$arch_plugin_output" '["souroldgeezer-design"]'
