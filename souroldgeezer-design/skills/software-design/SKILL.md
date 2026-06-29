@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python® tooling. Defer UI, API, infra, architecture, security, tests.
+  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python® tooling. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -23,7 +23,11 @@ Load core reference [../../docs/software-reference/software-design.md](../../doc
 §§2-7,9. For findings, load [references/smell-catalog.md](references/smell-catalog.md)
 and [references/smell-cards.jsonl](references/smell-cards.jsonl). Load [references/principles-catalog.md](references/principles-catalog.md)
 for principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md)
-for pattern questions. Load
+for pattern questions.
+Load [references/nfr-catalog.md](references/nfr-catalog.md) when
+non-functional/quality requirements, SLAs/SLOs, latency/availability/throughput
+targets, or quality attributes are in scope.
+Load
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
 when existing source, diffs, manifests, generated clients, shared libraries,
 adapters, state owners, domain vocabulary, or module boundaries are in scope.

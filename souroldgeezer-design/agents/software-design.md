@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python® tooling. Defer UI, API, infra, architecture, security, tests.
+  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python® tooling. Defer UI, API, infra, architecture, security, tests.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
