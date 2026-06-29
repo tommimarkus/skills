@@ -1,6 +1,6 @@
 ---
 name: lean-audit
-description: Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, and oversized always-loaded context. Read-only; defer security, test-quality, and IP/licence work to sibling skills.
+description: Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Read-only; defer security, test-quality, and IP/licence work to sibling skills.
 tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
 ---

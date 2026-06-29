@@ -216,7 +216,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain; cost stance via `config.yaml` |
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces |
-| `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; bundled deterministic engine + judgment layer; read-only |
+| `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; bundled deterministic engine + judgment layer; plus a surface-gated per-use cost lens (`LA-PUC-*`) for skills/commands/agents with a hookable guard; read-only |
 | `software-design` | `souroldgeezer-design` | Code/module/script design; core `SD-*` + per-language extensions |
 | `app-design` | `souroldgeezer-design` | Frontend app design (React / Next.js / Blazor™ WASM); WCAG 2.2 / i18n / Core Web Vitals baselines |
 | `api-design` | `souroldgeezer-design` | HTTP API design; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |

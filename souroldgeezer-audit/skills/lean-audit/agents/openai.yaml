@@ -1,7 +1,7 @@
 interface:
   display_name: "Lean Audit"
   short_description: >-
-    Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, and oversized always-loaded context. Read-only; defer security, test-quality, and IP/licence work to sibling skills.
+    Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Read-only; defer security, test-quality, and IP/licence work to sibling skills.
   default_prompt: "Audit this repo for duplication and waste."
 policy:
   allow_implicit_invocation: true
