@@ -30,5 +30,22 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   always-loaded context that belongs behind a load condition. Severity: warn.
   Source: inference (`procedures/fuzzy-waste.md`).
 
+## Per-use cost — Lean: over-processing
+- `LA-PUC-1` — a mode loads a closure file it does not need (mode-exclusive
+  elsewhere, or detection-loaded regardless of mode); fix: Load-Map mode-gating
+  (structural-safe). Severity: warn. Source: inference
+  (`procedures/per-use-cost.md`).
+- `LA-PUC-2` — a multi-mode/always-loaded closure file carries content exclusive
+  to one rarer mode; split it out (structural-safe on a clean header boundary;
+  needs-adversarial-review if prose moves under a shared header). Severity: warn.
+  Source: inference (`procedures/per-use-cost.md`).
+- `LA-PUC-3` — a single-file extension/reference loaded whole when each mode
+  needs only a slice; partition into core + per-mode slices
+  (needs-adversarial-review — cross-references). Severity: warn. Source:
+  inference (`procedures/per-use-cost.md`).
+
+Note: always-loaded `SKILL.md`-body bloat is covered by `LA-BLOAT`; not
+duplicated here.
+
 Out of v1 scope: code (non-prose) duplication; the rest of the Lean waste
 taxonomy (waiting, transport, motion, over-production beyond the above).
