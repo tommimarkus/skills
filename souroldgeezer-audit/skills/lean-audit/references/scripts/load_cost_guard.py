@@ -45,6 +45,16 @@ def baseline_for(skill_md, repo_root):
     return p if p.exists() else None
 
 
+def cost_warn_decision(messages):
+    if not messages:
+        return None
+    return {"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "allow",
+        "permissionDecisionReason":
+            "lean-audit per-use guard (advisory, not blocking): " + "; ".join(messages)}}
+
+
 def decide(target, new_content, skill_md, baseline, patterns):
     """Return a deny-decision dict, or None to allow. Pure; fail-open is the caller's."""
     pats = json.loads(Path(patterns).read_text())
@@ -91,6 +101,21 @@ def main():
         decision = decide(target, new_content, skill_md, baseline, patterns)
         if decision is not None:
             print(json.dumps(decision))
+        snap_p = repo_root / "tests" / "skill_load_cost" / "cost-snapshot.json"
+        scen_p = repo_root / "tests" / "skill_load_cost" / "scenarios.json"
+        if decision is None and snap_p.exists() and scen_p.exists():
+            # measure against the edited closure: write nothing, just re-measure scenarios
+            snap = json.loads(snap_p.read_text())
+            scenarios = json.loads(scen_p.read_text())
+            owned = {s["id"]: s for s in scenarios
+                     if str(target) in [str(repo_root / f) for f in s["files"]]
+                     or any((repo_root / f).resolve() == target.resolve() for f in s["files"])}
+            msgs = slc.cost_regressions(
+                {k: v for k, v in snap.items() if k in owned},
+                list(owned.values()), repo_root, tolerance=200)
+            warn = cost_warn_decision(msgs)
+            if warn is not None:
+                print(json.dumps(warn))
         return 0
     except Exception:
         return 0  # fail-open

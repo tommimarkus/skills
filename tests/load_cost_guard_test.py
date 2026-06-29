@@ -47,3 +47,11 @@ class GuardDecisionTest(unittest.TestCase):
             self.assertIsNone(guard.decide(
                 target=root / "c.md", new_content="## Sec\nLA-PUC-1 still here\n",
                 skill_md=root / "SKILL.md", baseline=base, patterns=patterns))
+
+class GuardCostWarnTest(unittest.TestCase):
+    def test_warn_payload_allows_and_names_scenario(self):
+        out = guard.cost_warn_decision(["lookup-functions: per-use cost grew 900 tokens"])
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "allow")
+        self.assertIn("lookup-functions", out["hookSpecificOutput"]["permissionDecisionReason"])
+    def test_no_warn_returns_none(self):
+        self.assertIsNone(guard.cost_warn_decision([]))
