@@ -81,3 +81,98 @@ python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py
 This is advisory (a Stop prompt), not an at-edit block. Until at-edit Codex
 parity ships, Codex relies on this end-of-session check plus the `lean-audit`
 skill run.
+
+---
+
+# lean-audit per-use cost guard — enablement recipe
+
+The `lean-audit` engine backs an **opt-in** per-use cost guard (`load_cost_guard.py`)
+that defends a skill's **fidelity floor** and warns on **cost regressions**. It ships
+**off** — installing the plugin does not enable enforcement. Enable it deliberately,
+per this recipe.
+
+## What it does
+
+On `Edit` / `Write` / `MultiEdit` to any `.md` file in a skill's Load-Map closure,
+`load_cost_guard.py` applies the session's diff against the skill's fidelity baseline:
+
+- **Fidelity block (deny):** if the edit would make an inventoried smell code or
+  reference section unreachable in the skill's closure — dropping an item below the
+  baseline floor — it returns `permissionDecision: deny` and names the lost item.
+  The fidelity floor must hold.
+- **Cost advisory (allow):** if the fidelity check passes but the edited closure is
+  measurably heavier than the `cost-snapshot.json` baseline for affected scenarios
+  (tolerance: 200 tokens), it returns an advisory `permissionDecision: allow` with a
+  warning message. This is informational — it does not block.
+
+It is **fail-open**: any engine error, non-`.md` file, path outside every skill's
+closure, missing baseline, missing patterns file, or exception → the edit is allowed
+silently. It adds no judgment logic — inventory and closure come from the engine.
+
+## Override a block
+
+When the guard denies an edit, do one of:
+- **Restructure** so the removed item is still reachable in the closure (move, not
+  delete);
+- **Cite** the item's smell code in prose rather than removing the section entirely;
+- if the loss is intentional (deliberate removal of a code that no longer applies),
+  update the fidelity baseline
+  (`tests/skill_load_cost/baselines/<skill-name>.json`) to reflect the new floor
+  before editing.
+
+## Enable in Claude Code — Stop hook (default)
+
+At session end the guard runs over all skill closure files touched in the session.
+This is the **recommended** enablement form — it adds no per-edit latency.
+
+Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+> **About `${CLAUDE_PLUGIN_ROOT}`:** same note as the lean_guard recipe — Claude Code
+> substitutes this variable only in plugin-defined hook commands. For a hook you add
+> to your own `settings.json`, substitute the real installed path — find it via
+> `/plugin` (the `souroldgeezer-audit` install path), e.g.
+> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`.
+> Re-point it after a plugin update.
+
+## Enable in Claude Code — PreToolUse opt-in (at-edit)
+
+For immediate at-edit blocking, add a `PreToolUse` hook instead:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This intercepts every edit at the moment it is applied. Use this form when you want
+to block fidelity regressions in-flight rather than at session close. Note that
+closure resolution adds per-edit latency; the Stop hook form avoids this.
