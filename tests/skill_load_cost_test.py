@@ -194,5 +194,21 @@ class ResolveClosureTest(unittest.TestCase):
             self.assertEqual(got, {"SKILL.md"})
 
 
+class CostRegressionTest(unittest.TestCase):
+    def test_flags_growth_past_tolerance_only(self):
+        snap = {"a": 100, "b": 200}
+        scenarios = [
+            {"id": "a", "files": ["a.md"]},
+            {"id": "b", "files": ["b.md"]},
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "a.md").write_text("word " * 130)   # grows past tolerance
+            (root / "b.md").write_text("word " * 205)    # within tolerance
+            probs = slc.cost_regressions(snap, scenarios, root, tolerance=25)
+            self.assertEqual(len(probs), 1)
+            self.assertIn("a:", probs[0])
+
+
 if __name__ == "__main__":
     unittest.main()

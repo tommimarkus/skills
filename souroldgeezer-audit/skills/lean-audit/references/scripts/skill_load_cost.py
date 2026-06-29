@@ -112,6 +112,34 @@ def _read_json(path: str):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int) -> list[str]:
+    """Check per-scenario token totals against a snapshot baseline.
+
+    For each scenario id in snapshot, re-measure its total and flag if growth
+    exceeds tolerance.
+
+    Args:
+        snapshot: dict mapping scenario id to baseline total tokens
+        scenarios: list of scenario dicts with id and files
+        root: Path to root for file resolution
+        tolerance: max token growth to accept without flagging
+
+    Returns:
+        list of problem messages for regressions exceeding tolerance
+    """
+    by_id = {s["id"]: s for s in scenarios}
+    problems = []
+    for sid, old in snapshot.items():
+        scen = by_id.get(sid)
+        if scen is None:
+            continue
+        cur = measure_scenario(scen, Path(root))["total"]
+        if cur - old > tolerance:
+            problems.append(
+                f"{sid}: per-use cost grew {cur - old} tokens (snapshot {old} -> {cur})")
+    return problems
+
+
 def _cmd_measure(args) -> int:
     scenarios = {s["id"]: s for s in _read_json(args.scenarios)}
     result = measure_scenario(scenarios[args.id], Path(args.root))
@@ -150,6 +178,17 @@ def _cmd_diff(args) -> int:
     return 1 if problems else 0
 
 
+def _cmd_snapshot(args) -> int:
+    scenarios = _read_json(args.scenarios)
+    out = {s["id"]: measure_scenario(s, Path(args.root))["total"] for s in scenarios}
+    text = json.dumps(out, indent=2)
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Skill per-use load cost + fidelity gate")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -172,6 +211,12 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--files", nargs="+", required=True)
     d.add_argument("--code-patterns", required=True)
     d.set_defaults(func=_cmd_diff)
+
+    sn = sub.add_parser("snapshot")
+    sn.add_argument("--scenarios", required=True)
+    sn.add_argument("--root", default=".")
+    sn.add_argument("--out")
+    sn.set_defaults(func=_cmd_snapshot)
 
     args = parser.parse_args(argv)
     return args.func(args)
