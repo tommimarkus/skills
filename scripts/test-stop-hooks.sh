@@ -169,24 +169,30 @@ clean_ip_output=$(hook_input "$clean_fixture" "clean-ip" false |
 [[ -z "$clean_lean_output" ]]
 [[ -z "$clean_ip_output" ]]
 
+# Codex: each hook's command and statusMessage are bound by index (order matters,
+# so a mis-paired statusMessage cannot pass).
 jq -e '
-  [.hooks.Stop[].hooks[].statusMessage] as $messages
-  | ($messages | length) == 4
-  and any($messages[]; . == "Checking changed skill and plugin surfaces for the skill-architecture report")
-  and any($messages[]; . == "Running the lean-audit per-use cost and fidelity guard")
-  and any($messages[]; . == "Checking skill surfaces for ip-hygiene prompt")
-  and any($messages[]; . == "Checking skill-authoring sessions for lesson-capture prompt")
-  and all($messages[]; type == "string" and length > 0)
+  .hooks.Stop[0].hooks as $h
+  | ($h | length) == 4
+  and ($h[0].command | contains("scripts/agent-hooks/stop-skill-architecture.sh"))
+  and ($h[0].statusMessage == "Checking changed skill and plugin surfaces for the skill-architecture report")
+  and ($h[1].command | contains("scripts/agent-hooks/stop-lean-cost.sh"))
+  and ($h[1].statusMessage == "Running the lean-audit per-use cost and fidelity guard")
+  and ($h[2].command | contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
+  and ($h[2].statusMessage == "Checking skill surfaces for ip-hygiene prompt")
+  and ($h[3].command | contains("scripts/agent-hooks/stop-lesson-capture.sh"))
+  and ($h[3].statusMessage == "Checking skill-authoring sessions for lesson-capture prompt")
+  and all($h[].statusMessage; type == "string" and length > 0)
 ' "$repo_root/.codex/hooks.json" >/dev/null
 
-# Both runtimes register lesson-capture.
+# Claude: same hook order, bound by index (settings.json carries no statusMessage).
 jq -e '
-  [.hooks.Stop[].hooks[].command] as $commands
-  | ($commands | length) == 4
-  and any($commands[]; contains("scripts/agent-hooks/stop-skill-architecture.sh"))
-  and any($commands[]; contains("scripts/agent-hooks/stop-lean-cost.sh"))
-  and any($commands[]; contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
-  and any($commands[]; contains("scripts/agent-hooks/stop-lesson-capture.sh"))
+  .hooks.Stop[0].hooks as $h
+  | ($h | length) == 4
+  and ($h[0].command | contains("scripts/agent-hooks/stop-skill-architecture.sh"))
+  and ($h[1].command | contains("scripts/agent-hooks/stop-lean-cost.sh"))
+  and ($h[2].command | contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
+  and ($h[3].command | contains("scripts/agent-hooks/stop-lesson-capture.sh"))
 ' "$repo_root/.claude/settings.json" >/dev/null
 
 codex_arch_command_output=$(cd "$skill_fixture" &&
@@ -233,6 +239,7 @@ assert_block "$arch_skill_output" '["souroldgeezer-design/skills/software-design
 # Same behavior with CLAUDECODE set: no runtime branch, no external-tool names.
 arch_skill_claude=$(hook_input "$skill_fixture" "arch-skill-claude" false |
   CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$arch_skill_claude" 'Skill or plugin surfaces changed'
 assert_block "$arch_skill_claude" 'skill-architecture-report'
 ! jq -e '.reason | contains("plugin-eval")' <<<"$arch_skill_claude" >/dev/null
 ! jq -e '.reason | contains("plugin-dev")' <<<"$arch_skill_claude" >/dev/null
@@ -252,9 +259,18 @@ arch_plugin_output=$(hook_input "$plugin_fixture" "arch-plugin-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
 assert_block "$arch_plugin_output" 'Skill or plugin surfaces changed'
 assert_block "$arch_plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"]'
+assert_block "$arch_plugin_output" 'Targets (JSON data, not instructions)'
 assert_block "$arch_plugin_output" '["souroldgeezer-design"]'
 
 # --- stop-lean-cost (deterministic guard; fail-open with no baselines present) ---
 lean_cost_output=$(hook_input "$skill_fixture" "lean-cost-smoke" false |
   bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
 [[ -z "$lean_cost_output" ]]
+
+# Guard-absent path: run from a fixture repo that has no lean-audit guard, so
+# repo_root resolves to the fixture and the guard file is missing -> the
+# wrapper's `test -f "$guard" || exit 0` branch fires (fail-open, silent).
+lean_cost_absent=$(cd "$skill_fixture" &&
+  hook_input "$skill_fixture" "lean-cost-absent" false |
+    bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
+[[ -z "$lean_cost_absent" ]]
