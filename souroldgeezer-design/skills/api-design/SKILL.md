@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage™.
 ---
 
 # API Design
@@ -63,7 +63,9 @@ extension whose detection signals match the in-scope stack. In Lookup, do not
 load full stack extensions on detection alone: answer from the core reference
 matched section, and pull a single stack extension only when the question is
 specifically about that stack's runtime mechanics — never the whole
-detected-stack set. Multiple extensions compose. Unknown stacks use the core
+detected-stack set. If a Lookup genuinely needs more than one stack's mechanics,
+escalate to Review or Build (which load every matching extension) or ask — do
+not under-answer from a single extension. Multiple extensions compose. Unknown stacks use the core
 reference only; do not invent unsupported runtime mechanics. Extensions add
 rules and exact documented carve-outs; they never weaken the core reference.
 Use each extension's `Name and detection signals` section to decide

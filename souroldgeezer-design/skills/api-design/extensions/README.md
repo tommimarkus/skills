@@ -5,7 +5,7 @@ Per-stack packs loaded on demand by the `api-design` skill. The core workflow in
 ## Load order
 
 1. The skill detects stack by globbing the target and inspecting manifests (`.csproj`, `package.json`, `host.json`, `local.settings.json`, IaC under `infra/`, etc.).
-2. Every matching extension is loaded. **Multiple extensions compose** on the same target — an API on Azure Functions .NET that stores entities in Cosmos and blobs in Storage loads all three extensions simultaneously; a hosted Next.js API loads `nodejs.md` first and then `nextjs.md`.
+2. In Build, Extract, and Review, every matching extension is loaded (in Lookup the skill pulls at most the single extension a stack-specific question targets — see `../SKILL.md` Load Map). **Multiple extensions compose** on the same target — an API on Azure Functions .NET that stores entities in Cosmos and blobs in Storage loads all three extensions simultaneously; a hosted Next.js API loads `nodejs.md` first and then `nextjs.md`.
 3. Each extension's additions (primitives, patterns, smells, positive signals, carve-outs) are added to the active reference.
 4. On conflict between a carve-out and a core rule, the carve-out wins — but only for the exact pattern described.
 

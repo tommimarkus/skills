@@ -43,10 +43,12 @@ gate exited 0 at every task where it was run, and the full
 # api-design per-use load cost
 
 api-design's per-use weight is dominated by its stack extensions (27,745 tokens
-across five files); SKILL.md (1291) and the core reference (~9862) load
+across five files); SKILL.md (1405) and the core reference (~9787) load
 identically across modes. The reductions here are therefore load-SET reductions
 on the extension layer — captured by comparing declared load lists, not by
-content shrink.
+content shrink. (This change grew SKILL.md by ~114 tokens — the Load Map
+mode-gating paragraph plus the escalation cue — an always-on cost in every mode,
+netted into the win-#1 figure below.)
 
 ## Win #1 — Lookup mode-gating (implemented)
 
@@ -64,10 +66,13 @@ Extension tokens loaded per Lookup on a Functions + Cosmos + Blob repo:
 | general principle / status / header | 18747 (afdotnet 7034 + cosmos 5591 + blob 6122) | 0 | **−18747** |
 | stack-specific (one stack) | 18747 | 7034 (the matched extension) | **−11713** |
 
-SKILL.md and the core reference load identically before and after, so they
-cancel in the delta. The `lookup-functions` scenario lists the whole core
-reference as a conservative upper bound; a real Lookup loads only the matched
-section plus immediate context.
+The extension-load delta is the headline. The ~75-token SKILL.md growth this
+change adds loads in every mode, so the net per-use reduction on a general
+Lookup is **~−18633** (18747 extension tokens removed, less the 114 always-on
+tokens added); on a stack-specific Lookup it is **~−11599**. The
+`lookup-functions` scenario lists the whole core reference as a conservative
+upper bound; a real Lookup loads only the matched section plus immediate
+context.
 
 ## Win #2 — Build/Review extension partition (measured, not implemented)
 
@@ -110,7 +115,8 @@ for the test-quality factoring. Recommended as a scoped follow-up.
 
 Win #1 (Lookup mode-gating) is committed: it removes up to **18747 extension
 tokens** from a general Lookup and **11713** from a stack-specific Lookup on a
-three-stack repo, with zero fidelity loss — the matched extension stays
+three-stack repo (net **~−18633** / **~−11599** after the ~114-token SKILL.md
+growth this change adds), with zero fidelity loss — the matched extension stays
 reachable for genuinely stack-specific questions. The api-design fidelity
 baseline (218 codes, 210 sections) and the `ApiDesignBaselineTest` regression
 gate are established as groundwork. Win #2 (the Build/Review extension

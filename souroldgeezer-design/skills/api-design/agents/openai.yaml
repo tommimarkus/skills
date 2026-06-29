@@ -8,7 +8,7 @@ interface:
     requests, security, reliability, observability, and verification-layer
     disclosure. Supports composable extensions for Azure® Functions™ .NET,
     Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and
-    Azure® Blob Storage.
+    Azure® Blob Storage™.
   default_prompt: "Design an HTTP API for this feature."
 policy:
   allow_implicit_invocation: true

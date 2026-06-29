@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — endpoints, services, API surfaces, or backend features. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage™.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
