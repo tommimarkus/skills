@@ -134,7 +134,7 @@ layout, the render-metadata target, the layout output, and the render output:
   },
   "layout": { "plugin": "elk-layout", "output": "generated/layout/main.json" },
   "render": {
-    "plugin": "svg-render",
+    "plugin": "render",
     "policy": "render-policy.json",
     "metadata": "generated/render-metadata/main.json",
     "output": "generated/svg/main.svg"
@@ -147,6 +147,13 @@ checked-in shared metadata policy/cache and can keep it synchronized with the
 views. Otherwise render with the generated per-view metadata declared in the
 view's `metadata.output`, after confirming the generated metadata profile
 matches the render policy profile.
+
+The `render` plugin emits the SVG artifact that remains the canonical proof. Its
+policy may also carry an optional `raster` block (for example
+`"raster": { "scale": 2 }`); when present the runtime additionally returns a
+base64-encoded `png` artifact (`encoding: base64`) alongside the SVG, for
+consumers that need a bitmap. SVG stays the evidence of record; treat the bitmap
+as an optional convenience export.
 
 ## 4. ArchiMate Layers And Aspects
 

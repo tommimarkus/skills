@@ -488,7 +488,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             '"$DEDIREN" project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json',
             '"$DEDIREN" project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json',
             '"$DEDIREN" layout --plugin elk-layout --input <layout-request.json>',
-            '"$DEDIREN" render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>',
+            '"$DEDIREN" render --plugin render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>',
             '"$DEDIREN" export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>',
         ]
 

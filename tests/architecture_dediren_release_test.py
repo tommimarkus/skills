@@ -26,19 +26,19 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "2026.06.6"
+EXPECTED_DEDIREN_VERSION = "2026.06.8"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
     "elk-layout",
-    "svg-render",
+    "render",
     "archimate-oef",
     "uml-xmi",
 }
 EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS = {
     "generic-graph",
     "elk-layout",
-    "svg-render",
+    "render",
     "archimate-oef",
 }
 
@@ -99,8 +99,10 @@ def envelope(result: subprocess.CompletedProcess[str]) -> dict:
 
 
 def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
-    # render-result.schema.v2 (Dediren 2026.06.4+) returns data.artifacts[]; the SVG
-    # moved out of the v1 data.content scalar. Mirror the bundle's documented extraction:
+    # render-result.schema returns data.artifacts[] (since v2, Dediren 2026.06.4); the
+    # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) adds a `png`
+    # artifact_kind and an `encoding` field but keeps the artifacts[] shape and the svg
+    # artifact. Mirror the bundle's documented extraction:
     # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
     data = envelope(result)["data"]
     for artifact in data["artifacts"]:
@@ -259,13 +261,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         required_paths = [
             "plugins/generic-graph.manifest.json",
             "plugins/elk-layout.manifest.json",
-            "plugins/svg-render.manifest.json",
+            "plugins/render.manifest.json",
             "plugins/archimate-oef.manifest.json",
             "plugins/uml-xmi.manifest.json",
             "schemas/model.schema.json",
             "schemas/layout-request.schema.json",
             "schemas/layout-result.schema.json",
-            "schemas/svg-render-policy.schema.json",
+            "schemas/render-policy.schema.json",
             "schemas/render-metadata.schema.json",
             "schemas/oef-export-policy.schema.json",
             "schemas/uml-xmi-export-policy.schema.json",
@@ -400,7 +402,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
             self.assertEqual(
                 envelope(render_result)["data"]["render_result_schema_version"],
-                "render-result.schema.v2",
+                "render-result.schema.v3",
             )
             svg = svg_render_content(render_result)
             self.assertIn("<svg", svg)
@@ -499,7 +501,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 )
 
             render_result = run_dediren(
-                "render", "--plugin", "svg-render",
+                "render", "--plugin", "render",
                 "--policy", bundle / "fixtures" / "render-policy" / "uml-svg.json",
                 "--metadata", render_metadata_path, "--input", layout_result_path,
             )

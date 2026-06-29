@@ -33,7 +33,7 @@ release bundle guide before loading schemas:
 It is the fast contract for Minimal Source JSON, Artifact Map, Semantic
 Profiles, Command Handoff, and Repair Rules.
 
-Use `generic-graph`, `elk-layout`, `svg-render`. For generated notation SVG
+Use `generic-graph`, `elk-layout`, `render`. For generated notation SVG
 metadata, set `plugins.generic-graph.semantic_profile` to `archimate` or `uml`;
 add `archimate-oef` only when OEF export is requested and `uml-xmi` only when
 UML/XMI export is requested. Plain `validate` proves schema only; `source-valid`
@@ -64,7 +64,7 @@ by `project.json`.
 "$DEDIREN" project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json
 "$DEDIREN" layout --plugin elk-layout --input <layout-request.json>
 "$DEDIREN" validate-layout --input <layout-result.json>
-"$DEDIREN" render --plugin svg-render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>
+"$DEDIREN" render --plugin render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>
 "$DEDIREN" export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
 "$DEDIREN" export --plugin uml-xmi --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
 ```
