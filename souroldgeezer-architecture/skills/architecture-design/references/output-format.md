@@ -28,7 +28,8 @@ that contradicts linked ArchiMate intent cap cross-notation readiness.
 
 Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
 `ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured, route-congested,
-group-imbalanced, or mixed concerns.
+group-imbalanced, or mixed concerns. Tune `layout_preferences` (`architecture.md`
+§9) for placement problems and re-validate before reporting or splitting.
 
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:
@@ -54,6 +55,7 @@ Semantic grouping: layout-only groups are not ArchiMate Grouping elements | sema
 Customization profile: none | local properties | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none
 Grouped layout fallback: not needed | used ungrouped fallback | not run
+Layout/render options: layout_preferences none | <view: knobs>; render static SVG | interactive <svg|html|both>; raster png no | yes
 Implementation readiness: sufficient | partial | insufficient | not assessed
 Finding split: <n> architecture-documentation findings; <n> other source material findings
 ArchiMate equivalence: direct | partial | metadata/companion | none | not assessed

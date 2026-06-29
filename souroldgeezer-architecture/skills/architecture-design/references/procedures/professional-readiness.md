@@ -23,8 +23,10 @@ kinds are footer disclosure, not placeholder views.
 Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
 `ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, route-congested,
 too wide/tall, group-imbalanced, or mixes concerns from multiple audiences.
-When a process, realization, technology-usage, or migration view becomes hard
-to scan, prefer splitting the concern over accepting the first valid render.
+For density, routing, or framing problems, tune the dediren layout
+(`architecture.md` §9 `layout_preferences`) and re-validate before reporting;
+reserve splitting the concern (§7) for genuinely mixed audiences, an inventory
+view, or a view that layout tuning cannot make scannable.
 
 ## Valid But Not Useful
 

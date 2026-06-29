@@ -155,6 +155,16 @@ base64-encoded `png` artifact (`encoding: base64`) alongside the SVG, for
 consumers that need a bitmap. SVG stays the evidence of record; treat the bitmap
 as an optional convenience export.
 
+The render policy also controls SVG interactivity through the `interactive`
+field (`none` | `svg` | `html` | `both`; default `none` is a static SVG). Set
+it to `svg`, `html`, or `both` to emit a navigable diagram (for example
+hover-highlighting via the policy `style.interaction` block) when the audience
+reads the diagram on screen rather than on a printed page. The selected release
+bundle ships `interactive-svg` and `rich-svg` render-policy fixtures as starting
+points for navigable and richer-styled output. Static SVG stays the default and
+the evidence of record; offer interactive or rich output as an opt-in and keep
+the `data-dediren-node-id` / `data-dediren-edge-id` markers required by §9.
+
 ## 4. ArchiMate Layers And Aspects
 
 ArchiMate separates architecture content by layer and aspect. Do not collapse
@@ -329,7 +339,17 @@ hard to scan, report the narrowest warning instead of claiming it is clean:
 - `ARCH-Q-2` for hub fanout, mixed audience concerns, or multiple viewpoint
   concerns in one diagram.
 
-Prefer splitting dense views into narrower concerns. Process views should stay
+First separate a *layout* problem from a *concern* problem. Density, route
+congestion, long spans, extreme aspect ratio, and framing are placement
+problems: tune the dediren layout (§9 `layout_preferences` — `mode`,
+`direction`, `density`, `wrapping`, `routing`) and re-run `validate-layout`
+before reporting `ARCH-L-3`. Reserve `ARCH-Q-2` and view splitting for genuine
+concern problems — mixed audiences, multiple viewpoints, an inventory dump, or
+unrelated layers in one diagram — or for a view that layout tuning still cannot
+make scannable.
+
+When the concern is genuinely mixed, prefer splitting into narrower concerns
+over one wide graph. Process views should stay
 linear when the story is linear. Service-realization views should keep the
 realization path easy to follow. Technology-usage views should split hosting,
 data, identity/security, and observability when one view cannot carry all of
@@ -451,6 +471,28 @@ failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
 parallel-only failures under `Dediren tool issues` with repro evidence. This
 parallel-only layout failure has regressed before, so include the serial-rerun
 comparison in the repro evidence.
+
+The `project --target layout-request` output carries an optional
+`layout_preferences` object the agent may set before `layout` to influence how
+ELK positions nodes and routes edges. It changes presentation only and never
+edits source semantics, so re-run `validate-layout` after tuning. Use the
+selected release bundle's `schemas/layout-request.schema.json` for the
+authoritative enums:
+
+- `mode`: `flow` runs ELK Layered when the relationships give the view a reading
+  order; `packed` runs ELK Rectangle Packing when the view has only nodes and
+  group boxes with no relationships to route; `auto` lets the runtime choose.
+- `direction`: `right` | `left` | `down` | `up` for flow orientation and
+  aspect-ratio/framing control.
+- `density`: `compact` | `readable` | `spacious` to relieve a dense view.
+- `wrapping`: `auto` | `off` | `multi-edge` to relieve hub fanout and parallel
+  edges.
+- `routing`: `style` (`orthogonal`), `profile` (`compact` | `readable` |
+  `spacious`), and `endpoint_merging` (`off` | `local` | `auto`) to relieve
+  route congestion and detours.
+
+Tune these to resolve a placement-driven `ARCH-L-3` before splitting a view
+(§7), and disclose any non-default `layout_preferences` per view in the footer.
 
 Dediren runtime validation is evidence, not the full ArchiMate review. If the
 tool accepts a relationship type, source/target combination, export shape, or

@@ -70,3 +70,9 @@ by `project.json`.
 ```
 
 Omit export unless OEF or XMI was requested.
+
+To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
+`wrapping` / `routing`; enums and guidance in `architecture.md` §9) in the
+layout-request before `layout`, then re-run `validate-layout`. For navigable
+output, set the render policy `interactive` field (§3); static SVG is the
+default.
