@@ -21,6 +21,7 @@ Rules cite source families rather than copying source prose.
 - Software-design principle taxonomy: IEEE Computer Society, SWEBOK Guide v4, https://www.computer.org/education/bodies-of-knowledge/software-engineering/v4
 - Domain terminology and DDD vocabulary: Eric Evans / Domain Language DDD Reference, https://www.domainlanguage.com/ddd/reference/
 - Quality-attribute tradeoff discipline: SEI Architecture Tradeoff Analysis Method, https://www.sei.cmu.edu/library/the-architecture-tradeoff-analysis-method-2/
+- Quality-attribute taxonomy: ISO/IEC 25010 (SQuaRE) product quality model, https://www.iso.org/standard/78176.html
 - Socio-technical fit and maintainability: DORA loosely coupled teams and code maintainability capabilities, https://dora.dev/capabilities/loosely-coupled-teams/ and https://dora.dev/capabilities/code-maintainability/
 - Coupling and propagation-cost calibration: MacCormack and Sturtevant, Journal of Systems and Software study page, https://www.hbs.edu/faculty/Pages/item.aspx?num=51343
 - DRY as knowledge-ownership discipline: Hunt and Thomas, *The Pragmatic Programmer*, https://www.pragmatic.org/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/
@@ -71,6 +72,12 @@ Default: make the next safe move, then reassess.
 
 Software design choices balance modifiability, performance, reliability, security, operability, cost, and cognitive load. The skill borrows ATAM's discipline of making forces explicit, but it does not run an architecture-board analysis.
 
+Non-functional requirements are quality attributes made explicit as requirements. Treat each in-scope NFR three ways: name it from the quality taxonomy, express it as a measurable quality-attribute scenario (stimulus, response, response measure), and allocate it to an owning boundary. An NFR with no measure is a claim (`SD-Q-1`); an NFR with no owning boundary is `SD-Q-3`.
+
+Load the compact decision aid at
+[../../skills/software-design/references/nfr-catalog.md](../../skills/software-design/references/nfr-catalog.md)
+when non-functional/quality requirements, SLAs/SLOs, latency/availability/throughput targets, or quality attributes are in scope. Do not expand this reference into a generic quality-engineering tutorial.
+
 Default: state the force and the local tactic. Do not pretend one design optimizes all qualities.
 
 ### 3.7 Socio-Technical Fit
@@ -108,7 +115,7 @@ Every principle recommendation or rejection must state:
 6. Depend inward toward stable policy and outward toward adapters, not the reverse.
 7. Use shared code for stable, boring mechanics; avoid shared domain cores unless ownership and vocabulary are genuinely shared.
 8. Record rejected abstractions when a familiar pattern is intentionally skipped.
-9. Treat performance, security, reliability, and operability as forces that may change the design, then delegate specialist detail to sibling skills when needed.
+9. Treat performance, security, reliability, and operability as forces that may change the design; name in-scope non-functional requirements from the quality taxonomy, express them as measurable scenarios, and allocate each to an owning boundary, then delegate specialist detail to sibling skills when needed.
 10. Prefer a reversible local change when evidence is weak.
 
 ## 5. Design Primitives
@@ -203,9 +210,10 @@ Checklist:
 10. `[history]` Churn hotspots are not made more central without cause.
 11. `[runtime]` Runtime quality claims are backed by measurements, not static inference.
 12. `[human]` Team ownership and domain meaning are not asserted without input.
-13. `[static]` Legacy debt is not extended silently.
-14. `[static]` The next refactor is small enough to validate.
-15. `[static]` Delegations to sibling skills are made when scope crosses their domain.
+13. `[human]` In-scope NFRs are named from the quality taxonomy, expressed as measurable scenarios, and allocated to an owning boundary.
+14. `[static]` Legacy debt is not extended silently.
+15. `[static]` The next refactor is small enough to validate.
+16. `[static]` Delegations to sibling skills are made when scope crosses their domain.
 
 ## 9. Delegation Map
 
