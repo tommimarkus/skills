@@ -172,6 +172,49 @@ class ApiDesignBaselineTest(unittest.TestCase):
         self.assertEqual(slc.diff_inventory(base, current), [])
 
 
+class ResolveClosureWithOverridesTest(unittest.TestCase):
+    def test_override_content_shrinks_closure_when_link_removed(self):
+        """If an override removes a link, the linked file must drop from the closure."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_md = root / "SKILL.md"
+            ref_md = root / "ref.md"
+            skill_md.write_text("# S\n[ref](ref.md)\n")
+            ref_md.write_text("# R\n")
+            # With the real content, ref.md is in the closure
+            base_closure = {p.name for p in slc.resolve_closure(skill_md)}
+            self.assertIn("ref.md", base_closure)
+            # Override SKILL.md to remove the link — ref.md must be absent
+            overrides = {skill_md.resolve(): "# S\n(no link anymore)\n"}
+            override_closure = {p.name for p in slc.resolve_closure_with_overrides(
+                skill_md, overrides)}
+            self.assertNotIn("ref.md", override_closure,
+                "link removal in override must shrink the closure")
+
+    def test_override_content_keeps_skill_md_itself(self):
+        """SKILL.md is always the closure root; an override of it still includes it."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_md = root / "SKILL.md"
+            skill_md.write_text("# S\n")
+            overrides = {skill_md.resolve(): "# S override\n"}
+            closure = {p.name for p in slc.resolve_closure_with_overrides(
+                skill_md, overrides)}
+            self.assertIn("SKILL.md", closure)
+
+    def test_no_overrides_matches_resolve_closure(self):
+        """With an empty overrides dict, the result must equal resolve_closure."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_md = root / "SKILL.md"
+            ref_md = root / "ref.md"
+            skill_md.write_text("# S\n[ref](ref.md)\n")
+            ref_md.write_text("# R\n")
+            normal = set(slc.resolve_closure(skill_md))
+            with_empty = set(slc.resolve_closure_with_overrides(skill_md, {}))
+            self.assertEqual(normal, with_empty)
+
+
 class ResolveClosureTest(unittest.TestCase):
     def test_follows_load_map_links_transitively(self):
         with tempfile.TemporaryDirectory() as d:

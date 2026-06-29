@@ -63,6 +63,40 @@ def resolve_closure(skill_md: Path) -> list[Path]:
     return sorted(seen)
 
 
+def resolve_closure_with_overrides(skill_md: Path, overrides: dict) -> list[Path]:
+    """Like resolve_closure but uses overrides[path] as the link text when reading
+    a file, instead of reading from disk.  This makes a pending edit's link removals
+    actually shrink the closure (e.g. when decide() tests a not-yet-written edit).
+
+    overrides: mapping of absolute Path -> str (the would-be content of that file).
+    Files not in overrides are read from disk as normal.
+    Non-existent files without an override entry are skipped (fail-open)."""
+    skill_md = skill_md.resolve()
+    seen: set[Path] = set()
+    queue = [skill_md]
+    while queue:
+        cur = queue.pop()
+        if cur in seen:
+            continue
+        if cur in overrides:
+            text = overrides[cur]
+        elif cur.exists():
+            text = cur.read_text(encoding="utf-8")
+        else:
+            continue
+        seen.add(cur)
+        for link in LINK_RE.findall(_strip_code(text)):
+            target = link.split("#", 1)[0]
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            nxt = (cur.parent / target).resolve()
+            if nxt.suffix == ".md" and nxt not in seen:
+                # Accept override-provided files even if not on disk
+                if nxt in overrides or nxt.exists():
+                    queue.append(nxt)
+    return sorted(seen)
+
+
 def extract_inventory(text: str, code_patterns: list[str]) -> dict:
     codes: set[str] = set()
     for pattern in code_patterns:

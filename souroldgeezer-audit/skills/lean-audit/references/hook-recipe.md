@@ -100,10 +100,12 @@ On `Edit` / `Write` / `MultiEdit` to any `.md` file in a skill's Load-Map closur
   reference section unreachable in the skill's closure — dropping an item below the
   baseline floor — it returns `permissionDecision: deny` and names the lost item.
   The fidelity floor must hold.
-- **Cost advisory (allow):** if the fidelity check passes but the edited closure is
-  measurably heavier than the `cost-snapshot.json` baseline for affected scenarios
-  (tolerance: 200 tokens), it returns an advisory `permissionDecision: allow` with a
-  warning message. This is informational — it does not block.
+- **Cost advisory (allow):** if the fidelity check passes but the current on-disk
+  closure is measurably heavier than the `cost-snapshot.json` baseline for affected
+  scenarios (tolerance: 200 tokens), it returns an advisory `permissionDecision: allow`
+  with a warning message. At Stop time the on-disk closure is the post-edit state
+  (accurate); at PreToolUse time it reflects pre-edit drift since the last snapshot.
+  Cost warnings are informational — they never block.
 
 It is **fail-open**: any engine error, non-`.md` file, path outside every skill's
 closure, missing baseline, missing patterns file, or exception → the edit is allowed
@@ -122,8 +124,9 @@ When the guard denies an edit, do one of:
 
 ## Enable in Claude Code — Stop hook (default)
 
-At session end the guard runs over all skill closure files touched in the session.
-This is the **recommended** enablement form — it adds no per-edit latency.
+At session end the guard runs over all skill closure files changed in the session.
+This is the **recommended** enablement form — it adds no per-edit latency, and the
+on-disk closure at Stop time IS the post-edit state, so cost measurement is accurate.
 
 Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 
@@ -175,4 +178,7 @@ For immediate at-edit blocking, add a `PreToolUse` hook instead:
 
 This intercepts every edit at the moment it is applied. Use this form when you want
 to block fidelity regressions in-flight rather than at session close. Note that
-closure resolution adds per-edit latency; the Stop hook form avoids this.
+closure resolution adds per-edit latency; the Stop hook form avoids this. The
+cost-warn advisory at PreToolUse time reflects current on-disk drift since the last
+snapshot (pre-edit), not the pending edit's marginal cost — use the Stop hook for
+accurate post-edit cost measurement.
