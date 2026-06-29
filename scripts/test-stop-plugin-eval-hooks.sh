@@ -299,3 +299,8 @@ arch_plugin_output=$(hook_input "$plugin_fixture" "arch-plugin-hooks" false |
 assert_block "$arch_plugin_output" 'Skill or plugin surfaces changed'
 assert_block "$arch_plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"]'
 assert_block "$arch_plugin_output" '["souroldgeezer-design"]'
+
+# --- stop-lean-cost (deterministic guard; fail-open with no baselines present) ---
+lean_cost_output=$(hook_input "$skill_fixture" "lean-cost-smoke" false |
+  bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
+[[ -z "$lean_cost_output" ]]
