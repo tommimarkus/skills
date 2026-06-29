@@ -386,7 +386,7 @@ skill's own files), and deterministic lessons into a
 `tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when the
 report engine already detects the smell. That capture → review → graduate path
 is how a one-off correction becomes a standing rule that feeds back into this
-document.
+document. Two further `Stop` hooks run first-party gates: `stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run (trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh` runs lean-audit's per-use cost/fidelity guard. Both are runtime-neutral (identical command on Claude Code and Codex) and replaced the former external-plugin `evaluate-skill` / `plugin-eval` hooks.
 
 ## Degradation Checks
 

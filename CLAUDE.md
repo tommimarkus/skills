@@ -42,6 +42,8 @@ For any task that creates, edits, reviews, triages, plans, or fixes a skill-rela
 
 The standard is the first design input; the report is the repeatable check. Loading the standard only at closeout misses trigger precision, workflow shape, context discipline, runtime parity, and release-hygiene decisions made while changing the code. Before finishing, apply the standard and run `scripts/skill-architecture-report.sh` when available; if it cannot run, record why and what narrower verification was used.
 
+A repo `Stop` hook (`scripts/agent-hooks/stop-skill-architecture.sh`, registered in both `.claude/settings.json` and `.codex/hooks.json`) fires once per session when a skill/plugin/agent/manifest surface changes and prompts you to run `scripts/skill-architecture-report.sh` and address findings on the changed targets — the first-party replacement for the former external `plugin-eval` / `plugin-dev` evaluate-skill and plugin-validator hooks. A second `Stop` hook (`scripts/agent-hooks/stop-lean-cost.sh`) runs lean-audit's deterministic per-use cost/fidelity guard (`souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`); it is fail-open and silent unless a skill with a committed `tests/skill_load_cost/baselines/<skill>.json` floor regresses.
+
 Also read the affected skill's own `SKILL.md` (and its `references/` / `extensions/`) before scoping — that is the source of truth for its modes, owns/delegates, finding namespaces, and extension set. The "Published skills index" only orients you to which skill that is and how it hands off to others.
 
 ## Structured-file tooling
