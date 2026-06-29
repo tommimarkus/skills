@@ -20,6 +20,12 @@ Own read-only duplication/waste audits of markdown prose and skill surfaces
 `test-quality-audit`; copyright / marks / licence → `ip-hygiene`; code or design
 structure → the design skills. Prose surfaces only in v1 (not code duplication).
 
+A second lens — per-use load cost — is surface-gated and composes with the waste
+lens: it fires only when the scope contains at least one entry artifact (`SKILL.md`,
+`agents/*.md`, `.codex/agents/*.toml`, `skills/<skill>/agents/openai.yaml`, or
+`commands/**/*.md`). When no entry artifact is in scope the per-use lens is silent
+and the waste lens runs unchanged. Both lenses are read-only and advisory.
+
 Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see `../../docs/audit-reference/audit-craft.md`
@@ -42,6 +48,12 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
   and `LA-BLOAT-2` checks (the engine does not emit these).
 - Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
 - For the opt-in prevention hook, see `references/hook-recipe.md` (enablement) and the guard `references/scripts/lean_guard.py` (not part of an audit run).
+- **Per-use cost lens (surface-gated):** load `references/procedures/per-use-cost.md`
+  only when entry artifacts (`SKILL.md`, `agents/*.md`, `.codex/agents/*.toml`,
+  `openai.yaml`, `commands/**/*.md`) are in scope. Run the bundled harness
+  `references/scripts/skill_load_cost.py` (`resolve_closure` / `measure` /
+  `baseline`) to size closures and project deltas. Cite the `LA-PUC-*` band from
+  `references/smell-catalog.md`; do not restate procedure prose.
 - Cite codes from `references/smell-catalog.md`; never restate catalog prose.
 
 ## Workflow
@@ -52,10 +64,21 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
    `LA-STALE-2` (prose describing a removed/renamed structure) and `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context). Mark these
    inference (audit-craft §2), not confirmed fact.
-4. Assign each finding a risk tier per `materiality.md` (a smell on a high-fan-in
-   surface such as CLAUDE.md outranks the same smell on a leaf file). Combine
-   severity × risk into the P0–P3 worklist (audit-craft §3 grid).
-5. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target.
+4. **Per-use cost lens (surface-gated).** Detect whether the scope contains at
+   least one entry artifact (`SKILL.md`, `agents/*.md`, `.codex/agents/*.toml`,
+   `skills/<skill>/agents/openai.yaml`, `commands/**/*.md`). If yes, run the
+   procedure at `references/procedures/per-use-cost.md` end-to-end (resolve
+   closures → model per-mode load sets → find LA-PUC-1/2/3 → classify
+   fidelity-safety → infer dial → emit findings + fidelity baseline). If no entry
+   artifact is in scope, record "no per-use surfaces in scope — per-use lens
+   silent" and skip this step; the waste-lens findings from steps 2–3 are
+   unchanged.
+5. Assign each waste-lens finding a risk tier per `materiality.md` (a smell on a
+   high-fan-in surface such as CLAUDE.md outranks the same smell on a leaf file).
+   Combine severity × risk into the P0–P3 worklist (audit-craft §3 grid). Per-use
+   findings carry their own dial-adjusted priority (see procedure); merge them into
+   the worklist under the `LA-PUC-*` band with their separate priority rationale.
+6. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
 
 ## Rules and Stop Conditions
 
@@ -78,6 +101,11 @@ End every output with: extensions loaded (none in v1) · registry used (path or 
 availability · reference path(s) · evidence limits · independence
 (independent | self-review | unknown) · assurance level (derived: limited |
 reasonable).
+
+When the per-use lens ran, append: detected entry surfaces + closures analyzed ·
+inferred dial + basis + any maintainer override · harness availability
+(`references/scripts/skill_load_cost.py` present / unavailable) · hookability
+pointer (`references/hook-recipe.md`).
 
 ## Prevention hook (opt-in)
 
