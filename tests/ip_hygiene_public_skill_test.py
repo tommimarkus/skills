@@ -107,7 +107,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             "AGENTS.md",
             "internal-skills/github-issue-lifecycle/SKILL.md",
             "scripts/agent-hooks/stop-ip-hygiene.sh",
-            "scripts/test-stop-plugin-eval-hooks.sh",
+            "scripts/test-stop-hooks.sh",
         ]
         for path in checked_paths:
             content = read(path)

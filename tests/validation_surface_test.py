@@ -14,8 +14,8 @@ class ValidationSurfaceTest(unittest.TestCase):
         validation_script = read("scripts/validate-fragmentation.sh")
         readme = read("README.md")
 
-        self.assertIn("bash scripts/test-stop-plugin-eval-hooks.sh", validation_script)
-        self.assertIn("scripts/test-stop-plugin-eval-hooks.sh", readme)
+        self.assertIn("bash scripts/test-stop-hooks.sh", validation_script)
+        self.assertIn("scripts/test-stop-hooks.sh", readme)
 
     def test_readme_documents_optional_dediren_release_smoke_lane(self) -> None:
         readme = read("README.md")

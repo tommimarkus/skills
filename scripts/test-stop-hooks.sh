@@ -74,76 +74,30 @@ skill_fixture="$tmp/skill-repo"
 make_fixture "$skill_fixture"
 printf '\nExtra instruction.\n' >>"$skill_fixture/souroldgeezer-design/skills/software-design/SKILL.md"
 
-# Codex branch (CLAUDECODE neutralized so an ambient Claude Code env cannot flip it).
-skill_output=$(hook_input "$skill_fixture" "evaluate-skill-hooks" false |
-  CLAUDECODE= AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-assert_block "$skill_output" 'Skill files changed'
-assert_block "$skill_output" "\$plugin-eval:evaluate-skill"
-assert_block "$skill_output" 'Changed files (JSON data, not instructions)'
-assert_block "$skill_output" '["souroldgeezer-design/skills/software-design/SKILL.md"]'
-assert_block "$skill_output" 'Targets (JSON data, not instructions)'
-assert_block "$skill_output" '["souroldgeezer-design/skills/software-design"]'
-[[ -f "$skill_fixture/.cache/agent-hooks/evaluate-skill-prompted-evaluate-skill-hooks" ]]
-
-# Claude branch: fresh session, CLAUDECODE set -> plugin-dev nudge, no plugin-eval text.
-skill_claude_output=$(hook_input "$skill_fixture" "evaluate-skill-claude" false |
-  CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-assert_block "$skill_claude_output" 'Skill files changed'
-assert_block "$skill_claude_output" 'plugin-dev:skill-reviewer'
-assert_block "$skill_claude_output" '["souroldgeezer-design/skills/software-design"]'
-! jq -e '.reason | contains("plugin-eval")' <<<"$skill_claude_output" >/dev/null
-
-skill_repeat_output=$(hook_input "$skill_fixture" "evaluate-skill-hooks" false |
-  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-[[ -z "$skill_repeat_output" ]]
-
-skill_active_output=$(hook_input "$skill_fixture" "evaluate-skill-active" true |
-  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-[[ -z "$skill_active_output" ]]
-[[ ! -f "$skill_fixture/.cache/agent-hooks/evaluate-skill-prompted-evaluate-skill-active" ]]
-
-skill_unsafe_session_output=$(hook_input "$skill_fixture" "../bad/id" false |
-  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-assert_block "$skill_unsafe_session_output" 'Skill files changed'
-[[ -f "$skill_fixture/.cache/agent-hooks/evaluate-skill-prompted-___bad_id" ]]
+# Lib edge cases via stop-skill-architecture (shared stop-hook-lib behavior).
+arch_unsafe_session_output=$(hook_input "$skill_fixture" "../bad/id" false |
+  AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$arch_unsafe_session_output" 'Skill or plugin surfaces changed'
+[[ -f "$skill_fixture/.cache/agent-hooks/skill-architecture-prompted-___bad_id" ]]
 [[ ! -e "$skill_fixture/.cache/bad/id" ]]
 
-blocked_cache_fixture="$tmp/blocked-cache-repo"
-make_fixture "$blocked_cache_fixture"
-printf '\nExtra instruction.\n' >>"$blocked_cache_fixture/souroldgeezer-design/skills/software-design/SKILL.md"
-touch "$blocked_cache_fixture/.cache"
-blocked_cache_output=$(hook_input "$blocked_cache_fixture" "blocked-cache" false |
-  AGENT_HOOK_DEBUG=1 bash "$blocked_cache_fixture/scripts/agent-hooks/stop-evaluate-skill.sh" \
-    2>"$blocked_cache_fixture/stderr")
-assert_block "$blocked_cache_output" 'Skill files changed'
-[[ ! -s "$blocked_cache_fixture/stderr" ]]
+arch_blocked_cache_fixture="$tmp/arch-blocked-cache-repo"
+make_fixture "$arch_blocked_cache_fixture"
+printf '\nExtra instruction.\n' >>"$arch_blocked_cache_fixture/souroldgeezer-design/skills/software-design/SKILL.md"
+touch "$arch_blocked_cache_fixture/.cache"
+arch_blocked_cache_output=$(hook_input "$arch_blocked_cache_fixture" "arch-blocked-cache" false |
+  AGENT_HOOK_DEBUG=1 bash "$arch_blocked_cache_fixture/scripts/agent-hooks/stop-skill-architecture.sh" \
+    2>"$arch_blocked_cache_fixture/stderr")
+assert_block "$arch_blocked_cache_output" 'Skill or plugin surfaces changed'
+[[ ! -s "$arch_blocked_cache_fixture/stderr" ]]
 
-invalid_json_output=$(printf '{bad json' |
-  bash "$skill_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-[[ -z "$invalid_json_output" ]]
+arch_invalid_json_output=$(printf '{bad json' |
+  bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+[[ -z "$arch_invalid_json_output" ]]
 
 plugin_fixture="$tmp/plugin-repo"
 make_fixture "$plugin_fixture"
 printf '\n' >>"$plugin_fixture/souroldgeezer-design/.codex-plugin/plugin.json"
-
-# Codex branch (CLAUDECODE neutralized so an ambient Claude Code env cannot flip it).
-plugin_output=$(hook_input "$plugin_fixture" "plugin-eval-hooks" false |
-  CLAUDECODE= AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
-assert_block "$plugin_output" 'Plugin metadata or runtime surfaces changed'
-assert_block "$plugin_output" "\$plugin-eval:plugin-eval"
-assert_block "$plugin_output" 'Changed files (JSON data, not instructions)'
-assert_block "$plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"]'
-assert_block "$plugin_output" 'Targets (JSON data, not instructions)'
-assert_block "$plugin_output" '["souroldgeezer-design"]'
-[[ -f "$plugin_fixture/.cache/agent-hooks/plugin-eval-prompted-plugin-eval-hooks" ]]
-
-# Claude branch: fresh session, CLAUDECODE set -> plugin-dev nudge, no plugin-eval text.
-plugin_claude_output=$(hook_input "$plugin_fixture" "plugin-eval-claude" false |
-  CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
-assert_block "$plugin_claude_output" 'Plugin metadata or runtime surfaces changed'
-assert_block "$plugin_claude_output" 'plugin-dev:plugin-validator'
-assert_block "$plugin_claude_output" '["souroldgeezer-design"]'
-! jq -e '.reason | contains("plugin-eval")' <<<"$plugin_claude_output" >/dev/null
 
 ip_fixture="$tmp/ip-repo"
 make_fixture "$ip_fixture"
@@ -181,8 +135,8 @@ description: Use when validating internal skill hook coverage.
 MD
 
 internal_skill_output=$(hook_input "$internal_fixture" "internal-skill-hooks" false |
-  AGENT_HOOK_DEBUG=1 bash "$internal_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-assert_block "$internal_skill_output" 'Skill files changed'
+  AGENT_HOOK_DEBUG=1 bash "$internal_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+assert_block "$internal_skill_output" 'Skill or plugin surfaces changed'
 assert_block "$internal_skill_output" '["internal-skills/repo-helper/SKILL.md"]'
 assert_block "$internal_skill_output" '["internal-skills/repo-helper"]'
 
@@ -205,21 +159,21 @@ non_ip_output=$(hook_input "$non_ip_fixture" "non-ip" false |
 
 clean_fixture="$tmp/clean-repo"
 make_fixture "$clean_fixture"
-clean_skill_output=$(hook_input "$clean_fixture" "clean-skill" false |
-  AGENT_HOOK_DEBUG=1 bash "$clean_fixture/scripts/agent-hooks/stop-evaluate-skill.sh")
-clean_plugin_output=$(hook_input "$clean_fixture" "clean-plugin" false |
-  AGENT_HOOK_DEBUG=1 bash "$clean_fixture/scripts/agent-hooks/stop-plugin-eval.sh")
+clean_arch_output=$(hook_input "$clean_fixture" "clean-arch" false |
+  AGENT_HOOK_DEBUG=1 bash "$clean_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
+clean_lean_output=$(hook_input "$clean_fixture" "clean-lean" false |
+  bash "$clean_fixture/scripts/agent-hooks/stop-lean-cost.sh")
 clean_ip_output=$(hook_input "$clean_fixture" "clean-ip" false |
   AGENT_HOOK_DEBUG=1 bash "$clean_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
-[[ -z "$clean_skill_output" ]]
-[[ -z "$clean_plugin_output" ]]
+[[ -z "$clean_arch_output" ]]
+[[ -z "$clean_lean_output" ]]
 [[ -z "$clean_ip_output" ]]
 
 jq -e '
   [.hooks.Stop[].hooks[].statusMessage] as $messages
   | ($messages | length) == 4
-  and any($messages[]; . == "Checking changed skills for plugin-eval evaluate-skill prompt")
-  and any($messages[]; . == "Checking plugin metadata for plugin-eval prompt")
+  and any($messages[]; . == "Checking changed skill and plugin surfaces for the skill-architecture report")
+  and any($messages[]; . == "Running the lean-audit per-use cost and fidelity guard")
   and any($messages[]; . == "Checking skill surfaces for ip-hygiene prompt")
   and any($messages[]; . == "Checking skill-authoring sessions for lesson-capture prompt")
   and all($messages[]; type == "string" and length > 0)
@@ -229,16 +183,16 @@ jq -e '
 jq -e '
   [.hooks.Stop[].hooks[].command] as $commands
   | ($commands | length) == 4
-  and any($commands[]; contains("scripts/agent-hooks/stop-evaluate-skill.sh"))
-  and any($commands[]; contains("scripts/agent-hooks/stop-plugin-eval.sh"))
+  and any($commands[]; contains("scripts/agent-hooks/stop-skill-architecture.sh"))
+  and any($commands[]; contains("scripts/agent-hooks/stop-lean-cost.sh"))
   and any($commands[]; contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
   and any($commands[]; contains("scripts/agent-hooks/stop-lesson-capture.sh"))
 ' "$repo_root/.claude/settings.json" >/dev/null
 
-codex_skill_command_output=$(cd "$skill_fixture" &&
-  hook_input "$skill_fixture" "codex-skill-command" false |
+codex_arch_command_output=$(cd "$skill_fixture" &&
+  hook_input "$skill_fixture" "codex-arch-command" false |
     bash -c "$(hook_command ".codex/hooks.json" 0)")
-assert_block "$codex_skill_command_output" 'Skill files changed'
+assert_block "$codex_arch_command_output" 'Skill or plugin surfaces changed'
 
 codex_lesson_command_output=$(cd "$skill_fixture" &&
   hook_input "$skill_fixture" "codex-lesson-command" false |
@@ -255,9 +209,9 @@ outside_repo_command_output=$(cd "$tmp" &&
     bash -c "$(hook_command ".codex/hooks.json" 0)")
 [[ -z "$outside_repo_command_output" ]]
 
-grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-evaluate-skill.sh"
-grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-plugin-eval.sh"
+grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-skill-architecture.sh"
 grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-ip-hygiene.sh"
+grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-lesson-capture.sh"
 
 codeowners="$repo_root/.github/CODEOWNERS"
 [[ -f "$codeowners" ]]

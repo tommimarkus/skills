@@ -123,7 +123,7 @@ python -m unittest
 ```
 
 `scripts/validate-fragmentation.sh` includes
-`scripts/test-stop-plugin-eval-hooks.sh`.
+`scripts/test-stop-hooks.sh`.
 
 Optional release-resolved Dediren smoke lane:
 

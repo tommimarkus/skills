@@ -5,13 +5,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-evaluate-skill.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
-            "statusMessage": "Checking changed skills for plugin-eval evaluate-skill prompt"
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-skill-architecture.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
+            "statusMessage": "Checking changed skill and plugin surfaces for the skill-architecture report"
           },
           {
             "type": "command",
-            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-plugin-eval.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
-            "statusMessage": "Checking plugin metadata for plugin-eval prompt"
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-lean-cost.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'",
+            "statusMessage": "Running the lean-audit per-use cost and fidelity guard"
           },
           {
             "type": "command",
