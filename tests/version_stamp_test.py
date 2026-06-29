@@ -137,20 +137,10 @@ def _write_marketplace(root: Path, plugin: str, version: str) -> None:
     )
 
 
-def _write_codex_manifest(root: Path, plugin: str, version: str) -> None:
-    manifest_dir = root / plugin / ".codex-plugin"
-    manifest_dir.mkdir(parents=True, exist_ok=True)
-    (manifest_dir / "plugin.json").write_text(
-        json.dumps({"name": plugin, "version": version}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-
 class GuardTest(unittest.TestCase):
     def _seed(self, root: Path) -> None:
         _init_repo(root)
         _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
-        _write_codex_manifest(root, "souroldgeezer-audit", "2026.06.3")
         _write_marketplace(root, "souroldgeezer-audit", "2026.06.3")
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "seed")
@@ -193,15 +183,6 @@ class GuardTest(unittest.TestCase):
             _write_marketplace(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "stamp on main")
             self.assertEqual(self._guard(root), 0)
-
-    def test_fails_when_branch_stamps_codex_manifest(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
-            _write_codex_manifest(root, "souroldgeezer-audit", "2026.06.4")
-            _git(root, "commit", "-qam", "stamp codex manifest")
-            self.assertEqual(self._guard(root), 1)
 
     def test_fails_when_branch_stamps_marketplace_entry(self):
         with tempfile.TemporaryDirectory() as tmp:

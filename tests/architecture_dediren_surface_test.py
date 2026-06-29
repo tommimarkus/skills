@@ -10,10 +10,8 @@ ACTIVE_SURFACES = [
     REPO_ROOT / "CLAUDE.md",
     REPO_ROOT / ".claude-plugin" / "marketplace.json",
     ARCH_PLUGIN / ".claude-plugin" / "plugin.json",
-    ARCH_PLUGIN / ".codex-plugin" / "plugin.json",
     ARCH_PLUGIN / "agents" / "architecture-design.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "agents" / "openai.yaml",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "archimate.md",
     ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md",
@@ -71,7 +69,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-architecture"
         )
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        codex_manifest = json.loads((ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
         # The marketplace entry is the in-test source of truth; every other surface
         # must agree with it. The value is *not* pinned here — the calendar stamp is
@@ -81,9 +78,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         canonical = marketplace_entry["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
         self.assertEqual(claude_manifest["version"], canonical)
-        self.assertEqual(codex_manifest["version"], canonical)
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
-        self.assertEqual(marketplace_entry["description"], codex_manifest["description"])
         self.assertIn(
             f"| `souroldgeezer-architecture` | `{canonical}` |",
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
@@ -1203,11 +1198,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_dediren_release_bundle_is_marked_upstream_owned(self) -> None:
         expectations = {
-            REPO_ROOT / "AGENTS.md": [
-                "imported upstream artifacts",
-                "Do not patch",
-                "Dediren tool issues",
-            ],
             # CLAUDE.md states the don't-patch rule in slimmed form and delegates
             # depth to the skill (restructure 0d28964).
             REPO_ROOT / "CLAUDE.md": [

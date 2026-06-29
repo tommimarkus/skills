@@ -10,8 +10,8 @@ PUBLIC_SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
 INTERNAL_SKILL_PATH = ".claude/skills/ip-hygiene/SKILL.md"
 AUDIT_DESCRIPTION = (
     "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and "
-    "duplication/waste (Lean), with per-stack extensions, matching Claude Code "
-    "subagents, and Codex skill metadata."
+    "duplication/waste (Lean), with per-stack extensions and matching Claude Code "
+    "subagents."
 )
 
 
@@ -26,7 +26,6 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
     def test_public_skill_files_exist(self) -> None:
         expected = [
             "SKILL.md",
-            "agents/openai.yaml",
             "references/authority-index.md",
             "references/copyright.md",
             "references/drive-by.md",
@@ -56,55 +55,34 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
 
     def test_runtime_entrypoints_exist_and_point_to_public_skill(self) -> None:
         claude_agent = read("souroldgeezer-audit/agents/ip-hygiene.md")
-        codex_agent = read(".codex/agents/ip-hygiene.toml")
-        openai_yaml = read("souroldgeezer-audit/skills/ip-hygiene/agents/openai.yaml")
 
         self.assertIn("name: ip-hygiene", claude_agent)
         self.assertIn("Invoke the `ip-hygiene` skill", claude_agent)
         self.assertIn(PUBLIC_SKILL_PATH, claude_agent)
         self.assertNotIn(INTERNAL_SKILL_PATH, claude_agent)
-        self.assertIn('name = "ip-hygiene"', codex_agent)
-        self.assertIn(PUBLIC_SKILL_PATH, codex_agent)
-        self.assertIn('display_name: "IP Hygiene"', openai_yaml)
-        self.assertIn("$ip-hygiene", openai_yaml)
 
     def test_audit_plugin_version_and_description_are_synchronized(self) -> None:
         marketplace = json.loads(read(".claude-plugin/marketplace.json"))
         claude_manifest = json.loads(read("souroldgeezer-audit/.claude-plugin/plugin.json"))
-        codex_manifest = json.loads(read("souroldgeezer-audit/.codex-plugin/plugin.json"))
         audit_entry = next(
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-audit"
         )
 
         # The marketplace entry is the in-test source of truth for the version; the
-        # manifests must agree with it. The value is deliberately not pinned to a
+        # manifest must agree with it. The value is deliberately not pinned to a
         # literal — the CalVer stamp is assigned at integration on main and owned by
-        # scripts/version_stamp.py, so a pin here would just be a sixth sync cell to
+        # scripts/version_stamp.py, so a pin here would just be a third sync cell to
         # hand-edit every bump. The description stays pinned because it is content.
         canonical = audit_entry["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
-        for surface in (audit_entry, claude_manifest, codex_manifest):
+        for surface in (audit_entry, claude_manifest):
             self.assertEqual(surface["version"], canonical)
             self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
-
-        prompts = codex_manifest["interface"]["defaultPrompt"]
-        self.assertEqual(codex_manifest["interface"]["websiteURL"], "https://github.com/tommimarkus/skills")
-        self.assertEqual(
-            codex_manifest["interface"]["privacyPolicyURL"],
-            "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
-        )
-        self.assertEqual(
-            codex_manifest["interface"]["termsOfServiceURL"],
-            "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
-        )
-        self.assertLessEqual(len(prompts), 3)
-        self.assertTrue(any("IP hygiene" in prompt or "ip-hygiene" in prompt for prompt in prompts))
 
     def test_repo_guidance_and_hooks_reference_public_skill(self) -> None:
         checked_paths = [
             "README.md",
             "CLAUDE.md",
-            "AGENTS.md",
             "internal-skills/github-issue-lifecycle/SKILL.md",
             "scripts/agent-hooks/stop-ip-hygiene.sh",
             "scripts/test-stop-hooks.sh",

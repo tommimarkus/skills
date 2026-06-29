@@ -85,7 +85,7 @@ editing would hide reply context, or a fresh visible escalation is needed.
 
 Use current state only, not an event log. Summarize verification instead of
 dumping command output. Use strict offset timestamps. `Actor` identifies the
-runtime, such as `Codex` or `Claude Code`.
+agent runtime, such as `Claude Code`.
 
 For confidential issues, avoid sensitive detail in public notes. Use internal
 notes only when the selected tooling supports them and repository guidance
@@ -98,7 +98,7 @@ Implementing state:
 <!-- issue-ops:gitlab:v1 -->
 Lifecycle status: implementing
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: group/project#123
@@ -114,7 +114,7 @@ Escalated state:
 <!-- issue-ops:gitlab:v1 -->
 Lifecycle status: escalated
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: group/project#123
@@ -130,7 +130,7 @@ Completed state:
 <!-- issue-ops:gitlab:v1 -->
 Lifecycle status: completed
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: direct integration
 Scope: group/project#123

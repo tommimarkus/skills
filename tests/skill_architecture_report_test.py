@@ -130,14 +130,12 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertIn("SAC-EVAL-TRIGGER-SCHEMA (high)", output)
         self.assertIn("SAC-REF-BROKEN-LINK (high)", output)
         self.assertIn("SAC-REF-UNADVERTISED-SUPPORT", output)
-        self.assertIn("SAC-RUNTIME-DEFAULT-PROMPTS (medium)", output)
-        self.assertIn("SAC-RUNTIME-MISSING-OPENAI (high)", output)
+        self.assertIn("SAC-RUNTIME-MISSING-CLAUDE-AGENT (high)", output)
         self.assertIn("SAC-DOC-MISSING-ENTRYPOINT (low)", output)
         self.assertIn("Path: `example-plugin/skills/noisy-skill/SKILL.md`", output)
         self.assertIn("Path: `example-plugin/skills/noisy-skill/references/extra.md`", output)
         self.assertIn("references/README.md", output)
         self.assertIn("Claude impact:", output)
-        self.assertIn("Codex impact:", output)
         self.assertIn("Next action:", output)
         self.assertIn("Verify/rerun:", output)
         self.assertIn("scripts/skill-architecture-report.sh .", output)
@@ -245,19 +243,17 @@ class SkillArchitectureReportTest(unittest.TestCase):
                 """,
             )
             write(
-                repo / ".cache/plugin/.codex-plugin/plugin.json",
+                repo / ".cache/plugin/.claude-plugin/plugin.json",
                 """
                 {
                   "name": "cached-plugin",
                   "version": "1.0.0",
-                  "description": "Cached plugin metadata",
-                  "skills": "./skills/"
+                  "description": "Cached plugin metadata"
                 }
                 """,
             )
 
             self.assertEqual([], module.find_skill_files(repo))
-            self.assertEqual([], module.find_codex_plugins(repo))
 
     def test_shell_wrapper_help_smoke(self) -> None:
         result = subprocess.run(
@@ -314,18 +310,16 @@ class SkillArchitectureReportTest(unittest.TestCase):
                 self.assertIn(expected_eval_id, behavior_cases)
 
         claude_manifest = json.loads((design_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        codex_manifest = json.loads((design_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_plugin = next(plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-design")
 
         # Cross-surface sync, not a pinned literal: the marketplace entry is the
-        # in-test source of truth and the manifests must agree with it. The CalVer
+        # in-test source of truth and the manifest must agree with it. The CalVer
         # value is assigned at integration on main (scripts/version_stamp.py), so
         # pinning it here would only add a hand-edited sibling-sync cell per bump.
         canonical = marketplace_plugin["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
         self.assertEqual(claude_manifest["version"], canonical)
-        self.assertEqual(codex_manifest["version"], canonical)
 
     def test_strict_mode_exits_nonzero_when_tool_findings_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -408,7 +402,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
 
     def make_ledger_fixture(self, repo: Path, case: dict) -> None:
         if not case.get("omit_repo_guidance", False):
-            write(repo / "AGENTS.md", "fixture agents\n")
             write(repo / "CLAUDE.md", "fixture claude\n")
 
         explicit_paths = {file["path"] for file in case["files"]}
@@ -435,44 +428,7 @@ class SkillArchitectureReportTest(unittest.TestCase):
                     f"---\nname: {skill_name}\ndescription: {description}\ntools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n",
                 )
 
-            codex_agent_path = f".codex/agents/{skill_name}.toml"
-            if not case.get("omit_codex_agent", False) and codex_agent_path not in explicit_paths:
-                write(
-                    repo / codex_agent_path,
-                    (
-                        f"name = \"{skill_name}\"\n"
-                        f"description = \"Fixture Codex wrapper for {skill_name}.\"\n"
-                        "sandbox_mode = \"workspace-write\"\n"
-                        "developer_instructions = \"\"\"\n"
-                        f"You are a fixture practitioner. Use the {skill_name} skill as the source of truth.\n"
-                        "Always emit the footer disclosure required by the skill.\n"
-                        "\"\"\"\n"
-                    ),
-                )
-
-            openai_path = f"{skill_dir}/agents/openai.yaml"
-            if case.get("omit_openai", False) or openai_path in explicit_paths:
-                continue
-            write(
-                repo / openai_path,
-                f"name: {skill_name}\ndescription: {description}\n",
-            )
-
     def make_noisy_fixture(self, fixture: Path) -> None:
-        write(
-            fixture / "example-plugin/.codex-plugin/plugin.json",
-            """
-            {
-              "name": "example-plugin",
-              "version": "1.0.0",
-              "description": "Fixture plugin",
-              "skills": "./skills/",
-              "interface": {
-                "defaultPrompt": ["one", "two", "three", "four"]
-              }
-            }
-            """,
-        )
         write(
             fixture / "example-plugin/skills/noisy-skill/SKILL.md",
             """
@@ -527,13 +483,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / "example-plugin/skills/quiet-skill/agents/openai.yaml",
-            """
-            name: quiet-skill
-            description: Fixture metadata.
-            """,
-        )
-        write(
             fixture / "internal-skills/internal-helper/SKILL.md",
             """
             ---
@@ -551,7 +500,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
     def make_clean_fixture(self, fixture: Path) -> None:
-        write(fixture / "AGENTS.md", "fixture agents\n")
         write(fixture / "CLAUDE.md", "fixture claude\n")
         write(
             fixture / "example-plugin/skills/clean-skill/SKILL.md",
@@ -581,13 +529,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / "example-plugin/skills/clean-skill/agents/openai.yaml",
-            """
-            name: clean-skill
-            description: Use when validating a clean fixture skill with explicit boundaries, outputs, stop conditions, and rerun guidance.
-            """,
-        )
-        write(
             fixture / "example-plugin/agents/clean-skill.md",
             """
             ---
@@ -598,18 +539,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             ---
 
             Invoke the skill.
-            """,
-        )
-        write(
-            fixture / ".codex/agents/clean-skill.toml",
-            """
-            name = "clean-skill"
-            description = "Fixture Codex wrapper for clean-skill."
-            sandbox_mode = "workspace-write"
-            developer_instructions = \"\"\"
-            You are a fixture practitioner. Use the clean-skill skill as the source of truth.
-            Always emit the footer disclosure required by the skill.
-            \"\"\"
             """,
         )
         write(fixture / "example-plugin/skills/clean-skill/references/group/one.md", "# Grouped Support\n")
@@ -640,7 +569,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
     def make_private_plugin_root_reference_fixture(self, fixture: Path) -> None:
-        write(fixture / "AGENTS.md", "fixture agents\n")
         write(fixture / "CLAUDE.md", "fixture claude\n")
         write(
             fixture / "example-plugin/skills/private-skill/SKILL.md",
@@ -661,19 +589,11 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / "example-plugin/skills/private-skill/agents/openai.yaml",
-            """
-            name: private-skill
-            description: Fixture metadata.
-            """,
-        )
-        write(
             fixture / "example-plugin/references/private-skill-procedures/check.md",
             "# Private Procedure\n",
         )
 
     def make_documented_shared_plugin_root_reference_fixture(self, fixture: Path) -> None:
-        write(fixture / "AGENTS.md", "fixture agents\n")
         write(fixture / "CLAUDE.md", "fixture claude\n")
         write(
             fixture / "example-plugin/references/README.md",
@@ -705,16 +625,8 @@ class SkillArchitectureReportTest(unittest.TestCase):
             Read ../../references/shared-guidance/check.md when shared plugin guidance applies.
             """,
         )
-        write(
-            fixture / "example-plugin/skills/first-skill/agents/openai.yaml",
-            """
-            name: first-skill
-            description: Fixture metadata.
-            """,
-        )
 
     def make_eval_issue_fixture(self, fixture: Path) -> None:
-        write(fixture / "AGENTS.md", "fixture agents\n")
         write(fixture / "CLAUDE.md", "fixture claude\n")
         write(
             fixture / "example-plugin/skills/eval-issue-skill/SKILL.md",
@@ -737,13 +649,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / "example-plugin/skills/eval-issue-skill/agents/openai.yaml",
-            """
-            name: eval-issue-skill
-            description: Use when validating eval issue fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
-            """,
-        )
-        write(
             fixture / "example-plugin/agents/eval-issue-skill.md",
             """
             ---
@@ -754,18 +659,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             ---
 
             Invoke the skill.
-            """,
-        )
-        write(
-            fixture / ".codex/agents/eval-issue-skill.toml",
-            """
-            name = "eval-issue-skill"
-            description = "Fixture Codex wrapper for eval-issue-skill."
-            sandbox_mode = "workspace-write"
-            developer_instructions = \"\"\"
-            You are a fixture practitioner. Use the eval-issue-skill skill as the source of truth.
-            Always emit the footer disclosure required by the skill.
-            \"\"\"
             """,
         )
         write(
@@ -782,7 +675,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
     def make_high_risk_issue_fixture(self, fixture: Path) -> None:
-        write(fixture / "AGENTS.md", "fixture agents\n")
         write(fixture / "CLAUDE.md", "fixture claude\n")
         write(
             fixture / "example-plugin/skills/security-audit-skill/SKILL.md",
@@ -805,13 +697,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             """,
         )
         write(
-            fixture / "example-plugin/skills/security-audit-skill/agents/openai.yaml",
-            """
-            name: security-audit-skill
-            description: Use when auditing security fixtures with explicit boundaries, outputs, stop conditions, and rerun guidance.
-            """,
-        )
-        write(
             fixture / "example-plugin/agents/security-audit-skill.md",
             """
             ---
@@ -822,18 +707,6 @@ class SkillArchitectureReportTest(unittest.TestCase):
             ---
 
             Invoke the skill.
-            """,
-        )
-        write(
-            fixture / ".codex/agents/security-audit-skill.toml",
-            """
-            name = "security-audit-skill"
-            description = "Fixture Codex wrapper for security-audit-skill."
-            sandbox_mode = "workspace-write"
-            developer_instructions = \"\"\"
-            You are a fixture practitioner. Use the security-audit-skill skill as the source of truth.
-            Always emit the footer disclosure required by the skill.
-            \"\"\"
             """,
         )
 

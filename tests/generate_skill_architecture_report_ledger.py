@@ -39,9 +39,7 @@ def skill_case(
     *,
     skill_name: str | None = None,
     extra_files: list[dict] | None = None,
-    omit_openai: bool = False,
     omit_claude_agent: bool = False,
-    omit_codex_agent: bool = False,
     omit_repo_guidance: bool = False,
     expected_findings: list[dict] | None = None,
     exact: bool = False,
@@ -65,12 +63,8 @@ def skill_case(
         "files": files,
         "expected_codes": [code],
     }
-    if omit_openai:
-        case["omit_openai"] = True
     if omit_claude_agent:
         case["omit_claude_agent"] = True
-    if omit_codex_agent:
-        case["omit_codex_agent"] = True
     if omit_repo_guidance:
         case["omit_repo_guidance"] = True
     if expected_findings is not None:
@@ -566,10 +560,6 @@ def case_rationalization_gate(complexity: str, index: str, scenario: str) -> dic
     )
 
 
-def case_runtime_missing_openai(complexity: str, index: str, scenario: str) -> dict:
-    return skill_case("SAC-RUNTIME-MISSING-OPENAI", complexity, index, scenario, f"Use when checking {scenario} Codex metadata.", clean_body(scenario), omit_openai=True)
-
-
 def case_runtime_name_drift(complexity: str, index: str, scenario: str) -> dict:
     name = f"{scenario}-skill"
     return {
@@ -599,37 +589,10 @@ def case_runtime_plugin_json(complexity: str, index: str, scenario: str) -> dict
             "scenario": scenario,
             "source": "local skill-only review archetype",
         },
-        "files": [{"path": "example-plugin/.codex-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"description\":\"{scenario}\",\n"}],
-        "expected_codes": ["SAC-RUNTIME-PLUGIN-JSON"],
-    }
-
-
-def case_runtime_default_prompts(complexity: str, index: str, scenario: str) -> dict:
-    prompts = [f"{scenario} prompt {n}" for n in range(4)]
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-DEFAULT-PROMPTS",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-DEFAULT-PROMPTS",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
         "files": [
-            {
-                "path": "example-plugin/.codex-plugin/plugin.json",
-                "content": json.dumps(
-                    {
-                        "name": "example-plugin",
-                        "version": "1.0.0",
-                        "description": f"Fixture plugin {scenario}",
-                        "skills": "./skills/",
-                        "interface": {"defaultPrompt": prompts},
-                    }
-                )
-                + "\n",
-            }
-        ],
-        "expected_codes": ["SAC-RUNTIME-DEFAULT-PROMPTS"],
+            {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}]}}\n"},
+            {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"description\":\"{scenario}\",\n"}],
+        "expected_codes": ["SAC-RUNTIME-PLUGIN-JSON"],
     }
 
 
@@ -645,40 +608,13 @@ def case_manifest_sync(complexity: str, index: str, scenario: str) -> dict:
         "files": [
             {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Marketplace {scenario}\"}}]}}\n"},
             {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Claude {scenario}\"}}\n"},
-            {"path": "example-plugin/.codex-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.1\",\"description\":\"Codex {scenario}\",\"skills\":\"./skills/\"}}\n"},
         ],
         "expected_codes": ["SAC-RUNTIME-MANIFEST-SYNC"],
     }
 
 
-def case_codex_skills_path(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-CODEX-SKILLS-PATH",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-CODEX-SKILLS-PATH",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [{"path": "example-plugin/.codex-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}\n"}],
-        "expected_codes": ["SAC-RUNTIME-CODEX-SKILLS-PATH"],
-    }
-
-
 def case_missing_claude_agent(complexity: str, index: str, scenario: str) -> dict:
     return skill_case("SAC-RUNTIME-MISSING-CLAUDE-AGENT", complexity, index, scenario, f"Use when checking {scenario} Claude subagent presence.", clean_body(scenario), omit_claude_agent=True)
-
-
-def case_missing_codex_agent(complexity: str, index: str, scenario: str) -> dict:
-    return skill_case(
-        "SAC-RUNTIME-MISSING-CODEX-AGENT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} Codex custom-agent presence.",
-        clean_body(scenario),
-        omit_codex_agent=True,
-    )
 
 
 def case_agent_desc_drift(complexity: str, index: str, scenario: str) -> dict:
@@ -700,77 +636,6 @@ def case_agent_desc_drift(complexity: str, index: str, scenario: str) -> dict:
     )
 
 
-def case_codex_agent_missing_skill_source(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-CODEX-AGENT-MISSING-SKILL-SOURCE",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} Codex custom-agent source links.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f".codex/agents/{name}.toml",
-                "content": (
-                    f"name = \"{name}\"\n"
-                    f"description = \"Codex wrapper for {scenario}.\"\n"
-                    "sandbox_mode = \"workspace-write\"\n"
-                    "developer_instructions = \"\"\"\n"
-                    "You are a fixture practitioner. Follow local instructions and emit the footer disclosure.\n"
-                    "\"\"\"\n"
-                ),
-            }
-        ],
-    )
-
-
-def case_codex_agent_missing_footer(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-CODEX-AGENT-MISSING-FOOTER",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} Codex custom-agent footer parity.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f".codex/agents/{name}.toml",
-                "content": (
-                    f"name = \"{name}\"\n"
-                    f"description = \"Codex wrapper for {scenario}.\"\n"
-                    "sandbox_mode = \"workspace-write\"\n"
-                    "developer_instructions = \"\"\"\n"
-                    f"You are a fixture practitioner. Use the {name} skill as the source of truth.\n"
-                    "\"\"\"\n"
-                ),
-            }
-        ],
-    )
-
-
-def case_openai_name_drift(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-OPENAI-NAME-DRIFT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} OpenAI name sync.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/skills/{name}/agents/openai.yaml",
-                "content": f"name: different-{scenario}\ndescription: Use when checking {scenario} OpenAI name sync.\n",
-            }
-        ],
-    )
-
-
 def case_missing_claude_manifest(complexity: str, index: str, scenario: str) -> dict:
     return {
         "complexity": complexity,
@@ -782,26 +647,8 @@ def case_missing_claude_manifest(complexity: str, index: str, scenario: str) -> 
         },
         "files": [
             {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}]}}\n"},
-            {"path": "example-plugin/.codex-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\",\"skills\":\"./skills/\"}}\n"},
         ],
         "expected_codes": ["SAC-RUNTIME-MISSING-CLAUDE-MANIFEST"],
-    }
-
-
-def case_missing_codex_manifest(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-MISSING-CODEX-MANIFEST",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-MISSING-CODEX-MANIFEST",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
-            {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}]}}\n"},
-            {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}\n"},
-        ],
-        "expected_codes": ["SAC-RUNTIME-MISSING-CODEX-MANIFEST"],
     }
 
 
@@ -817,7 +664,6 @@ def case_marketplace_missing_entry(complexity: str, index: str, scenario: str) -
         "files": [
             {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[]}\n"},
             {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}\n"},
-            {"path": "example-plugin/.codex-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\",\"skills\":\"./skills/\"}}\n"},
         ],
         "expected_codes": ["SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY"],
     }
@@ -861,25 +707,6 @@ def case_agent_missing_skill_tool(complexity: str, index: str, scenario: str) ->
     )
 
 
-def case_openai_desc_drift(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-OPENAI-DESC-DRIFT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} OpenAI description sync.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/skills/{name}/agents/openai.yaml",
-                "content": f"name: {name}\ndescription: Different {scenario} OpenAI description.\n",
-            }
-        ],
-    )
-
-
 def case_runtime_wrapper_workflow_duplication(complexity: str, index: str, scenario: str) -> dict:
     name = f"{scenario}-skill"
     description = f"Use when checking {scenario} runtime wrapper size."
@@ -910,20 +737,6 @@ def case_runtime_wrapper_workflow_duplication(complexity: str, index: str, scena
             }
         ],
     )
-
-
-def case_doc_split_marketplace(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-DOC-SPLIT-MARKETPLACE",
-        "gold_issue": {
-            "code": "SAC-DOC-SPLIT-MARKETPLACE",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [{"path": ".agents/plugins/marketplace.json", "content": f"{{\"plugins\":[],\"description\":\"{scenario}\"}}\n"}],
-        "expected_codes": ["SAC-DOC-SPLIT-MARKETPLACE"],
-    }
 
 
 def case_doc_missing_entrypoint(complexity: str, index: str, scenario: str) -> dict:
@@ -967,25 +780,15 @@ BUILDERS: list[tuple[str, CaseBuilder]] = [
     ("behavior-eval-schema", case_eval_behavior_schema),
     ("eval-ip-hygiene", case_eval_ip_hygiene),
     ("rationalization-gate", case_rationalization_gate),
-    ("missing-openai", case_runtime_missing_openai),
     ("skill-name-drift", case_runtime_name_drift),
     ("invalid-plugin-json", case_runtime_plugin_json),
-    ("default-prompts", case_runtime_default_prompts),
     ("manifest-sync", case_manifest_sync),
-    ("codex-skills-path", case_codex_skills_path),
     ("missing-claude-agent", case_missing_claude_agent),
-    ("missing-codex-agent", case_missing_codex_agent),
     ("agent-desc-drift", case_agent_desc_drift),
-    ("codex-agent-missing-source", case_codex_agent_missing_skill_source),
-    ("codex-agent-missing-footer", case_codex_agent_missing_footer),
-    ("openai-name-drift", case_openai_name_drift),
     ("missing-claude-manifest", case_missing_claude_manifest),
-    ("missing-codex-manifest", case_missing_codex_manifest),
     ("missing-marketplace-entry", case_marketplace_missing_entry),
     ("agent-name-drift", case_agent_name_drift),
     ("agent-missing-skill-tool", case_agent_missing_skill_tool),
-    ("openai-desc-drift", case_openai_desc_drift),
-    ("split-marketplace", case_doc_split_marketplace),
     ("missing-entrypoint", case_doc_missing_entrypoint),
 ]
 
@@ -1112,18 +915,6 @@ def build_guard_cases() -> list[dict]:
             extra_files=[{"path": "example-plugin/skills/guard-asset-folder-skill/assets/sample.txt", "content": "asset\n"}],
         ),
         guard_skill(
-            "guard-openai-nested",
-            clean_body("guard-openai-nested"),
-            ["SAC-RUNTIME-OPENAI-NAME-DRIFT", "SAC-RUNTIME-OPENAI-DESC-DRIFT"],
-            "nested Codex metadata fields do not count as flat name or description drift",
-            extra_files=[
-                {
-                    "path": "example-plugin/skills/guard-openai-nested-skill/agents/openai.yaml",
-                    "content": "interface:\n  display_name: Guard\n  short_description: Nested metadata.\n",
-                }
-            ],
-        ),
-        guard_skill(
             "guard-agent-tools",
             clean_body("guard-agent-tools"),
             ["SAC-RUNTIME-CLAUDE-AGENT-MISSING-SKILL-TOOL"],
@@ -1136,27 +927,14 @@ def build_guard_cases() -> list[dict]:
             ],
         ),
         guard_case(
-            "guard-default-prompts-three",
-            [
-                {
-                    "path": "example-plugin/.codex-plugin/plugin.json",
-                    "content": "{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\",\"skills\":\"./skills/\",\"interface\":{\"defaultPrompt\":[\"one\",\"two\",\"three\"]}}\n",
-                }
-            ],
-            ["SAC-RUNTIME-DEFAULT-PROMPTS", "SAC-RUNTIME-CODEX-SKILLS-PATH"],
-            "three Codex default prompts stay under the prompt limit",
-        ),
-        guard_case(
             "guard-marketplace-complete",
             [
                 {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}]}\n"},
                 {"path": "example-plugin/.claude-plugin/plugin.json", "content": "{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}\n"},
-                {"path": "example-plugin/.codex-plugin/plugin.json", "content": "{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\",\"skills\":\"./skills/\"}\n"},
             ],
             [
                 "SAC-RUNTIME-MANIFEST-SYNC",
                 "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST",
-                "SAC-RUNTIME-MISSING-CODEX-MANIFEST",
                 "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
             ],
             "complete marketplace and plugin manifests avoid runtime parity findings",

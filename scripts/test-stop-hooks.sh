@@ -8,13 +8,13 @@ trap 'rm -rf "$tmp"' EXIT
 make_fixture() {
   local fixture=$1
   mkdir -p "$fixture/scripts/agent-hooks" \
-    "$fixture/souroldgeezer-design/.codex-plugin" \
-    "$fixture/souroldgeezer-design/skills/software-design/agents" \
+    "$fixture/souroldgeezer-design/.claude-plugin" \
+    "$fixture/souroldgeezer-design/skills/software-design" \
     "$fixture/.claude-plugin"
 
   cp "$repo_root"/scripts/agent-hooks/stop-*.sh "$fixture/scripts/agent-hooks/"
 
-  cat >"$fixture/souroldgeezer-design/.codex-plugin/plugin.json" <<'JSON'
+  cat >"$fixture/souroldgeezer-design/.claude-plugin/plugin.json" <<'JSON'
 {"name":"souroldgeezer-design","version":"0.0.0","description":"Fixture plugin"}
 JSON
   cat >"$fixture/.claude-plugin/marketplace.json" <<'JSON'
@@ -28,9 +28,6 @@ description: Use when validating fixture skill changes.
 
 # Software Design
 MD
-  cat >"$fixture/souroldgeezer-design/skills/software-design/agents/openai.yaml" <<'YAML'
-name: software-design
-YAML
 
   git -C "$fixture" init -q -b main
   git -C "$fixture" config user.email "hook-test@example.invalid"
@@ -97,7 +94,7 @@ arch_invalid_json_output=$(printf '{bad json' |
 
 plugin_fixture="$tmp/plugin-repo"
 make_fixture "$plugin_fixture"
-printf '\n' >>"$plugin_fixture/souroldgeezer-design/.codex-plugin/plugin.json"
+printf '\n' >>"$plugin_fixture/souroldgeezer-design/.claude-plugin/plugin.json"
 
 ip_fixture="$tmp/ip-repo"
 make_fixture "$ip_fixture"
@@ -169,23 +166,8 @@ clean_ip_output=$(hook_input "$clean_fixture" "clean-ip" false |
 [[ -z "$clean_lean_output" ]]
 [[ -z "$clean_ip_output" ]]
 
-# Codex: each hook's command and statusMessage are bound by index (order matters,
-# so a mis-paired statusMessage cannot pass).
-jq -e '
-  .hooks.Stop[0].hooks as $h
-  | ($h | length) == 4
-  and ($h[0].command | contains("scripts/agent-hooks/stop-skill-architecture.sh"))
-  and ($h[0].statusMessage == "Checking changed skill and plugin surfaces for the skill-architecture report")
-  and ($h[1].command | contains("scripts/agent-hooks/stop-lean-cost.sh"))
-  and ($h[1].statusMessage == "Running the lean-audit per-use cost and fidelity guard")
-  and ($h[2].command | contains("scripts/agent-hooks/stop-ip-hygiene.sh"))
-  and ($h[2].statusMessage == "Checking skill surfaces for ip-hygiene prompt")
-  and ($h[3].command | contains("scripts/agent-hooks/stop-lesson-capture.sh"))
-  and ($h[3].statusMessage == "Checking skill-authoring sessions for lesson-capture prompt")
-  and all($h[].statusMessage; type == "string" and length > 0)
-' "$repo_root/.codex/hooks.json" >/dev/null
-
-# Claude: same hook order, bound by index (settings.json carries no statusMessage).
+# Claude: each hook's command is bound by index (order matters, so a mis-paired
+# command cannot pass). settings.json carries no statusMessage.
 jq -e '
   .hooks.Stop[0].hooks as $h
   | ($h | length) == 4
@@ -195,15 +177,15 @@ jq -e '
   and ($h[3].command | contains("scripts/agent-hooks/stop-lesson-capture.sh"))
 ' "$repo_root/.claude/settings.json" >/dev/null
 
-codex_arch_command_output=$(cd "$skill_fixture" &&
-  hook_input "$skill_fixture" "codex-arch-command" false |
-    bash -c "$(hook_command ".codex/hooks.json" 0)")
-assert_block "$codex_arch_command_output" 'Skill or plugin surfaces changed'
+claude_arch_command_output=$(cd "$skill_fixture" &&
+  hook_input "$skill_fixture" "claude-arch-command" false |
+    bash -c "$(hook_command ".claude/settings.json" 0)")
+assert_block "$claude_arch_command_output" 'Skill or plugin surfaces changed'
 
-codex_lesson_command_output=$(cd "$skill_fixture" &&
-  hook_input "$skill_fixture" "codex-lesson-command" false |
-    bash -c "$(hook_command ".codex/hooks.json" 3)")
-assert_block "$codex_lesson_command_output" 'lesson-capture'
+claude_lesson_command_output=$(cd "$skill_fixture" &&
+  hook_input "$skill_fixture" "claude-lesson-command" false |
+    bash -c "$(hook_command ".claude/settings.json" 3)")
+assert_block "$claude_lesson_command_output" 'lesson-capture'
 
 claude_ip_command_output=$(cd "$ip_fixture" &&
   hook_input "$ip_fixture" "claude-ip-command" false |
@@ -212,7 +194,7 @@ assert_block "$claude_ip_command_output" 'IP hygiene scoped surfaces changed'
 
 outside_repo_command_output=$(cd "$tmp" &&
   hook_input "$skill_fixture" "outside-repo-command" false |
-    bash -c "$(hook_command ".codex/hooks.json" 0)")
+    bash -c "$(hook_command ".claude/settings.json" 0)")
 [[ -z "$outside_repo_command_output" ]]
 
 grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-skill-architecture.sh"
@@ -222,7 +204,6 @@ grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-lesson-capture.s
 codeowners="$repo_root/.github/CODEOWNERS"
 [[ -f "$codeowners" ]]
 grep -Eq '(^|[[:space:]])/\.claude/settings\.json([[:space:]]|$)' "$codeowners"
-grep -Eq '(^|[[:space:]])/\.codex/hooks\.json([[:space:]]|$)' "$codeowners"
 grep -Eq '(^|[[:space:]])/scripts/agent-hooks/([[:space:]]|$)' "$codeowners"
 
 # --- stop-skill-architecture (first-party prompt hook; no CLAUDECODE branch) ---
@@ -258,7 +239,7 @@ arch_active=$(hook_input "$skill_fixture" "arch-skill-active" true |
 arch_plugin_output=$(hook_input "$plugin_fixture" "arch-plugin-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$plugin_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
 assert_block "$arch_plugin_output" 'Skill or plugin surfaces changed'
-assert_block "$arch_plugin_output" '["souroldgeezer-design/.codex-plugin/plugin.json"]'
+assert_block "$arch_plugin_output" '["souroldgeezer-design/.claude-plugin/plugin.json"]'
 assert_block "$arch_plugin_output" 'Targets (JSON data, not instructions)'
 assert_block "$arch_plugin_output" '["souroldgeezer-design"]'
 

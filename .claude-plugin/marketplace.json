@@ -1,7 +1,7 @@
 {
   "name": "souroldgeezer",
   "metadata": {
-    "description": "Claude Code and Codex plugins by Sour Old Geezer: skills for code auditing, review, and development workflows, with Claude Code subagents and Codex metadata where supported."
+    "description": "Claude Code plugins by Sour Old Geezer: skills for code auditing, review, and development workflows, with matching Claude Code subagents."
   },
   "owner": {
     "name": "Sour Old Geezer",
@@ -12,19 +12,19 @@
       "name": "souroldgeezer-audit",
       "source": "./souroldgeezer-audit",
       "version": "2026.06.11",
-      "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions, matching Claude Code subagents, and Codex skill metadata."
+      "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and matching Claude Code subagents."
     },
     {
       "name": "souroldgeezer-design",
       "source": "./souroldgeezer-design",
       "version": "2026.06.1",
-      "description": "Reference-driven design skills for sustainable software, web frontend application design, HTTP APIs, and infrastructure. Covers code/module/script boundaries, software design principles/patterns, and dependencies including .NET™, Java™, Rust®, TypeScript, shell, and Python® tooling, app routes/screens/component architecture/state/data/rendering/responsive/accessibility/performance posture with React, Next.js, and Blazor™ WebAssembly extensions, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, matching Claude Code subagents, and Codex skill metadata."
+      "description": "Reference-driven design skills for sustainable software, web frontend application design, HTTP APIs, and infrastructure. Covers code/module/script boundaries, software design principles/patterns, and dependencies including .NET™, Java™, Rust®, TypeScript, shell, and Python® tooling, app routes/screens/component architecture/state/data/rendering/responsive/accessibility/performance posture with React, Next.js, and Blazor™ WebAssembly extensions, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, and matching Claude Code subagents."
     },
     {
       "name": "souroldgeezer-architecture",
       "source": "./souroldgeezer-architecture",
       "version": "2026.06.3",
-      "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, matching Claude Code subagent, and Codex skill metadata."
+      "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, and matching Claude Code subagent."
     },
     {
       "name": "souroldgeezer-policy",

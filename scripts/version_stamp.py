@@ -114,17 +114,14 @@ def merge_base(repo_root: Path, base: str, head: str) -> str:
 def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
     versions: dict[str, str] = {}
     for plugin in PLUGINS:
-        for rel in (
-            f"{plugin}/.claude-plugin/plugin.json",
-            f"{plugin}/.codex-plugin/plugin.json",
-        ):
-            text = _git_show(repo_root, ref, rel)
-            if text is None:
-                continue
-            try:
-                versions[rel] = json.loads(text)["version"]
-            except (json.JSONDecodeError, KeyError, TypeError):
-                continue
+        rel = f"{plugin}/.claude-plugin/plugin.json"
+        text = _git_show(repo_root, ref, rel)
+        if text is None:
+            continue
+        try:
+            versions[rel] = json.loads(text)["version"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            continue
     market = _git_show(repo_root, ref, ".claude-plugin/marketplace.json")
     if market is not None:
         try:

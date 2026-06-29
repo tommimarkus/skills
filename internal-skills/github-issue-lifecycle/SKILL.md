@@ -108,9 +108,9 @@ files involve:
 - `souroldgeezer-*/agents/**`;
 - `souroldgeezer-*/docs/*-reference/**`;
 - `.claude/skills/**`;
-- Claude Code or Codex plugin manifests;
+- Claude Code plugin manifests;
 - marketplace manifests;
-- `README.md`, `CLAUDE.md`, or `AGENTS.md` sections that describe those
+- `README.md` or `CLAUDE.md` sections that describe those
   artifacts.
 
 Escalate the issue on any `ip-hygiene` concern that requires maintainer
@@ -121,7 +121,7 @@ extension, manifest, marketplace, internal authoring skill, or repo-doc changes,
 apply `docs/skill-architecture.md` and run `scripts/skill-architecture-report.sh`
 when available.
 
-For sync-surface decisions, follow `AGENTS.md`, `CLAUDE.md`, and
+For sync-surface decisions, follow `CLAUDE.md` and
 `docs/skill-architecture.md` instead of duplicating the repo-wide list here.
 This overlay adds only lifecycle-specific gates: re-read live issue state before
 closure, apply `ip-hygiene` when touched paths hit skill/reference/manifest

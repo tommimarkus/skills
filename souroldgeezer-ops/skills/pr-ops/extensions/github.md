@@ -59,7 +59,7 @@ visible escalation is needed.
 
 Use current state only, not an event log. Summarize verification instead of
 dumping command output. Use strict offset timestamps. `Actor` identifies the
-runtime, such as `Codex` or `Claude Code`.
+agent runtime, such as `Claude Code`.
 
 Working state:
 
@@ -67,7 +67,7 @@ Working state:
 <!-- pr-ops:github:v1 -->
 Lifecycle status: working
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Scope: PR #123
 Current step: addressing review feedback
@@ -83,7 +83,7 @@ Escalated state:
 <!-- pr-ops:github:v1 -->
 Lifecycle status: escalated
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Scope: PR #123
 Gate: unresolved requested changes
@@ -99,7 +99,7 @@ Completed state:
 <!-- pr-ops:github:v1 -->
 Lifecycle status: completed
 
-Actor: Codex
+Actor: Claude Code
 Mode: merge-only
 Scope: PR #123
 Result: merged pull request

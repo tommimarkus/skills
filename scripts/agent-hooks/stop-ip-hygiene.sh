@@ -15,16 +15,14 @@ changed=$(
     git -C "$repo_root" ls-files --others --exclude-standard
   } 2>/dev/null |
     awk '
-      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/|agents\/openai\.yaml$)/ { print; next }
+      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
       /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
       /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
-      /^souroldgeezer-[^/]+\/\.(claude-plugin|codex-plugin)\/plugin\.json$/ { print; next }
+      /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
       /^\.claude-plugin\/marketplace\.json$/ { print; next }
-      /^\.agents\/plugins\/marketplace\.json$/ { print; next }
-      /^\.codex\/agents\/[^/]+\.toml$/ { print; next }
       /^internal-skills\/[^/]+\// { print; next }
       /^\.claude\/skills\/[^/]+\// { print; next }
-      /^(CLAUDE|AGENTS|README)\.md$/ { print; next }
+      /^(CLAUDE|README)\.md$/ { print; next }
     ' |
     sort -u
 )
@@ -38,12 +36,6 @@ targets=$(
   awk -F/ '
     $1 == ".claude" && $2 == "skills" && NF >= 3 {
       print ".claude/skills/" $3
-    }
-    $1 == ".codex" && $2 == "agents" && NF >= 3 {
-      print ".codex/agents/" $3
-    }
-    $1 == ".agents" && $2 == "plugins" {
-      print ".agents/plugins/marketplace.json"
     }
     $1 == "internal-skills" && NF >= 2 {
       print "internal-skills/" $2
@@ -60,10 +52,10 @@ targets=$(
     $1 ~ /^souroldgeezer-/ && $2 == "docs" && NF >= 3 {
       print $1 "/docs/" $3
     }
-    $1 ~ /^souroldgeezer-/ && ($2 == ".claude-plugin" || $2 == ".codex-plugin") {
+    $1 ~ /^souroldgeezer-/ && $2 == ".claude-plugin" {
       print $1
     }
-    $1 == "CLAUDE.md" || $1 == "AGENTS.md" || $1 == "README.md" {
+    $1 == "CLAUDE.md" || $1 == "README.md" {
       print $1
     }
   ' <<<"$changed" |

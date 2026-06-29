@@ -35,7 +35,6 @@ stop_hook_safe_component() {
 
 debug_log() {
   [[ "${AGENT_HOOK_DEBUG:-}" == "1" ||
-     "${CODEX_HOOK_DEBUG:-}" == "1" ||
      "${CLAUDE_HOOK_DEBUG:-}" == "1" ]] || return 0
 
   mkdir -p "$marker_dir" 2>/dev/null || return 0

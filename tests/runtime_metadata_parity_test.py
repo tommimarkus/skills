@@ -60,6 +60,29 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("souroldgeezer-example/agents/example-skill.md", result.stdout)
         self.assertIn("description", result.stdout)
 
+    def test_plugin_manifest_version_drift_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / "souroldgeezer-example/.claude-plugin/plugin.json",
+                """
+                {
+                  "name": "souroldgeezer-example",
+                  "version": "0.2.0",
+                  "description": "Example plugin for runtime metadata parity tests.",
+                  "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
+                  "license": "MIT"
+                }
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("souroldgeezer-example/.claude-plugin/plugin.json", result.stdout)
+        self.assertIn("version", result.stdout)
+
     def test_docs_plugin_links_must_be_relative_to_doc(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
@@ -81,155 +104,42 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("docs/plugins/example.md", result.stdout)
         self.assertIn("[example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md)", result.stdout)
 
-    def test_codex_manifest_must_declare_skills_directory(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "souroldgeezer-example/.codex-plugin/plugin.json",
-                """
-                {
-                  "name": "souroldgeezer-example",
-                  "version": "0.1.0",
-                  "description": "Example plugin for runtime metadata parity tests.",
-                  "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
-                  "license": "MIT",
-                  "skills": "./wrong-skills/",
-                  "interface": {
-                    "displayName": "Sour Old Geezer Example",
-                    "shortDescription": "Example parity checks.",
-                    "defaultPrompt": ["Use example-skill."]
-                  }
-                }
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("souroldgeezer-example/.codex-plugin/plugin.json", result.stdout)
-        self.assertIn("skills", result.stdout)
-        self.assertIn("./skills/", result.stdout)
-
-    def test_missing_openai_metadata_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            (
-                repo
-                / "souroldgeezer-example"
-                / "skills"
-                / "example-skill"
-                / "agents"
-                / "openai.yaml"
-            ).unlink()
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
-            result.stdout,
-        )
-        self.assertIn("exists", result.stdout)
-
-    def test_openai_short_description_drift_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
-                """
-                interface:
-                  display_name: "Example Skill"
-                  short_description: "Drifted OpenAI metadata."
-                  default_prompt: "Use example-skill."
-                policy:
-                  allow_implicit_invocation: true
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
-            result.stdout,
-        )
-        self.assertIn("interface.short_description", result.stdout)
-
-    def test_orphan_internal_codex_agent_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".codex/agents/orphan.toml",
-                '''
-                name = "orphan"
-                description = "No public or internal skill owns this agent."
-                sandbox_mode = "workspace-write"
-                ''',
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".codex/agents/orphan.toml", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-
-    def test_wrong_path_public_codex_agent_alias_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".codex/agents/stale-public-alias.toml",
-                '''
-                name = "example-skill"
-                description = "Use when checking runtime metadata parity for an example skill."
-                sandbox_mode = "workspace-write"
-                ''',
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".codex/agents/stale-public-alias.toml", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-
-    def test_wrong_path_internal_codex_agent_alias_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".codex/agents/stale-internal-alias.toml",
-                '''
-                name = "internal-review"
-                description = "Use when checking Codex metadata parity for an internal skill."
-                sandbox_mode = "workspace-write"
-                ''',
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".codex/agents/stale-internal-alias.toml", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-
-    def test_shared_internal_skill_without_runtime_wrappers_is_detected(self) -> None:
+    def test_shared_internal_skill_without_claude_wrapper_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
             self.make_clean_fixture(repo)
             (repo / ".claude" / "skills" / "internal-review" / "SKILL.md").unlink()
-            (repo / ".codex" / "agents" / "internal-review.toml").unlink()
 
             result = run_checker(repo)
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
-        self.assertIn(".codex/agents/internal-review.toml", result.stdout)
         self.assertIn("exists", result.stdout)
         self.assertIn("present", result.stdout)
         self.assertIn("missing", result.stdout)
+
+    def test_orphan_claude_wrapper_without_shared_skill_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(
+                repo / ".claude/skills/orphan-review/SKILL.md",
+                """
+                ---
+                name: orphan-review
+                description: No shared internal skill owns this Claude wrapper.
+                ---
+
+                # Orphan Review
+                """,
+            )
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".claude/skills/orphan-review/SKILL.md", result.stdout)
+        self.assertIn("source-of-truth", result.stdout)
+        self.assertIn("internal-skills/orphan-review/SKILL.md", result.stdout)
 
     def test_internal_claude_wrapper_must_point_to_shared_skill(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -240,7 +150,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
                 """
                 ---
                 name: internal-review
-                description: Use when checking Codex metadata parity for an internal skill.
+                description: Use when reviewing the internal authoring workflow.
                 ---
 
                 # Internal Review
@@ -257,30 +167,6 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("source-of-truth", result.stdout)
         self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
 
-    def test_internal_codex_wrapper_must_point_to_shared_skill(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".codex/agents/internal-review.toml",
-                '''
-                name = "internal-review"
-                description = "Use when checking Codex metadata parity for an internal skill."
-                sandbox_mode = "workspace-write"
-
-                developer_instructions = """
-                Read `.claude/skills/internal-review/SKILL.md` and follow it as the source of truth.
-                """
-                ''',
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".codex/agents/internal-review.toml", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
-
     def test_internal_skill_wrapper_is_keyed_by_directory_when_frontmatter_name_drifts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
@@ -290,7 +176,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
                 """
                 ---
                 name: drifted-internal
-                description: Use when checking Codex metadata parity for an internal skill.
+                description: Use when reviewing the internal authoring workflow.
                 ---
 
                 # Internal Review
@@ -302,13 +188,12 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
         self.assertIn("name", result.stdout)
-        self.assertNotIn(".codex/agents/drifted-internal.toml", result.stdout)
-        self.assertNotIn(".codex/agents/internal-review.toml :: source-of-truth", result.stdout)
+        self.assertNotIn(".claude/skills/internal-review/SKILL.md :: source-of-truth", result.stdout)
 
     def make_clean_fixture(self, repo: Path) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
         skill_description = "Use when checking runtime metadata parity for an example skill."
-        internal_description = "Use when checking Codex metadata parity for an internal skill."
+        internal_description = "Use when reviewing the internal authoring workflow."
         write(
             repo / ".claude-plugin/marketplace.json",
             f"""
@@ -338,24 +223,6 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
-            repo / "souroldgeezer-example/.codex-plugin/plugin.json",
-            f"""
-            {{
-              "name": "souroldgeezer-example",
-              "version": "0.1.0",
-              "description": "{plugin_description}",
-              "author": {{"name": "Sour Old Geezer", "email": "test@example.invalid"}},
-              "license": "MIT",
-              "skills": "./skills/",
-              "interface": {{
-                "displayName": "Sour Old Geezer Example",
-                "shortDescription": "Example parity checks.",
-                "defaultPrompt": ["Use example-skill."]
-              }}
-            }}
-            """,
-        )
-        write(
             repo / "souroldgeezer-example/skills/example-skill/SKILL.md",
             f"""
             ---
@@ -375,25 +242,6 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             ---
 
             Use the matching skill as source of truth.
-            """,
-        )
-        write(
-            repo / ".codex/agents/example-skill.toml",
-            f'''
-            name = "example-skill"
-            description = "{skill_description}"
-            sandbox_mode = "workspace-write"
-            ''',
-        )
-        write(
-            repo / "souroldgeezer-example/skills/example-skill/agents/openai.yaml",
-            f"""
-            interface:
-              display_name: "Example Skill"
-              short_description: "{skill_description}"
-              default_prompt: "Use example-skill."
-            policy:
-              allow_implicit_invocation: true
             """,
         )
         write(
@@ -442,18 +290,6 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             Read `internal-skills/internal-review/SKILL.md` and follow it as the
             source of truth.
             """,
-        )
-        write(
-            repo / ".codex/agents/internal-review.toml",
-            f'''
-            name = "internal-review"
-            description = "{internal_description}"
-            sandbox_mode = "workspace-write"
-
-            developer_instructions = """
-            Read `internal-skills/internal-review/SKILL.md` and follow it as the source of truth.
-            """
-            ''',
         )
 
 

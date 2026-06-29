@@ -17,15 +17,14 @@ changed=$(
     git -C "$repo_root" ls-files --others --exclude-standard
   } 2>/dev/null |
     awk '
-      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/|agents\/openai\.yaml$)/ { print; next }
+      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
       /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
       /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
-      /^souroldgeezer-[^/]+\/\.(claude-plugin|codex-plugin)\/plugin\.json$/ { print; next }
+      /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
       /^\.claude-plugin\/marketplace\.json$/ { print; next }
       /^internal-skills\/[^/]+\// { print; next }
       /^\.claude\/skills\/[^/]+\// { print; next }
-      /^\.codex\/agents\/[^/]+\.toml$/ { print; next }
-      /^(CLAUDE|AGENTS|README)\.md$/ { print; next }
+      /^(CLAUDE|README)\.md$/ { print; next }
     ' |
     sort -u
 )

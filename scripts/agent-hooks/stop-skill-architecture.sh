@@ -18,11 +18,10 @@ changed=$(
     awk '
       /^internal-skills\/[^/]+\// { print; next }
       /^\.claude\/skills\/[^/]+\// { print; next }
-      /^\.codex\/agents\/[^/]+\.toml$/ { print; next }
       /^\.claude-plugin\/marketplace\.json$/ { print; next }
       /^souroldgeezer-[^/]+\/skills\/[^/]+\// { print; next }
       /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
-      /^souroldgeezer-[^/]+\/\.(claude-plugin|codex-plugin)\/plugin\.json$/ { print; next }
+      /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
     ' |
     sort -u
 )
@@ -36,11 +35,10 @@ targets=$(
   awk -F/ '
     $1 == "internal-skills" && NF >= 2 { print "internal-skills/" $2 }
     $1 == ".claude" && $2 == "skills" && NF >= 3 { print ".claude/skills/" $3 }
-    $1 == ".codex" && $2 == "agents" { print "." }
     $1 == ".claude-plugin" && $2 == "marketplace.json" { print "." }
     $1 ~ /^souroldgeezer-/ && $2 == "skills" && NF >= 3 { print $1 "/skills/" $3 }
     $1 ~ /^souroldgeezer-/ && $2 == "agents" && NF >= 3 { print $1 }
-    $1 ~ /^souroldgeezer-/ && ($2 == ".claude-plugin" || $2 == ".codex-plugin") { print $1 }
+    $1 ~ /^souroldgeezer-/ && $2 == ".claude-plugin" { print $1 }
   ' <<<"$changed" |
     sort -u
 )

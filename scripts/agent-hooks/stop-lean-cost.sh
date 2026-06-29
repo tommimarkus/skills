@@ -7,7 +7,7 @@ set -euo pipefail
 # (it derives the repo root from payload.cwd). This wrapper only resolves the
 # in-repo guard path and passes stdin through. No once-per-session marker: the
 # guard is silent unless a fidelity floor is breached (block) or cost grows
-# (advisory). Identical command on Claude Code and Codex.
+# (advisory).
 
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 guard="$repo_root/souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py"

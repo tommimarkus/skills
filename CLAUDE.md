@@ -1,24 +1,22 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) and Codex when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this repo is
 
-A **Claude Code and Codex plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`) and is read by both runtimes — Codex reads this Claude-style marketplace directly, so do not duplicate it under `.agents/plugins/marketplace.json` unless a future design explicitly splits catalogs. Each published plugin carries both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
+A **Claude Code plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
 
 ## Runtime documentation cross-checks
 
-When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check **both** official runtime doc sets — a Codex-only or Claude-only reading is insufficient.
+When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check the official Claude Code doc set before relying on memory.
 
 - Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour.
-- Codex: [Plugins overview](https://developers.openai.com/codex/plugins), [Build plugins](https://developers.openai.com/codex/plugins/build), [Codex skills](https://developers.openai.com/codex/skills), and [Codex subagents](https://developers.openai.com/codex/subagents) (when editing `.codex/agents/*.toml`) — authority for `.codex-plugin/plugin.json`, Codex `interface` metadata, marketplace handling, per-skill `agents/openai.yaml`, how Codex activates bundled `skills/**/SKILL.md`, and project-scoped custom agents.
-- Keep `.claude-plugin/marketplace.json` as the single shared marketplace while Codex supports Claude-style marketplaces; do not add `.agents/plugins/marketplace.json` unless a future design splits catalogs.
-- Codex local refresh: `codex plugin marketplace upgrade <name>` refreshes Git-backed marketplaces but reports a local marketplace as not Git-backed. After local plugin source changes, refresh the changed plugin through the plugin browser, restart Codex, and verify the materialized cache path and bundled `skills/` directories.
-- Keep `.codex-plugin/plugin.json#interface.defaultPrompt` to at most three entries; Codex warns and ignores extras.
+- Keep `.claude-plugin/marketplace.json` as the single shared marketplace.
+- Local refresh: after local plugin source changes, refresh the changed plugin through `/plugin`, restart Claude Code if a session still shows an older materialized copy, and verify the installed cache path and bundled `skills/` directories.
 
-## Keeping CLAUDE.md, AGENTS.md, and README.md current (MUST)
+## Keeping CLAUDE.md and README.md current (MUST)
 
-**All three MUST be kept current as the repo evolves** — each is load-bearing, and stale guidance causes downstream bugs. Treat drift as a blocking bug; fix it in the same commit that introduced it. Before finishing any task that changes repo structure or a skill's contract, re-read all three and amend any section now wrong or incomplete.
+**Both MUST be kept current as the repo evolves** — each is load-bearing, and stale guidance causes downstream bugs. Treat drift as a blocking bug; fix it in the same commit that introduced it. Before finishing any task that changes repo structure or a skill's contract, re-read both and amend any section now wrong or incomplete.
 
 **CLAUDE.md** (audience: Claude Code authoring/editing skills here; first file Claude reads). Keep it lean — orientation + the cross-cutting MUST rules + the skills index and delegation map. Per-skill contract depth lives in each skill's own `SKILL.md`, never duplicated here. Update when:
 - a plugin is added/removed/renamed (→ "Directory layout", plugin references, "Published skills index");
@@ -34,15 +32,13 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
 - the local-development or validation workflow changes (→ "Local development" / "Validation");
 - a skill's audience-facing behaviour changes — new mode, output format, reference path (→ the "What this is" table and any "Examples" entry that shows it).
 
-**AGENTS.md** (audience: Codex and AGENTS.md-aware tooling). A thin pointer to this file, not a copy. Update only when Codex entrypoint rules change (marketplace location, Codex manifest requirements, structured-file tooling, the bundled-skills vs custom-agents boundary). Keep canonical details here.
-
 ## Skill architecture craft standard (MUST)
 
-For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, tool-specific runtime wrappers, and the README / CLAUDE / AGENTS sections describing them.
+For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, Claude Code skill wrappers, and the README / CLAUDE sections describing them.
 
 The standard is the first design input; the report is the repeatable check. Loading the standard only at closeout misses trigger precision, workflow shape, context discipline, runtime parity, and release-hygiene decisions made while changing the code. Before finishing, apply the standard and run `scripts/skill-architecture-report.sh` when available; if it cannot run, record why and what narrower verification was used.
 
-A repo `Stop` hook (`scripts/agent-hooks/stop-skill-architecture.sh`, registered in both `.claude/settings.json` and `.codex/hooks.json`) fires once per session when a skill/plugin/agent/manifest surface changes and prompts you to run `scripts/skill-architecture-report.sh` and address findings on the changed targets — the first-party replacement for the former external `plugin-eval` / `plugin-dev` evaluate-skill and plugin-validator hooks. A second `Stop` hook (`scripts/agent-hooks/stop-lean-cost.sh`) runs lean-audit's deterministic per-use cost/fidelity guard (`souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`); it is fail-open and silent unless a skill with a committed `tests/skill_load_cost/baselines/<skill>.json` floor regresses.
+A repo `Stop` hook (`scripts/agent-hooks/stop-skill-architecture.sh`, registered in `.claude/settings.json`) fires once per session when a skill/plugin/agent/manifest surface changes and prompts you to run `scripts/skill-architecture-report.sh` and address findings on the changed targets — the first-party replacement for the former external `plugin-eval` / `plugin-dev` evaluate-skill and plugin-validator hooks. A second `Stop` hook (`scripts/agent-hooks/stop-lean-cost.sh`) runs lean-audit's deterministic per-use cost/fidelity guard (`souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`); it is fail-open and silent unless a skill with a committed `tests/skill_load_cost/baselines/<skill>.json` floor regresses.
 
 Also read the affected skill's own `SKILL.md` (and its `references/` / `extensions/`) before scoping — that is the source of truth for its modes, owns/delegates, finding namespaces, and extension set. The "Published skills index" only orients you to which skill that is and how it hands off to others.
 
@@ -56,13 +52,13 @@ Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files (`
 
 Before committing, run `git ls-files -ci --exclude-standard`. The output must be empty unless the same task documents a deliberate, path-specific tracked exception. If it lists a tracked ignored path, uncommit it immediately with `git rm --cached -- <path>` (keeping the working-tree copy); don't defer cleanup.
 
-Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.codex/config.toml`, `.mcp.json` — are local-only by default.
+Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.mcp.json` — are local-only by default.
 
 ## Repo-local Python® tooling
 
 The public validation command is `scripts/skill-architecture-report.sh [repo-root]`, a thin `uv`-run wrapper around the Python® engine `scripts/skill_architecture_report.py`. It is tool-first: use its deterministic findings and JSON output to keep skill workflows thin, and reserve LLM judgment for explicit manual prompts the tool cannot decide. Use the repo-local `pyproject.toml` / `uv.lock` and a local `.venv/` from `uv venv`; do not commit `.venv/`.
 
-`pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` from the repo root, or via wrappers (such as `scripts/skill-architecture-report.sh`) that `cd` there first. Do not add `UV_CACHE_DIR=/tmp/codex-uv-cache` to plans or normal verification; confirm the repo-local cache with `uv cache dir` and override `UV_CACHE_DIR` only as a one-off fallback when the repo config isn't applied or the reported path isn't writable.
+`pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` from the repo root, or via wrappers (such as `scripts/skill-architecture-report.sh`) that `cd` there first. Do not add `UV_CACHE_DIR=/tmp/uv-cache` to plans or normal verification; confirm the repo-local cache with `uv cache dir` and override `UV_CACHE_DIR` only as a one-off fallback when the repo config isn't applied or the reported path isn't writable.
 
 Primary checks:
 
@@ -78,22 +74,21 @@ Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill
 
 ## Repo-internal skills
 
-The repo ships a small set of **internal** skills under `internal-skills/` — shared repo-scoped workflows, deliberately *not* bundled with the published `souroldgeezer-*` plugins. Keep shared workflow text, references, evals, fixtures, and helper material there. Tool-specific directories contain only tool-specific entrypoints: Claude Code auto-discovery wrappers live under `.claude/skills/<name>/SKILL.md`, and Codex project-scoped wrappers live under `.codex/agents/<name>.toml`. Every internal skill must have both wrappers pointing back to `internal-skills/<name>/SKILL.md`. They encode how *we* author this repo, not capabilities shipped downstream.
+The repo ships a small set of **internal** skills under `internal-skills/` — shared repo-scoped workflows, deliberately *not* bundled with the published `souroldgeezer-*` plugins. Keep shared workflow text, references, evals, fixtures, and helper material there. The Claude Code auto-discovery wrapper for each lives under `.claude/skills/<name>/SKILL.md` and holds only the entrypoint, pointing back to `internal-skills/<name>/SKILL.md`. They encode how *we* author this repo, not capabilities shipped downstream.
 
 `ip-hygiene` formerly lived here but is now a public skill in `souroldgeezer-audit` at [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md).
 
 Current internal skills:
 
-- **`github-issue-lifecycle`** at [internal-skills/github-issue-lifecycle/SKILL.md](internal-skills/github-issue-lifecycle/SKILL.md) — repo-local overlay for explicit GitHub™ issue lifecycle requests here. Composes the public `issue-ops` skill, the GitHub™ provider extension, and this repo's defaults (`ip-hygiene`, `.worktrees/**`, direct-main handling, skill-architecture verification, published-surface sync, lifecycle status, cleanup). Claude Code has a thin wrapper at [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md); Codex has a thin wrapper at [.codex/agents/github-issue-lifecycle.toml](.codex/agents/github-issue-lifecycle.toml).
-- **`lesson-capture`** at [internal-skills/lesson-capture/SKILL.md](internal-skills/lesson-capture/SKILL.md) — invoked by the `scripts/agent-hooks/stop-lesson-capture.sh` Stop hook, registered in both `.claude/settings.json` and `.codex/hooks.json`. The hook fires/prompts when a skill-authoring surface changes and asks `lesson-capture` to judge whether the session holds a reusable lesson; transcript correction phrases are hints, not the gate. Distills one generalizable, Layer-2 (developing-the-skills) lesson and stages it to the gitignored pending ledger (`scripts/lessons_ledger.py`, `.cache/lessons/pending.jsonl`) for later review. First step of the lesson-loop self-improvement system; capture only — graduation to committed rules is a separate flow. Claude Code has a thin wrapper at [.claude/skills/lesson-capture/SKILL.md](.claude/skills/lesson-capture/SKILL.md); Codex has a thin wrapper at [.codex/agents/lesson-capture.toml](.codex/agents/lesson-capture.toml).
-- **`lessons`** at [internal-skills/lessons/SKILL.md](internal-skills/lessons/SKILL.md) — the `/lessons` review surface for the lesson loop. On `main` only, lists pending captured candidates (`scripts/lessons_ledger.py list --pending`), and for each the user approves/edits/rejects; approved `prose`/`policy` lessons are placed in their docs, approved `deterministic` lessons become a `SAC-T#####` fixture case only when the engine already detects the smell (else recorded as engine work). Completes the capture → review → graduate loop. Every graduation passes a deterministic secret scan (`scripts/lessons_secret_scan.py`, the `DSO-POS-9` control); the `auto-approved` fast-path is gated by `auto_approve_eligible()` and defaults to denying all change-classes until a template-synthesizable fixture path exists (unattended auto-commit is parked). Claude Code has a thin wrapper at [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md); Codex has a thin wrapper at [.codex/agents/lessons.toml](.codex/agents/lessons.toml).
+- **`github-issue-lifecycle`** at [internal-skills/github-issue-lifecycle/SKILL.md](internal-skills/github-issue-lifecycle/SKILL.md) — repo-local overlay for explicit GitHub™ issue lifecycle requests here. Composes the public `issue-ops` skill, the GitHub™ provider extension, and this repo's defaults (`ip-hygiene`, `.worktrees/**`, direct-main handling, skill-architecture verification, published-surface sync, lifecycle status, cleanup). Claude Code has a thin wrapper at [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md).
+- **`lesson-capture`** at [internal-skills/lesson-capture/SKILL.md](internal-skills/lesson-capture/SKILL.md) — invoked by the `scripts/agent-hooks/stop-lesson-capture.sh` Stop hook, registered in `.claude/settings.json`. The hook fires/prompts when a skill-authoring surface changes and asks `lesson-capture` to judge whether the session holds a reusable lesson; transcript correction phrases are hints, not the gate. Distills one generalizable, Layer-2 (developing-the-skills) lesson and stages it to the gitignored pending ledger (`scripts/lessons_ledger.py`, `.cache/lessons/pending.jsonl`) for later review. First step of the lesson-loop self-improvement system; capture only — graduation to committed rules is a separate flow. Claude Code has a thin wrapper at [.claude/skills/lesson-capture/SKILL.md](.claude/skills/lesson-capture/SKILL.md).
+- **`lessons`** at [internal-skills/lessons/SKILL.md](internal-skills/lessons/SKILL.md) — the `/lessons` review surface for the lesson loop. On `main` only, lists pending captured candidates (`scripts/lessons_ledger.py list --pending`), and for each the user approves/edits/rejects; approved `prose`/`policy` lessons are placed in their docs, approved `deterministic` lessons become a `SAC-T#####` fixture case only when the engine already detects the smell (else recorded as engine work). Completes the capture → review → graduate loop. Every graduation passes a deterministic secret scan (`scripts/lessons_secret_scan.py`, the `DSO-POS-9` control); the `auto-approved` fast-path is gated by `auto_approve_eligible()` and defaults to denying all change-classes until a template-synthesizable fixture path exists (unattended auto-commit is parked). Claude Code has a thin wrapper at [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md).
 
-Add here when new internal skills appear. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `.claude-plugin/plugin.json` or `.codex-plugin/plugin.json`.
+Add here when new internal skills appear. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `.claude-plugin/plugin.json`.
 
 ## Directory layout
 
 ```
-AGENTS.md                              ← thin Codex-native pointer to CLAUDE.md
 docs/skill-architecture.md             ← canonical skill architecture craft standard
 scripts/skill-architecture-report.sh   ← craft-standard validation wrapper for agent iteration
 scripts/skill_architecture_report.py   ← Python® validation engine and JSON/Markdown reporter
@@ -103,8 +98,7 @@ tests/generate_skill_architecture_report_ledger.py ← deterministic 500+ case l
 pyproject.toml / uv.lock               ← uv-managed repo-local tooling project
 internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of truth
 .claude/skills/<name>/SKILL.md         ← Claude Code wrappers for repo-internal skills
-.codex/agents/*.toml                   ← project-scoped Codex wrappers for published and repo-internal skills
-.claude-plugin/marketplace.json        ← shared Claude Code + Codex marketplace manifest
+.claude-plugin/marketplace.json        ← shared Claude Code marketplace manifest
 souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
 souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy)
 souroldgeezer-audit/        ← published audit plugin (devsecops-audit, test-quality-audit, ip-hygiene, lean-audit)
@@ -113,11 +107,9 @@ souroldgeezer-design/       ← published design plugin (software-design, app-de
 souroldgeezer-architecture/ ← published architecture plugin (architecture-design)
 <plugin-name>/
   .claude-plugin/plugin.json           ← Claude Code plugin manifest
-  .codex-plugin/plugin.json            ← Codex plugin manifest (points at ./skills/)
   docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
   agents/<skill-name>.md               ← one Claude Code subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
-                     /agents/openai.yaml ← Codex per-skill UI metadata / invocation policy
                      /extensions/      ← per-stack packs (see below)
                      /references/      ← smell catalog + reusable procedures / scripts / packaged runtime artifacts where needed
                      /config.yaml      ← optional, skill-specific (not a Claude Code standard)
@@ -146,19 +138,17 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 
 Adding a new plugin:
 1. `<plugin-name>/.claude-plugin/plugin.json` (required `name`, `version`, `description`; `author: {name, email}` and `license: MIT` defaults from memory; start at the current CalVer stamp `YYYY.0M.0`, e.g. `2026.06.0`).
-2. `<plugin-name>/.codex-plugin/plugin.json` with the same `name` / `version` / `description` / `author` / `license`, plus `"skills": "./skills/"` and Codex `interface` metadata (`interface.defaultPrompt` ≤ three entries; omit `apps` / `mcpServers` unless the plugin ships them).
-3. For each bundled skill, `skills/<skill>/agents/openai.yaml` with Codex UI metadata and invocation policy.
-4. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `version`, `description`) — this one marketplace is shared by both runtimes.
-5. `name` / `description` / `version` must stay in sync across both manifests and `marketplace.json#plugins[]` — every re-stamp updates all three in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
+2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `version`, `description`).
+3. `name` / `description` / `version` must stay in sync across the manifest and `marketplace.json#plugins[]` — every re-stamp updates both cells in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
 
 ## Plugin versioning (MUST)
 
-Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. A stamp always pairs with the content change that required it, and both plugin manifests (`.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`) and the `marketplace.json#plugins[]` entry move together as one stamp. **Where that stamp lands depends on where the work happens:**
+Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. A stamp always pairs with the content change that required it, and the plugin manifest (`.claude-plugin/plugin.json`) and the `marketplace.json#plugins[]` entry move together as one stamp. **Where that stamp lands depends on where the work happens:**
 
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell. At integration, get the correct next stamp with `uv run python scripts/version_stamp.py compute --plugin <name>` and apply it to all four cells in the integration commit.
+Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell. At integration, get the correct next stamp with `uv run python scripts/version_stamp.py compute --plugin <name>` and apply it to all three cells in the integration commit.
 
 **Stamp mechanics:**
 - Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version.
@@ -176,8 +166,8 @@ Before integrating a worktree, run `uv run python scripts/version_stamp.py guard
 **No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
 
 **Sibling-file sync** (one commit — the stamp's landing commit; the integration commit on `main` for worktree work):
-- `.claude-plugin/plugin.json#version`, `.codex-plugin/plugin.json#version`, `marketplace.json#plugins[].version`, and the plugin's `README.md` version-table cell — always all four; the README cell must equal the manifest version per plugin.
-- the three `#description` fields — when the change alters the plugin's surface (new skill, new mode).
+- `.claude-plugin/plugin.json#version`, `marketplace.json#plugins[].version`, and the plugin's `README.md` version-table cell — always all three; the README cell must equal the manifest version per plugin.
+- the two `#description` fields (the manifest and the marketplace entry) — when the change alters the plugin's surface (new skill, new mode).
 - `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").
 - `README.md` and `CLAUDE.md` — per the currency rule above; one commit.
 
@@ -203,7 +193,7 @@ Skills here follow a recurring shape. Understand it before editing any SKILL.md:
 
 Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md` — a thin one-shot wrapper that invokes the skill via the `Skill` tool, follows its instructions, and presents results in the skill's required shape. Frontmatter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
 
-Codex doesn't consume these plugin-root `agents/*.md` files; its installable-plugin parity is the bundled skills plus `skills/<skill>/agents/openai.yaml`, with project-scoped wrappers in `.codex/agents/*.toml` that point back to the matching skill and don't duplicate reference prose. When editing a skill's invocation contract (output format, required footer fields), update all three together: `SKILL.md`, the Claude Code subagent, and the Codex wrapper / `openai.yaml`.
+When editing a skill's invocation contract (output format, required footer fields), update both together: `SKILL.md` and the Claude Code subagent.
 
 ## Published skills index
 
@@ -239,6 +229,3 @@ Design and audit skills share the Build / Extract / Review / Lookup (design) and
 
 - `skills/<skill>/config.yaml` — skill-internal, not read by the Claude Code runtime. Safe to leave alone when editing plugin metadata.
 - `skills/<skill>/extensions/` and `references/` — skill-internal supporting files (docs allow arbitrary files beside `SKILL.md`), not a Claude Code feature. Executable helpers under `references/scripts/` are bundled resources the skill invokes, not runtime-discovered commands.
-- `.codex-plugin/plugin.json` — Codex packaging metadata, not read by Claude Code. Keep it synced with the Claude Code manifest and marketplace entry.
-- `skills/<skill>/agents/openai.yaml` — Codex per-skill UI metadata / invocation policy, not read by Claude Code.
-- `.codex/agents/*.toml` — project-scoped Codex custom agents, not plugin-bundled and not read by Claude Code.

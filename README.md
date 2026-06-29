@@ -1,6 +1,6 @@
 # souroldgeezer
 
-Claude Code and Codex plugin marketplace by Sour Old Geezer. This repository
+Claude Code™ plugin marketplace by Sour Old Geezer. This repository
 is the marketplace source and published plugin tree.
 
 ## What this is
@@ -16,8 +16,6 @@ The repo currently ships five plugins:
 | `souroldgeezer-ops` | `2026.06.0` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
 ## Install
-
-### Claude Code
 
 Add the shared marketplace, then install the plugins you want:
 
@@ -50,42 +48,11 @@ For local development, point Claude at the clone instead:
 }
 ```
 
-### Codex
-
-Codex reads the same shared marketplace at `.claude-plugin/marketplace.json`.
-Add the marketplace, then install or enable the plugins from the plugin
-browser:
-
-```text
-codex plugin marketplace add tommimarkus/skills
-codex
-/plugins
-```
-
-For local development, point Codex at the clone and refresh the installed copy
-after changing plugin sources:
-
-```text
-codex plugin marketplace add /absolute/path/to/skills
-codex
-/plugins
-```
-
-After local plugin changes, restart Codex and reinstall the changed plugin from
-`/plugins` if the session still shows an older materialized copy. `codex plugin
-marketplace upgrade <name>` refreshes Git-backed marketplaces, not local clone
-sources. Verify the installed cache under
-`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/` and confirm the
-expected `skills/` directories are present.
-
-Keep `.codex-plugin/plugin.json#interface.defaultPrompt` to three or fewer
-entries.
-
 ## Local development
 
 - Keep `.claude-plugin/marketplace.json` as the shared marketplace.
-- Keep each plugin's Claude and Codex manifests synchronized on `name`,
-  `version`, and `description`.
+- Keep each plugin's `.claude-plugin/plugin.json` manifest synchronized with its
+  marketplace entry on `name`, `version`, and `description`.
 - `architecture-design` resolves its Dediren runtime from GitHub™ Releases into
   `.cache/dediren/releases/`; do not commit that cache. The current Dediren
   bundle is Java™-backed and needs Java™ 21 or newer for runtime checks.

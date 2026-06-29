@@ -310,7 +310,7 @@ def path_captures(pattern: str, path: str) -> dict | None:
 
 
 BUILTIN_CARVE_OUTS = (("{plugin}/skills/{skill}/SKILL.md", "{plugin}/agents/{skill}.md"),)
-BUILTIN_EXEMPT = (".claude/skills/**", ".codex/agents/**")
+BUILTIN_EXEMPT = (".claude/skills/**",)
 
 
 def _pair_matches(a: str, b: str, x: str, y: str) -> bool:

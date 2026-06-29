@@ -20,16 +20,14 @@ class AppDesignReactNextExtensionSurfaceTest(unittest.TestCase):
     def test_app_design_loads_react_and_nextjs_extensions(self) -> None:
         skill = read(f"{APP_SKILL}/SKILL.md")
         readme = read(f"{APP_SKILL}/extensions/README.md")
-        openai = read(f"{APP_SKILL}/agents/openai.yaml")
         claude_agent = read("souroldgeezer-design/agents/app-design.md")
-        codex_agent = read(".codex/agents/app-design.toml")
 
         self.assertIn("extensions/react.md", skill)
         self.assertIn("extensions/nextjs.md", skill)
         self.assertIn("load it after the React extension", skill)
         self.assertIn("react.md", readme)
         self.assertIn("nextjs.md", readme)
-        for text in (skill, openai, claude_agent, codex_agent):
+        for text in (skill, claude_agent):
             self.assertIn("React", text)
             self.assertIn("Next.js", text)
 

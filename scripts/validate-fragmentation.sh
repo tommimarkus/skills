@@ -43,7 +43,6 @@ validate_marketplace_paths() {
 
     test -d "$plugin_dir"
     test -f "$plugin_dir/.claude-plugin/plugin.json"
-    test -f "$plugin_dir/.codex-plugin/plugin.json"
     test -d "$plugin_dir/skills"
   done
 
@@ -54,7 +53,6 @@ validate_plugin_manifests() {
   jq -c '.plugins[]' .claude-plugin/marketplace.json | while IFS= read -r plugin; do
     plugin_dir="$(jq -r '.source | sub("^./"; "")' <<<"$plugin")"
     claude_manifest="$plugin_dir/.claude-plugin/plugin.json"
-    codex_manifest="$plugin_dir/.codex-plugin/plugin.json"
 
     jq -e '
       type == "object" and
@@ -64,23 +62,6 @@ validate_plugin_manifests() {
       (.author | type == "object") and
       (.license | type == "string")
     ' "$claude_manifest" >/dev/null
-
-    jq -e '
-      type == "object" and
-      (.name | type == "string") and
-      (.version | type == "string") and
-      (.description | type == "string") and
-      (.skills == "./skills/") and
-      (.interface | type == "object") and
-      (.interface.defaultPrompt | type == "array") and
-      (.interface.defaultPrompt | length <= 3)
-    ' "$codex_manifest" >/dev/null
-
-    jq -s -e '
-      .[0].name == .[1].name and
-      .[0].version == .[1].version and
-      .[0].description == .[1].description
-    ' "$claude_manifest" "$codex_manifest" >/dev/null
 
     jq -n -e \
       --argjson marketplace "$plugin" \

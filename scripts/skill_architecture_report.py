@@ -7,7 +7,6 @@ import os
 import re
 import sys
 import tempfile
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -29,7 +28,6 @@ REPLACEMENT_LEDGER_REL = "tests/skill_architecture_report_ledger.jsonl"
 MIN_REPLACEMENT_CASES = 500
 MIN_AUTOMATED_RECALL = 90.0
 MAX_CLAUDE_AGENT_BODY_CHARS = 6000
-MAX_CODEX_AGENT_INSTRUCTIONS_CHARS = 3000
 SEVERITY_WEIGHTS = {
     "blocker": 13.0,
     "high": 8.0,
@@ -114,7 +112,6 @@ class Finding:
     evidence: str
     rule: str
     claude_impact: str
-    codex_impact: str
     action: str
     verify: str = RERUN_COMMAND
 
@@ -419,15 +416,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Use synthetic or originally paraphrased eval cases and record source handling.",
         ),
         Rule(
-            "SAC-RUNTIME-MISSING-OPENAI",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("published-skill-without-openai-yaml", "published-skill-with-openai-yaml"),
-            "Add agents/openai.yaml that matches the skill purpose and trigger boundaries.",
-        ),
-        Rule(
             "SAC-RUNTIME-NAME-DRIFT",
             "Runtime Parity",
             "high",
@@ -446,31 +434,13 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Fix JSON syntax, then rerun the report.",
         ),
         Rule(
-            "SAC-RUNTIME-DEFAULT-PROMPTS",
-            "Runtime Parity",
-            "medium",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("four-default-prompts", "three-default-prompts"),
-            "Reduce defaultPrompt to the highest-value three prompts and keep remaining examples in docs or references.",
-        ),
-        Rule(
             "SAC-RUNTIME-MANIFEST-SYNC",
             "Runtime Parity",
             "high",
             "docs/skill-architecture.md#runtime-contract",
             "deterministic",
             ("manifest-name-version-description-drift", "manifest-surfaces-synchronized"),
-            "Synchronize plugin name, version, and description across Claude, Codex, and marketplace manifests.",
-        ),
-        Rule(
-            "SAC-RUNTIME-CODEX-SKILLS-PATH",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("missing-codex-skills-path", "codex-skills-path-present"),
-            "Set .codex-plugin/plugin.json skills to ./skills/ so Codex can load bundled skills.",
+            "Synchronize plugin name, version, and description across the Claude plugin and marketplace manifests.",
         ),
         Rule(
             "SAC-RUNTIME-MISSING-CLAUDE-AGENT",
@@ -480,15 +450,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "deterministic",
             ("published-skill-without-claude-agent", "published-skill-with-claude-agent"),
             "Add the matching plugin-root Claude Code subagent for this published skill.",
-        ),
-        Rule(
-            "SAC-RUNTIME-MISSING-CODEX-AGENT",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("published-skill-without-codex-agent", "published-skill-with-codex-agent"),
-            "Add the matching project-scoped Codex custom agent for this published skill.",
         ),
         Rule(
             "SAC-RUNTIME-CLAUDE-AGENT-NAME-DRIFT",
@@ -518,24 +479,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Make the Claude Code subagent description mirror the skill description.",
         ),
         Rule(
-            "SAC-RUNTIME-CODEX-AGENT-MISSING-SKILL-SOURCE",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("codex-agent-without-skill-source", "codex-agent-uses-skill-source"),
-            "Make the Codex custom agent point to the matching skill as its source of truth.",
-        ),
-        Rule(
-            "SAC-RUNTIME-CODEX-AGENT-MISSING-FOOTER",
-            "Runtime Parity",
-            "medium",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("codex-agent-without-footer-contract", "codex-agent-preserves-footer-contract"),
-            "Make the Codex custom agent preserve the skill's footer disclosure contract.",
-        ),
-        Rule(
             "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
             "Runtime Parity",
             "high",
@@ -543,24 +486,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "deterministic",
             ("runtime-wrapper-duplicates-workflow", "runtime-wrapper-routes-to-skill"),
             "Shrink runtime wrappers to routing instructions and keep the full workflow in SKILL.md.",
-        ),
-        Rule(
-            "SAC-RUNTIME-OPENAI-NAME-DRIFT",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("openai-yaml-name-drift", "openai-yaml-name-matches-skill"),
-            "Make agents/openai.yaml name match the skill directory name.",
-        ),
-        Rule(
-            "SAC-RUNTIME-OPENAI-DESC-DRIFT",
-            "Runtime Parity",
-            "medium",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("openai-yaml-description-drift", "openai-yaml-description-matches-skill"),
-            "Make agents/openai.yaml description match the skill description when that field is present.",
         ),
         Rule(
             "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST",
@@ -572,15 +497,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Add the missing .claude-plugin/plugin.json or remove the stale marketplace entry.",
         ),
         Rule(
-            "SAC-RUNTIME-MISSING-CODEX-MANIFEST",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("marketplace-entry-without-codex-manifest", "marketplace-entry-with-codex-manifest"),
-            "Add the missing .codex-plugin/plugin.json or document why the plugin is not Codex-visible.",
-        ),
-        Rule(
             "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
             "Runtime Parity",
             "high",
@@ -590,22 +506,13 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Add the plugin to .claude-plugin/marketplace.json or remove the orphan manifests.",
         ),
         Rule(
-            "SAC-DOC-SPLIT-MARKETPLACE",
-            "Repo Guidance Drift",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "deterministic",
-            ("split-marketplace-catalog", "shared-marketplace-only"),
-            "Remove the split catalog or document the explicit split decision in canonical repo guidance.",
-        ),
-        Rule(
             "SAC-DOC-MISSING-ENTRYPOINT",
             "Repo Guidance Drift",
             "low",
             "docs/skill-architecture.md#advisory-report-contract",
             "deterministic",
-            ("missing-agents-or-claude-md", "both-entrypoints-present"),
-            "Add the missing entrypoint or document why this fixture/repo is intentionally partial.",
+            ("missing-claude-md", "claude-md-present"),
+            "Add the missing CLAUDE.md or document why this fixture/repo is intentionally partial.",
         ),
         Rule(
             "SAC-MANUAL-TASK-VALUE-LIFT",
@@ -624,15 +531,6 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "manual-prompt",
             ("review-hard-gates-vs-judgment-zones",),
             "Ask whether mandatory language is reserved for hard gates and judgment remains where needed.",
-        ),
-        Rule(
-            "SAC-MANUAL-RUNTIME-PARITY-SEMANTICS",
-            "Runtime Parity",
-            "high",
-            "docs/skill-architecture.md#runtime-contract",
-            "manual-prompt",
-            ("compare-claude-codex-user-facing-capability",),
-            "Compare runtime metadata semantically after deterministic sync checks pass.",
         ),
         Rule(
             "SAC-MANUAL-IP-HANDOFF",
@@ -734,14 +632,10 @@ def make_finding(
     action: str,
     verify: str = RERUN_COMMAND,
 ) -> Finding:
-    claude_impact = impact
-    codex_impact = impact
     if code == "SAC-TRIGGER-DESC-LENGTH":
         claude_impact = "Overlong descriptions make Claude trigger matching noisier."
-        codex_impact = "Codex may reject or truncate overlong skill metadata."
     else:
-        claude_impact = claude_impact.replace("Claude/Codex", "Claude")
-        codex_impact = codex_impact.replace("Claude/Codex", "Codex")
+        claude_impact = impact.replace("Claude", "Claude")
 
     if "$repo_root" in verify:
         verify = RERUN_COMMAND
@@ -754,7 +648,6 @@ def make_finding(
         evidence=normalize_field(evidence),
         rule=normalize_field(violated_rule),
         claude_impact=normalize_field(claude_impact),
-        codex_impact=normalize_field(codex_impact),
         action=normalize_field(action),
         verify=normalize_field(verify),
     )
@@ -806,17 +699,6 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, str], str]:
     return values, body
 
 
-def parse_simple_metadata(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.is_file():
-        return values
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"^([A-Za-z0-9_-]+):(?:\s*(.*))?$", line)
-        if match:
-            values[match.group(1)] = (match.group(2) or "").strip().strip('"').strip("'")
-    return values
-
-
 def load_json(path: Path) -> tuple[dict | None, str | None]:
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
@@ -824,16 +706,6 @@ def load_json(path: Path) -> tuple[dict | None, str | None]:
         return None, str(error)
     if not isinstance(parsed, dict):
         return None, "top-level JSON value is not an object"
-    return parsed, None
-
-
-def load_toml(path: Path) -> tuple[dict | None, str | None]:
-    try:
-        parsed = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as error:
-        return None, str(error)
-    if not isinstance(parsed, dict):
-        return None, "top-level TOML value is not a table"
     return parsed, None
 
 
@@ -910,17 +782,6 @@ def find_skill_files(repo_root: Path) -> list[str]:
         if re.search(r"(^|/)skills/[^/]+/SKILL\.md$", rel):
             skill_files.add(rel)
     return sorted(skill_files)
-
-
-def find_codex_plugins(repo_root: Path) -> list[str]:
-    plugins: list[str] = []
-    for path in repo_root.rglob("plugin.json"):
-        rel = path.relative_to(repo_root)
-        if path_is_ignored(rel):
-            continue
-        if rel.parts[-2:] == (".codex-plugin", "plugin.json"):
-            plugins.append(relpath(repo_root, path))
-    return sorted(plugins)
 
 
 def markdown_links(text: str) -> Iterable[str]:
@@ -1209,7 +1070,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                 f"{skill.skill_dir}/references/evals",
                 f"behavioral evidence exists but {skill.rel} has no references/evals or source-grounding load cue",
                 "Behavioral evidence should be discoverable from SKILL.md with explicit load conditions.",
-                "Claude/Codex may miss eval evidence during skill changes and preserve untested trigger or workflow behavior.",
+                "Claude may miss eval evidence during skill changes and preserve untested trigger or workflow behavior.",
                 "Mention eval artifacts from SKILL.md with explicit load conditions.",
             )
         )
@@ -1226,7 +1087,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                     relpath(repo_root, trigger_path),
                     "; ".join(schema_issues[:4]),
                     "Trigger eval packs should contain JSONL positive and negative activation cases with source-hygiene fields.",
-                    "Claude/Codex trigger tuning may improve recall while missing false positives or copying unsafe prompt text.",
+                    "Claude trigger tuning may improve recall while missing false positives or copying unsafe prompt text.",
                     "Fix trigger eval JSONL so it has positive and negative cases plus source-hygiene fields.",
                 )
             )
@@ -1239,7 +1100,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                     relpath(repo_root, trigger_path),
                     "; ".join(ip_issues[:4]),
                     "Eval artifacts should use synthetic or originally paraphrased cases and record source handling.",
-                    "Claude/Codex may propagate third-party prompt text or examples into the shipped plugin bundle.",
+                    "Claude may propagate third-party prompt text or examples into the shipped plugin bundle.",
                     "Use synthetic or originally paraphrased eval cases and record source handling.",
                 )
             )
@@ -1256,7 +1117,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                     relpath(repo_root, behavior_path),
                     "; ".join(schema_issues[:4]),
                     "Behavior eval packs should state expected artifacts, required checks, forbidden behaviors, and a grader.",
-                    "Claude/Codex may pass superficial evals that do not prove the workflow changed behavior.",
+                    "Claude may pass superficial evals that do not prove the workflow changed behavior.",
                     "Fix behavior eval JSONL so each case states expected artifacts, required checks, forbidden behaviors, and a grader.",
                 )
             )
@@ -1269,7 +1130,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                     relpath(repo_root, behavior_path),
                     "; ".join(ip_issues[:4]),
                     "Eval artifacts should use synthetic or originally paraphrased cases and record source handling.",
-                    "Claude/Codex may propagate third-party prompt text or examples into the shipped plugin bundle.",
+                    "Claude may propagate third-party prompt text or examples into the shipped plugin bundle.",
                     "Use synthetic or originally paraphrased eval cases and record source handling.",
                 )
             )
@@ -1283,7 +1144,7 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
                 skill.rel,
                 "high-risk audit/review skill lacks explicit false-positive, confidence, unsupported-evidence, or honest-limits gate",
                 "High-risk skills should force agents to reject plausible but unsupported findings.",
-                "Claude/Codex may overstate security, audit, review, or test-quality claims without enough evidence.",
+                "Claude may overstate security, audit, review, or test-quality claims without enough evidence.",
                 "Add explicit false-positive, false-negative, confidence, or unsupported-evidence gates.",
             )
         )
@@ -1293,23 +1154,6 @@ def scan_behavioral_evidence(repo_root: Path, skill: SkillFile, full_text: str) 
 
 def frontmatter_tools_include_skill(tools: str) -> bool:
     return any(part.strip() == "Skill" for part in re.split(r"[,|\s]+", tools) if part.strip())
-
-
-def codex_agent_points_to_skill(instructions: str, skill_name: str) -> bool:
-    return bool(
-        re.search(rf"\buse the {re.escape(skill_name)} skill as the source of truth\b", instructions, re.I)
-        or re.search(rf"\b(activate|read|invoke).*{re.escape(skill_name)} skill", instructions, re.I)
-    )
-
-
-def codex_agent_preserves_footer(instructions: str) -> bool:
-    return bool(
-        re.search(
-            r"\b(footer disclosure|disclosure footer|footer|extensions loaded|mcp availability|reference path)\b",
-            instructions,
-            re.I,
-        )
-    )
 
 
 def wrapper_workflow_duplication_markers(text: str) -> list[str]:
@@ -1348,7 +1192,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 f"description length={len(skill.description)} characters",
                 "Frontmatter description must stay at or below 1024 characters.",
-                "Codex may reject or truncate overlong metadata; Claude trigger matching also gets noisier.",
+                "Overlong metadata can be truncated and makes Claude trigger matching noisier.",
                 "Shorten the description and front-load the concrete trigger plus boundary context.",
             )
         )
@@ -1376,7 +1220,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 f"description contains aggressive trigger wording: {skill.description[:180]}",
                 "Triggers should be specific enough to stay quiet for near-miss prompts.",
-                "Claude/Codex may over-trigger this skill and consume context before the right workflow is selected.",
+                "Claude may over-trigger this skill and consume context before the right workflow is selected.",
                 "Replace broad imperative trigger wording with concrete task contexts and negative boundaries.",
             )
         )
@@ -1395,7 +1239,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 f"description contains workflow or vague shortcut wording: {skill.description[:180]}",
                 "Trigger metadata should select the skill, not compress the workflow or advertise generic help.",
-                "Claude/Codex may skip the loaded workflow or over-trigger on broad nearby tasks.",
+                "Claude may skip the loaded workflow or over-trigger on broad nearby tasks.",
                 "Move workflow-step sequences out of trigger metadata and into SKILL.md.",
             )
         )
@@ -1423,7 +1267,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no clear stop or escalation condition matched",
                 "Agentic workflows should state when to stop, ask, or fail instead of guessing.",
-                "Claude/Codex may continue past uncertainty, over-edit, or silently skip required evidence.",
+                "Claude may continue past uncertainty, over-edit, or silently skip required evidence.",
                 "Add explicit stop conditions for blockers, ambiguity, and verification failure.",
             )
         )
@@ -1437,7 +1281,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no concrete output contract matched",
                 "Skills should define the shape of the agent's result, not just activities to perform.",
-                "Claude/Codex may produce inconsistent responses that are hard to compare across iterations.",
+                "Claude may produce inconsistent responses that are hard to compare across iterations.",
                 "Add a short output contract naming required sections or fields for the final response.",
             )
         )
@@ -1451,7 +1295,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no explicit input, target, evidence, or pre-flight contract matched",
                 "Skills should name the inputs or evidence an agent must inspect before acting.",
-                "Claude/Codex may start from assumptions instead of checking the real target surface.",
+                "Claude may start from assumptions instead of checking the real target surface.",
                 "Add an explicit input or evidence contract so agents know what to inspect before acting.",
             )
         )
@@ -1465,7 +1309,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no evidence, citation, inspected-source, or verification-layer contract matched",
                 "Skills should define how outputs prove what evidence was inspected.",
-                "Claude/Codex may produce plausible findings without enough traceability for review.",
+                "Claude may produce plausible findings without enough traceability for review.",
                 "Add an evidence or citation contract so outputs show what was inspected.",
             )
         )
@@ -1479,7 +1323,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no ask-vs-continue rule matched",
                 "Skills should say when ambiguity, missing inputs, or scope uncertainty require asking.",
-                "Claude/Codex may proceed through uncertainty or ask when the workflow already has a safe default.",
+                "Claude may proceed through uncertainty or ask when the workflow already has a safe default.",
                 "Add ask-vs-continue rules for ambiguity, missing inputs, and scope uncertainty.",
             )
         )
@@ -1493,7 +1337,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "no rerun or validation loop matched",
                 "Skills should tell agents how to verify and repeat after edits.",
-                "Claude/Codex may stop after a plausible edit without proving the workflow still works.",
+                "Claude may stop after a plausible edit without proving the workflow still works.",
                 "Add exact validation or rerun guidance near the workflow's completion criteria.",
             )
         )
@@ -1507,7 +1351,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 "body uses generic coding-agent sequence instead of skill-specific decision steps",
                 "A skill should change decisions or catch failures a generic agent would miss.",
-                "Claude/Codex may spend context loading a skill that adds no task-specific lift.",
+                "Claude may spend context loading a skill that adds no task-specific lift.",
                 "Replace generic coding-agent instructions with domain-specific decisions, checks, or stop gates.",
             )
         )
@@ -1522,7 +1366,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 f"{len(broad_must_lines)} broad 'you must' lines matched",
                 "Mandatory language should be reserved for hard gates rather than broad behavior control.",
-                "Claude/Codex may follow rigid instructions when judgment or user clarification is required.",
+                "Claude may follow rigid instructions when judgment or user clarification is required.",
                 "Reserve mandatory language for hard gates and leave judgment zones explicit.",
             )
         )
@@ -1550,7 +1394,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 skill.rel,
                 f"support path loaded without a condition: {support_load}",
                 "Support files should be loaded through explicit task or target conditions.",
-                "Claude/Codex may load heavy references unnecessarily or miss the intended decision point.",
+                "Claude may load heavy references unnecessarily or miss the intended decision point.",
                 "Add a concrete load condition for referenced support material.",
             )
         )
@@ -1567,7 +1411,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                     skill.rel,
                     f"broken one-hop link target={link}",
                     "Support-file links from SKILL.md must resolve deterministically in local repo use.",
-                    "Claude/Codex will fail or hallucinate missing procedure content during iterative improvement.",
+                    "Claude will fail or hallucinate missing procedure content during iterative improvement.",
                     "Fix the link target or remove the stale reference from the skill body.",
                 )
             )
@@ -1604,7 +1448,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 f"{skill.skill_dir}/{support_bucket}",
                 f"{len(unadvertised[support_bucket])} support file(s) not mentioned from {skill.rel}; examples: {examples}",
                 "One-hop knowledge should be advertised with load conditions from SKILL.md.",
-                "Claude/Codex may never discover useful support material or may load it at the wrong time.",
+                "Claude may never discover useful support material or may load it at the wrong time.",
                 "Mention this support area from SKILL.md with a precise condition, or remove it if obsolete.",
             )
         )
@@ -1640,7 +1484,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 fixture_rel,
                 f"fixture not advertised from {skill.rel}",
                 "Fixtures should be discoverable from the always-loaded workflow with their validation purpose.",
-                "Claude/Codex may miss regression cases or invent ad hoc examples instead of using the bundled fixture.",
+                "Claude may miss regression cases or invent ad hoc examples instead of using the bundled fixture.",
                 "Mention the fixture from SKILL.md with its validation condition or remove the stale fixture.",
             )
         )
@@ -1657,7 +1501,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 template_rel,
                 f"template not advertised from {skill.rel}",
                 "Templates should be discoverable from the always-loaded workflow with a use condition.",
-                "Claude/Codex may invent output shape instead of using the bundled template.",
+                "Claude may invent output shape instead of using the bundled template.",
                 "Mention the template from SKILL.md with its use condition or remove the unused template.",
             )
         )
@@ -1674,22 +1518,8 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                 asset_rel,
                 f"asset not advertised from {skill.rel}",
                 "Skill assets should be discoverable from SKILL.md with their use condition.",
-                "Claude/Codex may ignore required bundled material or use it outside the intended context.",
+                "Claude may ignore required bundled material or use it outside the intended context.",
                 "Mention the asset from SKILL.md with its use condition or remove the unused asset.",
-            )
-        )
-
-    if skill.scope == "published" and not (repo_root / skill.skill_dir / "agents/openai.yaml").is_file():
-        findings.append(
-            make_finding(
-                "Runtime Parity",
-                "high",
-                "SAC-RUNTIME-MISSING-OPENAI",
-                skill.rel,
-                f"missing {skill.skill_dir}/agents/openai.yaml",
-                "Published plugin skills should include basic Codex metadata next to the shared skill.",
-                "Claude may have usable subagent guidance while Codex lacks equivalent skill metadata.",
-                "Add agents/openai.yaml that matches the skill purpose and trigger boundaries.",
             )
         )
 
@@ -1698,8 +1528,6 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
         plugin_dir = plugin_dir_from_skill_dir(skill.skill_dir)
         agent_rel = f"{plugin_dir}/agents/{expected_name}.md"
         agent_path = repo_root / agent_rel
-        codex_agent_rel = f".codex/agents/{expected_name}.toml"
-        codex_agent_path = repo_root / codex_agent_rel
         if not agent_path.is_file():
             findings.append(
                 make_finding(
@@ -1709,7 +1537,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                     skill.rel,
                     f"missing {agent_rel}",
                     "Published plugin skills should have matching plugin-root Claude Code subagents.",
-                    "Claude delegated workflows may be unavailable while Codex metadata exists.",
+                    "Claude delegated workflows may be unavailable without the matching subagent.",
                     "Add the matching plugin-root Claude Code subagent for this published skill.",
                 )
             )
@@ -1772,96 +1600,6 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                     )
                 )
 
-        if not codex_agent_path.is_file():
-            findings.append(
-                make_finding(
-                    "Runtime Parity",
-                    "high",
-                    "SAC-RUNTIME-MISSING-CODEX-AGENT",
-                    skill.rel,
-                    f"missing {codex_agent_rel}",
-                    "Published plugin skills should have matching project-scoped Codex custom agents in this repo.",
-                    "Codex delegated workflows may be unavailable even though Claude subagents exist.",
-                    "Add the matching project-scoped Codex custom agent for this published skill.",
-                )
-            )
-        else:
-            codex_agent, codex_agent_error = load_toml(codex_agent_path)
-            if codex_agent_error is None and codex_agent is not None:
-                instructions = str(codex_agent.get("developer_instructions", ""))
-                if not codex_agent_points_to_skill(instructions, expected_name):
-                    findings.append(
-                        make_finding(
-                            "Runtime Parity",
-                            "high",
-                            "SAC-RUNTIME-CODEX-AGENT-MISSING-SKILL-SOURCE",
-                            codex_agent_rel,
-                            "developer_instructions do not point to the matching skill as source of truth",
-                            "Codex custom agents should delegate the contract back to SKILL.md.",
-                            "Codex may drift from the shared skill workflow and duplicate stale procedure.",
-                            "Make the Codex custom agent point to the matching skill as its source of truth.",
-                        )
-                    )
-                if not codex_agent_preserves_footer(instructions):
-                    findings.append(
-                        make_finding(
-                            "Runtime Parity",
-                            "medium",
-                            "SAC-RUNTIME-CODEX-AGENT-MISSING-FOOTER",
-                            codex_agent_rel,
-                            "developer_instructions do not mention footer or disclosure requirements",
-                            "Codex custom agents should preserve the skill's output disclosure contract.",
-                            "Codex outputs may omit loaded extensions, MCP availability, cost stance, or reference path details.",
-                            "Make the Codex custom agent preserve the skill's footer disclosure contract.",
-                        )
-                    )
-                codex_duplication_markers = wrapper_workflow_duplication_markers(instructions)
-                if (
-                    len(instructions) > MAX_CODEX_AGENT_INSTRUCTIONS_CHARS
-                    and len(codex_duplication_markers) >= 4
-                ):
-                    findings.append(
-                        make_finding(
-                            "Runtime Parity",
-                            "high",
-                            "SAC-RUNTIME-WRAPPER-WORKFLOW-DUPLICATION",
-                            codex_agent_rel,
-                            f"Codex wrapper instructions length={len(instructions)} chars; workflow markers={', '.join(codex_duplication_markers[:8])}",
-                            "Runtime wrappers should launch or route to SKILL.md without embedding the full workflow.",
-                            "Codex custom agents may drift from the canonical shared skill behavior.",
-                            "Shrink the Codex wrapper to a router and keep detailed workflow rules in SKILL.md and one-hop references.",
-                        )
-                    )
-
-        openai_path = repo_root / skill.skill_dir / "agents/openai.yaml"
-        openai = parse_simple_metadata(openai_path)
-        if openai and "name" in openai and openai.get("name") != expected_name:
-            findings.append(
-                make_finding(
-                    "Runtime Parity",
-                    "high",
-                    "SAC-RUNTIME-OPENAI-NAME-DRIFT",
-                    f"{skill.skill_dir}/agents/openai.yaml",
-                    f"openai.yaml name={openai.get('name')}, directory={expected_name}",
-                    "Codex per-skill metadata name should match the skill directory.",
-                    "Codex may expose confusing skill names or lose parity with the bundled skill.",
-                    "Make agents/openai.yaml name match the skill directory name.",
-                )
-            )
-        if openai and "description" in openai and skill.description and openai.get("description") != skill.description:
-            findings.append(
-                make_finding(
-                    "Runtime Parity",
-                    "medium",
-                    "SAC-RUNTIME-OPENAI-DESC-DRIFT",
-                    f"{skill.skill_dir}/agents/openai.yaml",
-                    "openai.yaml description differs from SKILL.md description",
-                    "Codex per-skill metadata should describe the same trigger contract as the shared skill.",
-                    "Codex selection metadata may drift from the bundled workflow.",
-                    "Make agents/openai.yaml description match the skill description when that field is present.",
-                )
-            )
-
     if skill.name and "/skills/" in skill.rel:
         expected_name = Path(skill.skill_dir).name
         if skill.name != expected_name:
@@ -1873,61 +1611,11 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
                     skill.rel,
                     f"frontmatter name={skill.name}, directory={expected_name}",
                     "Skill name should match its directory for predictable runtime discovery.",
-                    "Claude/Codex may expose confusing names or fail parity checks.",
+                    "Claude may expose confusing names or fail parity checks.",
                     "Rename the directory or update frontmatter so both match.",
                 )
             )
 
-    return findings
-
-
-def scan_codex_plugin(repo_root: Path, rel: str) -> list[Finding]:
-    path = repo_root / rel
-    plugin, error = load_json(path)
-    if error is not None or plugin is None:
-        return [
-            make_finding(
-                "Runtime Parity",
-                "blocker",
-                "SAC-RUNTIME-PLUGIN-JSON",
-                rel,
-                f"json could not parse plugin.json: {error}",
-                "Plugin metadata must be valid JSON for both packaging and advisory checks.",
-                "Codex plugin discovery can fail before skills are visible.",
-                "Fix JSON syntax, then rerun the report.",
-            )
-        ]
-
-    findings: list[Finding] = []
-    if plugin.get("skills") != "./skills/":
-        findings.append(
-            make_finding(
-                "Runtime Parity",
-                "high",
-                "SAC-RUNTIME-CODEX-SKILLS-PATH",
-                rel,
-                f"skills={plugin.get('skills')!r}",
-                "Codex plugin manifests in this repo should point skills to ./skills/.",
-                "Codex may install the plugin without exposing bundled skills.",
-                "Set .codex-plugin/plugin.json skills to ./skills/ so Codex can load bundled skills.",
-            )
-        )
-
-    default_prompts = plugin.get("interface", {}).get("defaultPrompt", [])
-    prompt_count = len(default_prompts) if isinstance(default_prompts, list) else 0
-    if prompt_count > 3:
-        findings.append(
-            make_finding(
-                "Runtime Parity",
-                "medium",
-                "SAC-RUNTIME-DEFAULT-PROMPTS",
-                rel,
-                f"interface.defaultPrompt count={prompt_count}",
-                "Codex defaultPrompt arrays should contain three or fewer entries.",
-                "Extra Codex prompts are ignored or warned about, so advertised entrypoints drift from runtime truth.",
-                "Reduce defaultPrompt to the highest-value three prompts and keep remaining examples in docs or references.",
-            )
-        )
     return findings
 
 
@@ -2006,7 +1694,7 @@ def scan_plugin_reference_docs(repo_root: Path) -> list[Finding]:
                 doc_rel,
                 "plugin-level reference document is not mentioned by any owning skill workflow",
                 "Plugin-level reference documents should be explicitly selected by SKILL.md.",
-                "Claude/Codex may never load the bundled reference or may apply the skill without its canonical rubric.",
+                "Claude may never load the bundled reference or may apply the skill without its canonical rubric.",
                 "Mention the plugin-level reference document from the owning skill workflow or remove the stale document.",
             )
         )
@@ -2096,7 +1784,7 @@ def scan_private_plugin_root_references(repo_root: Path) -> list[Finding]:
                 reference_rel,
                 f"plugin-root reference is advertised only by {owner}",
                 "Skill-private support should live inside the owning skill directory so token cost and ownership stay visible.",
-                "Claude/Codex may miss ownership boundaries or load stale plugin-root material when only one skill can use it.",
+                "Claude may miss ownership boundaries or load stale plugin-root material when only one skill can use it.",
                 "Move this support under the owning skill's references/ tree, or document why it is shared plugin-level guidance.",
             )
         )
@@ -2118,7 +1806,7 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                 ".claude-plugin/marketplace.json",
                 f"json could not parse marketplace.json: {error}",
                 "Marketplace metadata must be valid JSON for advisory checks.",
-                "Claude/Codex marketplace discovery can fail before plugins are visible.",
+                "Claude marketplace discovery can fail before plugins are visible.",
                 "Fix JSON syntax, then rerun the report.",
             )
         ]
@@ -2137,35 +1825,22 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
             continue
         marketplace_sources.add(source)
         surfaces: dict[str, dict] = {"marketplace": entry}
-        for label, rel in (
-            ("claude", f"{source}/.claude-plugin/plugin.json"),
-            ("codex", f"{source}/.codex-plugin/plugin.json"),
-        ):
-            manifest_path = repo_root / rel
-            if not manifest_path.is_file():
-                code = (
-                    "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST"
-                    if label == "claude"
-                    else "SAC-RUNTIME-MISSING-CODEX-MANIFEST"
+        rel = f"{source}/.claude-plugin/plugin.json"
+        manifest_path = repo_root / rel
+        if not manifest_path.is_file():
+            findings.append(
+                make_finding(
+                    "Runtime Parity",
+                    "high",
+                    "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST",
+                    rel,
+                    f"marketplace entry source={source} has no {rel}",
+                    "Marketplace entries should resolve to the Claude plugin manifest in this repo.",
+                    "Claude marketplace discovery may fail during install.",
+                    "Add the missing .claude-plugin/plugin.json or remove the stale marketplace entry.",
                 )
-                action = (
-                    "Add the missing .claude-plugin/plugin.json or remove the stale marketplace entry."
-                    if label == "claude"
-                    else "Add the missing .codex-plugin/plugin.json or document why the plugin is not Codex-visible."
-                )
-                findings.append(
-                    make_finding(
-                        "Runtime Parity",
-                        "high",
-                        code,
-                        rel,
-                        f"marketplace entry source={source} has no {rel}",
-                        "Marketplace entries should resolve to both runtime plugin manifests in this repo.",
-                        "Claude/Codex marketplace discovery may expose only one runtime or fail during install.",
-                        action,
-                    )
-                )
-                continue
+            )
+        else:
             manifest, manifest_error = load_json(manifest_path)
             if manifest_error is not None or manifest is None:
                 findings.append(
@@ -2176,12 +1851,12 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                         rel,
                         f"json could not parse plugin.json: {manifest_error}",
                         "Plugin metadata must be valid JSON for runtime parity checks.",
-                        "Claude/Codex plugin discovery can fail before skills are visible.",
+                        "Claude plugin discovery can fail before skills are visible.",
                         "Fix JSON syntax, then rerun the report.",
                     )
                 )
-                continue
-            surfaces[label] = manifest
+            else:
+                surfaces["claude"] = manifest
 
         drift_fields = []
         for field in ("name", "version", "description"):
@@ -2196,9 +1871,9 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                     "SAC-RUNTIME-MANIFEST-SYNC",
                     source or f".claude-plugin/marketplace.json#plugins[{index}]",
                     "; ".join(drift_fields),
-                    "Plugin name, version, and description should stay synchronized across marketplace, Claude, and Codex manifests.",
-                    "Claude/Codex users may see different plugin identity or update surfaces.",
-                    "Synchronize plugin name, version, and description across Claude, Codex, and marketplace manifests.",
+                    "Plugin name, version, and description should stay synchronized across the marketplace and Claude manifests.",
+                    "Claude users may see different plugin identity or update surfaces.",
+                    "Synchronize plugin name, version, and description across the Claude plugin and marketplace manifests.",
                 )
             )
 
@@ -2207,7 +1882,7 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
         rel = manifest.relative_to(repo_root)
         if path_is_ignored(rel):
             continue
-        if rel.parts[-2:] not in {(".claude-plugin", "plugin.json"), (".codex-plugin", "plugin.json")}:
+        if rel.parts[-2:] != (".claude-plugin", "plugin.json"):
             continue
         if len(rel.parts) < 3:
             continue
@@ -2222,7 +1897,7 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                 source,
                 "plugin manifest exists but .claude-plugin/marketplace.json has no matching source entry",
                 "Published plugin manifests should be reachable from the shared marketplace.",
-                "Claude/Codex local marketplace users may never see or update the plugin.",
+                "Claude local marketplace users may never see or update the plugin.",
                 "Add the plugin to .claude-plugin/marketplace.json or remove the orphan manifests.",
             )
         )
@@ -2232,31 +1907,17 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
 
 def scan_repo_guidance(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
-    if (repo_root / ".agents/plugins/marketplace.json").exists():
-        findings.append(
-            make_finding(
-                "Repo Guidance Drift",
-                "high",
-                "SAC-DOC-SPLIT-MARKETPLACE",
-                ".agents/plugins/marketplace.json",
-                "secondary Codex marketplace catalog exists",
-                "This repo uses .claude-plugin/marketplace.json as the shared marketplace unless a design explicitly splits catalogs.",
-                "Claude/Codex package listings may drift and confuse local marketplace refreshes.",
-                "Remove the split catalog or document the explicit split decision in canonical repo guidance.",
-            )
-        )
-
-    if not (repo_root / "AGENTS.md").is_file() or not (repo_root / "CLAUDE.md").is_file():
+    if not (repo_root / "CLAUDE.md").is_file():
         findings.append(
             make_finding(
                 "Repo Guidance Drift",
                 "low",
                 "SAC-DOC-MISSING-ENTRYPOINT",
                 ".",
-                "AGENTS.md or CLAUDE.md is missing",
-                "Cross-runtime skill repos need explicit agent entrypoint guidance.",
-                "Claude/Codex contributors may apply inconsistent packaging and review rules.",
-                "Add the missing entrypoint or document why this fixture/repo is intentionally partial.",
+                "CLAUDE.md is missing",
+                "Skill repos need explicit agent entrypoint guidance.",
+                "Claude contributors may apply inconsistent packaging and review rules.",
+                "Add the missing CLAUDE.md or document why this fixture/repo is intentionally partial.",
             )
         )
     return findings
@@ -2266,8 +1927,6 @@ def collect_findings(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
     for skill_rel in find_skill_files(repo_root):
         findings.extend(scan_skill(repo_root, load_skill(repo_root, skill_rel)))
-    for plugin_rel in find_codex_plugins(repo_root):
-        findings.extend(scan_codex_plugin(repo_root, plugin_rel))
     findings.extend(scan_plugin_reference_docs(repo_root))
     findings.extend(scan_private_plugin_root_references(repo_root))
     findings.extend(scan_manifest_sync(repo_root))
@@ -2316,7 +1975,6 @@ def skill_description_from_fixture(skill_path: Path) -> str:
 
 def make_replacement_fixture(repo: Path, case: dict) -> None:
     if not case.get("omit_repo_guidance", False):
-        write_fixture_file(repo / "AGENTS.md", "fixture agents\n")
         write_fixture_file(repo / "CLAUDE.md", "fixture claude\n")
 
     explicit_paths = {file["path"] for file in case["files"]}
@@ -2341,29 +1999,6 @@ def make_replacement_fixture(repo: Path, case: dict) -> None:
                     "tools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n"
                 ),
             )
-
-        codex_agent_path = f".codex/agents/{skill_name}.toml"
-        if not case.get("omit_codex_agent", False) and codex_agent_path not in explicit_paths:
-            write_fixture_file(
-                repo / codex_agent_path,
-                (
-                    f"name = \"{skill_name}\"\n"
-                    f"description = \"Fixture Codex wrapper for {skill_name}.\"\n"
-                    "sandbox_mode = \"workspace-write\"\n"
-                    "developer_instructions = \"\"\"\n"
-                    f"You are a fixture practitioner. Use the {skill_name} skill as the source of truth.\n"
-                    "Always emit the footer disclosure required by the skill.\n"
-                    "\"\"\"\n"
-                ),
-            )
-
-        openai_path = f"{skill_dir}/agents/openai.yaml"
-        if case.get("omit_openai", False) or openai_path in explicit_paths:
-            continue
-        write_fixture_file(
-            repo / openai_path,
-            f"name: {skill_name}\ndescription: {description}\n",
-        )
 
 
 def gold_issue_codes(case: dict) -> list[str]:
@@ -2449,7 +2084,6 @@ def finding_to_dict(finding: Finding) -> dict[str, str]:
         "evidence": finding.evidence,
         "rule": finding.rule,
         "claude_impact": finding.claude_impact,
-        "codex_impact": finding.codex_impact,
         "action": finding.action,
         "verify": finding.verify,
     }
@@ -2555,7 +2189,6 @@ def emit_group(group: str, findings: list[Finding]) -> str:
                 f"- Evidence: {finding.evidence}",
                 f"- Violated rule: {finding.rule}",
                 f"- Claude impact: {finding.claude_impact}",
-                f"- Codex impact: {finding.codex_impact}",
                 f"- Next action: {finding.action}",
                 f"- Verify/rerun: `{finding.verify}`",
                 "",
@@ -2569,7 +2202,6 @@ def owner(path: str) -> str:
         r"^internal-skills/[^/]+",
         r"^\.claude/skills/[^/]+",
         r"^souroldgeezer-[^/]+/skills/[^/]+",
-        r"^souroldgeezer-[^/]+/\.codex-plugin/plugin\.json",
         r"^souroldgeezer-[^/]+/\.claude-plugin/plugin\.json",
     ):
         match = re.match(pattern, path)
@@ -2606,20 +2238,18 @@ def emit_grouped_targets(findings: list[Finding]) -> str:
 
 NEXT_PRIORITY = {
     "SAC-RUNTIME-PLUGIN-JSON": 1,
-    "SAC-RUNTIME-DEFAULT-PROMPTS": 2,
-    "SAC-RUNTIME-MISSING-OPENAI": 3,
-    "SAC-TRIGGER-DESC-LENGTH": 4,
-    "SAC-TRIGGER-AGGRESSIVE": 5,
-    "SAC-TRIGGER-MISSING-CONTEXT": 6,
-    "SAC-REF-BROKEN-LINK": 7,
-    "SAC-REF-PRIVATE-PLUGIN-ROOT": 8,
-    "SAC-SCRIPT-UNADVERTISED": 9,
-    "SAC-WORKFLOW-OUTPUT": 10,
-    "SAC-EVAL-HIDDEN-ARTIFACT": 11,
-    "SAC-EVAL-TRIGGER-SCHEMA": 12,
-    "SAC-EVAL-BEHAVIOR-SCHEMA": 13,
-    "SAC-EVAL-IP-HYGIENE": 14,
-    "SAC-WORKFLOW-RATIONALIZATION-GATE": 15,
+    "SAC-TRIGGER-DESC-LENGTH": 2,
+    "SAC-TRIGGER-AGGRESSIVE": 3,
+    "SAC-TRIGGER-MISSING-CONTEXT": 4,
+    "SAC-REF-BROKEN-LINK": 5,
+    "SAC-REF-PRIVATE-PLUGIN-ROOT": 6,
+    "SAC-SCRIPT-UNADVERTISED": 7,
+    "SAC-WORKFLOW-OUTPUT": 8,
+    "SAC-EVAL-HIDDEN-ARTIFACT": 9,
+    "SAC-EVAL-TRIGGER-SCHEMA": 10,
+    "SAC-EVAL-BEHAVIOR-SCHEMA": 11,
+    "SAC-EVAL-IP-HYGIENE": 12,
+    "SAC-WORKFLOW-RATIONALIZATION-GATE": 13,
 }
 
 

@@ -18,13 +18,11 @@ class IssueOpsGitLabExtensionTest(unittest.TestCase):
     def test_issue_ops_loads_gitlab_extension_and_metadata_mentions_it(self) -> None:
         skill = read("souroldgeezer-ops/skills/issue-ops/SKILL.md")
         readme = read("souroldgeezer-ops/skills/issue-ops/extensions/README.md")
-        openai = read("souroldgeezer-ops/skills/issue-ops/agents/openai.yaml")
         claude_agent = read("souroldgeezer-ops/agents/issue-ops.md")
-        codex_agent = read(".codex/agents/issue-ops.toml")
 
         self.assertIn("extensions/gitlab.md", skill)
         self.assertIn("gitlab.md", readme)
-        for text in (skill, openai, claude_agent, codex_agent):
+        for text in (skill, claude_agent):
             self.assertIn("GitLab", text)
 
     def test_gitlab_extension_has_required_sections_and_authoritative_sources(self) -> None:

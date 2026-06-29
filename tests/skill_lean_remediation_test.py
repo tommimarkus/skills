@@ -113,14 +113,14 @@ class SkillLeanRemediationTest(unittest.TestCase):
     ) -> None:
         overlay = read("internal-skills/github-issue-lifecycle/SKILL.md")
 
-        self.assertIn("AGENTS.md", overlay)
+        self.assertNotIn("AGENTS.md", overlay)
         self.assertIn("CLAUDE.md", overlay)
         self.assertIn("docs/skill-architecture.md", overlay)
         repeated_surface_names = [
             "skills/<skill>/agents/openai.yaml",
             "both plugin manifests",
             ".claude-plugin/marketplace.json",
-            "AGENTS.md when Codex entry rules change",
+            ".codex/agents",
         ]
         for text in repeated_surface_names:
             with self.subTest(text=text):

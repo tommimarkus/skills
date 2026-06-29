@@ -6,8 +6,7 @@ Load this when triage Q1 hits.
 
 Treat these as public-visible unless target repo guidance says otherwise:
 `README.md`, `AGENTS.md`, `CLAUDE.md`, marketplace manifests, plugin manifests,
-`agents/openai.yaml`, `.codex/agents/*.toml` descriptions, and frontmatter
-`description:` fields.
+and frontmatter `description:` fields.
 
 ## Convention
 

@@ -117,7 +117,7 @@ reply context, or a fresh visible escalation is needed.
 
 Use current state only, not an event log. Summarize verification instead of
 dumping command output. Use strict offset timestamps. `Actor` identifies the
-runtime, such as `Codex` or `Claude Code`.
+agent runtime, such as `Claude Code`.
 
 Working state:
 
@@ -125,7 +125,7 @@ Working state:
 <!-- pr-ops:gitlab:v1 -->
 Lifecycle status: working
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Scope: group/project!123
 Current step: monitoring merge request pipelines
@@ -141,7 +141,7 @@ Escalated state:
 <!-- pr-ops:gitlab:v1 -->
 Lifecycle status: escalated
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Scope: group/project!123
 Gate: required pipeline still manual after monitoring
@@ -157,7 +157,7 @@ Completed state:
 <!-- pr-ops:gitlab:v1 -->
 Lifecycle status: completed
 
-Actor: Codex
+Actor: Claude Code
 Mode: merge-only
 Scope: group/project!123
 Result: merged merge request

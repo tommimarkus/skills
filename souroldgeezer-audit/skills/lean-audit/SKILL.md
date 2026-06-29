@@ -22,8 +22,7 @@ structure → the design skills. Prose surfaces only in v1 (not code duplication
 
 A second lens — per-use load cost — is surface-gated and composes with the waste
 lens: it fires only when the scope contains at least one entry artifact (`SKILL.md`,
-`agents/*.md`, `.codex/agents/*.toml`, `skills/<skill>/agents/openai.yaml`, or
-`commands/**/*.md`). When no entry artifact is in scope the per-use lens is silent
+`agents/*.md`, or `commands/**/*.md`). When no entry artifact is in scope the per-use lens is silent
 and the waste lens runs unchanged. Both lenses are read-only and advisory.
 
 Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
@@ -114,8 +113,7 @@ block-severity duplication into guarded markdown. It ships OFF (installation ≠
 enforcement); enable it per `references/hook-recipe.md`. It is fail-open (engine
 error / timeout / non-guarded path → allow) and overridable (cite, restructure,
 or add `<!-- lean-audit:sync-intentional -->`); carve-outs are inherited from the
-engine. Codex runs the engine at the Stop hook; true at-edit Codex parity is
-future scope.
+engine.
 
 ## Skill Maintenance
 

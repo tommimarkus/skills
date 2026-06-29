@@ -5,9 +5,9 @@ Use this before publishing a release or bumping a plugin version.
 ## Checklist
 
 - Confirm the shared marketplace still points at existing plugin paths.
-- Confirm each plugin has matching Claude and Codex manifests.
+- Confirm each plugin has a Claude `.claude-plugin/plugin.json` manifest.
 - Confirm `name`, `version`, and `description` are synchronized across the
-  marketplace entry and both manifests.
+  marketplace entry and the Claude manifest.
 - Confirm the plugin docs still link every shipped skill.
 - Confirm `README.md` still acts as the product map.
 - Run the validation commands listed in `README.md`.
@@ -27,5 +27,5 @@ Use semver at the plugin level.
   changing a plugin name, moving a canonical reference path, or changing an
   output contract.
 
-When a plugin version changes, update the matching Claude manifest, Codex
-manifest, and marketplace entry in the same change.
+When a plugin version changes, update the matching Claude manifest and
+marketplace entry in the same change.

@@ -13,8 +13,7 @@ this advisor run).
 ## When this lens runs
 
 Gate: the scope must contain at least one entry artifact — a `SKILL.md`, an
-`agents/*.md` subagent, a `.codex/agents/*.toml` wrapper, an
-`skills/<skill>/agents/openai.yaml`, or a `commands/**/*.md` file. If no entry
+`agents/*.md` subagent, or a `commands/**/*.md` file. If no entry
 artifact is in scope, this lens is silent — emit nothing.
 
 ## Resolve the closure

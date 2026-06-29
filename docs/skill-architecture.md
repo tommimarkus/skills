@@ -46,9 +46,8 @@ Write trigger metadata to maximize useful activation, not raw activation:
 - Include clear exclusions when sibling skills own nearby work.
 - Avoid broad phrases such as "best practices", "general help", or "any code"
   unless the skill truly owns that surface.
-- Keep runtime metadata synchronized across Claude Code and Codex surfaces:
-  plugin manifests, marketplace entries, agent files, project-scoped Codex
-  agents, and per-skill Codex metadata.
+- Keep runtime metadata synchronized across the Claude Code surfaces: plugin
+  manifests, marketplace entries, and the matching subagent files.
 
 Trigger quality is a precision and recall problem. Low precision wastes context
 and can steer agents into the wrong workflow. Low recall means the skill exists
@@ -94,7 +93,7 @@ Use progressive disclosure deliberately:
 - Split heavy material by task path or target platform.
 - Keep source anchors as links and paraphrase in original wording.
 - Preserve a stable finding-code namespace when references define review rules.
-- Do not assume Claude or Codex will infer an overlay from folder naming alone.
+- Do not assume Claude will infer an overlay from folder naming alone.
   If an extension matters, the core workflow must name when to load it.
 
 For extension overlays, `SKILL.md` owns selection:
@@ -112,14 +111,12 @@ For extension overlays, `SKILL.md` owns selection:
   scenario that justified the split and the command or prompt set used to retest
   whether it can merge back into the generic core.
 
-This is a runtime contract, not just documentation style. Codex exposes skill
-metadata first, then loads the skill body after selection; optional
-`agents/openai.yaml` can influence UI metadata, invocation policy, and tool
-dependencies. Claude Code keeps skill names and descriptions available for
-selection, then loads the full skill when invoked; supporting files are read
-only when the skill points to them and the task needs them. In both runtimes,
-references and extensions must be visible from `SKILL.md` with enough context
-for a fresh agent to choose the right file without exploring the tree.
+This is a runtime contract, not just documentation style. Claude Code keeps
+skill names and descriptions available for selection, then loads the full skill
+when invoked; supporting files are read only when the skill points to them and
+the task needs them. References and extensions must be visible from `SKILL.md`
+with enough context for a fresh agent to choose the right file without exploring
+the tree.
 
 ### 4. Deterministic machinery
 
@@ -200,7 +197,7 @@ parallel skills and not a reason to duplicate the core workflow.
 
 First learn what works well for each target runtime and model tier. Then express
 the instruction in generalized language when one shape meets the quality bar
-across Claude Opus, Claude Sonnet, Claude Haiku, Codex GPT, and Codex GPT-mini.
+across Claude Opus, Claude Sonnet, and Claude Haiku.
 
 The generic core should usually prefer:
 
@@ -219,22 +216,19 @@ boundary.
 
 Calibrate potential extensions against likely model differences:
 
-- Stronger reasoning models such as Opus, Sonnet, and Codex GPT can tolerate
-  more evidence synthesis, but still need explicit boundaries, stop conditions,
-  and verification commands.
-- Faster or smaller models such as Haiku and GPT-mini need fewer modes, tighter
-  defaults, shorter references, concrete accepted/rejected target examples, and
+- Stronger reasoning models such as Opus and Sonnet can tolerate more evidence
+  synthesis, but still need explicit boundaries, stop conditions, and
+  verification commands.
+- Faster or smaller models such as Haiku need fewer modes, tighter defaults,
+  shorter references, concrete accepted/rejected target examples, and
   deterministic pre-checks for high-variance judgments.
-- Runtime trigger surfaces differ. Claude and Codex metadata should still
-  describe the same capability, but the exact field length, default prompt, and
-  agent/subagent packaging constraints may require runtime-specific metadata.
 
-Create a model or runtime extension only when the evidence says to split:
+Create a model-family extension only when the evidence says to split:
 
 - The same eval prompt passes for one family or tier and fails for another.
 - A smaller model loses actionability without extra rails.
-- A runtime metadata limit or packaging rule forces different wording.
-- A deterministic helper is needed for one runtime path but not the other.
+- A metadata length or packaging limit forces different wording for a tier.
+- A deterministic helper is needed for one model tier but not another.
 - General wording causes over-triggering, under-triggering, or degraded output
   for a specific target after at least one rewrite attempt.
 
@@ -259,8 +253,8 @@ Review skills against these dimensions:
   contract.
 - **Degree-of-freedom calibration:** The skill grants judgment where judgment is
   needed and uses deterministic checks where prose would be brittle.
-- **Runtime parity:** Claude Code and Codex packaging, metadata, agents, and
-  cache/install guidance describe the same user-facing capability.
+- **Runtime metadata sync:** The Claude Code plugin manifest, marketplace entry,
+  and matching subagent describe the same user-facing capability.
 - **Release hygiene:** Version, manifest, marketplace, README, and install
   guidance changes travel together when a published surface changes.
 - **IP/source hygiene:** Source material is linked, paraphrased in original
@@ -282,7 +276,6 @@ Each finding should include:
 - Evidence.
 - Violated rule from this standard.
 - Claude impact.
-- Codex impact.
 - Concrete next action.
 - Verification or rerun command.
 
@@ -336,7 +329,6 @@ Recommended report skeleton:
 - Evidence:
 - Violated rule:
 - Claude impact:
-- Codex impact:
 - Next action:
 - Verify:
 
@@ -386,7 +378,7 @@ skill's own files), and deterministic lessons into a
 `tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when the
 report engine already detects the smell. That capture → review → graduate path
 is how a one-off correction becomes a standing rule that feeds back into this
-document. Two further `Stop` hooks run first-party gates: `stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run (trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh` runs lean-audit's per-use cost/fidelity guard. Both are runtime-neutral (identical command on Claude Code and Codex) and replaced the former external-plugin `evaluate-skill` / `plugin-eval` hooks.
+document. Two further `Stop` hooks run first-party gates: `stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run (trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh` runs lean-audit's per-use cost/fidelity guard. Both run as first-party Stop hooks registered in `.claude/settings.json` and replaced the former external-plugin `evaluate-skill` / `plugin-eval` hooks.
 
 ## Degradation Checks
 
@@ -396,7 +388,7 @@ Before finishing a skill change, inspect for these common regressions:
 - The workflow added steps without changing decisions or failure detection.
 - The skill now duplicates a sibling skill instead of delegating.
 - Heavy reference material moved into always-loaded context.
-- Codex metadata and Claude Code metadata diverged.
+- Plugin manifest, marketplace entry, and matching subagent metadata diverged.
 - Deterministic checks were replaced by prose-only reminders.
 - Output fields became optional without a compensating reason.
 - Rerun guidance was removed or became ambiguous.
@@ -419,16 +411,6 @@ them; do not copy their prose into repo guidance.
   <https://code.claude.com/docs/en/plugin-marketplaces>
 - Claude Code plugin reference:
   <https://code.claude.com/docs/en/plugins-reference>
-- OpenAI Codex skills:
-  <https://developers.openai.com/codex/skills>
-- OpenAI Codex plugins:
-  <https://developers.openai.com/codex/plugins>
-- OpenAI Codex plugin build guide:
-  <https://developers.openai.com/codex/plugins/build>
-- OpenAI Codex subagents:
-  <https://developers.openai.com/codex/subagents>
-- OpenAI prompt guidance:
-  <https://developers.openai.com/api/docs/guides/prompt-engineering>
 - ISO 24495-1 plain language:
   <https://www.iso.org/standard/78907.html>
 - ASD-STE100 Simplified Technical English:

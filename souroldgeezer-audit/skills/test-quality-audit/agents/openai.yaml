@@ -1,9 +1,0 @@
-interface:
-  display_name: "Test Quality Audit"
-  short_description: >-
-    Use when auditing unit, integration, E2E, browser, or framework tests for
-    brittle assertions, false confidence, weak scope, missing edge coverage,
-    coupling, flakiness, or suite gaps.
-  default_prompt: "Review these tests for quality smells."
-policy:
-  allow_implicit_invocation: true

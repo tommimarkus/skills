@@ -24,13 +24,11 @@ class TypeScriptExtensionSurfaceTest(unittest.TestCase):
         extension_authoring = read(
             "souroldgeezer-design/skills/software-design/references/procedures/extension-authoring.md"
         )
-        openai = read("souroldgeezer-design/skills/software-design/agents/openai.yaml")
         claude_agent = read("souroldgeezer-design/agents/software-design.md")
-        codex_agent = read(".codex/agents/software-design.toml")
 
         self.assertIn("extensions/typescript.md", skill)
         self.assertIn("typescript.md", extension_authoring)
-        for text in (skill, openai, claude_agent, codex_agent):
+        for text in (skill, claude_agent):
             self.assertIn("TypeScript", text)
 
         typescript = read("souroldgeezer-design/skills/software-design/extensions/typescript.md")

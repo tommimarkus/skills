@@ -58,30 +58,6 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 > That path changes when the plugin updates, so re-point it after an update (or
 > point a stable env var at it in your shell profile and reference that).
 
-## Enable in Codex
-
-Codex has no at-edit pre-tool hook yet (true at-edit parity is future scope), so
-run the same engine at the **Stop** hook over the session's changed markdown and
-surface a prompt. Add a `Stop` command to `.codex/hooks.json` that runs the
-engine on the repo and prompts when it exits non-zero:
-
-```bash
-python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" . --format json
-# exit 1 == a block-severity duplication is present — prompt the agent to run
-# the lean-audit skill and cite or mark it before finishing.
-```
-
-> **Codex plugin paths:** Codex exposes `$PLUGIN_ROOT` natively and also sets
-> `$CLAUDE_PLUGIN_ROOT` for compatibility (there is no `$CODEX_PLUGIN_ROOT`). As
-> in Claude Code these resolve in plugin-defined hooks; for a manual
-> `.codex/hooks.json` entry, substitute the installed `lean_engine.py` path
-> directly (resolve it via your Codex plugin install location, or a stable env
-> var) just as in the Claude Code note above.
-
-This is advisory (a Stop prompt), not an at-edit block. Until at-edit Codex
-parity ships, Codex relies on this end-of-session check plus the `lean-audit`
-skill run.
-
 ---
 
 # lean-audit per-use cost guard — enablement recipe

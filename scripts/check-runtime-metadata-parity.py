@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Check Sour Old Geezer runtime metadata parity.
+"""Check Sour Old Geezer Claude Code runtime metadata parity.
 
 This is intentionally a checker, not a generator: SKILL.md frontmatter remains
 the canonical skill trigger metadata, and the shared marketplace remains the
-canonical plugin catalog.
+canonical plugin catalog. It keeps the Claude Code surfaces in sync with each
+other — marketplace entry, plugin manifest, the matching subagent, the README
+skill links, and the repo-internal skill Claude wrappers.
 """
 
 from __future__ import annotations
@@ -12,7 +14,6 @@ import argparse
 import json
 import os
 import sys
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -125,14 +126,6 @@ def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def read_toml(path: Path) -> dict[str, Any]:
-    return tomllib.loads(path.read_text(encoding="utf-8"))
-
-
-def read_yaml(path: Path) -> dict[str, Any]:
-    return parse_yaml_mapping(path.read_text(encoding="utf-8"), path)
-
-
 def compare(
     findings: list[Finding],
     repo: Path,
@@ -183,26 +176,12 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
         plugin_dirs.append(plugin_dir)
 
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
-        codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
         claude = read_json(claude_path)
-        codex = read_json(codex_path)
 
         for field in ("name", "version", "description"):
             compare(findings, repo, claude_path, field, plugin.get(field), claude.get(field))
-            compare(findings, repo, codex_path, field, plugin.get(field), codex.get(field))
-        compare(findings, repo, codex_path, "skills", "./skills/", codex.get("skills"))
 
     return plugin_dirs
-
-
-def display_name_for(skill_name: str) -> str:
-    acronyms = {
-        "api": "API",
-        "devsecops": "DevSecOps",
-        "ip": "IP",
-        "pr": "PR",
-    }
-    return " ".join(acronyms.get(part, part.capitalize()) for part in skill_name.split("-"))
 
 
 def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> set[str]:
@@ -234,37 +213,6 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
             else:
                 findings.append(Finding(repo_relative(repo, agent_path), "exists", "present", "missing"))
 
-            codex_agent_path = repo / ".codex" / "agents" / f"{skill_dir_name}.toml"
-            if codex_agent_path.exists():
-                codex_agent = read_toml(codex_agent_path)
-                compare(findings, repo, codex_agent_path, "name", skill_dir_name, codex_agent.get("name"))
-                compare(findings, repo, codex_agent_path, "description", skill_description, codex_agent.get("description"))
-            else:
-                findings.append(Finding(repo_relative(repo, codex_agent_path), "exists", "present", "missing"))
-
-            openai_path = skill_dir / "agents" / "openai.yaml"
-            if openai_path.exists():
-                openai = read_yaml(openai_path)
-                interface = openai.get("interface", {})
-                compare(
-                    findings,
-                    repo,
-                    openai_path,
-                    "interface.display_name",
-                    display_name_for(skill_name),
-                    interface.get("display_name") if isinstance(interface, dict) else "",
-                )
-                compare(
-                    findings,
-                    repo,
-                    openai_path,
-                    "interface.short_description",
-                    skill_description,
-                    interface.get("short_description") if isinstance(interface, dict) else "",
-                )
-            else:
-                findings.append(Finding(repo_relative(repo, openai_path), "exists", "present", "missing"))
-
             skill_target = plugin_dir / "skills" / skill_name / "SKILL.md"
             readme_link = markdown_link(skill_name, f"{plugin_name}/skills/{skill_name}/SKILL.md")
             if readme and readme_link not in readme:
@@ -291,8 +239,7 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
     return public_skill_names
 
 
-def check_internal_runtime_agents(repo: Path, public_skill_names: set[str], findings: list[Finding]) -> None:
-    agents_dir = repo / ".codex" / "agents"
+def check_internal_skill_wrappers(repo: Path, findings: list[Finding]) -> None:
     internal_skill_names: set[str] = set()
     shared_internal_skills_dir = repo / "internal-skills"
 
@@ -351,30 +298,6 @@ def check_internal_runtime_agents(repo: Path, public_skill_names: set[str], find
                         )
                     )
 
-            codex_agent_path = agents_dir / f"{internal_dir_name}.toml"
-            if codex_agent_path.exists():
-                codex_agent = read_toml(codex_agent_path)
-                codex_agent_text = codex_agent_path.read_text(encoding="utf-8")
-                compare(findings, repo, codex_agent_path, "name", internal_dir_name, codex_agent.get("name"))
-                compare(
-                    findings,
-                    repo,
-                    codex_agent_path,
-                    "description",
-                    internal_description,
-                    codex_agent.get("description"),
-                )
-                require_text_contains(
-                    findings,
-                    repo,
-                    codex_agent_path,
-                    "source-of-truth",
-                    shared_skill_ref,
-                    codex_agent_text,
-                )
-            else:
-                findings.append(Finding(repo_relative(repo, codex_agent_path), "exists", "present", "missing"))
-
     claude_skills_dir = repo / ".claude" / "skills"
     if claude_skills_dir.exists():
         for claude_wrapper_path in sorted(claude_skills_dir.glob("*/SKILL.md")):
@@ -390,29 +313,12 @@ def check_internal_runtime_agents(repo: Path, public_skill_names: set[str], find
                 )
             )
 
-    if not agents_dir.exists():
-        return
-
-    expected_codex_agent_stems = public_skill_names | internal_skill_names
-    for codex_agent_path in sorted(agents_dir.glob("*.toml")):
-        if codex_agent_path.stem in expected_codex_agent_stems:
-            continue
-
-        findings.append(
-            Finding(
-                repo_relative(repo, codex_agent_path),
-                "source-of-truth",
-                "public skill or internal-skills/<name>/SKILL.md",
-                "missing",
-            )
-        )
-
 
 def check_repo(repo: Path) -> list[Finding]:
     findings: list[Finding] = []
     plugin_dirs = check_plugin_metadata(repo, findings)
-    public_skill_names = check_skill_metadata(repo, plugin_dirs, findings)
-    check_internal_runtime_agents(repo, public_skill_names, findings)
+    check_skill_metadata(repo, plugin_dirs, findings)
+    check_internal_skill_wrappers(repo, findings)
     return findings
 
 
@@ -443,7 +349,7 @@ def main(argv: list[str] | None = None) -> int:
     repo = Path(args.repo).resolve()
     try:
         findings = check_repo(repo)
-    except (OSError, ValueError, json.JSONDecodeError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
 

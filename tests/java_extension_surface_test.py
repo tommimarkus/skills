@@ -24,13 +24,11 @@ class JavaExtensionSurfaceTest(unittest.TestCase):
         extension_authoring = read(
             "souroldgeezer-design/skills/software-design/references/procedures/extension-authoring.md"
         )
-        openai = read("souroldgeezer-design/skills/software-design/agents/openai.yaml")
         claude_agent = read("souroldgeezer-design/agents/software-design.md")
-        codex_agent = read(".codex/agents/software-design.toml")
 
         self.assertIn("extensions/java.md", skill)
         self.assertIn("java.md", extension_authoring)
-        for text in (skill, openai, claude_agent, codex_agent):
+        for text in (skill, claude_agent):
             self.assertIn("Java™", text)
 
         java = read("souroldgeezer-design/skills/software-design/extensions/java.md")

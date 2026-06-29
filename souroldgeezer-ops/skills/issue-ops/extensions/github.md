@@ -45,7 +45,7 @@ context, or a fresh visible escalation is needed.
 
 Use current state only, not an event log. Summarize verification instead of
 dumping command output. Use strict offset timestamps. `Actor` identifies the
-runtime, such as `Codex` or `Claude Code`.
+agent runtime, such as `Claude Code`.
 
 Implementing state:
 
@@ -53,7 +53,7 @@ Implementing state:
 <!-- issue-ops:github:v1 -->
 Lifecycle status: implementing
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: #123
@@ -69,7 +69,7 @@ Escalated state:
 <!-- issue-ops:github:v1 -->
 Lifecycle status: escalated
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: #123
@@ -85,7 +85,7 @@ Completed state:
 <!-- issue-ops:github:v1 -->
 Lifecycle status: completed
 
-Actor: Codex
+Actor: Claude Code
 Mode: full-cycle
 Integration: pr-ops handoff
 Scope: #123
