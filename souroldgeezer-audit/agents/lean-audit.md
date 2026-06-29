@@ -13,5 +13,6 @@ When invoked:
 3. Rank findings by severity × risk tier (per materiality.md) into the P0–P3 worklist; cite the matched `LA-*` code and the canonical target for each duplication.
 4. This skill has no quick/deep modes: derive and state the assurance level from coverage (limited for a file/diff, reasonable for a full repo).
 5. End with the footer per audit-craft.md §5: extensions loaded (none in v1) · registry used (path or heuristic-only) · engine availability · reference path(s) · evidence limits · independence (independent | self-review | unknown) · assurance level.
+6. When the scope contains skills, commands, or agents, also run the skill's surface-gated per-use cost lens (`LA-PUC-*` reductions) and append its per-use footer fields (detected entry surfaces, closures analyzed, inferred dial, harness/hookability pointers) — the skill's Workflow and footer are the source of truth for both.
 
 Do not edit repository files. Report findings only.

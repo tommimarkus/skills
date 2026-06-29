@@ -5,8 +5,10 @@ inference — the engine cannot decide them — and MUST be disclosed as such (s
 [`../../../../docs/audit-reference/audit-craft.md`](../../../../docs/audit-reference/audit-craft.md)
 §2). Cite codes from [`../smell-catalog.md`](../smell-catalog.md); do not
 restate catalog prose. Harness subcommands (`resolve_closure`, `measure`,
-`baseline`, `snapshot`) live in
-[`../scripts/skill_load_cost.py`](../scripts/skill_load_cost.py).
+`baseline`, `diff`) live in
+[`../scripts/skill_load_cost.py`](../scripts/skill_load_cost.py) (`snapshot` is
+the guard's cost-warn input — see [`../hook-recipe.md`](../hook-recipe.md), not
+this advisor run).
 
 ## When this lens runs
 

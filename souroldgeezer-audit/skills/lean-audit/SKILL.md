@@ -49,8 +49,8 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
 - Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
 - For the opt-in prevention hook, see `references/hook-recipe.md` (enablement) and the guard `references/scripts/lean_guard.py` (not part of an audit run).
 - **Per-use cost lens (surface-gated):** load `references/procedures/per-use-cost.md`
-  only when entry artifacts (`SKILL.md`, `agents/*.md`, `.codex/agents/*.toml`,
-  `openai.yaml`, `commands/**/*.md`) are in scope. Run the bundled harness
+  only when an entry artifact (the families listed in `## Contract`) is in scope.
+  Run the bundled harness
   `references/scripts/skill_load_cost.py` (`resolve_closure` / `measure` /
   `baseline`) to size closures and project deltas. Cite the `LA-PUC-*` band from
   `references/smell-catalog.md`; do not restate procedure prose.
@@ -65,8 +65,7 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
    (heavy reference material inlined in always-loaded context). Mark these
    inference (audit-craft §2), not confirmed fact.
 4. **Per-use cost lens (surface-gated).** Detect whether the scope contains at
-   least one entry artifact (`SKILL.md`, `agents/*.md`, `.codex/agents/*.toml`,
-   `skills/<skill>/agents/openai.yaml`, `commands/**/*.md`). If yes, run the
+   least one entry artifact (the families listed in `## Contract`). If yes, run the
    procedure at `references/procedures/per-use-cost.md` end-to-end (resolve
    closures → model per-mode load sets → find LA-PUC-1/2/3 → classify
    fidelity-safety → infer dial → emit findings + fidelity baseline). If no entry
