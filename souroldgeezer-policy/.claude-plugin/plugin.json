@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-policy",
-  "version": "2026.06.0",
+  "version": "2026.06.1",
   "description": "Passive policy skills for repo-initialized git workflow and release versioning.",
   "author": {
     "name": "Sour Old Geezer",
