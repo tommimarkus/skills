@@ -39,3 +39,82 @@ already factored to their respective homes — so it made no change. Fidelity
 diff: 0 regressions across all tasks — the `uv run python scripts/skill_load_cost.py diff`
 gate exited 0 at every task where it was run, and the full
 `TestQualityAuditBaselineTest` suite passes at branch tip.
+
+# api-design per-use load cost
+
+api-design's per-use weight is dominated by its stack extensions (27,745 tokens
+across five files); SKILL.md (1291) and the core reference (~9862) load
+identically across modes. The reductions here are therefore load-SET reductions
+on the extension layer — captured by comparing declared load lists, not by
+content shrink.
+
+## Win #1 — Lookup mode-gating (implemented)
+
+The Load Map previously listed each stack extension under "Load what applies"
+with a detection-signal trigger and no mode qualifier, so a Lookup on a
+multi-stack repo could load every detected stack's full extension. The tightened
+Load Map gates the five stack extensions to Build/Extract/Review and restricts
+Lookup to the core-reference matched section plus, at most, the single extension
+the question is specifically about.
+
+Extension tokens loaded per Lookup on a Functions + Cosmos + Blob repo:
+
+| Lookup kind | Before (load-on-detection) | After (win #1) | Delta |
+|---|---|---|---|
+| general principle / status / header | 18747 (afdotnet 7034 + cosmos 5591 + blob 6122) | 0 | **−18747** |
+| stack-specific (one stack) | 18747 | 7034 (the matched extension) | **−11713** |
+
+SKILL.md and the core reference load identically before and after, so they
+cancel in the delta. The `lookup-functions` scenario lists the whole core
+reference as a conservative upper bound; a real Lookup loads only the matched
+section plus immediate context.
+
+## Win #2 — Build/Review extension partition (measured, not implemented)
+
+Each stack extension is organized by purpose: a shared core (name + detection
+signals, hosting-model surface, applies-to sections), a Build/Extract slice
+(primitives, patterns, mapping table), and a Review slice (smell codes,
+carve-outs, project-assimilation discovery). All three load together today.
+Splitting each `<stack>.md` into `<stack>/core.md` + `<stack>/build.md` +
+`<stack>/review.md` — the proven test-quality-audit deep-split pattern — lets a
+single-mode run load only the slice it needs.
+
+Per-extension slice weights (tokens, classified by top-level section):
+
+| Extension | shared | build | review | total |
+|---|---|---|---|---|
+| azure-functions-dotnet | 830 | 3884 | 2320 | 7034 |
+| nodejs | 1094 | 1846 | 1842 | 4782 |
+| nextjs | 1177 | 1204 | 1835 | 4216 |
+| azure-cosmosdb | 751 | 2766 | 2074 | 5591 |
+| azure-blob-storage | 668 | 3174 | 2280 | 6122 |
+| **all five** | 4520 | 12874 | 10351 | 27745 |
+
+Projected per-use savings (drop the slice the mode never reads):
+- A Build/Extract run drops the review slice — up to **−10351** with all five
+  extensions in scope; **−4394** for the committed `build-functions-cosmos`
+  scenario (afdotnet 2320 + cosmos 2074).
+- A Review run drops the build slice — up to **−12874** with all five in scope;
+  **−9824** for `review-functions-cosmos-blob` (afdotnet 3884 + cosmos 2766 +
+  blob 3174).
+
+Risk (why it is measured, not landed here): the partition moves prose under
+shared headers, which the fidelity diff gate cannot see — it tracks codes +
+section headers + pointers, not prose relocated under an existing header.
+Extension cross-references (patterns ↔ smell codes; carve-outs that contrast a
+smell code) must stay reachable in their loading mode, so an adversarial
+per-reference review is required before committing the split, exactly as flagged
+for the test-quality factoring. Recommended as a scoped follow-up.
+
+## Summary
+
+Win #1 (Lookup mode-gating) is committed: it removes up to **18747 extension
+tokens** from a general Lookup and **11713** from a stack-specific Lookup on a
+three-stack repo, with zero fidelity loss — the matched extension stays
+reachable for genuinely stack-specific questions. The api-design fidelity
+baseline (218 codes, 210 sections) and the `ApiDesignBaselineTest` regression
+gate are established as groundwork. Win #2 (the Build/Review extension
+partition) is measured at **−10351 review-slice / −12874 build-slice** with all
+five extensions in scope (−4394 / −9824 on the committed two- and three-stack
+scenarios) and recommended as a scoped follow-up pending the adversarial
+cross-reference review the diff gate cannot automate.

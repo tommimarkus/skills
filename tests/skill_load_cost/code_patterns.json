@@ -1,6 +1,10 @@
 [
   "nodejs\\.(?:HC|LC|POS)-\\d+",
   "nextjs\\.(?:HC|LC|POS)-\\d+",
+  "afdotnet\\.(?:HC|LC|POS)-\\d+",
+  "cosmos\\.(?:HC|LC|POS)-\\d+",
+  "blob\\.(?:HC|LC|POS)-\\d+",
+  "(?:afdotnet|nodejs|nextjs|cosmos|blob)\\.PAT-[a-z0-9-]+",
   "\\bHC-\\d+",
   "\\bI-[A-Z]?\\d+",
   "\\bE-[A-Z]?\\d+",

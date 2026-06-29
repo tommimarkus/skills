@@ -26,5 +26,41 @@
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nextjs/deep.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nextjs/integration.md"
     ]
+  },
+  {
+    "id": "lookup-functions",
+    "skill": "api-design",
+    "files": [
+      "souroldgeezer-design/skills/api-design/SKILL.md",
+      "souroldgeezer-design/docs/api-reference/api-design.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md"
+    ]
+  },
+  {
+    "id": "build-functions-cosmos",
+    "skill": "api-design",
+    "files": [
+      "souroldgeezer-design/skills/api-design/SKILL.md",
+      "souroldgeezer-design/docs/api-reference/api-design.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md"
+    ]
+  },
+  {
+    "id": "review-functions-cosmos-blob",
+    "skill": "api-design",
+    "files": [
+      "souroldgeezer-design/skills/api-design/SKILL.md",
+      "souroldgeezer-design/docs/api-reference/api-design.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+      "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
+      "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md"
+    ]
   }
 ]

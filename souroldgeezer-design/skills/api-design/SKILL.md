@@ -58,10 +58,16 @@ Load what applies:
   Blob Storage API/object-store/IaC signals.
 - [extensions/README.md](extensions/README.md) only when editing extensions.
 
-Multiple extensions compose. Unknown stacks use the core reference only; do not
-invent unsupported runtime mechanics. Extensions add rules and exact documented
-carve-outs; they never weaken the core reference. Use each extension's
-`Name and detection signals` section to decide applicability.
+The five stack extensions above load for Build, Extract, and Review — every
+extension whose detection signals match the in-scope stack. In Lookup, do not
+load full stack extensions on detection alone: answer from the core reference
+matched section, and pull a single stack extension only when the question is
+specifically about that stack's runtime mechanics — never the whole
+detected-stack set. Multiple extensions compose. Unknown stacks use the core
+reference only; do not invent unsupported runtime mechanics. Extensions add
+rules and exact documented carve-outs; they never weaken the core reference.
+Use each extension's `Name and detection signals` section to decide
+applicability.
 
 ## Ask Vs Continue
 
