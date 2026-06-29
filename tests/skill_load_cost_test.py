@@ -10,7 +10,9 @@ from pathlib import Path
 # tests/skill_architecture_report_test.py and tests/lessons_ledger_test.py.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location(
-    "skill_load_cost", REPO_ROOT / "scripts" / "skill_load_cost.py"
+    "skill_load_cost",
+    REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
+    / "references" / "scripts" / "skill_load_cost.py",
 )
 slc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(slc)

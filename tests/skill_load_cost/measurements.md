@@ -36,7 +36,7 @@ within noise) by design — Deep mode still loads everything including the new
 cross-file restatement pass that found no true duplicate content to factor out
 of `nextjs/core.md` — the nodejs and nextjs cores are disjoint by design,
 already factored to their respective homes — so it made no change. Fidelity
-diff: 0 regressions across all tasks — the `uv run python scripts/skill_load_cost.py diff`
+diff: 0 regressions across all tasks — the `uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/skill_load_cost.py diff`
 gate exited 0 at every task where it was run, and the full
 `TestQualityAuditBaselineTest` suite passes at branch tip.
 
