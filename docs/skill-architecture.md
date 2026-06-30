@@ -429,6 +429,11 @@ Before finishing a skill change, inspect for these common regressions:
 - Source anchors were copied as prose instead of linked and paraphrased.
 - Feature utilization of a version-pinned or vendored upstream tool was judged
   against a stale local cache instead of the actually-pinned release.
+- A deterministic gate hand-maintains a model of a fact an authority already
+  owns — ignored paths, the repo file set, citation syntax — instead of
+  deriving it, so the copy drifts (e.g. an ignore list that misses a worktree
+  directory `.gitignore` already lists). Derive it from the authority (git,
+  `.gitignore`) and keep a graceful fallback for non-git targets.
 
 ## Source Anchors
 
