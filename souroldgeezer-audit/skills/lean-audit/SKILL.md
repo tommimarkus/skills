@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Read-only; defer security, test-quality, and IP/licence work to sibling skills.
+  Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code capability (verified live, never auto-run).
 ---
 
 # Lean Audit
@@ -25,6 +25,13 @@ lens: it fires only when the scope contains at least one entry artifact (`SKILL.
 `agents/*.md`, or `commands/**/*.md`). When no entry artifact is in scope the per-use lens is silent
 and the waste lens runs unchanged. Both lenses are read-only and advisory.
 
+A third lens — platform redundancy (`LA-NAT-*`) — is OPT-IN, not surface-gated: it
+runs ONLY when the request explicitly asks whether custom artifacts reinvent a
+native Claude Code capability. A normal duplication/waste run never activates it
+and makes zero agent/network calls. It is read-only and advisory, and its native
+verdicts come from a live `claude-code-guide` check (never a bundled capability
+list). See `## Platform-redundancy lens (opt-in)`.
+
 Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see `../../docs/audit-reference/audit-craft.md`
@@ -36,6 +43,10 @@ This skill has no Quick/Deep modes — its detection is deterministic, so it run
 one path and DERIVES the assurance level from coverage: a file or diff scope →
 `limited`; a full-repo enumeration → `reasonable`. State the assurance on one
 line (audit-craft §4, by named principle — as `ip-hygiene` does).
+
+The opt-in platform-redundancy lens is layered on top of this path and does not
+change it: the default run (waste + surface-gated per-use cost) is unchanged, and
+the platform-redundancy lens runs only on explicit request.
 
 ## Load Map
 
@@ -53,6 +64,11 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
   `references/scripts/skill_load_cost.py` (`resolve_closure` / `measure` /
   `baseline`) to size closures and project deltas. Cite the `LA-PUC-*` band from
   `references/smell-catalog.md`; do not restate procedure prose.
+- **Platform-redundancy lens (opt-in):** load `references/procedures/platform-redundancy.md`
+  ONLY when the request explicitly asks for a native/platform-redundancy check. It
+  carries the reinvention-pattern catalog, the live `claude-code-guide` consultation
+  protocol, the confidence tiering, the degraded-mode rule, and the emit fields.
+  Cite `LA-NAT-*` from `references/smell-catalog.md`; do not restate procedure prose.
 - Cite codes from `references/smell-catalog.md`; never restate catalog prose.
 
 ## Workflow
@@ -78,6 +94,32 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
    the worklist under the `LA-PUC-*` band with their separate priority rationale.
 6. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
 
+## Platform-redundancy lens (opt-in)
+
+Runs ONLY on an explicit native/platform-redundancy request — never as part of a
+default waste run, and never auto-fired by surface detection. When requested, load
+`references/procedures/platform-redundancy.md` and run it end-to-end:
+
+1. **Candidate detection (deterministic).** Scan in-scope artifacts (custom hooks /
+   scripts, guidance prose, custom skills/commands/agents, custom MCP) against the
+   reinvention-pattern catalog; emit `(artifact, suspected native capability)`
+   candidates. No verdict yet.
+2. **Live verification (agent-mediated).** For each candidate, consult
+   `claude-code-guide` — "does Claude Code natively provide X? cite docs; note
+   caveats / required config / version." Use its cited answer as evidence. This
+   requires the ability to dispatch the subagent; if unavailable (e.g. under
+   subagent invocation), run candidate detection only, emit each candidate as an
+   unverified `LA-NAT-2` review item, and disclose the degraded coverage — never
+   promote to `LA-NAT-1` without a citation.
+3. **Synthesis.** Promote to `LA-NAT-1` only on cited confirmation (confidence
+   `HIGH` drop-in / `MEDIUM` core-with-caveats); agent says "not native" →
+   non-finding (record the reason, no code); uncertain / partial → `LA-NAT-2`
+   (`LOW`, review). Each finding cites the doc evidence, names the native
+   alternative, and carries a "review — your custom one may do more; do not
+   blind-delete" recommendation.
+4. **Worklist.** Merge `LA-NAT-*` findings into the worklist under their own band;
+   assign risk tier per `materiality.md`. Read-only — never auto-migrate.
+
 ## Rules and Stop Conditions
 
 - Read-only: assess and produce a worklist; do not auto-fix unless edits are
@@ -92,6 +134,12 @@ line (audit-craft §4, by named principle — as `ip-hygiene` does).
   continue with the judgment-only checks; do not fabricate the deterministic
   findings.
 - When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
+- Platform-redundancy lens (opt-in): never assert "native" from the pattern catalog
+  alone — the catalog only nominates; a cited live `claude-code-guide` answer is
+  what promotes a candidate to `LA-NAT-1`. Surface confirmed redundancy as *review*,
+  never *delete*. Disclose the network dependency and the "capabilities as observed
+  <date>" recency. If the live check is unavailable, degrade to unverified
+  `LA-NAT-2` review items and disclose; do not fabricate a native verdict.
 
 ## Output footer (audit-craft §5)
 
@@ -104,6 +152,11 @@ When the per-use lens ran, append: detected entry surfaces + closures analyzed �
 inferred dial + basis + any maintainer override · harness availability
 (`references/scripts/skill_load_cost.py` present / unavailable) · hookability
 pointer (`references/hook-recipe.md`).
+
+When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
+artifact families detected · `claude-code-guide` availability (used | unavailable →
+degraded) · citations gathered + capabilities as observed `<date>` · network
+dependency.
 
 ## Prevention hook (opt-in)
 
