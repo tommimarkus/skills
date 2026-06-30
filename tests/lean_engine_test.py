@@ -530,5 +530,45 @@ class MalformedCarveOut(unittest.TestCase):
             self.assertEqual(result, 2)
 
 
+class GitAwareReadRepo(unittest.TestCase):
+    def _git(self, cwd, *args):
+        subprocess.run(["git", "-C", str(cwd), *args], check=True,
+                       capture_output=True, text=True)
+
+    def test_read_repo_excludes_ignored_nested_worktree(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            real = root / "aud" / "skills" / "s1" / "SKILL.md"
+            real.parent.mkdir(parents=True)
+            real.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-A")
+            self._git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+                      "-c", "commit.gpgsign=false",
+                      "commit", "-qm", "init")
+            (root / ".gitignore").write_text(".worktrees/\n", encoding="utf-8")
+            ghost = root / ".worktrees" / "b" / "aud" / "skills" / "s1" / "SKILL.md"
+            ghost.parent.mkdir(parents=True)
+            ghost.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
+            files = eng.read_repo(root.resolve(), root.resolve())
+            self.assertIn("aud/skills/s1/SKILL.md", files)
+            self.assertNotIn(".worktrees/b/aud/skills/s1/SKILL.md", files)
+
+    def test_read_repo_falls_back_without_git(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            real = root / "aud" / "skills" / "s1" / "SKILL.md"
+            real.parent.mkdir(parents=True)
+            real.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
+            ghost = root / ".worktrees" / "b" / "SKILL.md"
+            ghost.parent.mkdir(parents=True)
+            ghost.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
+            files = eng.read_repo(root, root)
+            self.assertIn("aud/skills/s1/SKILL.md", files)
+            self.assertTrue(all(".worktrees/" not in key for key in files))
+
+
 if __name__ == "__main__":
     unittest.main()

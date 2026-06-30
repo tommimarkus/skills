@@ -6,6 +6,7 @@ import fnmatch
 import json
 import posixpath
 import re
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -169,11 +170,40 @@ def is_guarded(rel: str) -> bool:
     return any(fnmatch.fnmatch(rel, g) for g in _GUARD_GLOBS)
 
 
+def repo_paths(root: Path) -> frozenset[str] | None:
+    """Paths git treats as part of root's own work tree (tracked plus
+    untracked-not-ignored), or None when root is not the top of a git work tree
+    or git is unavailable. Nested worktrees live in a separate work tree, so git
+    never lists them here; when None, callers fall back to the static _EXCLUDE
+    walk so non-git target repos still work."""
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    if Path(toplevel).resolve() != root.resolve():
+        return None
+    try:
+        listing = subprocess.run(
+            ["git", "-C", str(root), "ls-files",
+             "--cached", "--others", "--exclude-standard", "-z"],
+            check=True, capture_output=True, text=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return frozenset(entry for entry in listing.split("\0") if entry)
+
+
 def read_repo(root: Path, scope: Path) -> dict[str, str]:
     files: dict[str, str] = {}
     base = scope if scope.is_dir() else scope.parent
+    in_repo = repo_paths(root)
     for path in sorted(base.rglob("*.md")):
         rel = path.relative_to(root).as_posix()
+        if in_repo is not None and rel not in in_repo:
+            continue
         if is_guarded(rel):
             files[rel] = path.read_text(encoding="utf-8", errors="replace")
     return files
