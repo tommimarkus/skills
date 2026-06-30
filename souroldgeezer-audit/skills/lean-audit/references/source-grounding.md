@@ -14,3 +14,9 @@ schemas, or code are copied into this skill.
 - Engine behavioral evidence (precision/recall calibration, false-positive
   corpus) lives with the engine tests at repo-root `tests/lean_engine_test.py`
   and `tests/lean_engine_ledger.jsonl`.
+- Platform-redundancy lens (`LA-NAT-*`): the reinvention-pattern catalog is
+  repo-authored (patterns to suspect, in the auditor's own words — not a copied
+  feature list). Native verdicts are NOT stored here; they come from a live
+  `claude-code-guide` consultation at audit time and are disclosed with the
+  capability's observed-on date. No third-party doc text is copied into the skill;
+  findings cite the live source.
