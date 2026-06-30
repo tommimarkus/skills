@@ -60,6 +60,8 @@ The public validation command is `scripts/skill-architecture-report.sh [repo-roo
 
 `pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` from the repo root, or via wrappers (such as `scripts/skill-architecture-report.sh`) that `cd` there first. Do not add `UV_CACHE_DIR=/tmp/uv-cache` to plans or normal verification; confirm the repo-local cache with `uv cache dir` and override `UV_CACHE_DIR` only as a one-off fallback when the repo config isn't applied or the reported path isn't writable.
 
+Run repo-scanning gates (the skill-architecture report, the full unittest suite) in a **clean feature worktree**, not the primary checkout that has sibling worktrees nested under it — the scanners walk the filesystem and recurse into nested checkouts (`.worktrees/`, `.claude/worktrees/`), over-counting findings. When forced to read primary-checkout numbers, discount any finding whose path contains `.worktrees/` or `.claude/worktrees/` and verify the changed surface specifically.
+
 Primary checks:
 
 ```bash
@@ -140,6 +142,8 @@ Adding a new plugin:
 1. `<plugin-name>/.claude-plugin/plugin.json` (required `name`, `version`, `description`; `author: {name, email}` and `license: MIT` defaults from memory; start at the current CalVer stamp `YYYY.0M.0`, e.g. `2026.06.0`).
 2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `version`, `description`).
 3. `name` / `description` / `version` must stay in sync across the manifest and `marketplace.json#plugins[]` — every re-stamp updates both cells in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
+
+Removing a runtime's or tool's support: scope the cut to the marketplace's **own** surfaces — per-runtime manifests/wrappers/metadata, runtime-parity tooling and finding fields, install docs, and version-cell sets. Do **not** scrub (a) general agent-guidance conventions a downstream *target* repo uses (e.g. `AGENTS.md` in the policy / `ip-hygiene` skills); (b) optional external-plugin handoffs; (c) vendor-named security/detection patterns (e.g. an `openai-key` secret regex). Confirm no regression with a same-engine before/after report diff, and re-run the gold ledger so the ≥500-case / ≥90%-recall floor still holds after pruning rule families and regenerating it.
 
 ## Plugin versioning (MUST)
 

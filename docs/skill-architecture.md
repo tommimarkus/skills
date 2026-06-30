@@ -75,6 +75,13 @@ Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
 
+When the skill's core result is computed by a bundled deterministic script,
+prefer a single adaptive path over Quick/Deep or Build/Extract/Review mode
+dispatch. Derive the assurance or coverage disclosure from input scope (partial
+or diff input gives limited assurance; full enumeration gives reasonable).
+Reserve mode dispatch for skills whose work needs per-scope LLM-judgment
+calibration.
+
 ### 3. On-demand knowledge
 
 On-demand knowledge lives behind explicit load conditions:
@@ -92,6 +99,9 @@ Use progressive disclosure deliberately:
 - Give each reference a narrow reason to exist.
 - Split heavy material by task path or target platform.
 - Keep source anchors as links and paraphrase in original wording.
+- Cite cross-file reference paths as markdown links, not bare relative paths in
+  inline-code spans, so a depth-wrong or stale citation surfaces in link checks
+  instead of passing the gate silently.
 - Preserve a stable finding-code namespace when references define review rules.
 - Do not assume Claude will infer an overlay from folder naming alone.
   If an extension matters, the core workflow must name when to load it.
@@ -110,6 +120,15 @@ For extension overlays, `SKILL.md` owns selection:
 - If a model/runtime-specific extension exists, state the eval or pressure
   scenario that justified the split and the command or prompt set used to retest
   whether it can merge back into the generic core.
+- If a load map caps what a narrow mode loads (e.g. a Lookup loads at most one
+  extension or matched section, not the whole detected set), the same gating
+  text must name an escalation cue to a fuller mode or an explicit ask for the
+  cases the cap excludes; otherwise the cap is a silent fidelity-floor violation.
+- If a mode or lens is expensive and only occasionally needed (live network or
+  subagent calls, long runtime), default it to explicit opt-in that fires only
+  on an explicit request, not surface-gated auto-firing. A routine invocation of
+  the host skill must stay cheap and make zero agent or network calls unless the
+  user asked for the expensive path.
 
 This is a runtime contract, not just documentation style. Claude Code keeps
 skill names and descriptions available for selection, then loads the full skill
@@ -144,11 +163,26 @@ When a gate or pre-filter is meant to widen what gets caught, check it against
 each subclass of the target signal: a heuristic can silently exclude the very
 case it was added for (e.g. a turn-count filter drops single-turn self-correction).
 
+Before adding an enforcement or prevention layer (for example a blocking
+at-edit hook) on top of a detector, run the detector on the real target corpus
+and measure how many of its findings are intentional or structural. If most are
+idiomatic (parallel structure, subagent mirrors, thin wrappers), the fix is
+engine-level carve-outs that recognize the idiom, not per-instance registry
+exemptions or shipping a noisy enforcement layer.
+
 Skill-local scripts should be usable without an agent reverse-engineering them:
 provide noninteractive help, stable exit codes, and structured output when a
 downstream check needs machine-readable results. Stateful scripts should expose
 a dry-run mode or be idempotent enough that rerunning them cannot silently
 corrupt the repository or generated artifacts.
+
+A skill that ships a hook entrypoint (a guard or gate script) must include an
+integration test that drives the entrypoint's `main()` over the actual hook
+payload for each event it claims to support (PreToolUse, Stop, and so on) and
+asserts the documented decision or output. Unit tests on helper functions do not
+prove the wired hook fires; cross-check the advertised hook events against the
+events the entrypoint actually handles, because a recommended-default hook that
+silently does nothing is worse than none.
 
 ## Behavioral Evidence
 
@@ -393,6 +427,8 @@ Before finishing a skill change, inspect for these common regressions:
 - Output fields became optional without a compensating reason.
 - Rerun guidance was removed or became ambiguous.
 - Source anchors were copied as prose instead of linked and paraphrased.
+- Feature utilization of a version-pinned or vendored upstream tool was judged
+  against a stale local cache instead of the actually-pinned release.
 
 ## Source Anchors
 
