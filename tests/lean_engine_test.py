@@ -536,6 +536,10 @@ class GitAwareReadRepo(unittest.TestCase):
                        capture_output=True, text=True)
 
     def test_read_repo_excludes_ignored_nested_worktree(self):
+        # Use .claude/worktrees/ as the ghost location: it is in .gitignore in
+        # the real repo but NOT in _EXCLUDE, so only the git-membership gate
+        # (repo_paths) can exclude it.  This proves the git-aware fix does work;
+        # using .worktrees/ (which IS in _EXCLUDE) would pass even without the fix.
         eng = load_engine()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "repo"
@@ -547,13 +551,13 @@ class GitAwareReadRepo(unittest.TestCase):
             self._git(root, "-c", "user.email=t@t", "-c", "user.name=t",
                       "-c", "commit.gpgsign=false",
                       "commit", "-qm", "init")
-            (root / ".gitignore").write_text(".worktrees/\n", encoding="utf-8")
-            ghost = root / ".worktrees" / "b" / "aud" / "skills" / "s1" / "SKILL.md"
+            (root / ".gitignore").write_text(".claude/worktrees/\n", encoding="utf-8")
+            ghost = root / ".claude" / "worktrees" / "b" / "aud" / "skills" / "s1" / "SKILL.md"
             ghost.parent.mkdir(parents=True)
             ghost.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
             files = eng.read_repo(root.resolve(), root.resolve())
             self.assertIn("aud/skills/s1/SKILL.md", files)
-            self.assertNotIn(".worktrees/b/aud/skills/s1/SKILL.md", files)
+            self.assertNotIn(".claude/worktrees/b/aud/skills/s1/SKILL.md", files)
 
     def test_read_repo_falls_back_without_git(self):
         eng = load_engine()
