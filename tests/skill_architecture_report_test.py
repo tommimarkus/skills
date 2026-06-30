@@ -711,5 +711,41 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
 
+class GitBackedEnumeration(unittest.TestCase):
+    def _git(self, cwd, *args):
+        subprocess.run(["git", "-C", str(cwd), *args], check=True,
+                       capture_output=True, text=True)
+
+    def _init(self, repo):
+        self._git(repo, "init", "-q")
+        self._git(repo, "add", "-A")
+        self._git(repo, "-c", "user.email=t@t", "-c", "user.name=t",
+                  "-c", "commit.gpgsign=false",
+                  "commit", "-qm", "init")
+
+    def test_find_skill_files_excludes_ignored_nested_worktree(self):
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            write(repo / "example-plugin/skills/real/SKILL.md",
+                  "---\nname: real\ndescription: d\n---\n# Real\n")
+            self._init(repo)
+            write(repo / ".gitignore", ".claude/worktrees/\n")
+            write(repo / ".claude/worktrees/b/example-plugin/skills/ghost/SKILL.md",
+                  "---\nname: ghost\ndescription: d\n---\n# Ghost\n")
+            skills = module.find_skill_files(repo.resolve())
+            self.assertIn("example-plugin/skills/real/SKILL.md", skills)
+            self.assertNotIn(
+                ".claude/worktrees/b/example-plugin/skills/ghost/SKILL.md", skills)
+
+    def test_path_in_repo_falls_back_when_not_git(self):
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir(parents=True)
+            self.assertTrue(module.path_in_repo(repo.resolve(), "a/SKILL.md"))
+            self.assertFalse(module.path_in_repo(repo.resolve(), ".venv/x/SKILL.md"))
+
+
 if __name__ == "__main__":
     unittest.main()

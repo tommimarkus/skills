@@ -5,8 +5,10 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
+from functools import lru_cache
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -768,12 +770,47 @@ def path_is_ignored(path: Path) -> bool:
     return any(part in IGNORED_PATH_PARTS for part in path.parts)
 
 
+@lru_cache(maxsize=None)
+def _git_file_set(repo_root_str: str) -> frozenset[str] | None:
+    """Repo-relative posix paths git treats as part of repo_root's own work
+    tree (tracked plus untracked-not-ignored), or None when repo_root is not the
+    top of a git work tree or git is unavailable. Nested git worktrees live in a
+    separate work tree, so git never lists them here. Memoized per process; the
+    engine runs once per invocation, so staleness is not a concern."""
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", repo_root_str, "rev-parse", "--show-toplevel"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    if Path(toplevel).resolve() != Path(repo_root_str).resolve():
+        return None
+    listing = subprocess.run(
+        ["git", "-C", repo_root_str, "ls-files",
+         "--cached", "--others", "--exclude-standard", "-z"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    return frozenset(entry for entry in listing.split("\0") if entry)
+
+
+def path_in_repo(repo_root: Path, rel: str) -> bool:
+    """True when `rel` is part of the repo per git — the authority for
+    .gitignore and worktree boundaries. Falls back to the static
+    IGNORED_PATH_PARTS check when repo_root is not a git work tree (e.g. the
+    synthetic fixture repos the test suite builds in a tempdir)."""
+    files = _git_file_set(str(repo_root.resolve()))
+    if files is None:
+        return not path_is_ignored(Path(rel))
+    return rel in files
+
+
 def find_skill_files(repo_root: Path) -> list[str]:
     skill_files: set[str] = set()
     for path in repo_root.rglob("SKILL.md"):
-        if path_is_ignored(path.relative_to(repo_root)):
-            continue
         rel = relpath(repo_root, path)
+        if not path_in_repo(repo_root, rel):
+            continue
         if rel.startswith(".claude/skills/"):
             continue
         if re.search(r"^internal-skills/[^/]+/SKILL\.md$", rel):
@@ -1632,7 +1669,10 @@ def find_plugin_reference_docs(repo_root: Path) -> list[str]:
                 continue
             for reference in reference_root.rglob("*"):
                 if reference.is_file():
-                    docs.append(relpath(repo_root, reference))
+                    ref_rel = relpath(repo_root, reference)
+                    if not path_in_repo(repo_root, ref_rel):
+                        continue
+                    docs.append(ref_rel)
     return sorted(docs)
 
 
@@ -1713,8 +1753,11 @@ def find_plugin_root_reference_files(repo_root: Path) -> list[str]:
             reference_rel = reference.relative_to(repo_root)
             if reference_rel.parts[-1] == "README.md" and len(reference_rel.parts) == 3:
                 continue
+            ref_rel = relpath(repo_root, reference)
+            if not path_in_repo(repo_root, ref_rel):
+                continue
             if reference.is_file() and not path_is_ignored(reference_rel):
-                references.append(relpath(repo_root, reference))
+                references.append(ref_rel)
     return sorted(references)
 
 
@@ -1879,6 +1922,8 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
 
     manifest_sources: set[str] = set()
     for manifest in repo_root.rglob("plugin.json"):
+        if not path_in_repo(repo_root, relpath(repo_root, manifest)):
+            continue
         rel = manifest.relative_to(repo_root)
         if path_is_ignored(rel):
             continue
