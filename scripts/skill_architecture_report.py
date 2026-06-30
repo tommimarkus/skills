@@ -8,8 +8,8 @@ import re
 import subprocess
 import sys
 import tempfile
-from functools import lru_cache
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
@@ -786,11 +786,14 @@ def _git_file_set(repo_root_str: str) -> frozenset[str] | None:
         return None
     if Path(toplevel).resolve() != Path(repo_root_str).resolve():
         return None
-    listing = subprocess.run(
-        ["git", "-C", repo_root_str, "ls-files",
-         "--cached", "--others", "--exclude-standard", "-z"],
-        check=True, capture_output=True, text=True,
-    ).stdout
+    try:
+        listing = subprocess.run(
+            ["git", "-C", repo_root_str, "ls-files",
+             "--cached", "--others", "--exclude-standard", "-z"],
+            check=True, capture_output=True, text=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
     return frozenset(entry for entry in listing.split("\0") if entry)
 
 

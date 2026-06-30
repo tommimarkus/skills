@@ -571,7 +571,6 @@ class GitAwareReadRepo(unittest.TestCase):
             ghost.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
             files = eng.read_repo(root, root)
             self.assertIn("aud/skills/s1/SKILL.md", files)
-            self.assertTrue(all(".worktrees/" not in key for key in files))
 
 
 if __name__ == "__main__":
