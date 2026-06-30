@@ -30,6 +30,20 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   always-loaded context that belongs behind a load condition. Severity: warn.
   Source: inference (`procedures/fuzzy-waste.md`).
 
+## Platform redundancy — Lean: over-production (reinventing the platform)
+- `LA-NAT-1` — a custom artifact (hook/script, guidance-prose instruction,
+  skill/command/agent, or MCP server) reproduces a capability Claude Code now
+  provides natively, confirmed by a cited live `claude-code-guide` check.
+  Confidence field: `HIGH` (drop-in native equivalent) or `MEDIUM` (native covers
+  the core with caveats / required config). Severity: info (advisory).
+  Source: inference + live agent verification (`procedures/platform-redundancy.md`).
+  Opt-in lens only.
+- `LA-NAT-2` — a reinvention candidate the pattern catalog raised that the live
+  check could NOT confirm as native (uncertain, no citation, or the live check was
+  unavailable). Confidence: `LOW`. Surfaced as a review item, never as confirmed
+  redundancy. Severity: info. Source: inference (`procedures/platform-redundancy.md`).
+  Opt-in lens only.
+
 ## Per-use cost — Lean: over-processing
 - `LA-PUC-1` — a mode loads a closure file it does not need (mode-exclusive
   elsewhere, or detection-loaded regardless of mode); fix: Load-Map mode-gating
@@ -49,3 +63,6 @@ duplicated here.
 
 Out of v1 scope: code (non-prose) duplication; the rest of the Lean waste
 taxonomy (waiting, transport, motion, over-production beyond the above).
+
+Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
+explicitly asks whether custom artifacts reinvent a native Claude Code capability.
