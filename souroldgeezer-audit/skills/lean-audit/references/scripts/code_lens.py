@@ -130,6 +130,9 @@ def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> l
     seen: dict[tuple, int] = {}
     i = 0
     while i + k <= n:
+        if meta[i][0] != meta[i + k - 1][0]:   # seed window straddles a file boundary — skip
+            i += 1
+            continue
         gram = tuple(seq[i:i + k])
         if gram in seen:
             j = seen[gram]

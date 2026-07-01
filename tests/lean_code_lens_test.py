@@ -101,6 +101,14 @@ class Clones(unittest.TestCase):
                    "b.py": self._stream(lens, body + "\n# trailer")}
         self.assertTrue(lens.find_clones(streams, min_tokens=8))
 
+    def test_windows_straddling_file_boundaries_do_not_crash(self):
+        # Each file is shorter than the window; the global token stream
+        # concatenates files, so a naive seed window straddles a file boundary.
+        # Must not raise IndexError and must report no (phantom cross-file) clone.
+        lens = load_lens()
+        streams = {f"f{n}.py": self._stream(lens, "a b c") for n in range(3)}
+        self.assertEqual(lens.find_clones(streams, min_tokens=4), [])
+
 
 class Discovery(unittest.TestCase):
     def test_reads_only_source_extensions(self):
