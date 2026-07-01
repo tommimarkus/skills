@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing a repo, file, or diff for duplication and waste — near-duplicate or restated prose across docs and skills, broken or stale references, dead or unreferenced files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run).
+  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose only — not for source-code dead code or code duplication (use software-design). Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run).
 ---
 
 # Lean Audit
@@ -17,8 +17,12 @@ Cite `references/smell-catalog.md` codes (`LA-*`). Conform to
 Own read-only duplication/waste audits of markdown prose and skill surfaces
 (governance docs, `SKILL.md`, agents, `docs/*-reference/**`, `references/**`,
 `extensions/**`). Delegate: security → `devsecops-audit`; test quality →
-`test-quality-audit`; copyright / marks / licence → `ip-hygiene`; code or design
-structure → the design skills. Prose surfaces only in v1 (not code duplication).
+`test-quality-audit`; copyright / marks / licence → `ip-hygiene`; *semantic* code
+duplication / DRY ownership → the design skills (`software-design`). Prose
+surfaces only in v1: the engine scans markdown only, so *source-level* dead code
+and code duplication are out of scope and unowned today (tracked for a future
+code lens) — do not reroute them to a design skill, which reviews structure, not
+mechanical dead code.
 
 A second lens — per-use load cost — is surface-gated and composes with the waste
 lens: it fires only when the scope contains at least one entry artifact (`SKILL.md`,
