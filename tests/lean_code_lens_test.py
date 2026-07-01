@@ -165,3 +165,32 @@ class Cli(unittest.TestCase):
             (Path(d) / ".lean-audit.toml").write_text("this = = bad", encoding="utf-8")
             r = run_lens(d, "--registry", str(Path(d) / ".lean-audit.toml"), "--format", "json")
             self.assertEqual(r.returncode, 2)
+
+
+class Calibration(unittest.TestCase):
+    def test_block_precision_recall_bar(self):
+        lens = load_lens()
+        cases = [json.loads(l) for l in LEDGER.read_text(encoding="utf-8").splitlines() if l.strip()]
+        self.assertGreaterEqual(len(cases), 8, "ledger too small to calibrate")
+        tp = fp = fn = 0
+        for case in cases:
+            streams = {}
+            skip = False
+            for f in case["files"]:
+                if lens.INTENTIONAL_MARKER in f["content"]:
+                    skip = True                     # marker = file-level opt-out (see read_sources)
+                    continue
+                streams[f["path"]] = lens.strip_and_tokenize(
+                    f["content"], lens.profile_for(Path(f["path"]).suffix))
+            clones = [] if skip and not streams else lens.find_clones(streams, case["min_tokens"])
+            fired = any(c.severity == "block" for c in clones)
+            if case["expect_block"] and fired:
+                tp += 1
+            elif case["expect_block"] and not fired:
+                fn += 1
+            elif not case["expect_block"] and fired:
+                fp += 1
+        precision = tp / (tp + fp) if (tp + fp) else 1.0
+        recall = tp / (tp + fn) if (tp + fn) else 1.0
+        self.assertGreaterEqual(precision, 0.90, f"precision {precision:.2f}")
+        self.assertGreaterEqual(recall, 0.90, f"recall {recall:.2f}")
