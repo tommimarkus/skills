@@ -159,3 +159,40 @@ def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> l
         seen.setdefault(gram, i)
         i += 1
     return clones
+
+
+_EXCLUDE = (".worktrees/", ".claude/worktrees/", "docs/superpowers/", ".cache/",
+            ".git/", "node_modules/", "dist/", "build/", "target/", ".venv/")
+
+
+def load_config(registry_path: Path | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if registry_path is None or not Path(registry_path).is_file():
+        return (), DEFAULT_EXTENSIONS
+    data = tomllib.loads(Path(registry_path).read_text(encoding="utf-8"))
+    exempt = tuple(data.get("exempt_paths", ()))
+    exts = tuple(data.get("code_extensions", DEFAULT_EXTENSIONS))
+    return exempt, exts
+
+
+def _is_excluded(rel: str) -> bool:
+    return any(seg in rel for seg in _EXCLUDE)
+
+
+def read_sources(root: Path, exts: tuple[str, ...], exempt: tuple[str, ...]) -> dict[str, str]:
+    files: dict[str, str] = {}
+    in_repo = lean_engine.repo_paths(root)   # reused via sibling import (see file header)
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root).as_posix()
+        if in_repo is not None and rel not in in_repo:
+            continue
+        if _is_excluded(rel) or path.suffix not in exts:
+            continue
+        if any(fnmatch.fnmatch(rel, pat) for pat in exempt):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if INTENTIONAL_MARKER in text:
+            continue
+        files[rel] = text
+    return files

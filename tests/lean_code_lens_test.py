@@ -100,3 +100,41 @@ class Clones(unittest.TestCase):
         streams = {"a.py": self._stream(lens, "# header\n" + body),
                    "b.py": self._stream(lens, body + "\n# trailer")}
         self.assertTrue(lens.find_clones(streams, min_tokens=8))
+
+
+class Discovery(unittest.TestCase):
+    def test_reads_only_source_extensions(self):
+        lens = load_lens()
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "a.py").write_text("x = 1\n", encoding="utf-8")
+            (root / "notes.md").write_text("# md\n", encoding="utf-8")
+            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ())
+            self.assertIn("a.py", files)
+            self.assertNotIn("notes.md", files)
+
+    def test_excludes_vendored_dirs(self):
+        lens = load_lens()
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "v.js").write_text("var x = 1\n", encoding="utf-8")
+            (root / "keep.js").write_text("var y = 2\n", encoding="utf-8")
+            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ())
+            self.assertEqual(list(files), ["keep.js"])
+
+    def test_exempt_path_and_marker_suppressed(self):
+        lens = load_lens()
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "gen.py").write_text("x = 1\n", encoding="utf-8")
+            (root / "b.py").write_text(f"# {lens.INTENTIONAL_MARKER}\ny = 2\n", encoding="utf-8")
+            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ("gen.py",))
+            self.assertNotIn("gen.py", files)      # exempt_paths
+            self.assertNotIn("b.py", files)        # inline marker
+
+    def test_load_config_defaults_when_no_registry(self):
+        lens = load_lens()
+        exempt, exts = lens.load_config(None)
+        self.assertEqual(exempt, ())
+        self.assertEqual(exts, lens.DEFAULT_EXTENSIONS)
