@@ -101,3 +101,61 @@ def strip_and_tokenize(text: str, profile: tuple) -> list[tuple[str, int]]:
         i += 1
     flush()
     return tokens
+
+
+@dataclass(frozen=True)
+class Clone:
+    code: str
+    severity: str
+    path: str
+    lines: str
+    matched_path: str
+    matched_lines: str
+    tokens: int
+    action: str
+
+
+def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> list[Clone]:
+    k = min_tokens
+    seq: list[str] = []
+    meta: list[tuple[str, int]] = []          # (path, local_index)
+    per_file: dict[str, list[tuple[str, int]]] = {}
+    for path in sorted(streams):
+        toks = streams[path]
+        per_file[path] = toks
+        for li in range(len(toks)):
+            seq.append(toks[li][0]); meta.append((path, li))
+    n = len(seq)
+    clones: list[Clone] = []
+    seen: dict[tuple, int] = {}
+    i = 0
+    while i + k <= n:
+        gram = tuple(seq[i:i + k])
+        if gram in seen:
+            j = seen[gram]
+            length = k
+            while (i + length < n and j + length < i
+                   and seq[i + length] == seq[j + length]
+                   and meta[i + length][0] == meta[i][0]
+                   and meta[j + length][0] == meta[j][0]):
+                length += 1
+            pj, lj = meta[j]
+            pi, li = meta[i]
+            overlap = pj == pi and lj + length > li
+            if not overlap:
+                j0, j1 = per_file[pj][lj][1], per_file[pj][lj + length - 1][1]
+                i0, i1 = per_file[pi][li][1], per_file[pi][li + length - 1][1]
+                severity = "block" if length >= 2 * min_tokens else "info"
+                code = "LA-CODE-DUP-1" if severity == "block" else "LA-CODE-DUP-2"
+                clones.append(Clone(
+                    code=code, severity=severity,
+                    path=pj, lines=f"{j0}-{j1}",
+                    matched_path=pi, matched_lines=f"{i0}-{i1}",
+                    tokens=length,
+                    action=(f"Clone of {pj}:{j0}-{j1} ({length} tokens) — extract "
+                            f"shared code or mark // {INTENTIONAL_MARKER}.")))
+                i += length
+                continue
+        seen.setdefault(gram, i)
+        i += 1
+    return clones

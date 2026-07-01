@@ -47,3 +47,56 @@ class Tokenizer(unittest.TestCase):
     def test_unknown_extension_uses_generic_profile(self):
         lens = load_lens()
         self.assertEqual(lens.profile_for(".zzz"), lens.GENERIC_PROFILE)
+
+
+class Clones(unittest.TestCase):
+    def _stream(self, lens, text, ext=".py"):
+        return lens.strip_and_tokenize(text, lens.profile_for(ext))
+
+    def test_verbatim_cross_file_clone_blocks(self):
+        lens = load_lens()
+        body = " ".join(f"t{i}" for i in range(30))          # 30 identical tokens
+        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
+        clones = lens.find_clones(streams, min_tokens=8)
+        self.assertTrue(clones)
+        c = clones[0]
+        self.assertEqual(c.severity, "block")               # 30 >= 2*8
+        self.assertEqual(c.code, "LA-CODE-DUP-1")
+        self.assertEqual({c.path, c.matched_path}, {"a.py", "b.py"})
+        self.assertEqual(c.tokens, 30)
+
+    def test_midband_clone_is_info(self):
+        lens = load_lens()
+        body = " ".join(f"t{i}" for i in range(10))          # 10 tokens: 8 <= 10 < 16
+        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
+        clones = lens.find_clones(streams, min_tokens=8)
+        self.assertEqual(clones[0].severity, "info")
+        self.assertEqual(clones[0].code, "LA-CODE-DUP-2")
+
+    def test_below_threshold_no_clone(self):
+        lens = load_lens()
+        body = " ".join(f"t{i}" for i in range(5))
+        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
+        self.assertEqual(lens.find_clones(streams, min_tokens=8), [])
+
+    def test_distinct_files_no_clone(self):
+        lens = load_lens()
+        streams = {"a.py": self._stream(lens, " ".join(f"a{i}" for i in range(30))),
+                   "b.py": self._stream(lens, " ".join(f"b{i}" for i in range(30)))}
+        self.assertEqual(lens.find_clones(streams, min_tokens=8), [])
+
+    def test_intra_file_nonoverlapping_clone(self):
+        lens = load_lens()
+        block = " ".join(f"t{i}" for i in range(12))
+        streams = {"a.py": self._stream(lens, block + " sep " + block)}
+        clones = lens.find_clones(streams, min_tokens=8)
+        self.assertTrue(clones)
+        self.assertEqual(clones[0].path, "a.py")
+        self.assertEqual(clones[0].matched_path, "a.py")
+
+    def test_comment_only_difference_still_clone(self):
+        lens = load_lens()
+        body = " ".join(f"t{i}" for i in range(20))
+        streams = {"a.py": self._stream(lens, "# header\n" + body),
+                   "b.py": self._stream(lens, body + "\n# trailer")}
+        self.assertTrue(lens.find_clones(streams, min_tokens=8))
