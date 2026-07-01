@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose only — not for source-code dead code or code duplication (use software-design). Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run).
+  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled deterministic token-clone engine, `LA-CODE-DUP-*`); source-level dead code and *semantic* duplication/DRY stay with software-design. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run).
 ---
 
 # Lean Audit
@@ -16,13 +16,13 @@ Cite `references/smell-catalog.md` codes (`LA-*`). Conform to
 
 Own read-only duplication/waste audits of markdown prose and skill surfaces
 (governance docs, `SKILL.md`, agents, `docs/*-reference/**`, `references/**`,
-`extensions/**`). Delegate: security → `devsecops-audit`; test quality →
+`extensions/**`), plus mechanical source-code copy-paste duplication. Delegate: security → `devsecops-audit`; test quality →
 `test-quality-audit`; copyright / marks / licence → `ip-hygiene`; *semantic* code
-duplication / DRY ownership → the design skills (`software-design`). Prose
-surfaces only in v1: the engine scans markdown only, so *source-level* dead code
-and code duplication are out of scope and unowned today (tracked for a future
-code lens) — do not reroute them to a design skill, which reviews structure, not
-mechanical dead code.
+duplication / DRY ownership → the design skills (`software-design`). Source code:
+mechanical copy-paste **duplication** is owned via the bundled `code_lens.py`
+(token-window clones, `LA-CODE-DUP-*`). Mechanical source-level **dead code**
+remains out of scope and unowned today (tracked for v1.1) — do not reroute it to a
+design skill, which reviews structure, not mechanical dead code.
 
 A second lens — per-use load cost — is surface-gated and composes with the waste
 lens: it fires only when the scope contains at least one entry artifact (`SKILL.md`,
@@ -61,6 +61,7 @@ the platform-redundancy lens runs only on explicit request.
 - Load `references/procedures/fuzzy-waste.md` for the judgment-only `LA-STALE-2`
   and `LA-BLOAT-2` checks (the engine does not emit these).
 - Run the bundled engine `references/scripts/lean_engine.py` (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
+- Run the bundled code lens `references/scripts/code_lens.py` (the deterministic source of `LA-CODE-DUP-*`) when the scope contains source files — see Workflow step 2b.
 - For the opt-in prevention hook, see `references/hook-recipe.md` (enablement) and the guard `references/scripts/lean_guard.py` (not part of an audit run).
 - **Per-use cost lens (surface-gated):** load `references/procedures/per-use-cost.md`
   only when an entry artifact (the families listed in `## Contract`) is in scope.
@@ -79,6 +80,7 @@ the platform-redundancy lens runs only on explicit request.
 
 1. Establish the scope: the whole repo, a single file, a set of named files, or a diff (its changed files). The bundled engine has no single-file or diff mode — it always scans the markdown tree rooted at a DIRECTORY — so pick the directory to run it in and the in-scope path set to keep. If a `.lean-audit.toml` exists at the scanned root the engine reads it; otherwise it runs heuristic-only — disclose which.
 2. Run the bundled engine and parse its JSON. Use the portable absolute path: `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` — `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`; exit 1 = a block-severity duplication is present, exit 2 = engine error (report the limit, continue with the judgment-only checks). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
+2b. **Code-duplication lens (surface-gated).** If the scope contains source files (non-markdown code by extension), run `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` (`<dir>` = repo root, or the nearest common directory of the in-scope files) and parse its JSON. It emits `LA-CODE-DUP-1` (block, clone ≥ 2× min-tokens) and `LA-CODE-DUP-2` (advisory) clone pairs; exit 1 = a block clone present, exit 2 = engine error (disclose reduced coverage, continue with the other lenses). For a file / named-files / diff scope, KEEP ONLY clones whose `path` or `matched_path` is in scope. If no source files are in scope, record "no source surfaces in scope — code lens silent" and skip this step.
 3. Add the judgment-only checks from `references/procedures/fuzzy-waste.md` —
    `LA-STALE-2` (prose describing a removed/renamed structure) and `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context). Mark these
@@ -156,6 +158,10 @@ When the per-use lens ran, append: detected entry surfaces + closures analyzed �
 inferred dial + basis + any maintainer override · harness availability
 (`references/scripts/skill_load_cost.py` present / unavailable) · hookability
 pointer (`references/hook-recipe.md`).
+
+When the code-duplication lens ran, append: code lens ran (source surfaces
+detected) · languages/extensions scanned · min-tokens threshold · fail-open skips
+(unreadable/binary/unknown-extension).
 
 When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
 artifact families detected · `claude-code-guide` availability (used | unavailable →
