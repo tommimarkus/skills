@@ -170,6 +170,20 @@ idiomatic (parallel structure, subagent mirrors, thin wrappers), the fix is
 engine-level carve-outs that recognize the idiom, not per-instance registry
 exemptions or shipping a noisy enforcement layer.
 
+Dogfood a deterministic engine on the real corpus before calling the task done —
+especially one that concatenates or relates multiple files (a clone detector, a
+cross-reference resolver, a repo-wide cost model). The synthetic fixtures in a
+test ledger are tiny by construction and systematically miss the cross-file and
+scale cases the real repository exercises: a seed window straddling a file
+boundary in a concatenated token stream, or a citation written relative to a base
+the resolver never modeled. For a reference / citation / path-resolution detector
+specifically, model *every* base the corpus cites from (doc-dir, skill-root,
+plugin-root) and exclude non-citation contexts — fenced and inline code,
+regex/glob snippets, illustrative convention mentions — then confirm the
+false-positive rate on the real corpus before shipping; a
+resolver that models only some bases structurally yields all-false-positives on a
+repo whose citations use the ones it omitted.
+
 Skill-local scripts should be usable without an agent reverse-engineering them:
 provide noninteractive help, stable exit codes, and structured output when a
 downstream check needs machine-readable results. Stateful scripts should expose
