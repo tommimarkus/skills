@@ -12,6 +12,14 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
 - `LA-DUP-2` — content restated instead of citing its declared canonical home.
   Severity: block. Source: engine (registry-aware).
 
+## Code duplication — Lean: inventory / over-processing (source surfaces)
+- `LA-CODE-DUP-1` — mechanical copy-paste clone in source code at or above the
+  block band (token-window match ≥ 2× min-tokens; comments and string/number
+  literals normalized). Severity: block. Source: engine (`code_lens.py`).
+- `LA-CODE-DUP-2` — a shorter source clone in the advisory band
+  (min-tokens ≤ length < 2× min-tokens). Severity: info. Source: engine
+  (`code_lens.py`).
+
 ## Staleness — Lean: defects
 - `LA-STALE-1` — broken reference: a link whose file target or `#anchor` does not
   resolve. Severity: warn. Source: engine.
@@ -61,8 +69,10 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
 Note: always-loaded `SKILL.md`-body bloat is covered by `LA-BLOAT`; not
 duplicated here.
 
-Out of v1 scope: code (non-prose) duplication; the rest of the Lean waste
-taxonomy (waiting, transport, motion, over-production beyond the above).
+Out of v1 scope: source-level *dead code* (tracked for v1.1); *semantic* code
+duplication / DRY ownership (owned by `software-design`, `SD-S-2`); the rest of
+the Lean waste taxonomy (waiting, transport, motion, over-production beyond the
+above). Mechanical source *duplication* is now in scope via `LA-CODE-DUP-*`.
 
 Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
 explicitly asks whether custom artifacts reinvent a native Claude Code capability.
