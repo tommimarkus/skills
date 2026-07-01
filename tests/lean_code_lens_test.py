@@ -138,3 +138,30 @@ class Discovery(unittest.TestCase):
         exempt, exts = lens.load_config(None)
         self.assertEqual(exempt, ())
         self.assertEqual(exts, lens.DEFAULT_EXTENSIONS)
+
+
+class Cli(unittest.TestCase):
+    def test_json_and_exit1_on_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            body = " ".join(f"t{i}" for i in range(30)) + "\n"
+            (Path(d) / "a.py").write_text(body, encoding="utf-8")
+            (Path(d) / "b.py").write_text(body, encoding="utf-8")
+            r = run_lens(d, "--min-tokens", "8", "--format", "json")
+            self.assertEqual(r.returncode, 1)
+            codes = {f["code"] for f in json.loads(r.stdout)["findings"]}
+            self.assertIn("LA-CODE-DUP-1", codes)
+
+    def test_clean_tree_exit0(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "a.py").write_text(" ".join(f"a{i}" for i in range(30)) + "\n", encoding="utf-8")
+            (Path(d) / "b.py").write_text(" ".join(f"b{i}" for i in range(30)) + "\n", encoding="utf-8")
+            r = run_lens(d, "--min-tokens", "8", "--format", "json")
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(json.loads(r.stdout)["findings"], [])
+
+    def test_malformed_registry_exits_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "a.py").write_text("x = 1\n", encoding="utf-8")
+            (Path(d) / ".lean-audit.toml").write_text("this = = bad", encoding="utf-8")
+            r = run_lens(d, "--registry", str(Path(d) / ".lean-audit.toml"), "--format", "json")
+            self.assertEqual(r.returncode, 2)

@@ -196,3 +196,44 @@ def read_sources(root: Path, exts: tuple[str, ...], exempt: tuple[str, ...]) -> 
             continue
         files[rel] = text
     return files
+
+
+def scan_dir(root: Path, min_tokens: int, registry: Path | None) -> list[Clone]:
+    reg = registry if registry is not None else root / ".lean-audit.toml"
+    exempt, exts = load_config(reg)
+    sources = read_sources(root, exts, exempt)
+    streams = {rel: strip_and_tokenize(text, profile_for(Path(rel).suffix))
+               for rel, text in sources.items()}
+    return find_clones(streams, min_tokens)
+
+
+def _emit(clones: list[Clone], fmt: str) -> None:
+    if fmt == "json":
+        print(json.dumps({"findings": [c.__dict__ for c in clones]}, indent=2))
+    else:
+        for c in clones:
+            print(f"{c.code} [{c.severity}] {c.path}:{c.lines} == "
+                  f"{c.matched_path}:{c.matched_lines} ({c.tokens} tokens) -> {c.action}")
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description="lean-audit code-duplication lens")
+    ap.add_argument("scope", help="directory to scan")
+    ap.add_argument("--min-tokens", type=int, default=DEFAULT_MIN_CLONE_TOKENS)
+    ap.add_argument("--registry", help="path to .lean-audit.toml")
+    ap.add_argument("--format", choices=("text", "json"), default="text")
+    args = ap.parse_args(argv)
+    try:
+        scope = Path(args.scope).resolve()
+        root = scope if scope.is_dir() else scope.parent
+        registry = Path(args.registry) if args.registry else None
+        clones = scan_dir(root, args.min_tokens, registry)
+    except (OSError, tomllib.TOMLDecodeError, ValueError) as exc:
+        print(f"lean-audit code_lens: {exc}", file=sys.stderr)
+        return 2
+    _emit(clones, args.format)
+    return 1 if any(c.severity == "block" for c in clones) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
