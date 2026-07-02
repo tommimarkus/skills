@@ -4,7 +4,7 @@ Loaded only in Deep mode. For smells, detection, and carve-outs see [core](core.
 
 ## SUT surface enumeration
 
-Consumed by [SKILL.md § SUT surface enumeration](../../../SKILL.md) — step 2.5 of the deep-mode workflow. This section **extends** `../nodejs/core.md`'s five-class enumeration with Next.js-specific patterns. Classes deferred entirely to `../nodejs/core.md` are marked as such; classes with additional Next.js patterns below are layered *on top of* the `../nodejs/core.md` patterns (both fire; de-duplicate at the audit-output stage).
+Consumed by [SKILL.md § SUT surface enumeration](../../../SKILL.md) — step 2.5 of the deep-mode workflow. This section **extends** `../nodejs/deep.md`'s five-class enumeration with Next.js-specific patterns. Classes deferred entirely to `../nodejs/deep.md` are marked as such; classes with additional Next.js patterns below are layered *on top of* the `../nodejs/deep.md` patterns (both fire; de-duplicate at the audit-output stage).
 
 ### `Gap-API` (Next.js additions)
 

@@ -1,6 +1,6 @@
 # Extension: Node.js / TypeScript — core
 
-Shared core for the Node.js / TypeScript test-quality-audit extension. This file is loaded **whenever a Node.js project is detected in the audit target**, before step 0b (rubric selection). It owns everything that is not rubric-exclusive: detection signals, test-type dispatch, test-double classification, rubric-neutral smells, carve-outs, SUT surface enumeration, determinism verification, and the Stryker Mutator JS mutation tool declaration.
+Shared core for the Node.js / TypeScript test-quality-audit extension. This file is loaded **whenever a Node.js project is detected in the audit target**, before step 0b (rubric selection). It owns everything that is not rubric-exclusive: detection signals, test-type dispatch, test-double classification, rubric-neutral smells, and carve-outs; deep-mode procedures (SUT surface enumeration, determinism verification, and the Stryker Mutator JS mutation tool declaration) live in [`deep.md`](deep.md).
 
 Rubric-exclusive content lives in the rubric addons:
 
