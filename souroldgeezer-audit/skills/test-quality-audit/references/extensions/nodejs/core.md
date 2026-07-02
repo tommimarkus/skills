@@ -37,7 +37,7 @@ Detection glob shortcuts: `**/package.json`, `**/*.{test,spec}.{js,jsx,ts,tsx,mj
 Record these on detection; several smells and the mutation-tool config depend on them:
 
 - **TS flag.** `tsconfig.json` present anywhere in the target tree. Gates `nodejs.LC-1` (type coercion of mock) and `nodejs.LC-2` (`@ts-expect-error` / `@ts-ignore` in test), and signals the need for `@stryker-mutator/typescript-checker` in the mutation tool install.
-- **ESM flag.** `package.json` with `"type": "module"` OR runner config file using `.mjs` extension OR source files using `.mjs` extensions. Changes Stryker's runner selection (see [§ Mutation testing](#mutation-testing) and [`mutation-nodejs.md § 5. Known SUT limitations`](../../procedures/mutation-nodejs.md#5-known-sut-limitations)).
+- **ESM flag.** `package.json` with `"type": "module"` OR runner config file using `.mjs` extension OR source files using `.mjs` extensions. Changes Stryker's runner selection (see [`deep.md § Mutation testing`](deep.md#mutation-testing) and [`mutation-nodejs.md § 5. Known SUT limitations`](../../procedures/mutation-nodejs.md#5-known-sut-limitations)).
 - **Monorepo flag.** `package.json` with a `workspaces` field (array of glob patterns) OR `pnpm-workspace.yaml` OR `lerna.json` OR `nx.json` OR `turbo.json`. Changes detection scope: each workspace is audited independently, and mutation testing runs per-workspace rather than at the repo root.
 
 ---

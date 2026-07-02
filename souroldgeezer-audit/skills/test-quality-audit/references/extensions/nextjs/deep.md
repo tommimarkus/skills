@@ -41,11 +41,11 @@ Consumed by [SKILL.md § SUT surface enumeration](../../../SKILL.md) — step 2.
 
 ### `Gap-Migration`
 
-**Defer to [`../nodejs/core.md § Gap-Migration`](../nodejs/core.md#grep-patterns-per-gap-class)** — applies unchanged.
+**Defer to [`../nodejs/deep.md § Gap-Migration`](../nodejs/deep.md#grep-patterns-per-gap-class)** — applies unchanged.
 
 ### `Gap-Throw` (Next.js additions)
 
-**Defer to [`../nodejs/core.md § Gap-Throw`](../nodejs/core.md#grep-patterns-per-gap-class) for `throw new *Error` patterns.** Next.js additions:
+**Defer to [`../nodejs/deep.md § Gap-Throw`](../nodejs/deep.md#grep-patterns-per-gap-class) for `throw new *Error` patterns.** Next.js additions:
 
 - `throw notFound\(\s*\)` — from `next/navigation`; signals a Next-semantic 404 (renders `not-found.tsx`). The exception type is internal; what matters is that a test should exercise the caller's 404 path.
 - `throw redirect\(['"](?P<url>[^'"]+)['"]` — from `next/navigation`; signals a Next-semantic 3xx redirect (handled by the RSC framework). Tests should verify the redirect target.
@@ -56,7 +56,7 @@ For each occurrence, record the containing function and whether a test reference
 
 ### `Gap-Validate`
 
-**Defer to [`../nodejs/core.md § Gap-Validate`](../nodejs/core.md#grep-patterns-per-gap-class)** — applies unchanged. Zod schemas co-located with Route Handlers or Server Actions are a strong `HC-10` carve-out signal (see Carve-outs above).
+**Defer to [`../nodejs/deep.md § Gap-Validate`](../nodejs/deep.md#grep-patterns-per-gap-class)** — applies unchanged. Zod schemas co-located with Route Handlers or Server Actions are a strong `HC-10` carve-out signal (see Carve-outs above).
 
 ### Auth matrix enumeration (Next.js additions)
 
@@ -84,6 +84,6 @@ Cross-reference against `../nodejs/integration.md` auth scenario columns. Next.j
 
 ## Mutation tool
 
-Inherits from [`../nodejs/core.md § Mutation testing`](../nodejs/core.md#mutation-testing). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`mutation-nodejs.md § 5. Known SUT limitations § Next.js App Router source files`](../../procedures/mutation-nodejs.md#5-known-sut-limitations).
+Inherits from [`../nodejs/deep.md § Mutation testing`](../nodejs/deep.md#mutation-testing). Stryker Mutator JS is the tool for the whole JS/TS stack, including Next.js. Next.js-specific known-limitation caveats (App Router SWC pipeline, React Server Components) are already documented in [`mutation-nodejs.md § 5. Known SUT limitations § Next.js App Router source files`](../../procedures/mutation-nodejs.md#5-known-sut-limitations).
 
 **When a Next.js SUT is audited:** the limitation "probable but not officially documented" applies. First-audit workflow: attempt the run; if it succeeds, remove the caveat from `../nodejs/core.md`. If it fails with RSC-related errors (CS-type errors in the Stryker cleartext reporter, or a `transformer` failure in the Jest / Vitest runner output), report state C and recommend the extract-to-library workaround — move the server-side logic under `app/` to a plain TS library outside `app/`, reference it from Server Components / Route Handlers / Server Actions as thin adapters, and mutate the library.
