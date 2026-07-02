@@ -16,8 +16,9 @@ adaptations stay in the lane rubric.
 
 ## Shared sources
 
-These source entries appear in more than one lane rubric. The lane rubrics cite
-this section and keep only their lane-specific annotation lines.
+These source entries appear in more than one lane rubric. The integration and
+E2E rubrics cite this section and keep only their lane-specific annotation
+lines.
 
 ### Google Testing
 - Winters, Manshreck, Wright — *Software Engineering at Google*, ch. 11

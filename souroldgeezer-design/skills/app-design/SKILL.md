@@ -48,6 +48,7 @@ WebAssembly project/host/render-mode signals, or Blazor™ app-shell/component
 work; [extensions/README.md](extensions/README.md) only when editing extensions.
 Unknown stacks use core only.
 
+<!-- lean-audit:sync-intentional -->
 The three stack extensions above load for Build, Extract, and Review — every
 extension whose detection signals match the in-scope stack. In Lookup, do not
 load full stack extensions on detection alone: answer from the core reference

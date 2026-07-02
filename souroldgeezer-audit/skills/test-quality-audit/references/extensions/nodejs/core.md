@@ -8,9 +8,7 @@ Rubric-exclusive content lives in the rubric addons:
 - [`integration.md`](integration.md) — `nodejs.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration (Prisma / Drizzle / TypeORM / Knex).
 - [`e2e.md`](e2e.md) — Playwright-primary E2E smells and positive signals; Cypress and WebdriverIO covered as carve-outs only.
 
-Covers Jest, Vitest, Mocha, Node's built-in `node:test` runner, Sinon, testdouble, React Testing Library + `@testing-library/user-event`, fast-check, and the four dominant Node ORMs (Prisma, Drizzle, TypeORM, Knex). Playwright / Cypress / WebdriverIO routing lives here; per-stack E2E smells live in [`e2e.md`](e2e.md). Stryker Mutator JS is declared as the mutation tool.
-
-Deep-mode procedures (SUT enumeration, determinism, mutation) live in [deep](deep.md).
+Covers Jest, Vitest, Mocha, Node's built-in `node:test` runner, Sinon, testdouble, React Testing Library + `@testing-library/user-event`, fast-check, and the four dominant Node ORMs (Prisma, Drizzle, TypeORM, Knex). Playwright / Cypress / WebdriverIO routing lives here; per-stack E2E smells live in [`e2e.md`](e2e.md). Stryker Mutator JS is the declared mutation tool (declaration lives in [`deep.md`](deep.md)).
 
 ## Detection signals
 
