@@ -436,9 +436,11 @@ class CarveOuts(unittest.TestCase):
 
 
 class RepoResidual(unittest.TestCase):
-    def _scan_repo(self, eng):
+    def _scan_repo(self, eng, extra_files: dict[str, str] | None = None):
         root = REPO_ROOT
         files = eng.read_repo(root, root)
+        if extra_files:
+            files = {**files, **extra_files}
         reg = eng.load_registry(root / ".lean-audit.toml")
         return [f for f in eng.scan(files, reg) if f.severity == "block"]
 
@@ -456,9 +458,30 @@ class RepoResidual(unittest.TestCase):
         self.assertFalse(any("/extensions/" in p and "/extensions/" in m
                              and p.split("/skills/")[1].split("/")[0] == m.split("/skills/")[1].split("/")[0]
                              for p, m in pairs if "/skills/" in p and "/skills/" in m))
-        # the residual stays bounded and includes a genuine rubric dup
+        # the residual stays bounded (live-repo dedup work drives this toward zero over time)
         self.assertLessEqual(len(blocks), 20)
-        self.assertTrue(any("quality-reference" in p and "quality-reference" in m for p, m in pairs))
+
+    def test_scan_detects_injected_synthetic_duplication(self):
+        # Positive control, not a live-repo pin: the repo's end-state is ZERO
+        # block duplications, so any assertion pinned to a specific live finding
+        # (e.g. the old quality-reference rubric family) goes stale the moment
+        # that duplication is legitimately remediated (as it was in 1a9be56).
+        # Injecting a synthetic guarded pair proves the scan pipeline still
+        # detects real duplication without depending on what's currently unfixed.
+        eng = load_engine()
+        body = (
+            "## Shared\n"
+            "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha.\n"
+        )
+        path_a = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-a.md"
+        path_b = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-b.md"
+        self.assertTrue(eng.is_guarded(path_a))
+        self.assertTrue(eng.is_guarded(path_b))
+        blocks = self._scan_repo(eng, extra_files={path_a: body, path_b: body})
+        pairs = {(f.path, f.matched_path) for f in blocks}
+        self.assertIn((path_a, path_b), pairs)
+        self.assertIn((path_b, path_a), pairs)
 
 
 class EvaluateAddedBlock(unittest.TestCase):
