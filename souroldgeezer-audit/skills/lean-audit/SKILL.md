@@ -154,8 +154,9 @@ dependency.
 ## Prevention hook (opt-in)
 
 The same deterministic engine backs an opt-in PreToolUse guard
-(`references/scripts/lean_guard.py`). It ships OFF; enable, override, and
-fail-open semantics are defined in `references/hook-recipe.md`.
+(`references/scripts/lean_guard.py`) that soft-blocks an edit introducing a NEW
+block-severity duplication into guarded markdown. It ships OFF; enable, override,
+and fail-open semantics are defined in `references/hook-recipe.md`.
 
 ## Skill Maintenance
 
