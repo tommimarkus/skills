@@ -180,8 +180,10 @@ For each LA-PUC finding, emit the following fields:
 After emitting findings, capture the fidelity baseline for the executor:
 
 ```
-skill_load_cost.py baseline --files <closure-files> --code-patterns <patterns>
+skill_load_cost.py baseline --files <closure-files> --code-patterns <patterns.json>
 ```
+
+`<patterns.json>` is a JSON file containing a list of regex strings (e.g. `["\\bAPP-[A-Z]+-[0-9]+\\b"]`); the same file feeds `diff`.
 
 This `baseline` output is the pre-restructure inventory of codes, sections, and
 pointers. The executor uses it with `skill_load_cost.py diff` to confirm no
