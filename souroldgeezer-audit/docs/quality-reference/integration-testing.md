@@ -1,4 +1,5 @@
 # Integration Test Quality — Reference
+<!-- lean-audit:sync-intentional -->
 
 A language- and framework-agnostic synthesis of authoritative guidance on integration test quality. Sibling to [unit-testing.md](unit-testing.md). Written to be directly usable as the rubric and reasoning substrate for a test-quality audit agent.
 
@@ -13,7 +14,7 @@ This document covers integration tests in two sub-lanes that share principles bu
 
 Browser-driven full-stack tests are explicitly out of scope; they belong in the end-to-end lane and warrant their own reference.
 
-This document does not analyze any specific codebase. It states principles, smells, and rubrics.
+Scope statement: see [testing-core.md § Shared discipline](testing-core.md).
 
 ---
 
@@ -64,6 +65,7 @@ No `Sleep`, no `WaitFor` with a wall-clock budget, no retry-until-green loops. T
 Beck's *SlowTest* applies double here. A test that takes two minutes to spin up an environment will be skipped, and a skipped test catches nothing. Ship setup in the test, not around it; reuse environments where it does not compromise hermeticity; quarantine the slow ones into a separate lane and accept that they run less often.
 
 ### 2.8 Trustworthy, readable, maintainable
+<!-- lean-audit:sync-intentional -->
 Osherove's three pillars (see [unit-testing.md §2.6](unit-testing.md)). An integration test that is not trusted gets disabled within a quarter; an integration test that nobody can read gets deleted in the next refactor.
 
 ---
@@ -304,9 +306,8 @@ Distilled from §2–§7, written as directives an audit agent can apply directl
 - [Pact: Consumer-driven contracts](https://docs.pact.io/getting_started/what_is_pact)
 
 ### Google Testing
-- Winters, Manshreck, Wright — *Software Engineering at Google*, ch. 11 ("Testing Overview"), for the small / medium / large test sizing taxonomy and the hermetic-server pattern.
-- [Just Say No to More End-to-End Tests](https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html)
-- [Hermetic Servers](https://testing.googleblog.com/2012/10/hermetic-servers.html)
+Shared entries: [testing-core.md § Shared sources](testing-core.md). Integration
+lane also cites the ch. 11 taxonomy for the hermetic-server pattern (sub-lane A).
 
 ### Vladimir Khorikov
 - [Unit Testing: Principles, Practices, and Patterns — chapter 1 excerpt](https://enterprisecraftsmanship.com/files/Unit-Testing-Chapter-1-Excerpt.pdf) — process-boundary rule, extended here to deployment-unit boundaries for sub-lane B.

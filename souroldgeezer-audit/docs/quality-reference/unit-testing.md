@@ -1,4 +1,5 @@
 # Unit Test Quality — Reference
+<!-- lean-audit:sync-intentional -->
 
 A language- and framework-agnostic synthesis of authoritative guidance on unit test quality. Written to be directly usable as the rubric and reasoning substrate for a test-quality audit agent.
 
@@ -6,7 +7,7 @@ A language- and framework-agnostic synthesis of authoritative guidance on unit t
 
 The failure mode this reference addresses: **tests are routinely written to validate whatever the code currently does, but current behavior can be wrong at the moment the test is written**. A test that "passes" in that state silently locks in the bug, and later refactors preserve it. The goal is to distinguish tests derived from *intent* from tests that are merely *echoes of the implementation*.
 
-This document does not analyze any specific codebase. It states principles, smells, and rubrics.
+Scope statement: see [testing-core.md § Shared discipline](testing-core.md).
 
 ---
 

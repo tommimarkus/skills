@@ -37,6 +37,7 @@ Load the selected rubric before judging:
 - Load `../../docs/quality-reference/unit-testing.md` for unit/component.
 - Load `../../docs/quality-reference/integration-testing.md` for integration.
 - Load `../../docs/quality-reference/e2e-testing.md` for E2E.
+- Load `../../docs/quality-reference/testing-core.md` alongside any rubric (shared discipline + sources).
 
 Load `extensions/index.md` for stack signals. When stack signals match, load
 the stack's `core.md` and the matching rubric addon for each loaded stack layer

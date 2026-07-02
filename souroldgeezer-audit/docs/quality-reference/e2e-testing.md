@@ -1,4 +1,5 @@
 # End-to-End Test Quality — Reference
+<!-- lean-audit:sync-intentional -->
 
 A language- and framework-agnostic synthesis of authoritative guidance on end-to-end (browser-driven) test quality. Sibling to [unit-testing.md](unit-testing.md) and [integration-testing.md](integration-testing.md). Written to be directly usable as the rubric and reasoning substrate for a test-quality audit agent.
 
@@ -15,7 +16,7 @@ Both modes compound. An E2E test is the slowest, flakiest, most expensive test i
 
 This document covers browser-driven tests executed against a deployed or locally-launched stack through a real user agent (Playwright, Cypress, Selenium, WebDriverIO, or equivalent). It treats the browser as the primary seam. Out of scope: API-level "end-to-end" tests that do not drive a browser — those are sub-lane B of the integration rubric.
 
-This document does not analyze any specific codebase. It states principles, smells, and rubrics.
+Scope statement: see [testing-core.md § Shared discipline](testing-core.md).
 
 ---
 
@@ -68,6 +69,7 @@ Traces, screenshots, DOM snapshots, console logs, and network logs are captured 
 The Google testing book's guidance — *"just say no to more end-to-end tests"* — is the floor, not the ceiling. E2E test count should be deliberately small, each test should cover a high-value journey, and the suite should be deterministic enough to run on every commit without a retry budget. A suite that grows linearly with feature count is a suite that will be quarantined within two quarters.
 
 ### 2.8 Trustworthy, readable, maintainable
+<!-- lean-audit:sync-intentional -->
 Osherove's three pillars (see [unit-testing.md §2.6](unit-testing.md)). An E2E test that is not trusted gets quarantined within a sprint; an E2E test that nobody can read gets deleted in the next refactor. Both failures remove coverage without visible cost — the dashboards still show a green suite. Treat trust and readability as load-bearing, not cosmetic.
 
 ---
@@ -325,9 +327,11 @@ Non-derivable directives (§2–§7 ground the full set; these add or sharpen):
 - Kent C. Dodds, [*The Testing Trophy and Testing Classifications*](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications) — the "more integration, fewer E2E" shape.
 
 ### Google Testing
-- Winters, Manshreck, Wright — *Software Engineering at Google*, ch. 11 ("Testing Overview"), for the small / medium / large test sizing taxonomy and the recommended mix.
-- [Just Say No to More End-to-End Tests](https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html) — the canonical argument for keeping E2E deliberately small.
-- [Hermetic Servers](https://testing.googleblog.com/2012/10/hermetic-servers.html) — applies doubly when the browser is in the loop.
+Shared entries: [testing-core.md § Shared sources](testing-core.md). E2E lane
+deltas on those entries: the ch. 11 taxonomy is cited here also for the
+recommended mix; *Just Say No to More End-to-End Tests* is the canonical
+argument for keeping E2E deliberately small; *Hermetic Servers* applies doubly
+when the browser is in the loop.
 
 ### Playwright, Cypress, WebDriverIO best practices
 - [Playwright: Best Practices](https://playwright.dev/docs/best-practices) — accessible-name selectors, auto-retrying assertions, test isolation.
