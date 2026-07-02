@@ -97,6 +97,27 @@ stop_hook_should_continue() {
   fi
 }
 
+# Every entrypoint's first two calls, in order: parse+validate input, then check
+# the once-per-session/active/main-exists guards. Shared verbatim by all three
+# stop hooks; callers still do `stop_hook_bootstrap "<name>" || exit 0`.
+stop_hook_bootstrap() {
+  stop_hook_init "$1" || return 1
+  stop_hook_should_continue
+}
+
+# Computes $changed via the shared authoring-surface filter and exits 0 (with a
+# debug_log entry) when nothing in scope changed. Shared verbatim by
+# stop-ip-hygiene and stop-lesson-capture — stop-skill-architecture uses its
+# own narrower inline filter (see stop_hook_filter_authoring_surfaces) so it
+# does not call this helper.
+stop_hook_require_authoring_changes() {
+  changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
+  if [[ -z "$changed" ]]; then
+    debug_log "$1"
+    exit 0
+  fi
+}
+
 stop_hook_mark_prompted() {
   if mkdir -p "$marker_dir" 2>/dev/null && touch "$marker" 2>/dev/null; then
     debug_log "emit-block"

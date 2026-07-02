@@ -172,6 +172,10 @@ class BehavioralEvidenceAdoption:
         )
 
 
+# lean-audit:dup-intentional — declarative Rule catalog: consecutive Rule(...)
+# literals normalize to identical token streams in the code lens; this is
+# data-table shape, not extractable logic. (Marker suppresses code_lens clones
+# file-wide; the GitEnumerationParityTest guards the one cross-file copy.)
 def build_rule_catalog() -> tuple[Rule, ...]:
     return (
         Rule(
@@ -2342,6 +2346,21 @@ def emit_next_iteration(findings: list[Finding]) -> str:
     return "\n".join(lines)
 
 
+def _report_inputs(
+    repo_root: Path,
+    rules: tuple[Rule, ...] | None,
+    calibration: ReplacementCalibration | None,
+    adoption: BehavioralEvidenceAdoption | None,
+) -> tuple[tuple[Rule, ...], Coverage, ReplacementCalibration, BehavioralEvidenceAdoption]:
+    rules = rules or build_rule_catalog()
+    return (
+        rules,
+        calculate_coverage(rules),
+        calibration or calculate_replacement_calibration(repo_root),
+        adoption or collect_behavioral_evidence_adoption(repo_root),
+    )
+
+
 def render_report(
     repo_root: Path,
     findings: list[Finding],
@@ -2349,10 +2368,7 @@ def render_report(
     calibration: ReplacementCalibration | None = None,
     adoption: BehavioralEvidenceAdoption | None = None,
 ) -> str:
-    rules = rules or build_rule_catalog()
-    coverage = calculate_coverage(rules)
-    calibration = calibration or calculate_replacement_calibration(repo_root)
-    adoption = adoption or collect_behavioral_evidence_adoption(repo_root)
+    rules, coverage, calibration, adoption = _report_inputs(repo_root, rules, calibration, adoption)
     lines = [
         "# Skill Architecture Craft Report",
         "",
@@ -2409,10 +2425,7 @@ def render_json(
     calibration: ReplacementCalibration | None = None,
     adoption: BehavioralEvidenceAdoption | None = None,
 ) -> str:
-    rules = rules or build_rule_catalog()
-    coverage = calculate_coverage(rules)
-    calibration = calibration or calculate_replacement_calibration(repo_root)
-    adoption = adoption or collect_behavioral_evidence_adoption(repo_root)
+    rules, coverage, calibration, adoption = _report_inputs(repo_root, rules, calibration, adoption)
     payload = {
         "scope": {
             "repo": str(repo_root),

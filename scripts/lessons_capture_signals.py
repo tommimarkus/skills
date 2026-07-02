@@ -11,6 +11,9 @@ import re
 import sys
 from pathlib import Path
 
+# lean-audit:dup-intentional — declarative (label, pattern) tuple literal, same
+# shape as lessons_secret_scan.py's SECRET_PATTERNS but distinct content (correction
+# phrases vs secret shapes); this is data-table shape, not extractable logic.
 # (label, pattern): strong, low-false-positive phrases only. Never bare "no".
 CORRECTION_PATTERNS = (
     ("revert", r"\brevert(s|ed|ing)?\b"),

@@ -565,5 +565,31 @@ class GitAwareReadRepo(unittest.TestCase):
             self.assertIn("aud/skills/s1/SKILL.md", files)
 
 
+class GitEnumerationParityTest(unittest.TestCase):
+    """The bundled lean engine cannot import repo tooling, so the git ls-files
+    enumeration block is intentionally duplicated with skill_architecture_report.py.
+    This test fails when the two copies drift."""
+
+    @staticmethod
+    def _enumeration_block(path: Path) -> str:
+        text = path.read_text(encoding="utf-8")
+        start = text.index('["git", "-C"')
+        end = text.index("return frozenset", start)
+        block = text[start:end]
+        block = block.replace("repo_root_str", "ROOT").replace("str(root)", "ROOT")
+        # The report engine takes repo_root_str: str (lru_cache needs a hashable
+        # key), so its toplevel check wraps in Path(...); the bundled engine takes
+        # root: Path directly and calls .resolve() bare. Same comparison, cosmetic
+        # difference driven by the two functions' parameter types, not drift.
+        block = block.replace("Path(ROOT).resolve()", "ROOT.resolve()")
+        block = block.replace("root.resolve()", "ROOT.resolve()")
+        return " ".join(block.split())
+
+    def test_git_enumeration_matches_report_engine(self) -> None:
+        engine = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py"
+        report = REPO_ROOT / "scripts/skill_architecture_report.py"
+        self.assertEqual(self._enumeration_block(engine), self._enumeration_block(report))
+
+
 if __name__ == "__main__":
     unittest.main()

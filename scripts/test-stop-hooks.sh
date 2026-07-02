@@ -258,6 +258,9 @@ lean_cost_absent=$(cd "$skill_fixture" &&
 
 # Filter parity: ip-hygiene and lesson-capture share one authoring-surface
 # filter; a lib-level unit check pins the pattern set.
+# lean-audit:dup-intentional — `expected` below is the filtered subset of
+# `filter_input`; the overlapping lines are shared fixture data (the paths
+# the filter is proven to keep), not duplicated logic.
 filter_input=$(cat <<'EOF'
 souroldgeezer-audit/skills/lean-audit/SKILL.md
 souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md

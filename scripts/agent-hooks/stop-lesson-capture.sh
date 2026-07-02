@@ -6,16 +6,11 @@ hook_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=scripts/agent-hooks/stop-hook-lib.sh
 source "$hook_dir/stop-hook-lib.sh"
 
-stop_hook_init "lesson-capture" || exit 0
-stop_hook_should_continue || exit 0
+stop_hook_bootstrap "lesson-capture" || exit 0
 
 # Layer 2 gate: only skill-authoring surfaces count (developing the skills,
 # not running them).
-changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
-if [[ -z "$changed" ]]; then
-  debug_log "skip-no-authoring-surface"
-  exit 0
-fi
+stop_hook_require_authoring_changes "skip-no-authoring-surface"
 
 # Authoring surface changed → wake the capture skill's judgment. The capture skill
 # (the same in-session model, with full conversation context) decides whether any

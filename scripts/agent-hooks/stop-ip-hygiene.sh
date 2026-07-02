@@ -6,15 +6,8 @@ hook_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=scripts/agent-hooks/stop-hook-lib.sh
 source "$hook_dir/stop-hook-lib.sh"
 
-stop_hook_init "ip-hygiene" || exit 0
-stop_hook_should_continue || exit 0
-
-changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
-
-if [[ -z "$changed" ]]; then
-  debug_log "skip-no-ip-hygiene-changes"
-  exit 0
-fi
+stop_hook_bootstrap "ip-hygiene" || exit 0
+stop_hook_require_authoring_changes "skip-no-ip-hygiene-changes"
 
 targets=$(
   awk -F/ '

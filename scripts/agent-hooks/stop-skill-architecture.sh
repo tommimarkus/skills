@@ -6,8 +6,7 @@ hook_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=scripts/agent-hooks/stop-hook-lib.sh
 source "$hook_dir/stop-hook-lib.sh"
 
-stop_hook_init "skill-architecture" || exit 0
-stop_hook_should_continue || exit 0
+stop_hook_bootstrap "skill-architecture" || exit 0
 
 # Union of the surfaces the removed evaluate-skill + plugin-eval hooks watched
 # (deliberately narrower than stop_hook_filter_authoring_surfaces).
