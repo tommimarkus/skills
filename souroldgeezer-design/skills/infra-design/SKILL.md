@@ -40,6 +40,16 @@ backend, provider, module, plan/apply, or state; and
 Azure+Terraform compose. Load [extensions/README.md](extensions/README.md) only
 when editing extensions.
 
+The three stack extensions above load for Build, Extract, and Review — every
+extension whose detection signals match the in-scope stack. In Lookup, do not
+load full stack extensions on detection alone: answer from the core reference
+matched section, and pull a single stack extension only when the question is
+specifically about that stack's mechanics (Azure+Bicep and Azure+Terraform
+composition still applies when escalated) — never the whole detected-stack set.
+If a Lookup genuinely needs more than one stack's mechanics, escalate to Review
+or Build (which load every matching extension) or ask — do not under-answer
+from a single extension.
+
 Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic/paraphrased.
 
 ## Workflow

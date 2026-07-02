@@ -16,9 +16,11 @@ When invoked, run the infra-design skill and present results:
 
 1. Invoke the `infra-design` skill using the Skill tool.
 2. Follow the skill instructions exactly: confirm build, extract, review, or
-   lookup mode; detect source signals; load all matching extensions; and keep
-   API, UI, code, architecture-model, security, and test-quality concerns
-   delegated.
+   lookup mode; detect source signals; load all matching extensions for build,
+   extract, and review (lookup answers from the core reference and escalates
+   to review or build, or asks, before loading more than one stack's
+   extension); and keep API, UI, code, architecture-model, security, and
+   test-quality concerns delegated.
 3. For build mode: produce the compact infrastructure design brief, cite
    reference sections, name deferred decisions and rejected abstractions, and
    choose the cheapest validation step.
