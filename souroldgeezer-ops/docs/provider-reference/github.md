@@ -19,8 +19,9 @@ item (issue or PR/MR).
 
 ## Lifecycle Marker Mechanics
 
-Write a lifecycle marker comment on the item unless the run lacks comment
-permission. Update the latest marker from the same actor when possible. Add a new
+When a skill's trigger calls for a marker, write it on the item unless the run
+lacks comment permission. Update the latest marker from the same actor when
+possible. Add a new
 comment only when editing is unavailable, editing would hide reply context, or a
 fresh visible escalation is needed. Use current state only, not an event log.
 Summarize verification instead of dumping command output. Use strict offset
