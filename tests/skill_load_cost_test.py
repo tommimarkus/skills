@@ -249,24 +249,30 @@ class ResolveClosureCliTest(unittest.TestCase):
         (root / "refs" / "a.md").write_text("leaf, no links", encoding="utf-8")
         return root / "SKILL.md"
 
+    def _run_resolve_closure(self, entry: Path, *extra_args: str) -> tuple:
+        """Invoke the resolve_closure subcommand against entry, capturing stdout.
+        Returns (exit_code, stdout_text); shared by the JSON and plain-output
+        CLI tests below, which differ only in the flag passed and the assertions
+        made on the captured output."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = slc.main(["resolve_closure", str(entry), *extra_args])
+        return rc, buf.getvalue()
+
     def test_resolve_closure_subcommand_lists_transitive_links_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             entry = self._fixture_entry(Path(td))
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = slc.main(["resolve_closure", str(entry), "--json"])
+            rc, out = self._run_resolve_closure(entry, "--json")
             self.assertEqual(rc, 0)
-            paths = json.loads(buf.getvalue())
+            paths = json.loads(out)
             self.assertEqual(sorted(Path(p).name for p in paths), ["SKILL.md", "a.md"])
 
     def test_resolve_closure_subcommand_plain_output_newline_joined(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             entry = self._fixture_entry(Path(td))
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = slc.main(["resolve_closure", str(entry)])
+            rc, out = self._run_resolve_closure(entry)
             self.assertEqual(rc, 0)
-            lines = buf.getvalue().splitlines()
+            lines = out.splitlines()
             self.assertEqual(sorted(Path(p).name for p in lines), ["SKILL.md", "a.md"])
             for line in lines:
                 self.assertTrue(Path(line).is_absolute(), line)
