@@ -9,23 +9,7 @@ source "$hook_dir/stop-hook-lib.sh"
 stop_hook_init "ip-hygiene" || exit 0
 stop_hook_should_continue || exit 0
 
-changed=$(
-  {
-    git -C "$repo_root" diff --name-only main --
-    git -C "$repo_root" ls-files --others --exclude-standard
-  } 2>/dev/null |
-    awk '
-      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
-      /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
-      /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
-      /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
-      /^\.claude-plugin\/marketplace\.json$/ { print; next }
-      /^internal-skills\/[^/]+\// { print; next }
-      /^\.claude\/skills\/[^/]+\// { print; next }
-      /^(CLAUDE|README)\.md$/ { print; next }
-    ' |
-    sort -u
-)
+changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
 
 if [[ -z "$changed" ]]; then
   debug_log "skip-no-ip-hygiene-changes"

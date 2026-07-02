@@ -54,6 +54,32 @@ debug_log() {
   } 2>/dev/null || true
 }
 
+# Changed files vs main (tracked diff + untracked), sorted unique.
+# Requires $repo_root (set by stop_hook_init).
+stop_hook_changed_since_main() {
+  {
+    git -C "$repo_root" diff --name-only main --
+    git -C "$repo_root" ls-files --others --exclude-standard
+  } 2>/dev/null | sort -u
+}
+
+# The Layer-2 skill-authoring surface set shared VERBATIM by stop-ip-hygiene
+# and stop-lesson-capture. stop-skill-architecture deliberately uses its own
+# narrower filter (union of the removed evaluate-skill/plugin-eval hooks) —
+# do not point it here.
+stop_hook_filter_authoring_surfaces() {
+  awk '
+    /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
+    /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
+    /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
+    /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
+    /^\.claude-plugin\/marketplace\.json$/ { print; next }
+    /^internal-skills\/[^/]+\// { print; next }
+    /^\.claude\/skills\/[^/]+\// { print; next }
+    /^(CLAUDE|README)\.md$/ { print; next }
+  ' | LC_ALL=C sort -u
+}
+
 stop_hook_should_continue() {
   if [[ "$stop_hook_active" == "true" ]]; then
     debug_log "skip-stop-hook-active"

@@ -10,24 +10,8 @@ stop_hook_init "lesson-capture" || exit 0
 stop_hook_should_continue || exit 0
 
 # Layer 2 gate: only skill-authoring surfaces count (developing the skills,
-# not running them). Same surface set as stop-ip-hygiene.sh.
-changed=$(
-  {
-    git -C "$repo_root" diff --name-only main --
-    git -C "$repo_root" ls-files --others --exclude-standard
-  } 2>/dev/null |
-    awk '
-      /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
-      /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
-      /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
-      /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
-      /^\.claude-plugin\/marketplace\.json$/ { print; next }
-      /^internal-skills\/[^/]+\// { print; next }
-      /^\.claude\/skills\/[^/]+\// { print; next }
-      /^(CLAUDE|README)\.md$/ { print; next }
-    ' |
-    sort -u
-)
+# not running them).
+changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
 if [[ -z "$changed" ]]; then
   debug_log "skip-no-authoring-surface"
   exit 0

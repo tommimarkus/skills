@@ -9,12 +9,10 @@ source "$hook_dir/stop-hook-lib.sh"
 stop_hook_init "skill-architecture" || exit 0
 stop_hook_should_continue || exit 0
 
-# Union of the surfaces the removed evaluate-skill + plugin-eval hooks watched.
+# Union of the surfaces the removed evaluate-skill + plugin-eval hooks watched
+# (deliberately narrower than stop_hook_filter_authoring_surfaces).
 changed=$(
-  {
-    git -C "$repo_root" diff --name-only main --
-    git -C "$repo_root" ls-files --others --exclude-standard
-  } 2>/dev/null |
+  stop_hook_changed_since_main |
     awk '
       /^internal-skills\/[^/]+\// { print; next }
       /^\.claude\/skills\/[^/]+\// { print; next }

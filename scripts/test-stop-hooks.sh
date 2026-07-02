@@ -255,3 +255,42 @@ lean_cost_absent=$(cd "$skill_fixture" &&
   hook_input "$skill_fixture" "lean-cost-absent" false |
     bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
 [[ -z "$lean_cost_absent" ]]
+
+# Filter parity: ip-hygiene and lesson-capture share one authoring-surface
+# filter; a lib-level unit check pins the pattern set.
+filter_input=$(cat <<'EOF'
+souroldgeezer-audit/skills/lean-audit/SKILL.md
+souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md
+souroldgeezer-design/agents/app-design.md
+souroldgeezer-audit/docs/quality-reference/unit-testing.md
+souroldgeezer-audit/.claude-plugin/plugin.json
+.claude-plugin/marketplace.json
+internal-skills/lessons/SKILL.md
+.claude/skills/lessons/SKILL.md
+CLAUDE.md
+README.md
+scripts/skill_architecture_report.py
+tests/lean_engine_test.py
+docs/skill-architecture.md
+EOF
+)
+filtered=$(source scripts/agent-hooks/stop-hook-lib.sh; printf '%s\n' "$filter_input" | stop_hook_filter_authoring_surfaces | LC_ALL=C sort -u)
+expected=$(cat <<'EOF'
+.claude-plugin/marketplace.json
+.claude/skills/lessons/SKILL.md
+CLAUDE.md
+README.md
+internal-skills/lessons/SKILL.md
+souroldgeezer-audit/.claude-plugin/plugin.json
+souroldgeezer-audit/docs/quality-reference/unit-testing.md
+souroldgeezer-audit/skills/lean-audit/SKILL.md
+souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md
+souroldgeezer-design/agents/app-design.md
+EOF
+)
+if [[ "$filtered" != "$expected" ]]; then
+  echo "FAIL: stop_hook_filter_authoring_surfaces pattern set drifted" >&2
+  diff <(printf '%s\n' "$expected") <(printf '%s\n' "$filtered") >&2 || true
+  exit 1
+fi
+echo "ok: authoring-surface filter parity"
