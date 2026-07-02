@@ -20,3 +20,11 @@ b = "**/references/core-workflow.md"
 [[carve_out]]
 a = "**/references/source-grounding.md"
 b = "**/references/source-grounding.md"
+
+[[carve_out]]                                   # subagent thin wrappers are intentionally parallel (CLAUDE.md § Subagents)
+a = "**/agents/*.md"
+b = "**/agents/*.md"
+
+[[carve_out]]                                   # plugin-docs-level compact catalog restates its own plugin's rubric
+a = "{plugin}/docs/*-reference/*smell-catalog*.md"
+b = "{plugin}/docs/*-reference/**/*.md"
