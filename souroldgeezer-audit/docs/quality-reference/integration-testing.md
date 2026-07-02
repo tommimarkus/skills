@@ -307,7 +307,7 @@ Distilled from §2–§7, written as directives an audit agent can apply directl
 
 ### Google Testing
 Shared entries: [testing-core.md § Shared sources](testing-core.md). Integration
-lane also cites the ch. 11 taxonomy for the hermetic-server pattern (sub-lane A).
+lane also cites the ch. 11 material for the hermetic-server pattern.
 
 ### Vladimir Khorikov
 - [Unit Testing: Principles, Practices, and Patterns — chapter 1 excerpt](https://enterprisecraftsmanship.com/files/Unit-Testing-Chapter-1-Excerpt.pdf) — process-boundary rule, extended here to deployment-unit boundaries for sub-lane B.
