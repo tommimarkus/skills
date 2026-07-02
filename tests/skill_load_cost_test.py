@@ -1,5 +1,7 @@
 # tests/skill_load_cost_test.py
+import contextlib
 import glob
+import io
 import json
 import tempfile
 import unittest
@@ -225,6 +227,21 @@ class ResolveClosureTest(unittest.TestCase):
             (root / "SKILL.md").write_text("# S\n[gone](missing.md) `[x](nope.md)`\n")
             got = {p.name for p in slc.resolve_closure(root / "SKILL.md")}
             self.assertEqual(got, {"SKILL.md"})
+
+
+class ResolveClosureCliTest(unittest.TestCase):
+    def test_resolve_closure_subcommand_lists_transitive_links_json(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "refs").mkdir()
+            (root / "SKILL.md").write_text("see [a](refs/a.md)", encoding="utf-8")
+            (root / "refs" / "a.md").write_text("leaf, no links", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = slc.main(["resolve_closure", str(root / "SKILL.md"), "--json"])
+            self.assertEqual(rc, 0)
+            paths = json.loads(buf.getvalue())
+            self.assertEqual(sorted(Path(p).name for p in paths), ["SKILL.md", "a.md"])
 
 
 class CostRegressionTest(unittest.TestCase):

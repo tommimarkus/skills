@@ -45,22 +45,7 @@ def _strip_code(text: str) -> str:
 def resolve_closure(skill_md: Path) -> list[Path]:
     """Files a skill loads, via transitive Load-Map markdown links from SKILL.md.
     Deterministic (link-following only); the per-mode subset is judgment, not this."""
-    skill_md = skill_md.resolve()
-    seen: set[Path] = set()
-    queue = [skill_md]
-    while queue:
-        cur = queue.pop()
-        if cur in seen or not cur.exists():
-            continue
-        seen.add(cur)
-        for link in LINK_RE.findall(_strip_code(cur.read_text(encoding="utf-8"))):
-            target = link.split("#", 1)[0]
-            if not target or target.startswith(("http://", "https://", "mailto:")):
-                continue
-            nxt = (cur.parent / target).resolve()
-            if nxt.suffix == ".md" and nxt.exists() and nxt not in seen:
-                queue.append(nxt)
-    return sorted(seen)
+    return resolve_closure_with_overrides(skill_md, {})
 
 
 def resolve_closure_with_overrides(skill_md: Path, overrides: dict) -> list[Path]:
@@ -146,6 +131,14 @@ def _read_json(path: str):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def _emit_json(payload, out_path) -> None:
+    text = json.dumps(payload, indent=2)
+    if out_path:
+        Path(out_path).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+
+
 def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int) -> list[str]:
     """Check per-scenario token totals against a snapshot baseline.
 
@@ -191,11 +184,7 @@ def _cmd_baseline(args) -> int:
     invs = [extract_inventory(Path(f).read_text(encoding="utf-8"), patterns)
             for f in args.files]
     out = union_inventory(invs)
-    text = json.dumps(out, indent=2)
-    if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
-    else:
-        print(text)
+    _emit_json(out, args.out)
     return 0
 
 
@@ -215,11 +204,13 @@ def _cmd_diff(args) -> int:
 def _cmd_snapshot(args) -> int:
     scenarios = _read_json(args.scenarios)
     out = {s["id"]: measure_scenario(s, Path(args.root))["total"] for s in scenarios}
-    text = json.dumps(out, indent=2)
-    if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
-    else:
-        print(text)
+    _emit_json(out, args.out)
+    return 0
+
+
+def _cmd_resolve_closure(args) -> int:
+    paths = [str(p) for p in resolve_closure(Path(args.entry))]
+    print(json.dumps(paths, indent=2) if args.json else "\n".join(paths))
     return 0
 
 
@@ -251,6 +242,11 @@ def main(argv: list[str] | None = None) -> int:
     sn.add_argument("--root", default=".")
     sn.add_argument("--out")
     sn.set_defaults(func=_cmd_snapshot)
+
+    rc = sub.add_parser("resolve_closure")
+    rc.add_argument("entry")
+    rc.add_argument("--json", action="store_true")
+    rc.set_defaults(func=_cmd_resolve_closure)
 
     args = parser.parse_args(argv)
     return args.func(args)
