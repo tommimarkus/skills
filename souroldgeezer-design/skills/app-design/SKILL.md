@@ -48,6 +48,16 @@ WebAssembly project/host/render-mode signals, or Blazor™ app-shell/component
 work; [extensions/README.md](extensions/README.md) only when editing extensions.
 Unknown stacks use core only.
 
+The three stack extensions above load for Build, Extract, and Review — every
+extension whose detection signals match the in-scope stack. In Lookup, do not
+load full stack extensions on detection alone: answer from the core reference
+matched section, and pull a single stack extension only when the question is
+specifically about that stack's runtime mechanics (when that extension is
+nextjs.md, load react.md first — the composition order still applies) — never
+the whole detected-stack set. If a Lookup genuinely needs more than one stack's
+mechanics, escalate to Review or Build (which load every matching extension) or
+ask — do not under-answer from a single extension.
+
 Before changing trigger metadata, workflow, extension selection, grounding, or
 evals, load [references/evals](references/evals) and
 [references/source-grounding.md](references/source-grounding.md); keep evals
