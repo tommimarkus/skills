@@ -609,7 +609,7 @@ class GitEnumerationParityTest(unittest.TestCase):
         return " ".join(block.split())
 
     def test_git_enumeration_matches_report_engine(self) -> None:
-        engine = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py"
+        engine = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit/discovery.py"
         report = REPO_ROOT / "scripts/skill_architecture_report.py"
         self.assertEqual(self._enumeration_block(engine), self._enumeration_block(report))
 
