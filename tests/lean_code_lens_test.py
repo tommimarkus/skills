@@ -14,10 +14,16 @@ from tests.surface_test_lib import (
 
 LENS = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "code_lens.py"
 LEDGER = REPO_ROOT / "tests" / "lean_code_ledger.jsonl"
+CLONES = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "leanaudit" / "clones.py"
 
 
 def load_lens():
     return load_script_module("code_lens", LENS)
+
+
+def load_clones_mod():
+    load_lens()  # populates sys.path with scripts/ so `leanaudit.*` package imports resolve
+    return load_script_module("leanaudit_clones", CLONES)
 
 
 def run_lens(*args, stdin=None):
@@ -267,16 +273,16 @@ class TokenizerFixes(unittest.TestCase):
 
 class ExclusionFixes(unittest.TestCase):
     def test_substring_dir_not_excluded(self):
-        lens = load_lens()
-        self.assertFalse(lens._is_excluded("src/mydist/a.py"))
-        self.assertFalse(lens._is_excluded("app/rebuild/x.py"))
-        self.assertFalse(lens._is_excluded("svc/subtarget/y.py"))
+        clones_mod = load_clones_mod()
+        self.assertFalse(clones_mod._is_excluded("src/mydist/a.py"))
+        self.assertFalse(clones_mod._is_excluded("app/rebuild/x.py"))
+        self.assertFalse(clones_mod._is_excluded("svc/subtarget/y.py"))
 
     def test_exact_segment_dir_still_excluded(self):
-        lens = load_lens()
-        self.assertTrue(lens._is_excluded("dist/a.py"))
-        self.assertTrue(lens._is_excluded("pkg/node_modules/x.js"))
-        self.assertTrue(lens._is_excluded(".claude/worktrees/w/x.py"))
+        clones_mod = load_clones_mod()
+        self.assertTrue(clones_mod._is_excluded("dist/a.py"))
+        self.assertTrue(clones_mod._is_excluded("pkg/node_modules/x.js"))
+        self.assertTrue(clones_mod._is_excluded(".claude/worktrees/w/x.py"))
 
 
 class CloneLogicFixes(unittest.TestCase):
