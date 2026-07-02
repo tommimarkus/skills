@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-design",
-  "version": "2026.06.3",
+  "version": "2026.07.0",
   "description": "Reference-driven design skills for sustainable software, web frontend application design, HTTP APIs, and infrastructure. Covers code/module/script boundaries, software design principles/patterns, and dependencies including .NET™, Java™, Rust®, TypeScript, shell, and Python® tooling, app routes/screens/component architecture/state/data/rendering/responsive/accessibility/performance posture with React, Next.js, and Blazor™ WebAssembly extensions, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, and matching Claude Code subagents.",
   "author": {
     "name": "Sour Old Geezer",
