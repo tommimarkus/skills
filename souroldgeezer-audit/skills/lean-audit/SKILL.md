@@ -104,27 +104,10 @@ the platform-redundancy lens runs only on explicit request.
 
 Runs ONLY on an explicit native/platform-redundancy request — never as part of a
 default waste run, and never auto-fired by surface detection. When requested, load
-`references/procedures/platform-redundancy.md` and run it end-to-end:
-
-1. **Candidate detection (deterministic).** Scan in-scope artifacts (custom hooks /
-   scripts, guidance prose, custom skills/commands/agents, custom MCP) against the
-   reinvention-pattern catalog; emit `(artifact, suspected native capability)`
-   candidates. No verdict yet.
-2. **Live verification (agent-mediated).** For each candidate, consult
-   `claude-code-guide` — "does Claude Code natively provide X? cite docs; note
-   caveats / required config / version." Use its cited answer as evidence. This
-   requires the ability to dispatch the subagent; if unavailable (e.g. under
-   subagent invocation), run candidate detection only, emit each candidate as an
-   unverified `LA-NAT-2` review item, and disclose the degraded coverage — never
-   promote to `LA-NAT-1` without a citation.
-3. **Synthesis.** Promote to `LA-NAT-1` only on cited confirmation (confidence
-   `HIGH` drop-in / `MEDIUM` core-with-caveats); agent says "not native" →
-   non-finding (record the reason, no code); uncertain / partial → `LA-NAT-2`
-   (`LOW`, review). Each finding cites the doc evidence, names the native
-   alternative, and carries a "review — your custom one may do more; do not
-   blind-delete" recommendation.
-4. **Worklist.** Merge `LA-NAT-*` findings into the worklist under their own band;
-   assign risk tier per `materiality.md`. Read-only — never auto-migrate.
+`references/procedures/platform-redundancy.md` and run it end-to-end (candidate
+detection → live `claude-code-guide` verification → synthesis → worklist merge).
+Read-only; never auto-migrate. If the live check is unavailable, degrade to
+unverified `LA-NAT-2` review items and disclose.
 
 ## Rules and Stop Conditions
 
@@ -171,12 +154,8 @@ dependency.
 ## Prevention hook (opt-in)
 
 The same deterministic engine backs an opt-in PreToolUse guard
-(`references/scripts/lean_guard.py`) that soft-blocks an edit introducing a NEW
-block-severity duplication into guarded markdown. It ships OFF (installation ≠
-enforcement); enable it per `references/hook-recipe.md`. It is fail-open (engine
-error / timeout / non-guarded path → allow) and overridable (cite, restructure,
-or add `<!-- lean-audit:sync-intentional -->`); carve-outs are inherited from the
-engine.
+(`references/scripts/lean_guard.py`). It ships OFF; enable, override, and
+fail-open semantics are defined in `references/hook-recipe.md`.
 
 ## Skill Maintenance
 
