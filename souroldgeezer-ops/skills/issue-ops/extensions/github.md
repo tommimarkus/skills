@@ -1,11 +1,10 @@
 # GitHub Extension
 
-Load this extension when the repository remote, issue URL, issue number,
-provider tooling, or user wording identifies GitHub as the issue tracker.
-
-This extension adds GitHub mechanics to `issue-ops`. It does not replace the
-core authority, ledger, ask-vs-continue, escalation, verification, or completion
-contracts.
+Load this extension once a GitHub issue is the identified tracker — recognised
+from a github.com issue URL or number, the repository remote, provider tooling,
+or user wording. It adds GitHub issue mechanics to `issue-ops`; the shared GitHub
+mechanics and the core-contract boundary live in the
+[GitHub provider reference](../../../docs/provider-reference/github.md).
 
 ## State Resolution
 
@@ -27,25 +26,13 @@ prompt context without rechecking material facts.
 
 ## Tooling Order
 
-Use the best available GitHub integration in this order:
-
-1. GitHub MCP after verifying active session routing and repository identity.
-2. `gh` CLI after verifying `gh auth status` and repository context.
-3. GitHub REST API only when MCP and `gh` are unavailable or insufficient.
-
-If the selected route points at the wrong account or repository, escalate the
-item.
+Apply [../../../docs/provider-reference/github.md § Tooling Order](../../../docs/provider-reference/github.md#tooling-order).
 
 ## Lifecycle Comment
 
-Every inspected GitHub issue gets a lifecycle marker unless the run lacks
-comment permission. Update the latest marker from the same actor when possible.
-Add a new comment only when editing is unavailable, editing would hide reply
-context, or a fresh visible escalation is needed.
-
-Use current state only, not an event log. Summarize verification instead of
-dumping command output. Use strict offset timestamps. `Actor` identifies the
-agent runtime, such as `Claude Code`.
+Every inspected GitHub issue gets a lifecycle marker. Apply
+[../../../docs/provider-reference/github.md § Lifecycle Marker Mechanics](../../../docs/provider-reference/github.md#lifecycle-marker-mechanics),
+then write the `issue-ops` marker:
 
 Implementing state:
 
@@ -95,9 +82,6 @@ Resolution: implemented the issue request, delegated PR lifecycle, and verified 
 Last reviewed: 2026-05-02T12:00:00+03:00
 ```
 
-The final lifecycle marker update is sufficient before closing the issue. Do
-not add a separate closing comment unless updating the marker fails.
-
 ## Integration Strategies
 
 Default public integration strategy is `pr-ops-handoff`:
@@ -134,18 +118,13 @@ the user explicitly requests it.
 
 ## GitHub Escalation Gates
 
-Escalate the affected issue on:
+Also apply the shared gates in
+[../../../docs/provider-reference/github.md § Shared Escalation Gates](../../../docs/provider-reference/github.md#shared-escalation-gates).
+Escalate the affected issue additionally on:
 
-- wrong account, wrong repository, missing permission, or unexpected GitHub
-  tool routing;
 - protected branch mismatch that prevents both direct integration and
   `pr-ops` handoff;
-- existing linked pull request or issue branch with unclear issue ownership;
-- concurrent lifecycle marker from another current actor;
-- GitHub Actions permissions, workflow token handling, secret handling,
-  repository settings, branch rules, or sensitive history cleanup;
-- public comment text that rejects a request, assigns blame, makes a commitment,
-  asks the reporter to do work, or exposes sensitive detail.
+- existing linked pull request or issue branch with unclear issue ownership.
 
 ## Completion
 

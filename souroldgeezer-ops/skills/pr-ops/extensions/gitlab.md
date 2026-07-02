@@ -1,12 +1,11 @@
 # GitLab Extension
 
-Load this extension when the repository remote, merge request URL, GitLab `!123`
-reference, prepared branch target, provider tooling, sibling-skill handoff, or
-user wording identifies GitLab as the PR/MR provider.
-
-This extension adds GitLab mechanics to `pr-ops`. It does not replace the core
-authority, ledger, ask-vs-continue, escalation, verification, merge/close
-authorization, or completion contracts.
+Load this extension once GitLab is the identified PR/MR provider — recognised from
+a merge request URL, a GitLab `!123` reference, a prepared branch target, the
+repository remote, provider tooling, a sibling-skill handoff, or user wording. It
+adds GitLab MR mechanics to `pr-ops`; the shared GitLab tooling order and the
+core-contract boundary live in the
+[GitLab provider reference](../../../docs/provider-reference/gitlab.md).
 
 ## Authoritative Sources
 
@@ -85,20 +84,8 @@ it can mean missing permission rather than absence.
 
 ## Tooling Order
 
-Use the best available GitLab integration in this order:
-
-1. A configured GitLab MCP server, connector, or provider integration after
-   verifying active session routing, authenticated account, host, and project.
-2. `glab` CLI after verifying `glab auth status`, repository context, and host.
-   Use `-R` with `group/project`, full URL, or Git URL when the current
-   directory context is ambiguous.
-3. GitLab REST API v4 when provider tooling and `glab` are unavailable or
-   insufficient. Use `PRIVATE-TOKEN` or `Authorization: Bearer`, the
-   URL-encoded path form for project paths, `merge_request_iid`, and
-   pagination-aware reads.
-
-If the selected route points at the wrong account, host, or project, escalate
-the MR.
+Apply [../../../docs/provider-reference/gitlab.md § Tooling Order](../../../docs/provider-reference/gitlab.md#tooling-order).
+Use the project-local `merge_request_iid` (not the global `id`) on the REST route.
 
 Prefer stable REST endpoints for automation that needs precise lifecycle marker
 edits, thread replies, thread resolution, or line-level discussions. Treat

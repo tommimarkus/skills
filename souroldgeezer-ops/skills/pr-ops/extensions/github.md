@@ -1,12 +1,10 @@
 # GitHub Extension
 
-Load this extension when the repository remote, pull request URL, PR number,
-prepared branch target, provider tooling, or user wording identifies GitHub as
-the PR provider.
-
-This extension adds GitHub mechanics to `pr-ops`. It does not replace the core
-authority, ledger, ask-vs-continue, escalation, verification, merge/close
-authorization, or completion contracts.
+Load this extension once GitHub is the identified PR provider — recognised from a
+pull request URL or number, a prepared branch target, the repository remote,
+provider tooling, or user wording. It adds GitHub PR mechanics to `pr-ops`; the
+shared GitHub mechanics and the core-contract boundary live in the
+[GitHub provider reference](../../../docs/provider-reference/github.md).
 
 ## State Resolution
 
@@ -38,28 +36,16 @@ prompt context, or earlier check output without rechecking material facts.
 
 ## Tooling Order
 
-Use the best available GitHub integration in this order:
-
-1. GitHub MCP after verifying active session routing and repository identity.
-2. `gh` CLI after verifying `gh auth status` and repository context.
-3. GitHub REST API only when MCP and `gh` are unavailable or insufficient.
-
-If the selected route points at the wrong account or repository, escalate the
-PR.
+Apply [../../../docs/provider-reference/github.md § Tooling Order](../../../docs/provider-reference/github.md#tooling-order).
 
 ## Lifecycle Comment
 
-For long-running write work, add or update a PR lifecycle marker unless the run
-lacks comment permission or the user asked for read-only review. When a prepared
-branch target has no PR yet, defer the PR marker until after PR creation and use
-the issue lifecycle marker or final chat output for pre-creation status. Update
-the latest marker from the same actor when possible. Add a new comment only
-when editing is unavailable, editing would hide reply context, or a fresh
-visible escalation is needed.
-
-Use current state only, not an event log. Summarize verification instead of
-dumping command output. Use strict offset timestamps. `Actor` identifies the
-agent runtime, such as `Claude Code`.
+For long-running write work, add or update a PR lifecycle marker unless the user
+asked for read-only review. When a prepared branch target has no PR yet, defer
+the PR marker until after PR creation and use the issue lifecycle marker or final
+chat output for pre-creation status. Apply
+[../../../docs/provider-reference/github.md § Lifecycle Marker Mechanics](../../../docs/provider-reference/github.md#lifecycle-marker-mechanics),
+then write the `pr-ops` marker:
 
 Working state:
 
@@ -109,9 +95,8 @@ Verification: passed - repository checks
 Last reviewed: 2026-05-02T12:00:00+03:00
 ```
 
-The final lifecycle marker update is sufficient before merge or close. Do not
-add a separate completion comment unless updating the marker fails or the user
-explicitly asks for a public summary.
+As a pr-ops exception to the shared terminal-marker rule, a separate
+public-summary comment is allowed when the user explicitly asks for it.
 
 ## PR Creation Or Reuse
 
@@ -267,10 +252,10 @@ only for work areas owned by this run.
 
 ## GitHub Escalation Gates
 
-Escalate the affected PR on:
+Also apply the shared gates in
+[../../../docs/provider-reference/github.md § Shared Escalation Gates](../../../docs/provider-reference/github.md#shared-escalation-gates).
+Escalate the affected PR additionally on:
 
-- wrong account, wrong repository, missing permission, or unexpected GitHub
-  tool routing;
 - prepared branch ownership ambiguity, PR creation permission failure, or
   unsafe existing PR reuse candidate;
 - protected branch mismatch, required PR policy, required status checks, merge
@@ -278,13 +263,9 @@ Escalate the affected PR on:
 - unresolved requested changes, active review disagreement, unresolved
   conversations, late comments, draft PR state, merge conflict, stale branch, or
   non-trivial history cleanup;
-- existing PR branch with unclear ownership or a concurrent lifecycle marker
-  from another current actor;
-- GitHub Actions permissions, workflow token handling, secret handling,
-  repository settings, branch rules, or sensitive history cleanup;
-- external fork boundary, unavailable check logs, unknown external provider
-  failures, or public comment text that rejects a request, assigns blame, makes
-  a commitment, asks the reporter to do work, or exposes sensitive detail.
+- existing PR branch with unclear ownership;
+- external fork boundary, unavailable check logs, or unknown external provider
+  failures.
 
 ## Completion
 

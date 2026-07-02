@@ -1,11 +1,10 @@
 # GitLab Extension
 
-Load this extension when the repository remote, issue URL, provider tooling, or
-user wording identifies GitLab as the issue tracker.
-
-This extension adds GitLab mechanics to `issue-ops`. It does not replace the
-core authority, ledger, ask-vs-continue, escalation, verification, handoff, or
-completion contracts.
+Load this extension once a GitLab issue is the identified tracker — recognised
+from a GitLab issue URL, the repository remote, provider tooling, or user wording.
+It adds GitLab issue mechanics to `issue-ops`; the shared GitLab tooling order and
+the core-contract boundary live in the
+[GitLab provider reference](../../../docs/provider-reference/gitlab.md).
 
 ## Authoritative Sources
 
@@ -61,20 +60,8 @@ until auth, host, project path, and permissions are checked; it can mean
 
 ## Tooling Order
 
-Use the best available GitLab integration in this order:
-
-1. A configured GitLab MCP server, connector, or provider integration after
-   verifying active session routing, authenticated account, host, and project.
-2. `glab` CLI after verifying `glab auth status`, repository context, and host.
-   Use `-R` with `group/project`, full URL, or Git URL when the current
-   directory context is ambiguous.
-3. GitLab REST API v4 when provider tooling and `glab` are unavailable or
-   insufficient. Use `PRIVATE-TOKEN` or `Authorization: Bearer`, the
-   URL-encoded path form for project paths, `issue_iid`, and pagination-aware
-   reads.
-
-If the selected route points at the wrong account, host, or project, escalate
-the item.
+Apply [../../../docs/provider-reference/gitlab.md § Tooling Order](../../../docs/provider-reference/gitlab.md#tooling-order).
+Use the project-local `issue_iid` (not the global `id`) on the REST route.
 
 ## Lifecycle Status
 
