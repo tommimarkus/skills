@@ -19,16 +19,9 @@ provider-specific merge and close rules, and cleanup gates.
 
 ## Required Sections
 
-Each provider extension is a single markdown file in this directory with:
+See [../../../docs/provider-reference/authoring.md](../../../docs/provider-reference/authoring.md);
+the sections below are additions specific to this skill:
 
-- **Load condition**: which URLs, remotes, identifiers, tooling, or user wording
-  identify this provider.
-- **State resolution**: the live provider and local git facts to inspect before
-  acting.
-- **Tooling order**: provider integrations in preferred order, with auth and
-  repository-identity checks.
-- **Lifecycle marker or status model**: how visible progress is written, edited,
-  or skipped when permission is missing or public noise would be excessive.
 - **PR creation or reuse**: provider-specific prepared-branch, existing-PR, and
   branch-push mechanics.
 - **Review and comment handling**: provider-specific review, thread, reply,
@@ -39,11 +32,3 @@ Each provider extension is a single markdown file in this directory with:
   push, force-push, and conflict handling.
 - **Merge, close, and cleanup rules**: exact pre-merge refresh checks, merge
   method choice, close handling, and branch deletion safety.
-- **Escalation gates**: provider-specific stale-state, permission, concurrent
-  actor, public-comment, check, review, and merge-safety stops.
-- **Completion rules**: final refresh checks and final reporting requirements.
-
-Add a new provider extension only when the provider has enough lifecycle
-mechanics to keep out of the always-loaded core skill. Keep public platform
-claims anchored to official provider documentation when they are not obvious
-from live tooling behavior.

@@ -19,26 +19,10 @@ and escalation gates.
 
 ## Required Sections
 
-Each provider extension is a single markdown file in this directory with:
+See [../../../docs/provider-reference/authoring.md](../../../docs/provider-reference/authoring.md);
+the sections below are additions specific to this skill:
 
-- **Load condition**: which URLs, remotes, identifiers, tooling, or user wording
-  identify this tracker.
-- **State resolution**: the live tracker and local git facts to inspect before
-  acting.
-- **Tooling order**: provider integrations in preferred order, with auth and
-  repository-identity checks.
-- **Lifecycle marker or status model**: how visible progress is written, edited,
-  or skipped when permission is missing.
 - **Integration strategies**: provider-specific direct-commit, branch
   preparation, sibling PR-lifecycle handoff, or completion mechanics.
 - **Metadata policy**: labels, projects, milestones, assignees, components, or
   equivalent tracker fields.
-- **Escalation gates**: provider-specific stale-state, permission, concurrent
-  actor, public-comment, and closure-safety stops.
-- **Completion rules**: exact pre-close refresh checks and final reporting
-  requirements.
-
-Add a new provider extension only when the provider has enough lifecycle
-mechanics to keep out of the always-loaded core skill. Keep public platform
-claims anchored to official provider documentation when they are not obvious
-from live tooling behavior.
