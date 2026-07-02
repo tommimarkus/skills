@@ -122,7 +122,7 @@ undecided/                             ← skills not yet assigned to a plugin (
 
 Current `<kind>-reference/` directories in use:
 - `souroldgeezer-audit/docs/security-reference/devsecops.md` — DevSecOps rubric
-- `souroldgeezer-audit/docs/quality-reference/{unit,integration,e2e}-testing.md` — test-quality rubrics
+- `souroldgeezer-audit/docs/quality-reference/{unit,integration,e2e}-testing.md` — test-quality rubrics; `testing-core.md` beside them holds the shared lane core (shared discipline + shared sources) the rubrics cite
 - `souroldgeezer-audit/docs/audit-reference/audit-craft.md` — shared audit discipline + output contracts (independence disclosure, assurance level, consequence field, worklist prioritisation)
 - `souroldgeezer-audit/docs/audit-reference/materiality.md` — risk-tier procedure: materiality = max(signal strength, declared tier); orthogonal to smell severity, combined at the worklist
 - `souroldgeezer-audit/docs/audit-reference/sampling-projection.md` — sampling and projection procedure for Deep / in-depth modes when full enumeration exceeds budget
