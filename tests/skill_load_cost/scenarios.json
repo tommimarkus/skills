@@ -28,6 +28,17 @@
     ]
   },
   {
+    "id": "lean-audit-default",
+    "skill": "lean-audit",
+    "files": [
+      "souroldgeezer-audit/skills/lean-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/audit-reference/materiality.md",
+      "souroldgeezer-audit/skills/lean-audit/references/procedures/fuzzy-waste.md",
+      "souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md"
+    ]
+  },
+  {
     "id": "lookup-functions",
     "skill": "api-design",
     "files": [

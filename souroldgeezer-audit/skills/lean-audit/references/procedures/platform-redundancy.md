@@ -104,7 +104,8 @@ promotes it.
 
 ## Disclosure (feeds the SKILL.md footer)
 
-Report, for the run: lens ran (opt-in) · artifact families detected ·
-`claude-code-guide` availability (used | unavailable → degraded) · the citations
-gathered · **capabilities as observed `<date>`** · network dependency. This is how
-the lens's non-determinism stays honest.
+Report the run's lens footer fields exactly as specified in
+[`../../SKILL.md`](../../SKILL.md) §"Output footer (audit-craft §5)" (the
+platform-redundancy block) — do not improvise or drop fields. The observed-on
+date and the disclosed network dependency are how the lens's non-determinism
+stays honest.
