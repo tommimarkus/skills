@@ -55,6 +55,11 @@ user wording.
   writing provider state, discussions, branches, pipelines, merge, close, or
   cleanup.
 - New providers follow [extensions/README.md](extensions/README.md).
+- Shared provider mechanics (tooling order, auth) live in
+  [`../../docs/provider-reference/github.md`](../../docs/provider-reference/github.md)
+  and [`../../docs/provider-reference/gitlab.md`](../../docs/provider-reference/gitlab.md),
+  applied via the extensions above; the extension-authoring template is
+  [`../../docs/provider-reference/authoring.md`](../../docs/provider-reference/authoring.md).
 - If no provider can be identified, ask one concise provider/repository
   question.
 - If a provider is identified but unsupported, stop and report the missing

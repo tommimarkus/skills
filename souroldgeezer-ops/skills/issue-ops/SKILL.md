@@ -24,6 +24,11 @@ identifier, or user wording.
 - GitLab: read [`extensions/gitlab.md`](extensions/gitlab.md) before resolving
   or writing provider state.
 - New providers follow [`extensions/README.md`](extensions/README.md).
+- Shared provider mechanics (tooling order, auth) live in
+  [`../../docs/provider-reference/github.md`](../../docs/provider-reference/github.md)
+  and [`../../docs/provider-reference/gitlab.md`](../../docs/provider-reference/gitlab.md),
+  applied via the extensions above; the extension-authoring template is
+  [`../../docs/provider-reference/authoring.md`](../../docs/provider-reference/authoring.md).
 - If the provider is unknown, ask one concise tracker/repository question.
 - If the provider is known but unsupported, stop and report the missing
   extension.

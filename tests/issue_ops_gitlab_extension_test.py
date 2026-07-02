@@ -1,6 +1,6 @@
 import unittest
 
-from tests.surface_test_lib import read, read_jsonl
+from tests.surface_test_lib import compact, read, read_jsonl
 
 
 class IssueOpsGitLabExtensionTest(unittest.TestCase):
@@ -16,6 +16,13 @@ class IssueOpsGitLabExtensionTest(unittest.TestCase):
 
     def test_gitlab_extension_has_required_sections_and_authoritative_sources(self) -> None:
         gitlab = read("souroldgeezer-ops/skills/issue-ops/extensions/gitlab.md")
+        # Shared GitLab tooling-order/auth-verification mechanics moved to the
+        # cited plugin-level provider doc; the skill surface an executor reads
+        # is now extension + cited provider doc, so pin those details there.
+        provider_doc = read("souroldgeezer-ops/docs/provider-reference/gitlab.md")
+        # compact() collapses the provider doc's line wrapping so phrases that
+        # wrap mid-string (e.g. "URL-encoded\n   path") still match.
+        combined = compact(gitlab + provider_doc)
 
         for heading in (
             "## State Resolution",
@@ -39,9 +46,11 @@ class IssueOpsGitLabExtensionTest(unittest.TestCase):
         ):
             self.assertIn(source, gitlab)
 
-        self.assertIn("PRIVATE-TOKEN", gitlab)
+        # Auth-verification mechanic: now lives in the provider doc only.
+        self.assertIn("PRIVATE-TOKEN", combined)
         self.assertIn("issue_iid", gitlab)
-        self.assertIn("URL-encoded path", gitlab)
+        # Tooling-order mechanic: now lives in the provider doc only.
+        self.assertIn("URL-encoded path", combined)
         self.assertIn("related_merge_requests", gitlab)
         self.assertIn("closes_issues", gitlab)
 
