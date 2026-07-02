@@ -197,14 +197,27 @@ class ResolveClosureWithOverridesTest(unittest.TestCase):
                 skill_md, overrides)}
             self.assertIn("SKILL.md", closure)
 
-    def test_no_overrides_matches_resolve_closure(self):
-        """With an empty overrides dict, the result must equal resolve_closure."""
+    # test_no_overrides_matches_resolve_closure was retired: resolve_closure now
+    # delegates to resolve_closure_with_overrides(skill_md, {}), so that assertion
+    # became a tautology (f(x) == f(x)). Replaced by the discriminating test below.
+    def test_overrides_shrink_closure_vs_disk(self):
+        """A non-empty override exercises the override read path: links kept in the
+        override text are still followed, links removed drop from the closure —
+        while plain resolve_closure keeps reflecting the on-disk state."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            skill_md, ref_md = self._skill_with_ref(root)
-            normal = set(slc.resolve_closure(skill_md))
-            with_empty = set(slc.resolve_closure_with_overrides(skill_md, {}))
-            self.assertEqual(normal, with_empty)
+            (root / "refs").mkdir()
+            skill_md = root / "SKILL.md"
+            skill_md.write_text("[a](refs/a.md) [b](refs/b.md)\n")
+            (root / "refs" / "a.md").write_text("# A\n")
+            (root / "refs" / "b.md").write_text("# B\n")
+            disk = {p.name for p in slc.resolve_closure(skill_md)}
+            self.assertEqual(disk, {"SKILL.md", "a.md", "b.md"})
+            overrides = {skill_md.resolve(): "[a](refs/a.md)\n"}  # b link removed
+            overridden = {p.name for p in slc.resolve_closure_with_overrides(
+                skill_md, overrides)}
+            self.assertEqual(overridden, {"SKILL.md", "a.md"},
+                "override must drop b.md but still follow the kept a.md link")
 
 
 class ResolveClosureTest(unittest.TestCase):
@@ -230,18 +243,33 @@ class ResolveClosureTest(unittest.TestCase):
 
 
 class ResolveClosureCliTest(unittest.TestCase):
+    def _fixture_entry(self, root: Path) -> Path:
+        (root / "refs").mkdir()
+        (root / "SKILL.md").write_text("see [a](refs/a.md)", encoding="utf-8")
+        (root / "refs" / "a.md").write_text("leaf, no links", encoding="utf-8")
+        return root / "SKILL.md"
+
     def test_resolve_closure_subcommand_lists_transitive_links_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            (root / "refs").mkdir()
-            (root / "SKILL.md").write_text("see [a](refs/a.md)", encoding="utf-8")
-            (root / "refs" / "a.md").write_text("leaf, no links", encoding="utf-8")
+            entry = self._fixture_entry(Path(td))
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = slc.main(["resolve_closure", str(root / "SKILL.md"), "--json"])
+                rc = slc.main(["resolve_closure", str(entry), "--json"])
             self.assertEqual(rc, 0)
             paths = json.loads(buf.getvalue())
             self.assertEqual(sorted(Path(p).name for p in paths), ["SKILL.md", "a.md"])
+
+    def test_resolve_closure_subcommand_plain_output_newline_joined(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            entry = self._fixture_entry(Path(td))
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = slc.main(["resolve_closure", str(entry)])
+            self.assertEqual(rc, 0)
+            lines = buf.getvalue().splitlines()
+            self.assertEqual(sorted(Path(p).name for p in lines), ["SKILL.md", "a.md"])
+            for line in lines:
+                self.assertTrue(Path(line).is_absolute(), line)
 
 
 class CostRegressionTest(unittest.TestCase):
