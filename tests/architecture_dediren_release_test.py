@@ -112,6 +112,26 @@ def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
 
 
 class ArchitectureDedirenReleaseTest(unittest.TestCase):
+    def _assert_validate_ok(self, *args: str | Path) -> None:
+        """Run `dediren validate <args>` and assert it succeeds with an ok envelope.
+        Shared by the schema-validate / semantic-profile-validate pairs below."""
+        result = run_dediren("validate", *args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(envelope(result)["status"], "ok")
+
+    def _assert_project_ok(self, target: str, plugin: str, view_id: str) -> dict:
+        """Run `dediren project --target ... --plugin ... --view ... --input model.json`
+        and assert it succeeds with an ok envelope, returning the payload. Shared by
+        the projection/metadata projection pair below."""
+        result = run_dediren(
+            "project", "--target", target, "--plugin", plugin, "--view", view_id,
+            "--input", FIXTURE / "model.json",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = envelope(result)
+        self.assertEqual(payload["status"], "ok")
+        return payload
+
     def test_dediren_runtime_bundle_is_not_tracked_in_plugin_source(self) -> None:
         self.assertFalse((ARCH_PLUGIN / "tools" / "dediren-linux").exists())
         self.assertFalse((ARCH_PLUGIN / "tools" / "dediren-macos").exists())
@@ -322,51 +342,17 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
         view = project["views"][0]
 
-        schema_result = run_dediren("validate", "--input", FIXTURE / "model.json")
-        self.assertEqual(schema_result.returncode, 0, schema_result.stderr)
-        self.assertEqual(envelope(schema_result)["status"], "ok")
-
-        semantic_result = run_dediren(
-            "validate",
-            "--plugin",
-            "generic-graph",
-            "--profile",
-            "archimate",
-            "--input",
-            FIXTURE / "model.json",
+        self._assert_validate_ok("--input", FIXTURE / "model.json")
+        self._assert_validate_ok(
+            "--plugin", "generic-graph", "--profile", "archimate", "--input", FIXTURE / "model.json"
         )
-        self.assertEqual(semantic_result.returncode, 0, semantic_result.stderr)
-        self.assertEqual(envelope(semantic_result)["status"], "ok")
 
-        project_result = run_dediren(
-            "project",
-            "--target",
-            view["projection"]["target"],
-            "--plugin",
-            view["projection"]["plugin"],
-            "--view",
-            view["id"],
-            "--input",
-            FIXTURE / "model.json",
+        project_payload = self._assert_project_ok(
+            view["projection"]["target"], view["projection"]["plugin"], view["id"]
         )
-        self.assertEqual(project_result.returncode, 0, project_result.stderr)
-        project_payload = envelope(project_result)
-        self.assertEqual(project_payload["status"], "ok")
-
-        metadata_result = run_dediren(
-            "project",
-            "--target",
-            view["metadata"]["target"],
-            "--plugin",
-            view["metadata"]["plugin"],
-            "--view",
-            view["id"],
-            "--input",
-            FIXTURE / "model.json",
+        metadata_payload = self._assert_project_ok(
+            view["metadata"]["target"], view["metadata"]["plugin"], view["id"]
         )
-        self.assertEqual(metadata_result.returncode, 0, metadata_result.stderr)
-        metadata_payload = envelope(metadata_result)
-        self.assertEqual(metadata_payload["status"], "ok")
         self.assertEqual(metadata_payload["data"]["semantic_profile"], "archimate")
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -440,14 +426,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             fixture = bundle / "fixtures" / "source" / name
             with self.subTest(fixture=name):
                 self.assertTrue(fixture.is_file(), f"missing bundle fixture {name}")
-                schema_result = run_dediren("validate", "--input", fixture)
-                self.assertEqual(schema_result.returncode, 0, schema_result.stderr)
-                self.assertEqual(envelope(schema_result)["status"], "ok")
-                semantic_result = run_dediren(
-                    "validate", "--plugin", "generic-graph", "--profile", "uml", "--input", fixture
-                )
-                self.assertEqual(semantic_result.returncode, 0, semantic_result.stderr)
-                self.assertEqual(envelope(semantic_result)["status"], "ok")
+                self._assert_validate_ok("--input", fixture)
+                self._assert_validate_ok("--plugin", "generic-graph", "--profile", "uml", "--input", fixture)
 
     def test_release_uml_sequence_fragments_full_pipeline(self) -> None:
         bundle = release_bundle()

@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import subprocess
 import sys
@@ -6,18 +5,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import (
+    REPO_ROOT,
+    assert_precision_recall_at_least,
+    classify_tp_fp_fn,
+    load_script_module,
+    run_git,
+)
+
 ENGINE = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "lean_engine.py"
 LEDGER = REPO_ROOT / "tests" / "lean_engine_ledger.jsonl"
 
 
 def load_engine():
-    spec = importlib.util.spec_from_file_location("lean_engine", ENGINE)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("lean_engine", ENGINE)
 
 
 def run_engine(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
@@ -117,11 +118,21 @@ class Scoring(unittest.TestCase):
     def _idx(self, eng, body_a, body_b, path_a="a/SKILL.md", path_b="CLAUDE.md"):
         return eng.build_index({path_a: f"# A\n{body_a}", path_b: f"# Home\n{body_b}"})
 
-    def test_high_band_cross_file_is_block_dup1(self):
-        eng = load_engine()
+    def _section_a(self, eng):
         words = " ".join(f"w{i}" for i in range(40))
         idx = self._idx(eng, words, words)
         a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        return a, idx
+
+    def _assert_no_finding_for_pair(self, eng, path_a: str, path_b: str) -> None:
+        words = " ".join(f"w{i}" for i in range(40))
+        idx = eng.build_index({path_a: f"# A\n{words}", path_b: f"# B\n{words}"})
+        a = [s for s in idx if s.path == path_a][0]
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
+
+    def test_high_band_cross_file_is_block_dup1(self):
+        eng = load_engine()
+        a, idx = self._section_a(eng)
         reg = eng.load_registry(None)
         f = eng.score_section(a, idx, reg)
         self.assertIsNotNone(f)
@@ -131,9 +142,7 @@ class Scoring(unittest.TestCase):
 
     def test_canonical_home_match_is_dup2_with_cite(self):
         eng = load_engine()
-        words = " ".join(f"w{i}" for i in range(40))
-        idx = self._idx(eng, words, words)
-        a = [s for s in idx if s.path == "a/SKILL.md"][0]
+        a, idx = self._section_a(eng)
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / ".lean-audit.toml"
             p.write_text('[[canonical_home]]\npath = "CLAUDE.md"\nheading = "Home"\n', encoding="utf-8")
@@ -152,17 +161,12 @@ class Scoring(unittest.TestCase):
 
     def test_carveout_exempts(self):
         eng = load_engine()
-        words = " ".join(f"w{i}" for i in range(40))
-        idx = eng.build_index({"p/skills/x/SKILL.md": f"# A\n{words}", "p/agents/x.md": f"# B\n{words}"})
-        a = [s for s in idx if s.path == "p/skills/x/SKILL.md"][0]
-        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))   # built-in subagent mirror
+        # built-in subagent mirror
+        self._assert_no_finding_for_pair(eng, "p/skills/x/SKILL.md", "p/agents/x.md")
 
     def test_wrapper_path_exempt_no_finding(self):
         eng = load_engine()
-        words = " ".join(f"w{i}" for i in range(40))
-        idx = eng.build_index({".claude/skills/x/SKILL.md": f"# A\n{words}", "internal-skills/x/SKILL.md": f"# B\n{words}"})
-        a = [s for s in idx if s.path == ".claude/skills/x/SKILL.md"][0]
-        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
+        self._assert_no_finding_for_pair(eng, ".claude/skills/x/SKILL.md", "internal-skills/x/SKILL.md")
 
     def test_short_block_ignored(self):
         eng = load_engine()
@@ -289,16 +293,8 @@ class Calibration(unittest.TestCase):
             blocks = [f for f in eng.scan(files, reg)
                       if f.severity == "block" and f.path == case["expect_source"]]
             fired = bool(blocks)
-            if case["expect_block"] and fired:
-                tp += 1
-            elif case["expect_block"] and not fired:
-                fn += 1
-            elif not case["expect_block"] and fired:
-                fp += 1
-        precision = tp / (tp + fp) if (tp + fp) else 1.0
-        recall = tp / (tp + fn) if (tp + fn) else 1.0
-        self.assertGreaterEqual(precision, 0.90, f"precision {precision:.2f}")
-        self.assertGreaterEqual(recall, 0.90, f"recall {recall:.2f}")
+            tp, fp, fn = classify_tp_fp_fn(case["expect_block"], fired, tp, fp, fn)
+        assert_precision_recall_at_least(self, tp, fp, fn)
 
 
 class DeadRefs(unittest.TestCase):
@@ -531,10 +527,6 @@ class MalformedCarveOut(unittest.TestCase):
 
 
 class GitAwareReadRepo(unittest.TestCase):
-    def _git(self, cwd, *args):
-        subprocess.run(["git", "-C", str(cwd), *args], check=True,
-                       capture_output=True, text=True)
-
     def test_read_repo_excludes_ignored_nested_worktree(self):
         # Use .claude/worktrees/ as the ghost location: it is in .gitignore in
         # the real repo but NOT in _EXCLUDE, so only the git-membership gate
@@ -546,11 +538,11 @@ class GitAwareReadRepo(unittest.TestCase):
             real = root / "aud" / "skills" / "s1" / "SKILL.md"
             real.parent.mkdir(parents=True)
             real.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
-            self._git(root, "init", "-q")
-            self._git(root, "add", "-A")
-            self._git(root, "-c", "user.email=t@t", "-c", "user.name=t",
-                      "-c", "commit.gpgsign=false",
-                      "commit", "-qm", "init")
+            run_git(root, "init", "-q")
+            run_git(root, "add", "-A")
+            run_git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "init")
             (root / ".gitignore").write_text(".claude/worktrees/\n", encoding="utf-8")
             ghost = root / ".claude" / "worktrees" / "b" / "aud" / "skills" / "s1" / "SKILL.md"
             ghost.parent.mkdir(parents=True)

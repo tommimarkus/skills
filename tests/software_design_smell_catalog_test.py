@@ -1,24 +1,15 @@
-import json
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import re
 import unittest
-from pathlib import Path
 
+from tests.surface_test_lib import read, read_jsonl
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 SOFTWARE_SKILL = "souroldgeezer-design/skills/software-design"
 SMELL_CATALOG = f"{SOFTWARE_SKILL}/references/smell-catalog.md"
 SMELL_CARDS = f"{SOFTWARE_SKILL}/references/smell-cards.jsonl"
 BEHAVIOR_CASES = f"{SOFTWARE_SKILL}/references/evals/behavior-cases.jsonl"
 MODEL_PRESSURE = f"{SOFTWARE_SKILL}/references/evals/model-pressure.md"
 SOURCE_GROUNDING = f"{SOFTWARE_SKILL}/references/source-grounding.md"
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    return [json.loads(line) for line in read(path).splitlines() if line.strip()]
 
 
 class SoftwareDesignSmellCatalogTest(unittest.TestCase):

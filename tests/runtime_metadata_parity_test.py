@@ -1,18 +1,12 @@
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import REPO_ROOT, write_fixture as write
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 CHECKER = REPO_ROOT / "scripts" / "check-runtime-metadata-parity.py"
-
-
-def write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(textwrap.dedent(content).lstrip(), encoding="utf-8")
 
 
 def run_checker(repo: Path) -> subprocess.CompletedProcess[str]:
@@ -27,6 +21,21 @@ def run_checker(repo: Path) -> subprocess.CompletedProcess[str]:
 
 
 class RuntimeMetadataParityTest(unittest.TestCase):
+    def _run_with_broken_fixture(self, rel_path: str, content: str) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            write(repo / rel_path, content)
+            return run_checker(repo)
+
+    def _assert_broken_fixture_flags(self, rel_path: str, content: str, *expect_in_stdout: str
+                                      ) -> subprocess.CompletedProcess[str]:
+        result = self._run_with_broken_fixture(rel_path, content)
+        self.assertNotEqual(result.returncode, 0)
+        for substring in expect_in_stdout:
+            self.assertIn(substring, result.stdout)
+        return result
+
     def test_clean_fixture_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "repo"
@@ -38,71 +47,50 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("Runtime metadata parity OK", result.stdout)
 
     def test_skill_description_drift_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "souroldgeezer-example/agents/example-skill.md",
-                """
-                ---
-                name: example-skill
-                description: Use when this Claude agent has drifted away.
-                ---
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/agents/example-skill.md",
+            """
+            ---
+            name: example-skill
+            description: Use when this Claude agent has drifted away.
+            ---
 
-                Use the matching skill as source of truth.
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Runtime metadata parity failed", result.stdout)
-        self.assertIn("souroldgeezer-example/agents/example-skill.md", result.stdout)
-        self.assertIn("description", result.stdout)
+            Use the matching skill as source of truth.
+            """,
+            "Runtime metadata parity failed",
+            "souroldgeezer-example/agents/example-skill.md",
+            "description",
+        )
 
     def test_plugin_manifest_version_drift_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "souroldgeezer-example/.claude-plugin/plugin.json",
-                """
-                {
-                  "name": "souroldgeezer-example",
-                  "version": "0.2.0",
-                  "description": "Example plugin for runtime metadata parity tests.",
-                  "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
-                  "license": "MIT"
-                }
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("souroldgeezer-example/.claude-plugin/plugin.json", result.stdout)
-        self.assertIn("version", result.stdout)
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/.claude-plugin/plugin.json",
+            """
+            {
+              "name": "souroldgeezer-example",
+              "version": "0.2.0",
+              "description": "Example plugin for runtime metadata parity tests.",
+              "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
+              "license": "MIT"
+            }
+            """,
+            "souroldgeezer-example/.claude-plugin/plugin.json",
+            "version",
+        )
 
     def test_docs_plugin_links_must_be_relative_to_doc(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "docs/plugins/example.md",
-                """
-                # `souroldgeezer-example`
+        self._assert_broken_fixture_flags(
+            "docs/plugins/example.md",
+            """
+            # `souroldgeezer-example`
 
-                | Skill | Summary |
-                |---|---|
-                | [example-skill](souroldgeezer-example/skills/example-skill/SKILL.md) | Broken from docs/plugins |
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("docs/plugins/example.md", result.stdout)
-        self.assertIn("[example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md)", result.stdout)
+            | Skill | Summary |
+            |---|---|
+            | [example-skill](souroldgeezer-example/skills/example-skill/SKILL.md) | Broken from docs/plugins |
+            """,
+            "docs/plugins/example.md",
+            "[example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md)",
+        )
 
     def test_shared_internal_skill_without_claude_wrapper_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -119,75 +107,54 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertIn("missing", result.stdout)
 
     def test_orphan_claude_wrapper_without_shared_skill_is_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".claude/skills/orphan-review/SKILL.md",
-                """
-                ---
-                name: orphan-review
-                description: No shared internal skill owns this Claude wrapper.
-                ---
+        self._assert_broken_fixture_flags(
+            ".claude/skills/orphan-review/SKILL.md",
+            """
+            ---
+            name: orphan-review
+            description: No shared internal skill owns this Claude wrapper.
+            ---
 
-                # Orphan Review
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".claude/skills/orphan-review/SKILL.md", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-        self.assertIn("internal-skills/orphan-review/SKILL.md", result.stdout)
+            # Orphan Review
+            """,
+            ".claude/skills/orphan-review/SKILL.md",
+            "source-of-truth",
+            "internal-skills/orphan-review/SKILL.md",
+        )
 
     def test_internal_claude_wrapper_must_point_to_shared_skill(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / ".claude/skills/internal-review/SKILL.md",
-                """
-                ---
-                name: internal-review
-                description: Use when reviewing the internal authoring workflow.
-                ---
+        self._assert_broken_fixture_flags(
+            ".claude/skills/internal-review/SKILL.md",
+            """
+            ---
+            name: internal-review
+            description: Use when reviewing the internal authoring workflow.
+            ---
 
-                # Internal Review
+            # Internal Review
 
-                This wrapper accidentally duplicates workflow text instead of
-                delegating to the neutral shared source.
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
-        self.assertIn("source-of-truth", result.stdout)
-        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
+            This wrapper accidentally duplicates workflow text instead of
+            delegating to the neutral shared source.
+            """,
+            ".claude/skills/internal-review/SKILL.md",
+            "source-of-truth",
+            "internal-skills/internal-review/SKILL.md",
+        )
 
     def test_internal_skill_wrapper_is_keyed_by_directory_when_frontmatter_name_drifts(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp) / "repo"
-            self.make_clean_fixture(repo)
-            write(
-                repo / "internal-skills/internal-review/SKILL.md",
-                """
-                ---
-                name: drifted-internal
-                description: Use when reviewing the internal authoring workflow.
-                ---
+        result = self._assert_broken_fixture_flags(
+            "internal-skills/internal-review/SKILL.md",
+            """
+            ---
+            name: drifted-internal
+            description: Use when reviewing the internal authoring workflow.
+            ---
 
-                # Internal Review
-                """,
-            )
-
-            result = run_checker(repo)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("internal-skills/internal-review/SKILL.md", result.stdout)
-        self.assertIn("name", result.stdout)
+            # Internal Review
+            """,
+            "internal-skills/internal-review/SKILL.md",
+            "name",
+        )
         self.assertNotIn(".claude/skills/internal-review/SKILL.md :: source-of-truth", result.stdout)
 
     def make_clean_fixture(self, repo: Path) -> None:

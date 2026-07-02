@@ -1,19 +1,9 @@
-import json
 import unittest
-from pathlib import Path
 
+from tests.surface_test_lib import read, read_jsonl
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 APP_SKILL = "souroldgeezer-design/skills/app-design"
 API_SKILL = "souroldgeezer-design/skills/api-design"
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    return [json.loads(line) for line in read(path).splitlines() if line.strip()]
 
 
 class AppDesignReactNextExtensionSurfaceTest(unittest.TestCase):

@@ -1,9 +1,8 @@
 import json
 import unittest
-from pathlib import Path
 
+from tests.surface_test_lib import REPO_ROOT, read
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_SKILL = REPO_ROOT / "souroldgeezer-audit" / "skills" / "ip-hygiene"
 INTERNAL_SKILL = REPO_ROOT / ".claude" / "skills" / "ip-hygiene"
 PUBLIC_SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
@@ -13,10 +12,6 @@ AUDIT_DESCRIPTION = (
     "duplication/waste (Lean), with per-stack extensions and matching Claude Code "
     "subagents."
 )
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
 
 
 class PublicIpHygieneSkillTest(unittest.TestCase):

@@ -1,23 +1,17 @@
 import contextlib
-import importlib.util
 import io
 import json
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT, load_script_module, run_git as _git
+
 MODULE = REPO_ROOT / "scripts" / "version_stamp.py"
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("version_stamp", MODULE)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["version_stamp"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("version_stamp", MODULE)
 
 
 vs = load_module()
@@ -81,6 +75,13 @@ def _write_plugin_manifest(root: Path, plugin: str, version: str) -> None:
     )
 
 
+def _seed_committed_manifest(root: Path, version: str = "2026.06.3") -> None:
+    _init_repo(root)
+    _write_plugin_manifest(root, "souroldgeezer-audit", version)
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "seed")
+
+
 class ComputeCliTest(unittest.TestCase):
     def _run(self, root):
         buf = io.StringIO()
@@ -94,10 +95,7 @@ class ComputeCliTest(unittest.TestCase):
     def test_compute_prints_next_stamp_from_main(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _init_repo(root)
-            _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
-            _git(root, "add", "-A")
-            _git(root, "commit", "-qm", "seed")
+            _seed_committed_manifest(root)
             rc, out = self._run(root)
             self.assertEqual(rc, 0)
             self.assertEqual(out, "2026.06.4")
@@ -105,20 +103,12 @@ class ComputeCliTest(unittest.TestCase):
     def test_compute_reads_main_not_stale_working_tree(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _init_repo(root)
-            _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
-            _git(root, "add", "-A")
-            _git(root, "commit", "-qm", "seed")
+            _seed_committed_manifest(root)
             # working tree goes ahead, uncommitted — compute must ignore it
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.9")
             rc, out = self._run(root)
             self.assertEqual(rc, 0)
             self.assertEqual(out, "2026.06.4")
-
-
-def _git(cwd: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(cwd), *args], check=True,
-                   capture_output=True, text=True)
 
 
 def _init_repo(root: Path) -> None:

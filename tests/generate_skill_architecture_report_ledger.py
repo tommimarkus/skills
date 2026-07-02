@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 from __future__ import annotations
 
 import json
@@ -29,6 +30,23 @@ def clean_body(scenario: str) -> str:
     )
 
 
+def _base_envelope(code: str, complexity: str, scenario: str, files: list) -> dict:
+    """The complexity/intent/gold_issue/files/expected_codes envelope shared by every
+    case builder, whether it goes through skill_case or builds its own `files` list
+    from scratch (marketplace.json, plugin.json, ...)."""
+    return {
+        "complexity": complexity,
+        "intent": f"{scenario.replace('-', ' ')} exposes {code}",
+        "gold_issue": {
+            "code": code,
+            "scenario": scenario,
+            "source": "local skill-only review archetype",
+        },
+        "files": files,
+        "expected_codes": [code],
+    }
+
+
 def skill_case(
     code: str,
     complexity: str,
@@ -52,17 +70,7 @@ def skill_case(
         }
     ]
     files.extend(extra_files or [])
-    case: dict = {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes {code}",
-        "gold_issue": {
-            "code": code,
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": files,
-        "expected_codes": [code],
-    }
+    case = _base_envelope(code, complexity, scenario, files)
     if omit_claude_agent:
         case["omit_claude_agent"] = True
     if omit_repo_guidance:
@@ -72,6 +80,65 @@ def skill_case(
     if exact:
         case["expect_exact_codes"] = True
     return case
+
+
+def bare_case(code: str, complexity: str, scenario: str, files: list, *,
+              expected_findings: list | None = None) -> dict:
+    """Case envelope for the builders that construct their own `files` list from
+    scratch (marketplace.json, plugin.json, ...) rather than going through skill_case."""
+    case = _base_envelope(code, complexity, scenario, files)
+    if expected_findings is not None:
+        case["expected_findings"] = expected_findings
+    return case
+
+
+def case_unadvertised_artifact(
+    code: str, complexity: str, index: str, scenario: str, *,
+    kind: str, subdir: str, filename: str, content: str, expect_finding: bool = True,
+) -> dict:
+    """A skill with one extra file under `subdir` that SKILL.md never references.
+    Shared shape for the SAC-*-UNADVERTISED case builders (references/scripts/
+    fixtures/templates/assets)."""
+    name = f"{scenario}-skill"
+    path = f"example-plugin/skills/{name}/{subdir}/{filename}"
+    return skill_case(
+        code, complexity, index, scenario,
+        f"Use when checking {scenario} {kind} discoverability.",
+        clean_body(scenario),
+        skill_name=name,
+        extra_files=[{"path": path, "content": content}],
+        expected_findings=[{"code": code, "path": path}] if expect_finding else None,
+    )
+
+
+def case_with_agent_file(code: str, complexity: str, index: str, scenario: str, *,
+                         description: str, agent_content: str) -> dict:
+    """A skill with a companion agents/<name>.md file whose frontmatter drifts from
+    the skill in some way. Shared shape for the SAC-RUNTIME-*AGENT* case builders."""
+    name = f"{scenario}-skill"
+    return skill_case(
+        code, complexity, index, scenario, description, clean_body(scenario),
+        skill_name=name,
+        extra_files=[{"path": f"example-plugin/agents/{name}.md", "content": agent_content}],
+    )
+
+
+def case_with_eval_file(code: str, complexity: str, index: str, scenario: str, *,
+                        description: str, eval_filename: str, content: str) -> dict:
+    """A skill whose Load-Map cites references/evals, with one evals file containing
+    `content`. Shared shape for the SAC-EVAL-* schema/hygiene case builders."""
+    name = f"{scenario}-skill"
+    return skill_case(
+        code, complexity, index, scenario, description,
+        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
+        skill_name=name,
+        extra_files=[
+            {
+                "path": f"example-plugin/skills/{name}/references/evals/{eval_filename}",
+                "content": content,
+            }
+        ],
+    )
 
 
 def case_trigger_desc_length(complexity: str, index: str, scenario: str) -> dict:
@@ -216,22 +283,9 @@ def case_ref_broken_link(complexity: str, index: str, scenario: str) -> dict:
 
 
 def case_ref_unadvertised_support(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-REF-UNADVERTISED-SUPPORT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} support discoverability.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[{"path": f"example-plugin/skills/{name}/references/{scenario}.md", "content": f"# {scenario}\n"}],
-        expected_findings=[
-            {
-                "code": "SAC-REF-UNADVERTISED-SUPPORT",
-                "path": f"example-plugin/skills/{name}/references/{scenario}.md",
-            }
-        ],
+    return case_unadvertised_artifact(
+        "SAC-REF-UNADVERTISED-SUPPORT", complexity, index, scenario,
+        kind="support", subdir="references", filename=f"{scenario}.md", content=f"# {scenario}\n",
     )
 
 
@@ -251,15 +305,9 @@ def case_ref_unconditional_load(complexity: str, index: str, scenario: str) -> d
 
 
 def case_plugin_doc_unadvertised(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-REF-UNADVERTISED-PLUGIN-DOC",
-        "gold_issue": {
-            "code": "SAC-REF-UNADVERTISED-PLUGIN-DOC",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
+    return bare_case(
+        "SAC-REF-UNADVERTISED-PLUGIN-DOC", complexity, scenario,
+        files=[
             {
                 "path": "example-plugin/docs/example-reference/topic.md",
                 "content": f"# {scenario}\n\nReference prose for the fixture.\n",
@@ -273,14 +321,13 @@ def case_plugin_doc_unadvertised(complexity: str, index: str, scenario: str) -> 
                 ),
             },
         ],
-        "expected_codes": ["SAC-REF-UNADVERTISED-PLUGIN-DOC"],
-        "expected_findings": [
+        expected_findings=[
             {
                 "code": "SAC-REF-UNADVERTISED-PLUGIN-DOC",
                 "path": "example-plugin/docs/example-reference/topic.md",
             }
         ],
-    }
+    )
 
 
 def case_ref_private_plugin_root(complexity: str, index: str, scenario: str) -> dict:
@@ -306,70 +353,33 @@ def case_ref_private_plugin_root(complexity: str, index: str, scenario: str) -> 
 
 
 def case_script_unadvertised(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-SCRIPT-UNADVERTISED",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} helper-script discoverability.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[{"path": f"example-plugin/skills/{name}/scripts/{scenario}.sh", "content": "#!/usr/bin/env bash\necho fixture\n"}],
-        expected_findings=[
-            {
-                "code": "SAC-SCRIPT-UNADVERTISED",
-                "path": f"example-plugin/skills/{name}/scripts/{scenario}.sh",
-            }
-        ],
+    return case_unadvertised_artifact(
+        "SAC-SCRIPT-UNADVERTISED", complexity, index, scenario,
+        kind="helper-script", subdir="scripts", filename=f"{scenario}.sh",
+        content="#!/usr/bin/env bash\necho fixture\n",
     )
 
 
 def case_fixture_unadvertised(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-FIXTURE-UNADVERTISED",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} fixture discoverability.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[{"path": f"example-plugin/skills/{name}/fixtures/{scenario}.md", "content": "# Fixture\n"}],
-        expected_findings=[
-            {
-                "code": "SAC-FIXTURE-UNADVERTISED",
-                "path": f"example-plugin/skills/{name}/fixtures/{scenario}.md",
-            }
-        ],
+    return case_unadvertised_artifact(
+        "SAC-FIXTURE-UNADVERTISED", complexity, index, scenario,
+        kind="fixture", subdir="fixtures", filename=f"{scenario}.md", content="# Fixture\n",
     )
 
 
 def case_template_unadvertised(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-TEMPLATE-UNADVERTISED",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} template discoverability.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[{"path": f"example-plugin/skills/{name}/templates/{scenario}.md", "content": "# Template\n"}],
+    return case_unadvertised_artifact(
+        "SAC-TEMPLATE-UNADVERTISED", complexity, index, scenario,
+        kind="template", subdir="templates", filename=f"{scenario}.md", content="# Template\n",
+        expect_finding=False,
     )
 
 
 def case_asset_unadvertised(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-ASSET-UNADVERTISED",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} asset discoverability.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[{"path": f"example-plugin/skills/{name}/assets/{scenario}.txt", "content": "fixture asset\n"}],
+    return case_unadvertised_artifact(
+        "SAC-ASSET-UNADVERTISED", complexity, index, scenario,
+        kind="asset", subdir="assets", filename=f"{scenario}.txt", content="fixture asset\n",
+        expect_finding=False,
     )
 
 
@@ -453,7 +463,6 @@ def case_eval_hidden_artifact(complexity: str, index: str, scenario: str) -> dic
 
 
 def case_eval_trigger_schema(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
     record = {
         "id": f"{scenario}-trigger-yes",
         "prompt": f"Use {scenario}.",
@@ -464,25 +473,15 @@ def case_eval_trigger_schema(complexity: str, index: str, scenario: str) -> dict
         "ip_handling": "original synthetic prompt; no third-party text",
         "contains_third_party_text": False,
     }
-    return skill_case(
-        "SAC-EVAL-TRIGGER-SCHEMA",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} trigger eval schema.",
-        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/skills/{name}/references/evals/trigger-cases.jsonl",
-                "content": json.dumps(record, separators=(",", ":")) + "\n",
-            }
-        ],
+    return case_with_eval_file(
+        "SAC-EVAL-TRIGGER-SCHEMA", complexity, index, scenario,
+        description=f"Use when checking {scenario} trigger eval schema.",
+        eval_filename="trigger-cases.jsonl",
+        content=json.dumps(record, separators=(",", ":")) + "\n",
     )
 
 
 def case_eval_behavior_schema(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
     record = {
         "id": f"{scenario}-behavior",
         "prompt": f"Review {scenario}.",
@@ -491,25 +490,15 @@ def case_eval_behavior_schema(complexity: str, index: str, scenario: str) -> dic
         "ip_handling": "original synthetic prompt; no third-party text",
         "contains_third_party_text": False,
     }
-    return skill_case(
-        "SAC-EVAL-BEHAVIOR-SCHEMA",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} behavior eval schema.",
-        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/skills/{name}/references/evals/behavior-cases.jsonl",
-                "content": json.dumps(record, separators=(",", ":")) + "\n",
-            }
-        ],
+    return case_with_eval_file(
+        "SAC-EVAL-BEHAVIOR-SCHEMA", complexity, index, scenario,
+        description=f"Use when checking {scenario} behavior eval schema.",
+        eval_filename="behavior-cases.jsonl",
+        content=json.dumps(record, separators=(",", ":")) + "\n",
     )
 
 
 def case_eval_ip_hygiene(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
     unsafe = {
         "id": f"{scenario}-trigger-unsafe",
         "prompt": f"Use {scenario} with copied prompt text.",
@@ -530,20 +519,11 @@ def case_eval_ip_hygiene(complexity: str, index: str, scenario: str) -> dict:
         "ip_handling": "original synthetic prompt; no third-party text",
         "contains_third_party_text": False,
     }
-    return skill_case(
-        "SAC-EVAL-IP-HYGIENE",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} eval IP handling.",
-        clean_body(scenario) + "\nRead references/evals when changing evaluation cases.\n",
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/skills/{name}/references/evals/trigger-cases.jsonl",
-                "content": "\n".join(json.dumps(record, separators=(",", ":")) for record in (unsafe, safe)) + "\n",
-            }
-        ],
+    return case_with_eval_file(
+        "SAC-EVAL-IP-HYGIENE", complexity, index, scenario,
+        description=f"Use when checking {scenario} eval IP handling.",
+        eval_filename="trigger-cases.jsonl",
+        content="\n".join(json.dumps(record, separators=(",", ":")) for record in (unsafe, safe)) + "\n",
     )
 
 
@@ -562,55 +542,34 @@ def case_rationalization_gate(complexity: str, index: str, scenario: str) -> dic
 
 def case_runtime_name_drift(complexity: str, index: str, scenario: str) -> dict:
     name = f"{scenario}-skill"
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-NAME-DRIFT",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-NAME-DRIFT",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
+    return bare_case(
+        "SAC-RUNTIME-NAME-DRIFT", complexity, scenario,
+        files=[
             {
                 "path": f"example-plugin/skills/{name}/SKILL.md",
                 "content": skill_doc("different-name", f"Use when checking {scenario} skill-name parity.", clean_body(scenario)),
             }
         ],
-        "expected_codes": ["SAC-RUNTIME-NAME-DRIFT"],
-    }
+    )
 
 
 def case_runtime_plugin_json(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-PLUGIN-JSON",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-PLUGIN-JSON",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
+    return bare_case(
+        "SAC-RUNTIME-PLUGIN-JSON", complexity, scenario,
+        files=[
             {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}]}}\n"},
             {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"description\":\"{scenario}\",\n"}],
-        "expected_codes": ["SAC-RUNTIME-PLUGIN-JSON"],
-    }
+    )
 
 
 def case_manifest_sync(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-MANIFEST-SYNC",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-MANIFEST-SYNC",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
+    return bare_case(
+        "SAC-RUNTIME-MANIFEST-SYNC", complexity, scenario,
+        files=[
             {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Marketplace {scenario}\"}}]}}\n"},
             {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Claude {scenario}\"}}\n"},
         ],
-        "expected_codes": ["SAC-RUNTIME-MANIFEST-SYNC"],
-    }
+    )
 
 
 def case_missing_claude_agent(complexity: str, index: str, scenario: str) -> dict:
@@ -618,92 +577,45 @@ def case_missing_claude_agent(complexity: str, index: str, scenario: str) -> dic
 
 
 def case_agent_desc_drift(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-AGENT-DESC-DRIFT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} subagent description sync.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/agents/{name}.md",
-                "content": f"---\nname: {name}\ndescription: Different {scenario} description.\ntools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n",
-            }
-        ],
+    return case_with_agent_file(
+        "SAC-RUNTIME-AGENT-DESC-DRIFT", complexity, index, scenario,
+        description=f"Use when checking {scenario} subagent description sync.",
+        agent_content=f"---\nname: {scenario}-skill\ndescription: Different {scenario} description.\ntools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n",
     )
 
 
 def case_missing_claude_manifest(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-MISSING-CLAUDE-MANIFEST",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
+    return bare_case(
+        "SAC-RUNTIME-MISSING-CLAUDE-MANIFEST", complexity, scenario,
+        files=[
             {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}]}}\n"},
-        ],
-        "expected_codes": ["SAC-RUNTIME-MISSING-CLAUDE-MANIFEST"],
-    }
-
-
-def case_marketplace_missing_entry(complexity: str, index: str, scenario: str) -> dict:
-    return {
-        "complexity": complexity,
-        "intent": f"{scenario.replace('-', ' ')} exposes SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
-        "gold_issue": {
-            "code": "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
-            "scenario": scenario,
-            "source": "local skill-only review archetype",
-        },
-        "files": [
-            {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[]}\n"},
-            {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}\n"},
-        ],
-        "expected_codes": ["SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY"],
-    }
-
-
-def case_agent_name_drift(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-CLAUDE-AGENT-NAME-DRIFT",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} Claude agent name sync.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/agents/{name}.md",
-                "content": f"---\nname: different-{scenario}\ndescription: Use when checking {scenario} Claude agent name sync.\ntools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n",
-            }
         ],
     )
 
 
-def case_agent_missing_skill_tool(complexity: str, index: str, scenario: str) -> dict:
-    name = f"{scenario}-skill"
-    return skill_case(
-        "SAC-RUNTIME-CLAUDE-AGENT-MISSING-SKILL-TOOL",
-        complexity,
-        index,
-        scenario,
-        f"Use when checking {scenario} Claude agent tool access.",
-        clean_body(scenario),
-        skill_name=name,
-        extra_files=[
-            {
-                "path": f"example-plugin/agents/{name}.md",
-                "content": f"---\nname: {name}\ndescription: Use when checking {scenario} Claude agent tool access.\ntools: Read, Edit\nmodel: sonnet\n---\n\nInvoke the skill.\n",
-            }
+def case_marketplace_missing_entry(complexity: str, index: str, scenario: str) -> dict:
+    return bare_case(
+        "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY", complexity, scenario,
+        files=[
+            {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[]}\n"},
+            {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin {scenario}\"}}\n"},
         ],
+    )
+
+
+def case_agent_name_drift(complexity: str, index: str, scenario: str) -> dict:
+    return case_with_agent_file(
+        "SAC-RUNTIME-CLAUDE-AGENT-NAME-DRIFT", complexity, index, scenario,
+        description=f"Use when checking {scenario} Claude agent name sync.",
+        agent_content=f"---\nname: different-{scenario}\ndescription: Use when checking {scenario} Claude agent name sync.\ntools: Skill\nmodel: sonnet\n---\n\nInvoke the skill.\n",
+    )
+
+
+def case_agent_missing_skill_tool(complexity: str, index: str, scenario: str) -> dict:
+    return case_with_agent_file(
+        "SAC-RUNTIME-CLAUDE-AGENT-MISSING-SKILL-TOOL", complexity, index, scenario,
+        description=f"Use when checking {scenario} Claude agent tool access.",
+        agent_content=f"---\nname: {scenario}-skill\ndescription: Use when checking {scenario} Claude agent tool access.\ntools: Read, Edit\nmodel: sonnet\n---\n\nInvoke the skill.\n",
     )
 
 

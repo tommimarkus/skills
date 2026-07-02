@@ -1,52 +1,34 @@
-import json
 import unittest
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    return [json.loads(line) for line in read(path).splitlines() if line.strip()]
-
-
-def compact(text: str) -> str:
-    return " ".join(text.split())
+from tests.surface_test_lib import assert_software_design_loads_stack_extension, read, read_jsonl, compact
 
 
 class TypeScriptExtensionSurfaceTest(unittest.TestCase):
     def test_software_design_loads_typescript_extension_and_metadata_mentions_it(self) -> None:
-        skill = read("souroldgeezer-design/skills/software-design/SKILL.md")
-        extension_authoring = read(
-            "souroldgeezer-design/skills/software-design/references/procedures/extension-authoring.md"
-        )
-        claude_agent = read("souroldgeezer-design/agents/software-design.md")
-
-        self.assertIn("extensions/typescript.md", skill)
-        self.assertIn("typescript.md", extension_authoring)
-        for text in (skill, claude_agent):
-            self.assertIn("TypeScript", text)
+        assert_software_design_loads_stack_extension(self, "typescript", "TypeScript")
 
         typescript = read("souroldgeezer-design/skills/software-design/extensions/typescript.md")
-        self.assertIn("package.json", typescript)
-        self.assertIn("tsconfig.json", typescript)
-        self.assertIn("typescript.SD-", typescript)
-        self.assertIn("devsecops-audit", typescript)
-        self.assertIn("test-quality-audit", typescript)
+        for marker in (
+            "package.json",
+            "tsconfig.json",
+            "typescript.SD-",
+            "devsecops-audit",
+            "test-quality-audit",
+        ):
+            self.assertIn(marker, typescript)
 
     def test_typescript_software_design_guidance_is_grounded_in_authoritative_docs(self) -> None:
         typescript = read("souroldgeezer-design/skills/software-design/extensions/typescript.md")
         grounding = read("souroldgeezer-design/skills/software-design/references/source-grounding.md")
 
-        self.assertIn("typescriptlang.org/docs/handbook/project-references.html", typescript)
-        self.assertIn("typescriptlang.org/docs/handbook/modules/reference.html", typescript)
-        self.assertIn("typescriptlang.org/tsconfig", typescript)
-        self.assertIn("nodejs.org/api/packages.html", typescript)
-        self.assertIn("docs.npmjs.com/cli/v11/configuring-npm/package-json", typescript)
+        for source in (
+            "typescriptlang.org/docs/handbook/project-references.html",
+            "typescriptlang.org/docs/handbook/modules/reference.html",
+            "typescriptlang.org/tsconfig",
+            "nodejs.org/api/packages.html",
+            "docs.npmjs.com/cli/v11/configuring-npm/package-json",
+        ):
+            self.assertIn(source, typescript)
         self.assertIn("project references", compact(typescript))
         self.assertIn("Node.js package metadata", grounding)
 

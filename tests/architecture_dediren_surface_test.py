@@ -1,9 +1,10 @@
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import REPO_ROOT, read_jsonl
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
@@ -63,6 +64,32 @@ def compact_file(path: Path) -> str:
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
+    def _assert_phrase_in_surfaces(self, surfaces: list, phrase: str) -> None:
+        """One phrase, checked (compacted) across a list of surfaces."""
+        for surface in surfaces:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                content = " ".join(surface.read_text(encoding="utf-8").split())
+                self.assertIn(phrase, content)
+
+    def _assert_phrases_in_surfaces(self, surfaces: list, phrases: list) -> None:
+        """Every phrase in `phrases`, checked (compacted) across every surface in
+        `surfaces` — the nested surfaces x phrases coverage shape used below."""
+        for surface in surfaces:
+            content = " ".join(surface.read_text(encoding="utf-8").split())
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
+
+    def _assert_phrases_per_surface(self, expectations: dict) -> None:
+        """For each surface -> [phrases] mapping, assert every phrase is present in
+        that surface's compacted content. Shared shape for the per-surface phrase
+        coverage checks below."""
+        for surface, phrases in expectations.items():
+            content = compact_file(surface)
+            for phrase in phrases:
+                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
+                    self.assertIn(phrase, content)
+
     def test_architecture_plugin_version_is_synchronized_everywhere(self) -> None:
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_entry = next(
@@ -137,10 +164,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
         ]
 
-        for surface in surfaces:
-            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                content = " ".join(surface.read_text(encoding="utf-8").split())
-                self.assertIn(expected_phrase, content)
+        self._assert_phrase_in_surfaces(surfaces, expected_phrase)
 
     def test_process_lifting_guidance_prevents_overgrouping_small_linear_views(self) -> None:
         expected_phrase = (
@@ -158,38 +182,31 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
         ]
 
-        for surface in surfaces:
-            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                content = " ".join(surface.read_text(encoding="utf-8").split())
-                self.assertIn(expected_phrase, content)
+        self._assert_phrase_in_surfaces(surfaces, expected_phrase)
 
     def test_grouped_layout_guidance_requires_validation_fallback(self) -> None:
         # The grouped-layout validation fallback prose lives canonically in
         # architecture.md §9. output-format.md and the operational workflow cite
         # that section instead of duplicating the prose (refactor ad4db28).
         canonical = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        canonical_content = " ".join(canonical.read_text(encoding="utf-8").split())
-        for phrase in [
+        self._assert_phrases_in_surfaces([canonical], [
             "If grouped layout validation still reports connector-through-node, invalid route, or group-boundary warnings",
             "rerun the same view without groups",
             "use the cleaner layout as evidence and report the grouped-layout regression",
-        ]:
-            with self.subTest(surface=canonical.relative_to(REPO_ROOT), phrase=phrase):
-                self.assertIn(phrase, canonical_content)
+        ])
 
-        for surface in [
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-        ]:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in ["architecture.md` §9", "grouped-layout fallback", "report the regression"]:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_in_surfaces(
+            [
+                ARCH_PLUGIN
+                / "skills"
+                / "architecture-design"
+                / "references"
+                / "procedures"
+                / "architecture-operational-workflow.md",
+                ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
+            ],
+            ["architecture.md` §9", "grouped-layout fallback", "report the regression"],
+        )
 
     def test_lead_ea_modeling_feedback_is_documented(self) -> None:
         # The lead-EA modeling feedback lives canonically in architecture.md §5 and
@@ -209,11 +226,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "define the view concern, allowed element types, and relationship types",
             "Dediren tool issues",
         ]
-        for surface in canonical_surfaces:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in canonical_phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_in_surfaces(canonical_surfaces, canonical_phrases)
 
         output_format = " ".join(
             (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md")
@@ -440,11 +453,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
         surfaces = [
@@ -563,11 +572,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_notation_references_define_archimate_uml_boundary(self) -> None:
         archimate_ref = (
@@ -633,11 +638,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_output_contract_reports_notation_and_cross_notation_links(self) -> None:
         output_format = (
@@ -656,30 +657,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(phrase, output_format)
 
     def test_uml_handoff_eval_cases_exist(self) -> None:
-        behavior_cases = [
-            json.loads(line)
-            for line in (
-                ARCH_PLUGIN
-                / "skills"
-                / "architecture-design"
-                / "references"
-                / "evals"
-                / "behavior-cases.jsonl"
-            ).read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        trigger_cases = [
-            json.loads(line)
-            for line in (
-                ARCH_PLUGIN
-                / "skills"
-                / "architecture-design"
-                / "references"
-                / "evals"
-                / "trigger-cases.jsonl"
-            ).read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        behavior_cases = read_jsonl(
+            "souroldgeezer-architecture/skills/architecture-design/references/evals/behavior-cases.jsonl"
+        )
+        trigger_cases = read_jsonl(
+            "souroldgeezer-architecture/skills/architecture-design/references/evals/trigger-cases.jsonl"
+        )
         behavior_ids = {case["id"]: case for case in behavior_cases}
         trigger_ids = {case["id"]: case for case in trigger_cases}
 
@@ -756,11 +739,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_visual_readiness_guidance_flags_dense_valid_renders(self) -> None:
         expectations = {
@@ -808,11 +787,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_implementation_readiness_reference_is_routed(self) -> None:
         procedure = (
@@ -1239,11 +1214,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
         }
 
-        for surface, phrases in expectations.items():
-            content = compact_file(surface)
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
+        self._assert_phrases_per_surface(expectations)
 
     def test_new_finding_taxonomy_is_documented_without_legacy_ad_codes(self) -> None:
         smell_catalog = (

@@ -1,18 +1,12 @@
-import importlib.util
-import sys
 import unittest
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT, load_script_module
+
 MODULE = REPO_ROOT / "scripts" / "lessons_secret_scan.py"
 
 
 def load_scanner():
-    spec = importlib.util.spec_from_file_location("lessons_secret_scan", MODULE)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["lessons_secret_scan"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("lessons_secret_scan", MODULE)
 
 
 class ScanTextTest(unittest.TestCase):

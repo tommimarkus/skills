@@ -4,13 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT, run_git as _git
+
 HOOK = REPO_ROOT / "scripts" / "agent-hooks" / "stop-lesson-capture.sh"
-
-
-def _git(cwd: Path, *args):
-    subprocess.run(["git", "-C", str(cwd), *args], check=True,
-                   capture_output=True, text=True)
 
 
 def _repo(tmp: Path):
@@ -46,25 +42,23 @@ def _run(tmp: Path, transcript: Path):
 
 
 class HookTest(unittest.TestCase):
-    def test_fires_on_authoring_change_plus_correction(self):
+    def _assert_hook_blocks(self, out) -> None:
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('"decision": "block"', out.stdout)
+        self.assertIn("lesson-capture", out.stdout)
+
+    def _run_hook_with_transcript(self, text: str):
         with tempfile.TemporaryDirectory() as t:
             tmp = Path(t)
             _repo(tmp)
             _authoring_change(tmp)
-            out = _run(tmp, _transcript(tmp, "revert that, not what I asked"))
-            self.assertEqual(out.returncode, 0, out.stderr)
-            self.assertIn('"decision": "block"', out.stdout)
-            self.assertIn("lesson-capture", out.stdout)
+            return _run(tmp, _transcript(tmp, text))
+
+    def test_fires_on_authoring_change_plus_correction(self):
+        self._assert_hook_blocks(self._run_hook_with_transcript("revert that, not what I asked"))
 
     def test_fires_on_authoring_change_without_correction(self):
-        with tempfile.TemporaryDirectory() as t:
-            tmp = Path(t)
-            _repo(tmp)
-            _authoring_change(tmp)
-            out = _run(tmp, _transcript(tmp, "add another validation case please"))
-            self.assertEqual(out.returncode, 0, out.stderr)
-            self.assertIn('"decision": "block"', out.stdout)
-            self.assertIn("lesson-capture", out.stdout)
+        self._assert_hook_blocks(self._run_hook_with_transcript("add another validation case please"))
 
     def test_fires_on_authoring_change_without_transcript(self):
         with tempfile.TemporaryDirectory() as t:
@@ -75,9 +69,7 @@ class HookTest(unittest.TestCase):
                                 "stop_hook_active": False})
             out = subprocess.run(["bash", str(HOOK)], input=stdin,
                                  capture_output=True, text=True)
-            self.assertEqual(out.returncode, 0, out.stderr)
-            self.assertIn('"decision": "block"', out.stdout)
-            self.assertIn("lesson-capture", out.stdout)
+            self._assert_hook_blocks(out)
 
     def test_silent_without_authoring_change(self):
         with tempfile.TemporaryDirectory() as t:

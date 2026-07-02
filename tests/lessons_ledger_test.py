@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import subprocess
 import sys
@@ -6,21 +5,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT, load_script_module, run_git as _git
+
 MODULE = REPO_ROOT / "scripts" / "lessons_ledger.py"
 
 
 def load_ledger():
-    spec = importlib.util.spec_from_file_location("lessons_ledger", MODULE)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["lessons_ledger"] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("lessons_ledger", MODULE)
 
 
-def _git(cwd, *args):
-    subprocess.run(["git", "-C", str(cwd), *args], check=True,
-                   capture_output=True, text=True)
+def _run_cli(*args: str, cwd) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(MODULE), *args],
+                          cwd=str(cwd), capture_output=True, text=True)
 
 
 def _init_repo(root: Path):
@@ -148,15 +144,10 @@ class ConcurrencyTest(unittest.TestCase):
 
 
 class CliTest(unittest.TestCase):
-    def _run(self, *args, cwd):
-        return subprocess.run(
-            [sys.executable, str(MODULE), *args],
-            cwd=str(cwd), capture_output=True, text=True)
-
     def test_append_then_list_reports_count(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "pending.jsonl"
-            out = self._run(
+            out = _run_cli(
                 "append", "--path", str(path),
                 "--trigger", "failed-then-passed",
                 "--summary", "missing version sync test",
@@ -165,13 +156,13 @@ class CliTest(unittest.TestCase):
                 cwd=tmp)
             self.assertEqual(out.returncode, 0, out.stderr)
 
-            listed = self._run("list", "--path", str(path), cwd=tmp)
+            listed = _run_cli("list", "--path", str(path), cwd=tmp)
             self.assertEqual(listed.returncode, 0, listed.stderr)
             self.assertIn("1 candidate", listed.stdout)
 
     def test_append_rejects_bad_substrate_nonzero(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = self._run(
+            out = _run_cli(
                 "append", "--path", str(Path(tmp) / "p.jsonl"),
                 "--trigger", "t", "--summary", "s",
                 "--proposed-rule", "r", "--substrate", "bogus", cwd=tmp)
@@ -223,25 +214,21 @@ class StatusTest(unittest.TestCase):
 
 
 class ResolveCliTest(unittest.TestCase):
-    def _run(self, *args, cwd):
-        return subprocess.run([sys.executable, str(MODULE), *args],
-                              cwd=str(cwd), capture_output=True, text=True)
-
     def test_append_list_resolve_cycle(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "pending.jsonl"
-            self._run("append", "--path", str(path), "--trigger", "revert",
+            _run_cli("append", "--path", str(path), "--trigger", "revert",
                       "--summary", "s", "--proposed-rule", "rule one",
                       "--substrate", "policy", cwd=tmp)
-            pending = self._run("list", "--path", str(path), "--pending", cwd=tmp)
+            pending = _run_cli("list", "--path", str(path), "--pending", cwd=tmp)
             self.assertIn("[policy]", pending.stdout)
             cid = pending.stdout.split()[0]
 
-            resolved = self._run("resolve", "--path", str(path), "--id", cid,
+            resolved = _run_cli("resolve", "--path", str(path), "--id", cid,
                                  "--status", "applied", cwd=tmp)
             self.assertEqual(resolved.returncode, 0, resolved.stderr)
 
-            summary = self._run("list", "--path", str(path), cwd=tmp)
+            summary = _run_cli("list", "--path", str(path), cwd=tmp)
             self.assertIn("0 pending", summary.stdout)
             self.assertIn("1 applied", summary.stdout)
 

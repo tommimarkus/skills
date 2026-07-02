@@ -1,32 +1,21 @@
-import importlib.util
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import hashlib
 import json
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import REPO_ROOT, load_script_module, run_git, write_fixture as write
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 ENGINE = REPO_ROOT / "scripts" / "skill_architecture_report.py"
 WRAPPER = REPO_ROOT / "scripts" / "skill-architecture-report.sh"
 LEDGER = REPO_ROOT / "tests" / "skill_architecture_report_ledger.jsonl"
 
 
-def write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(textwrap.dedent(content).lstrip(), encoding="utf-8")
-
-
 def load_engine():
-    spec = importlib.util.spec_from_file_location("skill_architecture_report", ENGINE)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("skill_architecture_report", ENGINE)
 
 
 def run_engine(repo: Path) -> subprocess.CompletedProcess[str]:
@@ -56,6 +45,16 @@ def load_ledger_cases() -> list[dict]:
 
 
 class SkillArchitectureReportTest(unittest.TestCase):
+    def _run_engine_on_fixture(self, make_fixture, dirname: str = "repo") -> str:
+        """Build a fixture with make_fixture(fixture_path), run the engine on it, and
+        return stdout. Shared setup for the report-fixture assertion tests."""
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / dirname
+            make_fixture(fixture)
+            result = run_engine(fixture)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
     def test_replacement_ledger_measures_at_least_500_skill_only_findings(self) -> None:
         module = load_engine()
         cases = load_ledger_cases()
@@ -102,44 +101,41 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertGreaterEqual(coverage.weighted_percentage, 90.0)
 
     def test_fixture_report_preserves_existing_findings_and_adds_coverage(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            fixture = Path(tmp) / "repo"
-            self.make_noisy_fixture(fixture)
+        output = self._run_engine_on_fixture(self.make_noisy_fixture)
 
-            result = run_engine(fixture)
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        output = result.stdout
-        self.assertIn("# Skill Architecture Craft Report", output)
-        self.assertIn("## Summary", output)
-        self.assertIn("## Standard Coverage", output)
-        self.assertIn("## Behavioral Evidence Adoption", output)
-        self.assertIn("- Weight policy: `fixed by severity; catalog entries cannot tune weights`", output)
-        self.assertIn("- Severity weights: `blocker=13, high=8, medium=5, low=3`", output)
-        self.assertIn("- Category floor: `80.0% minimum per report group`", output)
-        self.assertIn("- Categories below floor: `none`", output)
         self.assertRegex(output, r"Total weighted coverage: `9[0-9]\.[0-9]%`|Total weighted coverage: `100\.0%`")
-        self.assertIn("- Deterministic:", output)
-        self.assertIn("- Heuristic:", output)
-        self.assertIn("- Manual prompt:", output)
-        self.assertIn("- Uncovered:", output)
-        self.assertIn("SAC-TRIGGER-AGGRESSIVE (medium)", output)
-        self.assertIn("SAC-TRIGGER-MISSING-CONTEXT (high)", output)
-        self.assertIn("SAC-WORKFLOW-OUTPUT (high)", output)
-        self.assertIn("SAC-EVAL-HIDDEN-ARTIFACT (high)", output)
-        self.assertIn("SAC-EVAL-TRIGGER-SCHEMA (high)", output)
-        self.assertIn("SAC-REF-BROKEN-LINK (high)", output)
-        self.assertIn("SAC-REF-UNADVERTISED-SUPPORT", output)
-        self.assertIn("SAC-RUNTIME-MISSING-CLAUDE-AGENT (high)", output)
-        self.assertIn("SAC-DOC-MISSING-ENTRYPOINT (low)", output)
-        self.assertIn("Path: `example-plugin/skills/noisy-skill/SKILL.md`", output)
-        self.assertIn("Path: `example-plugin/skills/noisy-skill/references/extra.md`", output)
-        self.assertIn("references/README.md", output)
-        self.assertIn("Claude impact:", output)
-        self.assertIn("Next action:", output)
-        self.assertIn("Verify/rerun:", output)
-        self.assertIn("scripts/skill-architecture-report.sh .", output)
-        self.assertIn("## Next Iteration", output)
+        for marker in (
+            "# Skill Architecture Craft Report",
+            "## Summary",
+            "## Standard Coverage",
+            "## Behavioral Evidence Adoption",
+            "- Weight policy: `fixed by severity; catalog entries cannot tune weights`",
+            "- Severity weights: `blocker=13, high=8, medium=5, low=3`",
+            "- Category floor: `80.0% minimum per report group`",
+            "- Categories below floor: `none`",
+            "- Deterministic:",
+            "- Heuristic:",
+            "- Manual prompt:",
+            "- Uncovered:",
+            "SAC-TRIGGER-AGGRESSIVE (medium)",
+            "SAC-TRIGGER-MISSING-CONTEXT (high)",
+            "SAC-WORKFLOW-OUTPUT (high)",
+            "SAC-EVAL-HIDDEN-ARTIFACT (high)",
+            "SAC-EVAL-TRIGGER-SCHEMA (high)",
+            "SAC-REF-BROKEN-LINK (high)",
+            "SAC-REF-UNADVERTISED-SUPPORT",
+            "SAC-RUNTIME-MISSING-CLAUDE-AGENT (high)",
+            "SAC-DOC-MISSING-ENTRYPOINT (low)",
+            "Path: `example-plugin/skills/noisy-skill/SKILL.md`",
+            "Path: `example-plugin/skills/noisy-skill/references/extra.md`",
+            "references/README.md",
+            "Claude impact:",
+            "Next action:",
+            "Verify/rerun:",
+            "scripts/skill-architecture-report.sh .",
+            "## Next Iteration",
+        ):
+            self.assertIn(marker, output)
 
     def test_clean_fixture_has_no_findings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,14 +194,8 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertEqual(0, payload["summary"]["finding_count"])
 
     def test_eval_artifacts_have_specific_findings(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            fixture = Path(tmp) / "repo"
-            self.make_eval_issue_fixture(fixture)
+        output = self._run_engine_on_fixture(self.make_eval_issue_fixture)
 
-            result = run_engine(fixture)
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        output = result.stdout
         self.assertIn("SAC-EVAL-HIDDEN-ARTIFACT (high)", output)
         self.assertIn("SAC-EVAL-TRIGGER-SCHEMA (high)", output)
         self.assertIn("SAC-EVAL-BEHAVIOR-SCHEMA (high)", output)
@@ -712,16 +702,12 @@ class SkillArchitectureReportTest(unittest.TestCase):
 
 
 class GitBackedEnumeration(unittest.TestCase):
-    def _git(self, cwd, *args):
-        subprocess.run(["git", "-C", str(cwd), *args], check=True,
-                       capture_output=True, text=True)
-
     def _init(self, repo):
-        self._git(repo, "init", "-q")
-        self._git(repo, "add", "-A")
-        self._git(repo, "-c", "user.email=t@t", "-c", "user.name=t",
-                  "-c", "commit.gpgsign=false",
-                  "commit", "-qm", "init")
+        run_git(repo, "init", "-q")
+        run_git(repo, "add", "-A")
+        run_git(repo, "-c", "user.email=t@t", "-c", "user.name=t",
+                "-c", "commit.gpgsign=false",
+                "commit", "-qm", "init")
 
     def test_find_skill_files_excludes_ignored_nested_worktree(self):
         module = load_engine()

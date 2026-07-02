@@ -1,21 +1,19 @@
 # tests/skill_load_cost_test.py
 import glob
-import importlib.util
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import REPO_ROOT, load_script_module
+
 # Load the script by path — repo convention (no `scripts/__init__.py`), matching
 # tests/skill_architecture_report_test.py and tests/lessons_ledger_test.py.
-REPO_ROOT = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location(
+slc = load_script_module(
     "skill_load_cost",
     REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
     / "references" / "scripts" / "skill_load_cost.py",
 )
-slc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(slc)
 
 
 class EstimateTokensTest(unittest.TestCase):
@@ -127,60 +125,55 @@ class CliTest(unittest.TestCase):
             )
 
 
+def _assert_baseline_satisfied(tc, baseline_name: str, roots: list) -> None:
+    """Committed load-cost baseline for `baseline_name` must still be satisfied by
+    the current content under `roots`. Shared by the per-skill baseline tests."""
+    repo = REPO_ROOT
+    base = json.loads(
+        (repo / f"tests/skill_load_cost/baselines/{baseline_name}.json").read_text()
+    )
+    patterns = json.loads(
+        (repo / "tests/skill_load_cost/code_patterns.json").read_text()
+    )
+    files = []
+    for r in roots:
+        files += glob.glob(str(repo / r / "**" / "*.md"), recursive=True)
+    current = slc.union_inventory(
+        [slc.extract_inventory(Path(f).read_text(), patterns) for f in files]
+    )
+    tc.assertEqual(slc.diff_inventory(base, current), [])
+
+
 class TestQualityAuditBaselineTest(unittest.TestCase):
     def test_current_files_satisfy_committed_baseline(self):
-        repo = Path(__file__).resolve().parents[1]
-        base = json.loads(
-            (repo / "tests/skill_load_cost/baselines/test-quality-audit.json").read_text()
-        )
-        patterns = json.loads(
-            (repo / "tests/skill_load_cost/code_patterns.json").read_text()
-        )
-        roots = [
+        _assert_baseline_satisfied(self, "test-quality-audit", [
             "souroldgeezer-audit/skills/test-quality-audit/references",
             "souroldgeezer-audit/docs/quality-reference",
             "souroldgeezer-audit/docs/audit-reference",
-        ]
-        files = []
-        for r in roots:
-            files += glob.glob(str(repo / r / "**" / "*.md"), recursive=True)
-        current = slc.union_inventory(
-            [slc.extract_inventory(Path(f).read_text(), patterns) for f in files]
-        )
-        self.assertEqual(slc.diff_inventory(base, current), [])
+        ])
 
 
 class ApiDesignBaselineTest(unittest.TestCase):
     def test_current_files_satisfy_committed_baseline(self):
-        repo = Path(__file__).resolve().parents[1]
-        base = json.loads(
-            (repo / "tests/skill_load_cost/baselines/api-design.json").read_text()
-        )
-        patterns = json.loads(
-            (repo / "tests/skill_load_cost/code_patterns.json").read_text()
-        )
-        roots = [
+        _assert_baseline_satisfied(self, "api-design", [
             "souroldgeezer-design/skills/api-design",
             "souroldgeezer-design/docs/api-reference",
-        ]
-        files = []
-        for r in roots:
-            files += glob.glob(str(repo / r / "**" / "*.md"), recursive=True)
-        current = slc.union_inventory(
-            [slc.extract_inventory(Path(f).read_text(), patterns) for f in files]
-        )
-        self.assertEqual(slc.diff_inventory(base, current), [])
+        ])
 
 
 class ResolveClosureWithOverridesTest(unittest.TestCase):
+    def _skill_with_ref(self, root: Path) -> tuple:
+        skill_md = root / "SKILL.md"
+        ref_md = root / "ref.md"
+        skill_md.write_text("# S\n[ref](ref.md)\n")
+        ref_md.write_text("# R\n")
+        return skill_md, ref_md
+
     def test_override_content_shrinks_closure_when_link_removed(self):
         """If an override removes a link, the linked file must drop from the closure."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            skill_md = root / "SKILL.md"
-            ref_md = root / "ref.md"
-            skill_md.write_text("# S\n[ref](ref.md)\n")
-            ref_md.write_text("# R\n")
+            skill_md, ref_md = self._skill_with_ref(root)
             # With the real content, ref.md is in the closure
             base_closure = {p.name for p in slc.resolve_closure(skill_md)}
             self.assertIn("ref.md", base_closure)
@@ -206,10 +199,7 @@ class ResolveClosureWithOverridesTest(unittest.TestCase):
         """With an empty overrides dict, the result must equal resolve_closure."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            skill_md = root / "SKILL.md"
-            ref_md = root / "ref.md"
-            skill_md.write_text("# S\n[ref](ref.md)\n")
-            ref_md.write_text("# R\n")
+            skill_md, ref_md = self._skill_with_ref(root)
             normal = set(slc.resolve_closure(skill_md))
             with_empty = set(slc.resolve_closure_with_overrides(skill_md, {}))
             self.assertEqual(normal, with_empty)

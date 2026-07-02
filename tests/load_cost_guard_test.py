@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import importlib.util, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
@@ -71,50 +72,58 @@ class PostEditContentTest(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class GuardDecisionTest(unittest.TestCase):
+    def _fixture(self, root: Path, skill_md: str, *, codes: list, sections: list,
+                 patterns: list, linked: dict | None = None) -> tuple[Path, Path, Path]:
+        """Write SKILL.md (+ any linked files), a base.json baseline, and a
+        pat.json pattern list under root; return their paths."""
+        (root / "SKILL.md").write_text(skill_md)
+        for name, text in (linked or {}).items():
+            (root / name).write_text(text)
+        base = root / "base.json"
+        base.write_text(json.dumps({"codes": codes, "sections": sections}))
+        patterns_path = root / "pat.json"
+        patterns_path.write_text(json.dumps(patterns))
+        return root / "SKILL.md", base, patterns_path
+
     def test_denies_when_edit_drops_a_smell_code(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "SKILL.md").write_text("# S\n[c](c.md)\nHC-1 here\n")
-            (root / "c.md").write_text("## Sec\nLA-PUC-1 token\n")
-            base = root / "base.json"
-            base.write_text(json.dumps({"codes": ["HC-1", "LA-PUC-1"],
-                                        "sections": ["S", "Sec"]}))
-            patterns = root / "pat.json"
-            patterns.write_text(json.dumps(["\\bHC-\\d+", "LA-PUC-\\d+"]))
+            skill_md, base, patterns = self._fixture(
+                root, "# S\n[c](c.md)\nHC-1 here\n",
+                codes=["HC-1", "LA-PUC-1"], sections=["S", "Sec"],
+                patterns=["\\bHC-\\d+", "LA-PUC-\\d+"],
+                linked={"c.md": "## Sec\nLA-PUC-1 token\n"})
             decision = guard.decide(
                 target=root / "c.md", new_content="## Sec\n(removed)\n",
-                skill_md=root / "SKILL.md", baseline=base, patterns=patterns)
+                skill_md=skill_md, baseline=base, patterns=patterns)
             self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_allows_when_nothing_unreachable(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "SKILL.md").write_text("# S\n[c](c.md)\n")
-            (root / "c.md").write_text("## Sec\nLA-PUC-1 token\n")
-            base = root / "base.json"
-            base.write_text(json.dumps({"codes": ["LA-PUC-1"], "sections": ["S", "Sec"]}))
-            patterns = root / "pat.json"; patterns.write_text(json.dumps(["LA-PUC-\\d+"]))
+            skill_md, base, patterns = self._fixture(
+                root, "# S\n[c](c.md)\n",
+                codes=["LA-PUC-1"], sections=["S", "Sec"], patterns=["LA-PUC-\\d+"],
+                linked={"c.md": "## Sec\nLA-PUC-1 token\n"})
             self.assertIsNone(guard.decide(
                 target=root / "c.md", new_content="## Sec\nLA-PUC-1 still here\n",
-                skill_md=root / "SKILL.md", baseline=base, patterns=patterns))
+                skill_md=skill_md, baseline=base, patterns=patterns))
 
     def test_denies_when_edit_orphans_linked_file_by_removing_link(self):
         """Removing a Load-Map link from SKILL.md must shrink the closure and
         cause codes in the orphaned file to become unreachable (Fix C)."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "SKILL.md").write_text("# S\n[c](c.md)\nHC-1 here\n")
-            (root / "c.md").write_text("## Sec\nLA-PUC-2 token\n")
-            base = root / "base.json"
-            base.write_text(json.dumps({"codes": ["HC-1", "LA-PUC-2"],
-                                        "sections": ["S", "Sec"]}))
-            patterns = root / "pat.json"
-            patterns.write_text(json.dumps(["\\bHC-\\d+", "LA-PUC-\\d+"]))
+            skill_md, base, patterns = self._fixture(
+                root, "# S\n[c](c.md)\nHC-1 here\n",
+                codes=["HC-1", "LA-PUC-2"], sections=["S", "Sec"],
+                patterns=["\\bHC-\\d+", "LA-PUC-\\d+"],
+                linked={"c.md": "## Sec\nLA-PUC-2 token\n"})
             # edit removes the link to c.md → LA-PUC-2 becomes orphaned
             decision = guard.decide(
                 target=root / "SKILL.md",
                 new_content="# S\nHC-1 here\n(no link to c.md)\n",
-                skill_md=root / "SKILL.md", baseline=base, patterns=patterns)
+                skill_md=skill_md, baseline=base, patterns=patterns)
             self.assertIsNotNone(decision,
                 "expected deny when link removal orphans a code-bearing file")
             self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
@@ -123,16 +132,13 @@ class GuardDecisionTest(unittest.TestCase):
         """An edit introducing a dangling pointer must deny (Fix C)."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "SKILL.md").write_text("# S\n")
-            base = root / "base.json"
-            base.write_text(json.dumps({"codes": [], "sections": ["S"]}))
-            patterns = root / "pat.json"
-            patterns.write_text(json.dumps([]))
+            skill_md, base, patterns = self._fixture(
+                root, "# S\n", codes=[], sections=["S"], patterns=[])
             # edit adds a pointer to a non-existent file
             decision = guard.decide(
                 target=root / "SKILL.md",
                 new_content="# S\n[broken](does-not-exist.md)\n",
-                skill_md=root / "SKILL.md", baseline=base, patterns=patterns)
+                skill_md=skill_md, baseline=base, patterns=patterns)
             self.assertIsNotNone(decision,
                 "expected deny when edit introduces a dangling pointer")
             self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
@@ -175,6 +181,24 @@ class MainIntegrationTest(unittest.TestCase):
             json.dumps({"codes": ["HC-1", "LA-PUC-1"], "sections": ["S", "Sec"]}))
         return skill_dir
 
+    def _run_guard_and_parse(self, payload: dict, *, exit_msg: str, lines_msg: str) -> tuple[dict, list]:
+        code, lines = _run_guard(payload)
+        self.assertEqual(code, 0, exit_msg)
+        self.assertTrue(lines, lines_msg)
+        return json.loads(lines[0]), lines
+
+    def _assert_no_output_line_matches(self, payload: dict, getter, forbidden, msg: str) -> None:
+        """Run the guard and assert no JSON output line's getter(line) == forbidden.
+        Non-JSON or getter-incompatible lines are ignored."""
+        code, lines = _run_guard(payload)
+        self.assertEqual(code, 0)
+        for line in lines:
+            try:
+                out = json.loads(line)
+                self.assertNotEqual(getter(out), forbidden, msg)
+            except (json.JSONDecodeError, AttributeError):
+                pass
+
     # -- PreToolUse: deny when code is dropped --
 
     def test_pretooluse_deny_drops_code(self):
@@ -191,10 +215,10 @@ class MainIntegrationTest(unittest.TestCase):
                 },
                 "cwd": str(root),
             }
-            code, lines = _run_guard(payload)
-            self.assertEqual(code, 0, "guard must exit 0 (fail-open contract)")
-            self.assertTrue(lines, "expected at least one output line")
-            out = json.loads(lines[0])
+            out, lines = self._run_guard_and_parse(
+                payload,
+                exit_msg="guard must exit 0 (fail-open contract)",
+                lines_msg="expected at least one output line")
             self.assertEqual(
                 out["hookSpecificOutput"]["permissionDecision"], "deny",
                 f"expected deny, got: {lines}")
@@ -218,17 +242,11 @@ class MainIntegrationTest(unittest.TestCase):
                 },
                 "cwd": str(root),
             }
-            code, lines = _run_guard(payload)
-            self.assertEqual(code, 0)
             # Must not emit a deny decision
-            for line in lines:
-                try:
-                    out = json.loads(line)
-                    self.assertNotEqual(
-                        out.get("hookSpecificOutput", {}).get("permissionDecision"), "deny",
-                        "non-skill path must not produce a deny")
-                except (json.JSONDecodeError, AttributeError):
-                    pass
+            self._assert_no_output_line_matches(
+                payload,
+                lambda out: out.get("hookSpecificOutput", {}).get("permissionDecision"),
+                "deny", "non-skill path must not produce a deny")
 
     # -- Stop-mode: fidelity block when code is removed from disk --
 
@@ -246,11 +264,11 @@ class MainIntegrationTest(unittest.TestCase):
 
             # Stop payload — no tool_input.file_path
             payload = {"cwd": str(root)}
-            code, lines = _run_guard(payload)
+            out, lines = self._run_guard_and_parse(
+                payload,
+                exit_msg="guard must exit 0 even on block",
+                lines_msg="expected block output")
 
-            self.assertEqual(code, 0, "guard must exit 0 even on block")
-            self.assertTrue(lines, "expected block output")
-            out = json.loads(lines[0])
             self.assertEqual(out["decision"], "block",
                              f"expected Stop-mode block decision, got: {lines}")
             self.assertIn("fidelity", out["reason"].lower())
@@ -263,16 +281,9 @@ class MainIntegrationTest(unittest.TestCase):
             root = Path(d)
             # No git init → git diff will fail → fail-open
             payload = {"cwd": str(root)}
-            code, lines = _run_guard(payload)
-            self.assertEqual(code, 0)
             # No block decision must be emitted
-            for line in lines:
-                try:
-                    out = json.loads(line)
-                    self.assertNotEqual(out.get("decision"), "block",
-                                        "no-git case must not block")
-                except (json.JSONDecodeError, AttributeError):
-                    pass
+            self._assert_no_output_line_matches(
+                payload, lambda out: out.get("decision"), "block", "no-git case must not block")
 
 
 if __name__ == "__main__":

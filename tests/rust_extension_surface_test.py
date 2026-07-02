@@ -1,78 +1,38 @@
-import json
 import unittest
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    records = []
-    for line in read(path).splitlines():
-        if line.strip():
-            records.append(json.loads(line))
-    return records
-
-
-def compact(text: str) -> str:
-    return " ".join(text.split())
+from tests.surface_test_lib import (
+    assert_software_design_loads_stack_extension,
+    assert_stack_has_synthetic_eval_coverage,
+    assert_stack_pack_grounding,
+    assert_test_quality_stack_pack,
+    compact,
+    read,
+)
 
 
 class RustExtensionSurfaceTest(unittest.TestCase):
     def test_test_quality_audit_loads_rust_core_and_rubric_addons(self) -> None:
-        index = read("souroldgeezer-audit/skills/test-quality-audit/extensions/index.md")
-
-        self.assertIn("Rust", index)
-        self.assertIn("references/extensions/rust/core.md", index)
-        self.assertIn("references/extensions/rust/unit.md", index)
-        self.assertIn("references/extensions/rust/integration.md", index)
-        self.assertIn("references/extensions/rust/e2e.md", index)
-
-        for name in ("core", "unit", "integration", "e2e"):
-            path = REPO_ROOT / f"souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/{name}.md"
-            self.assertTrue(path.exists(), path)
-
-        core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/core.md")
-        unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/unit.md")
-        integration = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/integration.md")
-        e2e = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/e2e.md")
-
-        self.assertIn("Cargo.toml", core)
-        self.assertIn("cargo-mutants", core)
-        self.assertIn("rust.HC-", core)
-        self.assertIn("rust.POS-", core)
-        self.assertIn("rust.HC-", unit)
-        self.assertIn("rust.I-HC-", integration)
-        self.assertIn("rust.E-HC-", e2e)
+        assert_test_quality_stack_pack(self, "rust", ("Cargo.toml", "cargo-mutants"))
+        assert_stack_pack_grounding(self, "rust", "Rust")
 
     def test_rust_test_quality_guidance_is_grounded_in_authoritative_docs(self) -> None:
         core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/core.md")
         unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/unit.md")
 
-        self.assertIn("doc.rust-lang.org/cargo/commands/cargo-test.html", core)
-        self.assertIn("doc.rust-lang.org/rustc/tests/index.html", core)
-        self.assertIn("cargo test --doc", core)
-        self.assertIn("nexte.st", core)
-        self.assertIn("mutants.out/outcomes.json", core)
-        self.assertIn("unsafe` functions", core)
+        for source in (
+            "doc.rust-lang.org/cargo/commands/cargo-test.html",
+            "doc.rust-lang.org/rustc/tests/index.html",
+            "cargo test --doc",
+            "nexte.st",
+            "mutants.out/outcomes.json",
+            "unsafe` functions",
+        ):
+            self.assertIn(source, core)
         self.assertIn("features should be additive", compact(unit))
         self.assertIn("--no-default-features", unit)
 
     def test_software_design_loads_rust_extension_and_metadata_mentions_it(self) -> None:
-        skill = read("souroldgeezer-design/skills/software-design/SKILL.md")
-        extension_authoring = read(
-            "souroldgeezer-design/skills/software-design/references/procedures/extension-authoring.md"
-        )
-        claude_agent = read("souroldgeezer-design/agents/software-design.md")
-
-        self.assertIn("extensions/rust.md", skill)
-        self.assertIn("rust.md", extension_authoring)
-        for text in (skill, claude_agent):
-            self.assertIn("Rust®", text)
+        assert_software_design_loads_stack_extension(self, "rust", "Rust®")
 
         rust = read("souroldgeezer-design/skills/software-design/extensions/rust.md")
         self.assertIn("Cargo.toml", rust)
@@ -91,27 +51,13 @@ class RustExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("feature unification", rust)
 
     def test_rust_support_has_synthetic_eval_coverage(self) -> None:
-        test_quality_trigger_ids = {
-            record["id"]
-            for record in read_jsonl("souroldgeezer-audit/skills/test-quality-audit/references/evals/trigger-cases.jsonl")
-        }
-        test_quality_behavior_ids = {
-            record["id"]
-            for record in read_jsonl("souroldgeezer-audit/skills/test-quality-audit/references/evals/behavior-cases.jsonl")
-        }
-        software_trigger_ids = {
-            record["id"]
-            for record in read_jsonl("souroldgeezer-design/skills/software-design/references/evals/trigger-cases.jsonl")
-        }
-        software_behavior_ids = {
-            record["id"]
-            for record in read_jsonl("souroldgeezer-design/skills/software-design/references/evals/behavior-cases.jsonl")
-        }
-
-        self.assertIn("test-quality-trigger-yes-rust-nextest", test_quality_trigger_ids)
-        self.assertIn("test-quality-behavior-rust-audit", test_quality_behavior_ids)
-        self.assertIn("software-design-trigger-yes-rust-review", software_trigger_ids)
-        self.assertIn("software-design-behavior-rust-review", software_behavior_ids)
+        assert_stack_has_synthetic_eval_coverage(
+            self,
+            "test-quality-trigger-yes-rust-nextest",
+            "test-quality-behavior-rust-audit",
+            "software-design-trigger-yes-rust-review",
+            "software-design-behavior-rust-review",
+        )
 
 
 if __name__ == "__main__":

@@ -1,19 +1,16 @@
-import json
 import re
 import unittest
-from pathlib import Path
 
+from tests.surface_test_lib import read, read_jsonl
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 SOFTWARE_SKILL = "souroldgeezer-design/skills/software-design"
 
 
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    return [json.loads(line) for line in read(path).splitlines() if line.strip()]
+def _behavior_checks_and_forbidden(behaviors: dict, case_id: str) -> tuple[str, str]:
+    """The join(required_checks)/join(forbidden_behaviors) lookup repeated across this
+    file's behavior-eval assertions."""
+    behavior = behaviors[case_id]
+    return " ".join(behavior["required_checks"]), " ".join(behavior["forbidden_behaviors"])
 
 
 class SoftwareDesignValueSurfaceTest(unittest.TestCase):
@@ -77,16 +74,14 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
             self.assertIn(case_id, triggers)
             self.assertFalse(triggers[case_id]["expected_activation"])
 
-        behavior = behaviors["software-design-behavior-typescript-build-implementation"]
-        checks = " ".join(behavior["required_checks"])
-        forbidden = " ".join(behavior["forbidden_behaviors"])
+        checks, forbidden = _behavior_checks_and_forbidden(
+            behaviors, "software-design-behavior-typescript-build-implementation"
+        )
         self.assertIn("design decision", checks)
         self.assertIn("review the diff", checks)
         self.assertIn("jump straight to code", forbidden)
 
-        behavior = behaviors["software-design-behavior-build-audit-handoff"]
-        checks = " ".join(behavior["required_checks"])
-        forbidden = " ".join(behavior["forbidden_behaviors"])
+        checks, forbidden = _behavior_checks_and_forbidden(behaviors, "software-design-behavior-build-audit-handoff")
         for phrase in (
             "classify adjacent audit triggers",
             "devsecops-audit Quick",
@@ -147,9 +142,9 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
         grounding = read(f"{SOFTWARE_SKILL}/references/source-grounding.md")
 
         self.assertIn("software-design-behavior-pattern-high-impact-selection", behaviors)
-        behavior = behaviors["software-design-behavior-pattern-high-impact-selection"]
-        checks = " ".join(behavior["required_checks"])
-        forbidden = " ".join(behavior["forbidden_behaviors"])
+        checks, forbidden = _behavior_checks_and_forbidden(
+            behaviors, "software-design-behavior-pattern-high-impact-selection"
+        )
         self.assertIn("current force", checks)
         self.assertIn("track record", checks)
         self.assertIn("pattern shopping", forbidden)

@@ -1,17 +1,6 @@
-import json
 import unittest
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def read(path: str) -> str:
-    return (REPO_ROOT / path).read_text(encoding="utf-8")
-
-
-def read_jsonl(path: str) -> list[dict]:
-    return [json.loads(line) for line in read(path).splitlines() if line.strip()]
+from tests.surface_test_lib import read, read_jsonl
 
 
 class IssueOpsGitLabExtensionTest(unittest.TestCase):

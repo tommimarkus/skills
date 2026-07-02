@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import subprocess
 import sys
@@ -6,18 +5,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import (
+    REPO_ROOT,
+    assert_precision_recall_at_least,
+    classify_tp_fp_fn,
+    load_script_module,
+)
+
 LENS = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "code_lens.py"
 LEDGER = REPO_ROOT / "tests" / "lean_code_ledger.jsonl"
 
 
 def load_lens():
-    spec = importlib.util.spec_from_file_location("code_lens", LENS)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script_module("code_lens", LENS)
 
 
 def run_lens(*args, stdin=None):
@@ -26,16 +26,16 @@ def run_lens(*args, stdin=None):
 
 
 class Tokenizer(unittest.TestCase):
-    def test_strips_line_and_block_comments(self):
+    def _tok(self, ext: str, text: str) -> list[str]:
         lens = load_lens()
-        prof = lens.profile_for(".js")
-        toks = [t for t, _ in lens.strip_and_tokenize("a = 1 // hi\n/* x */ b = 2\n", prof)]
+        return [t for t, _ in lens.strip_and_tokenize(text, lens.profile_for(ext))]
+
+    def test_strips_line_and_block_comments(self):
+        toks = self._tok(".js", "a = 1 // hi\n/* x */ b = 2\n")
         self.assertEqual(toks, ["a", "=", "NUM", "b", "=", "NUM"])
 
     def test_string_and_number_normalized(self):
-        lens = load_lens()
-        prof = lens.profile_for(".py")
-        toks = [t for t, _ in lens.strip_and_tokenize('x = "hello" + 42', prof)]
+        toks = self._tok(".py", 'x = "hello" + 42')
         self.assertEqual(toks, ["x", "=", "STR", "+", "NUM"])
 
     def test_line_numbers_tracked(self):
@@ -53,23 +53,23 @@ class Clones(unittest.TestCase):
     def _stream(self, lens, text, ext=".py"):
         return lens.strip_and_tokenize(text, lens.profile_for(ext))
 
-    def test_verbatim_cross_file_clone_blocks(self):
+    def _cross_file_clones(self, n: int, min_tokens: int = 8):
         lens = load_lens()
-        body = " ".join(f"t{i}" for i in range(30))          # 30 identical tokens
+        body = " ".join(f"t{i}" for i in range(n))
         streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
-        clones = lens.find_clones(streams, min_tokens=8)
+        return lens.find_clones(streams, min_tokens=min_tokens)
+
+    def test_verbatim_cross_file_clone_blocks(self):
+        clones = self._cross_file_clones(30)                # 30 >= 2*8
         self.assertTrue(clones)
         c = clones[0]
-        self.assertEqual(c.severity, "block")               # 30 >= 2*8
+        self.assertEqual(c.severity, "block")
         self.assertEqual(c.code, "LA-CODE-DUP-1")
         self.assertEqual({c.path, c.matched_path}, {"a.py", "b.py"})
         self.assertEqual(c.tokens, 30)
 
     def test_midband_clone_is_info(self):
-        lens = load_lens()
-        body = " ".join(f"t{i}" for i in range(10))          # 10 tokens: 8 <= 10 < 16
-        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
-        clones = lens.find_clones(streams, min_tokens=8)
+        clones = self._cross_file_clones(10)                # 10 tokens: 8 <= 10 < 16
         self.assertEqual(clones[0].severity, "info")
         self.assertEqual(clones[0].code, "LA-CODE-DUP-2")
 
@@ -111,35 +111,38 @@ class Clones(unittest.TestCase):
 
 
 class Discovery(unittest.TestCase):
-    def test_reads_only_source_extensions(self):
-        lens = load_lens()
+    def _discover(self, lens, contents: dict[str, str], exempt: tuple = ()) -> dict:
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "a.py").write_text("x = 1\n", encoding="utf-8")
-            (root / "notes.md").write_text("# md\n", encoding="utf-8")
-            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ())
-            self.assertIn("a.py", files)
-            self.assertNotIn("notes.md", files)
+            for rel, text in contents.items():
+                path = root / rel
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            return lens.read_sources(root, lens.DEFAULT_EXTENSIONS, exempt)
+
+    def test_reads_only_source_extensions(self):
+        lens = load_lens()
+        files = self._discover(lens, {"a.py": "x = 1\n", "notes.md": "# md\n"})
+        self.assertIn("a.py", files)
+        self.assertNotIn("notes.md", files)
 
     def test_excludes_vendored_dirs(self):
         lens = load_lens()
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            (root / "node_modules").mkdir()
-            (root / "node_modules" / "v.js").write_text("var x = 1\n", encoding="utf-8")
-            (root / "keep.js").write_text("var y = 2\n", encoding="utf-8")
-            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ())
-            self.assertEqual(list(files), ["keep.js"])
+        files = self._discover(lens, {
+            "node_modules/v.js": "var x = 1\n",
+            "keep.js": "var y = 2\n",
+        })
+        self.assertEqual(list(files), ["keep.js"])
 
     def test_exempt_path_and_marker_suppressed(self):
         lens = load_lens()
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            (root / "gen.py").write_text("x = 1\n", encoding="utf-8")
-            (root / "b.py").write_text(f"# {lens.INTENTIONAL_MARKER}\ny = 2\n", encoding="utf-8")
-            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, ("gen.py",))
-            self.assertNotIn("gen.py", files)      # exempt_paths
-            self.assertNotIn("b.py", files)        # inline marker
+        files = self._discover(
+            lens,
+            {"gen.py": "x = 1\n", "b.py": f"# {lens.INTENTIONAL_MARKER}\ny = 2\n"},
+            exempt=("gen.py",),
+        )
+        self.assertNotIn("gen.py", files)      # exempt_paths
+        self.assertNotIn("b.py", files)        # inline marker
 
     def test_load_config_defaults_when_no_registry(self):
         lens = load_lens()
@@ -196,16 +199,8 @@ class Calibration(unittest.TestCase):
                     f["content"], lens.profile_for(Path(f["path"]).suffix))
             clones = [] if skip and not streams else lens.find_clones(streams, case["min_tokens"])
             fired = any(c.severity == "block" for c in clones)
-            if case["expect_block"] and fired:
-                tp += 1
-            elif case["expect_block"] and not fired:
-                fn += 1
-            elif not case["expect_block"] and fired:
-                fp += 1
-        precision = tp / (tp + fp) if (tp + fp) else 1.0
-        recall = tp / (tp + fn) if (tp + fn) else 1.0
-        self.assertGreaterEqual(precision, 0.90, f"precision {precision:.2f}")
-        self.assertGreaterEqual(recall, 0.90, f"recall {recall:.2f}")
+            tp, fp, fn = classify_tp_fp_fn(case["expect_block"], fired, tp, fp, fn)
+        assert_precision_recall_at_least(self, tp, fp, fn)
 
 
 class TokenizerFixes(unittest.TestCase):
