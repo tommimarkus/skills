@@ -73,5 +73,36 @@
       "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
       "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md"
     ]
+  },
+  {
+    "id": "sd-lookup-principle",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/principles-catalog.md"
+    ]
+  },
+  {
+    "id": "sd-build-dotnet",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
+      "souroldgeezer-design/skills/software-design/extensions/dotnet.md"
+    ]
+  },
+  {
+    "id": "sd-review-typescript",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+      "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
+      "souroldgeezer-design/skills/software-design/extensions/typescript.md"
+    ]
   }
 ]
