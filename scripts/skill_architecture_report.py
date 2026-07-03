@@ -884,7 +884,7 @@ def support_files(repo_root: Path, skill_dir: str) -> list[str]:
         if not support_root.exists():
             continue
         for path in support_root.rglob("*"):
-            if path.is_file():
+            if path.is_file() and not path_is_ignored(path):
                 results.append(relpath(repo_root, path))
     return sorted(results)
 
@@ -893,7 +893,11 @@ def bucket_files(repo_root: Path, skill_dir: str, bucket: str) -> list[str]:
     root = repo_root / skill_dir / bucket
     if not root.exists():
         return []
-    return sorted(relpath(repo_root, path) for path in root.rglob("*") if path.is_file())
+    return sorted(
+        relpath(repo_root, path)
+        for path in root.rglob("*")
+        if path.is_file() and not path_is_ignored(path)
+    )
 
 
 def has_input_contract(text: str) -> bool:
