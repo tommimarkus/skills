@@ -1,17 +1,27 @@
+import contextlib
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
+
+from tests.surface_test_lib import REPO_ROOT, load_script_module
 
 SCRIPTS = (
     Path(__file__).resolve().parents[1]
     / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts"
 )
 sys.path.insert(0, str(SCRIPTS))
-import lean_guard  # noqa: E402
-import lean_engine  # noqa: E402
+
+GUARD_LEAN = SCRIPTS / "leanaudit" / "guard_lean.py"
+
+
+def load_guard():
+    return load_script_module("leanaudit_guard_lean", GUARD_LEAN)
+
 
 BIG = (
     "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi "
@@ -42,75 +52,76 @@ class Evaluate(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.root = corpus(self._tmp.name)
+        self.guard = load_guard()
         # the corpus dir is not a git repo; pin the root deterministically
-        self._orig = lean_guard._repo_root
-        lean_guard._repo_root = lambda cwd: self.root
+        self._orig = self.guard._repo_root
+        self.guard._repo_root = lambda cwd: self.root
 
     def tearDown(self):
-        lean_guard._repo_root = self._orig
+        self.guard._repo_root = self._orig
         self._tmp.cleanup()
 
     def test_new_duplicate_is_denied(self):
-        reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+        reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
         self.assertIsNotNone(reason)
         self.assertIn("lean-audit", reason)
         self.assertIn("sync-intentional", reason)
 
     def test_unique_content_is_allowed(self):
-        reason = lean_guard.evaluate(payload(
+        reason = self.guard.evaluate(payload(
             self.root, "aud/skills/s2/SKILL.md",
             "## Fresh\nNothing here repeats any four-word run from the corpus whatsoever today because this content introduces completely original vocabulary never previously encountered in reference material samples test cases validation datasets wherever possible."))
         self.assertIsNone(reason)
 
     def test_subagent_mirror_carveout_is_allowed(self):
         # built-in carve-out: {plugin}/skills/{skill}/SKILL.md <-> {plugin}/agents/{skill}.md
-        reason = lean_guard.evaluate(payload(self.root, "aud/agents/s1.md", "## Shared\n" + BIG))
+        reason = self.guard.evaluate(payload(self.root, "aud/agents/s1.md", "## Shared\n" + BIG))
         self.assertIsNone(reason)
 
     def test_override_marker_is_allowed(self):
         body = "## Shared\n<!-- lean-audit:sync-intentional: mirror -->\n" + BIG
-        reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", body))
+        reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", body))
         self.assertIsNone(reason)
 
     def test_non_guarded_path_is_allowed_without_engine(self):
         called = {"v": False}
-        orig = lean_engine.evaluate_added_block
-        lean_engine.evaluate_added_block = lambda *a, **k: called.__setitem__("v", True) or []
+        orig = self.guard.evaluate_added_block
+        self.guard.evaluate_added_block = lambda *a, **k: called.__setitem__("v", True) or []
         try:
-            reason = lean_guard.evaluate(payload(self.root, "notes.txt", "## Shared\n" + BIG))
+            reason = self.guard.evaluate(payload(self.root, "notes.txt", "## Shared\n" + BIG))
         finally:
-            lean_engine.evaluate_added_block = orig
+            self.guard.evaluate_added_block = orig
         self.assertIsNone(reason)
         self.assertFalse(called["v"], "engine must not run for a non-guarded path")
 
     def test_write_and_multiedit_shapes_are_handled(self):
         for tool in ("Write", "MultiEdit"):
-            reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG, tool=tool))
+            reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG, tool=tool))
             self.assertIsNotNone(reason, tool)
 
     def test_non_edit_tool_is_allowed(self):
-        self.assertIsNone(lean_guard.evaluate({"tool_name": "Bash", "tool_input": {"command": "ls"}, "cwd": str(self.root)}))
+        self.assertIsNone(self.guard.evaluate({"tool_name": "Bash", "tool_input": {"command": "ls"}, "cwd": str(self.root)}))
 
     def test_engine_error_fails_open(self):
-        orig = lean_engine.evaluate_added_block
+        orig = self.guard.evaluate_added_block
         def boom(*a, **k):
             raise RuntimeError("engine exploded")
-        lean_engine.evaluate_added_block = boom
+        self.guard.evaluate_added_block = boom
         try:
-            reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+            reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
         finally:
-            lean_engine.evaluate_added_block = orig
+            self.guard.evaluate_added_block = orig
         self.assertIsNone(reason)
 
     def test_is_guarded_error_fails_open(self):
-        orig = lean_engine.is_guarded
+        orig = self.guard.is_guarded
         def boom(*a, **k):
             raise RuntimeError("is_guarded exploded")
-        lean_engine.is_guarded = boom
+        self.guard.is_guarded = boom
         try:
-            reason = lean_guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+            reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
         finally:
-            lean_engine.is_guarded = orig
+            self.guard.is_guarded = orig
         self.assertIsNone(reason)
 
 
@@ -144,3 +155,24 @@ class MainSubprocess(unittest.TestCase):
             self.assertEqual(hso["hookEventName"], "PreToolUse")
             self.assertEqual(hso["permissionDecision"], "deny")
             self.assertIn("lean-audit", hso["permissionDecisionReason"])
+
+
+class FailOpenLoggingTest(unittest.TestCase):
+    def test_swallowed_exception_writes_stderr_line(self):
+        guard_mod = load_script_module(
+            "leanaudit_guard_lean",
+            REPO_ROOT
+            / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit/guard_lean.py",
+        )
+        # force the engine call to raise inside evaluate()
+        with unittest.mock.patch.object(
+            guard_mod, "evaluate", side_effect=RuntimeError("boom")
+        ):
+            stderr = io.StringIO()
+            stdin = io.StringIO('{"tool_name": "Write", "tool_input": {}, "cwd": "."}')
+            with contextlib.redirect_stderr(stderr), unittest.mock.patch(
+                "sys.stdin", stdin
+            ):
+                guard_mod.main()  # must NOT raise (fail-open)
+        self.assertIn("fail-open allow", stderr.getvalue())
+        self.assertIn("RuntimeError", stderr.getvalue())
