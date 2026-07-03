@@ -40,8 +40,12 @@ UML/XMI export is requested. Plain `validate` proves schema only; `source-valid`
 requires `validate` plus `validate --plugin generic-graph --profile archimate`
 for ArchiMate or `validate --plugin generic-graph --profile uml` for UML.
 When running OEF or XMI export, follow the selected release guide's schema-cache
-instructions such as setting `DEDIREN_SCHEMA_CACHE_DIR` or providing the
-offline schema path required by that export plugin.
+instructions. Export plugins download validation schemas from a child process
+that receives only manifest-listed environment variables, so proxied or
+sandboxed environments fail with `DEDIREN_*_SCHEMA_UNAVAILABLE` even when the
+agent's own shell has network access: pre-fetch the XSDs and pass absolute
+offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`
+(`DEDIREN_SCHEMA_CACHE_DIR` helps only when the child itself can download).
 Command order: `validate`; semantic validate; `project`; `layout`;
 `validate-layout`; `render`; optional export. The release-resolved Dediren runtime allows
 parallel per-view layout; rerun parallel-only failures serially before
@@ -76,3 +80,27 @@ To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 layout-request before `layout`, then re-run `validate-layout`. For navigable
 output, set the render policy `interactive` field (§3); static SVG is the
 default.
+
+## Envelope handling
+
+Every command emits a JSON envelope on stdout. Check the envelope `status`
+before feeding output to the next command — a downstream stage fed an error
+envelope fails one stage late with `DEDIREN_COMMAND_INPUT_INVALID`, pointing
+diagnosis at the wrong command.
+
+Envelope `status: ok` with empty `diagnostics` is **not** a quality verdict.
+`validate-layout` reports its verdict inside the payload: read `data.status`
+and the `data.*_count` quality fields. Treat `data.status: "warning"` or any
+nonzero non-informational count (`overlap_count`,
+`connector_through_node_count`, `invalid_route_count`, and the other §9 gate
+counts; `edge_crossing_count` is informational) as a blocking layout finding
+(`ARCH-L-*`) to resolve or disclose before claiming render evidence — an
+overlap can superimpose two nodes in the rendered SVG while every envelope in
+the pipeline says `ok`.
+
+Artifact extraction differs by command and yields silent empty files when
+mixed up: `render` returns artifacts in `.data.artifacts[]` (select the entry
+whose `artifact_kind` is `svg` and write its `.content`), while `export`
+returns a single artifact directly as `.data.content` (with `.data.artifact_kind`
+naming the format). After materializing any artifact, verify it is non-empty
+before claiming render or export evidence.
