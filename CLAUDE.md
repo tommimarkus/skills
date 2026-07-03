@@ -64,6 +64,8 @@ The lean-audit bundled scripts follow an enforced Python® standard: ruff + `myp
 
 Run repo-scanning gates (the skill-architecture report, the full unittest suite) in a **clean feature worktree**, not the primary checkout that has sibling worktrees nested under it — the scanners walk the filesystem and recurse into nested checkouts (`.worktrees/`, `.claude/worktrees/`), over-counting findings. When forced to read primary-checkout numbers, discount any finding whose path contains `.worktrees/` or `.claude/worktrees/` and verify the changed surface specifically.
 
+When restructuring files the deterministic engines scan, gate on a **classified** before/after finding-set diff — every difference must be a path rename of a base finding, an in-class declared suppression, or an adjudicated new class; byte/set equality against the pre-refactor baseline is unachievable by design (paths rename, dedupe keying shifts). Residual intentional parallels (identifier-rich test bodies, mandated shim boilerplate) take the `lean-audit:dup-intentional` marker on the data/boilerplate file, never on a logic module.
+
 Primary checks:
 
 ```bash
