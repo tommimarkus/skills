@@ -15,7 +15,8 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
 ## Code duplication — Lean: inventory / over-processing (source surfaces)
 - `LA-CODE-DUP-1` — mechanical copy-paste clone in source code at or above the
   block band (token-window match ≥ 2× min-tokens; comments and string/number
-  literals normalized). Severity: block. Source: engine (`code_lens.py`).
+  literals normalized; windows without minimum identifier diversity are skipped
+  as declarative data). Severity: block. Source: engine (`code_lens.py`).
 - `LA-CODE-DUP-2` — a shorter source clone in the advisory band
   (min-tokens ≤ length < 2× min-tokens). Severity: info. Source: engine
   (`code_lens.py`).

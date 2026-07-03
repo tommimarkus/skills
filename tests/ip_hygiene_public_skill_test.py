@@ -1,4 +1,3 @@
-# lean-audit:dup-intentional — declarative literal path/manifest lists; parallel literal data, not logic
 import json
 import unittest
 

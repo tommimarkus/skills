@@ -12,6 +12,7 @@ import argparse
 import dataclasses
 import fnmatch
 import json
+import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -43,6 +44,20 @@ __all__ = [
 
 DEFAULT_MIN_CLONE_TOKENS = 20
 INTENTIONAL_MARKER = "lean-audit:dup-intentional"
+
+# A clone window dominated by normalized literals/punctuation is data shape
+# (an __all__ list, a path table), not copied logic. Require a minimum number
+# of DISTINCT identifier tokens before a window may be reported. Private
+# tuning knob (leanaudit convention: non-`__all__` names carry a `_` prefix).
+_MIN_DISTINCT_IDENTIFIERS = 4
+
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*\Z")
+
+
+def _identifier_diverse(window: list[str]) -> bool:
+    idents = {t for t in window if t not in ("STR", "NUM") and _IDENTIFIER_RE.match(t)}
+    return len(idents) >= _MIN_DISTINCT_IDENTIFIERS
+
 
 # ext -> (line_comment_prefixes, block_comment_pairs, string_quotes, raw_string_quotes)
 # raw_string_quotes are scanned verbatim — no backslash escapes (e.g. Go backticks).
@@ -271,6 +286,10 @@ def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> l
             pi, li = meta[i]
             overlap = pj == pi and lj + length > li
             if not overlap:
+                window_tokens = seq[i : i + length]  # matched window's token texts
+                if not _identifier_diverse(window_tokens):
+                    i += 1  # declarative literal/punctuation shape, not copied logic
+                    continue
                 j0, j1 = per_file[pj][lj][1], per_file[pj][lj + length - 1][1]
                 i0, i1 = per_file[pi][li][1], per_file[pi][li + length - 1][1]
                 severity = "block" if length >= 2 * min_tokens else "info"

@@ -347,3 +347,36 @@ class CliFixes(unittest.TestCase):
             r = run_lens(d, "--format", "json")
             self.assertEqual(r.returncode, 0)
             self.assertEqual(json.loads(r.stdout)["findings"], [])
+
+
+class LiteralListFalsePositiveTest(unittest.TestCase):
+    """Declarative literal lists must not clone-match: __all__ blocks, path lists."""
+
+    def _scan_two(self, body_a: str, body_b: str) -> list:
+        clones_mod = load_clones_mod()
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.py").write_text(body_a, encoding="utf-8")
+            (root / "b.py").write_text(body_b, encoding="utf-8")
+            return clones_mod.scan_dir(root, 20, None)  # use the file's loaded module handle
+
+    def test_two_long_string_lists_do_not_match(self) -> None:
+        names = ", ".join(f'"name_{i}"' for i in range(30))
+        paths = ", ".join(f'"pkg/path/{i}.json"' for i in range(30))
+        found = self._scan_two(f"__all__ = [{names}]\n", f"required = [{paths}]\n")
+        self.assertEqual(found, [])
+
+    def test_genuine_logic_clone_still_detected(self) -> None:
+        logic = (
+            "def resolve(root, name, table, fallback):\n"
+            "    entry = table.get(name)\n"
+            "    if entry is None:\n"
+            "        entry = fallback(root, name)\n"
+            "        table[name] = entry\n"
+            "    for item in entry.parts:\n"
+            "        if item.kind == 'dir':\n"
+            "            yield item.path\n"
+            "    return entry\n"
+        )
+        found = self._scan_two(logic, logic)
+        self.assertTrue(found, "identifier-rich logic clone must still be reported")

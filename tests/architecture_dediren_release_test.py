@@ -1,4 +1,4 @@
-# lean-audit:dup-intentional — declarative literal path/manifest lists; parallel literal data, not logic
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import os
 import subprocess
