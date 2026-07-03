@@ -6,21 +6,24 @@ duplication into guarded markdown. Reads the PreToolUse JSON on stdin, emits a
 error, non-match, or non-guarded path. Carve-outs and the sync-intentional
 override are inherited from the engine — this hook adds no duplication logic.
 """
+
 from __future__ import annotations
 
 import json
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from leanaudit import hook_envelope
 from leanaudit.discovery import is_guarded
 from leanaudit.engine import evaluate_added_block
+from leanaudit.hook_envelope import HookPayload
 
 __all__ = ["evaluate", "main"]
 
 
-def _added_content(tool_name: str, tool_input: dict) -> str | None:
+def _added_content(tool_name: str, tool_input: dict[str, Any]) -> str | None:
     if tool_name == "Write":
         c = tool_input.get("content")
         return c if isinstance(c, str) and c else None
@@ -40,7 +43,9 @@ def _repo_root(cwd: str) -> Path | None:
     try:
         out = subprocess.run(
             ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if out.returncode == 0 and out.stdout.strip():
             return Path(out.stdout.strip())
@@ -52,7 +57,7 @@ def _repo_root(cwd: str) -> Path | None:
     return None
 
 
-def evaluate(payload: dict) -> str | None:
+def evaluate(payload: HookPayload) -> str | None:
     """Return a deny-reason if the edit introduces a block dup, else None."""
     tool_name = payload.get("tool_name")
     tool_input = payload.get("tool_input")

@@ -13,6 +13,7 @@ and NEVER blocks in either path.
 ALWAYS allows (exit 0, no stdout) on any error, non-skill path, missing
 baseline, or git failure. Adds no judgment logic — inventory + closure come
 from the engine."""
+
 from __future__ import annotations
 
 import json
@@ -62,8 +63,8 @@ def cost_warn_decision(messages: list[str]) -> dict[str, Any] | None:
     if not messages:
         return None
     return hook_envelope.permission_decision(
-        "allow",
-        "lean-audit per-use guard (advisory, not blocking): " + "; ".join(messages))
+        "allow", "lean-audit per-use guard (advisory, not blocking): " + "; ".join(messages)
+    )
 
 
 def decide(
@@ -83,8 +84,7 @@ def decide(
     closure = slc.resolve_closure_with_overrides(skill_md_p, {target_p: new_content})
     invs = []
     for f in closure:
-        text = new_content if f.resolve() == target_p \
-            else f.read_text(encoding="utf-8")
+        text = new_content if f.resolve() == target_p else f.read_text(encoding="utf-8")
         invs.append(slc.extract_inventory(text, pats))
     problems = slc.diff_inventory(base, slc.union_inventory(invs))
     # Also check for dangling pointers introduced by the pending edit (Fix C)
@@ -99,8 +99,10 @@ def decide(
         return None
     return hook_envelope.permission_decision(
         "deny",
-        "lean-audit per-use guard: fidelity regression — " + "; ".join(problems)
-        + ". Cite the lost item or restructure; the fidelity floor must hold.")
+        "lean-audit per-use guard: fidelity regression — "
+        + "; ".join(problems)
+        + ". Cite the lost item or restructure; the fidelity floor must hold.",
+    )
 
 
 def _load_snapshot_and_scenarios(
@@ -154,8 +156,7 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
         # no content override needed (the working tree already reflects them).
         closure = slc.resolve_closure(skill_md)
         existing = [f for f in closure if f.exists()]
-        invs = [slc.extract_inventory(f.read_text(encoding="utf-8"), pats)
-                for f in existing]
+        invs = [slc.extract_inventory(f.read_text(encoding="utf-8"), pats) for f in existing]
         problems = slc.diff_inventory(base, slc.union_inventory(invs))
         problems += slc.check_pointers(existing, pats)
         for p in problems:
@@ -167,30 +168,36 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
             snap, scenarios = loaded
             skill_scens = [s for s in scenarios if s.get("skill") == skill_name]
             if skill_scens:
-                snap_filtered = {k: v for k, v in snap.items()
-                                 if k in {s["id"] for s in skill_scens}}
-                msgs = slc.cost_regressions(
-                    snap_filtered, skill_scens, repo_root, tolerance=200)
+                snap_filtered = {
+                    k: v for k, v in snap.items() if k in {s["id"] for s in skill_scens}
+                }
+                msgs = slc.cost_regressions(snap_filtered, skill_scens, repo_root, tolerance=200)
                 cost_warnings.extend(msgs)
 
     if fidelity_problems:
         skills_str = ", ".join(sorted({p.split(":")[0] for p in fidelity_problems}))
         problems_str = "; ".join(fidelity_problems)
-        print(json.dumps({
-            "decision": "block",
-            "reason": (
-                f"lean-audit per-use guard: fidelity regression in {skills_str} — "
-                f"{problems_str}. Restore the lost code/section/pointer or cite it; "
-                "the fidelity floor must hold."
+        print(
+            json.dumps(
+                {
+                    "decision": "block",
+                    "reason": (
+                        f"lean-audit per-use guard: fidelity regression in {skills_str} — "
+                        f"{problems_str}. Restore the lost code/section/pointer or cite it; "
+                        "the fidelity floor must hold."
+                    ),
+                }
             )
-        }))
+        )
         return 0
 
     if cost_warnings:
         # Cost is advisory — plain text only, never a block decision.
-        print("lean-audit per-use guard (advisory): per-use cost grew vs snapshot"
-              " (post-edit on-disk closure vs committed cost-snapshot.json) — "
-              + "; ".join(cost_warnings))
+        print(
+            "lean-audit per-use guard (advisory): per-use cost grew vs snapshot"
+            " (post-edit on-disk closure vs committed cost-snapshot.json) — "
+            + "; ".join(cost_warnings)
+        )
 
     return 0
 
@@ -269,13 +276,18 @@ def main() -> int:
             # on-disk state is the post-edit truth (Stop-mode is preferred for
             # accurate cost measurement — see hook-recipe.md).
             snap, scenarios = loaded
-            owned = {s["id"]: s for s in scenarios
-                     if str(target) in [str(repo_root / f) for f in s["files"]]
-                     or any((repo_root / f).resolve() == target.resolve()
-                            for f in s["files"])}
+            owned = {
+                s["id"]: s
+                for s in scenarios
+                if str(target) in [str(repo_root / f) for f in s["files"]]
+                or any((repo_root / f).resolve() == target.resolve() for f in s["files"])
+            }
             msgs = slc.cost_regressions(
                 {k: v for k, v in snap.items() if k in owned},
-                list(owned.values()), repo_root, tolerance=200)
+                list(owned.values()),
+                repo_root,
+                tolerance=200,
+            )
             warn = cost_warn_decision(msgs)
             if warn is not None:
                 print(json.dumps(warn))

@@ -1,6 +1,7 @@
 """Git-aware repo enumeration (tracked+untracked, exclusions). The git block is
 intentionally duplicated with scripts/skill_architecture_report.py (packaging
 boundary; pinned by GitEnumerationParityTest)."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -10,17 +11,24 @@ from pathlib import Path
 __all__ = ["is_guarded", "read_repo", "repo_paths"]
 
 _GUARD_GLOBS = (
-    "CLAUDE.md", "AGENTS.md", "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "README.md",
     # Top-level authoring/governance docs are listed explicitly (like the root
     # files above): a `docs/*.md` glob would slurp the whole `docs/notes/**`
     # draft tree because fnmatch '*' crosses '/'. Add new authoritative
     # top-level docs here by name.
-    "docs/skill-architecture.md", "docs/skill-evaluation.md",
+    "docs/skill-architecture.md",
+    "docs/skill-evaluation.md",
     "docs/release-checklist.md",
-    "**/SKILL.md", "**/agents/*.md",
-    "**/docs/*-reference/**/*.md", "**/docs/*-reference/*.md",
-    "**/references/**/*.md", "**/references/*.md",
-    "**/extensions/**/*.md", "**/extensions/*.md",
+    "**/SKILL.md",
+    "**/agents/*.md",
+    "**/docs/*-reference/**/*.md",
+    "**/docs/*-reference/*.md",
+    "**/references/**/*.md",
+    "**/references/*.md",
+    "**/extensions/**/*.md",
+    "**/extensions/*.md",
 )
 _EXCLUDE = (".worktrees/", "docs/superpowers/", ".cache/", ".git/", "node_modules/")
 
@@ -39,6 +47,11 @@ def repo_paths(root: Path) -> frozenset[str] | None:
     or git is unavailable. Nested worktrees live in a separate work tree, so git
     never lists them here; when None, callers fall back to the static _EXCLUDE
     walk so non-git target repos still work."""
+    # fmt: off
+    # Kept byte-identical (modulo the naming/typing differences the parity test
+    # already tolerates) to scripts/skill_architecture_report.py's copy, which
+    # ruff's formatter never touches (outside [tool.ruff] include) — see
+    # GitEnumerationParityTest.
     try:
         toplevel = subprocess.run(
             ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
@@ -57,6 +70,7 @@ def repo_paths(root: Path) -> frozenset[str] | None:
     except (OSError, subprocess.CalledProcessError):
         return None
     return frozenset(entry for entry in listing.split("\0") if entry)
+    # fmt: on
 
 
 def read_repo(root: Path, scope: Path) -> dict[str, str]:

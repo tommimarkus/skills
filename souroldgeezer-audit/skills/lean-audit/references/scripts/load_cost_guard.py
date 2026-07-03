@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Entry shim — stable published path. Implementation: leanaudit.guard_load_cost."""
+
 # lean-audit:dup-intentional — mandated identical entry-shim boilerplate (published-path contract)
 from __future__ import annotations
 

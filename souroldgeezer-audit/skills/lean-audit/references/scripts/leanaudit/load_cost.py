@@ -4,6 +4,7 @@ Stdlib-only (see CLAUDE.md "Repo-local Python tooling"). Token counts are a
 deterministic proxy (word/punctuation split), not a model tokenizer; the metric
 is the before/after delta on a declared scenario, so a stable proxy suffices.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,9 +34,11 @@ class Inventory(TypedDict):
     """The code/section/pointer inventory extract_inventory produces. union_inventory
     drops `pointers` (codes/sections are the only fields it unions), so pointers is
     NotRequired rather than always present."""
+
     codes: list[str]
     sections: list[str]
     pointers: NotRequired[list[str]]
+
 
 TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 
@@ -44,7 +47,7 @@ def estimate_tokens(text: str) -> int:
     return len(TOKEN_RE.findall(text))
 
 
-def measure_scenario(scenario: dict, root: Path) -> dict:
+def measure_scenario(scenario: dict[str, Any], root: Path) -> dict[str, Any]:
     rows = []
     total = 0
     for rel in scenario["files"]:
@@ -72,7 +75,7 @@ def resolve_closure(skill_md: Path) -> list[Path]:
     return resolve_closure_with_overrides(skill_md, {})
 
 
-def resolve_closure_with_overrides(skill_md: Path, overrides: dict) -> list[Path]:
+def resolve_closure_with_overrides(skill_md: Path, overrides: dict[Path, str]) -> list[Path]:
     """Like resolve_closure but uses overrides[path] as the link text when reading
     a file, instead of reading from disk.  This makes a pending edit's link removals
     actually shrink the closure (e.g. when decide() tests a not-yet-written edit).
@@ -163,7 +166,12 @@ def _emit_json(payload: Any, out_path: str | None) -> None:
         print(text)
 
 
-def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int) -> list[str]:
+def cost_regressions(
+    snapshot: dict[str, int],
+    scenarios: list[dict[str, Any]],
+    root: str | Path,
+    tolerance: int,
+) -> list[str]:
     """Re-measure each snapshotted scenario's token total against root and flag it
     when growth over the snapshot exceeds tolerance."""
     by_id = {s["id"]: s for s in scenarios}
@@ -175,7 +183,8 @@ def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int
         cur = measure_scenario(scen, Path(root))["total"]
         if cur - old > tolerance:
             problems.append(
-                f"{sid}: per-use cost grew {cur - old} tokens (snapshot {old} -> {cur})")
+                f"{sid}: per-use cost grew {cur - old} tokens (snapshot {old} -> {cur})"
+            )
     return problems
 
 
@@ -193,8 +202,7 @@ def _cmd_measure(args: argparse.Namespace) -> int:
 
 def _cmd_baseline(args: argparse.Namespace) -> int:
     patterns = _read_json(args.code_patterns)
-    invs = [extract_inventory(Path(f).read_text(encoding="utf-8"), patterns)
-            for f in args.files]
+    invs = [extract_inventory(Path(f).read_text(encoding="utf-8"), patterns) for f in args.files]
     out = union_inventory(invs)
     _emit_json(out, args.out)
     return 0
@@ -262,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
-        return args.func(args)
+        return int(args.func(args))
     except (OSError, json.JSONDecodeError) as exc:
         print(f"skill-load-cost: {exc}", file=sys.stderr)
         return 2

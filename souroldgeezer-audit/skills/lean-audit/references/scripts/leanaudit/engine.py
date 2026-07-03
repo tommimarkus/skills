@@ -1,4 +1,5 @@
 """lean-audit deterministic duplication engine (stdlib-only)."""
+
 from __future__ import annotations
 
 import argparse
@@ -76,7 +77,7 @@ class Section:
     path: str
     heading: str
     body: str
-    shingles: frozenset
+    shingles: frozenset[tuple[str, ...]]
 
 
 def split_sections(text: str) -> list[tuple[str, str]]:
@@ -146,15 +147,36 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
         return None
     if best_c >= HIGH_BAND:
         if _is_home(reg, best.path, best.heading):
-            return Finding("LA-DUP-2", "block", sec.path, sec.heading, round(best_c, 3),
-                           best.path, best.heading,
-                           f'Cite {best.path} §"{best.heading}" instead of restating it.')
-        return Finding("LA-DUP-1", "block", sec.path, sec.heading, round(best_c, 3),
-                       best.path, best.heading,
-                       f'Duplicates {best.path} §"{best.heading}" — cite it or mark sync-intentional.')
-    return Finding("LA-DUP-1", "info", sec.path, sec.heading, round(best_c, 3),
-                   best.path, best.heading,
-                   f'Overlaps {best.path} §"{best.heading}" (advisory).')
+            return Finding(
+                "LA-DUP-2",
+                "block",
+                sec.path,
+                sec.heading,
+                round(best_c, 3),
+                best.path,
+                best.heading,
+                f'Cite {best.path} §"{best.heading}" instead of restating it.',
+            )
+        return Finding(
+            "LA-DUP-1",
+            "block",
+            sec.path,
+            sec.heading,
+            round(best_c, 3),
+            best.path,
+            best.heading,
+            f'Duplicates {best.path} §"{best.heading}" — cite it or mark sync-intentional.',
+        )
+    return Finding(
+        "LA-DUP-1",
+        "info",
+        sec.path,
+        sec.heading,
+        round(best_c, 3),
+        best.path,
+        best.heading,
+        f'Overlaps {best.path} §"{best.heading}" (advisory).',
+    )
 
 
 def evaluate_added_block(
@@ -198,7 +220,7 @@ def _heading_slugs(text: str) -> set[str]:
     return {slugify(h) for h, _ in split_sections(text) if h}
 
 
-def scan_stale_refs(files: dict[str, str], root=None) -> list[Finding]:
+def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
     for path, text in files.items():
         parent = posixpath.dirname(path)
@@ -208,17 +230,51 @@ def scan_stale_refs(files: dict[str, str], root=None) -> list[Finding]:
             rel, _, anchor = target.partition("#")
             if rel == "":
                 if anchor and slugify(anchor) not in _heading_slugs(text):
-                    findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
-                        f"Anchor '#{anchor}' not found in this file."))
+                    findings.append(
+                        Finding(
+                            "LA-STALE-1",
+                            "warn",
+                            path,
+                            "",
+                            0.0,
+                            "",
+                            "",
+                            f"Anchor '#{anchor}' not found in this file.",
+                        )
+                    )
                 continue
             resolved = posixpath.normpath(posixpath.join(parent, rel))
             present = resolved in files or (root is not None and (Path(root) / resolved).exists())
             if not present:
-                findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
-                    f"Broken reference: {target} does not resolve."))
-            elif anchor and resolved in files and slugify(anchor) not in _heading_slugs(files[resolved]):
-                findings.append(Finding("LA-STALE-1", "warn", path, "", 0.0, "", "",
-                    f"Broken anchor: '#{anchor}' not found in {resolved}."))
+                findings.append(
+                    Finding(
+                        "LA-STALE-1",
+                        "warn",
+                        path,
+                        "",
+                        0.0,
+                        "",
+                        "",
+                        f"Broken reference: {target} does not resolve.",
+                    )
+                )
+            elif (
+                anchor
+                and resolved in files
+                and slugify(anchor) not in _heading_slugs(files[resolved])
+            ):
+                findings.append(
+                    Finding(
+                        "LA-STALE-1",
+                        "warn",
+                        path,
+                        "",
+                        0.0,
+                        "",
+                        "",
+                        f"Broken anchor: '#{anchor}' not found in {resolved}.",
+                    )
+                )
     return findings
 
 
@@ -231,8 +287,18 @@ def find_dead_refs(files: dict[str, str]) -> list[Finding]:
             continue
         name = posixpath.basename(path)
         if not any(name in text for other, text in files.items() if other != path):
-            findings.append(Finding("LA-DEAD-1", "info", path, "", 0.0, "", "",
-                f"No other guarded file mentions {name}; possibly dead weight."))
+            findings.append(
+                Finding(
+                    "LA-DEAD-1",
+                    "info",
+                    path,
+                    "",
+                    0.0,
+                    "",
+                    "",
+                    f"No other guarded file mentions {name}; possibly dead weight.",
+                )
+            )
     return findings
 
 
@@ -243,7 +309,7 @@ def strip_frontmatter(text: str) -> str:
     if text.startswith("---\n"):
         end = text.find("\n---", 4)
         if end != -1:
-            return text[end + 4:].lstrip("\n")
+            return text[end + 4 :].lstrip("\n")
     return text
 
 
@@ -255,8 +321,19 @@ def scan_bloat(files: dict[str, str]) -> list[Finding]:
             continue
         lines = len(strip_frontmatter(text).splitlines())
         if lines > BLOAT_BUDGET_LINES:
-            findings.append(Finding("LA-BLOAT-1", "warn", path, "", 0.0, "", "",
-                f"SKILL.md body is {lines} lines (> {BLOAT_BUDGET_LINES}); move heavy detail to references/."))
+            findings.append(
+                Finding(
+                    "LA-BLOAT-1",
+                    "warn",
+                    path,
+                    "",
+                    0.0,
+                    "",
+                    "",
+                    f"SKILL.md body is {lines} lines (> {BLOAT_BUDGET_LINES}); "
+                    "move heavy detail to references/.",
+                )
+            )
     return findings
 
 
@@ -265,8 +342,10 @@ def _emit(findings: list[Finding], fmt: str) -> None:
         print(json.dumps({"findings": [dataclasses.asdict(f) for f in findings]}, indent=2))
     else:
         for f in findings:
-            print(f"{f.code} [{f.severity}] {f.path} §\"{f.heading}\" "
-                  f"(containment={f.containment}) -> {f.action}")
+            print(
+                f'{f.code} [{f.severity}] {f.path} §"{f.heading}" '
+                f"(containment={f.containment}) -> {f.action}"
+            )
 
 
 def main(argv: list[str]) -> int:
@@ -282,8 +361,9 @@ def main(argv: list[str]) -> int:
     if args.added_text is not None and args.added_text != "-":
         ap.error("--added-text only accepts '-' (read the block from stdin)")
     if args.registry and not Path(args.registry).is_file():
-        print(f"lean-audit: registry {args.registry} not found, using default config",
-              file=sys.stderr)
+        print(
+            f"lean-audit: registry {args.registry} not found, using default config", file=sys.stderr
+        )
 
     try:
         if args.added_text == "-":
@@ -300,8 +380,12 @@ def main(argv: list[str]) -> int:
             root = scope if scope.is_dir() else scope.parent
             reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
             files = read_repo(root, scope)
-            findings = (scan(files, reg) + scan_stale_refs(files, root)
-                        + find_dead_refs(files) + scan_bloat(files))
+            findings = (
+                scan(files, reg)
+                + scan_stale_refs(files, root)
+                + find_dead_refs(files)
+                + scan_bloat(files)
+            )
     except (OSError, tomllib.TOMLDecodeError, re.error) as exc:
         print(f"lean-audit: {exc}", file=sys.stderr)
         return 2

@@ -1,4 +1,5 @@
 """Registry of canonical homes, carve-outs, and exemptions (.lean-audit.toml)."""
+
 from __future__ import annotations
 
 import re
@@ -37,7 +38,9 @@ def load_registry(path: Path | None) -> Registry:
         return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
     data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     homes = tuple(
-        (h["path"], h["heading"]) for h in data.get("canonical_home", []) if "path" in h and "heading" in h
+        (h["path"], h["heading"])
+        for h in data.get("canonical_home", [])
+        if "path" in h and "heading" in h
     )
     carves = tuple((c["a"], c["b"]) for c in data.get("carve_out", []) if "a" in c and "b" in c)
     exempt = tuple(data.get("exempt_paths", []))
@@ -56,24 +59,30 @@ def _glob_to_regex(pattern: str) -> str:
         if c == "{":
             j = pattern.find("}", i)
             if j == -1:
-                out.append(re.escape(c)); i += 1
+                out.append(re.escape(c))
+                i += 1
             else:
-                out.append(f"(?P<{pattern[i + 1:j]}>[^/]+)")
+                out.append(f"(?P<{pattern[i + 1 : j]}>[^/]+)")
                 i = j + 1
-        elif pattern[i:i + 3] == "**/":
-            out.append("(?:.*/)?"); i += 3
-        elif pattern[i:i + 2] == "**":
-            out.append(".*"); i += 2
+        elif pattern[i : i + 3] == "**/":
+            out.append("(?:.*/)?")
+            i += 3
+        elif pattern[i : i + 2] == "**":
+            out.append(".*")
+            i += 2
         elif c == "*":
-            out.append("[^/]*"); i += 1
+            out.append("[^/]*")
+            i += 1
         elif c == "?":
-            out.append("[^/]"); i += 1
+            out.append("[^/]")
+            i += 1
         else:
-            out.append(re.escape(c)); i += 1
+            out.append(re.escape(c))
+            i += 1
     return "^" + "".join(out) + "$"
 
 
-def path_captures(pattern: str, path: str) -> dict | None:
+def path_captures(pattern: str, path: str) -> dict[str, str] | None:
     m = re.match(_glob_to_regex(pattern), path)
     return m.groupdict() if m else None
 
