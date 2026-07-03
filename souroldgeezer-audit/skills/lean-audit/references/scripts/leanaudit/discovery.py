@@ -26,6 +26,8 @@ _EXCLUDE = (".worktrees/", "docs/superpowers/", ".cache/", ".git/", "node_module
 
 
 def is_guarded(rel: str) -> bool:
+    """True if rel is a guarded-markdown path (matches a guard glob and isn't
+    under an excluded tree)."""
     if any(seg in rel for seg in _EXCLUDE):
         return False
     return any(fnmatch.fnmatch(rel, g) for g in _GUARD_GLOBS)

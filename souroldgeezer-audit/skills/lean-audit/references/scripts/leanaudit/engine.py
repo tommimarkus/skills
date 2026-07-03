@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import posixpath
 import re
@@ -66,7 +67,7 @@ def shingle_set(tokens: list[str], k: int = DEFAULT_K) -> set[tuple[str, ...]]:
     return {tuple(tokens[i : i + k]) for i in range(len(tokens) - k + 1)}
 
 
-def containment(added: set, other: set) -> float:
+def containment(added: frozenset[tuple[str, ...]], other: frozenset[tuple[str, ...]]) -> float:
     return len(added & other) / len(added) if added else 0.0
 
 
@@ -222,6 +223,8 @@ def scan_stale_refs(files: dict[str, str], root=None) -> list[Finding]:
 
 
 def find_dead_refs(files: dict[str, str]) -> list[Finding]:
+    """Flag references/ or extensions/ files whose basename no other guarded file
+    mentions — likely dead weight nothing loads."""
     findings: list[Finding] = []
     for path in files:
         if "/references/" not in path and "/extensions/" not in path:
@@ -245,6 +248,7 @@ def strip_frontmatter(text: str) -> str:
 
 
 def scan_bloat(files: dict[str, str]) -> list[Finding]:
+    """Flag SKILL.md bodies (frontmatter stripped) that exceed BLOAT_BUDGET_LINES."""
     findings: list[Finding] = []
     for path, text in files.items():
         if posixpath.basename(path) != "SKILL.md":
@@ -258,7 +262,7 @@ def scan_bloat(files: dict[str, str]) -> list[Finding]:
 
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
-        print(json.dumps({"findings": [f.__dict__ for f in findings]}, indent=2))
+        print(json.dumps({"findings": [dataclasses.asdict(f) for f in findings]}, indent=2))
     else:
         for f in findings:
             print(f"{f.code} [{f.severity}] {f.path} §\"{f.heading}\" "

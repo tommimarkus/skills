@@ -61,11 +61,9 @@ def _baseline_for(skill_md: Path, repo_root: Path) -> Path | None:
 def cost_warn_decision(messages: list[str]) -> dict[str, Any] | None:
     if not messages:
         return None
-    return {"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "allow",
-        "permissionDecisionReason":
-            "lean-audit per-use guard (advisory, not blocking): " + "; ".join(messages)}}
+    return hook_envelope.permission_decision(
+        "allow",
+        "lean-audit per-use guard (advisory, not blocking): " + "; ".join(messages))
 
 
 def decide(
@@ -99,12 +97,10 @@ def decide(
             problems.append(f"{target_p}: dangling pointer in pending edit: {pointer}")
     if not problems:
         return None
-    return {"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason":
-            "lean-audit per-use guard: fidelity regression — " + "; ".join(problems)
-            + ". Cite the lost item or restructure; the fidelity floor must hold."}}
+    return hook_envelope.permission_decision(
+        "deny",
+        "lean-audit per-use guard: fidelity regression — " + "; ".join(problems)
+        + ". Cite the lost item or restructure; the fidelity floor must hold.")
 
 
 def _load_snapshot_and_scenarios(

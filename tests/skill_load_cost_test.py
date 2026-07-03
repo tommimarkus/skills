@@ -3,19 +3,20 @@ import contextlib
 import glob
 import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module
 
+SCRIPT = (REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
+          / "references" / "scripts" / "skill_load_cost.py")
+
 # Load the script by path — repo convention (no `scripts/__init__.py`), matching
 # tests/skill_architecture_report_test.py and tests/lessons_ledger_test.py.
-slc = load_script_module(
-    "skill_load_cost",
-    REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
-    / "references" / "scripts" / "skill_load_cost.py",
-)
+slc = load_script_module("skill_load_cost", SCRIPT)
 
 
 class EstimateTokensTest(unittest.TestCase):
@@ -292,6 +293,18 @@ class CostRegressionTest(unittest.TestCase):
             probs = slc.cost_regressions(snap, scenarios, root, tolerance=25)
             self.assertEqual(len(probs), 1)
             self.assertIn("a:", probs[0])
+
+
+class CliExitContractTest(unittest.TestCase):
+    def test_missing_patterns_file_exits_2_without_traceback(self):
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "baseline", "--files", str(SCRIPT),
+             "--code-patterns", "/nonexistent/patterns.json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 2)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertIn("patterns", proc.stderr.lower())
 
 
 if __name__ == "__main__":

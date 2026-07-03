@@ -614,5 +614,15 @@ class GitEnumerationParityTest(unittest.TestCase):
         self.assertEqual(self._enumeration_block(engine), self._enumeration_block(report))
 
 
+class RegistryWarningTest(unittest.TestCase):
+    def test_missing_registry_path_warns_on_stderr(self):
+        proc = subprocess.run(
+            [sys.executable, str(ENGINE), ".", "--registry", "/nonexistent/reg.toml",
+             "--format", "json"],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        self.assertIn("not found", proc.stderr.lower())
+
+
 if __name__ == "__main__":
     unittest.main()

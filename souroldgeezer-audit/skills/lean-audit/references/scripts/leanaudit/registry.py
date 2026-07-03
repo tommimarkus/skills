@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +30,10 @@ class Registry:
 
 
 def load_registry(path: Path | None) -> Registry:
-    if path is None or not Path(path).is_file():
+    if path is None:
+        return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
+    if not Path(path).is_file():
+        print(f"lean-audit: registry {path} not found, using default config", file=sys.stderr)
         return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
     data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     homes = tuple(

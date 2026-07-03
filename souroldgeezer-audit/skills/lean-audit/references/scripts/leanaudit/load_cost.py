@@ -11,9 +11,11 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any, NotRequired, TypedDict
 
 __all__ = [
     "TOKEN_RE",
+    "Inventory",
     "estimate_tokens",
     "measure_scenario",
     "resolve_closure",
@@ -25,6 +27,15 @@ __all__ = [
     "cost_regressions",
     "main",
 ]
+
+
+class Inventory(TypedDict):
+    """The code/section/pointer inventory extract_inventory produces. union_inventory
+    drops `pointers` (codes/sections are the only fields it unions), so pointers is
+    NotRequired rather than always present."""
+    codes: list[str]
+    sections: list[str]
+    pointers: NotRequired[list[str]]
 
 TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 
@@ -95,7 +106,7 @@ def resolve_closure_with_overrides(skill_md: Path, overrides: dict) -> list[Path
     return sorted(seen)
 
 
-def extract_inventory(text: str, code_patterns: list[str]) -> dict:
+def extract_inventory(text: str, code_patterns: list[str]) -> Inventory:
     codes: set[str] = set()
     for pattern in code_patterns:
         codes.update(re.findall(pattern, text))
@@ -108,7 +119,7 @@ def extract_inventory(text: str, code_patterns: list[str]) -> dict:
     }
 
 
-def union_inventory(invs: list[dict]) -> dict:
+def union_inventory(invs: list[Inventory]) -> Inventory:
     codes: set[str] = set()
     sections: set[str] = set()
     for inv in invs:
@@ -117,7 +128,7 @@ def union_inventory(invs: list[dict]) -> dict:
     return {"codes": sorted(codes), "sections": sorted(sections)}
 
 
-def diff_inventory(baseline: dict, current: dict) -> list[str]:
+def diff_inventory(baseline: Inventory, current: Inventory) -> list[str]:
     problems = []
     for code in sorted(set(baseline["codes"]) - set(current["codes"])):
         problems.append(f"missing code (unreachable across skill): {code}")
@@ -140,11 +151,11 @@ def check_pointers(paths: list[Path], code_patterns: list[str]) -> list[str]:
     return problems
 
 
-def _read_json(path: str):
+def _read_json(path: str) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _emit_json(payload, out_path) -> None:
+def _emit_json(payload: Any, out_path: str | None) -> None:
     text = json.dumps(payload, indent=2)
     if out_path:
         Path(out_path).write_text(text + "\n", encoding="utf-8")
@@ -153,20 +164,8 @@ def _emit_json(payload, out_path) -> None:
 
 
 def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int) -> list[str]:
-    """Check per-scenario token totals against a snapshot baseline.
-
-    For each scenario id in snapshot, re-measure its total and flag if growth
-    exceeds tolerance.
-
-    Args:
-        snapshot: dict mapping scenario id to baseline total tokens
-        scenarios: list of scenario dicts with id and files
-        root: Path to root for file resolution
-        tolerance: max token growth to accept without flagging
-
-    Returns:
-        list of problem messages for regressions exceeding tolerance
-    """
+    """Re-measure each snapshotted scenario's token total against root and flag it
+    when growth over the snapshot exceeds tolerance."""
     by_id = {s["id"]: s for s in scenarios}
     problems = []
     for sid, old in snapshot.items():
@@ -180,7 +179,7 @@ def cost_regressions(snapshot: dict, scenarios: list[dict], root, tolerance: int
     return problems
 
 
-def _cmd_measure(args) -> int:
+def _cmd_measure(args: argparse.Namespace) -> int:
     scenarios = {s["id"]: s for s in _read_json(args.scenarios)}
     result = measure_scenario(scenarios[args.id], Path(args.root))
     if args.json:
@@ -192,7 +191,7 @@ def _cmd_measure(args) -> int:
     return 0
 
 
-def _cmd_baseline(args) -> int:
+def _cmd_baseline(args: argparse.Namespace) -> int:
     patterns = _read_json(args.code_patterns)
     invs = [extract_inventory(Path(f).read_text(encoding="utf-8"), patterns)
             for f in args.files]
@@ -201,7 +200,7 @@ def _cmd_baseline(args) -> int:
     return 0
 
 
-def _cmd_diff(args) -> int:
+def _cmd_diff(args: argparse.Namespace) -> int:
     patterns = _read_json(args.code_patterns)
     baseline = _read_json(args.baseline)
     paths = [Path(f) for f in args.files]
@@ -214,14 +213,14 @@ def _cmd_diff(args) -> int:
     return 1 if problems else 0
 
 
-def _cmd_snapshot(args) -> int:
+def _cmd_snapshot(args: argparse.Namespace) -> int:
     scenarios = _read_json(args.scenarios)
     out = {s["id"]: measure_scenario(s, Path(args.root))["total"] for s in scenarios}
     _emit_json(out, args.out)
     return 0
 
 
-def _cmd_resolve_closure(args) -> int:
+def _cmd_resolve_closure(args: argparse.Namespace) -> int:
     paths = [str(p) for p in resolve_closure(Path(args.entry))]
     print(json.dumps(paths, indent=2) if args.json else "\n".join(paths))
     return 0
@@ -262,4 +261,8 @@ def main(argv: list[str] | None = None) -> int:
     rc.set_defaults(func=_cmd_resolve_closure)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"skill-load-cost: {exc}", file=sys.stderr)
+        return 2

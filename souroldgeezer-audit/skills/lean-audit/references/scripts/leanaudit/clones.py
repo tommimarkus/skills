@@ -1,13 +1,14 @@
 """lean-audit code-duplication lens (stdlib-only).
 
 Detects mechanical copy-paste clones in source via token-window seed-and-extend.
-Sibling to lean_engine.py (markdown waste); reuses lean_engine.repo_paths for
-git-aware discovery via the repo's sibling-import pattern (see the lean_guard.py
+Sibling to leanaudit.engine (markdown waste); reuses leanaudit.discovery.repo_paths
+for git-aware discovery via the repo's sibling-import pattern (see the lean_guard.py
 shim).
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import fnmatch
 import json
 import sys
@@ -325,7 +326,7 @@ def scan_dir(root: Path, min_tokens: int, registry: Path | None) -> list[Clone]:
 
 def _emit(clones: list[Clone], fmt: str) -> None:
     if fmt == "json":
-        print(json.dumps({"findings": [c.__dict__ for c in clones]}, indent=2))
+        print(json.dumps({"findings": [dataclasses.asdict(c) for c in clones]}, indent=2))
     else:
         for c in clones:
             print(f"{c.code} [{c.severity}] {c.path}:{c.lines} == "
@@ -355,7 +356,3 @@ def main(argv: list[str]) -> int:
         return 2
     _emit(clones, args.format)
     return 1 if any(c.severity == "block" for c in clones) else 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
