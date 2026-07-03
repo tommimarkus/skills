@@ -648,7 +648,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         expected_phrases = [
             "Notation: archimate | uml | mixed | unsupported",
             "Cross-notation links: none | UML elaborates ArchiMate",
-            "Export readiness: not requested | OEF ready | XMI ready | blocked",
+            "Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked",
             "Handoff boundary: architecture/design model | companion material required | delegated to <skill>",
         ]
 
