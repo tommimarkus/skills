@@ -76,8 +76,10 @@ by `project.json`.
 
 Omit export unless OEF or XMI was requested.
 
-After materializing a rendered SVG, add its accessible name and visible title
-(`architecture.md` §9 post-render step; `--check` verifies presence):
+After materializing a rendered SVG, complete its accessible name (the runtime
+emits `role="img"` + `<title>` natively; render-policy `accessibility` block
+or view-id fallback) and add the visible title (`architecture.md` §9
+post-render step; `--check` verifies presence):
 
 ```bash
 "$SKILL_DIR"/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg

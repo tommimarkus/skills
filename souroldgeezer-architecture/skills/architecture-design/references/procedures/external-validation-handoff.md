@@ -30,7 +30,7 @@ source and disclose coverage in the footer's `Export readiness` qualifier
    When candidate or evidence-labeled content is exported, disclose that the
    downstream tool shows it indistinguishably from confirmed architecture.
 3. **Content coverage (XMI).** Verify which authored kinds appear in the
-   export; on the release-resolved runtime (verified on 2026.06.10) only class
+   export; on the release-resolved runtime (verified on 2026.07.0) only class
    structure survives — associations, sequence interactions, and deployment
    content are omitted with an `ok` envelope, and multiplicities/attribute
    types are serialized non-canonically. Qualify as e.g. `XMI ready (classes

@@ -8,27 +8,32 @@ Usage:
   svg-accessible-name.sh --check [--title <text>] <svg-file>
   svg-accessible-name.sh --help
 
-Post-render accessible-name step for dediren-rendered SVG views. The
-release-resolved Dediren runtime emits no accessible name; this repo-owned
-step edits generated render output only, never the upstream bundle.
+Post-render accessible-name completion for dediren-rendered SVG views. This
+repo-owned step edits generated render output only, never the upstream bundle.
 
-Apply mode injects on the root <svg> element: role="img" and aria-labelledby
-pointing at an injected <title> (the view label) and optional <desc> (the
-view's architecture question), plus a visible per-view title text block in a
-band added above the diagram. The original viewBox is preserved in a
-data-arch-a11y-viewbox attribute so reruns replace the previous injection
-instead of stacking bands.
+Apply mode ensures the artifact carries a per-view accessible name and a
+visible title:
 
-If the artifact already carries a runtime-native accessible name (role="img"
-plus a <title> this script did not inject), apply mode removes only its own
-previous injection, otherwise leaves the file as-is, and reports it.
+- When the runtime already emitted a native accessible name (role="img" plus
+  a root <title>, available since the accessible-name fix in the release-
+  resolved runtime; the title falls back to the layout view id), the step
+  keeps the native markup, upgrades the <title> text to the view label,
+  ensures a <desc> carrying the view's architecture question, and adds the
+  visible title block.
+- When the artifact has no accessible name (older runtimes), the step injects
+  role="img", aria-labelledby to an injected <title>, aria-describedby to an
+  optional <desc>, and the visible title block.
+
+The visible per-view title renders in a band added above the diagram; the
+original viewBox is preserved in a data-arch-a11y-viewbox attribute so reruns
+replace the previous band instead of stacking.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
 block carrying that text.
 
 Exit codes:
-  0  applied, already accessible, or check passed
+  0  applied or check passed
   1  check failed
   2  usage error
   3  input is not an SVG with a parseable viewBox
@@ -134,27 +139,19 @@ run_awk() {
         exit (ok ? 0 : 1)
       }
 
-      # Remove any previous injection from this script.
-      restored = 0
-      if (match(tag, / data-arch-a11y="root" data-arch-a11y-viewbox="[^"]*" role="img" aria-labelledby="arch-a11y-title( arch-a11y-desc)?"/)) {
+      # Remove any previous injection from this script (both the current
+      # attribute shape and the earlier combined aria-labelledby shape).
+      if (match(tag, / data-arch-a11y="root" data-arch-a11y-viewbox="[^"]*"( role="img" aria-labelledby="arch-a11y-title( arch-a11y-desc)?"( aria-describedby="arch-a11y-desc")?)?/)) {
         injected = substr(tag, RSTART, RLENGTH)
         origvb = injected
         sub(/^.*data-arch-a11y-viewbox="/, "", origvb)
         sub(/".*$/, "", origvb)
         tag = substr(tag, 1, RSTART - 1) substr(tag, RSTART + RLENGTH)
         sub(/ viewBox="[^"]*"/, " viewBox=\"" origvb "\"", tag)
-        restored = 1
       }
       gsub(/\n?<title id="arch-a11y-title">[^<]*<\/title>/, "", body)
       gsub(/\n?<desc id="arch-a11y-desc">[^<]*<\/desc>/, "", body)
       gsub(/\n?<text data-arch-a11y="visible-title"[^>]*>[^<]*<\/text>/, "", body)
-
-      # Respect a runtime-native accessible name.
-      if (tag ~ / role="img"/ && body ~ /<title[^>]*>[^<]+<\/title>/) {
-        printf "%s", head tag body > (FILENAME ".a11y-tmp")
-        printf "runtime-native accessible name detected; no injection performed\n"
-        exit 0
-      }
 
       if (match(tag, / viewBox="[^"]*"/) == 0) { exit 3 }
       vb = substr(tag, RSTART, RLENGTH)
@@ -169,9 +166,52 @@ run_awk() {
       newvb = fmt(minx) " " fmt(miny - band) " " fmt(w) " " fmt(h + band)
       sub(/ viewBox="[^"]*"/, " viewBox=\"" newvb "\"", tag)
 
-      ids = "arch-a11y-title"
-      if (desc != "") { ids = ids " arch-a11y-desc" }
-      inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\" role=\"img\" aria-labelledby=\"" ids "\""
+      visible = "\n<text data-arch-a11y=\"visible-title\" x=\"" fmt(minx + pad) "\" y=\"" fmt(miny - 12) "\" font-family=\"sans-serif\" font-size=\"" fontsize "\" font-weight=\"bold\">" title "</text>"
+
+      # Runtime-native accessible name: keep the native markup, upgrade the
+      # title text to the view label, and ensure the desc.
+      native = (tag ~ / role="img"/ && body ~ /<title[^>]*>[^<]*<\/title>/)
+      if (native) {
+        inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\""
+        if (tag ~ /\/>$/) {
+          sub(/\/>$/, inject "/>", tag)
+        } else {
+          sub(/>$/, inject ">", tag)
+        }
+
+        if (match(body, /<title[^>]*>[^<]*<\/title>/)) {
+          seg = substr(body, RSTART, RLENGTH)
+          open_len = index(seg, ">")
+          body = substr(body, 1, RSTART - 1) substr(seg, 1, open_len) title "</title>" substr(body, RSTART + RLENGTH)
+        }
+        if (desc != "") {
+          if (match(body, /<desc[^>]*>[^<]*<\/desc>/)) {
+            seg = substr(body, RSTART, RLENGTH)
+            open_len = index(seg, ">")
+            body = substr(body, 1, RSTART - 1) substr(seg, 1, open_len) desc "</desc>" substr(body, RSTART + RLENGTH)
+          } else {
+            close_pos = index(body, "</title>")
+            body = substr(body, 1, close_pos + 7) "\n<desc>" desc "</desc>" substr(body, close_pos + 8)
+          }
+        }
+        close_pos = index(body, "</title>")
+        anchor = close_pos + 7
+        if (desc != "") {
+          desc_pos = index(body, "</desc>")
+          if (desc_pos > 0) { anchor = desc_pos + 6 }
+        }
+        body = substr(body, 1, anchor) visible substr(body, anchor + 1)
+
+        printf "%s", head tag body > (FILENAME ".a11y-tmp")
+        printf "completed native accessible name: title set%s; visible title block added\n", (desc != "" ? " + desc" : "")
+        exit 0
+      }
+
+      # No native accessible name (older runtimes): inject the full markup.
+      sub(/ role="img"/, "", tag)
+      ids = " role=\"img\" aria-labelledby=\"arch-a11y-title\""
+      if (desc != "") { ids = ids " aria-describedby=\"arch-a11y-desc\"" }
+      inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\"" ids
       if (tag ~ /\/>$/) {
         sub(/\/>$/, inject "/>", tag)
       } else {
@@ -182,7 +222,7 @@ run_awk() {
       if (desc != "") {
         block = block "\n<desc id=\"arch-a11y-desc\">" desc "</desc>"
       }
-      block = block "\n<text data-arch-a11y=\"visible-title\" x=\"" fmt(minx + pad) "\" y=\"" fmt(miny - 12) "\" font-family=\"sans-serif\" font-size=\"" fontsize "\" font-weight=\"bold\">" title "</text>"
+      block = block visible
 
       printf "%s", head tag block body > (FILENAME ".a11y-tmp")
       printf "applied: role=img + title%s + visible title block; viewBox band added\n", (desc != "" ? " + desc" : "")

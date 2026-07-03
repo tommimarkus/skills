@@ -61,7 +61,8 @@ class SvgAccessibleNameTest(unittest.TestCase):
 
         root = ET.fromstring(content)
         self.assertEqual(root.get("role"), "img")
-        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title arch-a11y-desc")
+        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
+        self.assertEqual(root.get("aria-describedby"), "arch-a11y-desc")
         title = root.find(f"{{{SVG_NS}}}title")
         assert title is not None
         self.assertEqual(title.text, "Order flow")
@@ -89,6 +90,7 @@ class SvgAccessibleNameTest(unittest.TestCase):
         self.apply("--title", "Order flow")
         root = ET.fromstring(self.svg.read_text(encoding="utf-8"))
         self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
+        self.assertIsNone(root.get("aria-describedby"))
         self.assertIsNone(root.find(f"{{{SVG_NS}}}desc"))
 
     def test_apply_escapes_xml_metacharacters(self) -> None:
@@ -139,14 +141,64 @@ class SvgAccessibleNameTest(unittest.TestCase):
         run_script("--check", "--title", "Order flow", self.svg)
         self.assertEqual(before, self.svg.read_text(encoding="utf-8"))
 
-    def test_runtime_native_accessible_name_is_respected(self) -> None:
+    def test_runtime_native_accessible_name_is_completed(self) -> None:
         self.svg.write_text(NATIVE_SVG, encoding="utf-8")
-        result = self.apply("--title", "Ignored")
-        self.assertIn("runtime-native accessible name", result.stdout)
-        self.assertEqual(NATIVE_SVG, self.svg.read_text(encoding="utf-8"))
+        result = self.apply("--title", "View label", "--desc", "Which parts cooperate?")
+        self.assertIn("completed native accessible name", result.stdout)
 
-        check = run_script("--check", self.svg)
+        content = self.svg.read_text(encoding="utf-8")
+        root = ET.fromstring(content)
+        self.assertEqual(root.get("role"), "img")
+        # Native markup is kept, not re-labelled through injected ids.
+        self.assertIsNone(root.get("aria-labelledby"))
+        titles = root.findall(f"{{{SVG_NS}}}title")
+        self.assertEqual(len(titles), 1)
+        self.assertEqual(titles[0].text, "View label")
+        self.assertIsNone(titles[0].get("id"))
+        descs = root.findall(f"{{{SVG_NS}}}desc")
+        self.assertEqual(len(descs), 1)
+        self.assertEqual(descs[0].text, "Which parts cooperate?")
+        visible = [
+            el
+            for el in root.iter(f"{{{SVG_NS}}}text")
+            if el.get("data-arch-a11y") == "visible-title"
+        ]
+        self.assertEqual(len(visible), 1)
+        self.assertEqual(visible[0].text, "View label")
+        self.assertEqual(root.get("viewBox"), "0 -32 10 42")
+        self.assertEqual(root.get("data-arch-a11y-viewbox"), "0 0 10 10")
+
+        check = run_script("--check", "--title", "View label", self.svg)
         self.assertEqual(check.returncode, 0, check.stdout)
+
+    def test_native_completion_is_idempotent(self) -> None:
+        self.svg.write_text(NATIVE_SVG, encoding="utf-8")
+        self.apply("--title", "View label", "--desc", "Which parts cooperate?")
+        first = self.svg.read_text(encoding="utf-8")
+        self.apply("--title", "View label", "--desc", "Which parts cooperate?")
+        self.assertEqual(first, self.svg.read_text(encoding="utf-8"))
+
+    def test_v1_injected_artifact_upgrades_without_stacking(self) -> None:
+        v1 = (
+            f'<svg xmlns="{SVG_NS}" viewBox="0 -32 400 332" data-arch-a11y="root"'
+            ' data-arch-a11y-viewbox="0 0 400 300" role="img"'
+            ' aria-labelledby="arch-a11y-title arch-a11y-desc">\n'
+            '<title id="arch-a11y-title">Old</title>\n'
+            '<desc id="arch-a11y-desc">Old question?</desc>\n'
+            '<text data-arch-a11y="visible-title" x="8" y="-12" font-family="sans-serif"'
+            ' font-size="16" font-weight="bold">Old</text>\n'
+            "<rect/></svg>"
+        )
+        self.svg.write_text(v1, encoding="utf-8")
+        self.apply("--title", "New")
+        content = self.svg.read_text(encoding="utf-8")
+        root = ET.fromstring(content)
+        self.assertEqual(root.get("viewBox"), "0 -32 400 332")
+        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
+        self.assertNotIn("Old", content)
+        titles = root.findall(f"{{{SVG_NS}}}title")
+        self.assertEqual(len(titles), 1)
+        self.assertEqual(titles[0].text, "New")
 
     def test_non_svg_input_exits_3(self) -> None:
         self.svg.write_text("not an svg", encoding="utf-8")

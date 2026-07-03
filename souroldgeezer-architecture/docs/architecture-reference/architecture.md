@@ -165,6 +165,13 @@ points for navigable and richer-styled output. Static SVG stays the default and
 the evidence of record; offer interactive or rich output as an opt-in and keep
 the `data-dediren-node-id` / `data-dediren-edge-id` markers required by §9.
 
+The render policy may also carry an optional `accessibility` block (`title`,
+`description`) that names the emitted SVG for assistive technology: the root
+element gets `role="img"` with a `<title>` (falling back to the layout view id
+when the block is absent) and a `<desc>` when a description is supplied. A
+package-level policy shared by several views cannot carry per-view text; the
+§9 accessible-name post-render step completes per-view labels either way.
+
 ## 4. ArchiMate Layers And Aspects
 
 ArchiMate separates architecture content by layer and aspect. Do not collapse
@@ -522,14 +529,16 @@ with both validation counts.
 
 ### Accessible-Name Post-Render Step
 
-The release-resolved Dediren runtime emits SVG with no accessible name — no
-`role`, `aria-*`, `<title>`, or `<desc>` markup — so every rendered view fails
-WCAG 2.2 SC 1.1.1 (Non-text Content) as produced, and a view usually carries
-no visible title either, leaving an exported diagram unidentifiable outside
-its package. The render policy has no field for accessible names; the runtime
-feature gap is reported upstream, not patched locally. Until the runtime emits
-accessible names itself, run the repo-owned post-render step on every rendered
-or re-rendered view:
+The release-resolved Dediren runtime names every emitted SVG for assistive
+technology (WCAG 2.2 SC 1.1.1 Non-text Content): the root element carries
+`role="img"` with a `<title>` set from the render policy `accessibility` block
+(§3), falling back to the layout view id, plus a `<desc>` when the block
+supplies a description. Two gaps remain repo-owned: a package-level policy
+shared by several views cannot carry per-view text (the fallback title is the
+view id, not the view label), and the runtime renders no visible title,
+leaving an exported diagram unidentifiable outside its package. Run the
+repo-owned post-render step on every rendered or re-rendered view to close
+both:
 
 ```bash
 "$SKILL_DIR"/references/scripts/svg-accessible-name.sh \
@@ -537,14 +546,15 @@ or re-rendered view:
   <pkg>/generated/svg/<view-id>.svg
 ```
 
-The script injects `role="img"` with an `aria-labelledby` `<title>` (the view
-label) and optional `<desc>` (the view's architecture question from
-`project.json`), and adds a visible per-view title block in a band above the
-diagram. It edits generated render output only — never the upstream bundle —
-is idempotent, defers to a runtime-native accessible name when a future
-release emits one, and offers `--check` for verification. Missing
-accessible-name markup or a missing visible title on rendered evidence is
-`ARCH-R-2`.
+The script completes a runtime-native accessible name — upgrades the `<title>`
+text to the view label and ensures a `<desc>` carrying the view's architecture
+question from `project.json` — or injects the full markup (`role="img"`,
+`aria-labelledby` `<title>`, optional `aria-describedby` `<desc>`) for
+artifacts from runtimes without native accessible names, and always adds a
+visible per-view title block in a band above the diagram. It edits generated
+render output only — never the upstream bundle — is idempotent, and offers
+`--check` for verification. Missing accessible-name markup or a missing
+visible title on rendered evidence is `ARCH-R-2`.
 
 Render-ready requires inspecting SVG for:
 

@@ -27,7 +27,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "2026.06.10"
+EXPECTED_DEDIREN_VERSION = "2026.07.0"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
