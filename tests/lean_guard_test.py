@@ -176,3 +176,16 @@ class FailOpenLoggingTest(unittest.TestCase):
                 guard_mod.main()  # must NOT raise (fail-open)
         self.assertIn("fail-open allow", stderr.getvalue())
         self.assertIn("RuntimeError", stderr.getvalue())
+
+    def test_repo_root_execution_failure_writes_stderr_line(self):
+        guard_mod = load_guard()
+        # real execution failure (git missing / OSError), not a non-repo cwd
+        with unittest.mock.patch.object(
+            guard_mod.subprocess, "run", side_effect=OSError("git not found")
+        ):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertIsNone(guard_mod._repo_root("."))  # must fail open
+        self.assertIn("fail-open allow", stderr.getvalue())
+        self.assertIn("repo-root", stderr.getvalue())
+        self.assertIn("OSError", stderr.getvalue())

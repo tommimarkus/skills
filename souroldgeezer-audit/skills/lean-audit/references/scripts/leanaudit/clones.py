@@ -2,7 +2,8 @@
 
 Detects mechanical copy-paste clones in source via token-window seed-and-extend.
 Sibling to lean_engine.py (markdown waste); reuses lean_engine.repo_paths for
-git-aware discovery via the repo's sibling-import pattern (see lean_guard.py:18).
+git-aware discovery via the repo's sibling-import pattern (see the lean_guard.py
+shim).
 """
 from __future__ import annotations
 

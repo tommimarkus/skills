@@ -44,7 +44,10 @@ def _repo_root(cwd: str) -> Path | None:
         )
         if out.returncode == 0 and out.stdout.strip():
             return Path(out.stdout.strip())
-    except Exception:
+    except Exception as exc:
+        # A non-repo cwd exits via returncode != 0 without raising; this fires
+        # only on real execution failure (git missing, timeout, OSError).
+        hook_envelope.fail_open_log("lean-guard", "repo-root", exc)
         return None
     return None
 
