@@ -22,6 +22,12 @@ reproducible output.
 When the `architecture.md` §9 grouped-layout fallback was used, report the
 regression plus both validation counts.
 
+Export readiness never claims bare "ready": qualify with coverage — views
+exported vs. total actual views, and content kinds exported vs. authored (per
+[external-validation-handoff](procedures/external-validation-handoff.md)
+required disclosures) — e.g. `OEF ready (1 of 2 views)`, `XMI ready (classes
+only)`. A lossy export with an `ok` envelope is still lossy evidence.
+
 Cross-notation: report UML to ArchiMate `properties.uml.architecture_context`
 links as handoff evidence. Broken targets, missing source evidence, or UML detail
 that contradicts linked ArchiMate intent cap cross-notation readiness.
@@ -50,7 +56,7 @@ Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.m
 Package: docs/architecture/<feature>.dediren/
 Notation: archimate | uml | mixed | unsupported
 Dediren runtime: <path|not run>; Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
-Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready | XMI ready | blocked
+Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked
 Cross-notation links: none | UML elaborates ArchiMate <ids> | broken <ids> | not assessed
 Handoff boundary: architecture/design model | companion material required | delegated to <skill>
 Diagram kind: <primary>; views: <n>; missing kinds: <list|none>; View groups: <n> source-backed groups | none
