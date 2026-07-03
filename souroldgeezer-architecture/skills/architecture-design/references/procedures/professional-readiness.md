@@ -6,7 +6,8 @@ Use these levels in Build, Extract, and Review.
 - `view-readable`: source-valid plus actual views project, layout, validate.
   This is layout-valid evidence, not a visually clean claim.
 - `render-ready`: view-readable plus inspected nonblank marker-rich SVG and a
-  visual-readiness pass for density, framing, label risk, and audience fit.
+  visual-readiness pass for density, framing, label risk — including the
+  label-to-own-edge distance check (`architecture.md` §7) — and audience fit.
 - `review-ready`: render-ready plus no blocking `ARCH-*` finding.
 
 The package rollup is the weakest applicable level across actual views.
@@ -21,8 +22,9 @@ Technology Usage, Migration, Motivation, Business Process Cooperation. Missing
 kinds are footer disclosure, not placeholder views.
 
 Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
-`ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, route-congested,
-too wide/tall, group-imbalanced, or mixes concerns from multiple audiences.
+`ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, label-dissociated,
+route-congested, too wide/tall, group-imbalanced, or mixes concerns from
+multiple audiences.
 For density, routing, or framing problems, tune the dediren layout
 (`architecture.md` §9 `layout_preferences`) and re-validate before reporting;
 reserve splitting the concern (§7) for genuinely mixed audiences, an inventory

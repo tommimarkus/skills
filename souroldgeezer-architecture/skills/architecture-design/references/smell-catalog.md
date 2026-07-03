@@ -19,7 +19,7 @@ Severity: `block` invalid source or failed projection/layout/render/export;
 - `ARCH-M-3`: wrong relationship semantics: ownership as Realization, API/GUI as Application Service, process sequencing as Serving.
 - `ARCH-Q-2`: unclear concern, hub fanout, mixed concerns, audience incoherence, or vocabulary mixing.
 - `ARCH-L-3`: valid layout but hard to scan: density, route congestion, empty groups, long spans, extreme aspect ratio.
-- `ARCH-R-3`: nonblank SVG but labels, icons, or markers obscure the message.
+- `ARCH-R-3`: nonblank SVG but labels, icons, or markers obscure the message, or an edge label sits closer to a different edge than its own route.
 - `ARCH-M-2`: package source fails schema validation (`validate` error envelope).
 - `ARCH-V-1`: `project.json` declares a view with no model content or whose projection fails.
 - `ARCH-L-2`: layout validation reports connector-through-node, invalid route, or group-boundary errors.
