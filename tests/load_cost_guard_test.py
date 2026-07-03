@@ -1,13 +1,19 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
-import importlib.util, json, subprocess, sys, tempfile, unittest
+import json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-_p = (REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py")
-_spec = importlib.util.spec_from_file_location("load_cost_guard", _p)
-guard = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(guard)
+from tests.surface_test_lib import load_script_module
 
-GUARD_SCRIPT = str(_p)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = (
+    REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts"
+)
+sys.path.insert(0, str(SCRIPTS))
+
+GUARD_LOAD_COST = SCRIPTS / "leanaudit" / "guard_load_cost.py"
+guard = load_script_module("leanaudit_guard_load_cost", GUARD_LOAD_COST)
+
+GUARD_SCRIPT = str(SCRIPTS / "load_cost_guard.py")
 
 
 # ---------------------------------------------------------------------------
