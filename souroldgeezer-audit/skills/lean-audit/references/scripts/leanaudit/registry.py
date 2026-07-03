@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,10 +29,11 @@ class Registry:
 
 
 def load_registry(path: Path | None) -> Registry:
-    if path is None:
-        return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
-    if not Path(path).is_file():
-        print(f"lean-audit: registry {path} not found, using default config", file=sys.stderr)
+    # Silent on a missing path: call sites default to root/.lean-audit.toml on
+    # every run (including the PreToolUse guard hot path), so a repo without a
+    # registry is routine, not a diagnostic. The missing-registry warning lives
+    # at the CLI layer, gated on an explicit --registry flag (engine.py main).
+    if path is None or not Path(path).is_file():
         return Registry(canonical_homes=(), carve_outs=(), exempt_paths=())
     data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     homes = tuple(

@@ -281,6 +281,9 @@ def main(argv: list[str]) -> int:
 
     if args.added_text is not None and args.added_text != "-":
         ap.error("--added-text only accepts '-' (read the block from stdin)")
+    if args.registry and not Path(args.registry).is_file():
+        print(f"lean-audit: registry {args.registry} not found, using default config",
+              file=sys.stderr)
 
     try:
         if args.added_text == "-":

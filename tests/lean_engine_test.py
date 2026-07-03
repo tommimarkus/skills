@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import subprocess
 import sys
@@ -622,6 +624,37 @@ class RegistryWarningTest(unittest.TestCase):
             capture_output=True, text=True, cwd=REPO_ROOT,
         )
         self.assertIn("not found", proc.stderr.lower())
+
+    def test_default_run_without_registry_toml_is_silent(self):
+        # Regression: the warning must gate on an EXPLICIT --registry flag only.
+        # A default run in a repo without .lean-audit.toml (call sites always
+        # compute root/.lean-audit.toml before load_registry) must stay silent,
+        # or every downstream run — including the PreToolUse guard hot path —
+        # emits noise.
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "CLAUDE.md").write_text(
+                "# Home\nunique alpha bravo charlie\n", encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(ENGINE), d, "--format", "json"],
+                capture_output=True, text=True, cwd=REPO_ROOT,
+            )
+            self.assertEqual(proc.stderr, "")
+            self.assertIn(proc.returncode, (0, 1))
+
+    def test_evaluate_added_block_without_registry_toml_is_silent(self):
+        # The guard path (evaluate_added_block with registry=None) defaults to
+        # root/.lean-audit.toml internally; a missing toml must not warn.
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            sk = root / "aud" / "skills" / "s1" / "SKILL.md"
+            sk.parent.mkdir(parents=True)
+            sk.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stderr(buf):
+                eng.evaluate_added_block(
+                    root, "aud/skills/s2/SKILL.md", "## Fresh\nnothing shared", None)
+            self.assertEqual(buf.getvalue(), "")
 
 
 if __name__ == "__main__":
