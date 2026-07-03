@@ -65,6 +65,13 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 - The SVG render path needs generated render metadata from
   `dediren project --target render-metadata --plugin generic-graph`.
 - UML/XMI compatibility export uses `uml-xmi` only when requested.
+- SVG inspection (render-ready): confirm each `Lifeline` renders as its own
+  column — a distinct head box and vertical stem — and that every `Message`
+  spans the horizontal gap between its two lifelines. Two lifelines sharing a
+  head position or stem, or a message drawn as a stub inside a merged box, is an
+  `ARCH-R-*` defect even when every command envelope reports `ok`; cross-check
+  `validate-layout` `data.status` and `overlap_count` per
+  [self-check](../../procedures/self-check.md) "Envelope handling".
 
 ## Findings
 

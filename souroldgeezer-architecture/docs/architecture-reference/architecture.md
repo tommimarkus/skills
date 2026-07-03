@@ -514,7 +514,13 @@ Render-ready requires inspecting SVG for:
 - expected `data-dediren-edge-id` markers for visible relationships;
 - labels and markers that do not obscure the main architecture path;
 - density, fanout, route span, group balance, and viewpoint focus that are
-  acceptable for the audience.
+  acceptable for the audience;
+- kind-specific structure that a clean `validate-layout` does not prove — for
+  `uml-sequence`, each lifeline in a distinct column/stem and every message
+  spanning its two lifelines (per the UML sequence notation reference).
+  Superimposed participants are an `ARCH-R-*` defect even under an `ok`
+  envelope; inspect this in addition to the self-check "Envelope handling"
+  `data.status` / `overlap_count` gate.
 
 ### Relationship Connectors And Junctions
 
