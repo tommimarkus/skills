@@ -296,6 +296,9 @@ class CostRegressionTest(unittest.TestCase):
 
 
 class CliExitContractTest(unittest.TestCase):
+    def setUp(self):
+        self.fix = Path(__file__).parent / "skill_load_cost" / "fixtures"
+
     def test_missing_patterns_file_exits_2_without_traceback(self):
         proc = subprocess.run(
             [sys.executable, str(SCRIPT), "baseline", "--files", str(SCRIPT),
@@ -305,6 +308,33 @@ class CliExitContractTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         self.assertNotIn("Traceback", proc.stderr)
         self.assertIn("patterns", proc.stderr.lower())
+
+    def test_unknown_scenario_id_exits_2_without_traceback(self):
+        with tempfile.TemporaryDirectory() as d:
+            scenarios = Path(d) / "scenarios.json"
+            scenarios.write_text(json.dumps([{"id": "known", "files": ["alpha.md"]}]))
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), "measure",
+                 "--scenarios", str(scenarios), "--id", "nope", "--root", str(self.fix)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(proc.returncode, 2)
+            self.assertNotIn("Traceback", proc.stderr)
+            self.assertIn("nope", proc.stderr)
+            self.assertIn("known", proc.stderr)
+
+    def test_malformed_regex_pattern_exits_2_without_traceback(self):
+        with tempfile.TemporaryDirectory() as d:
+            patterns = Path(d) / "patterns.json"
+            patterns.write_text(json.dumps(["(unterminated"]))
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), "baseline",
+                 "--files", str(self.fix / "alpha.md"),
+                 "--code-patterns", str(patterns)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(proc.returncode, 2)
+            self.assertNotIn("Traceback", proc.stderr)
 
 
 if __name__ == "__main__":

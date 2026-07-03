@@ -24,7 +24,7 @@ from typing import Any
 from leanaudit import hook_envelope
 from leanaudit import load_cost as slc
 
-__all__ = ["decide", "cost_warn_decision", "post_edit_content", "run_stop_mode", "main"]
+__all__ = ["cost_warn_decision", "decide", "main", "post_edit_content", "run_stop_mode"]
 
 
 def post_edit_content(tool_name: str, tool_input: dict[str, Any], current: str) -> str | None:

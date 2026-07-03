@@ -15,18 +15,18 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
 __all__ = [
-    "TOKEN_RE",
     "Inventory",
+    "TOKEN_RE",
+    "check_pointers",
+    "cost_regressions",
+    "diff_inventory",
     "estimate_tokens",
+    "extract_inventory",
+    "main",
     "measure_scenario",
     "resolve_closure",
     "resolve_closure_with_overrides",
-    "extract_inventory",
     "union_inventory",
-    "diff_inventory",
-    "check_pointers",
-    "cost_regressions",
-    "main",
 ]
 
 
@@ -190,6 +190,13 @@ def cost_regressions(
 
 def _cmd_measure(args: argparse.Namespace) -> int:
     scenarios = {s["id"]: s for s in _read_json(args.scenarios)}
+    if args.id not in scenarios:
+        available = ", ".join(sorted(scenarios)) or "(none)"
+        print(
+            f"skill-load-cost: unknown scenario id {args.id!r} (available: {available})",
+            file=sys.stderr,
+        )
+        return 2
     result = measure_scenario(scenarios[args.id], Path(args.root))
     if args.json:
         print(json.dumps(result, indent=2))
@@ -271,6 +278,6 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, re.error) as exc:
         print(f"skill-load-cost: {exc}", file=sys.stderr)
         return 2

@@ -1,10 +1,13 @@
+"""Shared PreToolUse/Stop hook envelope helpers: payload parsing, decision shaping,
+and fail-open diagnostics logging."""
+
 from __future__ import annotations
 
 import json
 import sys
 from typing import Any, TypedDict
 
-__all__ = ["HookPayload", "read_payload", "permission_decision", "fail_open_log"]
+__all__ = ["HookPayload", "fail_open_log", "permission_decision", "read_payload"]
 
 
 class HookPayload(TypedDict, total=False):

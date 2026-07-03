@@ -16,4 +16,4 @@ from leanaudit.engine import main  # noqa: E402
 from leanaudit.registry import *  # noqa: E402,F403
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    raise SystemExit(main(sys.argv[1:]))

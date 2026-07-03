@@ -26,19 +26,19 @@ CommentProfile = tuple[
 
 __all__ = [
     "COMMENT_PROFILES",
+    "Clone",
     "CommentProfile",
-    "GENERIC_PROFILE",
     "DEFAULT_EXTENSIONS",
     "DEFAULT_MIN_CLONE_TOKENS",
+    "GENERIC_PROFILE",
     "INTENTIONAL_MARKER",
-    "profile_for",
-    "strip_and_tokenize",
-    "Clone",
     "find_clones",
     "load_config",
+    "main",
+    "profile_for",
     "read_sources",
     "scan_dir",
-    "main",
+    "strip_and_tokenize",
 ]
 
 DEFAULT_MIN_CLONE_TOKENS = 20
