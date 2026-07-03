@@ -63,6 +63,7 @@ the platform-redundancy lens runs only on explicit request.
 - Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
 - Run the bundled code lens [`references/scripts/code_lens.py`](references/scripts/code_lens.py) (the deterministic source of `LA-CODE-DUP-*`) when the scope contains source files — see Workflow step 2b.
 - For the opt-in prevention hooks, see [`references/hook-recipe.md`](references/hook-recipe.md) (enablement) and the guard entrypoints [`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and [`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py) (not part of an audit run).
+- All five scripts above are stable entry shims; the implementation lives in the sibling package [`references/scripts/leanaudit/`](references/scripts/leanaudit/) (verify: `uv run python -m unittest tests.lean_audit_shims_test` in this marketplace repo, or run any shim `--help`).
 - **Per-use cost lens (surface-gated):** load [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md)
   only when an entry artifact (the families listed in `## Contract`) is in scope.
   Run the bundled harness
