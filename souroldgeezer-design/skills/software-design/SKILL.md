@@ -28,9 +28,9 @@ below and cite the section named in its `Cite` entry. If the lookup needs code
 evidence, cross-section tradeoffs, or no catalog row matches, escalate to
 Review/Build or ask — do not under-answer from a catalog row.
 Lookup footers name the catalog as the loaded reference path.
-Load [references/principles-catalog.md](references/principles-catalog.md)
-for principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md)
-for pattern questions.
+Load [references/principles-catalog.md](references/principles-catalog.md) for
+principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md) for
+pattern questions.
 Load [references/nfr-catalog.md](references/nfr-catalog.md) when
 non-functional/quality requirements, SLAs/SLOs, latency/availability/throughput
 targets, or quality attributes are in scope.

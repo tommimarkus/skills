@@ -124,3 +124,23 @@ partition) is measured at **−10351 review-slice / −12874 build-slice** with 
 five extensions in scope (−4394 / −9824 on the committed two- and three-stack
 scenarios) and recommended as a scoped follow-up pending the adversarial
 cross-reference review the diff gate cannot automate.
+
+# software-design per-use load cost
+
+Guard coverage added 2026-07: scenarios (`sd-lookup-principle`, `sd-build-dotnet`,
+`sd-review-typescript`), committed baseline, `SD-*` code patterns.
+
+| Scenario | Before | After | Delta |
+|---|---|---|---|
+| sd-lookup-principle | 4484 | 1531 | -2953 |
+| sd-build-dotnet | 5359 | 5436 | +77 |
+| sd-review-typescript | 8041 | 8118 | +77 |
+
+The lookup drop is a load-SET change: Lookup no longer loads the core
+reference (3094 tokens); catalogs carry `Cite` section anchors so citations
+survive, with an escalation cue for catalog-insufficient lookups. Build/
+Extract/Review kept their load set; their small growth is the Load Map
+wording. The former `§§2-7,9` scoping was cosmetic (whole-file reads) and
+silently excluded §8's evidence-layer definitions; the load instruction is
+now whole-file. Fidelity: `skill_load_cost.py diff` exit 0 at every task;
+`SoftwareDesignBaselineTest` green.

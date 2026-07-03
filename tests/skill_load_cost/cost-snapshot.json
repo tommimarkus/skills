@@ -1,8 +1,11 @@
 {
-  "lean-audit-default": 6765,
   "quick-node-unit": 20037,
   "deep-nextjs-suite": 44610,
+  "lean-audit-default": 6765,
   "lookup-functions": 18226,
   "build-functions-cosmos": 25297,
-  "review-functions-cosmos-blob": 31419
+  "review-functions-cosmos-blob": 31419,
+  "sd-lookup-principle": 1531,
+  "sd-build-dotnet": 5436,
+  "sd-review-typescript": 8118
 }
