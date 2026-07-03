@@ -5,7 +5,8 @@ availability/throughput targets, or quality attributes are in scope. Do not
 expand into a generic quality-engineering tutorial; rely on the base model for
 attribute definitions and keep this aid focused on naming, measuring,
 allocating, and delegating. For each in-scope NFR require `Name`, `Scenario`,
-`Owner`; otherwise treat as `SD-Q-1` (no measure) or `SD-Q-3` (no owner).
+`Owner`; otherwise treat as `SD-Q-1` (no measure) or `SD-Q-3` (no owner). In
+Lookup, cite core reference `§3.6`.
 
 ## 1. Name from the taxonomy
 

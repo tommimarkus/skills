@@ -3,7 +3,8 @@
 Load only for named-pattern questions or visible ceremony. Output: `Force`,
 `Fit`, `Avoid case`, `Smell prevented`, `Smell introduced`, `Validation`.
 Reject shopping, imagined variation, pass-through wrappers, hidden ownership,
-and migrations lacking an Exit condition.
+and migrations lacking an Exit condition. In Lookup, cite core reference `§6`
+(Patterns).
 
 | Pattern | Current force | Sustainable lift | Misuse guardrail | Track record |
 |---|---|---|---|---|
