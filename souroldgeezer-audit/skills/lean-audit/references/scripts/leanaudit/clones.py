@@ -26,6 +26,7 @@ CommentProfile = tuple[
 
 __all__ = [
     "COMMENT_PROFILES",
+    "CommentProfile",
     "GENERIC_PROFILE",
     "DEFAULT_EXTENSIONS",
     "DEFAULT_MIN_CLONE_TOKENS",

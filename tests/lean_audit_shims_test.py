@@ -26,17 +26,6 @@ CLI_SMOKE = (
     ["code_lens.py", "--help"],
     ["skill_load_cost.py", "--help"],
 )
-# Pre-existing top-level public names deliberately (or historically) kept out of
-# their module's __all__, grandfathered so the completeness check bites only on new
-# drift: CommentProfile is a type alias appearing in public signatures; the four
-# load_cost regexes are module-internal constants. Fix at the source (export it or
-# _-prefix it) to shrink this table; never grow it for new names.
-KNOWN_UNEXPORTED = {
-    "clones.py": frozenset({"CommentProfile"}),
-    "load_cost.py": frozenset({"FENCE_RE", "INLINE_CODE_RE", "LINK_RE", "SECTION_RE"}),
-}
-
-
 def _load_shim(shim_name: str) -> ModuleType:
     # Loading a leanaudit/*.py package module directly requires scripts/ on
     # sys.path first (the package does absolute `leanaudit.X` imports); the
@@ -115,13 +104,7 @@ class AllCompletenessTest(unittest.TestCase):
                 tree = ast.parse(path.read_text(encoding="utf-8"))
                 public = _public_top_level_names(tree)
                 declared = _declared_all(tree, path)
-                grandfathered = KNOWN_UNEXPORTED.get(path.name, frozenset())
-                self.assertLessEqual(
-                    grandfathered, public,
-                    f"{path.name}: stale KNOWN_UNEXPORTED entries: "
-                    f"{sorted(grandfathered - public)}",
-                )
-                missing = public - declared - grandfathered
+                missing = public - declared
                 self.assertFalse(
                     missing,
                     f"{path.name}: public top-level names missing from __all__: "

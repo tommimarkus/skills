@@ -57,16 +57,16 @@ def measure_scenario(scenario: dict[str, Any], root: Path) -> dict[str, Any]:
     return {"id": scenario["id"], "rows": rows, "total": total}
 
 
-SECTION_RE = re.compile(r"^#{1,6}[ \t]+(.*?)[ \t]*$", re.M)
-LINK_RE = re.compile(r"\]\(([^)]+)\)")
-FENCE_RE = re.compile(r"```.*?```", re.S)
-INLINE_CODE_RE = re.compile(r"`[^`]*`")
+_SECTION_RE = re.compile(r"^#{1,6}[ \t]+(.*?)[ \t]*$", re.M)
+_LINK_RE = re.compile(r"\]\(([^)]+)\)")
+_FENCE_RE = re.compile(r"```.*?```", re.S)
+_INLINE_CODE_RE = re.compile(r"`[^`]*`")
 
 
 def _strip_code(text: str) -> str:
     """Remove fenced and inline code so code samples (regex, link-like syntax)
     are not mistaken for Markdown link pointers."""
-    return INLINE_CODE_RE.sub("", FENCE_RE.sub("", text))
+    return _INLINE_CODE_RE.sub("", _FENCE_RE.sub("", text))
 
 
 def resolve_closure(skill_md: Path) -> list[Path]:
@@ -97,7 +97,7 @@ def resolve_closure_with_overrides(skill_md: Path, overrides: dict[Path, str]) -
         else:
             continue
         seen.add(cur)
-        for link in LINK_RE.findall(_strip_code(text)):
+        for link in _LINK_RE.findall(_strip_code(text)):
             target = link.split("#", 1)[0]
             if not target or target.startswith(("http://", "https://", "mailto:")):
                 continue
@@ -113,8 +113,8 @@ def extract_inventory(text: str, code_patterns: list[str]) -> Inventory:
     codes: set[str] = set()
     for pattern in code_patterns:
         codes.update(re.findall(pattern, text))
-    sections = SECTION_RE.findall(text)
-    pointers = LINK_RE.findall(_strip_code(text))
+    sections = _SECTION_RE.findall(text)
+    pointers = _LINK_RE.findall(_strip_code(text))
     return {
         "codes": sorted(codes),
         "sections": sections,
