@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Entry shim — stable published path. Implementation: leanaudit.engine
 (+ discovery/registry re-exported for compatibility)."""
+# lean-audit:dup-intentional — mandated identical entry-shim boilerplate (published-path contract)
 from __future__ import annotations
 
 import sys
