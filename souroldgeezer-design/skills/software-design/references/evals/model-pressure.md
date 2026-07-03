@@ -9,3 +9,12 @@ Smell-catalog expansion gate: record baseline failure, accepted smell-catalog ru
 2026-06-01 smell expansion: fixed undefined ranges; added `SD-B-2`, `SD-B-4`,
 `SD-C-2`, `SD-C-4`, `SD-S-2`, `SD-E-2`, `SD-Q-2`, and .NET/Python evals.
 Merge back if fresh-agent runs show no lift or weak evidence.
+
+2026-07 Lookup load cap: Lookup answers from the matched catalog only; the
+core reference is not loaded. Catalogs carry `Cite` anchors; the gating text
+names the escalation cue (code evidence, cross-section tradeoffs, or no
+matching row -> Review/Build or ask). Retest: behavior evals
+`software-design-behavior-lookup-catalog-only` and
+`software-design-behavior-lookup-escalation`; scenario `sd-lookup-principle`.
+Merge back (drop the cap) if fresh-agent lookups under-answer or mis-cite
+sections.

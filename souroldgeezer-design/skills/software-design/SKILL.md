@@ -19,9 +19,16 @@ Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 
 ## Load Map
 
-Load core reference [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md)
-§§2-7,9. For findings, load [references/smell-catalog.md](references/smell-catalog.md)
-and [references/smell-cards.jsonl](references/smell-cards.jsonl). Load [references/principles-catalog.md](references/principles-catalog.md)
+For Build/Extract/Review, load the whole core reference
+[../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).
+For findings, load [references/smell-catalog.md](references/smell-catalog.md)
+and [references/smell-cards.jsonl](references/smell-cards.jsonl).
+For Lookup, do not load the core reference: answer from the matched catalog
+below and cite the section named in its `Cite` entry. If the lookup needs code
+evidence, cross-section tradeoffs, or no catalog row matches, escalate to
+Review/Build or ask — do not under-answer from a catalog row.
+Lookup footers name the catalog as the loaded reference path.
+Load [references/principles-catalog.md](references/principles-catalog.md)
 for principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md)
 for pattern questions.
 Load [references/nfr-catalog.md](references/nfr-catalog.md) when
