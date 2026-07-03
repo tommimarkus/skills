@@ -27,9 +27,11 @@ links as handoff evidence. Broken targets, missing source evidence, or UML detai
 that contradicts linked ArchiMate intent cap cross-notation readiness.
 
 Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
-`ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured, route-congested,
-group-imbalanced, or mixed concerns. Tune `layout_preferences` (`architecture.md`
-§9) for placement problems and re-validate before reporting or splitting.
+`ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured,
+label-dissociated (`architecture.md` §7 label-to-own-edge check),
+route-congested, group-imbalanced, or mixed concerns. Tune `layout_preferences`
+(`architecture.md` §9) for placement problems and re-validate before reporting
+or splitting.
 
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:

@@ -335,18 +335,32 @@ hard to scan, report the narrowest warning instead of claiming it is clean:
 
 - `ARCH-L-3` for high edge count, high edge/node ratio, long cross-group
   routes, extreme aspect ratio, large empty groups, or congested route channels;
-- `ARCH-R-3` for labels, icons, or markers that obscure the primary message;
+- `ARCH-R-3` for labels, icons, or markers that obscure the primary message,
+  including an edge label that dissociates from its own edge — closer to a
+  different edge run than to its own route;
 - `ARCH-Q-2` for hub fanout, mixed audience concerns, or multiple viewpoint
   concerns in one diagram.
 
+One sub-check is measurable and mandatory whenever a rendered view carries edge
+labels: label-to-own-edge distance. Pair each edge label with its own route via
+the `data-dediren-edge-id` markers, measure the distance from the label anchor
+to the nearest point of that route, and compare it against the nearest point of
+every other edge run in the view. Report `ARCH-R-3` when a different edge run
+is closer than the label's own route, or when the own-route distance exceeds
+roughly one label height. A `validate-layout` envelope reporting
+`label_space_issue_count: 0` never clears this check — the runtime is known to
+under-report label-edge dissociation — so measure from the rendered SVG. When
+measured dissociation contradicts a zero label-space count, also record the
+silent metric under `Dediren tool issues` (§9); do not patch the bundle.
+
 First separate a *layout* problem from a *concern* problem. Density, route
-congestion, long spans, extreme aspect ratio, and framing are placement
-problems: tune the dediren layout (§9 `layout_preferences` — `mode`,
-`direction`, `density`, `wrapping`, `routing`) and re-run `validate-layout`
-before reporting `ARCH-L-3`. Reserve `ARCH-Q-2` and view splitting for genuine
-concern problems — mixed audiences, multiple viewpoints, an inventory dump, or
-unrelated layers in one diagram — or for a view that layout tuning still cannot
-make scannable.
+congestion, long spans, extreme aspect ratio, framing, and label displacement
+are placement problems: tune the dediren layout (§9 `layout_preferences` —
+`mode`, `direction`, `density`, `wrapping`, `routing`) and re-run
+`validate-layout` before reporting `ARCH-L-3`. Reserve `ARCH-Q-2` and view
+splitting for genuine concern problems — mixed audiences, multiple viewpoints,
+an inventory dump, or unrelated layers in one diagram — or for a view that
+layout tuning still cannot make scannable.
 
 When the concern is genuinely mixed, prefer splitting into narrower concerns
 over one wide graph. Process views should stay
