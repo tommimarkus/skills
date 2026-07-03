@@ -85,6 +85,7 @@ Build.
 | Drift | `references/procedures/drift-detection.md` |
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
 | Dediren release resolver | `references/scripts/dediren-release.sh`; use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
+| SVG accessible name | `references/scripts/svg-accessible-name.sh`; run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | `references/procedures/lifting-rules-dotnet.md` |
 | Java extraction | `references/procedures/lifting-rules-java.md` |
 | Bicep extraction | `references/procedures/lifting-rules-bicep.md` |

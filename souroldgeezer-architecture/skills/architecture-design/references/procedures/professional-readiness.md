@@ -5,9 +5,11 @@ Use these levels in Build, Extract, and Review.
 - `source-valid`: source validates; ids and relationships resolve.
 - `view-readable`: source-valid plus actual views project, layout, validate.
   This is layout-valid evidence, not a visually clean claim.
-- `render-ready`: view-readable plus inspected nonblank marker-rich SVG and a
-  visual-readiness pass for density, framing, label risk — including the
-  label-to-own-edge distance check (`architecture.md` §7) — and audience fit.
+- `render-ready`: view-readable plus inspected nonblank marker-rich SVG
+  carrying the `architecture.md` §9 accessible-name markup and visible title
+  (post-render step; missing is `ARCH-R-2`), and a visual-readiness pass for
+  density, framing, label risk — including the label-to-own-edge distance
+  check (`architecture.md` §7) — and audience fit.
 - `review-ready`: render-ready plus no blocking `ARCH-*` finding.
 
 The package rollup is the weakest applicable level across actual views.

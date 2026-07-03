@@ -520,12 +520,42 @@ ungrouped layout validates cleaner, keep source-backed groups in `model.json`,
 use the cleaner layout as evidence and report the grouped-layout regression
 with both validation counts.
 
+### Accessible-Name Post-Render Step
+
+The release-resolved Dediren runtime emits SVG with no accessible name — no
+`role`, `aria-*`, `<title>`, or `<desc>` markup — so every rendered view fails
+WCAG 2.2 SC 1.1.1 (Non-text Content) as produced, and a view usually carries
+no visible title either, leaving an exported diagram unidentifiable outside
+its package. The render policy has no field for accessible names; the runtime
+feature gap is reported upstream, not patched locally. Until the runtime emits
+accessible names itself, run the repo-owned post-render step on every rendered
+or re-rendered view:
+
+```bash
+"$SKILL_DIR"/references/scripts/svg-accessible-name.sh \
+  --title "<view label>" --desc "<the view's architecture question>" \
+  <pkg>/generated/svg/<view-id>.svg
+```
+
+The script injects `role="img"` with an `aria-labelledby` `<title>` (the view
+label) and optional `<desc>` (the view's architecture question from
+`project.json`), and adds a visible per-view title block in a band above the
+diagram. It edits generated render output only — never the upstream bundle —
+is idempotent, defers to a runtime-native accessible name when a future
+release emits one, and offers `--check` for verification. Missing
+accessible-name markup or a missing visible title on rendered evidence is
+`ARCH-R-2`.
+
 Render-ready requires inspecting SVG for:
 
 - nonblank content;
 - coherent `viewBox`;
 - expected `data-dediren-node-id` markers for visible nodes;
 - expected `data-dediren-edge-id` markers for visible relationships;
+- an accessible name: `role="img"` with a nonempty `<title>`, plus `<desc>`
+  when the view declares its architecture question (post-render step above);
+- a visible per-view title block so the artifact stays identifiable when
+  embedded outside the package;
 - labels and markers that do not obscure the main architecture path;
 - density, fanout, route span, group balance, and viewpoint focus that are
   acceptable for the audience.
@@ -593,8 +623,10 @@ For each package:
 6. Run ELK layout for changed or requested views; parallel per-view layout is
    allowed with the release-resolved Dediren runtime, but rerun any parallel failure serially before
    reporting it as a layout defect.
-7. Render SVG for changed or requested views.
-8. Inspect SVG for nonblank, marker-rich, visually readable output.
+7. Render SVG for changed or requested views, then run the accessible-name
+   post-render step (§9) on each rendered view.
+8. Inspect SVG for nonblank, marker-rich, accessible-named, visually readable
+   output.
 9. Run optional export only when requested.
 10. Run drift detection only when source comparison is requested.
 11. Report quality level, export readiness, evidence, missing diagram kinds,

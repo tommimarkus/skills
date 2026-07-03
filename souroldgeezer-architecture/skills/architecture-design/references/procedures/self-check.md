@@ -43,7 +43,8 @@ When running OEF or XMI export, follow the selected release guide's schema-cache
 instructions such as setting `DEDIREN_SCHEMA_CACHE_DIR` or providing the
 offline schema path required by that export plugin.
 Command order: `validate`; semantic validate; `project`; `layout`;
-`validate-layout`; `render`; optional export. The release-resolved Dediren runtime allows
+`validate-layout`; `render`; accessible-name post-render step; optional
+export. The release-resolved Dediren runtime allows
 parallel per-view layout; rerun parallel-only failures serially before
 `ARCH-L-1`.
 
@@ -70,6 +71,13 @@ by `project.json`.
 ```
 
 Omit export unless OEF or XMI was requested.
+
+After materializing a rendered SVG, add its accessible name and visible title
+(`architecture.md` §9 post-render step; `--check` verifies presence):
+
+```bash
+"$SKILL_DIR"/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
+```
 
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 `wrapping` / `routing`; enums and guidance in `architecture.md` §9) in the

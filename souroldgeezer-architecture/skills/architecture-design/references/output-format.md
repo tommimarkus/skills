@@ -31,7 +31,8 @@ Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
 label-dissociated (`architecture.md` §7 label-to-own-edge check),
 route-congested, group-imbalanced, or mixed concerns. Tune `layout_preferences`
 (`architecture.md` §9) for placement problems and re-validate before reporting
-or splitting.
+or splitting. Missing `architecture.md` §9 accessible-name markup or visible
+title on rendered evidence is `ARCH-R-2`.
 
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:
@@ -48,7 +49,7 @@ Mode: build | extract | review | lookup
 Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.md
 Package: docs/architecture/<feature>.dediren/
 Notation: archimate | uml | mixed | unsupported
-Dediren runtime: <path|not run>; Validation: source; semantic; projection; metadata; layout; layout validation; SVG; visual; OEF; XMI
+Dediren runtime: <path|not run>; Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
 Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready | XMI ready | blocked
 Cross-notation links: none | UML elaborates ArchiMate <ids> | broken <ids> | not assessed
 Handoff boundary: architecture/design model | companion material required | delegated to <skill>
