@@ -102,11 +102,12 @@ class Evaluate(unittest.TestCase):
     def test_non_edit_tool_is_allowed(self):
         self.assertIsNone(self.guard.evaluate({"tool_name": "Bash", "tool_input": {"command": "ls"}, "cwd": str(self.root)}))
 
-    def test_engine_error_fails_open(self):
+    def _stderr_from_forced_engine_failure(self, engine_stub) -> str:
+        """Swap evaluate_added_block for engine_stub, run a duplicate-introducing
+        evaluate() with stderr captured, restore, assert fail-open (None reason),
+        and return the captured stderr for branch-label assertions."""
         orig = self.guard.evaluate_added_block
-        def boom(*a, **k):
-            raise RuntimeError("engine exploded")
-        self.guard.evaluate_added_block = boom
+        self.guard.evaluate_added_block = engine_stub
         stderr = io.StringIO()
         try:
             with contextlib.redirect_stderr(stderr):
@@ -114,7 +115,12 @@ class Evaluate(unittest.TestCase):
         finally:
             self.guard.evaluate_added_block = orig
         self.assertIsNone(reason)
-        self.assertIn("[engine-evaluate]", stderr.getvalue())
+        return stderr.getvalue()
+
+    def test_engine_error_fails_open(self):
+        def boom(*a, **k):
+            raise RuntimeError("engine exploded")
+        self.assertIn("[engine-evaluate]", self._stderr_from_forced_engine_failure(boom))
 
     def test_reason_format_error_fails_open(self):
         # A finding that reaches the block branch but is missing the attributes the
@@ -123,16 +129,8 @@ class Evaluate(unittest.TestCase):
         class _BareBlock:
             severity = "block"
 
-        orig = self.guard.evaluate_added_block
-        self.guard.evaluate_added_block = lambda *a, **k: [_BareBlock()]
-        stderr = io.StringIO()
-        try:
-            with contextlib.redirect_stderr(stderr):
-                reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
-        finally:
-            self.guard.evaluate_added_block = orig
-        self.assertIsNone(reason)
-        self.assertIn("[reason-format]", stderr.getvalue())
+        stderr = self._stderr_from_forced_engine_failure(lambda *a, **k: [_BareBlock()])
+        self.assertIn("[reason-format]", stderr)
 
     def test_is_guarded_error_fails_open(self):
         orig = self.guard.is_guarded
