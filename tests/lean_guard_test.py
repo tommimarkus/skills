@@ -107,11 +107,32 @@ class Evaluate(unittest.TestCase):
         def boom(*a, **k):
             raise RuntimeError("engine exploded")
         self.guard.evaluate_added_block = boom
+        stderr = io.StringIO()
         try:
-            reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+            with contextlib.redirect_stderr(stderr):
+                reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
         finally:
             self.guard.evaluate_added_block = orig
         self.assertIsNone(reason)
+        self.assertIn("[engine-evaluate]", stderr.getvalue())
+
+    def test_reason_format_error_fails_open(self):
+        # A finding that reaches the block branch but is missing the attributes the
+        # reason string formats (matched_path/matched_heading/containment/action)
+        # exercises the second try/except in evaluate() — the "reason-format" label.
+        class _BareBlock:
+            severity = "block"
+
+        orig = self.guard.evaluate_added_block
+        self.guard.evaluate_added_block = lambda *a, **k: [_BareBlock()]
+        stderr = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(stderr):
+                reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG))
+        finally:
+            self.guard.evaluate_added_block = orig
+        self.assertIsNone(reason)
+        self.assertIn("[reason-format]", stderr.getvalue())
 
     def test_is_guarded_error_fails_open(self):
         orig = self.guard.is_guarded

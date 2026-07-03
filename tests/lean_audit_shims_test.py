@@ -57,6 +57,9 @@ def _public_top_level_names(tree: ast.Module) -> set[str]:
     return {n for n in names if not n.startswith("_") and n not in imported}
 
 
+# Reads only the first __all__ = [...] literal; the leanaudit convention is a
+# single literal list (an AugAssign extension would fail loudly here — safe
+# direction).
 def _declared_all(tree: ast.Module, path: Path) -> set[str]:
     """The module's __all__, parsed from the same AST (a literal list of strings in
     every leanaudit module)."""
@@ -94,7 +97,9 @@ class AllCompletenessTest(unittest.TestCase):
     """Guards the gap test_reexports_cover_module_all cannot see: a public name
     dropped from (or never added to) a module's __all__ shrinks the export and the
     parity check together, silently. ruff F822 only catches over-declaration; this
-    static check catches under-declaration."""
+    static check catches under-declaration. Only direct children of the module body
+    are walked; the package convention forbids defs nested in top-level if/try
+    blocks."""
 
     def test_public_top_level_names_are_declared_in_all(self) -> None:
         for path in sorted((SCRIPTS / "leanaudit").glob("*.py")):

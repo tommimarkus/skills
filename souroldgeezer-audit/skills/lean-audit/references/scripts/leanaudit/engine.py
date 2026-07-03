@@ -362,7 +362,8 @@ def main(argv: list[str]) -> int:
         ap.error("--added-text only accepts '-' (read the block from stdin)")
     if args.registry and not Path(args.registry).is_file():
         print(
-            f"lean-audit: registry {args.registry} not found, using default config", file=sys.stderr
+            f"lean-audit: --registry {args.registry} not found; scanning with default config",
+            file=sys.stderr,
         )
 
     try:
