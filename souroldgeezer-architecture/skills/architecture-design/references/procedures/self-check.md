@@ -125,3 +125,14 @@ whose `artifact_kind` is `svg` and write its `.content`), while `export`
 returns a single artifact directly as `.data.content` (with `.data.artifact_kind`
 naming the format). After materializing any artifact, verify it is non-empty
 before claiming render or export evidence.
+
+For a UML view whose render metadata authors association end adornments
+(edge `properties.source_role` / `target_role` / `source_multiplicity` /
+`target_multiplicity`), also verify end-adornment coverage after
+materializing the SVG: collect the nonempty adornment values from the
+metadata edges (e.g. `jq` over `.edges[].properties`) and confirm each
+appears as an SVG `<text>` label. Report the count in the footer quality
+qualifier (`render-ready (end adornments <rendered> of <authored>)`); a
+missing adornment is `ARCH-R-2` plus a `Dediren tool issues` entry per
+`architecture.md` §9 — this content has dropped with every stage reporting
+`status: ok`, so envelope checks never prove it.

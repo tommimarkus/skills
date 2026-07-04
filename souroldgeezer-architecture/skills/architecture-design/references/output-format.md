@@ -31,6 +31,14 @@ only)`. A single-view or classes-only export keeps an `ok` envelope but carries
 `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`); read
 `.diagnostics[]` — a partial export is still partial evidence.
 
+Render readiness for a UML view that authors association end adornments
+qualifies the same way: count rendered vs. authored end-adornment labels per
+the `architecture.md` §9 end-adornment coverage check and carry the count in
+the quality level — e.g. `render-ready (end adornments 4 of 4)`. A gap is
+`ARCH-R-2` plus a `Dediren tool issues` entry, never an unqualified
+`render-ready` — the pipeline reports `ok` envelopes while the diagram is
+lossier than the model.
+
 Cross-notation: report UML to ArchiMate `properties.uml.architecture_context`
 links as handoff evidence. Broken targets, missing source evidence, or UML detail
 that contradicts linked ArchiMate intent cap cross-notation readiness.

@@ -7,9 +7,11 @@ Use these levels in Build, Extract, and Review.
   This is layout-valid evidence, not a visually clean claim.
 - `render-ready`: view-readable plus inspected nonblank marker-rich SVG
   carrying the `architecture.md` §9 accessible-name markup and visible title
-  (post-render step; missing is `ARCH-R-2`), and a visual-readiness pass for
+  (post-render step; missing is `ARCH-R-2`), a visual-readiness pass for
   density, framing, label risk — including the label-to-own-edge distance
-  check (`architecture.md` §7) — and audience fit.
+  check (`architecture.md` §7) — and audience fit, and, for UML views with
+  authored association end adornments, the `architecture.md` §9
+  end-adornment coverage check with its quality-level coverage qualifier.
 - `review-ready`: render-ready plus no blocking `ARCH-*` finding.
 
 The package rollup is the weakest applicable level across actual views.

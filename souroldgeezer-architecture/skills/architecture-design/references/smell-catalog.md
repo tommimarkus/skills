@@ -26,9 +26,11 @@ Severity: `block` invalid source or failed projection/layout/render/export;
 - `ARCH-L-4`: grouped layout regresses against its ungrouped rerun; fallback layout used as evidence.
 - `ARCH-R-1`: SVG render fails, or produces blank content or an incoherent `viewBox`.
 - `ARCH-R-2`: rendered SVG is missing expected `data-dediren-node-id` /
-  `data-dediren-edge-id` markers, or the `architecture.md` §9 post-render
+  `data-dediren-edge-id` markers, the `architecture.md` §9 post-render
   accessible-name markup (`role="img"`, nonempty `<title>`, visible title
-  block).
+  block), or authored UML association end adornments (roles/multiplicities)
+  present in the view's render metadata (`architecture.md` §9 end-adornment
+  coverage check).
 - `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
 - `ARCH-E-4`: committed export output is stale against current package source or layout evidence.
 - `ARCH-Q-1`: claimed quality level exceeds the validation stages actually proven.

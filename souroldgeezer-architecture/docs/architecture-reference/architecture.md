@@ -650,6 +650,17 @@ Render-ready requires inspecting SVG for:
 - a visible per-view title block so the artifact stays identifiable when
   embedded outside the package;
 - labels and markers that do not obscure the main architecture path;
+- for a UML view, authored association end adornments carried by the view's
+  render metadata (edge `properties.source_role` / `target_role` /
+  `source_multiplicity` / `target_multiplicity`) each appearing as a rendered
+  text label at its edge end. Count rendered vs. authored adornment values
+  from the SVG and qualify the quality level with that coverage
+  (output-format); a missing adornment is `ARCH-R-2` plus a `Dediren tool
+  issues` entry. Never infer this coverage from `ok` envelopes — dediren
+  ≤ 2026.07.0 dropped every end adornment between render metadata and SVG
+  while all stages reported `status: ok` with empty diagnostics (fixed in
+  2026.07.1), so a developer reading the diagram lost cardinality the model
+  authored with no signal;
 - element type distinguishable from the rendered shape, decorator, and fill
   without reading the `data-*` metadata, and relationship notation that matches
   ArchiMate® 3.2 — each relationship family a distinct line style and endpoint
