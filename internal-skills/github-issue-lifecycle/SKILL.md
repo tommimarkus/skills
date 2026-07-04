@@ -36,6 +36,32 @@ If this overlay conflicts with the public core on repo-specific behavior, this
 overlay wins only inside this repository. If the public core or GitHub extension
 changes a general lifecycle contract, update this overlay in the same change.
 
+## Tooling
+
+This repository has a GitHub MCP server connected, so prefer GitHub MCP as the
+default GitHub integration for every issue read and write here — issue state,
+comments, labels, linked pull requests, and lifecycle markers. This is the
+repo-local application of
+`souroldgeezer-ops/docs/provider-reference/github.md § Tooling Order`
+(GitHub MCP first, then `gh`, then REST); it does not change that order.
+
+The GitHub MCP tools are deferred: they are listed by name (for example
+`mcp__<server>__issue_read`, `issue_write`, `add_issue_comment`, `list_issues`,
+`get_me`) but their schemas are not preloaded. Load the ones you need with
+`ToolSearch` (`select:<tool>,<tool>`) before calling them. Treat a GitHub MCP
+server as present whenever such `mcp__*_github__*` tools are listed; do not read
+"no GitHub tool is currently loaded" as "no MCP available," and do not open with
+a `gh auth status` probe or a `gh` call as the first move.
+
+When more than one GitHub MCP server is connected, pick the one whose routing
+matches this repository's remote, confirming identity with a cheap read
+(`get_me` or a repository lookup) before any write — the reference's "verify
+active session routing and repository identity" step.
+
+Fall back to `gh` CLI, then REST, only when no GitHub MCP server is connected in
+the session, such as a headless or cron run; then follow the shared Tooling
+Order's verification for that route.
+
 ## Evidence Contract
 
 Before acting, inspect these inputs and use them as the evidence basis for the

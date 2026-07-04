@@ -13,3 +13,7 @@ external documentation.
   `souroldgeezer-ops/skills/issue-ops/extensions/github.md`.
   Handling: local public-skill workflow and provider mechanics; eval cases
   mention the handoff shape without reproducing tracker data.
+- Source: `souroldgeezer-ops/docs/provider-reference/github.md § Tooling Order`.
+  Handling: local shared provider mechanics; the GitHub-MCP-default eval derives
+  from the documented MCP-first tooling order, adding only the repo-local
+  deferred-tool loading step. No external text copied.
