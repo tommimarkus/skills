@@ -95,7 +95,13 @@ To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 `wrapping` / `routing`; enums and guidance in `architecture.md` §9) in the
 layout-request before `layout`, then re-run `validate-layout`. For navigable
 output, set the render policy `interactive` field (§3); static SVG is the
-default.
+default. After every render, verify the mode from the artifact before
+disclosing it — `grep -c '<script' <svg>` is `0` for a static policy and
+`≥ 1` when `interactive` scripts the SVG — and report that verified mode,
+never the policy intent, in the footer `Layout/render options` line. A
+mismatch is `ARCH-R-5`; a script despite a static policy additionally goes
+upstream under `Dediren tool issues` (`architecture.md` §9 render-mode
+check).
 
 ## Envelope handling
 

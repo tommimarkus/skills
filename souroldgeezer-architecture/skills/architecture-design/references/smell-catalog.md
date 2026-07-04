@@ -4,7 +4,7 @@ Use one narrow code/severity per finding and cite evidence.
 
 Codes: `ARCH-M-1` `ARCH-M-2` `ARCH-M-3` `ARCH-M-4`; `ARCH-V-1`
 `ARCH-V-2` `ARCH-V-3` `ARCH-V-4`; `ARCH-L-1` `ARCH-L-2` `ARCH-L-3`
-`ARCH-L-4`; `ARCH-R-1` `ARCH-R-2` `ARCH-R-3` `ARCH-R-4`; `ARCH-X-1`
+`ARCH-L-4`; `ARCH-R-1` `ARCH-R-2` `ARCH-R-3` `ARCH-R-4` `ARCH-R-5`; `ARCH-X-1`
 `ARCH-X-2` `ARCH-X-3` `ARCH-X-4`; `ARCH-E-1` `ARCH-E-2` `ARCH-E-3`
 `ARCH-E-4`; `ARCH-Q-1` `ARCH-Q-2` `ARCH-Q-3` `ARCH-Q-4`.
 
@@ -32,6 +32,11 @@ Severity: `block` invalid source or failed projection/layout/render/export;
   present in the view's render metadata (`architecture.md` §9 end-adornment
   coverage check).
 - `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
+- `ARCH-R-5`: emitted artifact interactivity contradicts the render policy or
+  the footer disclosure: a `<script>` despite `interactive` unset/`none`, a
+  missing script or artifact kind when `interactive` is set, or a
+  `Layout/render options` line that misreports what the artifact contains
+  (`architecture.md` §9 render-mode check).
 - `ARCH-E-4`: committed export output is stale against current package source or layout evidence.
 - `ARCH-Q-1`: claimed quality level exceeds the validation stages actually proven.
 - `ARCH-Q-4`: required output footer fields are missing or mutually inconsistent (a quality-level over-claim is `ARCH-Q-1`).

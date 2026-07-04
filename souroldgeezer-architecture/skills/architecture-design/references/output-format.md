@@ -55,6 +55,13 @@ route-congested, group-imbalanced, or mixed concerns. Tune `layout_preferences`
 or splitting. Missing `architecture.md` §9 accessible-name markup or visible
 title on rendered evidence is `ARCH-R-2`.
 
+Render mode: the footer `Layout/render options` line reports the mode
+verified from the emitted artifact (`architecture.md` §9 render-mode check),
+never the render-policy intent. A policy/artifact/footer mismatch is
+`ARCH-R-5`; a script despite a static policy adds a `Dediren tool issues`
+entry. When interactive output ships, disclose the `architecture.md` §3
+mouse-only and embedding limits to the audience.
+
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:
 
@@ -79,7 +86,7 @@ Semantic grouping: layout-only groups are not ArchiMate Grouping elements | sema
 Customization profile: none | local properties | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none
 Grouped layout fallback: not needed | used ungrouped fallback | not run
-Layout/render options: layout_preferences none | <view: knobs>; render static SVG | interactive <svg|html|both>; raster png no | yes
+Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free) | interactive <svg|html|both> (verified; mouse-only limits disclosed); raster png no | yes
 Implementation readiness: sufficient | partial | insufficient | not assessed
 Build readiness disclosure: <n> of 7 concern classes present; absent <list|none> | not build mode
 Finding split: <n> architecture-documentation findings; <n> other source material findings
