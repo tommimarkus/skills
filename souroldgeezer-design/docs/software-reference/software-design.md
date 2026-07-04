@@ -27,6 +27,13 @@ Rules cite source families rather than copying source prose.
 - DRY as knowledge-ownership discipline: Hunt and Thomas, *The Pragmatic Programmer*, https://www.pragmatic.org/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/
 - Code smells/refactoring calibration: Lacerda, Petrillo, Pimenta, and Gueheneuc, tertiary systematic review, https://www.sciencedirect.com/science/article/pii/S0164121220300881
 - DDD empirical calibration: systematic literature review, https://www.sciencedirect.com/science/article/pii/S0164121225002055
+- Software maintenance lifecycle and maintenance-type taxonomy: ISO/IEC/IEEE 14764:2022 on ISO/IEC/IEEE 12207:2017, https://www.iso.org/standard/80710.html and https://www.iso.org/standard/63712.html
+- Version-as-compatibility-contract schemes: Semantic Versioning 2.0.0, https://semver.org/ and Calendar Versioning, https://calver.org/
+- Dependency management, deprecation, and single-version convergence: Titus Winters, Tom Manshreck, and Hyrum Wright, *Software Engineering at Google*, https://abseil.io/resources/swe-book
+- Observable-behavior coupling calibration: Hyrum's Law, https://www.hyrumslaw.com/
+- Dependency freshness measurement: Cox, Bouwers, van Eekelen, and Visser, "Measuring Dependency Freshness in Software Systems," ICSE 2015, https://ericbouwers.github.io/papers/icse15.pdf
+- Safe backward-incompatible interface change: Parallel Change (expand/contract), Joshua Kerievsky via Martin Fowler, https://martinfowler.com/bliki/ParallelChange.html
+- Change-history communication for consumers: Keep a Changelog, https://keepachangelog.com/
 
 Source roles:
 
@@ -105,6 +112,16 @@ Every principle recommendation or rejection must state:
 6. The cheapest evidence layer needed before treating the principle as
    justified.
 
+### 3.8 Version, Deprecation, And Convergence Lifecycle
+
+A release communicates its compatibility impact. Classify every externally-visible change as breaking, additive, or cosmetic. SemVer encodes that contract in the version number; CalVer decouples it and requires the classification to be carried in a changelog and deprecation policy; live-at-HEAD replaces version negotiation with single-version convergence. Pick the scheme by audience, then hold the classification discipline regardless of scheme.
+
+A deprecation is a staged lifecycle — replacement, owner, removal trigger — not a permanent marker. Treat dependency currency as measurable design debt; prefer small continuous upgrades over a big-bang. Converge on one supported version of a shared concern; keep internal producer/consumer skew bounded and give any divergence a convergence owner and exit. Before removing or converging an observable behavior, account for Hyrum's Law and gather characterization evidence.
+
+Delegate HTTP versioning and `Sunset`/`Deprecation` headers to `api-design`, runtime config/fleet convergence and rollout to `infra-design`, upgrade CVE/supply-chain risk to `devsecops-audit`, and characterization tests to `test-quality-audit`.
+
+Default: make the compatibility contract explicit and the next upgrade small.
+
 ## 4. Decision Defaults
 
 1. Start with one concrete use case before adding extension mechanisms.
@@ -117,6 +134,8 @@ Every principle recommendation or rejection must state:
 8. Record rejected abstractions when a familiar pattern is intentionally skipped.
 9. Treat performance, security, reliability, and operability as forces that may change the design; name in-scope non-functional requirements from the quality taxonomy, express them as measurable scenarios, and allocate each to an owning boundary, then delegate specialist detail to sibling skills when needed.
 10. Prefer a reversible local change when evidence is weak.
+11. Make each release's compatibility contract explicit and classify every externally-visible change as breaking, additive, or cosmetic — independent of scheme (SemVer, CalVer, or live-at-HEAD). Treat a deprecation as a staged lifecycle with a replacement, an owner, and a removal trigger, not a permanent marker.
+12. Keep dependencies and internal consumers converging on one supported version; prefer incremental upgrades over a big-bang, and give any divergence a convergence owner and exit.
 
 ## 5. Design Primitives
 
@@ -214,6 +233,10 @@ Checklist:
 14. `[static]` Legacy debt is not extended silently.
 15. `[static]` The next refactor is small enough to validate.
 16. `[static]` Delegations to sibling skills are made when scope crosses their domain.
+17. `[static]` Externally-visible changes are classified breaking/additive/cosmetic and the compatibility contract is explicit.
+18. `[static]` Deprecations name a replacement, an owner, and a removal trigger.
+19. `[history]` Dependency currency is treated as debt with an upgrade cadence; security risk is delegated to `devsecops-audit`.
+20. `[graph]`/`[human]` Divergent versions or forks of a shared concern have a named convergence owner and bounded internal skew.
 
 ## 9. Delegation Map
 
@@ -224,13 +247,13 @@ Checklist:
   engineering side for decomposition, dependency direction, helper/library
   extraction, state-machine shape, adapter boundaries, and coupling risks
   underneath frontend features.
-- `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability.
+- `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability, HTTP versioning and `Sunset`/`Deprecation` headers.
 - `infra-design`: infrastructure/IaC topology, cloud resources, environment and
-  state boundaries, rollout/rollback, operations handoff.
+  state boundaries, rollout/rollback, runtime config/fleet convergence, operations handoff.
 - `architecture-design`: ArchiMate models, OEF XML, enterprise/solution views, architecture drift.
 - `devsecops-audit`: application and IaC security posture, workflows, release
-  artifacts, secrets, pipeline controls.
-- `test-quality-audit`: test quality, characterization/specification classification, integration/E2E scope, mutation-testing worklists.
+  artifacts, secrets, pipeline controls, dependency-upgrade CVE and supply-chain risk.
+- `test-quality-audit`: test quality, characterization/specification classification, integration/E2E scope, mutation-testing worklists, characterization tests before converging or removing observable behavior.
 
 ## 10. Output Contracts
 
