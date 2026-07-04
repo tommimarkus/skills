@@ -572,9 +572,10 @@ Render-ready requires inspecting SVG for:
 - kind-specific structure that a clean `validate-layout` does not prove — for
   `uml-sequence`, each lifeline in a distinct column/stem and every message
   spanning its two lifelines (per the UML sequence notation reference).
-  Superimposed participants are an `ARCH-R-*` defect even under an `ok`
-  envelope; inspect this in addition to the self-check "Envelope handling"
-  `data.status` / `overlap_count` gate.
+  Superimposed participants are an `ARCH-R-*` defect; inspect the SVG structure
+  independently, in addition to the self-check "Envelope handling" verdict
+  (envelope `status: warning` on dediren 2026.07.1+, and the `data.status` /
+  `overlap_count` payload gate on any runtime).
 
 ### Relationship Connectors And Junctions
 

@@ -40,7 +40,7 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.0"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.07.1"}],
   "nodes": [
     {"id": "ix-login", "type": "Interaction", "label": "Login", "properties": {"uml": {}}},
     {"id": "user", "type": "Lifeline", "label": "User", "properties": {"uml": {"interaction": "ix-login"}}},
@@ -69,8 +69,9 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
   column — a distinct head box and vertical stem — and that every `Message`
   spans the horizontal gap between its two lifelines. Two lifelines sharing a
   head position or stem, or a message drawn as a stub inside a merged box, is an
-  `ARCH-R-*` defect even when every command envelope reports `ok`; cross-check
-  `validate-layout` `data.status` and `overlap_count` per
+  `ARCH-R-*` defect; inspect the SVG structure independently, and cross-check the
+  `validate-layout` verdict (envelope `status: warning` on dediren 2026.07.1+,
+  and the `data.status` / `overlap_count` payload on any runtime) per
   [self-check](../../procedures/self-check.md) "Envelope handling".
 
 ## Findings

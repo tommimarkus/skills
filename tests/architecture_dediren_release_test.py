@@ -27,7 +27,7 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.0"
+EXPECTED_DEDIREN_VERSION = "2026.07.1"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -464,18 +464,20 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             layout_result_path = temp_path / "layout-result.json"
             layout_result_path.write_text(json.dumps(envelope(layout_result)["data"]), encoding="utf-8")
 
-            # Known Dediren tool issue: for UML sequence layouts, validate-layout reports
-            # DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER on every Message edge (ELK
-            # routes message endpoints off the Lifeline node perimeter). Render still succeeds,
-            # so the pipeline proceeds; we pin the known diagnostic so any NEW failure mode
-            # (a different code, or a non-envelope crash) is caught here.
+            # dediren#30 (fixed in 2026.07.1): validate-layout now surfaces its quality
+            # verdict at the envelope. This sequence-fragments layout carries
+            # overlap_count=1 (nested combined-fragment boxes), so the envelope reports
+            # status "warning" with a DEDIREN_LAYOUT_QUALITY_WARNING diagnostic naming the
+            # count; the exit code stays 0 and render still succeeds. We pin the known
+            # warning so any NEW failure mode (a different diagnostic code, an error, or a
+            # non-envelope crash) is caught here.
             validation_result = run_dediren("validate-layout", "--input", layout_result_path)
             validation_envelope = envelope(validation_result)
-            self.assertIn(validation_envelope["status"], ("ok", "error"))
-            if validation_envelope["status"] == "error":
+            self.assertIn(validation_envelope["status"], ("ok", "warning"))
+            if validation_envelope["status"] == "warning":
                 self.assertTrue(
                     all(
-                        d["code"] == "DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER"
+                        d["code"] == "DEDIREN_LAYOUT_QUALITY_WARNING"
                         for d in validation_envelope["diagnostics"]
                     ),
                     validation_result.stdout,

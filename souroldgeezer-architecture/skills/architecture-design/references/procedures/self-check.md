@@ -98,15 +98,20 @@ before feeding output to the next command — a downstream stage fed an error
 envelope fails one stage late with `DEDIREN_COMMAND_INPUT_INVALID`, pointing
 diagnosis at the wrong command.
 
-Envelope `status: ok` with empty `diagnostics` is **not** a quality verdict.
-`validate-layout` reports its verdict inside the payload: read `data.status`
-and the `data.*_count` quality fields. Treat `data.status: "warning"` or any
-nonzero non-informational count (`overlap_count`,
+On the pinned runtime (dediren 2026.07.1+), `validate-layout` surfaces its
+quality verdict at the envelope: a nonzero non-informational count sets envelope
+`status: "warning"` and emits a `DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic
+naming the offending `data.*` count (the exit code stays `0` — a warning is not
+a failure). Still read the payload as the authoritative source: `data.status`
+and the `data.*_count` quality fields (`overlap_count`,
 `connector_through_node_count`, `invalid_route_count`, and the other §9 gate
-counts; `edge_crossing_count` is informational) as a blocking layout finding
-(`ARCH-L-*`) to resolve or disclose before claiming render evidence — an
-overlap can superimpose two nodes in the rendered SVG while every envelope in
-the pipeline says `ok`.
+counts; `edge_crossing_count` is informational). Older runtimes (≤ dediren
+2026.07.0) reported envelope `status: ok` with empty `diagnostics` even when
+`data.status` was `warning`, so never treat an `ok` envelope alone as a quality
+verdict — for an artifact from one of those runtimes the payload is the only
+signal. Treat `data.status: "warning"` or any nonzero non-informational count as
+a blocking layout finding (`ARCH-L-*`) to resolve or disclose before claiming
+render evidence; an overlap can superimpose two nodes in the rendered SVG.
 
 Artifact extraction differs by command and yields silent empty files when
 mixed up: `render` returns artifacts in `.data.artifacts[]` (select the entry
