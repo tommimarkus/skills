@@ -2,7 +2,8 @@
 
 Use in Review mode when the user asks whether architecture docs are enough as
 an implementation handoff, where findings should live, or whether a package can
-guide implementation without the rest of the source material.
+guide implementation without the rest of the source material. In Build mode,
+load only § Build Readiness Disclosure at closeout.
 
 Report: implementation-readiness verdict; evidence inventory; architecture-documentation findings; other source material findings; skill/package issue classification; ArchiMate equivalence; Implementation impact. Recommend links to implementation contracts, not duplicated contracts. Do not treat architecture docs as a complete implementation specification. runtime/package readiness claims are separate from implementation-handoff completeness claims.
 
@@ -40,3 +41,30 @@ supported diagram kind; `ARCH-V-3` or `ARCH-Q-2` for views that cannot answer
 the handoff question; `ARCH-M-4` for architect-owned content presented as
 extracted fact. Do not report source-material gaps as architecture-design
 defects unless the package claimed that detail.
+
+## Build Readiness Disclosure
+
+Build mode ends by enumerating the architecture-owned classes above, each
+marked present or absent in the package. A class is present only when the
+package models it as first-class elements and relations, not only as edge
+labels:
+
+- product/stakeholder intent: Motivation, Requirement, or Constraint content,
+  or a documented viewpoint and quality target;
+- process semantics: process or interaction views cover failure or alternate
+  paths, not only the happy path;
+- API surface: interface elements own the API facts (ApplicationInterface or a
+  UML interface), not Serving labels alone;
+- data ownership/lifecycle: data objects tied to owning components and stores
+  via Access, with value types defined (Enumeration/DataType) where the
+  profile supports them;
+- security/trust boundaries: an explicit boundary element or semantic-boundary
+  group, not an implied one;
+- environment: deployment or technology topology modeled;
+- operations/gates: operation and migration gates modeled or explicitly
+  deferred to companion material.
+
+Absent classes are a disclosure, not a silent omission and not automatic
+findings: recommend supplying architect intent or a Review-mode
+implementation-readiness review. The disclosure reports concern-class
+coverage; it is not an implementation-readiness verdict.

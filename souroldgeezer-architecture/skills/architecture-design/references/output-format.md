@@ -1,6 +1,10 @@
 Return evidence, notation, cross-notation links, quality, export readiness,
-findings, footer. Build/Extract: package state, groups, blockers. Review:
-`[ARCH-*] finding; evidence; severity; action`. Lookup: brief/footer.
+findings, footer. Build/Extract: package state, groups, blockers. Build also
+ends with the build readiness disclosure — architecture-owned concern classes
+present vs. absent per
+[implementation-readiness-review](procedures/implementation-readiness-review.md)
+§ Build Readiness Disclosure. Review: `[ARCH-*] finding; evidence; severity;
+action`. Lookup: brief/footer.
 
 Implementation-readiness review fields: implementation-readiness verdict, evidence
 inventory, architecture-documentation findings, other source material findings,
@@ -77,6 +81,7 @@ Unsupported ArchiMate concepts: relationship connectors and junctions unsupporte
 Grouped layout fallback: not needed | used ungrouped fallback | not run
 Layout/render options: layout_preferences none | <view: knobs>; render static SVG | interactive <svg|html|both>; raster png no | yes
 Implementation readiness: sufficient | partial | insufficient | not assessed
+Build readiness disclosure: <n> of 7 concern classes present; absent <list|none> | not build mode
 Finding split: <n> architecture-documentation findings; <n> other source material findings
 ArchiMate equivalence: direct | partial | metadata/companion | none | not assessed
 Findings: <n> blocking ARCH-*

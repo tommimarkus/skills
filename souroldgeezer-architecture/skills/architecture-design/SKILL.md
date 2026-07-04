@@ -33,7 +33,10 @@ edits/findings.
 
 ## Modes
 
-- **Build**: create/edit package source from architect intent.
+- **Build**: create/edit package source from architect intent; close with the
+  build readiness disclosure
+  ([implementation-readiness-review](references/procedures/implementation-readiness-review.md)
+  § Build Readiness Disclosure).
 - **Extract**: lift evidenced code/IaC/API/UI/workflow facts; mark
   architect-owned content. Put source-backed groups in `model.json` under
   `plugins.generic-graph.views[].groups`, not `project.json`.
@@ -104,7 +107,7 @@ Build.
 | ArchiMate notation/profile | `references/notations/archimate.md` |
 | UML® notation/profile and ArchiMate handoff links | `references/notations/uml.md` |
 | Review/readiness | `references/smell-catalog.md`, `references/red-flags.md`, `references/procedures/professional-readiness.md` |
-| implementation-readiness review | `references/procedures/implementation-readiness-review.md` |
+| implementation-readiness review; Build closeout disclosure | `references/procedures/implementation-readiness-review.md` |
 | Source-weighted ArchiMate element/relation selection | `references/source-weighting.md`; details in `../../docs/architecture-reference/source-weighting.md` |
 | Drift | `references/procedures/drift-detection.md` |
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
