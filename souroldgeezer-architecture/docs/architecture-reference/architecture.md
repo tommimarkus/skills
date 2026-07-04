@@ -650,6 +650,17 @@ Render-ready requires inspecting SVG for:
 - a visible per-view title block so the artifact stays identifiable when
   embedded outside the package;
 - labels and markers that do not obscure the main architecture path;
+- element type distinguishable from the rendered shape, decorator, and fill
+  without reading the `data-*` metadata, and relationship notation that matches
+  ArchiMate® 3.2 — each relationship family a distinct line style and endpoint
+  markers, not one collapsed solid line and filled arrow — with element-group
+  and trust-boundary strokes meeting WCAG 2.2 SC 1.4.11 3:1 non-text contrast.
+  The bundled `render-policy.json` fixtures are the reference policy: they carry
+  a decorator and layer fill for every element type used and an edge style for
+  all eleven relationship families. Where the runtime has no dotted line style,
+  ArchiMate Access renders dashed and is not distinguished from Influence
+  (disambiguated only by Influence's `+`/`-` label); disclose that under
+  `Dediren tool issues`. Collapsed notation or a sub-3:1 boundary is `ARCH-R-*`;
 - density, fanout, route span, group balance, and viewpoint focus that are
   acceptable for the audience;
 - kind-specific structure that a clean `validate-layout` does not prove — for
