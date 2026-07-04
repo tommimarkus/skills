@@ -30,6 +30,20 @@ Relationship types:
 - `CommunicationPath` — a link between nodes/environments;
   `properties.uml: {}`.
 
+`properties.uml.node` records ownership but does not nest the rendered boxes:
+a view listing an owning `Device`/`Node` and its `ExecutionEnvironment` as
+plain view nodes renders them as disjoint peers. Make ownership visible the
+way `uml-state-machine` shows containers: model each owning deployment target
+as a view group with `role: "semantic-boundary"` and `semantic_source_id`
+referencing its model id, list the owned environments plus the artifacts and
+specifications deployed onto them as `members`, and leave the owning node out
+of the view's `nodes` list. Keep it in `nodes` only when a view relationship
+(e.g. a `CommunicationPath`) attaches to it directly — a group-only endpoint
+fails validation with
+`DEDIREN_GENERIC_GRAPH_RELATIONSHIP_ENDPOINT_OUTSIDE_VIEW` — and disclose in
+the output footer that it then also renders as a separate box outside its own
+boundary.
+
 ## Worked Example
 
 Synthetic `uml-deployment` source (lending domain):
@@ -52,7 +66,7 @@ Synthetic `uml-deployment` source (lending domain):
     {"id": "man-loans", "type": "Manifestation", "source": "art-loans", "target": "comp-loans", "label": "manifests", "properties": {"uml": {}}},
     {"id": "cp-app-db", "type": "CommunicationPath", "source": "env-jvm", "target": "node-db", "label": "jdbc", "properties": {"uml": {}}}
   ],
-  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "loans-deployment-view", "label": "Loans Deployment View", "kind": "uml-deployment", "nodes": ["node-app", "env-jvm", "art-loans", "spec-loans", "comp-loans", "node-db"], "relationships": ["dep-loans", "dep-spec", "man-loans", "cp-app-db"]}]}}
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "loans-deployment-view", "label": "Loans Deployment View", "kind": "uml-deployment", "nodes": ["env-jvm", "art-loans", "spec-loans", "comp-loans", "node-db"], "relationships": ["dep-loans", "dep-spec", "man-loans", "cp-app-db"], "groups": [{"id": "grp-node-app", "label": "App Host", "role": "semantic-boundary", "semantic_source_id": "node-app", "members": ["env-jvm", "art-loans", "spec-loans"]}]}]}}
 }
 ```
 
