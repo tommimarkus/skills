@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, validating, or looking up architecture models and diagrams as ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup.
+description: Use when building, extracting, reviewing, rendering, validating, or looking up architecture models and diagrams as ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup — including plain-language requests for an architecture diagram or model kept and maintained in the repo, even without dediren, ArchiMate®, or UML® vocabulary. Not for one-off diagrams or flowcharts in other formats; UI component hierarchies belong to app-design, code/module structure sketches to software-design.
 ---
 
 # Architecture Design
