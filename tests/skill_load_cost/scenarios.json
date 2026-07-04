@@ -103,5 +103,53 @@
       "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
       "souroldgeezer-design/skills/software-design/extensions/typescript.md"
     ]
+  },
+  {
+    "id": "arch-lookup-notation",
+    "skill": "architecture-design",
+    "files": [
+      "souroldgeezer-architecture/skills/architecture-design/SKILL.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/notations/archimate.md"
+    ]
+  },
+  {
+    "id": "arch-build-archimate",
+    "skill": "architecture-design",
+    "files": [
+      "souroldgeezer-architecture/skills/architecture-design/SKILL.md",
+      "souroldgeezer-architecture/docs/architecture-reference/architecture.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/architecture-operational-workflow.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/self-check.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/notations/archimate.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/output-format.md"
+    ]
+  },
+  {
+    "id": "arch-extract-dotnet",
+    "skill": "architecture-design",
+    "files": [
+      "souroldgeezer-architecture/skills/architecture-design/SKILL.md",
+      "souroldgeezer-architecture/docs/architecture-reference/architecture.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/architecture-operational-workflow.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/self-check.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/notations/archimate.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/source-weighting.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/lifting-rules-dotnet.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/output-format.md"
+    ]
+  },
+  {
+    "id": "arch-review-package",
+    "skill": "architecture-design",
+    "files": [
+      "souroldgeezer-architecture/skills/architecture-design/SKILL.md",
+      "souroldgeezer-architecture/docs/architecture-reference/architecture.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/architecture-operational-workflow.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/self-check.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/smell-catalog.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/red-flags.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/procedures/professional-readiness.md",
+      "souroldgeezer-architecture/skills/architecture-design/references/output-format.md"
+    ]
   }
 ]

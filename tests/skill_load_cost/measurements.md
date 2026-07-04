@@ -150,3 +150,45 @@ SKILL.md across all three modes): the Load Map now says Lookup cites "the
 core-reference section it names for Lookup (a `Cite` column or a cite
 sentence)" so the instruction reads correctly for the pattern/NFR catalogs
 (which name the section in a sentence, not a `Cite` column).
+
+# architecture-design per-use load cost
+
+Guard coverage added for issue #66: scenarios (`arch-lookup-notation`,
+`arch-build-archimate`, `arch-extract-dotnet`, `arch-review-package`),
+committed baseline, `ARCH-*` code patterns.
+
+| Scenario | Tokens |
+|---|---|
+| arch-lookup-notation | 1922 |
+| arch-build-archimate | 14144 |
+| arch-extract-dotnet | 15286 |
+| arch-review-package | 15521 |
+
+The headline per-use win is a load-SET reduction the fixed-file scenarios only
+partly capture. Before #66, SKILL.md step 1 force-loaded the whole 771-line
+`architecture.md` plus the operational workflow for **every** mode, and step 2's
+self-check pulled the dediren bundle agent guide (~564 lines, resolved from the
+release bundle) for every non-Lookup mode. After #66:
+
+- **Lookup** no longer loads `architecture.md`, the operational workflow, or
+  self-check at all when the answer makes no runtime claim — it reads only the
+  cited section (or the one notation file). `arch-lookup-notation` (1922 tokens)
+  models this cheap path; the pre-fix Lookup paid close to the full Build
+  closure.
+- **Build / Extract / Review** read only the `architecture.md` sections the mode
+  needs (per the step-1 map), not the whole file. The token proxy reads whole
+  files, so the scenario totals above list `architecture.md` at full size — an
+  upper bound; the real per-use read is the section subset.
+- The **bundle agent guide** (`dediren-release.sh --agent-guide`) is deferred to
+  the moment source-JSON authoring, a command handoff, or a repair loop is
+  imminent. It is a release-bundle download, not a repo file, so no scenario can
+  measure it; a notation Lookup or a mechanical edit that reaches no runtime
+  command now never loads those ~564 lines.
+
+Fidelity floor: the `architecture-design` baseline (32 codes — 28 `ARCH-*` plus
+`E-1..E-4` — and 104 sections) and `ArchitectureDesignBaselineTest` guard that
+the section-scoping and agent-guide deferral leave every finding code and
+reference section reachable across the skill closure. The step-1 escalation cue
+("this map is a floor, not a cap") keeps a mode free to pull any other section
+the moment the task reaches it — the guard the earlier bare `§§2-7,9`
+software-design scoping (above) lacked before it was reverted to whole-file.

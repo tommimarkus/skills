@@ -172,6 +172,14 @@ class SoftwareDesignBaselineTest(unittest.TestCase):
         ])
 
 
+class ArchitectureDesignBaselineTest(unittest.TestCase):
+    def test_current_files_satisfy_committed_baseline(self):
+        _assert_baseline_satisfied(self, "architecture-design", [
+            "souroldgeezer-architecture/skills/architecture-design",
+            "souroldgeezer-architecture/docs/architecture-reference",
+        ])
+
+
 class ResolveClosureWithOverridesTest(unittest.TestCase):
     def _skill_with_ref(self, root: Path) -> tuple:
         skill_md = root / "SKILL.md"

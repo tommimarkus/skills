@@ -23,8 +23,10 @@ The selected release bundle is an imported upstream Dediren artifact. Do not
 patch cached release files or future packaged bundles; report defects under
 `Dediren tool issues` per `architecture.md` §9.
 
-For JSON authoring, repair, and command handoff details, read the selected
-release bundle guide before loading schemas:
+Resolving the bundle above does not require the agent guide. Defer it until
+authoring, repairing, or handing off source JSON is imminent; a resolve-and-
+validate or review-only runtime check never needs it. When that point is
+reached, read the selected release bundle guide before loading schemas:
 
 ```bash
 "$SKILL_DIR"/references/scripts/dediren-release.sh --agent-guide

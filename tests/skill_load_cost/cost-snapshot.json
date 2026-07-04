@@ -7,5 +7,9 @@
   "review-functions-cosmos-blob": 31419,
   "sd-lookup-principle": 1542,
   "sd-build-dotnet": 5447,
-  "sd-review-typescript": 8129
+  "sd-review-typescript": 8129,
+  "arch-lookup-notation": 1922,
+  "arch-build-archimate": 14144,
+  "arch-extract-dotnet": 15286,
+  "arch-review-package": 15521
 }

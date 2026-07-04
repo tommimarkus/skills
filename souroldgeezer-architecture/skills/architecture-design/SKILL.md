@@ -48,12 +48,33 @@ Build.
 
 ## Workflow
 
-1. Read [architecture](../../docs/architecture-reference/architecture.md) and
-   [workflow](references/procedures/architecture-operational-workflow.md).
-2. Run [self-check](references/procedures/self-check.md) before runtime claims;
-   it uses [dediren-release.sh](references/scripts/dediren-release.sh) to
-   resolve the pinned GitHub™ release bundle. Lookup may skip this step when
-   the answer makes no runtime claim.
+1. Load only the [architecture](../../docs/architecture-reference/architecture.md)
+   sections the mode needs; do not read it whole. By mode:
+   - **Build / Extract**: §1 operating contract, §2 quality levels, §3 package
+     source, §5 relationship discipline, §7 view rules, §9 runtime evidence; add
+     §4 layers/aspects and §6 diagram kinds when choosing element or view types;
+     Extract also loads §8 source evidence.
+   - **Review**: §1 operating contract, §2 quality levels, §7 view rules, §9
+     runtime evidence, §12 finding taxonomy, §13 review checklist; add §5
+     relationship discipline and §4 layers/aspects when auditing element or
+     relationship legality.
+   - **Lookup**: only the section the question cites.
+
+   This map is a floor, not a cap: pull §10 OEF, §11 profile, §14 pitfalls, or
+   any other section the moment the task reaches it, and escalate a Lookup to
+   the fuller Build/Extract/Review set (or ask) when a bounded answer no longer
+   covers the work. Read the
+   [operational workflow](references/procedures/architecture-operational-workflow.md)
+   before running Build/Extract/Review operational steps; a Lookup that makes no
+   runtime claim may skip it.
+2. Before any runtime claim, run
+   [self-check](references/procedures/self-check.md); it uses
+   [dediren-release.sh](references/scripts/dediren-release.sh) to resolve the
+   pinned GitHub™ release bundle. Defer the bundle agent guide
+   (`dediren-release.sh --agent-guide`) until authoring source JSON, a command
+   handoff, or a repair loop is imminent — a notation Lookup or a mechanical
+   edit that reaches no runtime command never loads it. Lookup may skip
+   self-check entirely when the answer makes no runtime claim.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load `references/notations/archimate.md` for
    ArchiMate. For UML, load `references/notations/uml.md` (hub) plus only the
