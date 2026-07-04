@@ -1,5 +1,6 @@
 Return evidence, notation, cross-notation links, quality, export readiness,
-findings, footer. Build/Extract: package state, groups, blockers. Build also
+findings, executive summary, footer. Build/Extract: package state, groups,
+blockers. Build also
 ends with the build readiness disclosure — architecture-owned concern classes
 present vs. absent per
 [implementation-readiness-review](procedures/implementation-readiness-review.md)
@@ -69,6 +70,36 @@ Use `Notable choices` only for non-obvious or challenged decisions:
 Notable choices:
 - <source fact> -> <chosen concept/relation/view>; rejected <alternative>; evidence <source-backed|candidate-from-source|architect-owned|weak-evidence|overlay-only>
 ```
+
+## Executive Summary
+
+Build, Extract, and Review output carries a required executive summary
+immediately above the Footer; Lookup (bounded brief/footer answers) is exempt.
+Write it for a non-technical sponsor deciding what to approve, fund, or
+escalate: plain words only — no `ARCH-*` codes, quality-level tokens, file
+paths, or notation/dediren jargon. Those stay in the Footer.
+
+```text
+Executive summary:
+- Subject: <the architecture/feature and what this run did, in plain words>
+- Verdict: <one plain-words sentence: is the architecture sound, and can the reader rely on these diagrams?>
+- Diagrams: <plain-language gloss of the reached quality level, per the table below>
+- Top risks / asks: <up to 3, each naming the decision needed - approve, fund, or escalate | none>
+```
+
+The `Diagrams` gloss must match the Footer `Quality level` — never overstate:
+
+| Quality level | Plain-language gloss |
+|---|---|
+| source-valid | the model's facts are consistent, but the diagrams themselves have not been checked — do not rely on the pictures yet |
+| view-readable | diagrams are structurally valid but not yet confirmed legible — treat them as drafts |
+| render-ready | diagrams are rendered and checked for legibility — readable, subject to the listed risks |
+| review-ready | no blocking issues remain — the diagrams can be relied on for the stated scope and audience |
+| not assessed | quality was not evaluated in this run — do not act on the diagrams from this report alone |
+
+Partial export or render coverage, blocking findings, and layout-fallback
+regressions that change what the reader may rely on must also surface here as
+plain-words risks/asks, not only as footer fields.
 
 ## Footer
 
