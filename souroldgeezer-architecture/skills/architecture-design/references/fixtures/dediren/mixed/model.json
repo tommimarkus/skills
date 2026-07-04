@@ -1,0 +1,32 @@
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [
+    { "id": "generic-graph", "version": "2026.07.1" },
+    { "id": "archimate-oef", "version": "2026.07.1" }
+  ],
+  "nodes": [
+    { "id": "client", "type": "ApplicationComponent", "label": "Client Application", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },
+    { "id": "svc-orders", "type": "ApplicationComponent", "label": "Orders Service", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },
+    { "id": "if-orders", "type": "ApplicationInterface", "label": "Orders API", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },
+    { "id": "asvc-orders", "type": "ApplicationService", "label": "Order Management", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } }
+  ],
+  "relationships": [
+    { "id": "svc-provides-if", "type": "Composition", "source": "svc-orders", "target": "if-orders", "label": "provides", "properties": { "visible": true } },
+    { "id": "svc-realizes-asvc", "type": "Realization", "source": "svc-orders", "target": "asvc-orders", "label": "realizes", "properties": { "visible": true } },
+    { "id": "asvc-serves-client", "type": "Serving", "source": "asvc-orders", "target": "client", "label": "serves", "properties": { "visible": true } }
+  ],
+  "plugins": {
+    "generic-graph": {
+      "semantic_profile": "archimate",
+      "views": [
+        {
+          "id": "app-cooperation",
+          "label": "Mixed - Application Cooperation",
+          "nodes": ["client", "svc-orders", "if-orders", "asvc-orders"],
+          "relationships": ["svc-provides-if", "svc-realizes-asvc", "asvc-serves-client"],
+          "groups": []
+        }
+      ]
+    }
+  }
+}

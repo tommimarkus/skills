@@ -1,0 +1,34 @@
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [
+    { "id": "generic-graph", "version": "2026.07.1" },
+    { "id": "uml-xmi", "version": "2026.07.1" }
+  ],
+  "nodes": [
+    { "id": "pkg-fulfilment", "type": "Package", "label": "Fulfilment", "properties": { "uml": { "kind": "package", "architecture_context": { "profile": "archimate", "element_id": "svc-orders", "relationship": "elaborates" } } } },
+    { "id": "class-order", "type": "Class", "label": "Order", "properties": { "uml": { "package": "pkg-fulfilment", "attributes": [ { "name": "reference", "type": "OrderReference", "visibility": "public", "multiplicity": "1" }, { "name": "placedOn", "type": "Timestamp", "visibility": "public", "multiplicity": "1" }, { "name": "state", "type": "FulfilmentState", "visibility": "private", "multiplicity": "1" } ], "operations": [ { "name": "confirm", "visibility": "public", "parameters": [], "return_type": "void" } ] } } },
+    { "id": "class-shipment", "type": "Class", "label": "Shipment", "properties": { "uml": { "package": "pkg-fulfilment", "attributes": [ { "name": "carrier", "type": "String", "visibility": "public", "multiplicity": "1" }, { "name": "trackingCode", "type": "String", "visibility": "public", "multiplicity": "0..1" } ], "operations": [] } } },
+    { "id": "enum-fulfilment-state", "type": "Enumeration", "label": "FulfilmentState", "properties": { "uml": { "package": "pkg-fulfilment", "literals": ["Open", "Confirmed", "Dispatched", "Closed"] } } }
+  ],
+  "relationships": [
+    { "id": "order-ships-as", "type": "Composition", "source": "class-order", "target": "class-shipment", "label": "shipment", "properties": { "uml": { "source_role": "order", "target_role": "shipment", "source_multiplicity": "1", "target_multiplicity": "0..*" } } },
+    { "id": "order-uses-state", "type": "Dependency", "source": "class-order", "target": "enum-fulfilment-state", "label": "uses", "properties": {} }
+  ],
+  "plugins": {
+    "generic-graph": {
+      "semantic_profile": "uml",
+      "views": [
+        {
+          "id": "domain-class",
+          "label": "Mixed - Domain Class View",
+          "kind": "uml-class",
+          "nodes": ["pkg-fulfilment", "class-order", "class-shipment", "enum-fulfilment-state"],
+          "relationships": ["order-ships-as", "order-uses-state"],
+          "groups": [
+            { "id": "fulfilment-boundary", "label": "Fulfilment", "role": "semantic-boundary", "semantic_source_id": "pkg-fulfilment", "members": ["class-order", "class-shipment", "enum-fulfilment-state"] }
+          ]
+        }
+      ]
+    }
+  }
+}

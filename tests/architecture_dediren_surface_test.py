@@ -671,7 +671,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         behavior = behavior_ids["architecture-design-behavior-uml-archimate-handoff-links"]
         self.assertIn("Cross-notation links field", behavior["expected_artifacts"])
         self.assertIn(
-            "verify referenced ArchiMate ids exist before claiming cross-notation readiness",
+            "verify referenced ArchiMate ids exist in the package's ArchiMate model "
+            "(the archimate entry in project.json models[]) before claiming cross-notation readiness",
             behavior["required_checks"],
         )
         self.assertIn(

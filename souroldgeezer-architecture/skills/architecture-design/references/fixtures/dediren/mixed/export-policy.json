@@ -1,0 +1,8 @@
+{
+  "oef_export_policy_schema_version": "oef-export-policy.schema.v1",
+  "model_identifier": "id-mixed-arch-model",
+  "model_name": "Mixed Orders (ArchiMate)",
+  "view_identifier": "id-app-cooperation",
+  "view_name": "Application Cooperation",
+  "viewpoint": "Application Cooperation"
+}

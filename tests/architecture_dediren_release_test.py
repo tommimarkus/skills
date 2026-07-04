@@ -27,6 +27,15 @@ FIXTURE = (
     / "dediren"
     / "basic"
 )
+MIXED_FIXTURE = (
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "fixtures"
+    / "dediren"
+    / "mixed"
+)
 EXPECTED_DEDIREN_VERSION = "2026.07.1"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
@@ -254,6 +263,41 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(fixture_versions, {"generic-graph": EXPECTED_DEDIREN_VERSION})
         self.assertEqual(fixture_model["plugins"]["generic-graph"]["semantic_profile"], "archimate")
         self.assertEqual(project_plugin_ids, EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS)
+
+    def test_mixed_fixture_declares_canonical_multimodel_layout(self) -> None:
+        project = json.loads((MIXED_FIXTURE / "project.json").read_text(encoding="utf-8"))
+        arch_model = json.loads((MIXED_FIXTURE / "model.json").read_text(encoding="utf-8"))
+        uml_model = json.loads((MIXED_FIXTURE / "model-uml.json").read_text(encoding="utf-8"))
+
+        # v2 multi-model project shape binds one single-notation model per notation.
+        self.assertEqual(project["schema"], "souroldgeezer.architecture.dediren.project.v2")
+        models = {model["id"]: model for model in project["models"]}
+        self.assertEqual({model["profile"] for model in models.values()}, {"archimate", "uml"})
+        for model in models.values():
+            data = json.loads((MIXED_FIXTURE / model["file"]).read_text(encoding="utf-8"))
+            self.assertEqual(data["plugins"]["generic-graph"]["semantic_profile"], model["profile"])
+
+        # Every view binds a declared model; every export binds a declared model and view.
+        view_ids = {view["id"] for view in project["views"]}
+        for view in project["views"]:
+            self.assertIn(view["model"], models)
+        for export in project["exports"]:
+            self.assertIn(export["model"], models)
+            self.assertIn(export["view"], view_ids)
+        self.assertEqual({view["model"] for view in project["views"]}, set(models))
+        self.assertEqual({export["plugin"] for export in project["exports"]}, {"archimate-oef", "uml-xmi"})
+
+        # The cross-notation handoff resolves into the package's ArchiMate model.
+        arch_ids = {node["id"] for node in arch_model["nodes"]}
+        links = [
+            node["properties"]["uml"]["architecture_context"]
+            for node in uml_model["nodes"]
+            if node.get("properties", {}).get("uml", {}).get("architecture_context")
+        ]
+        self.assertTrue(links, "mixed fixture should demonstrate a cross-notation handoff link")
+        for context in links:
+            self.assertEqual(context["profile"], "archimate")
+            self.assertIn(context["element_id"], arch_ids)
 
     def test_current_platform_release_smoke_reports_version(self) -> None:
         bundle = release_bundle()

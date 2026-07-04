@@ -59,7 +59,10 @@ Build.
    ArchiMate. For UML, load `references/notations/uml.md` (hub) plus only the
    per-kind file under `references/notations/uml/` for the kind in play:
    `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`,
-   `component`, or `deployment`. For mixed packages, load both notation files.
+   `component`, or `deployment`. For mixed packages, load both notation files
+   and bind one single-notation model per notation with the `project.json`
+   multi-model `v2` layout (`models[]`, per-view `model`, `exports[]`;
+   architecture.md §3, fixture `references/fixtures/dediren/mixed/`).
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load

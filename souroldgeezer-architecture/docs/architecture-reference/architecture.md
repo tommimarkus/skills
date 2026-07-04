@@ -12,6 +12,7 @@ The canonical source for a feature architecture is:
 docs/architecture/<feature>.dediren/
   project.json
   model.json
+  model-<notation>.json      # per-notation model(s) in a mixed package (§3)
   render-policy.json
   render-metadata.json       # optional checked-in shared semantic metadata
   export-policy.json        # optional compatibility export policy
@@ -171,6 +172,63 @@ element gets `role="img"` with a `<title>` (falling back to the layout view id
 when the block is absent) and a `<desc>` when a description is supplied. A
 package-level policy shared by several views cannot carry per-view text; the
 §9 accessible-name post-render step completes per-view labels either way.
+
+### Mixed-Notation Packages
+
+One dediren model carries a single `plugins.generic-graph.semantic_profile`, and
+validation is profile-global: the runtime rejects foreign-profile element types
+(`DEDIREN_ARCHIMATE_ELEMENT_TYPE_UNSUPPORTED` /
+`DEDIREN_UML_ELEMENT_TYPE_UNSUPPORTED`), so one model cannot hold both ArchiMate
+and UML content. A package that spans notations therefore keeps **one
+single-notation model per notation** — `model.json` for ArchiMate plus
+`model-<notation>.json` (for example `model-uml.json`) for UML — each validated,
+projected, rendered, and exported with its own `--profile`.
+
+`project.json` binds these models with the multi-model
+`souroldgeezer.architecture.dediren.project.v2` shape: a `models[]` registry
+(`{ id, file, profile }`), a `model` reference on every view, and an `exports[]`
+array so each model/view can declare its own export policy. Single-notation
+packages keep the `v1` shape (top-level `model` plus a singular `export`); `v2`
+is required whenever a package spans notations. Each view still carries the same
+`projection`/`metadata`/`layout`/`render` objects shown above.
+
+```json
+{
+  "schema": "souroldgeezer.architecture.dediren.project.v2",
+  "feature": "orders",
+  "models": [
+    { "id": "arch", "file": "model.json", "profile": "archimate" },
+    { "id": "uml", "file": "model-uml.json", "profile": "uml" }
+  ],
+  "views": [
+    { "id": "app-cooperation", "model": "arch", "title": "Application Cooperation",
+      "projection": { "plugin": "generic-graph", "target": "layout-request" },
+      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/app-cooperation.json" },
+      "layout": { "plugin": "elk-layout", "output": "generated/layout/app-cooperation.json" },
+      "render": { "plugin": "render", "policy": "render-policy.json", "metadata": "generated/render-metadata/app-cooperation.json", "output": "generated/svg/app-cooperation.svg" } },
+    { "id": "domain-class", "model": "uml", "title": "Domain Class View",
+      "projection": { "plugin": "generic-graph", "target": "layout-request" },
+      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/domain-class.json" },
+      "layout": { "plugin": "elk-layout", "output": "generated/layout/domain-class.json" },
+      "render": { "plugin": "render", "policy": "render-policy-uml.json", "metadata": "generated/render-metadata/domain-class.json", "output": "generated/svg/domain-class.svg" } }
+  ],
+  "exports": [
+    { "id": "arch-oef", "model": "arch", "view": "app-cooperation", "plugin": "archimate-oef", "policy": "export-policy.json", "output": "generated/export/orders.oef.xml" },
+    { "id": "uml-xmi", "model": "uml", "view": "domain-class", "plugin": "uml-xmi", "policy": "export-policy-uml.json", "output": "generated/export/orders.uml.xmi" }
+  ]
+}
+```
+
+Cross-notation handoff stays one-directional through
+`properties.uml.architecture_context` on the UML side, pointing at an id in the
+package's ArchiMate model (see `references/notations/uml.md`). The bundled
+example is `references/fixtures/dediren/mixed/` — an ArchiMate Application
+Cooperation model plus a UML class model whose `pkg-fulfilment` package
+elaborates the ArchiMate `svc-orders` component; its per-view pipeline and both
+exports
+resolve on the pinned runtime. Do not invent a single mixed model, a different
+`model-<notation>.json` split, or an ad-hoc `exports[]` dialect outside this
+layout.
 
 ## 4. ArchiMate Layers And Aspects
 

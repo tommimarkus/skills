@@ -1,0 +1,34 @@
+{
+  "schema": "souroldgeezer.architecture.dediren.project.v2",
+  "feature": "mixed",
+  "models": [
+    { "id": "arch", "file": "model.json", "profile": "archimate" },
+    { "id": "uml", "file": "model-uml.json", "profile": "uml" }
+  ],
+  "views": [
+    {
+      "id": "app-cooperation",
+      "model": "arch",
+      "title": "Mixed - Application Cooperation",
+      "diagramKind": "Application Cooperation",
+      "projection": { "plugin": "generic-graph", "target": "layout-request" },
+      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/app-cooperation.json" },
+      "layout": { "plugin": "elk-layout", "output": "generated/layout/app-cooperation.json" },
+      "render": { "plugin": "render", "policy": "render-policy.json", "metadata": "generated/render-metadata/app-cooperation.json", "output": "generated/svg/app-cooperation.svg" }
+    },
+    {
+      "id": "domain-class",
+      "model": "uml",
+      "title": "Mixed - Domain Class View",
+      "diagramKind": "UML Class",
+      "projection": { "plugin": "generic-graph", "target": "layout-request" },
+      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/domain-class.json" },
+      "layout": { "plugin": "elk-layout", "output": "generated/layout/domain-class.json" },
+      "render": { "plugin": "render", "policy": "render-policy-uml.json", "metadata": "generated/render-metadata/domain-class.json", "output": "generated/svg/domain-class.svg" }
+    }
+  ],
+  "exports": [
+    { "id": "arch-oef", "model": "arch", "view": "app-cooperation", "plugin": "archimate-oef", "policy": "export-policy.json", "output": "generated/export/mixed.oef.xml" },
+    { "id": "uml-xmi", "model": "uml", "view": "domain-class", "plugin": "uml-xmi", "policy": "export-policy-uml.json", "output": "generated/export/mixed.uml.xmi" }
+  ]
+}
