@@ -48,10 +48,24 @@ qualifier (see [output-format](../output-format.md)):
    `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the
    envelope `status` stays `ok`; read `.diagnostics[]`, qualify as e.g. `XMI
    ready (classes only)`, and report the gap under `Dediren tool issues`.
-4. **Schema validation.** Because the OEF document always carries a
-   `<views>`/`<diagrams>` element, it declares and validates against the Open
-   Group `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that
-   diagram schema (dediren 2026.07.1+; earlier runtimes named the model-only
-   `archimate3_Model.xsd`, which rejects `<views>`). Disclose which schema the
-   evidence used. In restricted environments pre-fetch XSDs and pass offline
-   paths per [self-check](self-check.md) envelope/schema guidance.
+4. **Schema validation.** Disclose which schema the evidence used — and, for
+   XMI, which validation level was reached.
+   - *OEF (ArchiMate).* The OEF document always carries a `<views>`/`<diagrams>`
+     element, so it declares and validates against the Open Group
+     `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that diagram
+     schema (dediren 2026.07.1+; earlier runtimes named the model-only
+     `archimate3_Model.xsd`, which rejects `<views>`).
+   - *XMI (UML).* Validation of the `uml-xmi` output is partial (`uml-xmi
+     capabilities` → `schema_validation.kind: omg-xmi-xsd-partial`): pointing
+     `DEDIREN_XMI_SCHEMA_PATH` at the bare OMG `XMI.xsd` — the schema the runtime
+     caches by default — checks only the XMI envelope, not the UML content, so a
+     canonical serialization (item 3) is not itself a schema-validated one. To
+     schema-check the emitted `uml:*` content, point `DEDIREN_XMI_SCHEMA_PATH` at
+     a driver schema that imports `XMI.xsd` plus a UML 2.5.1 XSD and run `xmllint
+     --nonet --noout --schema <driver.xsd> <document>`; OMG publishes no
+     importable UML 2.5.1 XSD, so supply or generate one (for example from the
+     Eclipse UML2 metamodel) or import the document into a UML tool. Never report
+     "XMI schema-validated" when only the envelope was checked; report the
+     achieved level under `Dediren tool issues`.
+   In restricted environments pre-fetch XSDs and pass offline paths per
+   [self-check](self-check.md) envelope/schema guidance.

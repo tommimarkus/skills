@@ -46,6 +46,10 @@ sandboxed environments fail with `DEDIREN_*_SCHEMA_UNAVAILABLE` even when the
 agent's own shell has network access: pre-fetch the XSDs and pass absolute
 offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`
 (`DEDIREN_SCHEMA_CACHE_DIR` helps only when the child itself can download).
+`DEDIREN_XMI_SCHEMA_PATH` at the bare `XMI.xsd` validates only the XMI envelope;
+full UML-content schema validation needs the driver schema in
+[external-validation-handoff](external-validation-handoff.md) required
+disclosure 4.
 Command order: `validate`; semantic validate; `project`; `layout`;
 `validate-layout`; `render`; accessible-name post-render step; optional
 export. The release-resolved Dediren runtime allows
