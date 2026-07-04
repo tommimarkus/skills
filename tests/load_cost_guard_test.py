@@ -1,5 +1,5 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
-import json, subprocess, sys, tempfile, unittest
+import contextlib, io, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 from tests.surface_test_lib import load_script_module
@@ -290,6 +290,41 @@ class MainIntegrationTest(unittest.TestCase):
             # No block decision must be emitted
             self._assert_no_output_line_matches(
                 payload, lambda out: out.get("decision"), "block", "no-git case must not block")
+
+
+class CommittedBaselinesStopModeTest(unittest.TestCase):
+    """Guard/test closure parity on the real repo (issue #75): for every skill
+    with a committed baseline, the guard's own Stop-mode check must stay silent
+    (no block decision) on a clean tree. This is the whitespace-only-edit
+    acceptance run as a test — if a baseline protects content the guard's link
+    closure cannot reach, this fails with the permanent phantom regressions the
+    guard would otherwise emit on every session. Cost advisories are allowed."""
+
+    def test_stop_mode_silent_for_every_committed_baseline(self):
+        baselines = sorted(
+            (REPO_ROOT / "tests" / "skill_load_cost" / "baselines").glob("*.json")
+        )
+        self.assertTrue(baselines, "no committed baselines found")
+        for bl in baselines:
+            with self.subTest(skill=bl.stem):
+                matches = sorted(
+                    REPO_ROOT.glob(f"souroldgeezer-*/skills/{bl.stem}/SKILL.md")
+                )
+                self.assertEqual(
+                    len(matches), 1,
+                    f"baseline {bl.stem!r} must map to exactly one SKILL.md",
+                )
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    rc = guard._run_stop_mode_with_changed(
+                        [str(matches[0])], REPO_ROOT
+                    )
+                self.assertEqual(rc, 0)
+                out = buf.getvalue()
+                self.assertNotIn(
+                    '"decision": "block"', out,
+                    f"guard blocks {bl.stem} on an unchanged tree:\n{out[:2000]}",
+                )
 
 
 if __name__ == "__main__":

@@ -81,8 +81,8 @@ from static source.
 
 Before changing trigger metadata, workflow behavior, extension selection,
 source grounding, or evaluation coverage, read `references/evals` and
-`references/source-grounding.md`. Keep evals synthetic or originally
-paraphrased.
+[`references/source-grounding.md`](references/source-grounding.md). Keep evals
+synthetic or originally paraphrased.
 
 ## Workflow
 

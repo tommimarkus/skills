@@ -1,15 +1,15 @@
 {
-  "quick-node-unit": 20037,
-  "deep-nextjs-suite": 44610,
-  "lean-audit-default": 6765,
-  "lookup-functions": 18226,
-  "build-functions-cosmos": 25297,
-  "review-functions-cosmos-blob": 31419,
+  "quick-node-unit": 20527,
+  "deep-nextjs-suite": 45063,
+  "lean-audit-default": 6841,
+  "lookup-functions": 18237,
+  "build-functions-cosmos": 25308,
+  "review-functions-cosmos-blob": 31430,
   "sd-lookup-principle": 1542,
-  "sd-build-dotnet": 5447,
-  "sd-review-typescript": 8129,
-  "arch-lookup-notation": 1922,
-  "arch-build-archimate": 14144,
-  "arch-extract-dotnet": 15286,
-  "arch-review-package": 15521
+  "sd-build-dotnet": 6188,
+  "sd-review-typescript": 9316,
+  "arch-lookup-notation": 2406,
+  "arch-build-archimate": 16898,
+  "arch-extract-dotnet": 18040,
+  "arch-review-package": 18455
 }

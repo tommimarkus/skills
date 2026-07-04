@@ -96,7 +96,9 @@ When the guard denies an edit, do one of:
 - if the loss is intentional (deliberate removal of a code that no longer applies),
   update the fidelity baseline
   (`tests/skill_load_cost/baselines/<skill-name>.json`) to reflect the new floor
-  before editing.
+  before editing. Regenerate it from the skill's own closure — `resolve_closure
+  <SKILL.md>` fed to `baseline --files` — never from a directory glob, so the
+  floor never protects content the guard's closure cannot reach.
 
 ## Enable in Claude Code — Stop hook (default)
 

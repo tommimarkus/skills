@@ -11,8 +11,8 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   `references/`.
   Handling: local bundled references owned by this repo; eval prompts are
   original synthetic scenarios for rubric selection, scope, and evidence limits.
-- Source: `references/golden-corpus/index.md` and
-  `references/golden-corpus/test-quality-audit-cases.jsonl`.
+- Source: [`golden-corpus/index.md`](golden-corpus/index.md) and
+  `golden-corpus/test-quality-audit-cases.jsonl`.
   Handling: local maintenance evidence; behavioral evals are separate synthetic
   cases and do not copy corpus prompts or expected outputs.
 - Source: `../../../docs/audit-reference/audit-craft.md`,

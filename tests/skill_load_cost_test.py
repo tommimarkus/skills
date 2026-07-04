@@ -1,6 +1,5 @@
 # tests/skill_load_cost_test.py
 import contextlib
-import glob
 import io
 import json
 import subprocess
@@ -128,56 +127,42 @@ class CliTest(unittest.TestCase):
             )
 
 
-def _assert_baseline_satisfied(tc, baseline_name: str, roots: list) -> None:
-    """Committed load-cost baseline for `baseline_name` must still be satisfied by
-    the current content under `roots`. Shared by the per-skill baseline tests."""
-    repo = REPO_ROOT
-    base = json.loads(
-        (repo / f"tests/skill_load_cost/baselines/{baseline_name}.json").read_text()
-    )
-    patterns = json.loads(
-        (repo / "tests/skill_load_cost/code_patterns.json").read_text()
-    )
-    files = []
-    for r in roots:
-        files += glob.glob(str(repo / r / "**" / "*.md"), recursive=True)
-    current = slc.union_inventory(
-        [slc.extract_inventory(Path(f).read_text(), patterns) for f in files]
-    )
-    tc.assertEqual(slc.diff_inventory(base, current), [])
+def baseline_skill_md(repo: Path, baseline_name: str) -> Path:
+    """Map a committed baseline name to its unique owning SKILL.md — the inverse
+    of the guard's `_baseline_for` (skill dir name → baselines/<name>.json)."""
+    matches = sorted(repo.glob(f"souroldgeezer-*/skills/{baseline_name}/SKILL.md"))
+    if len(matches) != 1:
+        raise AssertionError(
+            f"baseline {baseline_name!r} must map to exactly one published "
+            f"SKILL.md, found {matches}"
+        )
+    return matches[0]
 
 
-class TestQualityAuditBaselineTest(unittest.TestCase):
-    def test_current_files_satisfy_committed_baseline(self):
-        _assert_baseline_satisfied(self, "test-quality-audit", [
-            "souroldgeezer-audit/skills/test-quality-audit/references",
-            "souroldgeezer-audit/docs/quality-reference",
-            "souroldgeezer-audit/docs/audit-reference",
-        ])
+class CommittedBaselinesClosureTest(unittest.TestCase):
+    """Every committed load-cost baseline must be satisfied by the inventory of
+    the guard's own link closure (resolve_closure) — the same closure the Stop
+    hook enforces. A directory-glob inventory is deliberately NOT used here: a
+    baseline built wider than the closure would report permanent phantom
+    regressions the guard can never satisfy (issue #75)."""
 
-
-class ApiDesignBaselineTest(unittest.TestCase):
-    def test_current_files_satisfy_committed_baseline(self):
-        _assert_baseline_satisfied(self, "api-design", [
-            "souroldgeezer-design/skills/api-design",
-            "souroldgeezer-design/docs/api-reference",
-        ])
-
-
-class SoftwareDesignBaselineTest(unittest.TestCase):
-    def test_current_files_satisfy_committed_baseline(self):
-        _assert_baseline_satisfied(self, "software-design", [
-            "souroldgeezer-design/skills/software-design",
-            "souroldgeezer-design/docs/software-reference",
-        ])
-
-
-class ArchitectureDesignBaselineTest(unittest.TestCase):
-    def test_current_files_satisfy_committed_baseline(self):
-        _assert_baseline_satisfied(self, "architecture-design", [
-            "souroldgeezer-architecture/skills/architecture-design",
-            "souroldgeezer-architecture/docs/architecture-reference",
-        ])
+    def test_committed_baselines_satisfied_by_guard_closure(self):
+        repo = REPO_ROOT
+        patterns = json.loads(
+            (repo / "tests/skill_load_cost/code_patterns.json").read_text()
+        )
+        baselines = sorted((repo / "tests/skill_load_cost/baselines").glob("*.json"))
+        self.assertTrue(baselines, "no committed baselines found")
+        for bl in baselines:
+            with self.subTest(skill=bl.stem):
+                closure = slc.resolve_closure(baseline_skill_md(repo, bl.stem))
+                current = slc.union_inventory([
+                    slc.extract_inventory(p.read_text(encoding="utf-8"), patterns)
+                    for p in closure
+                ])
+                self.assertEqual(
+                    slc.diff_inventory(json.loads(bl.read_text()), current), []
+                )
 
 
 class ResolveClosureWithOverridesTest(unittest.TestCase):

@@ -22,14 +22,14 @@ Load the per-kind file under `uml/` only when that kind is in play.
 
 | Kind | Concern | Load |
 |---|---|---|
-| `kind: "uml-class"` | class / interface / type structure | `uml/class.md` |
-| `kind: "uml-data"` | data types and enumerations | `uml/data.md` |
-| `kind: "uml-activity"` | control / object flow | `uml/activity.md` |
-| `kind: "uml-sequence"` | one interaction over time | `uml/sequence.md` |
-| `kind: "uml-state-machine"` | states and transitions of one element | `uml/state-machine.md` |
-| `kind: "uml-use-case"` | actor goals and system scope | `uml/use-case.md` |
-| `kind: "uml-component"` | implementation components and interfaces | `uml/component.md` |
-| `kind: "uml-deployment"` | artifact-to-node deployment | `uml/deployment.md` |
+| `kind: "uml-class"` | class / interface / type structure | [`uml/class.md`](uml/class.md) |
+| `kind: "uml-data"` | data types and enumerations | [`uml/data.md`](uml/data.md) |
+| `kind: "uml-activity"` | control / object flow | [`uml/activity.md`](uml/activity.md) |
+| `kind: "uml-sequence"` | one interaction over time | [`uml/sequence.md`](uml/sequence.md) |
+| `kind: "uml-state-machine"` | states and transitions of one element | [`uml/state-machine.md`](uml/state-machine.md) |
+| `kind: "uml-use-case"` | actor goals and system scope | [`uml/use-case.md`](uml/use-case.md) |
+| `kind: "uml-component"` | implementation components and interfaces | [`uml/component.md`](uml/component.md) |
+| `kind: "uml-deployment"` | artifact-to-node deployment | [`uml/deployment.md`](uml/deployment.md) |
 
 ## Delegation
 

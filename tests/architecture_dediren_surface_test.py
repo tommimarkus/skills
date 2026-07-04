@@ -974,9 +974,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md"
         ).read_text(encoding="utf-8")
         expected = (
-            "In Extract mode, load `references/source-weighting.md` before "
-            "selecting ArchiMate element, relationship, or view types unless "
-            "the task is a purely mechanical update to an existing package."
+            "In Extract mode, load "
+            "[`references/source-weighting.md`](references/source-weighting.md) "
+            "before selecting ArchiMate element, relationship, or view types "
+            "unless the task is a purely mechanical update to an existing "
+            "package."
         )
 
         self.assertIn(expected, " ".join(skill.split()))

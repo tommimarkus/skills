@@ -7,8 +7,8 @@ description: >-
 # Test Quality Audit
 
 Audit whether tests prove the intended contract at the right layer. Use
-`../../docs/quality-reference/` rubrics. Cite `references/smell-catalog.md`
-codes.
+`../../docs/quality-reference/` rubrics. Cite
+[`references/smell-catalog.md`](references/smell-catalog.md) codes.
 
 ## Contract
 
@@ -20,54 +20,60 @@ Inputs: target/diff/suite, mode, stack signals, specs/contracts,
 helpers/fixtures, and optional coverage/mutation/flake evidence. Ask/stop when
 target, mode, rubric, files, sibling ownership, requested edits, or confidence
 lack a safe default. For discipline on false positives, limits, and severity, see
-`../../docs/audit-reference/audit-craft.md` §2–§3.
+[`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2–§3.
 
 ## Load Map
 
-Load `../../docs/audit-reference/audit-craft.md` in all modes (discipline +
-output contract). In Deep mode only, also load
-`../../docs/audit-reference/materiality.md` (risk tier) and
-`../../docs/audit-reference/sampling-projection.md` (scale) — these are
+Load [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md)
+in all modes (discipline + output contract). In Deep mode only, also load
+[`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md)
+(risk tier) and
+[`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md)
+(scale) — these are
 Deep-scale tools; Quick must not load them.
 This skill adds the test rubric and `HC-*/I-*/E-*` namespace on top; it does not
 restate craft.
 
 Load the selected rubric before judging:
 
-- Load `../../docs/quality-reference/unit-testing.md` for unit/component.
-- Load `../../docs/quality-reference/integration-testing.md` for integration.
-- Load `../../docs/quality-reference/e2e-testing.md` for E2E.
-- Load `../../docs/quality-reference/testing-core.md` alongside any rubric (shared discipline + sources).
+- Load [`../../docs/quality-reference/unit-testing.md`](../../docs/quality-reference/unit-testing.md) for unit/component.
+- Load [`../../docs/quality-reference/integration-testing.md`](../../docs/quality-reference/integration-testing.md) for integration.
+- Load [`../../docs/quality-reference/e2e-testing.md`](../../docs/quality-reference/e2e-testing.md) for E2E.
+- Load [`../../docs/quality-reference/testing-core.md`](../../docs/quality-reference/testing-core.md) alongside any rubric (shared discipline + sources).
 
-Load `extensions/index.md` for stack signals. When stack signals match, load
+Load [`extensions/index.md`](extensions/index.md) for stack signals. When stack signals match, load
 the stack's `core.md` and the matching rubric addon for each loaded stack layer
 (`unit.md`, `integration.md`, or `e2e.md`) — do not load the whole stack directory:
 
 | Stack | Load |
 |---|---|
-| .NET | `references/extensions/dotnet/core.md` + selected addon |
-| Java | `references/extensions/java/core.md` + selected addon |
-| Node.js / TypeScript | `references/extensions/nodejs/core.md` + selected addon |
-| Next.js | `references/extensions/nodejs/core.md` + addon, then `references/extensions/nextjs/core.md` + addon |
-| Python | `references/extensions/python/core.md` + selected addon |
-| Robot Framework | `references/extensions/robotframework/core.md` + selected addon |
-| Rust | `references/extensions/rust/core.md` + selected addon |
+| .NET | [`references/extensions/dotnet/core.md`](references/extensions/dotnet/core.md) + selected addon |
+| Java | [`references/extensions/java/core.md`](references/extensions/java/core.md) + selected addon |
+| Node.js / TypeScript | [`references/extensions/nodejs/core.md`](references/extensions/nodejs/core.md) + selected addon |
+| Next.js | [`references/extensions/nodejs/core.md`](references/extensions/nodejs/core.md) + addon, then [`references/extensions/nextjs/core.md`](references/extensions/nextjs/core.md) + addon |
+| Python | [`references/extensions/python/core.md`](references/extensions/python/core.md) + selected addon |
+| Robot Framework | [`references/extensions/robotframework/core.md`](references/extensions/robotframework/core.md) + selected addon |
+| Rust | [`references/extensions/rust/core.md`](references/extensions/rust/core.md) + selected addon |
 
 In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
 determinism, mutation); Quick mode never loads it.
 
-Load `references/extensions/authoring.md` only when editing extension structure.
+Load [`references/extensions/authoring.md`](references/extensions/authoring.md) only when editing extension structure.
 
 Load procedures only when needed from `references/procedures/`: per-test
-output fields (`per-test-output-fields.md`), audit rules and common mistakes
-(`audit-rules-and-common-mistakes.md`), auth matrix enumeration
-(`auth-matrix-enumeration.md`, step 2.6, deep integration only), migration
-upgrade-path enumeration (`migration-upgrade-path.md`, step 2.7, deep
-integration only), guardrails, deep output, and SUT/determinism gates. Load
-`references/procedures/mutation-nodejs.md` or
-`references/procedures/mutation-dotnet.md` only in Deep mode when the
-matching stack extension is active and mutation evidence is requested or
-reached.
+output fields ([`per-test-output-fields.md`](references/procedures/per-test-output-fields.md)),
+audit rules and common mistakes
+([`audit-rules-and-common-mistakes.md`](references/procedures/audit-rules-and-common-mistakes.md)),
+auth matrix enumeration
+([`auth-matrix-enumeration.md`](references/procedures/auth-matrix-enumeration.md),
+step 2.6, deep integration only), migration upgrade-path enumeration
+([`migration-upgrade-path.md`](references/procedures/migration-upgrade-path.md),
+step 2.7, deep integration only), guardrails, deep output, and
+SUT/determinism gates. Load
+[`references/procedures/mutation-nodejs.md`](references/procedures/mutation-nodejs.md) or
+[`references/procedures/mutation-dotnet.md`](references/procedures/mutation-dotnet.md)
+only in Deep mode when the matching stack extension is active and mutation
+evidence is requested or reached.
 
 ## Modes
 
@@ -107,7 +113,8 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 ## Skill Maintenance
 
 Maintenance: for rubric/dispatch/output/extension/example edits, run
-`references/procedures/golden-corpus-evals.md` and use
-`references/golden-corpus/`. For trigger/workflow/grounding/eval edits, read `references/evals`.
-For those edits, read `references/source-grounding.md`; keep evals synthetic. After skill-surface edits, rerun
+[`references/procedures/golden-corpus-evals.md`](references/procedures/golden-corpus-evals.md)
+and use `references/golden-corpus/`. For trigger/workflow/grounding/eval edits, read `references/evals`.
+For those edits, read [`references/source-grounding.md`](references/source-grounding.md);
+keep evals synthetic. After skill-surface edits, rerun
 `scripts/skill-architecture-report.sh .`.

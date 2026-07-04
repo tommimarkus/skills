@@ -85,9 +85,11 @@ Build.
    edit that reaches no runtime command never loads it. Lookup may skip
    self-check entirely when the answer makes no runtime claim.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
-   export request, or prompt. Load `references/notations/archimate.md` for
-   ArchiMate. For UML, load `references/notations/uml.md` (hub) plus only the
-   per-kind file under `references/notations/uml/` for the kind in play:
+   export request, or prompt. Load
+   [`references/notations/archimate.md`](references/notations/archimate.md) for
+   ArchiMate. For UML, load
+   [`references/notations/uml.md`](references/notations/uml.md) (hub) plus only
+   the per-kind file under `references/notations/uml/` for the kind in play:
    `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`,
    `component`, or `deployment`. For mixed packages, load both notation files
    and bind one single-notation model per notation with the `project.json`
@@ -96,7 +98,8 @@ Build.
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load
-   `references/source-weighting.md` before selecting ArchiMate element,
+   [`references/source-weighting.md`](references/source-weighting.md)
+   before selecting ArchiMate element,
    relationship, or view types unless the task is a purely mechanical update to
    an existing package. Keep a compact rationale for every non-obvious
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
@@ -110,19 +113,19 @@ Build.
 
 | Need | Use |
 |---|---|
-| ArchiMate notation/profile | `references/notations/archimate.md` |
-| UML® notation/profile and ArchiMate handoff links | `references/notations/uml.md` |
-| Review/readiness | `references/smell-catalog.md`, `references/red-flags.md`, `references/procedures/professional-readiness.md` |
-| implementation-readiness review; Build closeout disclosure | `references/procedures/implementation-readiness-review.md` |
-| Source-weighted ArchiMate element/relation selection | `references/source-weighting.md`; details in `../../docs/architecture-reference/source-weighting.md` |
-| Drift / cross-package consistency | `references/procedures/drift-detection.md` |
-| OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
-| Dediren release resolver | `references/scripts/dediren-release.sh`; use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
-| SVG accessible name | `references/scripts/svg-accessible-name.sh`; run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
-| .NET extraction | `references/procedures/lifting-rules-dotnet.md` |
-| Java extraction | `references/procedures/lifting-rules-java.md` |
-| Bicep extraction | `references/procedures/lifting-rules-bicep.md` |
-| GitHub Actions extraction | `references/procedures/lifting-rules-gha.md` |
-| Process extraction | `references/procedures/lifting-rules-process.md`, `references/procedures/process-view-emission.md`, `references/procedures/seed-views.md` |
+| ArchiMate notation/profile | [`references/notations/archimate.md`](references/notations/archimate.md) |
+| UML® notation/profile and ArchiMate handoff links | [`references/notations/uml.md`](references/notations/uml.md) |
+| Review/readiness | [`references/smell-catalog.md`](references/smell-catalog.md), [`references/red-flags.md`](references/red-flags.md), [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) |
+| implementation-readiness review; Build closeout disclosure | [`references/procedures/implementation-readiness-review.md`](references/procedures/implementation-readiness-review.md) |
+| Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
+| Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
+| OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
+| Dediren release resolver | [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh); use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
+| SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
+| .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
+| Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
+| Bicep extraction | [`references/procedures/lifting-rules-bicep.md`](references/procedures/lifting-rules-bicep.md) |
+| GitHub Actions extraction | [`references/procedures/lifting-rules-gha.md`](references/procedures/lifting-rules-gha.md) |
+| Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
-| Skill maintenance | `references/evals`, `references/source-grounding.md` |
+| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md) |
