@@ -23,7 +23,12 @@ Node types:
 Relationship types:
 
 - `Transition` — `properties.uml`: `region`, `kind` (e.g. `external`),
-  `trigger` (event), optional `guard` (condition).
+  optional `trigger` (event), optional `guard` (condition). The outgoing
+  transition of an `initial` Pseudostate carries no `trigger` and no `guard`
+  (UML 2.5.1); model events as triggers on State-to-State transitions. The
+  `uml` profile validator does not flag violations (verified on dediren
+  2026.07.1), so `source-valid` alone does not prove this rule holds — apply
+  it when authoring.
 
 `StateMachine` and `Region` nodes are structural containers — include them in
 the model's `nodes` array but **not** in a view's `nodes` list. Only
@@ -43,14 +48,16 @@ Synthetic `uml-state-machine` source (lending domain):
     {"id": "sm-loan", "type": "StateMachine", "label": "Loan", "properties": {"uml": {}}},
     {"id": "r-main", "type": "Region", "label": "main", "properties": {"uml": {"state_machine": "sm-loan"}}},
     {"id": "init", "type": "Pseudostate", "label": "init", "properties": {"uml": {"region": "r-main", "kind": "initial"}}},
+    {"id": "available", "type": "State", "label": "Available", "properties": {"uml": {"region": "r-main"}}},
     {"id": "open", "type": "State", "label": "Open", "properties": {"uml": {"region": "r-main"}}},
     {"id": "returned", "type": "FinalState", "label": "Returned", "properties": {"uml": {"region": "r-main"}}}
   ],
   "relationships": [
-    {"id": "t-borrow", "type": "Transition", "source": "init", "target": "open", "label": "borrow", "properties": {"uml": {"region": "r-main", "kind": "external", "trigger": "borrow"}}},
+    {"id": "t-init", "type": "Transition", "source": "init", "target": "available", "label": "", "properties": {"uml": {"region": "r-main", "kind": "external"}}},
+    {"id": "t-borrow", "type": "Transition", "source": "available", "target": "open", "label": "borrow", "properties": {"uml": {"region": "r-main", "kind": "external", "trigger": "borrow"}}},
     {"id": "t-return", "type": "Transition", "source": "open", "target": "returned", "label": "return", "properties": {"uml": {"region": "r-main", "kind": "external", "trigger": "return", "guard": "notOverdue"}}}
   ],
-  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "loan-state-view", "label": "Loan State View", "kind": "uml-state-machine", "nodes": ["init", "open", "returned"], "relationships": ["t-borrow", "t-return"]}]}}
+  "plugins": {"generic-graph": {"semantic_profile": "uml", "views": [{"id": "loan-state-view", "label": "Loan State View", "kind": "uml-state-machine", "nodes": ["init", "available", "open", "returned"], "relationships": ["t-init", "t-borrow", "t-return"]}]}}
 }
 ```
 
