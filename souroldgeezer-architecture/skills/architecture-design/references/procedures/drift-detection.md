@@ -18,6 +18,31 @@ Classify each difference before assigning an `ARCH-*` code:
 
 Source implies omitted or reversed relationship: `ARCH-X-4`.
 
+## Cross-Package Consistency
+
+Use when Review scope spans more than one package under `docs/architecture/`,
+includes the landscape package, or edits an element shared with a sibling
+package (`architecture.md` §15).
+
+1. Enumerate sibling packages (`docs/architecture/*.dediren/`) and index
+   elements by `properties.identity`, then by exact element id; an explicit
+   `identity` value wins over id equality.
+2. Classify:
+   - linked elements (shared `identity` or id) disagreeing on ArchiMate type,
+     or carrying contradictory labels or evidence claims: `ARCH-X-5`
+     cross-package identity conflict. Different relationship or property
+     subsets are not conflicts.
+   - likely-same elements — matching type and label across packages — with no
+     shared id or `identity` key: `ARCH-X-6` fragmentation candidate.
+   - an element shared by two or more feature packages missing from an
+     existing landscape package, or a landscape element no feature package or
+     architect intent backs: `ARCH-X-6` rollup gap.
+3. Recommend per finding: link the identities, reconcile the conflicting
+   claim, or update the landscape. Never bulk-rewrite package ids
+   mechanically; id churn breaks render metadata and history.
+
+Evidence names the package set and the shared identity or id.
+
 ## Scope Limits
 
 Business-other, Motivation, Strategy, portfolio, cloud-quality, and Physical
@@ -27,4 +52,6 @@ unverified intent instead of deleting it.
 ## Output
 
 Report added/removed/changed/unverified counts and likely reconciliation:
-update package, update source, or confirm architect-owned intent.
+update package, update source, or confirm architect-owned intent. When the
+cross-package leg ran, also report conflict and fragmentation-candidate counts
+and the packages compared.

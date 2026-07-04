@@ -48,6 +48,11 @@ Cross-notation: report UML to ArchiMate `properties.uml.architecture_context`
 links as handoff evidence. Broken targets, missing source evidence, or UML detail
 that contradicts linked ArchiMate intent cap cross-notation readiness.
 
+Cross-package: when the `architecture.md` §15 consistency leg runs, report
+identity conflicts (`ARCH-X-5`) and fragmentation candidates or rollup gaps
+(`ARCH-X-6`) with the package set and shared identity or id; the footer
+`Cross-package identity` line carries the rollup.
+
 Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
 `ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured,
 label-dissociated (`architecture.md` §7 label-to-own-edge check),
@@ -111,6 +116,7 @@ Notation: archimate | uml | mixed | unsupported
 Dediren runtime: <path|not run>; Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
 Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked
 Cross-notation links: none | UML elaborates ArchiMate <ids> | broken <ids> | not assessed
+Cross-package identity: single package | consistent | conflicts <n>, candidates <n> | not assessed
 Handoff boundary: architecture/design model | companion material required | delegated to <skill>
 Diagram kind: <primary>; views: <n>; missing kinds: <list|none>; View groups: <n> source-backed groups | none
 Semantic grouping: layout-only groups are not ArchiMate Grouping elements | semantic-boundary semantic_source_id | not assessed

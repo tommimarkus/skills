@@ -87,6 +87,8 @@ per-extraction dialect:
 - `source` — source path plus symbol or workflow name backing the claim;
 - `confidence` — confidence in the claim;
 - `open_question` — an unresolved question about the element.
+- `identity` — repo-stable cross-package identity slug asserting that elements
+  in different packages model the same real-world thing (§15).
 
 Set `rationale` on any non-obvious node or relationship. Add the four evidence
 keys in Extract mode whenever a claim could be mistaken for extracted truth
@@ -742,7 +744,7 @@ The active finding namespaces are:
 - `ARCH-V-*`: view projection, view membership, and diagram-kind fit.
 - `ARCH-L-*`: layout command and layout validation evidence.
 - `ARCH-R-*`: SVG render command and rendered artifact quality.
-- `ARCH-X-*`: extraction and drift evidence.
+- `ARCH-X-*`: extraction, drift, and cross-package identity evidence.
 - `ARCH-E-*`: optional OEF export and downstream validation evidence.
 - `ARCH-Q-*`: readiness, audience, and quality claims.
 
@@ -800,3 +802,70 @@ For each package:
   kinds.
 
 Report these with `ARCH-*` findings and concrete repair actions.
+
+## 15. Cross-Package Identity And Landscape
+
+One package per feature keeps each model focused, but a repository with
+several packages describes shared elements more than once: the same
+application component, service, or node appears in multiple feature packages.
+Without an identity convention those copies fragment into disconnected models.
+This section is the repo-owned convention for holding them together; the
+dediren runtime is per-package and enforces none of it.
+
+### Element Identity Across Packages
+
+Two elements in different packages are claims about the same real-world thing
+only when they share an identity:
+
+- Prefer reusing the same element id across packages when authoring a shared
+  element (`svc-orders` in every package that models the orders service).
+- When local ids have already diverged and renaming would churn history, set
+  the canonical `properties.identity` key (§3) on each element to the same
+  repo-stable slug (for example `app.orders-service`). An explicit `identity`
+  value is the authoritative link and wins over id equality.
+- Identity slugs are repo-scoped and stable across package renames. Never
+  reuse a slug for a different real-world thing.
+
+Matching labels or types alone assert nothing; cross-package review treats
+them only as fragmentation candidates.
+
+Linked elements must agree on the ArchiMate type (or a disclosed
+specialization) and must not carry contradictory labels or evidence claims.
+Feature packages may still show different subsets of a shared element's
+relationships and properties; a subset is not a conflict.
+
+### Landscape Package
+
+When shared elements span two or more feature packages, keep the portfolio
+rollup as a landscape package at:
+
+```
+docs/architecture/landscape.dediren/
+```
+
+The landscape package is an ordinary dediren package (§1, §3): same file
+layout, same validation gates, same render evidence. Its views answer
+portfolio questions — which applications exist, how they cooperate across
+features, which technology hosts them — rather than one feature's question.
+Landscape elements carry the same shared ids or `identity` slugs as their
+feature-package counterparts, and their `properties.source` may cite the
+member packages that elaborate them.
+
+Landscape content is architect-owned overlay by default (§8; drift-detection
+scope limits): rolling feature models up into a portfolio claim is an
+architectural act, not extraction. Do not generate the landscape mechanically
+from feature packages, and do not add one before at least two packages share
+elements.
+
+### Cross-Package Consistency Review
+
+Cross-package consistency is a Review leg; the procedure lives in
+[drift-detection.md § Cross-Package Consistency](../../skills/architecture-design/references/procedures/drift-detection.md#cross-package-consistency).
+Run it when Review scope spans more than one package, includes the landscape
+package, or edits an element shared with a sibling package. An identity
+conflict is `ARCH-X-5`; an unlinked likely-duplicate or a landscape rollup gap
+is `ARCH-X-6`.
+
+A repository that deliberately models a single feature needs none of this:
+one package, no shared elements. Disclose `single package` in the footer
+`Cross-package identity` line and continue.

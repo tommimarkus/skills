@@ -5,7 +5,7 @@ Use one narrow code/severity per finding and cite evidence.
 Codes: `ARCH-M-1` `ARCH-M-2` `ARCH-M-3` `ARCH-M-4`; `ARCH-V-1`
 `ARCH-V-2` `ARCH-V-3` `ARCH-V-4`; `ARCH-L-1` `ARCH-L-2` `ARCH-L-3`
 `ARCH-L-4`; `ARCH-R-1` `ARCH-R-2` `ARCH-R-3` `ARCH-R-4` `ARCH-R-5`; `ARCH-X-1`
-`ARCH-X-2` `ARCH-X-3` `ARCH-X-4`; `ARCH-E-1` `ARCH-E-2` `ARCH-E-3`
+`ARCH-X-2` `ARCH-X-3` `ARCH-X-4` `ARCH-X-5` `ARCH-X-6`; `ARCH-E-1` `ARCH-E-2` `ARCH-E-3`
 `ARCH-E-4`; `ARCH-Q-1` `ARCH-Q-2` `ARCH-Q-3` `ARCH-Q-4`.
 
 Severity: `block` invalid source or failed projection/layout/render/export;
@@ -42,7 +42,7 @@ Severity: `block` invalid source or failed projection/layout/render/export;
 - `ARCH-Q-4`: required output footer fields are missing or mutually inconsistent (a quality-level over-claim is `ARCH-Q-1`).
 
 Remaining codes are defined where they are used: `ARCH-X-1`, `ARCH-X-3`,
-`ARCH-X-4` in `procedures/drift-detection.md`; `ARCH-E-1`, `ARCH-E-2`,
+`ARCH-X-4`, `ARCH-X-5`, `ARCH-X-6` in `procedures/drift-detection.md`; `ARCH-E-1`, `ARCH-E-2`,
 `ARCH-E-3` in `procedures/external-validation-handoff.md`; `ARCH-V-2` in
 `procedures/process-view-emission.md`; `ARCH-V-3` in
 `procedures/implementation-readiness-review.md`; `ARCH-L-1` in

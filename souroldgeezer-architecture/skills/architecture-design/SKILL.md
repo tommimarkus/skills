@@ -12,13 +12,16 @@ the router; load references only when their conditions apply.
 
 Canonical source is `docs/architecture/<feature>.dediren/`: edit source and
 policies, recreate generated output, use SVG as proof, treat OEF/XMI as optional
-compatibility export, and list only actual views in `project.json`.
+compatibility export, and list only actual views in `project.json`. Elements
+shared across packages and the optional `landscape.dediren/` portfolio rollup
+follow the cross-package identity convention (architecture §15).
 
 ## Boundary
 
 Owns ArchiMate® and UML® notation when the artifact is a dediren
 architecture/design package, package source/policies, SVG/OEF/XMI evidence,
-drift, cross-notation `properties.uml.architecture_context` handoff links, and
+drift, cross-package identity and landscape rollup, cross-notation
+`properties.uml.architecture_context` handoff links, and
 `ARCH-*` findings. Delegate UI, API, infra, security, test-quality, live cloud
 observation, and implementation details that are not being modeled as package
 handoff facts.
@@ -62,6 +65,9 @@ Build.
      relationship discipline and §4 layers/aspects when auditing element or
      relationship legality.
    - **Lookup**: only the section the question cites.
+   - Any mode adds §15 cross-package identity when more than one
+     `docs/architecture/*.dediren/` package exists and the task touches a
+     shared element or the landscape package.
 
    This map is a floor, not a cap: pull §10 OEF, §11 profile, §14 pitfalls, or
    any other section the moment the task reaches it, and escalate a Lookup to
@@ -109,7 +115,7 @@ Build.
 | Review/readiness | `references/smell-catalog.md`, `references/red-flags.md`, `references/procedures/professional-readiness.md` |
 | implementation-readiness review; Build closeout disclosure | `references/procedures/implementation-readiness-review.md` |
 | Source-weighted ArchiMate element/relation selection | `references/source-weighting.md`; details in `../../docs/architecture-reference/source-weighting.md` |
-| Drift | `references/procedures/drift-detection.md` |
+| Drift / cross-package consistency | `references/procedures/drift-detection.md` |
 | OEF/downstream validation | `references/procedures/external-validation-handoff.md` |
 | Dediren release resolver | `references/scripts/dediren-release.sh`; use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
 | SVG accessible name | `references/scripts/svg-accessible-name.sh`; run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
