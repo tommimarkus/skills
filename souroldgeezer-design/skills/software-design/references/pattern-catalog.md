@@ -18,3 +18,4 @@ and migrations lacking an Exit condition. In Lookup, cite core reference `§6`
 | Domain Model / Aggregate | Invariants matter. | Rules with model. | Reject CRUD record. | PoEAA; DDD. |
 | Repository + Unit of Work | Real persistence/transaction boundary. | Domain/data split. | Reject ORM CRUD wrapper. | PoEAA; high misuse risk. |
 | Strangler Fig / Branch by Abstraction | Replace while shipping. | Incremental migration. | Require Exit condition. | Fowler; AWS guidance. |
+| Parallel Change / Expand-Contract | Backward-incompatible interface change while shipping. | Safe expand, migrate, contract. | Require the removal (Exit) step; reject a permanent dual interface. | Kerievsky; Fowler; Continuous Delivery. |
