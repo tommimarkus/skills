@@ -70,9 +70,28 @@ inside the architecture package.
 
 `model.json` contains nodes, relationships, source evidence, and plugin-owned
 metadata. A node needs a stable id, ArchiMate type, human label, and enough
-properties or documentation to explain why it belongs in the package. A
-relationship needs a stable id, type, source id, target id, and optional label
-or documentation.
+`properties` to explain why it belongs in the package. A relationship needs a
+stable id, type, source id, target id, and an optional label. The model schema
+sets `additionalProperties: false` on nodes and relationships and rejects a
+`documentation` field on either; the schema-legal home for prose and evidence is
+the free-form `properties` object, through the canonical keys below.
+
+Canonical `properties` keys keep prose and evidence machine-readable, so Review,
+drift detection, and cross-package queries can rely on them instead of a
+per-extraction dialect:
+
+- `rationale` — prose explaining why the element belongs or what it represents
+  (the schema-legal home for the rejected node-level `documentation` text);
+- `evidence` — the §8 evidence label (`source-backed`, `candidate-from-source`,
+  `architect-owned`, `weak-evidence`, or `overlay-only`);
+- `source` — source path plus symbol or workflow name backing the claim;
+- `confidence` — confidence in the claim;
+- `open_question` — an unresolved question about the element.
+
+Set `rationale` on any non-obvious node or relationship. Add the four evidence
+keys in Extract mode whenever a claim could be mistaken for extracted truth
+(§8). Notation-specific keys stay namespaced (for example `properties.uml.node`,
+`properties.uml.architecture_context`).
 
 Stable ids matter. Preserve existing ids unless they are duplicate, misleading,
 or tied to removed source evidence. Labels can be human-friendly; id and label
@@ -440,9 +459,13 @@ when the work sequence is the message.
 Load `source-weighting.md` before classifying source surfaces in Extract mode
 unless the task is a purely mechanical update to an existing package. Use the
 source-to-ArchiMate selection matrix, relationship ladder, view recipes, and
-evidence labels for non-obvious choices. Record `source-backed`,
-`candidate-from-source`, `architect-owned`, `weak-evidence`, or `overlay-only`
-when a claim could be mistaken for extracted truth.
+evidence labels for non-obvious choices. Record the label — `source-backed`,
+`candidate-from-source`, `architect-owned`, `weak-evidence`, or `overlay-only` —
+in the element's `properties.evidence` key when a claim could be mistaken for
+extracted truth, with `properties.source`, `properties.confidence`, and
+`properties.open_question` alongside it (canonical keys defined in §3). Those
+property keys are the schema-legal home for evidence; do not invent
+per-extraction key names.
 
 Extract only facts that source can support.
 
@@ -464,8 +487,10 @@ Contract, Product, Service, Function, Motivation, Strategy, and Physical claims
 unless the user supplies explicit architecture intent or source evidence.
 
 Business Process, Business Event, and Business Interaction may be lifted from
-workflow sources only as candidates with source path, symbol/workflow name,
-confidence, and unresolved questions. Missing evidence is `ARCH-X-2`.
+workflow sources only as candidates, each recording `properties.evidence`
+(`candidate-from-source`), `properties.source` (path plus symbol/workflow name),
+`properties.confidence`, and `properties.open_question`. Missing evidence is
+`ARCH-X-2`.
 
 Extracted views should use source-backed groups when source structure supports
 ownership, hosting, trust, environment, dependency, system responsibility, or
