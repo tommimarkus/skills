@@ -17,26 +17,41 @@ then recreate the export.
 
 ## Required fidelity disclosures
 
-An `ok` export envelope proves the command ran, not that the model survived.
-Before claiming export readiness, compare the export content against package
-source and disclose coverage in the footer's `Export readiness` qualifier
-(see [output-format](../output-format.md)):
+An `ok` export envelope proves the command ran, not that the whole model
+survived: the pinned runtime keeps `status: ok` and declares any omission
+through `info` diagnostics. Read `.diagnostics[]`, compare the export content
+against package source, and disclose coverage in the footer's `Export readiness`
+qualifier (see [output-format](../output-format.md)):
 
 1. **View coverage (OEF).** One export policy binds exactly one
-   `view_identifier`; a multi-view package exports one diagram per run.
-   Enumerate exported vs. omitted views (e.g. `OEF ready (1 of 2 views)`).
-2. **Property loss (OEF).** Node/relationship `properties` — including
-   evidence labels such as `candidate-from-source` — do not survive export.
-   When candidate or evidence-labeled content is exported, disclose that the
-   downstream tool shows it indistinguishably from confirmed architecture.
-3. **Content coverage (XMI).** Verify which authored kinds appear in the
-   export; on the release-resolved runtime (verified on 2026.07.0) only class
-   structure survives — associations, sequence interactions, and deployment
-   content are omitted with an `ok` envelope, and multiplicities/attribute
-   types are serialized non-canonically. Qualify as e.g. `XMI ready (classes
-   only)` and report the gap under `Dediren tool issues`.
-4. **Schema validation.** Diagram-bearing OEF validates against the Open Group
-   `archimate3_Diagram.xsd` (its embedded `schemaLocation` names
-   `archimate3_Model.xsd`, which rejects `<views>`); disclose which schema the
+   `view_identifier`, so each run exports a single view. When the source
+   declares more views than the exported one, the runtime declares the omission
+   with the `info` diagnostic `DEDIREN_OEF_VIEWS_OMITTED` (naming the omitted
+   view ids and count) while the envelope `status` stays `ok` (dediren
+   2026.07.1+); read `.diagnostics[]` and enumerate exported vs. omitted views
+   (e.g. `OEF ready (1 of 2 views)`). Export the other views to represent them.
+2. **Property preservation (OEF).** Node/relationship `properties` — including
+   evidence labels such as `candidate-from-source` — are preserved through
+   export as OEF `<propertyDefinitions>` plus per-element `<property>`/`<value>`
+   (dediren 2026.07.1+; earlier runtimes dropped them silently). Because a
+   downstream ArchiMate tool renders them as generic properties with no
+   candidate/confirmed distinction, when candidate or evidence-labeled content
+   is exported disclose that the downstream tool shows it indistinguishably from
+   confirmed architecture.
+3. **Content coverage (XMI).** The `uml-xmi` export represents the single
+   laid-out view's class-diagram structure — classes, associations, and
+   attributes with canonical UML 2.5.1 serialization (multiplicities as owned
+   `lowerValue`/`upperValue`, attribute types resolved to `uml:PrimitiveType`
+   or in-scope classifiers) (dediren 2026.07.1+). Content outside the exported
+   view — other views' elements/relationships and sequence/deployment/activity
+   dynamic content — is declared, not dropped silently, with `info` diagnostics
+   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the
+   envelope `status` stays `ok`; read `.diagnostics[]`, qualify as e.g. `XMI
+   ready (classes only)`, and report the gap under `Dediren tool issues`.
+4. **Schema validation.** Because the OEF document always carries a
+   `<views>`/`<diagrams>` element, it declares and validates against the Open
+   Group `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that
+   diagram schema (dediren 2026.07.1+; earlier runtimes named the model-only
+   `archimate3_Model.xsd`, which rejects `<views>`). Disclose which schema the
    evidence used. In restricted environments pre-fetch XSDs and pass offline
    paths per [self-check](self-check.md) envelope/schema guidance.

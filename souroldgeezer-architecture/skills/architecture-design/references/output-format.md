@@ -26,7 +26,10 @@ Export readiness never claims bare "ready": qualify with coverage — views
 exported vs. total actual views, and content kinds exported vs. authored (per
 [external-validation-handoff](procedures/external-validation-handoff.md)
 required disclosures) — e.g. `OEF ready (1 of 2 views)`, `XMI ready (classes
-only)`. A lossy export with an `ok` envelope is still lossy evidence.
+only)`. A single-view or classes-only export keeps an `ok` envelope but carries
+`info` omission diagnostics (`DEDIREN_OEF_VIEWS_OMITTED`,
+`DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`); read
+`.diagnostics[]` — a partial export is still partial evidence.
 
 Cross-notation: report UML to ArchiMate `properties.uml.architecture_context`
 links as handoff evidence. Broken targets, missing source evidence, or UML detail
