@@ -132,9 +132,9 @@ Guard coverage added 2026-07: scenarios (`sd-lookup-principle`, `sd-build-dotnet
 
 | Scenario | Before | After | Delta |
 |---|---|---|---|
-| sd-lookup-principle | 4484 | 1531 | -2953 |
-| sd-build-dotnet | 5359 | 5436 | +77 |
-| sd-review-typescript | 8041 | 8118 | +77 |
+| sd-lookup-principle | 4484 | 1542 | -2942 |
+| sd-build-dotnet | 5359 | 5447 | +88 |
+| sd-review-typescript | 8041 | 8129 | +88 |
 
 The lookup drop is a load-SET change: Lookup no longer loads the core
 reference (3094 tokens); catalogs carry `Cite` section anchors so citations
@@ -144,3 +144,9 @@ wording. The former `§§2-7,9` scoping was cosmetic (whole-file reads) and
 silently excluded §8's evidence-layer definitions; the load instruction is
 now whole-file. Fidelity: `skill_load_cost.py diff` exit 0 at every task;
 `SoftwareDesignBaselineTest` green.
+
+The After values include a follow-up cite-wording refinement (+11 tok to
+SKILL.md across all three modes): the Load Map now says Lookup cites "the
+core-reference section it names for Lookup (a `Cite` column or a cite
+sentence)" so the instruction reads correctly for the pattern/NFR catalogs
+(which name the section in a sentence, not a `Cite` column).

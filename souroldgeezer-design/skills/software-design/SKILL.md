@@ -24,9 +24,10 @@ For Build/Extract/Review, load the whole core reference
 For findings, load [references/smell-catalog.md](references/smell-catalog.md)
 and [references/smell-cards.jsonl](references/smell-cards.jsonl).
 For Lookup, do not load the core reference: answer from the matched catalog
-below and cite the section named in its `Cite` entry. If the lookup needs code
-evidence, cross-section tradeoffs, or no catalog row matches, escalate to
-Review/Build or ask — do not under-answer from a catalog row.
+below and cite the core-reference section it names for Lookup (a `Cite` column
+or a cite sentence). If the lookup needs code evidence, cross-section
+tradeoffs, or no catalog row matches, escalate to Review/Build or ask — do not
+under-answer from a catalog row.
 Lookup footers name the catalog as the loaded reference path.
 Load [references/principles-catalog.md](references/principles-catalog.md) for
 principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md) for
