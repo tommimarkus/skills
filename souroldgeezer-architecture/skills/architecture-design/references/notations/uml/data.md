@@ -41,11 +41,9 @@ Synthetic `uml-data` source (lending domain):
 
 ## Validation, Render, Export
 
-- `source-valid` requires schema validation plus
-  `validate --plugin generic-graph --profile uml`.
-- The SVG render path needs generated render metadata from
-  `dediren project --target render-metadata --plugin generic-graph`.
-- UML/XMI compatibility export uses `uml-xmi` only when requested.
+Shared UML contract — validation, render metadata, on-request XMI export:
+[uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
+No `uml-data`-specific deltas.
 
 ## Findings
 

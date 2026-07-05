@@ -60,19 +60,10 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 
 ## Validation, Render, Export
 
-- `source-valid` requires schema validation plus
-  `validate --plugin generic-graph --profile uml`.
-- The SVG render path needs generated render metadata from
-  `dediren project --target render-metadata --plugin generic-graph`.
-- UML/XMI compatibility export (`uml-xmi`) carries class-diagram structure
-  only; it does not represent `uml-sequence` content (interactions, lifelines,
-  messages) in the XMI. Exporting a sequence view declares the unrepresented
-  content with `info` diagnostics `DEDIREN_XMI_ELEMENTS_OMITTED` /
-  `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the envelope `status` stays `ok`
-  (dediren 2026.07.1+); read `.diagnostics[]`, qualify readiness as `XMI ready
-  (classes only)` per
-  [external-validation-handoff](../../procedures/external-validation-handoff.md),
-  and keep sequence handoff to the rendered SVG.
+Shared contract: [uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
+XMI-omitted here: interactions, lifelines, messages; keep sequence handoff to
+the rendered SVG.
+
 - SVG inspection (render-ready): confirm each `Lifeline` renders as its own
   column — a distinct head box and vertical stem — and that every `Message`
   spans the horizontal gap between its two lifelines. Two lifelines sharing a

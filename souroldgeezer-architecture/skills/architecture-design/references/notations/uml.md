@@ -11,10 +11,24 @@ owning skill (see Delegation).
 
 ## Validation, Render, Export
 
-A UML view is `source-valid` only with schema validation plus
-`validate --plugin generic-graph --profile uml`. The render
-(render-metadata → SVG) and `uml-xmi` export paths, and `properties.uml.*`
-placement, are documented per kind — load the kind's file under `uml/`.
+Shared contract for every UML view kind; the per-kind files under `uml/` add
+only their deltas to it.
+
+- A UML view is `source-valid` only with schema validation plus
+  `validate --plugin generic-graph --profile uml`.
+- The SVG render path needs generated render metadata from
+  `dediren project --target render-metadata --plugin generic-graph`.
+- UML/XMI compatibility export (`uml-xmi`) runs only when requested and
+  carries class-diagram structure only. When an exported view holds content
+  the XMI cannot represent (the kind's file names it), the runtime declares
+  the omission with `info` diagnostics `DEDIREN_XMI_ELEMENTS_OMITTED` /
+  `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the envelope `status` stays `ok`
+  (dediren 2026.07.1+); read `.diagnostics[]` and qualify readiness as
+  `XMI ready (classes only)` per
+  [external-validation-handoff](../procedures/external-validation-handoff.md).
+
+`properties.uml.*` placement is documented per kind — load the kind's file
+under `uml/`.
 
 ## Kind Index
 

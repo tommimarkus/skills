@@ -72,20 +72,10 @@ Synthetic `uml-deployment` source (lending domain):
 
 ## Validation, Render, Export
 
-- `source-valid` requires schema validation plus
-  `validate --plugin generic-graph --profile uml`.
-- The SVG render path needs generated render metadata from
-  `dediren project --target render-metadata --plugin generic-graph`.
-- UML/XMI compatibility export (`uml-xmi`) carries class-diagram structure
-  only; it does not represent `uml-deployment` content (devices, execution
-  environments, artifacts, `Deployment`/`Manifestation`/`CommunicationPath`
-  relationships) in the XMI. Exporting a deployment view declares the
-  unrepresented content with `info` diagnostics `DEDIREN_XMI_ELEMENTS_OMITTED` /
-  `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the envelope `status` stays `ok`
-  (dediren 2026.07.1+); read `.diagnostics[]`, qualify readiness as `XMI ready
-  (classes only)` per
-  [external-validation-handoff](../../procedures/external-validation-handoff.md),
-  and keep deployment handoff to the rendered SVG.
+Shared contract: [uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
+XMI-omitted here: devices, execution environments, artifacts,
+`Deployment`/`Manifestation`/`CommunicationPath` relationships; keep
+deployment handoff to the rendered SVG.
 
 ## Findings
 
