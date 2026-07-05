@@ -35,7 +35,7 @@
     {
       "name": "souroldgeezer-ops",
       "source": "./souroldgeezer-ops",
-      "version": "2026.07.0",
+      "version": "2026.07.1",
       "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions."
     }
   ]

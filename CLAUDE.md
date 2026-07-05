@@ -111,7 +111,7 @@ internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of 
 .claude/skills/<name>/SKILL.md         ← Claude Code wrappers for repo-internal skills
 .claude-plugin/marketplace.json        ← shared Claude Code marketplace manifest
 souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
-  docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + extension-authoring template (github.md, gitlab.md, authoring.md)
+  docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + provider-agnostic lifecycle/escalation core + extension-authoring template (github.md, gitlab.md, provider-lifecycle-core.md, authoring.md)
 souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy)
 souroldgeezer-audit/        ← published audit plugin (devsecops-audit, test-quality-audit, ip-hygiene, lean-audit)
   docs/audit-reference/     ← shared audit craft core (audit-craft.md, materiality.md, sampling-projection.md)
@@ -141,7 +141,7 @@ Current `<kind>-reference/` directories in use:
 - `souroldgeezer-design/docs/api-reference/api-design.md` — api-design playbook
 - `souroldgeezer-design/docs/infra-reference/infra-design.md` — infra-design playbook
 - `souroldgeezer-architecture/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate® 3.2, with UML® notation overlays under the skill references)
-- `souroldgeezer-ops/docs/provider-reference/{github,gitlab}.md` — shared provider mechanics both ops skills' extensions cite; `authoring.md` beside them is the shared extension-authoring template the two `extensions/README.md` entrypoints cite
+- `souroldgeezer-ops/docs/provider-reference/{github,gitlab}.md` — shared provider mechanics both ops skills' extensions cite; `provider-lifecycle-core.md` beside them holds the provider-agnostic lifecycle-marker and escalation core that both providers and both skills' SKILL.md / extensions cite; `authoring.md` is the shared extension-authoring template the two `extensions/README.md` entrypoints cite
 
 Migration note: `architecture-design` moved from `souroldgeezer-design` to `souroldgeezer-architecture` — if you installed `souroldgeezer-design` for architecture work, see [docs/maintenance-procedures.md § architecture-design plugin migration](docs/maintenance-procedures.md) for the install and canonical-handoff details.
 
