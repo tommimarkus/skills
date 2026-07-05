@@ -28,3 +28,11 @@ b = "**/agents/*.md"
 [[carve_out]]                                   # plugin-docs-level compact catalog restates its own plugin's rubric
 a = "{plugin}/docs/*-reference/*smell-catalog*.md"
 b = "{plugin}/docs/*-reference/**/*.md"
+
+[[carve_out]]                                   # issue-ops/pr-ops provider extensions are deliberately parallel siblings built from the shared provider reference (CLAUDE.md § Subagents-style intentional parallelism)
+a = "souroldgeezer-ops/skills/*/extensions/**/*.md"
+b = "souroldgeezer-ops/skills/*/extensions/**/*.md"
+
+[[carve_out]]                                   # design-skill extension READMEs are intentionally parallel boilerplate (CLAUDE.md § Subagents-style intentional parallelism)
+a = "souroldgeezer-design/skills/*/extensions/README.md"
+b = "souroldgeezer-design/skills/*/extensions/README.md"
