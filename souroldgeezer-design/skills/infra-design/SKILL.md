@@ -30,7 +30,7 @@ deployment proposals/PRs/plans; Lookup narrow infra-design tradeoffs.
 
 ## Load Map
 
-Read [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md) when existing IaC, environment files, remote state, deployment workflows, plan/what-if evidence, import/move records, generated artifacts, topology documentation, architecture pairing, drift evidence, or diffs are in scope.
+Read [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md) when existing IaC, state, environments, deployment/drift evidence, or diffs are in scope; that procedure lists the full trigger set.
 Load [extensions/azure.md](extensions/azure.md) for Azure® resource/service/
 subscription/tenant/RG/CLI/PowerShell/pipeline signals;
 [extensions/terraform.md](extensions/terraform.md) for `.tf`, `.tfvars`,
