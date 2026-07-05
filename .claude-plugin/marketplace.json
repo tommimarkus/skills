@@ -11,7 +11,7 @@
     {
       "name": "souroldgeezer-audit",
       "source": "./souroldgeezer-audit",
-      "version": "2026.07.9",
+      "version": "2026.07.10",
       "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and matching Claude Code subagents."
     },
     {
@@ -23,7 +23,7 @@
     {
       "name": "souroldgeezer-architecture",
       "source": "./souroldgeezer-architecture",
-      "version": "2026.07.20",
+      "version": "2026.07.21",
       "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, and matching Claude Code subagent."
     },
     {
