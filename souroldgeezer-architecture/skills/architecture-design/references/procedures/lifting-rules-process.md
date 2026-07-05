@@ -18,9 +18,12 @@ Business Actor, Role, Object, Contract, Product, Service, Function, Motivation,
 Strategy, and Physical remain architect-owned unless supplied.
 
 ## Evidence
+<!-- lean-audit:sync-intentional: process-lifting deliberately self-contains this §8 evidence guidance; architecture_dediren_surface_test pins these phrases -->
 
 Record source path, symbol/workflow, trigger/entrypoint, outcome, confidence,
-and unresolved architect questions. Missing evidence is `ARCH-X-2`.
+and unresolved architect questions. Missing evidence is `ARCH-X-2`. See
+[architecture.md §8](../../../../docs/architecture-reference/architecture.md#8-extraction-and-source-evidence)
+for the full evidence-labeling schema.
 
 Use source-backed groups for shared participant, orchestrator, queue, service
 boundary, or system responsibility. Inferred human themes stay architect-owned.
