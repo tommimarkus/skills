@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — identifier-rich parallel test bodies (CLAUDE.md § Repo-local Python® tooling)
 import subprocess
 import tempfile
 import unittest
