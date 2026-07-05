@@ -1,6 +1,6 @@
-# Fuzzy Waste Procedure (LA-STALE-2 / LA-BLOAT-2)
+# Fuzzy Waste Procedure (LA-STALE-2 / LA-BLOAT-2 / LA-VERBOSE-2)
 
-Load when running lean-audit. These two codes are NOT deterministic — the engine
+Load when running lean-audit. These codes are NOT deterministic — the engine
 cannot decide them — so they are auditor inference and MUST be marked as
 requiring verification (audit-craft §2, fact-vs-inference). Apply high-precision
 discipline: when uncertain, downgrade or omit. A noisy waste finding erodes trust.
@@ -39,4 +39,34 @@ Method:
 3. Emit `LA-BLOAT-2` naming the block and the reference file it should move to;
    recommend the load-condition pointer.
 
-Both codes are `warn` — never `block`. Disclose them as inference in the output.
+## LA-VERBOSE-2 — confirmed wasteful verbosity
+
+Trigger: an engine `LA-VERBOSE-1` nomination (or a passage the user explicitly
+names, disclosed as `nomination: user-directed`). Never free-scan for wordiness —
+confirm only what the deterministic nominator raised (or the user pointed at).
+That input boundary is the deterministic-first line and is what keeps this code
+high-precision.
+
+Method:
+1. Read the nominated section and its cited metrics (tokens, filler density,
+   scaffold count, repeat ratio). Draft the faithful tightening in your head, not
+   in the tree — this code is detection, not repair.
+2. Confirm the reduction is material: the faithful rewrite is meaningfully shorter
+   (propose ≈ 30% fewer tokens as the floor). A trivial trim is not waste worth
+   flagging.
+3. Confirm the wordiness is NOT load-bearing. Do NOT emit when the length carries
+   meaning: every obligation, qualifier ("only when…", "unless…"), threshold,
+   number, negation, and enumerated item must survive the rewrite. Pedagogical
+   emphasis, calibrated hedging, normative precision, and deliberately explicit
+   phrasing for weaker model tiers are calibration, not *muda*.
+4. Emit `LA-VERBOSE-2` citing the section, its `LA-VERBOSE-1` metrics, the
+   projected token delta, and the load-bearing assessment. If you cannot confirm a
+   faithful reduction exists, record it a cleared non-finding with the reason —
+   do not emit.
+
+Detection only in v1: this confirms the finding; it does not produce the rewrite.
+Turning a confirmed `LA-VERBOSE-2` into a proposed reduction is the minify
+`tighten` class — a separate, opt-in, not-yet-wired step.
+
+All three inference codes (`LA-STALE-2`, `LA-BLOAT-2`, `LA-VERBOSE-2`) are `warn`
+— never `block`. Disclose them as inference in the output.

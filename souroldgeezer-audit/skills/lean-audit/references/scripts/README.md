@@ -78,9 +78,9 @@ load_cost ─────────────────▶ guard_load_cost
 |---|---|---|---|
 | [`hook_envelope.py`](leanaudit/hook_envelope.py) | leaf | Parse the PreToolUse/Stop hook JSON payload, shape the `permissionDecision` envelope Claude Code™ reads, and log one fail-open diagnostic line to stderr. Public: `HookPayload`, `read_payload`, `permission_decision`, `fail_open_log`. | stdlib |
 | [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | stdlib |
-| [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths, plus the built-in defaults and the `sync-intentional` override. Public: `Registry`, `load_registry`, `carved_out`, `path_exempt`, `has_override`. | stdlib |
+| [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution, inventory extraction/diff, pointer and cost-regression checks. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `main`, … | stdlib |
-| [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, and the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`. `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `discovery`, `registry` |
+| [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `discovery`, `registry` |
 | [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `discovery` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
 | [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
@@ -99,7 +99,7 @@ skill filters findings to its in-scope path set after the run). Output is text o
 this guide does not redefine them.
 
 - **`lean_engine.py <dir>`** — markdown duplication/waste. Emits `LA-DUP-1/2`,
-  `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`. Flags: `--added-text -` (score one
+  `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1`. Flags: `--added-text -` (score one
   block from stdin, needs `--source`), `--corpus-root`, `--registry`,
   `--format {text,json}`. **Exit 0** = clean, **1** = a block-severity finding
   present, **2** = engine error (bad args, unreadable file, TOML/regex error).
@@ -217,6 +217,7 @@ All tests live at the repo root under `tests/`. Run one with
 | [`tests/lean_audit_python_standard_test.py`](../../../../../tests/lean_audit_python_standard_test.py) | ruff + `mypy --strict` gate. |
 | [`tests/lean_audit_shims_test.py`](../../../../../tests/lean_audit_shims_test.py) | Shim↔package parity: each shim re-exports its module's `__all__`; `--help` smoke; every public name is declared in `__all__`. |
 | [`tests/lean_engine_test.py`](../../../../../tests/lean_engine_test.py) | Markdown engine + ledger calibration ([`tests/lean_engine_ledger.jsonl`](../../../../../tests/lean_engine_ledger.jsonl)) at **≥0.90 precision AND recall**. |
+| [`tests/lean_verbosity_test.py`](../../../../../tests/lean_verbosity_test.py) | Verbosity nominator (`LA-VERBOSE-1`) helpers + ledger calibration ([`tests/lean_verbosity_ledger.jsonl`](../../../../../tests/lean_verbosity_ledger.jsonl)) at **≥0.90 precision AND recall**, plus a bounded live-repo residual. |
 | [`tests/lean_code_lens_test.py`](../../../../../tests/lean_code_lens_test.py) | Clone lens + ledger calibration ([`tests/lean_code_ledger.jsonl`](../../../../../tests/lean_code_ledger.jsonl)) at the shipped `DEFAULT_MIN_CLONE_TOKENS`, **≥0.90 precision/recall**. |
 | [`tests/skill_load_cost_test.py`](../../../../../tests/skill_load_cost_test.py) | Per-use harness; plus every committed baseline must be satisfiable by the guard's own closure. |
 | [`tests/lean_guard_test.py`](../../../../../tests/lean_guard_test.py) | PreToolUse dup guard, incl. subprocess `main()` smoke. |
@@ -242,7 +243,9 @@ tests, then [§ Before you finish](#before-you-finish).
 - **Add / retune a markdown finding code** → edit `leanaudit/engine.py`; add or
   update a code entry in [`../smell-catalog.md`](../smell-catalog.md); add gold
   rows to `tests/lean_engine_ledger.jsonl` and keep `lean_engine_test.py`
-  ≥0.90 precision/recall.
+  ≥0.90 precision/recall. The `LA-VERBOSE-1` nominator is `info`-only (it cannot
+  ride the block-keyed engine ledger), so it calibrates against its own
+  `tests/lean_verbosity_ledger.jsonl` / `lean_verbosity_test.py` at the same bar.
 - **Add a language to the clone lens** → extend `COMMENT_PROFILES` /
   `DEFAULT_EXTENSIONS` in `leanaudit/clones.py`; add ledger rows to
   `tests/lean_code_ledger.jsonl`; keep `lean_code_lens_test.py` green.

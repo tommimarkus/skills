@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled deterministic token-clone engine, `LA-CODE-DUP-*`); source-level dead code and *semantic* duplication/DRY stay with software-design. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, two opt-in lenses: platform-redundancy flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run); and minify turns detected waste into a propose-only reduction diff plus fidelity report — never applied.
+  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, verbose passages, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled token-clone engine, `LA-CODE-DUP-*`); source-level dead code and *semantic* duplication/DRY stay with software-design. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, two opt-in lenses: platform-redundancy flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run); and minify turns detected waste into a propose-only reduction diff plus fidelity report — never applied.
 ---
 
 # Lean Audit
@@ -66,9 +66,9 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
 - Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier).
 - Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) only at repo scale when
   full enumeration exceeds budget.
-- Load [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) for the judgment-only `LA-STALE-2`
-  and `LA-BLOAT-2` checks (the engine does not emit these).
-- Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1`) per Workflow step 2.
+- Load [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) for the judgment-only `LA-STALE-2`,
+  `LA-BLOAT-2`, and `LA-VERBOSE-2` checks (the engine does not emit these; `LA-VERBOSE-2` confirms or clears engine `LA-VERBOSE-1` nominations).
+- Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1` / `LA-VERBOSE-1`) per Workflow step 2.
 - Run the bundled code lens [`references/scripts/code_lens.py`](references/scripts/code_lens.py) (the deterministic source of `LA-CODE-DUP-*`) when the scope contains source files — see Workflow step 2b.
 - For the opt-in prevention hooks, see [`references/hook-recipe.md`](references/hook-recipe.md) (enablement) and the guard entrypoints [`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and [`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py) (not part of an audit run).
 - All five scripts above are stable entry shims; the implementation lives in the sibling package [`references/scripts/leanaudit/`](references/scripts/leanaudit/) (verify: `uv run python -m unittest tests.lean_audit_shims_test` in this marketplace repo, or run any shim `--help`).
@@ -93,12 +93,14 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
 ## Workflow
 
 1. Establish the scope: the whole repo, a single file, a set of named files, or a diff (its changed files). The bundled engine has no single-file or diff mode — it always scans the markdown tree rooted at a DIRECTORY — so pick the directory to run it in and the in-scope path set to keep. If a `.lean-audit.toml` exists at the scanned root the engine reads it; otherwise it runs heuristic-only — disclose which.
-2. Run the bundled engine and parse its JSON. Use the portable absolute path: `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` — `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`; exit 1 = a block-severity duplication is present, exit 2 = engine error (report the limit, continue with the judgment-only checks). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
+2. Run the bundled engine and parse its JSON. Use the portable absolute path: `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` — `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1` (info verbosity nominations); exit 1 = a block-severity duplication is present, exit 2 = engine error (report the limit, continue with the judgment-only checks). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
 2b. **Code-duplication lens (surface-gated).** If the scope contains source files (non-markdown code by extension), run `python3 "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` (`<dir>` = repo root, or the nearest common directory of the in-scope files) and parse its JSON. It emits `LA-CODE-DUP-1` (block, clone ≥ 2× min-tokens) and `LA-CODE-DUP-2` (advisory) clone pairs; exit 1 = a block clone present, exit 2 = engine error (disclose reduced coverage, continue with the other lenses). For a file / named-files / diff scope, KEEP ONLY clones whose `path` or `matched_path` is in scope. If no source files are in scope, record "no source surfaces in scope — code lens silent" and skip this step.
 3. Add the judgment-only checks from [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) —
-   `LA-STALE-2` (prose describing a removed/renamed structure) and `LA-BLOAT-2`
-   (heavy reference material inlined in always-loaded context). Mark these
-   inference (audit-craft §2), not confirmed fact.
+   `LA-STALE-2` (prose describing a removed/renamed structure), `LA-BLOAT-2`
+   (heavy reference material inlined in always-loaded context), and `LA-VERBOSE-2`
+   (confirm or clear each engine `LA-VERBOSE-1` verbosity nomination — never
+   free-scan for wordiness). Mark these inference (audit-craft §2), not confirmed
+   fact.
 4. **Per-use cost lens (surface-gated).** Detect whether the scope contains at
    least one entry artifact (the families listed in `## Contract`). If yes, run the
    procedure at [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md) end-to-end (resolve

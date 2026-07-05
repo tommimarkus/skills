@@ -17,6 +17,7 @@ from leanaudit.registry import (
     Registry,
     carved_out,
     has_override,
+    has_verbose_override,
     load_registry,
     path_exempt,
 )
@@ -32,13 +33,17 @@ __all__ = [
     "build_index",
     "containment",
     "evaluate_added_block",
+    "filler_density",
     "find_dead_refs",
     "link_targets",
     "main",
     "normalize",
+    "repeat_ratio",
+    "scaffold_count",
     "scan",
     "scan_bloat",
     "scan_stale_refs",
+    "scan_verbosity",
     "score_section",
     "shingle_set",
     "slugify",
@@ -120,6 +125,11 @@ class Finding:
     matched_path: str
     matched_heading: str
     action: str
+    # Additive, defaulted: carries the LA-VERBOSE-1 wordiness statistics as an
+    # ordered tuple of (name, value) pairs. Empty for every other finding kind;
+    # dataclasses.asdict serializes it into the JSON payload without touching
+    # existing emitters.
+    metrics: tuple[tuple[str, float], ...] = ()
 
 
 def _is_home(reg: Registry, path: str, heading: str) -> bool:
@@ -337,6 +347,156 @@ def scan_bloat(files: dict[str, str]) -> list[Finding]:
     return findings
 
 
+# --- LA-VERBOSE-1: deterministic verbosity nominator ---------------------------
+#
+# A NOMINATION stage only: it flags sections whose wordiness statistics cross the
+# configured thresholds so the judgment layer (LA-VERBOSE-2, fuzzy-waste.md) can
+# confirm or clear them. `info` severity — never blocks, never touches the guard.
+# The English filler lexicon and scaffold patterns below are repo-authored, not
+# lifted from any published style guide. The repetition signal is language-neutral;
+# the filler/scaffold signals are English-only (a disclosed evidence limit).
+
+# Redundant hedges and circumlocutions, as normalized token tuples (see normalize).
+_FILLER_LEXICON: frozenset[tuple[str, ...]] = frozenset(
+    {
+        ("in", "order", "to"),
+        ("due", "to", "the", "fact", "that"),
+        ("the", "fact", "that"),
+        ("for", "the", "purpose", "of"),
+        ("in", "the", "event", "that"),
+        ("in", "spite", "of", "the", "fact", "that"),
+        ("at", "this", "point", "in", "time"),
+        ("at", "the", "present", "time"),
+        ("with", "regard", "to"),
+        ("with", "respect", "to"),
+        ("when", "it", "comes", "to"),
+        ("as", "a", "matter", "of", "fact"),
+        ("needless", "to", "say"),
+        ("it", "is", "important", "to", "note", "that"),
+        ("basically",),
+        ("essentially",),
+        ("obviously",),
+        ("simply",),
+        ("literally",),
+        ("actually",),
+    }
+)
+# Longest phrases first so greedy matching claims multi-word fillers whole.
+_FILLER_BY_LEN: tuple[tuple[str, ...], ...] = tuple(sorted(_FILLER_LEXICON, key=len, reverse=True))
+
+# Sentence-opening meta-discourse ("this section describes …") — scaffolding that
+# narrates the prose instead of carrying it.
+_SCAFFOLD_RE = re.compile(
+    r"\bthis (?:section|document|guide|chapter|page) "
+    r"(?:describes|explains|covers|outlines|introduces|discusses)\b"
+    r"|\bthe (?:purpose|goal|aim) of this (?:section|document|guide|page) is\b"
+    r"|\bas (?:mentioned|described|noted|discussed|stated) "
+    r"(?:above|earlier|previously|below)\b"
+    r"|\bit is worth noting\b"
+    r"|\bit should be noted\b"
+    r"|\bbefore we (?:begin|proceed|continue|dive)\b"
+    r"|\bin this (?:section|document|guide) we\b",
+    re.IGNORECASE,
+)
+
+
+def filler_density(tokens: list[str]) -> float:
+    """Fraction of normalized tokens covered by filler phrases (greedy,
+    non-overlapping). 0.0 for an empty token list."""
+    n = len(tokens)
+    if n == 0:
+        return 0.0
+    covered = 0
+    i = 0
+    while i < n:
+        matched = 0
+        for phrase in _FILLER_BY_LEN:
+            m = len(phrase)
+            if m <= n - i and tuple(tokens[i : i + m]) == phrase:
+                matched = m
+                break
+        if matched:
+            covered += matched
+            i += matched
+        else:
+            i += 1
+    return covered / n
+
+
+def scaffold_count(body: str) -> int:
+    """Count sentence-opening meta-discourse scaffolds. Code fences and inline
+    code are stripped first so fenced samples never count."""
+    text = _INLINE_CODE.sub(" ", _FENCE.sub(" ", body))
+    return len(_SCAFFOLD_RE.findall(text))
+
+
+def repeat_ratio(tokens: list[str], k: int = DEFAULT_K) -> float:
+    """Fraction of k-shingle occurrences that are repeats within the section
+    (multiset variant of shingle_set). High when a section restates itself."""
+    if len(tokens) < k:
+        return 0.0
+    shingles = [tuple(tokens[i : i + k]) for i in range(len(tokens) - k + 1)]
+    total = len(shingles)
+    if total == 0:
+        return 0.0
+    return (total - len(set(shingles))) / total
+
+
+def scan_verbosity(files: dict[str, str], reg: Registry) -> list[Finding]:
+    """Nominate sections whose wordiness statistics cross the configured
+    thresholds (LA-VERBOSE-1, info). Frontmatter is stripped (the keyword-rich
+    description is deliberate trigger metadata); path exemptions and the
+    verbose-intentional marker suppress; the whole lens is off when the
+    [verbosity] table sets enabled = false. Requires >= 2 of the 3 signals to
+    fire — the composite gate is the precision mechanism."""
+    cfg = reg.verbosity
+    if not cfg.enabled:
+        return []
+    findings: list[Finding] = []
+    for path, text in files.items():
+        if path_exempt(reg, path):
+            continue
+        for heading, body in split_sections(strip_frontmatter(text)):
+            if has_verbose_override(body):
+                continue
+            tokens = normalize(body)
+            n = len(tokens)
+            if n < cfg.min_tokens:
+                continue
+            fd = filler_density(tokens)
+            sc = scaffold_count(body)
+            rr = repeat_ratio(tokens)
+            signals = sum(
+                (
+                    fd >= cfg.filler_density,
+                    sc >= cfg.scaffold_min,
+                    rr >= cfg.repeat_ratio,
+                )
+            )
+            if signals >= 2:
+                findings.append(
+                    Finding(
+                        "LA-VERBOSE-1",
+                        "info",
+                        path,
+                        heading,
+                        0.0,
+                        "",
+                        "",
+                        f"Verbosity candidate ({n} tokens, filler {fd:.2f}, "
+                        f"scaffold {sc}, repeat {rr:.2f}) — confirm or clear via "
+                        "fuzzy-waste.md before acting (LA-VERBOSE-2).",
+                        metrics=(
+                            ("tokens", float(n)),
+                            ("filler_density", round(fd, 3)),
+                            ("scaffold", float(sc)),
+                            ("repeat_ratio", round(rr, 3)),
+                        ),
+                    )
+                )
+    return findings
+
+
 def _emit(findings: list[Finding], fmt: str) -> None:
     if fmt == "json":
         print(json.dumps({"findings": [dataclasses.asdict(f) for f in findings]}, indent=2))
@@ -386,6 +546,7 @@ def main(argv: list[str]) -> int:
                 + scan_stale_refs(files, root)
                 + find_dead_refs(files)
                 + scan_bloat(files)
+                + scan_verbosity(files, reg)
             )
     except (OSError, tomllib.TOMLDecodeError, re.error) as exc:
         print(f"lean-audit: {exc}", file=sys.stderr)

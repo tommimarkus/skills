@@ -39,6 +39,27 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   always-loaded context that belongs behind a load condition. Severity: warn.
   Source: inference (`procedures/fuzzy-waste.md`).
 
+## Verbosity — Lean: over-processing (intra-passage)
+- `LA-VERBOSE-1` — statistical verbosity candidate: a section at or above the
+  token floor tripping ≥ 2 deterministic wordiness signals (filler / hedge
+  density, meta-discourse scaffolding, intra-section repetition). A NOMINATION,
+  not a verdict — confirm or clear via `procedures/fuzzy-waste.md` before acting.
+  Frontmatter and code fences are excluded; path exemptions and a
+  `<!-- lean-audit:verbose-intentional: … -->` marker suppress; the `[verbosity]`
+  table in `.lean-audit.toml` tunes the thresholds or disables the lens. The
+  composite ≥ 2-signal gate is the precision mechanism (a single signal — e.g. a
+  naturally repetitive anchor list — never nominates). The filler / scaffold
+  signals are English-only; the repetition signal is language-neutral (a disclosed
+  evidence limit). Severity: info. Source: engine.
+- `LA-VERBOSE-2` — confirmed wasteful verbosity: a nominated (or explicitly
+  user-named) passage judgment confirms is faithfully reducible — materially
+  fewer tokens with every obligation, qualifier, threshold, negation, and
+  enumerated item preserved, and the wordiness not load-bearing (pedagogy,
+  calibrated hedging, normative precision). Severity: warn. Source: inference
+  (`procedures/fuzzy-waste.md`); mark as requiring verification. Detection only
+  in v1 — turning it into a reduction (the minify `tighten` class) is a separate,
+  not-yet-wired step.
+
 ## Platform redundancy — Lean: over-production (reinventing the platform)
 - `LA-NAT-1` — a custom artifact (hook/script, guidance-prose instruction,
   skill/command/agent, or MCP server) reproduces a capability Claude Code now
@@ -92,6 +113,8 @@ Out of v1 scope: source-level *dead code* (tracked for v1.1); *semantic* code
 duplication / DRY ownership (owned by `software-design`, `SD-S-2`); the rest of
 the Lean waste taxonomy (waiting, transport, motion, over-production beyond the
 above). Mechanical source *duplication* is now in scope via `LA-CODE-DUP-*`.
+Intra-passage over-processing (wordy but unique prose) is now in scope via
+`LA-VERBOSE-*` (deterministic nomination + judgment confirmation).
 
 Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
 explicitly asks whether custom artifacts reinvent a native Claude Code capability.
