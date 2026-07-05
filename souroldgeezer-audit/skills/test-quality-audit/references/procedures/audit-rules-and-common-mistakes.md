@@ -53,17 +53,11 @@ auditor mistakes that prevent noisy or misrouted reviews.
 
 ## Integration-Specific Rules
 
-- Every integration test must state what it integrates and why a unit test
-  would not do.
-- Prefer narrow integration tests: one SUT, one real dependency, one seam.
-  Broad tests must justify their breadth.
-- Inside an integration test, a mock is a scope leak unless it represents a
-  process or deployment boundary and no contract test is available.
-- At service boundaries, prefer consumer-driven contracts over mocks.
-- Test data is owned per test; shared mutable fixtures are a smell.
-- Log and trace assertions are valid only against published structured
-  contracts.
-- Flake is a scope signal, not a quarantine problem.
+- Apply the integration-lane directives from
+  [integration-testing.md §10 Directive principles](../../../../docs/quality-reference/integration-testing.md#10-directive-principles);
+  that rubric is loaded for every integration-lane audit (SKILL.md Load Map).
+  If the integration rubric is not loaded yet, load it before judging
+  integration tests — do not re-derive the directives from this file.
 
 ## E2E-Specific Rules
 
