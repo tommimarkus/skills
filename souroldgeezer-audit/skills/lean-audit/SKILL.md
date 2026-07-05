@@ -211,4 +211,9 @@ live at repo root: `tests/lean_engine_test.py` / `tests/lean_engine_ledger.jsonl
 (markdown engine), `tests/lean_code_lens_test.py` / `tests/lean_code_ledger.jsonl`
 (code lens), and `tests/lean_guard_test.py` / `tests/load_cost_guard_test.py` /
 `tests/skill_load_cost_test.py` (guards + per-use harness).
+For the bundled Python tooling's architecture and a safe-change guide — the
+shim→`leanaudit/` package contract, module map, finding codes, the ruff/mypy
+standard, config/data files, and this test matrix — read the maintainer guide
+`references/scripts/README.md` (referenced as an inline path, not a link, so this
+dev doc stays out of the runtime load closure; CLAUDE.md link-checks the path).
 After skill-surface edits, rerun `scripts/skill-architecture-report.sh .`.
