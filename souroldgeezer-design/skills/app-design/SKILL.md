@@ -95,6 +95,7 @@ assimilation, delegations, and limits. Findings use
 action, and citation. If none, say so with limits.
 
 ## Stop Conditions
+<!-- lean-audit:sync-intentional -->
 
 Stop when source/scope is missing, sibling ownership dominates, required
 runtime/visual/a11y/performance evidence is absent, load-bearing debt has no

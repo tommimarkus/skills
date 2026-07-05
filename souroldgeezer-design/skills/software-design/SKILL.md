@@ -83,6 +83,7 @@ evidence, action, and citation. Principle/pattern decisions name force,
 fit/rule, avoid case, smell reduced/introduced, cheapest validation layer.
 
 ## Stop Conditions
+<!-- lean-audit:sync-intentional -->
 
 Stop when source/scope is missing, sibling ownership dominates, runtime/human
 facts are absent, debt has no smaller safe move, extension validation is
