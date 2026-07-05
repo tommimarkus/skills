@@ -28,7 +28,10 @@ identifier, or user wording.
 - Shared provider mechanics (tooling order, auth) live in
   [`../../docs/provider-reference/github.md`](../../docs/provider-reference/github.md)
   and [`../../docs/provider-reference/gitlab.md`](../../docs/provider-reference/gitlab.md),
-  applied via the extensions above; the extension-authoring template is
+  applied via the extensions above; the provider-agnostic lifecycle-marker and
+  escalation core is
+  [`../../docs/provider-reference/provider-lifecycle-core.md`](../../docs/provider-reference/provider-lifecycle-core.md),
+  and the extension-authoring template is
   [`../../docs/provider-reference/authoring.md`](../../docs/provider-reference/authoring.md).
 - If the provider is unknown, ask one concise tracker/repository question.
 - If the provider is known but unsupported, stop and report the missing
