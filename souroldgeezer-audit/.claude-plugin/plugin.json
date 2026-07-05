@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-audit",
-  "version": "2026.07.13",
+  "version": "2026.07.14",
   "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and matching Claude Code subagents.",
   "author": {
     "name": "Sour Old Geezer",
