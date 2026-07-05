@@ -75,6 +75,14 @@ Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
 
+A capability the `SKILL.md` advertises must be one the pinned runtime can
+actually express. Verify a composed claim — a specific mode × notation × export
+combination — against the runtime before shipping it; if the runtime cannot
+express the combination, narrow the claim rather than let an agent invent an
+ad-hoc shape to satisfy it. Back a load-bearing composed claim with a fixture or
+eval that exercises it — the combinations the workflow leans on, not every
+permutation.
+
 When the skill's core result is computed by a bundled deterministic script,
 prefer a single adaptive path over Quick/Deep or Build/Extract/Review mode
 dispatch. Derive the assurance or coverage disclosure from input scope (partial
@@ -99,6 +107,12 @@ Use progressive disclosure deliberately:
 - Give each reference a narrow reason to exist.
 - Split heavy material by task path or target platform.
 - Keep source anchors as links and paraphrase in original wording.
+- When a reference prescribes a best-practice that picks a convention, scheme,
+  or tool, state the underlying invariant and the major production-proven
+  variants rather than mandating one popular option; before settling on one,
+  check whether this repo's own practice already uses a different one (e.g.
+  CalVer, not SemVer) — mandating an option the repo contradicts in its own
+  dogfooding is an internal-consistency smell.
 - Cite cross-file reference paths as markdown links, not bare relative paths in
   inline-code spans, so a depth-wrong or stale citation surfaces in link checks
   instead of passing the gate silently.
