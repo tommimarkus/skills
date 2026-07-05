@@ -73,8 +73,11 @@ bash scripts/skill-architecture-report.sh --help
 uv run python scripts/skill_architecture_report.py .
 uv run python scripts/skill_architecture_report.py --format json --strict .
 uv run python -m unittest tests.skill_architecture_report_test
+uv run python -m unittest discover -s tests -p '*_test.py'  # whole suite — NOT bare discover (default test*.py collects 0 here)
 git diff --check
 ```
+
+Run the whole suite with the repo's actual `*_test.py` pattern; bare `unittest discover` uses `test*.py`, silently collects zero, and reads as a pass — treat a run that collects 0 tests as a failed gate.
 
 Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####` IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`), and a unique intent; the unittest suite rejects duplicate IDs, intents, and fixture/expectation fingerprints before executing the cases. The report's primary replacement claim is empirical: the `Replacement Calibration` section runs the local gold ledger and reports how many skill-only findings the tool detects automatically — keep ≥500 gold-finding cases and ≥90% automated replacement recall (catalog coverage is secondary metadata, not the success criterion). When cases are bulk-generated, update `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL in the same change.
 
@@ -91,6 +94,8 @@ Current internal skills:
 - **`lessons`** at [internal-skills/lessons/SKILL.md](internal-skills/lessons/SKILL.md) — the `/lessons` review surface for the lesson loop. On `main` only, lists pending captured candidates (`scripts/lessons_ledger.py list --pending`), and for each the user approves/edits/rejects; approved `prose`/`policy` lessons are placed in their docs, approved `deterministic` lessons become a `SAC-T#####` fixture case only when the engine already detects the smell (else recorded as engine work). Completes the capture → review → graduate loop. Every graduation passes a deterministic secret scan (`scripts/lessons_secret_scan.py`, the `DSO-POS-9` control); the `auto-approved` fast-path is gated by `auto_approve_eligible()` and defaults to denying all change-classes until a template-synthesizable fixture path exists (unattended auto-commit is parked). Claude Code has a thin wrapper at [.claude/skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md).
 
 Add here when new internal skills appear. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `.claude-plugin/plugin.json`.
+
+When a repo-internal skill's tooling order prefers an MCP server (e.g. `github-issue-lifecycle` → GitHub™ MCP), it must also state that this harness may expose those MCP tools as **deferred** — loaded via `ToolSearch` before first use — and that the model should not fall back to an always-loaded CLI/Bash equivalent (e.g. `gh`) as its first move unless no such MCP server is connected. Keep this harness-specific loading guidance in repo-internal skills and agent guidance only; published `souroldgeezer-*` skills stay harness-agnostic and express tool *preference*, not `ToolSearch` mechanics.
 
 ## Directory layout
 
