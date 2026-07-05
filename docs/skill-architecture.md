@@ -198,6 +198,15 @@ prove the wired hook fires; cross-check the advertised hook events against the
 events the entrypoint actually handles, because a recommended-default hook that
 silently does nothing is worse than none.
 
+To test whether a change-triggered gate's finding is caused by your edit rather
+than pre-existing, the control run must still trip the gate's trigger. Removing
+the change entirely (a stash or revert) also removes the trigger a dirty-file or
+diff-scoped gate keys on, so it enumerates nothing and a clean result proves
+nothing about the finding. Use a content-neutral control that still fires the
+enumeration path — a whitespace-only edit to the same file at baseline content:
+if the finding reproduces there, it is content-independent and pre-existing, not
+caused by your change.
+
 ## Behavioral Evidence
 
 Behavioral evidence records why a skill should keep its current trigger,
