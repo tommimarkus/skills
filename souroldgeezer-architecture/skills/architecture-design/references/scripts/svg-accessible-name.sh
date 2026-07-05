@@ -107,6 +107,24 @@ run_awk() {
       return s
     }
     function fmt(n) { return sprintf("%.6g", n) }
+    # Append attrs to the root <svg> tag (mutates the global tag), handling
+    # both self-closing and open tag endings.
+    function inject_root_attrs(attrs) {
+      if (tag ~ /\/>$/) {
+        sub(/\/>$/, attrs "/>", tag)
+      } else {
+        sub(/>$/, attrs ">", tag)
+      }
+    }
+    # Replace the text of the first <elem ...>text</elem> in the global body,
+    # keeping the opening tag byte-for-byte. Returns 1 on match, 0 otherwise.
+    function replace_elem_text(elem, text,    seg, open_len) {
+      if (!match(body, "<" elem "[^>]*>[^<]*</" elem ">")) { return 0 }
+      seg = substr(body, RSTART, RLENGTH)
+      open_len = index(seg, ">")
+      body = substr(body, 1, RSTART - 1) substr(seg, 1, open_len) text "</" elem ">" substr(body, RSTART + RLENGTH)
+      return 1
+    }
     BEGIN { RS = "\x01" }
     {
       doc = $0
@@ -173,23 +191,11 @@ run_awk() {
       native = (tag ~ / role="img"/ && body ~ /<title[^>]*>[^<]*<\/title>/)
       if (native) {
         inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\""
-        if (tag ~ /\/>$/) {
-          sub(/\/>$/, inject "/>", tag)
-        } else {
-          sub(/>$/, inject ">", tag)
-        }
+        inject_root_attrs(inject)
 
-        if (match(body, /<title[^>]*>[^<]*<\/title>/)) {
-          seg = substr(body, RSTART, RLENGTH)
-          open_len = index(seg, ">")
-          body = substr(body, 1, RSTART - 1) substr(seg, 1, open_len) title "</title>" substr(body, RSTART + RLENGTH)
-        }
+        replace_elem_text("title", title)
         if (desc != "") {
-          if (match(body, /<desc[^>]*>[^<]*<\/desc>/)) {
-            seg = substr(body, RSTART, RLENGTH)
-            open_len = index(seg, ">")
-            body = substr(body, 1, RSTART - 1) substr(seg, 1, open_len) desc "</desc>" substr(body, RSTART + RLENGTH)
-          } else {
+          if (!replace_elem_text("desc", desc)) {
             close_pos = index(body, "</title>")
             body = substr(body, 1, close_pos + 7) "\n<desc>" desc "</desc>" substr(body, close_pos + 8)
           }
@@ -212,11 +218,7 @@ run_awk() {
       ids = " role=\"img\" aria-labelledby=\"arch-a11y-title\""
       if (desc != "") { ids = ids " aria-describedby=\"arch-a11y-desc\"" }
       inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\"" ids
-      if (tag ~ /\/>$/) {
-        sub(/\/>$/, inject "/>", tag)
-      } else {
-        sub(/>$/, inject ">", tag)
-      }
+      inject_root_attrs(inject)
 
       block = "\n<title id=\"arch-a11y-title\">" title "</title>"
       if (desc != "") {
