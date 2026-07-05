@@ -6,8 +6,8 @@ description: >-
 
 # DevSecOps Audit
 
-Audit whether controls affect what ships. Use `../../docs/security-reference/devsecops.md`;
-cite `../../docs/security-reference/devsecops-smell-catalog.md` codes without
+Audit whether controls affect what ships. Use [`../../docs/security-reference/devsecops.md`](../../docs/security-reference/devsecops.md);
+cite [`../../docs/security-reference/devsecops-smell-catalog.md`](../../docs/security-reference/devsecops-smell-catalog.md) codes without
 restating rubric prose.
 
 ## Contract
@@ -19,31 +19,31 @@ Inputs: scope, mode, cost stance, release/live evidence, and tools. If ambiguous
 ask the user when mode/scope/cost stance/MCP/network/destructive
 action/sibling boundary lacks a safe default; otherwise continue. Never claim enforcement,
 reachability, account control, rotation, or provenance without evidence. For discipline on
-false positives, limits, and severity, see `../../docs/audit-reference/audit-craft.md` §2–§3.
+false positives, limits, and severity, see [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2–§3.
 
 ## Load Map
 
 Apply the shared core before loading extensions:
-- Load `../../docs/audit-reference/audit-craft.md` (discipline + output contract).
-- Load `../../docs/audit-reference/materiality.md` (risk tier).
-- Load `../../docs/audit-reference/sampling-projection.md` (scale).
+- Load [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) (discipline + output contract).
+- Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier).
+- Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) (scale).
 This skill adds the DevSecOps rubric and `DSO-*` namespace on top; it does not restate craft.
 
-Load `extensions/github-actions.md` and `docs/security-reference/devsecops-extensions/github-actions.md` when workflows/actions match.
-Load `extensions/bicep.md` and `docs/security-reference/devsecops-extensions/bicep.md` when Bicep/Azure IaC matches.
-Load `extensions/dockerfile.md` and `docs/security-reference/devsecops-extensions/dockerfile.md` when Docker/Compose/container targets match.
-Load `extensions/dotnet-security.md` and `docs/security-reference/devsecops-extensions/dotnet-security.md` when C#/.NET/appsettings targets match.
-Load `references/procedures/cost-stance-detection.md` when resolving cost stance.
-Load `references/procedures/threat-model-planning.md` first when running Deep mode.
-Load `references/procedures/stage-coverage-matrix.md`, `references/procedures/evidence-per-release.md`, and `references/procedures/mcp-github-probes.md` when running Deep mode.
-Load `references/procedures/extension-authoring.md` only when editing extensions.
-Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic.
-Load `references/procedures/golden-corpus-evals.md` (corpus: `references/golden-corpus/`) after changing the rubric, smell catalog, output contract, or extensions; record recall per `audit-craft.md` §8.
+Load [`extensions/github-actions.md`](extensions/github-actions.md) and [`../../docs/security-reference/devsecops-extensions/github-actions.md`](../../docs/security-reference/devsecops-extensions/github-actions.md) when workflows/actions match.
+Load [`extensions/bicep.md`](extensions/bicep.md) and [`../../docs/security-reference/devsecops-extensions/bicep.md`](../../docs/security-reference/devsecops-extensions/bicep.md) when Bicep/Azure IaC matches.
+Load [`extensions/dockerfile.md`](extensions/dockerfile.md) and [`../../docs/security-reference/devsecops-extensions/dockerfile.md`](../../docs/security-reference/devsecops-extensions/dockerfile.md) when Docker/Compose/container targets match.
+Load [`extensions/dotnet-security.md`](extensions/dotnet-security.md) and [`../../docs/security-reference/devsecops-extensions/dotnet-security.md`](../../docs/security-reference/devsecops-extensions/dotnet-security.md) when C#/.NET/appsettings targets match.
+Load [`references/procedures/cost-stance-detection.md`](references/procedures/cost-stance-detection.md) when resolving cost stance.
+Load [`references/procedures/threat-model-planning.md`](references/procedures/threat-model-planning.md) first when running Deep mode.
+Load [`references/procedures/stage-coverage-matrix.md`](references/procedures/stage-coverage-matrix.md), [`references/procedures/evidence-per-release.md`](references/procedures/evidence-per-release.md), and [`references/procedures/mcp-github-probes.md`](references/procedures/mcp-github-probes.md) when running Deep mode.
+Load [`references/procedures/extension-authoring.md`](references/procedures/extension-authoring.md) only when editing extensions.
+Before editing triggers/workflow/extensions/grounding/evals, load [`references/evals`](references/evals) and [`references/source-grounding.md`](references/source-grounding.md); keep evals synthetic.
+Load [`references/procedures/golden-corpus-evals.md`](references/procedures/golden-corpus-evals.md) (corpus: [`references/golden-corpus/`](references/golden-corpus/)) after changing the rubric, smell catalog, output contract, or extensions; record recall per [`audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.
 
 ## Workflow
 
 1. Select mode, scope, target types, evidence layers, and delegations.
-2. For Deep, run `references/procedures/threat-model-planning.md` first: enumerate crown jewels, trust boundaries, attacker goals; emit the Risk plan and prioritize fieldwork high-risk-first.
+2. For Deep, run [`references/procedures/threat-model-planning.md`](references/procedures/threat-model-planning.md) first: enumerate crown jewels, trust boundaries, attacker goals; emit the Risk plan and prioritize fieldwork high-risk-first.
 3. Prefer `rg`; inspect workflow/IaC/container/code/release/security files,
    then load and announce extensions.
 4. Resolve cost stance from invocation, `config.yaml`, repo guidance, then
@@ -62,8 +62,8 @@ Load `references/procedures/golden-corpus-evals.md` (corpus: `references/golden-
   framework coupling, live-state block, verdict, honest limits.
 
 Findings use `[CODE] type: path:line` with severity (`block`, `warn`, `info`),
-stage, evidence, action, citation, **SUT risk tier** (materiality.md; cite signal —
-auth/secrets/IaC-priv → high), and **Consequence** (audit-craft.md §3). Deep worklist
+stage, evidence, action, citation, **SUT risk tier** ([`materiality.md`](../../docs/audit-reference/materiality.md); cite signal —
+auth/secrets/IaC-priv → high), and **Consequence** ([`audit-craft.md`](../../docs/audit-reference/audit-craft.md) §3). Deep worklist
 priority is `severity × risk tier` per the §3 table. If none, say so with limits. Every
 answer reports extensions, cost stance/source, Codex Security, rubric path, evidence
 limits, independence, and assurance level. Deep also reports MCP GitHub, verdict
