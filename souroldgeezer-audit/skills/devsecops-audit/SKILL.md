@@ -25,8 +25,8 @@ false positives, limits, and severity, see [`../../docs/audit-reference/audit-cr
 
 Apply the shared core before loading extensions:
 - Load [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) (discipline + output contract).
-- Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier).
-- Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) (scale).
+- Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier) — in all modes; Quick findings carry the SUT risk tier.
+- Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) (scale) — in Deep mode only, when full enumeration exceeds budget; Quick must not load it.
 This skill adds the DevSecOps rubric and `DSO-*` namespace on top; it does not restate craft.
 
 Load [`extensions/github-actions.md`](extensions/github-actions.md) and [`../../docs/security-reference/devsecops-extensions/github-actions.md`](../../docs/security-reference/devsecops-extensions/github-actions.md) when workflows/actions match.
