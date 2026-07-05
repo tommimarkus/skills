@@ -43,6 +43,7 @@ mechanics; they do not replace the core authority, escalation, ledger,
 verification, monitoring, cleanup, or completion contract.
 
 ## Provider Selection
+<!-- lean-audit:sync-intentional -->
 
 Identify the provider from the PR/MR URL, repository remote, configured tooling,
 identifier shape, prepared branch repository, sibling-skill handoff, or explicit

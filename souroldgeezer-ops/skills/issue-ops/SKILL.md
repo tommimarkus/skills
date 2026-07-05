@@ -15,6 +15,7 @@ skill's triggers, behavior, provider handoff rules, source grounding, or evals,
 also read `references/evals` and `references/source-grounding.md`.
 
 ## Provider
+<!-- lean-audit:sync-intentional -->
 
 Identify the tracker from the issue URL, repo remote, configured tooling, issue
 identifier, or user wording.
