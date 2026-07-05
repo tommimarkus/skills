@@ -1,7 +1,7 @@
 {
   "quick-node-unit": 20527,
   "deep-nextjs-suite": 45063,
-  "lean-audit-default": 6841,
+  "lean-audit-default": 7845,
   "lookup-functions": 18237,
   "build-functions-cosmos": 25308,
   "review-functions-cosmos-blob": 31430,
@@ -11,5 +11,6 @@
   "arch-lookup-notation": 2406,
   "arch-build-archimate": 16898,
   "arch-extract-dotnet": 18040,
-  "arch-review-package": 18455
+  "arch-review-package": 18455,
+  "lean-audit-minify": 12781
 }

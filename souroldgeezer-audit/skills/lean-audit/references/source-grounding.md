@@ -20,3 +20,12 @@ schemas, or code are copied into this skill.
   `claude-code-guide` consultation at audit time and are disclosed with the
   capability's observed-on date. No third-party doc text is copied into the skill;
   findings cite the live source.
+- Minify lens (`LA-MIN-*`): the Locate → Propose → Fidelity-verify → Emit
+  protocol, the obligation-ledger method, and the rejection taxonomy are
+  repo-authored, motivated by this repo's own token-reduction lessons
+  (deterministic gates and spec review alone miss precision loss in dense
+  skill docs; every "covered elsewhere" pointer must be verified against its
+  target's content). The deterministic gates reuse the bundled harness
+  (`scripts/skill_load_cost.py`) and engine (`scripts/lean_engine.py`); no
+  third-party prose, diffs, or fixtures are copied into the skill, and every
+  eval case is synthetic.

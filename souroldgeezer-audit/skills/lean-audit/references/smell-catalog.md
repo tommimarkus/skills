@@ -67,6 +67,24 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   (needs-adversarial-review — cross-references). Severity: warn. Source:
   inference (`procedures/per-use-cost.md`).
 
+## Minify — Lean: over-processing (propose-only reduction)
+- `LA-MIN-1` — an accepted reduction: a concrete propose-only rewrite (dedupe
+  to canonical home, hoist always-loaded reference, tighten restated prose,
+  delete dead file, or per-use move) that passed the full adversarial fidelity
+  gate; carried in the proposal diff, never applied. Severity: info (a
+  proposal disposition, not a control weakness). Source: inference +
+  deterministic gate (`procedures/minify.md`). Opt-in lens only.
+- `LA-MIN-2` — a rejected reduction: a candidate that failed or could not run
+  a required fidelity gate (pointer-unresolved, semantic-loss,
+  eval-regression, obligation-dropped, escalation-cue-missing, or
+  gate-unavailable); recorded with its reason, never merged into the proposal.
+  Severity: info. Source: inference + deterministic gate
+  (`procedures/minify.md`). Opt-in lens only.
+- `LA-MIN-3` — an out-of-scope reduction referral: reducible source-code waste
+  (e.g. `LA-CODE-DUP-*` clones) minify may not rewrite, referred to the owning
+  skill. Severity: info. Source: inference (`procedures/minify.md`). Opt-in
+  lens only.
+
 Note: always-loaded `SKILL.md`-body bloat is covered by `LA-BLOAT`; not
 duplicated here.
 
@@ -77,3 +95,7 @@ above). Mechanical source *duplication* is now in scope via `LA-CODE-DUP-*`.
 
 Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
 explicitly asks whether custom artifacts reinvent a native Claude Code capability.
+
+Minify (`LA-MIN-*`) is an opt-in, propose-only lens: silent unless the request
+explicitly asks for a minification / reduction proposal, and it never applies
+edits — it emits a reviewable diff and fidelity report only.
