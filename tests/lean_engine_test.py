@@ -87,6 +87,18 @@ class Sections(unittest.TestCase):
         self.assertIn(("one", "two", "three", "four"), h.shingles)
 
 
+class Slugify(unittest.TestCase):
+    def test_github_double_hyphen_around_removed_punctuation(self):
+        eng = load_engine()
+        # GitHub drops "&" then hyphenates EACH space: "A & B" -> "a--b", not "a-b".
+        self.assertEqual(eng.slugify("Notation Rendering & Render Metadata"),
+                         "notation-rendering--render-metadata")
+
+    def test_plain_heading(self):
+        eng = load_engine()
+        self.assertEqual(eng.slugify("Git ignore hygiene (MUST)"), "git-ignore-hygiene-must")
+
+
 class RegistryAndOverride(unittest.TestCase):
     def test_load_registry_carveouts(self):
         eng = load_engine()
@@ -265,6 +277,14 @@ class StaleRefs(unittest.TestCase):
     def test_valid_anchor_ok(self):
         eng = load_engine()
         files = {"a/SKILL.md": "see [t](b.md#real-heading)", "a/b.md": "# Real Heading\nx"}
+        self.assertEqual(eng.scan_stale_refs(files), [])
+
+    def test_github_style_double_hyphen_anchor_ok(self):
+        eng = load_engine()
+        # Regression: the "&" heading slugs to a double hyphen on GitHub; the
+        # engine must resolve that anchor instead of emitting a false LA-STALE-1.
+        files = {"a/SKILL.md": "see [t](b.md#notation-rendering--render-metadata)",
+                 "a/b.md": "# Notation Rendering & Render Metadata\nx"}
         self.assertEqual(eng.scan_stale_refs(files), [])
 
     def test_url_and_mailto_skipped(self):

@@ -217,8 +217,13 @@ def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
 
 
 def slugify(heading: str) -> str:
+    """GitHub-compatible slug: drop punctuation, then map each whitespace char to one hyphen.
+
+    GitHub's slugger removes punctuation first and converts every remaining space
+    individually, so "A & B" slugs to "a--b" (double hyphen), not "a-b".
+    """
     s = re.sub(r"[^\w\s-]", "", heading.strip().lower())
-    return re.sub(r"\s+", "-", s)
+    return re.sub(r"\s", "-", s)
 
 
 def link_targets(text: str) -> list[str]:
