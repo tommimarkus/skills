@@ -446,9 +446,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "allows parallel per-view ELK layout",
                 "keeps serial rerun fallback",
             ],
-            # CLAUDE.md is kept lean; it delegates runtime-evidence depth to the
-            # skill rather than restating the contract (restructure 0d28964).
-            REPO_ROOT / "CLAUDE.md": [
+            # The Dediren upstream release adoption procedure (carrying the
+            # runtime-evidence delegation) was relocated from CLAUDE.md to
+            # docs/maintenance-procedures.md; CLAUDE.md keeps a one-line pointer.
+            REPO_ROOT / "docs" / "maintenance-procedures.md": [
                 "runtime-evidence rules live in the architecture-design `SKILL.md`",
             ],
         }
@@ -1166,19 +1167,24 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("~/Documents", source_grounding)
 
     def test_repo_guidance_uses_release_resolver_path(self) -> None:
-        claude_guidance = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        # The Dediren adoption procedure moved from CLAUDE.md to
+        # docs/maintenance-procedures.md (CLAUDE.md keeps a one-line pointer).
+        maintenance_guidance = (
+            REPO_ROOT / "docs" / "maintenance-procedures.md"
+        ).read_text(encoding="utf-8")
 
         self.assertIn(
             "souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh",
-            claude_guidance,
+            maintenance_guidance,
         )
-        self.assertNotRegex(claude_guidance, r"(?m)^tools/dediren-(linux|macos)/")
+        self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
     def test_dediren_release_bundle_is_marked_upstream_owned(self) -> None:
         expectations = {
-            # CLAUDE.md states the don't-patch rule in slimmed form and delegates
-            # depth to the skill (restructure 0d28964).
-            REPO_ROOT / "CLAUDE.md": [
+            # The don't-patch rule lives in the Dediren upstream release adoption
+            # procedure, which relocated from CLAUDE.md to
+            # docs/maintenance-procedures.md.
+            REPO_ROOT / "docs" / "maintenance-procedures.md": [
                 "Never patch the downloaded bundle",
                 "report runtime defects upstream",
             ],
