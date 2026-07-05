@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled deterministic token-clone engine, `LA-CODE-DUP-*`); source-level dead code and *semantic* duplication/DRY stay with software-design. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run).
+  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled deterministic token-clone engine, `LA-CODE-DUP-*`); source-level dead code and *semantic* duplication/DRY stay with software-design. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, an opt-in platform-redundancy lens flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run). Also on explicit request only, an opt-in minify lens turns detected waste into a propose-only reduction diff plus an adversarial fidelity report (pointer resolution, eval re-run, intent diff) — it never applies edits.
 ---
 
 # Lean Audit
@@ -36,6 +36,14 @@ and makes zero agent/network calls. It is read-only and advisory, and its native
 verdicts come from a live `claude-code-guide` check (never a bundled capability
 list). See `## Platform-redundancy lens (opt-in)`.
 
+A fourth lens — minify (`LA-MIN-*`) — is OPT-IN and PROPOSE-ONLY: it runs ONLY
+when the request explicitly asks for a minification / reduction proposal. It
+consumes the waste and per-use lenses' findings to produce a reviewable diff
+plus a fidelity report; it NEVER writes target files — applying the diff is a
+separate, explicit user step outside this skill. A normal duplication/waste
+run never activates it and it makes zero agent/network calls. See
+`## Minify lens (opt-in, propose-only)`.
+
 Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see
@@ -48,9 +56,9 @@ one path and DERIVES the assurance level from coverage: a file or diff scope →
 `limited`; a full-repo enumeration → `reasonable`. State the assurance on one
 line (audit-craft §4, by named principle — as `ip-hygiene` does).
 
-The opt-in platform-redundancy lens is layered on top of this path and does not
-change it: the default run (waste + surface-gated per-use cost) is unchanged, and
-the platform-redundancy lens runs only on explicit request.
+The opt-in platform-redundancy and minify lenses are layered on top of this
+path and do not change it: the default run (waste + surface-gated per-use
+cost) is unchanged, and the opt-in lenses run only on explicit request.
 
 ## Load Map
 
@@ -75,6 +83,11 @@ the platform-redundancy lens runs only on explicit request.
   carries the reinvention-pattern catalog, the live `claude-code-guide` consultation
   protocol, the confidence tiering, the degraded-mode rule, and the emit fields.
   Cite `LA-NAT-*` from [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
+- **Minify lens (opt-in, propose-only):** load [`references/procedures/minify.md`](references/procedures/minify.md)
+  ONLY when the request explicitly asks for a minification / reduction
+  proposal. It carries the Locate → Propose → Fidelity-verify → Emit protocol,
+  the shadow-workspace mechanics, the rejection taxonomy, and the emit fields.
+  Cite `LA-MIN-*` from [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
 - Cite codes from [`references/smell-catalog.md`](references/smell-catalog.md); never restate catalog prose.
 
 ## Workflow
@@ -110,10 +123,25 @@ detection → live `claude-code-guide` verification → synthesis → worklist m
 Read-only; never auto-migrate. If the live check is unavailable, degrade to
 unverified `LA-NAT-2` review items and disclose.
 
+## Minify lens (opt-in, propose-only)
+
+Runs ONLY on an explicit minification / reduction-proposal request — never as
+part of a default waste run, and never auto-fired by surface detection. When
+requested, run Workflow steps 1–5 first (they produce the ranked worklist the
+lens consumes), then load [`references/procedures/minify.md`](references/procedures/minify.md)
+and run it end-to-end (Locate → Propose → Fidelity-verify → Emit). Output is a
+reviewable diff per target plus a fidelity report — never an applied edit.
+Reductions that fail the adversarial fidelity gate are rejected with a reason
+(`LA-MIN-2`), never merged; source-code clones are referred, not rewritten
+(`LA-MIN-3`). All gates use only the bundled engine and harness — zero
+agent/network calls.
+
 ## Rules and Stop Conditions
 
 - Read-only: assess and produce a worklist; do not auto-fix unless edits are
-  explicitly requested. Separate audit from repair (audit-craft §2).
+  explicitly requested. Separate audit from repair (audit-craft §2). The
+  minify lens is that explicit-request path — and even then it only PRODUCES
+  the edit (see the minify bullet below); it never applies one.
 - Intentional structural duplication — declared via `[[carve_out]]` / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding.
 - Suppress false positives: before asserting a finding, confirm the matched
   passage is independent duplication, not a quote, cross-reference, or code
@@ -130,6 +158,11 @@ unverified `LA-NAT-2` review items and disclose.
   never *delete*. Disclose the network dependency and the "capabilities as observed
   <date>" recency. If the live check is unavailable, degrade to unverified
   `LA-NAT-2` review items and disclose; do not fabricate a native verdict.
+- Minify lens (opt-in, propose-only): emit proposal diffs in the report output
+  (or a user-requested scratch file), never into the target tree; applying a
+  proposed diff is a separate explicit user action outside this skill. Never
+  emit a reduction that failed — or could not run — a required fidelity gate;
+  reject it with its reason code instead (fail-closed for acceptance).
 
 ## Output footer (audit-craft §5)
 
@@ -151,6 +184,14 @@ When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
 artifact families detected · `claude-code-guide` availability (used | unavailable →
 degraded) · citations gathered + capabilities as observed `<date>` · network
 dependency.
+
+When the opt-in minify lens ran, also append: lens ran (opt-in, propose-only —
+no target files written) · targets minified · reductions accepted / rejected
+(with reason codes) · token delta and per-use closure delta
+([`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) `snapshot`/`measure`, before → after) ·
+pointer verification result (`diff` gate + `LA-STALE-1` shadow scan) · target
+evals re-run (case counts + result | no eval pack — restricted classes) ·
+shadow-workspace path.
 
 ## Prevention hook (opt-in)
 
