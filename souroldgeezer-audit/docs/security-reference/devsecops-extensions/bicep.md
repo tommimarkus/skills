@@ -12,6 +12,7 @@
 extension.
 
 ## Cost banding
+<!-- lean-audit:sync-intentional -->
 
 This extension splits smells into two bands:
 

@@ -353,5 +353,6 @@ when the browser is in the loop.
 - [MDN — Content Security Policy](https://developer.mozilla.org/docs/Web/HTTP/CSP) and [MDN — Cookies](https://developer.mozilla.org/docs/Web/HTTP/Cookies) — reference for the browser-enforcement paths sub-lane S actually exercises.
 
 ### Sibling references
+<!-- lean-audit:sync-intentional -->
 - [unit-testing.md](unit-testing.md) — the unit rubric this document composes with. Where the E2E rubric is silent on a topic that applies to all lanes (assertion specificity, FIRST properties, the limits of coverage), defer to the unit-testing reference.
 - [integration-testing.md](integration-testing.md) — the integration rubric this document composes with. Where the E2E rubric is silent on flake, hermeticity, or per-test data ownership, the integration-testing reference is authoritative; §7 of this document lists only the E2E-specific additions.

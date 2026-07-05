@@ -327,4 +327,5 @@ lane also cites the ch. 11 material for the hermetic-server pattern.
 - [Testcontainers documentation](https://testcontainers.com/) — hermetic real dependencies in sub-lane A.
 
 ### Sibling reference
+<!-- lean-audit:sync-intentional -->
 - [unit-testing.md](unit-testing.md) — the unit-test rubric this document composes with. Where the integration rubric is silent on a topic that applies to both lanes (assertion specificity, naming, FIRST properties, the limits of coverage), defer to the unit-testing reference.

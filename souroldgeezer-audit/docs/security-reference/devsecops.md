@@ -1,4 +1,5 @@
 # DevSecOps — Reference
+<!-- lean-audit:sync-intentional -->
 
 A language-, stack-, and jurisdiction-agnostic synthesis of authoritative guidance on DevSecOps. Written to be directly usable as the rubric and reasoning substrate for a DevSecOps audit agent and a DevSecOps skill.
 

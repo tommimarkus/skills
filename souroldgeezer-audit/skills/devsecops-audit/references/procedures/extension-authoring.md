@@ -34,6 +34,7 @@ Each extension file in `../../extensions/` is intentionally short. Required cont
 | `dotnet-security.md` | C# under `api/` `app/` `shared/` `tests/` | .NET security routing; full `dns.*` rules in docs |
 
 ## Cost Banding
+<!-- lean-audit:sync-intentional -->
 
 Extensions that cover Azure resources, currently `bicep.md`, split their smell
 codes into two bands by remediation cost:
