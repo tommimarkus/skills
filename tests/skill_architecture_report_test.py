@@ -256,7 +256,38 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Usage: scripts/skill-architecture-report.sh [--format markdown|json] [--strict] [repo-root]", result.stdout)
+        self.assertIn("Usage: scripts/skill-architecture-report.sh [--format markdown|json] [--strict] [--native-validate] [repo-root]", result.stdout)
+
+    def test_native_validate_skips_when_claude_absent(self) -> None:
+        module = load_engine()
+        self.assertEqual([], module.native_validate_findings(REPO_ROOT, None))
+
+    def test_native_validate_reports_failures_via_injected_runner(self) -> None:
+        module = load_engine()
+        calls: list = []
+
+        def failing_runner(plugin_path):
+            calls.append(plugin_path)
+            return (1, "frontmatter: YAML Parse error: Unexpected token")
+
+        findings = module.native_validate_findings(REPO_ROOT, "/stub/claude", runner=failing_runner)
+        self.assertTrue(calls, "runner should be invoked per plugin when claude is present")
+        self.assertTrue(findings)
+        self.assertTrue(all(f.code == "SAC-RUNTIME-NATIVE-VALIDATE" for f in findings))
+        self.assertTrue(all(f.group == "Runtime Parity" for f in findings))
+
+    def test_native_validate_clean_when_runner_passes(self) -> None:
+        module = load_engine()
+        findings = module.native_validate_findings(REPO_ROOT, "/stub/claude", runner=lambda _p: (0, ""))
+        self.assertEqual([], findings)
+
+    def test_native_validate_fail_open_on_runner_exception(self) -> None:
+        module = load_engine()
+
+        def boom(_plugin_path):
+            raise RuntimeError("validator exploded")
+
+        self.assertEqual([], module.native_validate_findings(REPO_ROOT, "/stub/claude", runner=boom))
 
     def test_json_output_is_machine_readable_for_thin_skill(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

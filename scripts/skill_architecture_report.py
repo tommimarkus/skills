@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -612,10 +613,12 @@ def calculate_coverage(rules: Iterable[Rule]) -> Coverage:
 
 def usage() -> str:
     return (
-        "Usage: scripts/skill-architecture-report.sh [--format markdown|json] [--strict] [repo-root]\n\n"
+        "Usage: scripts/skill-architecture-report.sh [--format markdown|json] [--strict] [--native-validate] [repo-root]\n\n"
         "Runs deterministic Skill Architecture Craft Standard validation and emits\n"
         "Markdown or machine-readable JSON. Findings exit 0 unless --strict is set;\n"
-        "usage and unreadable-path errors exit nonzero.\n"
+        "usage and unreadable-path errors exit nonzero. With --native-validate, folds\n"
+        "`claude plugin validate --strict` per plugin into Runtime Parity (fail-open\n"
+        "when the Claude CLI is absent).\n"
     )
 
 
@@ -1979,6 +1982,86 @@ def scan_repo_guidance(repo_root: Path) -> list[Finding]:
     return findings
 
 
+def native_plugin_dirs(repo_root: Path) -> list[str]:
+    """Plugin source dirs declared in the marketplace manifest, keeping only those
+    that resolve to a Claude plugin manifest in this repo. Fail-open: returns []
+    when the marketplace is missing or unreadable."""
+    marketplace_path = repo_root / ".claude-plugin/marketplace.json"
+    if not marketplace_path.is_file():
+        return []
+    marketplace, error = load_json(marketplace_path)
+    if error is not None or not isinstance(marketplace, dict):
+        return []
+    plugins = marketplace.get("plugins", [])
+    if not isinstance(plugins, list):
+        return []
+    dirs: list[str] = []
+    for entry in plugins:
+        if not isinstance(entry, dict):
+            continue
+        source = str(entry.get("source", "")).removeprefix("./")
+        if source and (repo_root / source / ".claude-plugin/plugin.json").is_file():
+            dirs.append(source)
+    return dirs
+
+
+def _default_native_validator(claude_bin: str):
+    """Runner that shells out to `claude plugin validate --strict <plugin>`;
+    returns (exit_code, combined_output)."""
+
+    def run(plugin_path: Path) -> tuple[int, str]:
+        completed = subprocess.run(
+            [claude_bin, "plugin", "validate", "--strict", str(plugin_path)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        return completed.returncode, (completed.stdout + completed.stderr).strip()
+
+    return run
+
+
+def native_validate_findings(
+    repo_root: Path,
+    claude_bin: str | None,
+    *,
+    runner=None,
+) -> list[Finding]:
+    """Fail-open structural pre-pass that folds `claude plugin validate --strict`
+    per plugin into the report. Composes the native structural validator
+    (plugin/marketplace manifest, agent/skill/command frontmatter, hooks schema)
+    with the craft-standard checks; it does not replace them. Returns [] when the
+    Claude CLI is absent or an invocation errors, so a machine without the native
+    tool still runs the rest of the report unchanged."""
+    if claude_bin is None:
+        return []
+    validate = runner if runner is not None else _default_native_validator(claude_bin)
+    findings: list[Finding] = []
+    for source in native_plugin_dirs(repo_root):
+        rel = f"{source}/.claude-plugin/plugin.json"
+        try:
+            code, output = validate(repo_root / source)
+        except Exception:
+            continue  # fail-open: a validator error must never block the report
+        if code != 0:
+            summary = " ".join((output or "validation failed").split())
+            findings.append(
+                make_finding(
+                    "Runtime Parity",
+                    "high",
+                    "SAC-RUNTIME-NATIVE-VALIDATE",
+                    rel,
+                    f"claude plugin validate --strict failed: {summary}",
+                    "Plugin manifests, agent/skill/command frontmatter, and hooks must "
+                    "pass the native `claude plugin validate --strict` structural checks.",
+                    "Claude may load the plugin with dropped or malformed metadata at runtime.",
+                    "Fix the reported structural issue, then rerun the report.",
+                )
+            )
+    return findings
+
+
 def collect_findings(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
     for skill_rel in find_skill_files(repo_root):
@@ -2461,6 +2544,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--native-validate", action="store_true")
     parser.add_argument("repo_root", nargs="?")
     parser.add_argument("extra", nargs="*")
     parser.add_argument("-h", "--help", action="store_true")
@@ -2483,6 +2567,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     resolved_repo_root = repo_root.resolve()
     findings = collect_findings(resolved_repo_root)
+    if args.native_validate:
+        findings = native_validate_findings(resolved_repo_root, shutil.which("claude")) + findings
     rules = build_rule_catalog()
     coverage = calculate_coverage(rules)
     calibration = calculate_replacement_calibration(resolved_repo_root)
