@@ -192,3 +192,23 @@ reference section reachable across the skill closure. The step-1 escalation cue
 ("this map is a floor, not a cap") keeps a mode free to pull any other section
 the moment the task reaches it — the guard the earlier bare `§§2-7,9`
 software-design scoping (above) lacked before it was reverted to whole-file.
+
+# lean-audit minify lens — per-use load cost
+
+| Scenario | Before | After | Delta |
+|---|---|---|---|
+| lean-audit-default | 6841 | 7845 | +1004 |
+| lean-audit-minify (new) | — | 12536 | n/a |
+
+The default-path growth is the SKILL.md wiring (the minify Contract paragraph,
+opt-in section, Load Map bullet, Rules, and footer block) plus the `LA-MIN-*`
+catalog band; `procedures/minify.md` itself is opt-in and loads only in the
+`lean-audit-minify` scenario, so it never enters the default always-loaded
+path. Fidelity baseline regenerated from `resolve_closure` (now inventories
+`LA-MIN-1/2/3` and the minify sections: 14 -> 18 codes, 66 -> 73 sections).
+
+Note: `resolve_closure` follows every markdown link regardless of load
+condition, so the opt-in `procedures/minify.md` (and `platform-redundancy.md`)
+appear in the SKILL.md closure and fidelity baseline even though they load only
+on explicit request. The `lean-audit-minify` scenario total (12536) is
+therefore a conservative upper bound on the real opt-in per-use read.
