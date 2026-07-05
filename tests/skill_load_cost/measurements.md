@@ -198,7 +198,7 @@ software-design scoping (above) lacked before it was reverted to whole-file.
 | Scenario | Before | After | Delta |
 |---|---|---|---|
 | lean-audit-default | 6841 | 7845 | +1004 |
-| lean-audit-minify (new) | — | 12536 | n/a |
+| lean-audit-minify (new) | — | 12781 | n/a |
 
 The default-path growth is the SKILL.md wiring (the minify Contract paragraph,
 opt-in section, Load Map bullet, Rules, and footer block) plus the `LA-MIN-*`

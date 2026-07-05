@@ -98,15 +98,26 @@ against the shadow copy):
 - **G2 inventory + pointer diff:**
   `skill_load_cost.py diff --baseline before.json --files <after-closure files> --code-patterns <patterns.json>`
   must exit 0 — no missing code, no missing section, no dangling pointer.
-- **G3 stale/anchor scan:** run `lean_engine.py <shadow-root> --format json`
-  and compare `LA-STALE-1` findings to the before run: no NEW broken link or
-  `#anchor`. (G2's pointer check is existence-only; G3 covers anchors.)
+- **G3 stale/anchor scan:** run `lean_engine.py <shadow-root> --format json` at
+  the **mirrored repo root** — a path that preserves every file's repo-relative
+  depth, NOT the bare skill directory. The engine keys guarded-file discovery on
+  the path relative to the scan root, so pointing it at a skill subdirectory
+  silently scans nothing and returns `[]`, indistinguishable from a clean pass.
+  First assert the guarded-file set is non-empty (the edited target files appear
+  in the run); only then compare `LA-STALE-1` findings to the before run: no NEW
+  broken link or `#anchor`. **G3 is the ONLY gate that catches a broken
+  `#anchor`** — G2's `diff`/`check_pointers` is existence-only on the file part
+  before `#`, so a bad anchor slips through BOTH gates if G3 is run at the wrong
+  root. Run G3 at the mirrored repo root, every time.
 - **G4 delta measurement:** write an ad-hoc scenarios file listing the
   before-closure files, run `skill_load_cost.py snapshot` once with
   `--root <audited root>` and once with `--root <shadow root>` (after-closure
   file list), and record the token delta; for skill targets also record the
   per-use closure delta (`resolve_closure` before vs after — files removed
-  from the always-loaded set).
+  from the always-loaded set). Note: `resolve_closure` prints ABSOLUTE paths,
+  but `snapshot`/`measure` scenarios need paths relative to `--root` (they must
+  resolve against both the audited and shadow roots) — convert before writing
+  the scenarios file.
 
 **Judgment gates** (adversarial; disclosed as inference, audit-craft §2):
 
@@ -148,7 +159,10 @@ Per accepted reduction (`LA-MIN-1`):
 - **consumed findings** — the `LA-*` codes from Stage 1 it remediates
 - **reduction class** — dedupe-to-canonical | hoist | tighten | delete-dead |
   per-use move (gate/split/partition)
-- **diff** — the unified diff, fenced, apply-ready but NOT applied
+- **diff** — the unified diff, fenced, apply-ready but NOT applied (diff two
+  repo-relative paths, or normalize the `a/`…`b/`… headers — `git diff
+  --no-index <real> <shadow>` bakes in the absolute shadow path, which does not
+  apply cleanly against the target)
 - **token delta** — from G4
 - **per-use closure delta** — for skill targets, from G4
 - **fidelity-safety** — structural-safe | needs-adversarial-review
