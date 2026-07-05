@@ -35,6 +35,11 @@ to reduction classes:
   that would dangle.
 - `LA-BLOAT-1` / `LA-BLOAT-2` → **hoist**: move the heavy always-loaded block
   to a `references/` file behind an explicit load condition.
+- `LA-VERBOSE-2` → **tighten**: rewrite the confirmed-verbose passage in place
+  at a lower token count, preserving every semantic unit (the unique-prose gate
+  in Stage 3 governs this class). Consumes ONLY `LA-VERBOSE-2` (a judgment-
+  confirmed finding); a raw `LA-VERBOSE-1` engine nomination never enters the
+  worklist unconfirmed.
 - `LA-PUC-1/2/3` (when the target has entry artifacts) → the per-use
   procedure's recommended move (mode-gate / split / partition), inheriting its
   fidelity-safety class and the escalation-cue rule from
@@ -48,6 +53,14 @@ Exclusions (never enter the worklist):
 - `LA-CODE-DUP-*` clones and any source-code rewrite: emit an `LA-MIN-3`
   referral to the owning skill (`software-design` for semantic restructure)
   instead. Minify rewrites prose/skill surfaces only.
+- **Normative regions** — a MUST-rule, stop condition, output-contract clause,
+  Load-Map, or frontmatter — are hard-banned from **tighten** in v1: the rewrite
+  risk on load-bearing prose outweighs the token win. Emit them as
+  `LA-MIN-2: gate-unavailable` (detector stays visible as `LA-VERBOSE-2`); the
+  safer classes (dedupe/hoist) may still act there. A region already claimed by
+  **dedupe-to-canonical** is likewise excluded from **tighten** in the same
+  proposal — dedupe is strictly safer (its content survives at the canonical
+  home) and wins the overlap.
 
 Rank the remaining items by projected token delta × per-use weight (the
 per-use dial from [`per-use-cost.md`](per-use-cost.md), when inferred) × the
@@ -64,6 +77,17 @@ escalation cue, finding code, and section heading cited from elsewhere — and
 assign each a disposition: `kept` (still present), `moved-to <path>#<section>`
 (hoisted), or `cited-at <canonical path>#<section>` (deduped). **No obligation
 may be dropped.** The ledger is Stage 3's G7 evidence and part of the emit.
+
+**Tighten items build a semantic-unit ledger** (a finer obligation ledger): a
+tighten rewrite carries its own meaning — there is no canonical home to fall
+back on — so the coarse "each instruction / clause" ledger is too blunt.
+Decompose the passage into atomic semantic units: every normative term
+(MUST / NEVER / ONLY / should), conditional or scope qualifier ("only when…",
+"unless…", "at least N"), named artifact / path / code / number / threshold,
+enumerated list item, negation, and actor–action–object triple. Mark each `kept`
+or `reworded` (a `reworded` unit MUST quote the after-text that carries it); any
+unit that cannot be mapped into the after-text is `obligation-dropped`. This
+ledger is the G7v and G5v evidence.
 
 Dial composition (from [`per-use-cost.md`](per-use-cost.md) "Infer the dial"):
 on a structural-only-dial target (audit skills), propose structural-safe
@@ -142,6 +166,31 @@ against the shadow copy):
 - **G8 escalation cue:** confirm every capping/moving reduction carries its
   re-load cue (`escalation-cue-missing` otherwise).
 
+**Tighten-class gates** (apply IN ADDITION to G1–G8, ONLY to `tighten`
+reductions — the one class that rewrites unique prose with no canonical
+fallback). Run tighten reductions as their own per-target batch so a gate
+failure bisects cleanly, never mixed with dedupe/hoist/delete in one batch:
+
+- **G2v deterministic guard-token gate** (fail-closed): for each tighten region
+  run `skill_load_cost.py guard_tokens --before <before-region> --after <after-region> --code-patterns <patterns.json>`;
+  it must exit 0. The after-region must preserve every finding code, link
+  target, inline-code span, number, and ALL-CAPS normative keyword, and must not
+  drop any negation token's count (the dropped-`not` silent-inversion guard). A
+  non-zero exit is `guard-token-dropped`; if the harness cannot run it,
+  `gate-unavailable`. G2v is English-keyword based; non-English normative markers
+  ride on G5v/G7v only — disclose that limit.
+- **G5v reverse-derivation probes** (replaces the vacuous G5 — a tighten has no
+  canonical target to read): for each semantic unit, form a probe question from
+  the BEFORE text ("under what condition does X apply?", "is Y required or
+  optional?", "what is the threshold for Z?") and answer it from the AFTER text
+  ALONE. Unanswerable or differently answered → `semantic-loss`.
+- **Two-way entailment:** the after-text must not ADD meaning either — any
+  normative term or obligation in the after-text not traceable to a before unit
+  (e.g. a `should` tightened into a `must`) is `meaning-added`.
+
+A tighten on a normative region is already excluded at Stage 1
+(`gate-unavailable`); if one reaches here, reject it the same way.
+
 **Failure handling.** Gates run per target batch. On failure, bisect: revert
 the smallest set of reductions whose removal makes all gates pass; reject that
 set as `LA-MIN-2` with the failing gate's reason code and evidence. If a
@@ -167,7 +216,8 @@ Per accepted reduction (`LA-MIN-1`):
 - **per-use closure delta** — for skill targets, from G4
 - **fidelity-safety** — structural-safe | needs-adversarial-review
   (+ `maintainer-review required` on structural-only-dial targets)
-- **obligation ledger** — the Stage 2 ledger with final dispositions
+- **obligation ledger** — the Stage 2 ledger with final dispositions (the finer
+  semantic-unit ledger for a `tighten` reduction)
 
 Per rejected reduction (`LA-MIN-2`): code, target, reduction class, reason
 code, and the failing evidence (the regression line, flipped eval id, or
@@ -176,8 +226,9 @@ surface and the owning skill.
 
 Close with the named `fidelity:` block: reductions proposed / accepted /
 rejected (by reason code) · total token delta · per-use closure delta(s) ·
-pointer verification result (G2 + G3) · evals re-run (case counts + result,
-or "no eval pack — restricted classes") · shadow-workspace path. Proposed
+pointer verification result (G2 + G3) · guard-token gate result (G2v, for any
+`tighten`) · evals re-run (case counts + result, or "no eval pack — restricted
+classes") · shadow-workspace path. Proposed
 diffs live in the report output (or a user-requested scratch file); never in
 the target tree.
 

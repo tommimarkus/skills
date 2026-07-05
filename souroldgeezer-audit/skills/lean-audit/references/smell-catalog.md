@@ -56,9 +56,11 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   fewer tokens with every obligation, qualifier, threshold, negation, and
   enumerated item preserved, and the wordiness not load-bearing (pedagogy,
   calibrated hedging, normative precision). Severity: warn. Source: inference
-  (`procedures/fuzzy-waste.md`); mark as requiring verification. Detection only
-  in v1 — turning it into a reduction (the minify `tighten` class) is a separate,
-  not-yet-wired step.
+  (`procedures/fuzzy-waste.md`); mark as requiring verification. Consumed by the
+  minify `tighten` class (opt-in, propose-only) on non-normative prose only —
+  normative regions (MUST-rules, stop conditions, output contracts) are
+  hard-banned from tighten in v1 (`gate-unavailable`), where it stays
+  detection-only.
 
 ## Platform redundancy — Lean: over-production (reinventing the platform)
 - `LA-NAT-1` — a custom artifact (hook/script, guidance-prose instruction,
@@ -90,15 +92,16 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
 
 ## Minify — Lean: over-processing (propose-only reduction)
 - `LA-MIN-1` — an accepted reduction: a concrete propose-only rewrite (dedupe
-  to canonical home, hoist always-loaded reference, tighten restated prose,
-  delete dead file, or per-use move) that passed the full adversarial fidelity
-  gate; carried in the proposal diff, never applied. Severity: info (a
+  to canonical home, hoist always-loaded reference, tighten confirmed-verbose
+  prose, delete dead file, or per-use move) that passed the full adversarial
+  fidelity gate; carried in the proposal diff, never applied. Severity: info (a
   proposal disposition, not a control weakness). Source: inference +
   deterministic gate (`procedures/minify.md`). Opt-in lens only.
 - `LA-MIN-2` — a rejected reduction: a candidate that failed or could not run
   a required fidelity gate (pointer-unresolved, semantic-loss,
-  eval-regression, obligation-dropped, escalation-cue-missing, or
-  gate-unavailable); recorded with its reason, never merged into the proposal.
+  guard-token-dropped, meaning-added, eval-regression, obligation-dropped,
+  escalation-cue-missing, or gate-unavailable); recorded with its reason, never
+  merged into the proposal.
   Severity: info. Source: inference + deterministic gate
   (`procedures/minify.md`). Opt-in lens only.
 - `LA-MIN-3` — an out-of-scope reduction referral: reducible source-code waste

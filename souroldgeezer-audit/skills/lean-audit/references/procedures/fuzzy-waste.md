@@ -64,9 +64,12 @@ Method:
    faithful reduction exists, record it a cleared non-finding with the reason —
    do not emit.
 
-Detection only in v1: this confirms the finding; it does not produce the rewrite.
-Turning a confirmed `LA-VERBOSE-2` into a proposed reduction is the minify
-`tighten` class — a separate, opt-in, not-yet-wired step.
+This code confirms the finding; it does not produce the rewrite. A confirmed
+`LA-VERBOSE-2` on non-normative prose feeds the minify `tighten` class (opt-in,
+propose-only — see [`minify.md`](minify.md)), which drafts a reviewable diff
+behind the adversarial fidelity gate. Normative regions (MUST-rules, stop
+conditions, output contracts, Load-Map, frontmatter) are hard-banned from
+tighten in v1, so there `LA-VERBOSE-2` stays detection-only.
 
 All three inference codes (`LA-STALE-2`, `LA-BLOAT-2`, `LA-VERBOSE-2`) are `warn`
 — never `block`. Disclose them as inference in the output.

@@ -191,7 +191,8 @@ When the opt-in minify lens ran, also append: lens ran (opt-in, propose-only —
 no target files written) · targets minified · reductions accepted / rejected
 (with reason codes) · token delta and per-use closure delta
 ([`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) `snapshot`/`measure`, before → after) ·
-pointer verification result (`diff` gate + `LA-STALE-1` shadow scan) · target
+pointer verification result (`diff` gate + `LA-STALE-1` shadow scan) ·
+guard-token gate result (`guard_tokens`, for any `tighten` reduction) · target
 evals re-run (case counts + result | no eval pack — restricted classes) ·
 shadow-workspace path.
 

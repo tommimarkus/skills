@@ -338,5 +338,103 @@ class CliExitContractTest(unittest.TestCase):
             self.assertNotIn("Traceback", proc.stderr)
 
 
+CODE_PATTERNS = json.loads((REPO_ROOT / "tests/skill_load_cost/code_patterns.json").read_text())
+
+# A before-region carrying one element of every guarded token class.
+_BEFORE = (
+    "The loader MUST reject `unknown` fields and return a problem for LA-DUP-1 "
+    "within 30 ms; see [guide](x.md). It does not retry."
+)
+
+
+class GuardTokensTest(unittest.TestCase):
+    """G2v deterministic guard: an after-region must preserve every closed token
+    class of the before-region (superset for codes/links/inline-code/numbers/
+    normative-keywords; no drop in any negation token's count)."""
+
+    def _guard(self, after: str, before: str = _BEFORE) -> list[str]:
+        return slc.guard_tokens(before, after, CODE_PATTERNS)
+
+    def test_faithful_tighten_preserving_all_classes_is_clean(self):
+        after = (
+            "The loader MUST reject `unknown` fields, returning a problem for "
+            "LA-DUP-1 within 30 ms ([guide](x.md)); it does not retry."
+        )
+        self.assertEqual(self._guard(after), [])
+
+    def test_dropped_finding_code_flagged(self):
+        after = "The loader MUST reject `unknown` fields within 30 ms; see [guide](x.md). It does not retry."
+        probs = self._guard(after)
+        self.assertTrue(any("LA-DUP-1" in p for p in probs), probs)
+
+    def test_dropped_link_target_flagged(self):
+        after = "The loader MUST reject `unknown` fields for LA-DUP-1 within 30 ms. It does not retry."
+        self.assertTrue(any("x.md" in p for p in self._guard(after)))
+
+    def test_dropped_inline_code_flagged(self):
+        after = "The loader MUST reject unknown fields for LA-DUP-1 within 30 ms; see [guide](x.md). It does not retry."
+        self.assertTrue(any("unknown" in p for p in self._guard(after)))
+
+    def test_dropped_number_flagged(self):
+        after = "The loader MUST reject `unknown` fields for LA-DUP-1 quickly; see [guide](x.md). It does not retry."
+        self.assertTrue(any("30" in p for p in self._guard(after)))
+
+    def test_dropped_normative_keyword_flagged(self):
+        after = "The loader should reject `unknown` fields for LA-DUP-1 within 30 ms; see [guide](x.md). It does not retry."
+        self.assertTrue(any("MUST" in p for p in self._guard(after)))
+
+    def test_dropped_negation_is_hard_fail(self):
+        # silent inversion: "does not retry" -> "retries"
+        after = "The loader MUST reject `unknown` fields for LA-DUP-1 within 30 ms; see [guide](x.md). It retries."
+        self.assertTrue(any("not" in p.lower() for p in self._guard(after)))
+
+    def test_added_content_is_not_flagged(self):
+        # guard_tokens is one-directional (before subset of after); adding an
+        # extra normative keyword is fine here (two-way entailment is a judgment
+        # step, not this deterministic gate).
+        after = _BEFORE + " Callers MUST NEVER assume ordering."
+        self.assertEqual(self._guard(after), [])
+
+    def test_empty_before_is_clean(self):
+        self.assertEqual(slc.guard_tokens("", "anything at all", CODE_PATTERNS), [])
+
+
+class GuardTokensCliTest(unittest.TestCase):
+    def _run(self, before: str, after: str):
+        with tempfile.TemporaryDirectory() as d:
+            bf, af = Path(d) / "before.md", Path(d) / "after.md"
+            pat = Path(d) / "patterns.json"
+            bf.write_text(before, encoding="utf-8")
+            af.write_text(after, encoding="utf-8")
+            pat.write_text(json.dumps(CODE_PATTERNS), encoding="utf-8")
+            return subprocess.run(
+                [sys.executable, str(SCRIPT), "guard_tokens",
+                 "--before", str(bf), "--after", str(af), "--code-patterns", str(pat)],
+                capture_output=True, text=True,
+            )
+
+    def test_clean_rewrite_exits_0(self):
+        proc = self._run(_BEFORE, _BEFORE)
+        self.assertEqual(proc.returncode, 0)
+
+    def test_violation_exits_1(self):
+        proc = self._run(_BEFORE, "The loader rejects fields quickly.")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("guard", (proc.stdout + proc.stderr).lower())
+
+    def test_missing_file_exits_2_without_traceback(self):
+        with tempfile.TemporaryDirectory() as d:
+            pat = Path(d) / "patterns.json"
+            pat.write_text(json.dumps(CODE_PATTERNS))
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), "guard_tokens",
+                 "--before", "/nonexistent/b.md", "--after", "/nonexistent/a.md",
+                 "--code-patterns", str(pat)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(proc.returncode, 2)
+            self.assertNotIn("Traceback", proc.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

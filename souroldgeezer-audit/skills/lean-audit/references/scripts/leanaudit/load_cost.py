@@ -22,6 +22,7 @@ __all__ = [
     "diff_inventory",
     "estimate_tokens",
     "extract_inventory",
+    "guard_tokens",
     "main",
     "measure_scenario",
     "resolve_closure",
@@ -141,6 +142,77 @@ def diff_inventory(baseline: Inventory, current: Inventory) -> list[str]:
     return problems
 
 
+# --- G2v: deterministic guard-token gate for tighten rewrites -------------------
+#
+# A tighten rewrite carries its own meaning (unlike dedupe, whose content survives
+# at the canonical home), so this is the one deterministic backstop against silent
+# fidelity loss. It compares the CLOSED token classes of a before/after region: the
+# after-region must be a superset for codes/links/inline-code/numbers/normative
+# keywords, and must not DROP any negation token's count (the dropped-"not" silent
+# inversion). English-keyword based; non-English normative markers ride on the
+# judgment gates (G7v/G5v) only — a disclosed evidence limit.
+_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
+_NORMATIVE_RE = re.compile(
+    r"\b(?:MUST|MUSTN'T|SHALL|SHOULD|SHOULDN'T|NEVER|ONLY|NOT|NONE|"
+    r"REQUIRED|ALWAYS|FORBIDDEN|PROHIBITED)\b"
+)
+_NEGATION_RE = re.compile(
+    r"\b(?:no|not|never|none|without|unless|except|cannot|neither|nor)\b", re.I
+)
+
+
+def _prose_text(text: str, code_patterns: list[str]) -> str:
+    """Strip fenced/inline code, link targets, and finding codes so number
+    extraction sees prose thresholds, not the digits inside a code like LA-DUP-1."""
+    stripped = _LINK_RE.sub(" ", _strip_code(text))
+    for pattern in code_patterns:
+        stripped = re.sub(pattern, " ", stripped)
+    return stripped
+
+
+def guard_tokens(before: str, after: str, code_patterns: list[str]) -> list[str]:
+    """Compare the closed token classes of a before/after region for a tighten
+    rewrite. Returns a list of drop messages (empty = the rewrite preserved every
+    guarded token). One-directional (before must be preserved in after); adding
+    meaning is caught by the judgment two-way-entailment step, not here."""
+
+    def codes(text: str) -> set[str]:
+        found: set[str] = set()
+        for pattern in code_patterns:
+            found.update(re.findall(pattern, text))
+        return found
+
+    def normatives(text: str) -> set[str]:
+        return set(_NORMATIVE_RE.findall(_strip_code(text)))
+
+    def negations(text: str) -> list[str]:
+        return [t.lower() for t in _NEGATION_RE.findall(_strip_code(text))]
+
+    problems: list[str] = []
+    checks = [
+        ("code", codes(before), codes(after)),
+        ("link", set(_LINK_RE.findall(before)), set(_LINK_RE.findall(after))),
+        ("inline-code", set(_INLINE_CODE_RE.findall(before)), set(_INLINE_CODE_RE.findall(after))),
+        (
+            "number",
+            set(_NUMBER_RE.findall(_prose_text(before, code_patterns))),
+            set(_NUMBER_RE.findall(_prose_text(after, code_patterns))),
+        ),
+        ("normative keyword", normatives(before), normatives(after)),
+    ]
+    for label, before_set, after_set in checks:
+        for missing in sorted(before_set - after_set):
+            problems.append(f"dropped {label}: {missing}")
+
+    before_neg = negations(before)
+    after_neg = negations(after)
+    for tok in sorted(set(before_neg)):
+        b, a = before_neg.count(tok), after_neg.count(tok)
+        if a < b:
+            problems.append(f"dropped negation: {tok} ({b} -> {a})")
+    return problems
+
+
 def check_pointers(paths: list[Path], code_patterns: list[str]) -> list[str]:
     problems = []
     for path in paths:
@@ -228,6 +300,16 @@ def _cmd_diff(args: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+def _cmd_guard_tokens(args: argparse.Namespace) -> int:
+    patterns = _read_json(args.code_patterns)
+    before = Path(args.before).read_text(encoding="utf-8")
+    after = Path(args.after).read_text(encoding="utf-8")
+    problems = guard_tokens(before, after, patterns)
+    for problem in problems:
+        print(f"GUARD-TOKEN GATE: {problem}", file=sys.stderr)
+    return 1 if problems else 0
+
+
 def _cmd_snapshot(args: argparse.Namespace) -> int:
     scenarios = _read_json(args.scenarios)
     out = {s["id"]: measure_scenario(s, Path(args.root))["total"] for s in scenarios}
@@ -263,6 +345,12 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--files", nargs="+", required=True)
     d.add_argument("--code-patterns", required=True)
     d.set_defaults(func=_cmd_diff)
+
+    gt = sub.add_parser("guard_tokens")
+    gt.add_argument("--before", required=True)
+    gt.add_argument("--after", required=True)
+    gt.add_argument("--code-patterns", required=True)
+    gt.set_defaults(func=_cmd_guard_tokens)
 
     sn = sub.add_parser("snapshot")
     sn.add_argument("--scenarios", required=True)
