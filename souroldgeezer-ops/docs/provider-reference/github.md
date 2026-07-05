@@ -1,10 +1,9 @@
 # GitHub Provider Reference
 
-Tooling order, lifecycle-marker mechanics, and escalation gates that `issue-ops`
-and `pr-ops` share when GitHub is the provider. Both skills' `extensions/github.md`
-link the sections below and add only what differs for their own item — a GitHub
-issue for `issue-ops`, a pull request for `pr-ops`. A skill's own core contracts
-are unaffected by this reference.
+GitHub tooling order for `issue-ops` and `pr-ops`, plus the GitHub view of the
+shared [provider-lifecycle-core.md](provider-lifecycle-core.md) lifecycle and
+escalation sections. Both skills' `extensions/github.md` link the sections below
+and add only the GitHub issue or pull-request specifics.
 
 ## Tooling Order
 
@@ -19,28 +18,10 @@ item (issue or PR/MR).
 
 ## Lifecycle Marker Mechanics
 
-When a skill's trigger calls for a marker, write it on the item unless the run
-lacks comment permission. Update the latest marker from the same actor when
-possible. Add a new
-comment only when editing is unavailable, editing would hide reply context, or a
-fresh visible escalation is needed. Use current state only, not an event log.
-Summarize verification instead of dumping command output. Use strict offset
-timestamps. `Actor` identifies the agent runtime, such as `Claude Code`.
-
-Each skill defines its own lifecycle-status marker templates (`issue-ops:github:v1`
-and `pr-ops:github:v1`) with skill-relevant fields; keep the marker to one
-current-state block per item. The final marker update is sufficient before the
-terminal action — closing the issue, or merging or closing the PR — so do not add
-a separate closing or completion comment unless updating the marker fails.
+Apply [provider-lifecycle-core.md § Lifecycle marker mechanics](provider-lifecycle-core.md#lifecycle-marker-mechanics).
+GitHub templates: `issue-ops:github:v1`, `pr-ops:github:v1`.
 
 ## Shared Escalation Gates
 
-Escalate the affected item (issue or PR/MR) on:
-
-- wrong account, wrong repository, missing permission, or unexpected GitHub tool
-  routing;
-- a concurrent lifecycle marker from another current actor;
-- GitHub Actions permissions, workflow token handling, secret handling,
-  repository settings, branch rules, or sensitive history cleanup;
-- public comment text that rejects a request, assigns blame, makes a commitment,
-  asks the reporter to do work, or exposes sensitive detail.
+Apply [provider-lifecycle-core.md § Escalation gates](provider-lifecycle-core.md#escalation-gates)
+(on GitHub, "CI or pipeline permissions" covers GitHub Actions).

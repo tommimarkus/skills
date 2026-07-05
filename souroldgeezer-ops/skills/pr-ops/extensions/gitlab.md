@@ -98,13 +98,8 @@ For long-running write work, add or update an MR lifecycle marker unless the
 run lacks note permission or the user asked for read-only review. When a
 prepared branch target has no MR yet, defer the MR marker until after MR
 creation and use the issue lifecycle marker or final chat output for
-pre-creation status. Update the latest marker from the same actor when
-possible. Add a new note only when editing is unavailable, editing would hide
-reply context, or a fresh visible escalation is needed.
-
-Use current state only, not an event log. Summarize verification instead of
-dumping command output. Use strict offset timestamps. `Actor` identifies the
-agent runtime, such as `Claude Code`.
+pre-creation status. Apply the provider-agnostic marker mechanics from
+[../../../docs/provider-reference/provider-lifecycle-core.md § Lifecycle marker mechanics](../../../docs/provider-reference/provider-lifecycle-core.md#lifecycle-marker-mechanics).
 
 Working state:
 
@@ -154,8 +149,8 @@ Verification: passed - repository checks
 Last reviewed: 2026-05-13T12:00:00+03:00
 ```
 
-The final lifecycle marker update is sufficient before merge or close. Do not
-add a separate completion note unless updating the marker fails or the user
+The final marker update is sufficient before merge or close (see the core
+mechanics); on GitLab, also skip a separate completion note unless the user
 explicitly asks for a public summary.
 
 ## MR Creation Or Reuse

@@ -66,13 +66,9 @@ Use the project-local `issue_iid` (not the global `id`) on the REST route.
 ## Lifecycle Status
 
 Every inspected GitLab issue gets a lifecycle marker note unless the run lacks
-note permission. Update the latest marker from the same actor when the selected
-route supports note editing. Add a new note only when editing is unavailable,
-editing would hide reply context, or a fresh visible escalation is needed.
-
-Use current state only, not an event log. Summarize verification instead of
-dumping command output. Use strict offset timestamps. `Actor` identifies the
-agent runtime, such as `Claude Code`.
+note permission. Apply the provider-agnostic marker mechanics from
+[../../../docs/provider-reference/provider-lifecycle-core.md § Lifecycle marker mechanics](../../../docs/provider-reference/provider-lifecycle-core.md#lifecycle-marker-mechanics);
+on GitLab, update the marker only when the selected route supports note editing.
 
 For confidential issues, avoid sensitive detail in public notes. Use internal
 notes only when the selected tooling supports them and repository guidance
@@ -127,8 +123,8 @@ Resolution: implemented the issue request and verified closure safety
 Last reviewed: 2026-05-13T12:00:00+03:00
 ```
 
-The final lifecycle marker update is sufficient before closing the issue. Do
-not add a separate closing note unless updating the marker fails.
+The final marker update is sufficient before closing the issue (see the core
+mechanics).
 
 ## Integration Strategies
 
@@ -181,10 +177,12 @@ hard-to-reverse unless the task is specifically about moving.
 
 ## GitLab Escalation Gates
 
-Escalate the affected issue on:
+Apply the provider-agnostic gates from
+[../../../docs/provider-reference/provider-lifecycle-core.md § Escalation gates](../../../docs/provider-reference/provider-lifecycle-core.md#escalation-gates)
+(on GitLab those cover wrong host or project path, GitLab tooling route, CI/CD
+variables, protected branches, webhooks). Escalate the affected issue
+additionally on:
 
-- wrong account, wrong host, wrong project path, missing permission, or
-  unexpected GitLab tooling route;
 - ambiguous numeric reference where `id`, `iid`, `issue_iid`, and
   `merge_request_iid` could be confused;
 - GitLab Self-Managed version or tier differences that make a required field,
@@ -192,15 +190,10 @@ Escalate the affected issue on:
 - protected branch mismatch that prevents both direct integration and
   `pr-ops` handoff;
 - existing related merge request or issue branch with unclear issue ownership;
-- concurrent lifecycle marker from another current actor;
 - open blockers, unresolved linked `blocks` / `is_blocked_by` state, or late
   comments that change closure safety;
 - confidential issue detail that cannot be safely summarized in a lifecycle
   note with available tooling;
-- GitLab token scopes, protected branches, project settings, webhooks, CI/CD
-  variables, repository settings, or sensitive history cleanup;
-- public note text that rejects a request, assigns blame, makes a commitment,
-  asks the reporter to do work, or exposes sensitive detail;
 - implementation requires GitLab merge-request lifecycle work but no safe
   `pr-ops` GitLab handoff exists.
 
