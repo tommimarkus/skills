@@ -442,7 +442,7 @@ report, eval prompts, or forward-test behavior.
 Beyond this per-change loop, the repository runs a cross-session capture
 loop. A Stop hook invokes the `lesson-capture` skill to distill one
 generalizable (Layer-2, developing-the-skills) lesson from a session
-and file it as a `lesson-candidate` GitHub issue (rendered by the pure
+and file it as a `lesson-candidate` GitHub™ issue (rendered by the pure
 `scripts/lessons_issue.py`, hard secret-scanned at capture, deduped
 by fingerprint, fail-open). Graduation is ordinary issue handling:
 `issue-ops` (or the repo-internal `github-issue-lifecycle` overlay)
