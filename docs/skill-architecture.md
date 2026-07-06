@@ -116,6 +116,11 @@ Use progressive disclosure deliberately:
 - Cite cross-file reference paths as markdown links, not bare relative paths in
   inline-code spans, so a depth-wrong or stale citation surfaces in link checks
   instead of passing the gate silently.
+- Exception: to add a bundled dev/maintainer doc *without* counting it toward the
+  skill's per-use load closure, reference it in `SKILL.md` as an inline-code path,
+  not a markdown link — the load-closure resolver follows every markdown link in
+  `SKILL.md` (after stripping code, so section placement is irrelevant) — and put
+  the link-checkable markdown link on a non-closure surface such as `CLAUDE.md`.
 - Preserve a stable finding-code namespace when references define review rules.
 - Do not assume Claude will infer an overlay from folder naming alone.
   If an extension matters, the core workflow must name when to load it.
