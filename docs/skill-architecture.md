@@ -439,17 +439,25 @@ Classification rules:
 Do not claim improvement from prose preference alone. Tie the claim to the
 report, eval prompts, or forward-test behavior.
 
-Beyond this per-change loop, the repository runs a cross-session capture loop. A
-Stop hook invokes the `lesson-capture` skill to distill one generalizable
-(Layer-2, developing-the-skills) lesson from a session and stage it to a
-gitignored pending ledger. The `lessons` skill (`/lessons`, on `main` only) then
-reviews pending candidates and graduates approved ones into durable rules: prose
-and policy lessons into the relevant docs (this standard, `CLAUDE.md`, or a
-skill's own files), and deterministic lessons into a
-`tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when the
-report engine already detects the smell. That capture → review → graduate path
-is how a one-off correction becomes a standing rule that feeds back into this
-document. Two further `Stop` hooks run first-party gates: `stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run (trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh` runs lean-audit's per-use cost/fidelity guard. Both run as first-party Stop hooks registered in `.claude/settings.json` and replaced the former external-plugin `evaluate-skill` / `plugin-eval` hooks.
+Beyond this per-change loop, the repository runs a cross-session capture
+loop. A Stop hook invokes the `lesson-capture` skill to distill one
+generalizable (Layer-2, developing-the-skills) lesson from a session
+and file it as a `lesson-candidate` GitHub issue (rendered by the pure
+`scripts/lessons_issue.py`, hard secret-scanned at capture, deduped
+by fingerprint, fail-open). Graduation is ordinary issue handling:
+`issue-ops` (or the repo-internal `github-issue-lifecycle` overlay)
+drives each issue to the Definition of Done embedded in its body, which
+routes prose and policy lessons into the relevant docs (this standard,
+`CLAUDE.md`, or a skill's own files) and deterministic lessons into a
+`tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when
+the report engine already detects the smell. That capture → graduate
+path is how a one-off correction becomes a standing rule that feeds
+back into this document. Two further `Stop` hooks run first-party gates:
+`stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run
+(trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh`
+runs lean-audit's per-use cost/fidelity guard. Both run as first-party
+Stop hooks registered in `.claude/settings.json` and replaced the former
+external-plugin `evaluate-skill` / `plugin-eval` hooks.
 
 ## Degradation Checks
 
