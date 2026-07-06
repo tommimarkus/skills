@@ -34,4 +34,4 @@ stop_hook_mark_prompted
 stop_hook_emit_block \
   "This skill-authoring session may hold a reusable lesson." \
   "Before finishing, follow the lesson-capture workflow in \`internal-skills/lesson-capture/SKILL.md\` for the changed skill-craft surfaces. Judge whether anything this session revealed a generalizable Layer-2 rule — a correction, pointed question, or steering from the user, OR a wrong path you took and corrected yourself. Confirm it is Layer-2 (developing the skills), not Layer-1 (a skill's runtime output), and not a one-off; if not, record nothing. $phrase_hint" \
-  "Stage at most one generalizable candidate via \`python3 scripts/lessons_ledger.py append ...\`."
+  "Stage at most one generalizable candidate as a \`lesson-candidate\` GitHub issue per the lesson-capture workflow (render + secret-scan + dedup + create; fail-open)."
