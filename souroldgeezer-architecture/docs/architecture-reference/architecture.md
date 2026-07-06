@@ -452,7 +452,8 @@ silent metric under `Dediren tool issues` (§9); do not patch the bundle.
 First separate a *layout* problem from a *concern* problem. Density, route
 congestion, long spans, extreme aspect ratio, framing, and label displacement
 are placement problems: tune the dediren layout (§9 `layout_preferences` —
-`mode`, `direction`, `density`, `wrapping`, `routing`) and re-run
+`mode`, `direction`, `density`, `wrapping`, `routing`, and the ELK Layered
+tuning knobs) and re-run
 `validate-layout` before reporting `ARCH-L-3`. Reserve `ARCH-Q-2` and view
 splitting for genuine concern problems — mixed audiences, multiple viewpoints,
 an inventory dump, or unrelated layers in one diagram — or for a view that
@@ -603,9 +604,24 @@ authoritative enums:
 - `density`: `compact` | `readable` | `spacious` to relieve a dense view.
 - `wrapping`: `auto` | `off` | `multi-edge` to relieve hub fanout and parallel
   edges.
-- `routing`: `style` (`orthogonal`), `profile` (`compact` | `readable` |
-  `spacious`), and `endpoint_merging` (`off` | `local` | `auto`) to relieve
-  route congestion and detours.
+- `routing`: `style` (`orthogonal` | `polyline` | `spline`), `profile`
+  (`compact` | `readable` | `spacious`), and `endpoint_merging` (`off` |
+  `local` | `auto`) to relieve route congestion and detours.
+- `algorithm`: `layered` selects ELK Layered explicitly (currently the only
+  value; `mode: flow` already implies it) — set it alongside the layered-only
+  tuning below so the intent is self-documenting.
+- Layered-algorithm tuning (layered-only; ignored under `packed`):
+  `cycle_breaking` picks how feedback edges are broken; `layering.strategy` and
+  `placement.strategy` choose layer assignment and in-layer placement (e.g.
+  `placement.strategy: network-simplex` straightens a grouped fan-out that
+  staircases under the default); `crossing.strategy` / `crossing.greedy_switch`
+  control crossing minimization; and `compaction`, `components` (`separate`,
+  `spacing`), `high_degree_nodes`, and `thoroughness` tune whitespace,
+  disconnected-component packing, hub handling, and layout effort.
+- per-node placement hints (set on the node, not in `layout_preferences`):
+  `layer_constraint` pins a node to an edge layer (`first` / `last` / …) and
+  `partition` (integer) groups nodes into ordered bands — use sparingly to fix
+  a specific misplacement, and re-validate.
 
 Tune these to resolve a placement-driven `ARCH-L-3` before splitting a view
 (§7), and disclose any non-default `layout_preferences` per view in the footer.
