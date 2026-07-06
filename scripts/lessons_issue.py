@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pure rendering core for the lesson loop's GitHub-issue store.
 
-Replaces the removed local JSONL ledger (scripts/lessons_ledger.py). The
+Replaces the former local JSONL ledger. The
 lesson-capture skill turns one captured Layer-2 lesson into a `lesson-candidate`
 GitHub issue; this module holds the deterministic, network-free part — the issue
 title, body (with a hidden dedup fingerprint and a per-substrate Definition of
