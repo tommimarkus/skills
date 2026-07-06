@@ -399,7 +399,7 @@ class CaptureGlob(unittest.TestCase):
 
     def test_no_capture_match_returns_empty_dict(self):
         eng = load_engine()
-        self.assertEqual(eng.path_captures(".claude/skills/**", ".claude/skills/lessons/SKILL.md"), {})
+        self.assertEqual(eng.path_captures(".claude/skills/**", ".claude/skills/lesson-capture/SKILL.md"), {})
         self.assertIsNone(eng.path_captures(".claude/skills/**", "souroldgeezer-audit/skills/x/SKILL.md"))
 
     def test_unclosed_brace_is_literal_no_crash(self):
@@ -428,7 +428,7 @@ class CarveOuts(unittest.TestCase):
     def test_builtin_wrapper_path_exempt(self):
         eng = load_engine()
         reg = eng.load_registry(None)
-        self.assertTrue(eng.path_exempt(reg, ".claude/skills/lessons/SKILL.md"))
+        self.assertTrue(eng.path_exempt(reg, ".claude/skills/lesson-capture/SKILL.md"))
         self.assertFalse(eng.path_exempt(reg, "souroldgeezer-audit/skills/x/SKILL.md"))
 
     def test_registry_pair_with_shared_capture(self):

@@ -46,6 +46,7 @@ class HookTest(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn('"decision": "block"', out.stdout)
         self.assertIn("lesson-capture", out.stdout)
+        self.assertIn("lesson-candidate", out.stdout)
 
     def _run_hook_with_transcript(self, text: str):
         with tempfile.TemporaryDirectory() as t:

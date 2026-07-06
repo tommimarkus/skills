@@ -14,7 +14,7 @@ SCRIPT = (REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
           / "references" / "scripts" / "skill_load_cost.py")
 
 # Load the script by path — repo convention (no `scripts/__init__.py`), matching
-# tests/skill_architecture_report_test.py and tests/lessons_ledger_test.py.
+# tests/skill_architecture_report_test.py and tests/lessons_issue_test.py.
 slc = load_script_module("skill_load_cost", SCRIPT)
 
 
