@@ -99,6 +99,11 @@ Keep direct-main issue branches local. Prefer one clean commit named
 `Fix #<number>: <title>` for defects or `Resolve #<number>: <title>`
 otherwise.
 
+`lesson-candidate` issues are self-describing: each carries its own Definition of
+Done (the lesson-loop graduation discipline). Drive the issue to that DoD, then close
+**as completed** when the rule is applied or **as not planned** when rejected (one-line
+reason). No lesson-loop knowledge lives in `issue-ops` itself.
+
 Use the repo-local ledger as recovery hints only:
 
 ```text
