@@ -1,6 +1,7 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -298,6 +299,42 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         for context in links:
             self.assertEqual(context["profile"], "archimate")
             self.assertIn(context["element_id"], arch_ids)
+
+    def test_every_embedded_dediren_version_pin_matches_expected(self) -> None:
+        # A Dediren version bump must update every copy of the pinned version.
+        # Discover the pins instead of listing them by hand so a newly added
+        # pinned fixture or notation example is guarded automatically, and a
+        # bump cannot silently miss a duplicated pin. Pins live in two shapes:
+        # required_plugins[].version inside the dediren fixture models, and the
+        # required_plugins pin embedded in each UML notation worked example.
+        arch_refs = ARCH_PLUGIN / "skills" / "architecture-design" / "references"
+        pins: dict[str, str] = {}  # "<relative-path>::<plugin-id>" -> version
+
+        fixture_models = sorted((arch_refs / "fixtures" / "dediren").rglob("*.json"))
+        for model_path in fixture_models:
+            document = json.loads(model_path.read_text(encoding="utf-8"))
+            relative = model_path.relative_to(REPO_ROOT)
+            for plugin in document.get("required_plugins", []):
+                pins[f"{relative}::{plugin['id']}"] = plugin["version"]
+        fixture_pin_count = len(pins)
+
+        required_plugins_array = re.compile(r'"required_plugins"\s*:\s*\[(.*?)\]', re.DOTALL)
+        plugin_pin = re.compile(r'"id"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"')
+        notation_examples = sorted((arch_refs / "notations" / "uml").glob("*.md"))
+        for example_path in notation_examples:
+            relative = example_path.relative_to(REPO_ROOT)
+            for array_body in required_plugins_array.findall(example_path.read_text(encoding="utf-8")):
+                for plugin_id, version in plugin_pin.findall(array_body):
+                    pins[f"{relative}::{plugin_id}"] = version
+        notation_pin_count = len(pins) - fixture_pin_count
+
+        # Guard both discovery sources: an empty glob (moved/renamed directory)
+        # would otherwise pass vacuously and stop covering the pins it should.
+        self.assertTrue(fixture_pin_count, "expected Dediren fixture version pins")
+        self.assertTrue(notation_pin_count, "expected UML notation-example version pins")
+
+        mismatched = {location: version for location, version in pins.items() if version != EXPECTED_DEDIREN_VERSION}
+        self.assertEqual(mismatched, {}, f"embedded pins not equal to {EXPECTED_DEDIREN_VERSION}: {mismatched}")
 
     def test_current_platform_release_smoke_reports_version(self) -> None:
         bundle = release_bundle()
