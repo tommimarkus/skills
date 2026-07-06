@@ -24,7 +24,7 @@ def compact(text: str) -> str:
 def load_script_module(name: str, path: Path):
     """Dynamically load a scripts/*.py file as an importable module, registering it
     in sys.modules under `name`. Shared by the tests that exercise repo scripts
-    (version_stamp, lessons_ledger, lessons_capture_signals, lessons_secret_scan, ...)
+    (version_stamp, lessons_issue, lessons_capture_signals, lessons_secret_scan, ...)
     directly rather than via a package import."""
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -35,7 +35,7 @@ def load_script_module(name: str, path: Path):
 
 def run_git(cwd, *args: str) -> None:
     """Run a git command in cwd, raising on failure. Shared by the tests that build
-    throwaway git fixtures (version_stamp, lessons_ledger, lean_engine,
+    throwaway git fixtures (version_stamp, lessons_issue, lean_engine,
     skill_architecture_report, ...)."""
     subprocess.run(["git", "-C", str(cwd), *args], check=True,
                     capture_output=True, text=True)
