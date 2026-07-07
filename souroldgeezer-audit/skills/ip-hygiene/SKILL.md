@@ -62,7 +62,11 @@ Apply audit core principles before judging:
 First, when a change set or target paths are available, run the objective
 pre-filter to surface bundled-asset / schema / vendored candidates:
 
-`references/scripts/ip-prefilter.sh --format text -- <touched paths>`
+`${CLAUDE_SKILL_DIR}/references/scripts/ip-prefilter.sh --format text -- <touched paths>`
+
+(`${CLAUDE_SKILL_DIR}` is this skill's own directory, which Claude Code
+substitutes to the installed path; a bare relative path would not resolve from
+the target repo's working directory.)
 
 It scans only objective filesystem facts (Q3/Q4 candidates). Use its hits as
 evidence when answering Q3 and Q4. It does NOT answer any question: an empty
