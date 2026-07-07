@@ -150,19 +150,19 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 
 Adding a new plugin:
 1. `<plugin-name>/.claude-plugin/plugin.json` (required `name`, `version`, `description`; `author: {name, email}` and `license: MIT` defaults from memory; start at the current CalVer stamp `YYYY.0M.0`, e.g. `2026.06.0`).
-2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `version`, `description`).
-3. `name` / `description` / `version` must stay in sync across the manifest and `marketplace.json#plugins[]` — every re-stamp updates both cells in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
+2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `description`).
+3. `name` / `description` must stay in sync across the manifest and `marketplace.json#plugins[]`. `version` lives only in `plugin.json` and never appears in the marketplace entry — Claude Code always resolves `plugin.json` over a marketplace-entry copy without warning, so a stray copy is a silent drift risk. Every re-stamp updates the `plugin.json#version` and README version-table cells together in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
 
 **Removing a runtime's or tool's support**: on any runtime/tool support-removal, follow [docs/maintenance-procedures.md § Removing a runtime's or tool's support](docs/maintenance-procedures.md) — scope the cut to marketplace-owned surfaces, preserve downstream target-repo conventions, optional handoffs to external plugins, and vendor-named detection patterns, and re-diff the report and gold ledger.
 
 ## Plugin versioning (MUST)
 
-Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. A stamp always pairs with the content change that required it, and the plugin manifest (`.claude-plugin/plugin.json`) and the `marketplace.json#plugins[]` entry move together as one stamp. **Where that stamp lands depends on where the work happens:**
+Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. `plugin.json#version` is the sole version authority (Claude Code always resolves it over a marketplace-entry copy without warning, so a mirrored copy is a silent drift risk); `marketplace.json#plugins[]` entries never carry a `version` key. A stamp always pairs with the content change that required it, and updates the plugin manifest (`.claude-plugin/plugin.json#version`) and the root `README.md` version-table cell together as one stamp — the two version-authority cells. **Where that stamp lands depends on where the work happens:**
 
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell. At integration, get the correct next stamp with `uv run python scripts/version_stamp.py compute --plugin <name>` and apply it to all three cells in the integration commit.
+Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell, or if any marketplace entry (re)introduces a `version` key. At integration, get the correct next stamp with `uv run python scripts/version_stamp.py compute --plugin <name>` and apply it to both version-authority cells (`plugin.json#version`, the README table cell) in the integration commit.
 
 **Stamp mechanics:**
 - Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version.
@@ -180,7 +180,7 @@ Before integrating a worktree, run `uv run python scripts/version_stamp.py guard
 **No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
 
 **Sibling-file sync** (one commit — the stamp's landing commit; the integration commit on `main` for worktree work):
-- `.claude-plugin/plugin.json#version`, `marketplace.json#plugins[].version`, and the plugin's `README.md` version-table cell — always all three; the README cell must equal the manifest version per plugin.
+- `.claude-plugin/plugin.json#version` and the plugin's `README.md` version-table cell — always both; the README cell must equal the manifest version per plugin. `marketplace.json#plugins[]` entries never carry a `version` key.
 - the two `#description` fields (the manifest and the marketplace entry) — when the change alters the plugin's surface (new skill, new mode).
 - `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").
 - `README.md` and `CLAUDE.md` — per the currency rule above; one commit.

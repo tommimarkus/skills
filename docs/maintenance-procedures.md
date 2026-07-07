@@ -38,7 +38,7 @@ Exit codes: **0** = ready to integrate, **1** = a verify gate failed (fix, then 
 - **cosmetic** → commit and go straight to integration; a normal scoped `ip-hygiene` triage is enough.
 - **non-cosmetic** → run the `ip-hygiene` skill **in-depth** over the changed architecture surface; review each listed substantive surface for a **new capability**. If one needs architecture-design skill support, that is feature work — file a follow-up issue and **stop before integrating**. Otherwise record `maintenance-only, no contract change`, commit, and integrate.
 
-**Integration (step 3) always lands on `main`, never on the branch** — the feature branch carries content only (CLAUDE.md § Plugin versioning). The verdict prints the exact recipe: `version_stamp.py guard`, then `version_stamp.py compute --plugin souroldgeezer-architecture`, then apply that stamp to all three cells (plugin manifest, `marketplace.json`, README) plus the version-sync test, and commit on `main`.
+**Integration (step 3) always lands on `main`, never on the branch** — the feature branch carries content only (CLAUDE.md § Plugin versioning). The verdict prints the exact recipe: `version_stamp.py guard`, then `version_stamp.py compute --plugin souroldgeezer-architecture`, then apply that stamp to the two version-authority cells (plugin manifest, README) plus the version-sync test, and commit on `main`. `marketplace.json` entries never carry a `version` key.
 
 Never patch the downloaded bundle; report runtime defects upstream. Tool-ownership and runtime-evidence rules live in the architecture-design `SKILL.md` and `docs/architecture-reference/architecture.md`.
 

@@ -52,7 +52,9 @@ For local development, point Claude at the clone instead:
 
 - Keep `.claude-plugin/marketplace.json` as the shared marketplace.
 - Keep each plugin's `.claude-plugin/plugin.json` manifest synchronized with its
-  marketplace entry on `name`, `version`, and `description`.
+  marketplace entry on `name` and `description`. `version` lives only in
+  `plugin.json` — Claude Code always resolves it over a marketplace-entry copy
+  without warning, so marketplace entries never carry a `version` key.
 - `architecture-design` resolves its Dediren runtime from GitHub™ Releases into
   `.cache/dediren/releases/`; do not commit that cache. The current Dediren
   bundle is Java™-backed and needs Java™ 21 or newer for runtime checks.
