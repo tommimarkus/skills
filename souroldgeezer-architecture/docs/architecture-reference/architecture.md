@@ -548,7 +548,11 @@ Use `dediren-release.sh --agent-guide` to locate the selected release bundle's
 `docs/agent-usage.md` file, then read it before loading schemas. It is the fast
 contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, and Repair Rules. The current release bundle is Java™-backed and
-requires Java™ 21 or newer for runnable CLI checks.
+requires Java™ 21 or newer for runnable CLI checks; the resolver finds it via
+`JAVACMD`, `JAVA_HOME`, a sdkman-managed Java™ ≥21, or `java` on `PATH`, and
+sdkman is the recommended provisioner when the host lacks one (`sdk install java
+21-tem`). Missing Java™ caps runtime checks at `source-valid`, not a hard stop
+(see `references/procedures/self-check.md`).
 
 The release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
 legality, uses the technology element name `Node`, not `TechnologyNode`, reports

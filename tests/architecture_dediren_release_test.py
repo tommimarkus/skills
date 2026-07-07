@@ -206,6 +206,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                     "DEDIREN_CACHE_DIR": str(cache_dir),
                     "JAVA_HOME": "",
                     "JAVACMD": "",
+                    # Point sdkman at a nonexistent dir so this stays hermetic:
+                    # a sdkman-managed Java >=21 on the host would otherwise be
+                    # preferred over the fake Java 17 this test injects on PATH.
+                    "SDKMAN_DIR": str(temp_path / "no-sdkman"),
                     "PATH": f"{fake_bin}:{os.environ['PATH']}",
                 },
             )
@@ -213,6 +217,51 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Java 21", result.stderr)
         self.assertIn("17", result.stderr)
+
+    def test_release_resolver_prefers_sdkman_java_21_over_older_path_java(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            cache_dir = temp_path / "cache"
+            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
+            bin_dir = bundle_dir / "bin"
+            bin_dir.mkdir(parents=True)
+            (bundle_dir / "bundle.json").write_text("{}", encoding="utf-8")
+            fake_dediren = bin_dir / "dediren"
+            fake_dediren.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
+            fake_dediren.chmod(0o755)
+            # An older Java on PATH that would be rejected on its own.
+            path_bin = temp_path / "path-bin"
+            path_bin.mkdir()
+            path_java = path_bin / "java"
+            path_java.write_text(
+                "#!/usr/bin/env sh\nprintf 'openjdk version \"17.0.12\"\\n' >&2\n",
+                encoding="utf-8",
+            )
+            path_java.chmod(0o755)
+            # A sdkman-managed Java 21 that must be preferred over the PATH java.
+            sdkman_dir = temp_path / "sdkman"
+            sdkman_java = sdkman_dir / "candidates" / "java" / "current" / "bin" / "java"
+            sdkman_java.parent.mkdir(parents=True)
+            sdkman_java.write_text(
+                "#!/usr/bin/env sh\nprintf 'openjdk version \"21.0.2\"\\n' >&2\n",
+                encoding="utf-8",
+            )
+            sdkman_java.chmod(0o755)
+
+            result = run_resolver(
+                "--ensure",
+                env={
+                    "DEDIREN_CACHE_DIR": str(cache_dir),
+                    "JAVA_HOME": "",
+                    "JAVACMD": "",
+                    "SDKMAN_DIR": str(sdkman_dir),
+                    "PATH": f"{path_bin}:{os.environ['PATH']}",
+                },
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("requires Java 21", result.stderr)
+        self.assertTrue(result.stdout.strip().endswith("/bin/dediren"), result.stdout)
 
     def test_release_resolver_serves_a_platform_independent_bundle(self) -> None:
         script = RELEASE_SCRIPT.read_text(encoding="utf-8")

@@ -13,11 +13,18 @@ DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"
 
 The resolver caches release bundles under `.cache/dediren/releases/`; do not
 commit that cache. The pinned release bundle is Java™-backed; commands that
-return or execute the runnable Dediren CLI require Java™ 21 or newer through
-`JAVA_HOME`, `JAVACMD`, or `java` on `PATH`. If the resolver cannot download or
-select a supported platform, disclose `not run (missing dediren release
-bundle)` and cap at `source-valid` unless Lookup only. If Java™ 21+ is missing,
-disclose `not run (missing Java 21+ runtime)` for runtime steps.
+return or execute the runnable Dediren CLI require Java™ 21 or newer. The
+resolver selects it in order: `JAVACMD`, then `JAVA_HOME`, then a sdkman-managed
+Java™ ≥21 (`$SDKMAN_DIR/candidates/java/current`, default `~/.sdkman`), then
+`java` on `PATH`. **sdkman is the recommended way to provision Java™ 21+ when the
+host lacks it** — `sdk install java 21-tem` (or any ≥21 distribution) — analogous
+to how `uv` provisions Python® for the audit engines; the resolver does not
+auto-install it. If the resolver cannot download or select a supported platform,
+disclose `not run (missing dediren release bundle)` and cap at `source-valid`
+unless Lookup only. If no Java™ 21+ runtime can be resolved, disclose `not run
+(missing Java 21+ runtime)` for runtime steps and cap at `source-valid`
+(authoring and source validation remain available; this is a capability cap, not
+a hard stop).
 
 The selected release bundle is an imported upstream Dediren artifact. Do not
 patch cached release files or future packaged bundles; report defects under

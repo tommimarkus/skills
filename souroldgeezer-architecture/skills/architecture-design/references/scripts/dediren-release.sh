@@ -37,10 +37,15 @@ Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
   DEDIREN_VERSION    Release version without leading v, default 2026.07.10
   DEDIREN_CACHE_DIR  Cache directory, default .cache/dediren/releases
-  JAVA_HOME/JAVACMD  Java 21+ runtime used by packaged Dediren launchers
+  JAVA_HOME/JAVACMD  Explicit Java 21+ runtime for the packaged Dediren launchers
+  SDKMAN_DIR         sdkman install dir, default ~/.sdkman
 
-The Dediren agent bundle is a platform-independent Java distribution; a single
-release archive serves every host with a Java 21+ runtime.
+Java resolution order: JAVACMD, then JAVA_HOME, then a sdkman-managed Java >=21
+($SDKMAN_DIR/candidates/java/current), then `java` on PATH. sdkman is the
+recommended provisioner when no Java 21+ is present: `sdk install java 21-tem`
+(or any >=21 distribution). The Dediren agent bundle is a platform-independent
+Java distribution; a single release archive serves every host with a Java 21+
+runtime.
 USAGE
 }
 
@@ -71,6 +76,23 @@ need_cmd() {
   fi
 }
 
+java_version_of() {
+  # Major version of an explicit java command path; empty output + nonzero on failure.
+  local cmd="$1" output
+  output="$("$cmd" -version 2>&1)" || return 1
+  printf '%s\n' "$output" |
+    awk -F'"' '/version/ {
+      split($2, parts, ".")
+      if (parts[1] == "1") {
+        print parts[2]
+      } else {
+        sub(/[^0-9].*/, "", parts[1])
+        print parts[1]
+      }
+      exit
+    }'
+}
+
 java_command() {
   local cmd
   if [ -n "${JAVACMD:-}" ]; then
@@ -78,11 +100,23 @@ java_command() {
   elif [ -n "${JAVA_HOME:-}" ]; then
     cmd="$JAVA_HOME/bin/java"
   else
-    cmd="java"
+    # No explicit override: prefer a sdkman-managed Java >=21 (sdkman is the
+    # recommended provisioner — `sdk install java 21-<dist>`) over a bare PATH
+    # `java`, which is often an older system JDK. Fall back to PATH `java`.
+    local sdkman_java="${SDKMAN_DIR:-$HOME/.sdkman}/candidates/java/current/bin/java"
+    local sdkman_major=""
+    if [ -x "$sdkman_java" ]; then
+      sdkman_major="$(java_version_of "$sdkman_java" 2>/dev/null || true)"
+    fi
+    if [ -n "$sdkman_major" ] && [ "$sdkman_major" -ge 21 ]; then
+      cmd="$sdkman_java"
+    else
+      cmd="java"
+    fi
   fi
 
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    printf 'Required Java 21+ runtime not found; set JAVA_HOME or JAVACMD.\n' >&2
+    printf 'Required Java 21+ runtime not found; set JAVA_HOME or JAVACMD, or install one via sdkman (sdk install java 21-tem).\n' >&2
     return 127
   fi
 
@@ -90,25 +124,11 @@ java_command() {
 }
 
 java_major_version() {
-  local cmd output major
-  cmd="$(java_command)"
-  output="$("$cmd" -version 2>&1)"
-  major="$(
-    printf '%s\n' "$output" |
-      awk -F'"' '/version/ {
-        split($2, parts, ".")
-        if (parts[1] == "1") {
-          print parts[2]
-        } else {
-          sub(/[^0-9].*/, "", parts[1])
-          print parts[1]
-        }
-        exit
-      }'
-  )"
-
+  local cmd major
+  cmd="$(java_command)" || return 1
+  major="$(java_version_of "$cmd" 2>/dev/null || true)"
   if [ -z "$major" ]; then
-    printf 'Could not determine Java version from: %s\n' "$output" >&2
+    printf 'Could not determine Java version from: %s\n' "$("$cmd" -version 2>&1)" >&2
     return 1
   fi
 
@@ -119,7 +139,7 @@ need_java_21() {
   local major
   major="$(java_major_version)"
   if [ "$major" -lt 21 ]; then
-    printf 'Dediren %s requires Java 21 or newer; detected Java %s.\n' "$DEDIREN_VERSION" "$major" >&2
+    printf 'Dediren %s requires Java 21 or newer; detected Java %s. Install one via sdkman (sdk install java 21-tem) or set JAVA_HOME/JAVACMD.\n' "$DEDIREN_VERSION" "$major" >&2
     return 1
   fi
 }
