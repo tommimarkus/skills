@@ -18,6 +18,15 @@ non-guarded path → the edit is allowed. It adds no logic of its own — carve-
 (built-in + `.lean-audit.toml`) and the `<!-- lean-audit:sync-intentional -->`
 override are inherited from the engine.
 
+**Interpreter (`uv` primary):** the guard needs Python ≥3.11 (`tomllib`). The
+recipes below invoke it with `uv run`, which provisions or selects a conforming
+interpreter even when the system `python3` is older; a `python3 …` command is an
+alternative only where `python3` is already ≥3.11. Whichever you use, an
+interpreter that is too old makes the shim exit 3 with a legible
+`requires Python >=3.11` message — and because the guard is fail-open, the edit is
+then simply allowed: the hook does not enforce until a conforming interpreter is
+available.
+
 ## Override a block
 
 When the hook denies an edit, do one of:
@@ -40,7 +49,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_guard.py\""
+            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_guard.py\""
           }
         ]
       }
@@ -116,7 +125,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
           }
         ]
       }
@@ -145,7 +154,7 @@ For immediate at-edit blocking, add a `PreToolUse` hook instead:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
           }
         ]
       }

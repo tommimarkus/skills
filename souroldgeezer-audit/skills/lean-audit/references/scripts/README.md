@@ -10,8 +10,13 @@ For what the tool *reports* (operator view), stay in
 [`../../SKILL.md`](../../SKILL.md) and the finding codes in
 [`../smell-catalog.md`](../smell-catalog.md). This guide is the *internals* view.
 
-- Runtime: **standard library only, Python ≥ 3.11.** No third-party imports; the
-  guards run under a bare `python3` with no dependency resolution.
+- Runtime: **standard library only, Python ≥ 3.11.** No third-party imports, so no
+  dependency resolution is needed — but `tomllib` is stdlib only from 3.11, so the
+  ≥3.11 floor is real. Invoke every shim with `uv` as the primary runner (it
+  provisions/selects a conforming interpreter even when the system `python3` is
+  older); the shims declare `requires-python = ">=3.11"` and guard `sys.version_info`
+  at startup, exiting 3 with a legible message before the package import when run
+  under an older `python3`.
 - Quality bar: **ruff + `mypy --strict`**, scoped to this tree (see
   [§ The enforced standard](#the-enforced-standard)).
 - Contract: the five top-level scripts are **stable published paths**; the logic
@@ -127,8 +132,12 @@ duplicate that here. What a maintainer needs to know about the code:
   PreToolUse; absent ⇒ Stop mode (`run_stop_mode`, which diffs session-changed
   markdown against committed baselines). **The Stop path is the one wired into
   this repo**, via [`../../../../../scripts/agent-hooks/stop-lean-cost.sh`](../../../../../scripts/agent-hooks/stop-lean-cost.sh)
-  (registered in `.claude/settings.json`), which `exec`s the guard under
-  `python3` — not `uv`, because the tooling is stdlib-only.
+  (registered in `.claude/settings.json`), which runs the guard with `uv` as the
+  primary interpreter (it provisions the required Python ≥3.11 even when the
+  system `python3` is older), falls back to a ≥3.11 `python3`, and fails open
+  (exit 0) when neither is available. Stdlib-only is not enough on its own —
+  `tomllib` is stdlib only from 3.11 — so the floor, not the dependency set, is
+  what makes the interpreter choice matter.
 - Fidelity regression **blocks**; cost growth is **advisory** (tolerance 200
   tokens) and never blocks.
 

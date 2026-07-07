@@ -113,7 +113,14 @@ resolved closure of every affected entry artifact plus every non-markdown
 pointer target cited from edited files, and disclose the reduced mirror.
 
 **Deterministic gates** (all must pass; commands are repo-root-relative, run
-against the shadow copy):
+against the shadow copy). Invoke `skill_load_cost.py` and `lean_engine.py` with
+`uv` as the primary runner — it provisions the required Python ≥3.11 even when the
+system `python3` is older:
+`uv run "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/<script>.py" …`
+(fallback `python3 "$CLAUDE_PLUGIN_ROOT/…/<script>.py" …` only where `python3` is
+≥3.11). Each bare `skill_load_cost.py` / `lean_engine.py` shorthand below means
+that invocation; if no conforming interpreter is available (shim exit 3 / `uv`
+reports none), STOP per the host skill's interpreter-floor rule:
 
 - **G1 before-inventory:**
   `skill_load_cost.py baseline --files <before-closure files> --code-patterns <patterns.json> --out before.json`

@@ -8,7 +8,14 @@ restate catalog prose. Harness subcommands (`resolve_closure`, `measure`,
 `baseline`, `diff`) live in
 [`../scripts/skill_load_cost.py`](../scripts/skill_load_cost.py) (`snapshot` is
 the guard's cost-warn input — see [`../hook-recipe.md`](../hook-recipe.md), not
-this advisor run).
+this advisor run). Invoke it with `uv` as the primary runner — it provisions the
+required Python ≥3.11 even when the system `python3` is older:
+`uv run "$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/skill_load_cost.py" <subcommand> …`
+(fallback `python3 "$CLAUDE_PLUGIN_ROOT/…/skill_load_cost.py" …` only where
+`python3` is ≥3.11). Every `skill_load_cost.py <subcommand>` shorthand below means
+that invocation. If no conforming interpreter is available (shim exit 3 / `uv`
+reports no compatible interpreter), STOP per the host skill's interpreter-floor
+rule — do not substitute a judgment-only pass.
 
 ## When this lens runs
 
