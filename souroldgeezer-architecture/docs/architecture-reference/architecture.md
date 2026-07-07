@@ -533,11 +533,12 @@ the package or update the source.
 
 ## 9. Runtime Evidence
 
-The skill uses the Dediren agent bundle published in GitHub™ Releases. Set
-`SKILL_DIR` to the architecture-design skill directory (the directory that
-contains the skill's `SKILL.md`; in this repo that is
-`souroldgeezer-architecture/skills/architecture-design`, in an installed
-plugin it is inside the plugin cache), then resolve the pinned release with:
+The skill uses the Dediren agent bundle published in GitHub™ Releases. Dediren is
+an internal engine the agent resolves and runs silently — users are never asked
+to locate it or its version. `$SKILL_DIR` is this skill's absolute directory, set
+in `SKILL.md` from the `${CLAUDE_SKILL_DIR}` substitution (which resolves the
+installed-plugin cache path and this source repo alike; it contains the skill's
+`SKILL.md`), then resolve the pinned release with:
 
 ```bash
 DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"

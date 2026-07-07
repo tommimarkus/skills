@@ -1,11 +1,11 @@
 # Dediren Self-Check
 
-Before runtime claims, resolve the pinned Dediren GitHub™ release. Set
-`SKILL_DIR` to the architecture-design skill directory — the directory that
-contains this skill's `SKILL.md`. In this marketplace repo that is
-`souroldgeezer-architecture/skills/architecture-design`; in an installed
-plugin it is the `skills/architecture-design/` directory inside the plugin
-cache.
+Before runtime claims, resolve the pinned Dediren GitHub™ release. Dediren is an
+internal engine: resolve and run it yourself so the user never has to find it or
+its version. `$SKILL_DIR` is this skill's absolute directory, established in
+`SKILL.md` from the `${CLAUDE_SKILL_DIR}` substitution (the directory that
+contains this skill's `SKILL.md`) — not a guessed plugin-cache or
+working-directory path.
 
 ```bash
 DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"

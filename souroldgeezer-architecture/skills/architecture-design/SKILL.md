@@ -79,7 +79,16 @@ Build.
 2. Before any runtime claim, run
    [self-check](references/procedures/self-check.md); it uses
    [dediren-release.sh](references/scripts/dediren-release.sh) to resolve the
-   pinned GitHub™ release bundle. Defer the bundle agent guide
+   pinned GitHub™ release bundle. Dediren is an internal engine — resolve and run
+   it silently from this skill's own directory; never ask the user to locate
+   Dediren, its release bundle, or its version. That directory is
+   `${CLAUDE_SKILL_DIR}`, which Claude Code™ expands to the skill's absolute path
+   on load (resolving the installed-plugin cache and this source repo alike); use
+   it wherever a bundled-script command shows `"$SKILL_DIR"` (here, in self-check,
+   and in architecture §9). If it does not expand, fall back to the skill base
+   directory reported at invocation, or
+   `souroldgeezer-architecture/skills/architecture-design` in this source repo.
+   Defer the bundle agent guide
    (`dediren-release.sh --agent-guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical
    edit that reaches no runtime command never loads it. Lookup may skip
