@@ -1,8 +1,8 @@
 {
   "model_schema_version": "model.schema.v1",
   "required_plugins": [
-    { "id": "generic-graph", "version": "2026.07.9" },
-    { "id": "archimate-oef", "version": "2026.07.9" }
+    { "id": "generic-graph", "version": "2026.07.10" },
+    { "id": "archimate-oef", "version": "2026.07.10" }
   ],
   "nodes": [
     { "id": "client", "type": "ApplicationComponent", "label": "Client Application", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },

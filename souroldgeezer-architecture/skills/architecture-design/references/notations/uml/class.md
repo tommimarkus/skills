@@ -34,7 +34,7 @@ Synthetic `uml-class` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.9"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.07.10"}],
   "nodes": [
     {"id": "pkg-lending", "type": "Package", "label": "Lending", "properties": {}},
     {"id": "class-member", "type": "Class", "label": "Member", "properties": {"uml": {"package": "pkg-lending", "attributes": [{"name": "id", "type": "MemberId", "visibility": "public", "multiplicity": "1"}], "operations": [{"name": "borrow", "visibility": "public", "parameters": [{"name": "book", "type": "Book"}], "return_type": "Loan"}]}}},
