@@ -218,7 +218,18 @@ never substituted: it expands to empty, so the bundled script is silently
 unfindable once the plugin is installed, and only appears to work in the
 marketplace source repo through a guessable relative path. Reference files read
 raw are not substituted, so establish the value in `SKILL.md` and carry it into
-any procedure the workflow steps into. Before copying a sibling skill's
+any procedure the workflow steps into. Substitution reaches skill and agent
+*content*, but not every context equally: `${CLAUDE_SKILL_DIR}` expands in the
+`SKILL.md` body, while `${CLAUDE_PLUGIN_ROOT}` expands inline in skill/agent
+content **and** in hook, monitor, and MCP/LSP-config commands. Critically,
+`${CLAUDE_SKILL_DIR}` is **not** substituted in `SKILL.md` frontmatter hook
+commands — there it expands to empty exactly as a bare variable would (a known
+Claude Code limitation, `anthropics/claude-code#36135`, closed not-planned). So a
+bundled script invoked from a frontmatter hook must use `${CLAUDE_PLUGIN_ROOT}`
+(e.g. `${CLAUDE_PLUGIN_ROOT}/skills/<skill>/references/scripts/...`), which the
+plugin reference documents as substituted in hook commands and exported to hook
+processes; reserve `${CLAUDE_SKILL_DIR}` for the skill body and the procedures it
+carries the value into. Before copying a sibling skill's
 invocation convention — or declaring that sibling broken — verify the
 substitution mechanism against the official skills and plugins docs; pinned
 upstream engines vendored inside a skill are internal and resolve through the
