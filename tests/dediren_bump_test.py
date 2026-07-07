@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module
 
@@ -218,6 +219,11 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn("not CalVer", result.stdout + result.stderr)
 
+    def test_latest_subcommand_is_registered(self):
+        # Offline: --help proves the subcommand is wired without resolving the network.
+        result = self._run("latest", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 class CalverOrderTest(unittest.TestCase):
     def test_micro_orders_numerically_not_lexically(self):
@@ -225,6 +231,72 @@ class CalverOrderTest(unittest.TestCase):
         self.assertLess(db._calver_tuple("2026.07.9"), db._calver_tuple("2026.07.10"))
         self.assertLess(db._calver_tuple("2026.07.27"), db._calver_tuple("2026.08.0"))
         self.assertEqual(db._calver_tuple("2026.07.9"), (2026, 7, 9))
+
+
+class ParseReleaseTagTest(unittest.TestCase):
+    def test_parses_v_prefixed_calver(self):
+        self.assertEqual(
+            db._parse_release_tag("https://github.com/o/r/releases/tag/v2026.07.10"),
+            "2026.07.10",
+        )
+
+    def test_parses_without_v_and_with_trailing_slash(self):
+        self.assertEqual(
+            db._parse_release_tag("https://github.com/o/r/releases/tag/2026.07.10/"),
+            "2026.07.10",
+        )
+
+    def test_rejects_url_without_a_tag(self):
+        with self.assertRaises(RuntimeError):
+            db._parse_release_tag("https://github.com/o/r/releases")
+
+    def test_rejects_non_calver_tag(self):
+        with self.assertRaises(RuntimeError):
+            db._parse_release_tag("https://github.com/o/r/releases/tag/nightly")
+
+
+class RepoSlugTest(unittest.TestCase):
+    def test_reads_release_script_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_temp_repo(Path(tmp))
+            self.assertEqual(db._repo_slug(root), "tommimarkus/dediren")
+
+    def test_env_override_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_temp_repo(Path(tmp))
+            with mock.patch.dict(db.os.environ, {"DEDIREN_REPO": "fork/dediren"}):
+                self.assertEqual(db._repo_slug(root), "fork/dediren")
+
+
+class ResolveLatestTest(unittest.TestCase):
+    class _Resp:
+        def __init__(self, url):
+            self._url = url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def geturl(self):
+            return self._url
+
+    def test_follows_redirect_and_parses_tag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_temp_repo(Path(tmp))
+            target = "https://github.com/tommimarkus/dediren/releases/tag/v2027.01.3"
+            with mock.patch.object(db.urllib.request, "urlopen",
+                                   return_value=self._Resp(target)):
+                self.assertEqual(db.resolve_latest(root), "2027.01.3")
+
+    def test_network_failure_raises_runtimeerror(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_temp_repo(Path(tmp))
+            with mock.patch.object(db.urllib.request, "urlopen",
+                                   side_effect=db.urllib.error.URLError("boom")):
+                with self.assertRaises(RuntimeError):
+                    db.resolve_latest(root)
 
 
 class PreflightProblemsTest(unittest.TestCase):

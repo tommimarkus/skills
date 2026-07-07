@@ -15,6 +15,9 @@ Stdlib-only responsibilities:
 
 - ``current``: print the pinned version, read from the single source of truth
   (``DEDIREN_VERSION_DEFAULT`` in the release script).
+- ``latest``: print the newest published release, resolved by following GitHub's
+  ``/releases/latest`` redirect (stdlib-only, no API token). ``bump`` / ``parity`` /
+  ``adopt`` also accept ``--to latest`` to target it without a lookup.
 - ``bump --to X [--check]``: literal-replace the current pin with ``X`` across *only* the
   known dediren-pin surfaces, then re-run the same pin discovery the release test's
   guard uses and fail if any pin still differs. ``--check`` reports the plan without
@@ -45,6 +48,8 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -67,6 +72,13 @@ _EXPECTED_RE = re.compile(r'EXPECTED_DEDIREN_VERSION\s*=\s*"([^"]+)"')
 # set of pins that a bump must move.
 _REQUIRED_PLUGINS_ARRAY = re.compile(r'"required_plugins"\s*:\s*\[(.*?)\]', re.DOTALL)
 _PLUGIN_PIN = re.compile(r'"id"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"')
+
+# Latest-release resolution: follow GitHub's ``/releases/latest`` redirect (stdlib-only,
+# no API token) so ``--to latest`` / the ``latest`` command can target the newest release
+# without the caller having to look it up. Host and repo are overridable for tests / forks.
+GITHUB_HOST = os.environ.get("DEDIREN_GITHUB_HOST", "https://github.com").rstrip("/")
+_RELEASE_TAG_RE = re.compile(r"/releases/tag/v?([^/]+)/?$")
+_REPO_SLUG_RE = re.compile(r'DEDIREN_REPO_DEFAULT="([^"]+)"')
 
 # Release-bundle subpaths whose change between two versions may signal a runtime-contract
 # shift the human must classify. Read-only diff surfaces for ``parity`` / ``adopt``.
@@ -99,6 +111,46 @@ def current_version(repo_root: Path = REPO_ROOT) -> str:
     if not match:
         raise RuntimeError(f"{RELEASE_SCRIPT_REL}: DEDIREN_VERSION_DEFAULT not found")
     return match.group(1)
+
+
+def _repo_slug(repo_root: Path = REPO_ROOT) -> str:
+    """The GitHub ``owner/repo`` of the pinned runtime: ``DEDIREN_REPO`` env override, else
+    the release script's single source of truth (``DEDIREN_REPO_DEFAULT``)."""
+    env = os.environ.get("DEDIREN_REPO")
+    if env:
+        return env
+    text = (repo_root / RELEASE_SCRIPT_REL).read_text(encoding="utf-8")
+    match = _REPO_SLUG_RE.search(text)
+    if not match:
+        raise RuntimeError(f"{RELEASE_SCRIPT_REL}: DEDIREN_REPO_DEFAULT not found")
+    return match.group(1)
+
+
+def _parse_release_tag(url: str) -> str:
+    """Extract a CalVer version from a GitHub ``/releases/tag/v<version>`` URL. Pure."""
+    match = _RELEASE_TAG_RE.search(url)
+    if not match:
+        raise RuntimeError(f"cannot parse a release tag from {url!r}")
+    version = match.group(1)
+    if not CALVER_RE.match(version):
+        raise RuntimeError(f"latest release tag {version!r} is not CalVer (YYYY.0M.MICRO)")
+    return version
+
+
+def resolve_latest(repo_root: Path = REPO_ROOT) -> str:
+    """Resolve the newest published release version by following GitHub's
+    ``/releases/latest`` redirect. Stdlib-only, no API token; raises ``RuntimeError`` when
+    the network is unavailable or the redirect target is not a CalVer tag."""
+    url = f"{GITHUB_HOST}/{_repo_slug(repo_root)}/releases/latest"
+    request = urllib.request.Request(
+        url, method="HEAD", headers={"User-Agent": "dediren_bump"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            final_url = response.geturl()
+    except (urllib.error.URLError, OSError) as exc:
+        raise RuntimeError(f"could not resolve latest release from {url}: {exc}") from exc
+    return _parse_release_tag(final_url)
 
 
 def discover_pins(repo_root: Path = REPO_ROOT) -> dict[str, str]:
@@ -597,21 +649,27 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("current", parents=[common],
                    help="print the currently pinned Dediren version")
 
+    sub.add_parser("latest", parents=[common],
+                   help="print the newest published Dediren release version")
+
     bump_parser = sub.add_parser("bump", parents=[common],
                                  help="move every embedded Dediren pin to --to")
-    bump_parser.add_argument("--to", required=True, help="target Dediren version (CalVer)")
+    bump_parser.add_argument("--to", required=True,
+                             help="target Dediren version (CalVer, or 'latest')")
     bump_parser.add_argument("--check", action="store_true",
                              help="report the plan without writing any files")
 
     parity_parser = sub.add_parser("parity", parents=[common],
                                    help="diff the current vs target release bundles")
-    parity_parser.add_argument("--to", required=True, help="target Dediren version (CalVer)")
+    parity_parser.add_argument("--to", required=True,
+                               help="target Dediren version (CalVer, or 'latest')")
 
     adopt_parser = sub.add_parser(
         "adopt", parents=[common],
         help="run the adoption (preflight, parity+classify, bump, verify) and print a verdict",
     )
-    adopt_parser.add_argument("--to", required=True, help="target Dediren version (CalVer)")
+    adopt_parser.add_argument("--to", required=True,
+                              help="target Dediren version (CalVer, or 'latest')")
     adopt_parser.add_argument("--plan", action="store_true",
                               help="preflight + parity + classification only; no bump, no verify")
     adopt_parser.add_argument("--json", action="store_true", help="emit the verdict as JSON")
@@ -626,6 +684,22 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "current":
         print(current_version(repo_root))
         return 0
+
+    if args.command == "latest":
+        try:
+            print(resolve_latest(repo_root))
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
+    if getattr(args, "to", None) == "latest":
+        try:
+            args.to = resolve_latest(repo_root)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"resolved latest release -> {args.to}", file=sys.stderr)
 
     if args.command == "bump":
         try:

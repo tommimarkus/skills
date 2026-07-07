@@ -4,25 +4,27 @@ Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
 
 ## Dediren upstream release adoption
 
-(The one architecture-specific version procedure, documented nowhere else.) Adopting a new `tommimarkus/dediren` release is a **mechanical pin bump** across ~14 repo-owned surfaces plus a small **judgment residue** the tool cannot decide. One command — `adopt` — runs the whole mechanical spine and prints exactly what to do next; it never asks a question. The tool (`scripts/dediren_bump.py`, stdlib-only) lives outside every plugin tree, so it needs no CalVer stamp of its own.
+(The one architecture-specific version procedure, documented nowhere else.) Adopting a new `tommimarkus/dediren` release is a **mechanical pin bump** across ~14 repo-owned surfaces plus a small **judgment residue** the tool cannot decide. One command — `adopt` — runs the whole mechanical spine and prints exactly what to do next; it never asks a question. The tool (`scripts/dediren_bump.py`, stdlib-only) lives outside every plugin tree, so it needs no CalVer stamp of its own. You don't need to look the version up: `scripts/dediren_bump.py latest` prints the newest published release (it follows GitHub's `/releases/latest` redirect, no API token), and every `--to` accepts the literal `latest`.
 
 **Happy path (a maintenance/cosmetic bump — the common case): three commands.**
 
 ```bash
-# 0. Isolate the work in a worktree named for the target version.
-git worktree add -b dediren-<version> .worktrees/dediren-<version> main
-cd .worktrees/dediren-<version>
+# 0. Resolve the newest release and isolate the work in a worktree named for it.
+#    (Or set version=<X> by hand to target a specific release.)
+version="$(uv run python scripts/dediren_bump.py latest)"
+git worktree add -b dediren-"$version" .worktrees/dediren-"$version" main
+cd .worktrees/dediren-"$version"
 
-# 1. Run the whole adoption; read the verdict it prints.
-uv run python scripts/dediren_bump.py adopt --to <version>
+# 1. Run the whole adoption; read the verdict it prints. (`--to latest` also works.)
+uv run python scripts/dediren_bump.py adopt --to "$version"
 
 # 2. Commit the bump on the branch (the verdict's NEXT lines confirm this).
-git commit -am "chore(architecture-design): adopt Dediren <version> (<classification>)"
+git commit -am "chore(architecture-design): adopt Dediren $version (<classification>)"
 
 # 3. Integrate on main using the exact INTEGRATION recipe the verdict printed.
 ```
 
-**What `adopt --to <version>` does, in one non-interactive pass** (add `--plan` for a read-only preview that classifies but does not bump or verify; add `--json` for machine-readable output):
+**What `adopt --to <version>` does, in one non-interactive pass** (`--to` also accepts `latest`; add `--plan` for a read-only preview that classifies but does not bump or verify; add `--json` for machine-readable output):
 
 1. **Preflight** — target is CalVer and newer than the current pin; the pin surfaces are clean. Blocks with exit 2 and a fix if not.
 2. **Parity + auto-classification** — downloads the current and target bundles (in parallel, cached) and diffs the judgment surfaces (`bundle.json`, `docs/agent-usage.md`, plugin manifests, schemas, fixtures). It classifies **cosmetic** when the bundle changed only version strings, **non-cosmetic** when any contract surface changed, and lists the substantive surfaces. Conservative: anything it cannot prove is version-only counts as substantive.
