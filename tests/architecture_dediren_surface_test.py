@@ -97,14 +97,18 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         )
         claude_manifest = json.loads((ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
 
-        # The marketplace entry is the in-test source of truth; every other surface
-        # must agree with it. The value is *not* pinned here — the calendar stamp is
-        # assigned at integration on main and owned by scripts/version_stamp.py, so
-        # pinning a literal would only add an undocumented sibling-sync cell. This
-        # test enforces the cross-surface invariant; well-formedness is checked too.
-        canonical = marketplace_entry["version"]
+        # plugin.json#version is the sole version authority (Claude Code always
+        # resolves it over a marketplace-entry copy without warning, so a mirrored
+        # copy is a silent drift risk); the manifest is the in-test source of truth,
+        # the marketplace entry must not carry a competing version key, and the
+        # README table cell must agree with the manifest. The value is *not* pinned
+        # here — the calendar stamp is assigned at integration on main and owned by
+        # scripts/version_stamp.py, so pinning a literal would only add an
+        # undocumented sibling-sync cell. This test enforces the cross-surface
+        # invariant; well-formedness is checked too.
+        canonical = claude_manifest["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
-        self.assertEqual(claude_manifest["version"], canonical)
+        self.assertNotIn("version", marketplace_entry)
         self.assertEqual(marketplace_entry["description"], claude_manifest["description"])
         self.assertIn(
             f"| `souroldgeezer-architecture` | `{canonical}` |",

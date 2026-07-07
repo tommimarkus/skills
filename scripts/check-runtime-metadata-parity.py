@@ -170,6 +170,7 @@ def marketplace_plugins(repo: Path) -> list[dict[str, Any]]:
 
 def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
     plugin_dirs: list[Path] = []
+    marketplace_path = repo / ".claude-plugin" / "marketplace.json"
     for plugin in marketplace_plugins(repo):
         source = plugin.get("source", "")
         plugin_dir = repo / source.removeprefix("./")
@@ -178,8 +179,23 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
         claude = read_json(claude_path)
 
-        for field in ("name", "version", "description"):
+        for field in ("name", "description"):
             compare(findings, repo, claude_path, field, plugin.get(field), claude.get(field))
+
+        # plugin.json#version is the sole version authority: Claude Code always
+        # resolves it over a marketplace-entry copy without warning, so a stray
+        # marketplace copy is a silent drift risk rather than a helpful mirror.
+        if claude.get("version") is None:
+            findings.append(Finding(repo_relative(repo, claude_path), "version", "present", "missing"))
+        if "version" in plugin:
+            findings.append(
+                Finding(
+                    repo_relative(repo, marketplace_path),
+                    "version",
+                    "absent (plugin.json#version is the sole authority)",
+                    normalize_text(plugin.get("version")),
+                )
+            )
 
     return plugin_dirs
 

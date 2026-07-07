@@ -334,13 +334,15 @@ class SkillArchitectureReportTest(unittest.TestCase):
         marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
         marketplace_plugin = next(plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-design")
 
-        # Cross-surface sync, not a pinned literal: the marketplace entry is the
-        # in-test source of truth and the manifest must agree with it. The CalVer
-        # value is assigned at integration on main (scripts/version_stamp.py), so
-        # pinning it here would only add a hand-edited sibling-sync cell per bump.
-        canonical = marketplace_plugin["version"]
+        # plugin.json#version is the sole version authority (Claude Code always
+        # resolves it over a marketplace-entry copy without warning, so a mirrored
+        # copy is a silent drift risk); the manifest is the in-test source of truth
+        # and the marketplace entry must not carry a competing version key. The
+        # CalVer value is assigned at integration on main (scripts/version_stamp.py),
+        # so pinning it here would only add a hand-edited sibling-sync cell per bump.
+        canonical = claude_manifest["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
-        self.assertEqual(claude_manifest["version"], canonical)
+        self.assertNotIn("version", marketplace_plugin)
 
     def test_strict_mode_exits_nonzero_when_tool_findings_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

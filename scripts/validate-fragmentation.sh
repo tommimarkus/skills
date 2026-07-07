@@ -63,13 +63,16 @@ validate_plugin_manifests() {
       (.license | type == "string")
     ' "$claude_manifest" >/dev/null
 
+    # plugin.json#version is the sole version authority: Claude Code always
+    # resolves it over a marketplace-entry copy without warning, so the
+    # marketplace entry must never carry a version key of its own.
     jq -n -e \
       --argjson marketplace "$plugin" \
       --slurpfile claude "$claude_manifest" \
       '
       $marketplace.name == $claude[0].name and
-      $marketplace.version == $claude[0].version and
-      $marketplace.description == $claude[0].description
+      $marketplace.description == $claude[0].description and
+      ($marketplace | has("version") | not)
       ' >/dev/null
   done
 

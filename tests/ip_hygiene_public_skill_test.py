@@ -63,16 +63,20 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-audit"
         )
 
-        # The marketplace entry is the in-test source of truth for the version; the
-        # manifest must agree with it. The value is deliberately not pinned to a
-        # literal — the CalVer stamp is assigned at integration on main and owned by
-        # scripts/version_stamp.py, so a pin here would just be a third sync cell to
-        # hand-edit every bump. The description stays pinned because it is content.
-        canonical = audit_entry["version"]
+        # plugin.json#version is the sole version authority (Claude Code always
+        # resolves it over a marketplace-entry copy without warning, so a mirrored
+        # copy is a silent drift risk); the manifest is the in-test source of truth
+        # and the marketplace entry must not carry a competing version key. The
+        # value is deliberately not pinned to a literal — the CalVer stamp is
+        # assigned at integration on main and owned by scripts/version_stamp.py, so
+        # a pin here would just be a hand-edited sync cell every bump. The
+        # description stays pinned because it is content, and stays synchronized
+        # across both surfaces.
+        canonical = claude_manifest["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
-        for surface in (audit_entry, claude_manifest):
-            self.assertEqual(surface["version"], canonical)
-            self.assertEqual(surface["description"], AUDIT_DESCRIPTION)
+        self.assertNotIn("version", audit_entry)
+        self.assertEqual(audit_entry["description"], AUDIT_DESCRIPTION)
+        self.assertEqual(claude_manifest["description"], AUDIT_DESCRIPTION)
 
     def test_repo_guidance_and_hooks_reference_public_skill(self) -> None:
         checked_paths = [

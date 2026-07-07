@@ -62,19 +62,41 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "description",
         )
 
-    def test_plugin_manifest_version_drift_is_detected(self) -> None:
+    def test_plugin_manifest_missing_version_is_detected(self) -> None:
         self._assert_broken_fixture_flags(
             "souroldgeezer-example/.claude-plugin/plugin.json",
             """
             {
               "name": "souroldgeezer-example",
-              "version": "0.2.0",
               "description": "Example plugin for runtime metadata parity tests.",
               "author": {"name": "Sour Old Geezer", "email": "test@example.invalid"},
               "license": "MIT"
             }
             """,
             "souroldgeezer-example/.claude-plugin/plugin.json",
+            "version",
+        )
+
+    def test_marketplace_entry_with_version_key_is_detected(self) -> None:
+        # plugin.json#version is the sole authority (Claude Code always resolves
+        # it over a marketplace-entry copy without warning); a marketplace entry
+        # carrying a version key is flagged even when the value matches.
+        self._assert_broken_fixture_flags(
+            ".claude-plugin/marketplace.json",
+            """
+            {
+              "name": "souroldgeezer",
+              "plugins": [
+                {
+                  "name": "souroldgeezer-example",
+                  "source": "./souroldgeezer-example",
+                  "version": "0.1.0",
+                  "description": "Example plugin for runtime metadata parity tests."
+                }
+              ]
+            }
+            """,
+            ".claude-plugin/marketplace.json",
             "version",
         )
 
@@ -170,7 +192,6 @@ class RuntimeMetadataParityTest(unittest.TestCase):
                 {{
                   "name": "souroldgeezer-example",
                   "source": "./souroldgeezer-example",
-                  "version": "0.1.0",
                   "description": "{plugin_description}"
                 }}
               ]
