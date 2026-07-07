@@ -193,9 +193,13 @@ syntax. Offer it only when the audience opens the artifact directly in a
 browser, tell them how to operate it, and disclose the verified mode and
 these limits in the footer `Layout/render options` line. The selected release
 bundle ships `interactive-svg` and `rich-svg` render-policy fixtures as
-starting points for navigable and richer-styled output. Static SVG stays the
-default and the evidence of record; keep the `data-dediren-node-id` /
-`data-dediren-edge-id` markers required by §9.
+starting points for navigable and richer-styled output, plus a `dark-svg`
+fixture (dark canvas, light labels) as a dark-theme starting point. A dark
+policy is still held to the same WCAG 2.2 SC 1.4.11 non-text and label-text
+contrast bars as a light one — verify contrast from the emitted artifact, not
+from the fixture's presence. Static SVG stays the default and the evidence of
+record; keep the `data-dediren-node-id` / `data-dediren-edge-id` markers
+required by §9.
 
 The render policy may also carry an optional `accessibility` block (`title`,
 `description`) that names the emitted SVG for assistive technology: the root
