@@ -446,8 +446,8 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "high",
             "docs/skill-architecture.md#runtime-contract",
             "deterministic",
-            ("manifest-name-version-description-drift", "manifest-surfaces-synchronized"),
-            "Synchronize plugin name, version, and description across the Claude plugin and marketplace manifests.",
+            ("manifest-name-description-drift-or-marketplace-version-key", "manifest-surfaces-synchronized"),
+            "Synchronize plugin name and description across the Claude plugin and marketplace manifests; keep version in plugin.json only and remove it from the marketplace entry.",
         ),
         Rule(
             "SAC-RUNTIME-MISSING-CLAUDE-AGENT",
@@ -1925,10 +1925,19 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                 surfaces["claude"] = manifest
 
         drift_fields = []
-        for field in ("name", "version", "description"):
+        for field in ("name", "description"):
             values = {label: surface.get(field) for label, surface in surfaces.items()}
             if len(set(values.values())) > 1:
                 drift_fields.append(f"{field}={values}")
+        # plugin.json#version is the sole version authority: Claude Code always
+        # resolves it over a marketplace-entry copy without warning, so a stray
+        # marketplace copy is a silent drift risk rather than a helpful mirror.
+        # The marketplace entry must never carry a "version" key at all, and
+        # plugin.json must declare one.
+        if "version" in entry:
+            drift_fields.append(f"version={{'marketplace': {entry.get('version')!r}}} (must be absent; plugin.json#version is the sole authority)")
+        if "claude" in surfaces and surfaces["claude"].get("version") is None:
+            drift_fields.append("version={'claude': None} (plugin.json must declare a version)")
         if drift_fields:
             findings.append(
                 make_finding(
@@ -1937,9 +1946,9 @@ def scan_manifest_sync(repo_root: Path) -> list[Finding]:
                     "SAC-RUNTIME-MANIFEST-SYNC",
                     source or f".claude-plugin/marketplace.json#plugins[{index}]",
                     "; ".join(drift_fields),
-                    "Plugin name, version, and description should stay synchronized across the marketplace and Claude manifests.",
-                    "Claude users may see different plugin identity or update surfaces.",
-                    "Synchronize plugin name, version, and description across the Claude plugin and marketplace manifests.",
+                    "Plugin name and description should stay synchronized across the marketplace and Claude manifests; version lives only in plugin.json (Claude Code always resolves it over a marketplace-entry copy without warning, so a mirrored copy is a silent drift risk).",
+                    "Claude users may see different plugin identity or update surfaces, or a stale marketplace version copy may mask the real plugin.json value.",
+                    "Synchronize plugin name and description across the Claude plugin and marketplace manifests; keep version in plugin.json only and remove it from the marketplace entry.",
                 )
             )
 

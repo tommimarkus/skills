@@ -563,10 +563,14 @@ def case_runtime_plugin_json(complexity: str, index: str, scenario: str) -> dict
 
 
 def case_manifest_sync(complexity: str, index: str, scenario: str) -> dict:
+    # Marketplace entry deliberately carries no "version" key (plugin.json is the
+    # sole authority) so this fixture isolates description drift; a marketplace
+    # entry that carries a version key at all is its own gold case, see
+    # build_guard_cases()'s "marketplace-entry-carries-version-key".
     return bare_case(
         "SAC-RUNTIME-MANIFEST-SYNC", complexity, scenario,
         files=[
-            {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Marketplace {scenario}\"}}]}}\n"},
+            {"path": ".claude-plugin/marketplace.json", "content": f"{{\"plugins\":[{{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"description\":\"Marketplace {scenario}\"}}]}}\n"},
             {"path": "example-plugin/.claude-plugin/plugin.json", "content": f"{{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Claude {scenario}\"}}\n"},
         ],
     )
@@ -877,7 +881,7 @@ def build_guard_cases() -> list[dict]:
         guard_case(
             "guard-marketplace-complete",
             [
-                {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}]}\n"},
+                {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"description\":\"Fixture plugin\"}]}\n"},
                 {"path": "example-plugin/.claude-plugin/plugin.json", "content": "{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}\n"},
             ],
             [
@@ -886,6 +890,15 @@ def build_guard_cases() -> list[dict]:
                 "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
             ],
             "complete marketplace and plugin manifests avoid runtime parity findings",
+        ),
+        bare_case(
+            "SAC-RUNTIME-MANIFEST-SYNC",
+            "adversarial",
+            "marketplace-entry-carries-version-key",
+            files=[
+                {"path": ".claude-plugin/marketplace.json", "content": "{\"plugins\":[{\"name\":\"example-plugin\",\"source\":\"./example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}]}\n"},
+                {"path": "example-plugin/.claude-plugin/plugin.json", "content": "{\"name\":\"example-plugin\",\"version\":\"1.0.0\",\"description\":\"Fixture plugin\"}\n"},
+            ],
         ),
         guard_skill(
             "guard-established-skill-dir-alias",
