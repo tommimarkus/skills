@@ -5,6 +5,8 @@ against a throwaway copy of the real pin surfaces, and drive the CLI via subproc
 The load-bearing safety property is scope: the bump must never touch the coincidental
 souroldgeezer-design / marketplace CalVer that can equal the dediren pin.
 """
+import io
+import json
 import re
 import shutil
 import subprocess
@@ -204,6 +206,150 @@ class CliTest(unittest.TestCase):
             root = build_temp_repo(Path(tmp))
             result = self._run("bump", "--to", "not-a-version", "--repo-root", str(root))
             self.assertNotEqual(result.returncode, 0)
+
+    def test_adopt_help_lists_the_subcommand(self):
+        result = self._run("adopt", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("verdict", result.stdout)
+
+    def test_adopt_rejects_bad_version_before_any_network(self):
+        # A non-CalVer target fails preflight with exit 2 without touching the resolver.
+        result = self._run("adopt", "--to", "not-a-version", "--repo-root", str(REPO_ROOT))
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("not CalVer", result.stdout + result.stderr)
+
+
+class CalverOrderTest(unittest.TestCase):
+    def test_micro_orders_numerically_not_lexically(self):
+        # The bug string comparison would hit: "2026.07.9" > "2026.07.10" lexically.
+        self.assertLess(db._calver_tuple("2026.07.9"), db._calver_tuple("2026.07.10"))
+        self.assertLess(db._calver_tuple("2026.07.27"), db._calver_tuple("2026.08.0"))
+        self.assertEqual(db._calver_tuple("2026.07.9"), (2026, 7, 9))
+
+
+class PreflightProblemsTest(unittest.TestCase):
+    def test_clean_forward_bump_has_no_problems(self):
+        self.assertEqual(
+            db.preflight_problems("2026.07.9", "2026.07.10", dirty_pin_paths=[]), []
+        )
+
+    def test_flags_non_calver_target(self):
+        problems = db.preflight_problems("2026.07.9", "nope", dirty_pin_paths=[])
+        self.assertTrue(problems and "not CalVer" in problems[0])
+
+    def test_flags_older_target(self):
+        problems = db.preflight_problems("2026.07.10", "2026.07.9", dirty_pin_paths=[])
+        self.assertTrue(any("older" in p for p in problems))
+
+    def test_flags_dirty_pin_surfaces(self):
+        problems = db.preflight_problems(
+            "2026.07.9", "2026.07.10", dirty_pin_paths=["a/pin.md", "b/pin.json"]
+        )
+        self.assertTrue(any("already modified" in p for p in problems))
+        self.assertIn("a/pin.md", " ".join(problems))
+
+
+class ClassifyBundleChangeTest(unittest.TestCase):
+    OLD, NEW_V = "2026.07.9", "2026.07.10"
+
+    def test_version_only_diff_is_cosmetic(self):
+        surfaces = [
+            ("bundle.json", '{"v":"2026.07.9"}', '{"v":"2026.07.10"}'),
+            ("docs/agent-usage.md", "pinned 2026.07.9 here", "pinned 2026.07.10 here"),
+            ("schemas/model.json", "identical", "identical"),
+        ]
+        classification, substantive = db.classify_bundle_change(surfaces, self.OLD, self.NEW_V)
+        self.assertEqual(classification, "cosmetic")
+        self.assertEqual(substantive, [])
+
+    def test_added_field_is_substantive(self):
+        surfaces = [("schemas/model.json", '{"a":1}', '{"a":1,"b":2}')]
+        classification, substantive = db.classify_bundle_change(surfaces, self.OLD, self.NEW_V)
+        self.assertEqual(classification, "non-cosmetic")
+        self.assertEqual(substantive, ["schemas/model.json"])
+
+    def test_added_or_removed_file_is_substantive(self):
+        surfaces = [
+            ("schemas/new.json", None, "{}"),        # added upstream
+            ("schemas/gone.json", "{}", None),       # removed upstream
+        ]
+        classification, substantive = db.classify_bundle_change(surfaces, self.OLD, self.NEW_V)
+        self.assertEqual(classification, "non-cosmetic")
+        self.assertEqual(sorted(substantive), ["schemas/gone.json", "schemas/new.json"])
+
+    def test_binary_change_is_substantive_but_equal_binary_is_not(self):
+        surfaces = [
+            ("fixtures/a.bin", b"\x00\x01", b"\x00\x02"),
+            ("fixtures/b.bin", b"\xff\xfe", b"\xff\xfe"),
+        ]
+        classification, substantive = db.classify_bundle_change(surfaces, self.OLD, self.NEW_V)
+        self.assertEqual(classification, "non-cosmetic")
+        self.assertEqual(substantive, ["fixtures/a.bin"])
+
+    def test_no_changes_is_cosmetic(self):
+        surfaces = [("bundle.json", "same", "same")]
+        classification, _ = db.classify_bundle_change(surfaces, self.OLD, self.NEW_V)
+        self.assertEqual(classification, "cosmetic")
+
+
+class IntegrationRecipeTest(unittest.TestCase):
+    def test_recipe_stamps_on_main_and_names_the_plugin(self):
+        recipe = "\n".join(db.integration_recipe("2026.08.0"))
+        self.assertIn("version_stamp.py guard", recipe)
+        self.assertIn("version_stamp.py compute --plugin souroldgeezer-architecture", recipe)
+        self.assertIn("merge --ff-only dediren-2026.08.0", recipe)
+        # It must never propose stamping from the branch.
+        self.assertIn("main", recipe)
+
+
+class NextActionsAndVerifyPlanTest(unittest.TestCase):
+    def test_cosmetic_skips_indepth_ip_hygiene(self):
+        actions = " ".join(db.next_actions("cosmetic", "2026.08.0"))
+        self.assertIn("no in-depth run required", actions)
+        self.assertNotIn("IN-DEPTH", actions)
+
+    def test_non_cosmetic_requires_indepth_ip_hygiene_and_capability_review(self):
+        actions = " ".join(db.next_actions("non-cosmetic", "2026.08.0"))
+        self.assertIn("IN-DEPTH", actions)
+        self.assertIn("NEW capability", actions)
+
+    def test_verify_plan_runs_smoke_with_flag_plus_surface_and_diff_checks(self):
+        plan = db.verify_plan()
+        names = {name for name, _, _ in plan}
+        self.assertEqual(names, {"smoke", "surface-tests", "diff-check"})
+        smoke = next(spec for spec in plan if spec[0] == "smoke")
+        self.assertEqual(smoke[2].get("DEDIREN_RELEASE_SMOKE"), "1")
+        self.assertIn("tests.architecture_dediren_release_test", smoke[1])
+        diff_check = next(spec for spec in plan if spec[0] == "diff-check")
+        self.assertEqual(diff_check[1], ["git", "diff", "--check"])
+
+
+class EmitVerdictTest(unittest.TestCase):
+    def test_json_verdict_is_machine_readable(self):
+        verdict = db.AdoptVerdict(
+            "2026.07.9", "2026.07.10", "ready", True,
+            classification="cosmetic", verify_results=[("smoke", True)],
+            next_actions=["do x"], integration=["step y"],
+        )
+        buffer = io.StringIO()
+        db._emit_verdict(verdict, out=buffer, json_out=True)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(payload["classification"], "cosmetic")
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["verify"], [{"check": "smoke", "ok": True}])
+
+    def test_text_verdict_shows_result_and_next(self):
+        verdict = db.AdoptVerdict(
+            "2026.07.9", "2026.07.10", "verify", False,
+            problems=["verify gate 'smoke' failed"],
+            next_actions=["re-run adopt"],
+        )
+        buffer = io.StringIO()
+        db._emit_verdict(verdict, out=buffer, json_out=False)
+        text = buffer.getvalue()
+        self.assertIn("result: BLOCKED", text)
+        self.assertIn("NEXT:", text)
+        self.assertIn("smoke", text)
 
 
 if __name__ == "__main__":

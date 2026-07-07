@@ -11,7 +11,7 @@ architecture plugin's marketplace/README stamp can *coincidentally* equal the de
 This is repo-maintenance tooling — it lives outside every plugin tree, needs no CalVer
 stamp of its own, and mirrors ``scripts/version_stamp.py`` (stdlib-only, ``uv run``).
 
-Three stdlib-only responsibilities:
+Stdlib-only responsibilities:
 
 - ``current``: print the pinned version, read from the single source of truth
   (``DEDIREN_VERSION_DEFAULT`` in the release script).
@@ -22,21 +22,30 @@ Three stdlib-only responsibilities:
 - ``parity --to X``: fetch the current and target release bundles via the release
   resolver and diff the judgment surfaces (agent-usage guide, plugin manifests, schemas,
   fixtures, bundle manifest) so the human feature-parity classification reads a diff.
+- ``adopt --to X [--plan] [--json]``: the one-shot, non-interactive driver a weak model
+  can run end to end. Preflight → parity + *auto-classification* (cosmetic when the
+  upstream bundle changed only version strings, else non-cosmetic) → bump → a parallel
+  verify gate (smoke pipeline + surface tests + whitespace check) → a single verdict
+  with the exact next actions and the on-``main`` integration recipe. It never prompts:
+  the two irreducibly human/model steps (in-depth ip-hygiene, new-capability skill
+  support) are emitted as ``NEXT`` lines, not interactive gates. Exit 0 = ready to
+  integrate, 1 = a verify gate failed, 2 = preflight/parity could not proceed.
 
-The tool performs the *mechanical* bump and feeds the *judgment* steps; it never
-classifies breaking/additive/cosmetic, edits architecture.md, or applies the CalVer
-stamp (owned by ``version_stamp.py`` at integration).
+The tool performs the *mechanical* bump, *auto-classifies* against the bundle diff, and
+feeds the residual *judgment* steps as next actions; it never edits architecture.md,
+never applies the CalVer stamp, and never mutates ``main`` (both owned by
+``version_stamp.py`` at integration).
 """
 from __future__ import annotations
 
 import argparse
 import difflib
-import filecmp
 import json
 import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,6 +55,9 @@ ARCH_REFS_REL = "souroldgeezer-architecture/skills/architecture-design/reference
 RELEASE_SCRIPT_REL = f"{ARCH_REFS_REL}/scripts/dediren-release.sh"
 TEST_FILE_REL = "tests/architecture_dediren_release_test.py"
 SOURCE_GROUNDING_REL = f"{ARCH_REFS_REL}/source-grounding.md"
+
+# The plugin whose CalVer stamp a dediren adoption re-stamps at integration.
+INTEGRATION_PLUGIN = "souroldgeezer-architecture"
 
 CALVER_RE = re.compile(r"^\d{4}\.\d{2}\.\d+$")
 
@@ -57,7 +69,7 @@ _REQUIRED_PLUGINS_ARRAY = re.compile(r'"required_plugins"\s*:\s*\[(.*?)\]', re.D
 _PLUGIN_PIN = re.compile(r'"id"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"')
 
 # Release-bundle subpaths whose change between two versions may signal a runtime-contract
-# shift the human must classify. Read-only diff surfaces for ``parity``.
+# shift the human must classify. Read-only diff surfaces for ``parity`` / ``adopt``.
 PARITY_SURFACES = (
     "bundle.json",
     "docs/agent-usage.md",
@@ -214,14 +226,50 @@ def _ensure_bundle(repo_root: Path, version: str) -> Path:
     return Path(result.stdout.strip())
 
 
-def _bundle_lines(path: Path) -> list[str]:
-    """Read a bundle file as keep-ends lines, or an empty list when it is absent."""
-    return path.read_text(encoding="utf-8").splitlines(keepends=True) if path.is_file() else []
+def _read_surface(path: Path) -> str | bytes | None:
+    """A bundle surface as text (``str``), raw bytes when it is not UTF-8, or ``None``
+    when it is absent in that release."""
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+
+
+def _bundle_surface_names(current_bundle: Path, target_bundle: Path) -> list[str]:
+    """The union of ``PARITY_SURFACES`` matches across both bundles, as posix subpaths."""
+    names: set[str] = set()
+    for pattern in PARITY_SURFACES:
+        names |= {p.relative_to(current_bundle).as_posix() for p in current_bundle.glob(pattern)}
+        names |= {p.relative_to(target_bundle).as_posix() for p in target_bundle.glob(pattern)}
+    return sorted(names)
+
+
+def collect_parity(
+    repo_root: Path, current: str, target: str
+) -> list[tuple[str, str | bytes | None, str | bytes | None]]:
+    """Fetch both release bundles (in parallel) and return one ``(name, current, target)``
+    triple per parity surface, each side ``str`` / ``bytes`` / ``None``. Shared by the
+    ``parity`` diff and the ``adopt`` auto-classifier so the glob/read logic lives once."""
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        current_future = pool.submit(_ensure_bundle, repo_root, current)
+        target_future = pool.submit(_ensure_bundle, repo_root, target)
+        current_bundle = current_future.result()
+        target_bundle = target_future.result()
+    surfaces: list[tuple[str, str | bytes | None, str | bytes | None]] = []
+    for name in _bundle_surface_names(current_bundle, target_bundle):
+        surfaces.append(
+            (name, _read_surface(current_bundle / name), _read_surface(target_bundle / name))
+        )
+    return surfaces
 
 
 def run_parity(repo_root: Path, target_version: str, *, out=sys.stdout) -> int:
     """Fetch the current and target bundles and print a diff of the parity surfaces so the
-    human can classify the release. Network + resolver bound; not exercised by unit tests."""
+    human (or the ``adopt`` classifier) can classify the release. Network + resolver bound;
+    not exercised by unit tests."""
     if not CALVER_RE.match(target_version):
         raise ValueError(f"not a CalVer version: {target_version!r}")
     current = current_version(repo_root)
@@ -229,36 +277,26 @@ def run_parity(repo_root: Path, target_version: str, *, out=sys.stdout) -> int:
         print(f"target {target_version} equals the current pin; nothing to compare", file=out)
         return 0
 
-    current_bundle = _ensure_bundle(repo_root, current)
-    target_bundle = _ensure_bundle(repo_root, target_version)
-
     changed: list[str] = []
-    for pattern in PARITY_SURFACES:
-        names = sorted(
-            {p.relative_to(current_bundle).as_posix() for p in current_bundle.glob(pattern)}
-            | {p.relative_to(target_bundle).as_posix() for p in target_bundle.glob(pattern)}
-        )
-        for name in names:
-            a = current_bundle / name
-            b = target_bundle / name
-            if a.is_file() and b.is_file() and filecmp.cmp(a, b, shallow=False):
-                continue
-            changed.append(name)
-            try:
-                a_lines = _bundle_lines(a)
-                b_lines = _bundle_lines(b)
-            except UnicodeDecodeError:
-                print(f"(binary) {name} differs", file=out)
-                continue
-            out.writelines(
-                difflib.unified_diff(
-                    a_lines, b_lines,
-                    fromfile=f"{current}/{name}", tofile=f"{target_version}/{name}",
-                )
+    for name, a, b in collect_parity(repo_root, current, target_version):
+        if a == b:
+            continue
+        changed.append(name)
+        # ``None`` means added/removed between releases; ``bytes`` means a non-UTF-8
+        # (binary) surface. Render a real diff for text (incl. add/remove); label binary.
+        if isinstance(a, bytes) or isinstance(b, bytes):
+            print(f"(binary) {name} differs", file=out)
+            continue
+        out.writelines(
+            difflib.unified_diff(
+                a.splitlines(keepends=True) if a else [],
+                b.splitlines(keepends=True) if b else [],
+                fromfile=f"{current}/{name}", tofile=f"{target_version}/{name}",
             )
+        )
 
-    summary = f"\n{len(changed)} parity surface(s) changed between {current} and {target_version}:"
-    print(summary, file=out)
+    header = f"\n{len(changed)} parity surface(s) changed between {current} and {target_version}:"
+    print(header, file=out)
     for name in changed:
         print(f"  {name}", file=out)
     print(
@@ -267,6 +305,282 @@ def run_parity(repo_root: Path, target_version: str, *, out=sys.stdout) -> int:
         file=out,
     )
     return 0
+
+
+# ---------------------------------------------------------------------------
+# adopt: one-shot, non-interactive orchestration of a release adoption.
+# ---------------------------------------------------------------------------
+
+
+def _calver_tuple(version: str) -> tuple[int, int, int]:
+    """Component-wise CalVer order so 2026.07.9 sorts *below* 2026.07.10 (string
+    comparison gets this wrong)."""
+    year, month, micro = version.split(".")
+    return int(year), int(month), int(micro)
+
+
+@dataclass
+class AdoptVerdict:
+    current: str
+    target: str
+    stage: str                              # preflight | parity | ready | verify
+    ok: bool
+    classification: str | None = None       # cosmetic | non-cosmetic
+    substantive_surfaces: list[str] = field(default_factory=list)
+    problems: list[str] = field(default_factory=list)
+    next_actions: list[str] = field(default_factory=list)
+    verify_results: list[tuple[str, bool]] = field(default_factory=list)
+    integration: list[str] = field(default_factory=list)
+
+
+def preflight_problems(current: str, target: str, *, dirty_pin_paths: list[str]) -> list[str]:
+    """Blocking reasons an adoption cannot start. Pure; the caller supplies git state."""
+    if not CALVER_RE.match(target):
+        return [f"target {target!r} is not CalVer (YYYY.0M.MICRO)"]
+    problems: list[str] = []
+    if _calver_tuple(target) < _calver_tuple(current):
+        problems.append(f"target {target} is older than the current pin {current}")
+    if dirty_pin_paths:
+        problems.append(
+            "pin surfaces already modified ("
+            + ", ".join(sorted(dirty_pin_paths))
+            + "); commit or stash them first so the bump is reviewable in isolation"
+        )
+    return problems
+
+
+def classify_bundle_change(
+    surfaces: list[tuple[str, str | bytes | None, str | bytes | None]], old: str, new: str
+) -> tuple[str, list[str]]:
+    """Auto-classify an adoption from the upstream bundle diff.
+
+    A surface whose only difference is the ``old`` -> ``new`` version string is cosmetic
+    noise; anything else — added/removed content, an added or removed file, or a binary
+    change — is a *substantive* (contract-affecting) surface. The adoption is ``cosmetic``
+    only when no surface is substantive. Conservative by construction: a change it cannot
+    prove is version-only counts as substantive."""
+    substantive: list[str] = []
+    for name, a, b in surfaces:
+        if a is None or b is None:
+            if a != b:
+                substantive.append(name)
+            continue
+        if a == b:
+            continue
+        if isinstance(a, str) and isinstance(b, str) and a.replace(old, new) == b:
+            continue
+        substantive.append(name)
+    return ("cosmetic" if not substantive else "non-cosmetic", substantive)
+
+
+def integration_recipe(target: str, *, plugin: str = INTEGRATION_PLUGIN) -> list[str]:
+    """The exact steps to stamp + sync on ``main`` at integration — never on the branch
+    (CLAUDE.md § Plugin versioning: the feature branch carries content only)."""
+    return [
+        f"git switch main && git merge --ff-only dediren-{target}",
+        "uv run python scripts/version_stamp.py guard   # branch must not have stamped a cell",
+        f"uv run python scripts/version_stamp.py compute --plugin {plugin}",
+        f"# apply that stamp to all three cells: {plugin}/.claude-plugin/plugin.json,",
+        f"#   .claude-plugin/marketplace.json[{plugin}], and {plugin}/README.md (all equal),",
+        "#   sync the version-sync test expectation, then commit the stamp on main.",
+    ]
+
+
+def next_actions(classification: str, target: str) -> list[str]:
+    """The residual model/human steps, spelled out so no interactive gate is needed."""
+    if classification == "cosmetic":
+        return [
+            "Cosmetic maintenance bump: the upstream bundle changed only version strings.",
+            "ip-hygiene: a normal scoped triage is enough (no in-depth run required).",
+            f"Commit the bump on branch dediren-{target}, then integrate with the recipe below.",
+        ]
+    return [
+        "Non-cosmetic bump: the upstream bundle changed the contract surfaces listed above.",
+        "Run the ip-hygiene skill IN-DEPTH over the changed architecture surface before finishing.",
+        "Review each substantive surface for a NEW capability. If one needs architecture-design "
+        "support, that is feature work — file a follow-up issue and STOP before integrating.",
+        'If no new capability is needed, record "maintenance-only, no contract change", commit, '
+        "then integrate with the recipe below.",
+    ]
+
+
+def verify_plan() -> list[tuple[str, list[str], dict[str, str]]]:
+    """The parallel gate ``adopt`` runs after a bump: full smoke pipeline + dediren surface
+    tests + a whitespace check. Pure ``(name, argv, env-overrides)`` triples so a test can
+    assert the smoke flag and scope without running the (slow, Java-bound) checks."""
+    unittest = [sys.executable, "-m", "unittest"]
+    return [
+        ("smoke",
+         unittest + ["tests.architecture_dediren_release_test"], {"DEDIREN_RELEASE_SMOKE": "1"}),
+        ("surface-tests",
+         unittest + ["tests.architecture_dediren_surface_test", "tests.dediren_bump_test"], {}),
+        ("diff-check", ["git", "diff", "--check"], {}),
+    ]
+
+
+def run_verify(repo_root: Path) -> list[tuple[str, bool, str]]:
+    """Run every verify check concurrently; wall-clock is the slowest (the smoke pipeline).
+    Returns ``(name, passed, combined-output)`` per check."""
+    plan = verify_plan()
+
+    def _run(spec: tuple[str, list[str], dict[str, str]]) -> tuple[str, bool, str]:
+        name, argv, env_overrides = spec
+        env = os.environ.copy()
+        env.update(env_overrides)
+        proc = subprocess.run(argv, cwd=repo_root, env=env, text=True, capture_output=True)
+        return name, proc.returncode == 0, proc.stdout + proc.stderr
+
+    with ThreadPoolExecutor(max_workers=len(plan)) as pool:
+        return list(pool.map(_run, plan))
+
+
+def _dirty_pin_paths(repo_root: Path) -> list[str]:
+    """Pin surfaces with uncommitted changes, per git. Empty for a clean tree or a non-git
+    target — the check degrades gracefully rather than blocking (derive from the authority,
+    keep a fallback: skill-architecture.md § Degradation Checks)."""
+    rels = [str(path.relative_to(repo_root)) for path in target_files(repo_root)]
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "status", "--porcelain", "--", *rels],
+        text=True, capture_output=True,
+    )
+    if proc.returncode != 0:
+        return []
+    return [line[3:].strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _emit_verdict(verdict: AdoptVerdict, *, out=sys.stdout, json_out: bool = False) -> None:
+    if json_out:
+        payload = {
+            "current": verdict.current,
+            "target": verdict.target,
+            "stage": verdict.stage,
+            "ok": verdict.ok,
+            "classification": verdict.classification,
+            "substantive_surfaces": verdict.substantive_surfaces,
+            "problems": verdict.problems,
+            "verify": [{"check": name, "ok": ok} for name, ok in verdict.verify_results],
+            "next_actions": verdict.next_actions,
+            "integration": verdict.integration,
+        }
+        print(json.dumps(payload, indent=2), file=out)
+        return
+
+    heading = f"dediren adopt: {verdict.current} -> {verdict.target}  [stage: {verdict.stage}]"
+    print(heading, file=out)
+    if verdict.classification:
+        print(f"classification: {verdict.classification}", file=out)
+    if verdict.substantive_surfaces:
+        print("substantive bundle surfaces:", file=out)
+        for name in verdict.substantive_surfaces:
+            print(f"  - {name}", file=out)
+    if verdict.verify_results:
+        cells = (f"{name}={'ok' if ok else 'FAIL'}" for name, ok in verdict.verify_results)
+        print(f"verify: {'  '.join(cells)}", file=out)
+    if verdict.problems:
+        print("PROBLEMS:", file=out)
+        for problem in verdict.problems:
+            print(f"  - {problem}", file=out)
+    if verdict.next_actions:
+        print("NEXT:", file=out)
+        for action in verdict.next_actions:
+            print(f"  - {action}", file=out)
+    if verdict.integration:
+        print("INTEGRATION (run on main after merge, never on the branch):", file=out)
+        for line in verdict.integration:
+            print(f"  {line}", file=out)
+    print(f"\nresult: {'READY' if verdict.ok else 'BLOCKED'}", file=out)
+
+
+def run_adopt(
+    repo_root: Path, target: str, *, plan_only: bool = False, json_out: bool = False, out=sys.stdout
+) -> int:
+    """Drive a whole adoption non-interactively and print one verdict. See the module
+    docstring for the stage sequence and exit codes."""
+    if not CALVER_RE.match(target):
+        _emit_verdict(
+            AdoptVerdict("?", target, "preflight", ok=False,
+                         problems=[f"target {target!r} is not CalVer (YYYY.0M.MICRO)"]),
+            out=out, json_out=json_out,
+        )
+        return 2
+
+    current = current_version(repo_root)
+
+    # Idempotent re-run: already pinned to the target -> re-verify only (no re-classify,
+    # since the previous version is gone and parity needs two distinct versions).
+    if current == target and not plan_only:
+        results = run_verify(repo_root)
+        ok = all(passed for _, passed, _ in results)
+        problems = [] if ok else [f"verify gate '{n}' failed" for n, p, _ in results if not p]
+        _emit_verdict(
+            AdoptVerdict(
+                current, target, "ready" if ok else "verify", ok,
+                verify_results=[(name, passed) for name, passed, _ in results],
+                next_actions=[f"Already pinned to {target}; re-verified.",
+                              "If integrating, use the recipe below."],
+                integration=integration_recipe(target) if ok else [],
+                problems=problems,
+            ),
+            out=out, json_out=json_out,
+        )
+        return 0 if ok else 1
+
+    problems = preflight_problems(current, target, dirty_pin_paths=_dirty_pin_paths(repo_root))
+    if problems:
+        _emit_verdict(AdoptVerdict(current, target, "preflight", ok=False, problems=problems),
+                      out=out, json_out=json_out)
+        return 2
+
+    try:
+        surfaces = collect_parity(repo_root, current, target)
+    except (subprocess.SubprocessError, OSError) as exc:
+        _emit_verdict(
+            AdoptVerdict(current, target, "parity", ok=False,
+                         problems=[f"could not fetch release bundles: {exc}"]),
+            out=out, json_out=json_out,
+        )
+        return 2
+    classification, substantive = classify_bundle_change(surfaces, current, target)
+
+    if plan_only:
+        plan_actions = ["Plan only: no bump or verify.", *next_actions(classification, target)]
+        _emit_verdict(
+            AdoptVerdict(
+                current, target, "parity", ok=True, classification=classification,
+                substantive_surfaces=substantive,
+                next_actions=plan_actions,
+                integration=integration_recipe(target),
+            ),
+            out=out, json_out=json_out,
+        )
+        return 0
+
+    try:
+        bump(repo_root, target)
+    except (ValueError, PinDriftError) as exc:
+        _emit_verdict(AdoptVerdict(current, target, "preflight", ok=False, problems=[str(exc)]),
+                      out=out, json_out=json_out)
+        return 2
+
+    results = run_verify(repo_root)
+    ok = all(passed for _, passed, _ in results)
+    if ok:
+        verdict = AdoptVerdict(
+            current, target, "ready", True, classification, substantive,
+            verify_results=[(name, passed) for name, passed, _ in results],
+            next_actions=next_actions(classification, target),
+            integration=integration_recipe(target),
+        )
+    else:
+        verdict = AdoptVerdict(
+            current, target, "verify", False, classification, substantive,
+            verify_results=[(name, passed) for name, passed, _ in results],
+            problems=[f"verify gate '{name}' failed" for name, passed, _ in results if not passed],
+            next_actions=[f"A verify gate failed. Inspect it, fix the cause, then re-run "
+                          f"`adopt --to {target}` (idempotent)."],
+        )
+    _emit_verdict(verdict, out=out, json_out=json_out)
+    return 0 if ok else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -292,6 +606,15 @@ def build_parser() -> argparse.ArgumentParser:
     parity_parser = sub.add_parser("parity", parents=[common],
                                    help="diff the current vs target release bundles")
     parity_parser.add_argument("--to", required=True, help="target Dediren version (CalVer)")
+
+    adopt_parser = sub.add_parser(
+        "adopt", parents=[common],
+        help="run the adoption (preflight, parity+classify, bump, verify) and print a verdict",
+    )
+    adopt_parser.add_argument("--to", required=True, help="target Dediren version (CalVer)")
+    adopt_parser.add_argument("--plan", action="store_true",
+                              help="preflight + parity + classification only; no bump, no verify")
+    adopt_parser.add_argument("--json", action="store_true", help="emit the verdict as JSON")
 
     return parser
 
@@ -330,6 +653,9 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+
+    if args.command == "adopt":
+        return run_adopt(repo_root, args.to, plan_only=args.plan, json_out=args.json)
 
     return 1
 

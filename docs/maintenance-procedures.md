@@ -4,13 +4,39 @@ Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
 
 ## Dediren upstream release adoption
 
-(The one architecture-specific version procedure, documented nowhere else.) Adopting a new `tommimarkus/dediren` release is a **mechanical pin bump** across ~14 repo-owned surfaces plus a **judgment pass** (parity, classification, skill support) the tool cannot make for you. The mechanical bump and its re-verification are owned by the repo-maintenance tool `scripts/dediren_bump.py` (stdlib-only, run `uv run python scripts/dediren_bump.py <subcommand>`); it lives outside every plugin tree, so it needs no CalVer stamp of its own. Run, in order:
+(The one architecture-specific version procedure, documented nowhere else.) Adopting a new `tommimarkus/dediren` release is a **mechanical pin bump** across ~14 repo-owned surfaces plus a small **judgment residue** the tool cannot decide. One command — `adopt` — runs the whole mechanical spine and prints exactly what to do next; it never asks a question. The tool (`scripts/dediren_bump.py`, stdlib-only) lives outside every plugin tree, so it needs no CalVer stamp of its own.
 
-1. **Parity diff (judgment input).** `uv run python scripts/dediren_bump.py parity --to <version>` downloads the current and target release bundles via the release resolver and diffs the judgment surfaces (`bundle.json`, `docs/agent-usage.md`, plugin manifests, schemas, bundled fixtures). Read the diff: a version-string change can hide a runtime-contract change (e.g. the render-envelope schema version, `data.content`→`data.artifacts`) that requires test/doc updates and makes the bump non-cosmetic. Cover the full feature set the pin spans (agent-usage guide, plugin manifests, schemas, bundled fixtures, commands, semantic profiles) and add or update architecture-design skill support for any new capability — do not only bump refs and sync.
-2. **Bump the pins.** `uv run python scripts/dediren_bump.py bump --to <version>` replaces every embedded pin in one scoped, re-verified pass — the release-script default and usage line, `EXPECTED_DEDIREN_VERSION`, the basic and mixed fixtures' `required_plugins` version, the UML notation worked examples, and the source-grounding claim. It reads the current pin from the single source of truth (`DEDIREN_VERSION_DEFAULT` in `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh`), refuses when a pin has already drifted, and re-runs the release test's pin discovery so a duplicated pin cannot be silently missed. Preview with `--check` first. The bump deliberately does **not** touch `architecture.md` (capability docs are judgment) or any CalVer cell.
-3. **Gated smoke suite.** `DEDIREN_RELEASE_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test` runs the full validate→layout→render→export pipeline against the new bundle. It must pass before you classify or re-stamp — the re-pinned source-grounding claim is only honest once the smoke suite confirms the new bundle.
-4. **Classify + record.** Classify the bump (cosmetic only when the smoke suite and parity diff confirm no skill-contract change) and record the parity finding in closeout (new features supported, or "maintenance-only, no contract change").
-5. **Re-stamp + sync at integration.** Re-stamp `souroldgeezer-architecture` and sync manifests / marketplace / README / version-sync test. The re-stamp follows "Where that stamp lands" (CLAUDE.md § Plugin versioning): deferred to the `main` integration commit when the adoption work is in a worktree, computed with `uv run python scripts/version_stamp.py compute --plugin souroldgeezer-architecture`.
+**Happy path (a maintenance/cosmetic bump — the common case): three commands.**
+
+```bash
+# 0. Isolate the work in a worktree named for the target version.
+git worktree add -b dediren-<version> .worktrees/dediren-<version> main
+cd .worktrees/dediren-<version>
+
+# 1. Run the whole adoption; read the verdict it prints.
+uv run python scripts/dediren_bump.py adopt --to <version>
+
+# 2. Commit the bump on the branch (the verdict's NEXT lines confirm this).
+git commit -am "chore(architecture-design): adopt Dediren <version> (<classification>)"
+
+# 3. Integrate on main using the exact INTEGRATION recipe the verdict printed.
+```
+
+**What `adopt --to <version>` does, in one non-interactive pass** (add `--plan` for a read-only preview that classifies but does not bump or verify; add `--json` for machine-readable output):
+
+1. **Preflight** — target is CalVer and newer than the current pin; the pin surfaces are clean. Blocks with exit 2 and a fix if not.
+2. **Parity + auto-classification** — downloads the current and target bundles (in parallel, cached) and diffs the judgment surfaces (`bundle.json`, `docs/agent-usage.md`, plugin manifests, schemas, fixtures). It classifies **cosmetic** when the bundle changed only version strings, **non-cosmetic** when any contract surface changed, and lists the substantive surfaces. Conservative: anything it cannot prove is version-only counts as substantive.
+3. **Bump** — the scoped, re-verified pin replacement (release-script default + usage line, `EXPECTED_DEDIREN_VERSION`, the fixtures' `required_plugins`, the UML notation examples, the source-grounding claim). Reads the pin from the single source of truth (`DEDIREN_VERSION_DEFAULT` in `souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh`), refuses on pre-existing drift, and re-runs the release test's pin discovery so a duplicated pin cannot be missed. It never touches `architecture.md` or any CalVer cell.
+4. **Verify** (parallel) — the gated smoke suite (`DEDIREN_RELEASE_SMOKE=1` full validate→layout→render→export against the new bundle), the dediren surface tests, and `git diff --check`. A real upstream contract break (e.g. render-envelope schema version, `data.content`→`data.artifacts`) surfaces here as a **verify failure** (exit 1), not a silent cosmetic pass — this is the honesty backstop for auto-classification.
+
+Exit codes: **0** = ready to integrate, **1** = a verify gate failed (fix, then re-run `adopt` — it is idempotent), **2** = preflight/parity could not proceed.
+
+**Follow the verdict's `NEXT` lines** — the only residual steps, spelled out so no question is needed:
+
+- **cosmetic** → commit and go straight to integration; a normal scoped `ip-hygiene` triage is enough.
+- **non-cosmetic** → run the `ip-hygiene` skill **in-depth** over the changed architecture surface; review each listed substantive surface for a **new capability**. If one needs architecture-design skill support, that is feature work — file a follow-up issue and **stop before integrating**. Otherwise record `maintenance-only, no contract change`, commit, and integrate.
+
+**Integration (step 3) always lands on `main`, never on the branch** — the feature branch carries content only (CLAUDE.md § Plugin versioning). The verdict prints the exact recipe: `version_stamp.py guard`, then `version_stamp.py compute --plugin souroldgeezer-architecture`, then apply that stamp to all three cells (plugin manifest, `marketplace.json`, README) plus the version-sync test, and commit on `main`.
 
 Never patch the downloaded bundle; report runtime defects upstream. Tool-ownership and runtime-evidence rules live in the architecture-design `SKILL.md` and `docs/architecture-reference/architecture.md`.
 
