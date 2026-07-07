@@ -37,7 +37,7 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.5"
+EXPECTED_DEDIREN_VERSION = "2026.07.6"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",

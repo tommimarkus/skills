@@ -622,6 +622,11 @@ authoritative enums:
   `layer_constraint` pins a node to an edge layer (`first` / `last` / …) and
   `partition` (integer) groups nodes into ordered bands — use sparingly to fix
   a specific misplacement, and re-validate.
+- per-edge priority hints (set on the relationship, not in `layout_preferences`):
+  a `priority` object with integer `resist_reversal` (bias against reversing the
+  edge during cycle breaking), `keep_short` (bias toward spanning fewer layers),
+  and `keep_straight` (bias toward a straight route) nudges ELK Layered edge
+  routing for one edge — use sparingly to fix a specific route, and re-validate.
 
 Tune these to resolve a placement-driven `ARCH-L-3` before splitting a view
 (§7), and disclose any non-default `layout_preferences` per view in the footer.
