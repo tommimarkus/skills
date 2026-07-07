@@ -117,12 +117,28 @@ def _init_repo(root: Path) -> None:
     _git(root, "config", "user.name", "t")
 
 
-def _write_marketplace(root: Path, plugin: str, version: str) -> None:
+def _write_marketplace(root: Path, plugin: str, version: str | None = None) -> None:
+    """Write a marketplace.json with one entry for ``plugin``. Real marketplace
+    entries never carry a ``version`` key (plugin.json is the sole authority);
+    ``version`` is accepted here only so guard-violation fixtures can force one
+    back in."""
     mp_dir = root / ".claude-plugin"
     mp_dir.mkdir(parents=True, exist_ok=True)
+    entry: dict[str, str] = {"name": plugin, "source": f"./{plugin}"}
+    if version is not None:
+        entry["version"] = version
     (mp_dir / "marketplace.json").write_text(
-        json.dumps({"plugins": [{"name": plugin, "version": version}]}, indent=2)
-        + "\n",
+        json.dumps({"plugins": [entry]}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_readme(root: Path, plugin: str, version: str) -> None:
+    (root / "README.md").write_text(
+        "# fixture\n\n"
+        "| Plugin | Version |\n"
+        "|---|---:|\n"
+        f"| `{plugin}` | `{version}` |\n",
         encoding="utf-8",
     )
 
@@ -131,7 +147,8 @@ class GuardTest(unittest.TestCase):
     def _seed(self, root: Path) -> None:
         _init_repo(root)
         _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.3")
-        _write_marketplace(root, "souroldgeezer-audit", "2026.06.3")
+        _write_readme(root, "souroldgeezer-audit", "2026.06.3")
+        _write_marketplace(root, "souroldgeezer-audit")
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "seed")
 
@@ -146,6 +163,15 @@ class GuardTest(unittest.TestCase):
             _git(root, "checkout", "-q", "-b", "feature")
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "premature stamp")
+            self.assertEqual(self._guard(root), 1)
+
+    def test_fails_when_branch_stamps_the_readme_cell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._seed(root)
+            _git(root, "checkout", "-q", "-b", "feature")
+            _write_readme(root, "souroldgeezer-audit", "2026.06.4")
+            _git(root, "commit", "-qam", "premature readme stamp")
             self.assertEqual(self._guard(root), 1)
 
     def test_passes_for_content_only_branch(self):
@@ -170,18 +196,34 @@ class GuardTest(unittest.TestCase):
             _git(root, "commit", "-qm", "branch work")
             _git(root, "checkout", "-q", "main")
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.4")
-            _write_marketplace(root, "souroldgeezer-audit", "2026.06.4")
+            _write_readme(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "stamp on main")
             self.assertEqual(self._guard(root), 0)
 
     def test_fails_when_branch_stamps_marketplace_entry(self):
+        """The marketplace entry must never carry a version key — plugin.json is
+        the sole authority. Reintroducing one is a guard failure even when its
+        value matches plugin.json, because presence alone is the drift risk."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._seed(root)
             _git(root, "checkout", "-q", "-b", "feature")
-            _write_marketplace(root, "souroldgeezer-audit", "2026.06.4")
+            _write_marketplace(root, "souroldgeezer-audit", "2026.06.3")
             _git(root, "commit", "-qam", "stamp marketplace entry")
             self.assertEqual(self._guard(root), 1)
+
+    def test_passes_when_marketplace_entry_has_no_version_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._seed(root)
+            _git(root, "checkout", "-q", "-b", "feature")
+            note = root / "souroldgeezer-audit" / "skills" / "note.md"
+            note.parent.mkdir(parents=True, exist_ok=True)
+            note.write_text("content\n", encoding="utf-8")
+            _write_marketplace(root, "souroldgeezer-audit")
+            _git(root, "add", "-A")
+            _git(root, "commit", "-qm", "content only, marketplace stays clean")
+            self.assertEqual(self._guard(root), 0)
 
 
 if __name__ == "__main__":

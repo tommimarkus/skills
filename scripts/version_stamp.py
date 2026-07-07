@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """Worktree-deferred CalVer stamping for the plugins in this marketplace.
 
-Two stdlib-only responsibilities (see CLAUDE.md "Plugin versioning (MUST)"):
+``plugin.json#version`` is the sole version authority (Claude Code always
+resolves the plugin.json value over a marketplace-entry copy without warning,
+so a stale marketplace copy is a silent drift risk — see CLAUDE.md "Plugin
+versioning (MUST)"). A stamp therefore touches exactly two cells: a plugin's
+``.claude-plugin/plugin.json#version`` and its row in the root
+``README.md`` version table. Marketplace ``plugins[]`` entries never carry a
+``version`` key.
+
+Two stdlib-only responsibilities:
 
 - ``compute``: at integration on ``main``, print a plugin's next CalVer stamp
-  computed against ``main``'s *current* state, so the within-month micro counter
-  is a real main-line sequence number, not a value guessed against a stale
-  worktree base.
+  computed against ``main``'s *current* state (read from plugin.json only), so
+  the within-month micro counter is a real main-line sequence number, not a
+  value guessed against a stale worktree base.
 - ``guard``: at the end of worktree / feature-branch work, fail if the branch
-  touched any version cell. Under the worktree-deferred rule the stamp belongs
-  to the ``main`` integration commit, not the feature branch.
+  touched either version cell, or if any marketplace entry (re)introduces a
+  ``version`` key. Under the worktree-deferred rule the stamp belongs to the
+  ``main`` integration commit, not the feature branch.
 """
 from __future__ import annotations
 
@@ -111,7 +120,23 @@ def merge_base(repo_root: Path, base: str, head: str) -> str:
     return result.stdout.strip()
 
 
+# Matches a root README.md version-table row: `| `<plugin>` | `<version>` | ...`.
+README_ROW_RE = re.compile(
+    r"^\|\s*`(?P<plugin>souroldgeezer-[a-z]+)`\s*\|\s*`(?P<version>[^`]+)`\s*\|",
+    re.MULTILINE,
+)
+
+
+def read_readme_versions(text: str) -> dict[str, str]:
+    """Pull each plugin's version-table cell out of the root README.md. Tolerant:
+    rows for unknown plugins or malformed tables simply don't match."""
+    return {match["plugin"]: match["version"] for match in README_ROW_RE.finditer(text)}
+
+
 def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
+    """The two sole-authority version cells at ``ref``: each plugin's
+    plugin.json#version and its README.md version-table cell. Marketplace
+    entries are deliberately excluded — see ``marketplace_version_offenders``."""
     versions: dict[str, str] = {}
     for plugin in PLUGINS:
         rel = f"{plugin}/.claude-plugin/plugin.json"
@@ -122,14 +147,31 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
             versions[rel] = json.loads(text)["version"]
         except (json.JSONDecodeError, KeyError, TypeError):
             continue
-    market = _git_show(repo_root, ref, ".claude-plugin/marketplace.json")
-    if market is not None:
-        try:
-            for entry in json.loads(market).get("plugins", []):
-                versions[f"marketplace:{entry['name']}"] = entry["version"]
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
+    readme_text = _git_show(repo_root, ref, "README.md")
+    if readme_text is not None:
+        for plugin, version in read_readme_versions(readme_text).items():
+            versions[f"readme:{plugin}"] = version
     return versions
+
+
+def marketplace_version_offenders(repo_root: Path, ref: str) -> list[str]:
+    """Plugin names whose marketplace.json entry illegally carries a ``version``
+    key at ``ref``. plugin.json is the sole version authority (Claude Code
+    always resolves it over a marketplace-entry copy without warning, so a
+    stray marketplace copy is a silent drift risk). Fail-open: a missing or
+    malformed marketplace.json yields no offenders rather than raising."""
+    market = _git_show(repo_root, ref, ".claude-plugin/marketplace.json")
+    if market is None:
+        return []
+    try:
+        payload = json.loads(market)
+    except json.JSONDecodeError:
+        return []
+    offenders: list[str] = []
+    for entry in payload.get("plugins", []):
+        if isinstance(entry, dict) and "version" in entry:
+            offenders.append(str(entry.get("name", "<unnamed>")))
+    return offenders
 
 
 def cmd_guard(args: argparse.Namespace) -> int:
@@ -139,6 +181,12 @@ def cmd_guard(args: argparse.Namespace) -> int:
         versions_at_ref(repo_root, base_ref),
         versions_at_ref(repo_root, args.head),
     )
+    offenders = marketplace_version_offenders(repo_root, args.head)
+
+    if not changed and not offenders:
+        print("OK: this branch changed no version cells.")
+        return 0
+
     if changed:
         print(
             "Version cells were stamped inside this branch/worktree:",
@@ -152,9 +200,18 @@ def cmd_guard(args: argparse.Namespace) -> int:
             "uv run python scripts/version_stamp.py compute --plugin <name>",
             file=sys.stderr,
         )
-        return 1
-    print("OK: this branch changed no version cells.")
-    return 0
+    if offenders:
+        print(
+            "Marketplace entries must never carry a version key — plugin.json "
+            "is the sole authority (Claude Code always resolves plugin.json over "
+            "a marketplace-entry copy without warning, so a stray copy is a "
+            "silent drift risk):",
+            file=sys.stderr,
+        )
+        for name in offenders:
+            print(f"  {name}", file=sys.stderr)
+        print("Remove the version key from that marketplace entry.", file=sys.stderr)
+    return 1
 
 
 def build_parser() -> argparse.ArgumentParser:
