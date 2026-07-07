@@ -209,6 +209,21 @@ downstream check needs machine-readable results. Stateful scripts should expose
 a dry-run mode or be idempotent enough that rerunning them cannot silently
 corrupt the repository or generated artifacts.
 
+A skill that invokes a script bundled beside its `SKILL.md` must reference it
+through a documented Claude Code path substitution — canonically
+`${CLAUDE_SKILL_DIR}` (the skill's own directory), or another documented
+variable that substitutes inline in skill and agent content such as
+`${CLAUDE_PLUGIN_ROOT}`. A bare or invented shell variable like `$SKILL_DIR` is
+never substituted: it expands to empty, so the bundled script is silently
+unfindable once the plugin is installed, and only appears to work in the
+marketplace source repo through a guessable relative path. Reference files read
+raw are not substituted, so establish the value in `SKILL.md` and carry it into
+any procedure the workflow steps into. Before copying a sibling skill's
+invocation convention — or declaring that sibling broken — verify the
+substitution mechanism against the official skills and plugins docs; pinned
+upstream engines vendored inside a skill are internal and resolve through the
+same documented substitution, not a bare variable.
+
 A skill that ships a hook entrypoint (a guard or gate script) must include an
 integration test that drives the entrypoint's `main()` over the actual hook
 payload for each event it claims to support (PreToolUse, Stop, and so on) and
