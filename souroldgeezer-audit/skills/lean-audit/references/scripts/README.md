@@ -172,12 +172,12 @@ before/after delta is meaningful, so a stable proxy is sufficient.
   the registry the engines read: `[[carve_out]]` glob pairs (declared intentional
   parallels, with `{name}` captures), `[[canonical_home]]`, `exempt_paths`, and
   `code_extensions`. This repo's file is carve-out-only.
-- [`../../../../../pyproject.toml`](../../../../../pyproject.toml) — scopes ruff
+- `pyproject.toml` (at the marketplace source-repo root) — scopes ruff
   (`[tool.ruff] include`) and mypy (`[tool.mypy] files`) to **this scripts tree
   only**, and sets the repo-local `uv` cache.
 
 **Read by the per-use harness and the Stop guard, under
-[`../../../../../tests/skill_load_cost/`](../../../../../tests/skill_load_cost/):**
+`tests/skill_load_cost/` (at the marketplace source-repo root):**
 
 | File | Shape | Meaning of a regression |
 |---|---|---|
@@ -186,9 +186,11 @@ before/after delta is meaningful, so a stable proxy is sufficient.
 | `cost-snapshot.json` | `{scenario-id: token-total}` cost floor | Growth beyond tolerance → advisory only (never blocks). |
 | `code_patterns.json` | `[regex]` for smell/reference codes | Defines what `extract_inventory` counts as a "code". |
 
-**Regenerate a fidelity baseline the sanctioned way** — from the skill's own
-closure, never a directory glob (a glob-built floor would "protect" content the
-guard's closure cannot reach, yielding phantom regressions):
+**Regenerate a fidelity baseline the sanctioned way** — in the marketplace
+source repo (the `tests/skill_load_cost/` paths below sit at its root), from
+the skill's own closure, never a directory glob (a glob-built floor would
+"protect" content the guard's closure cannot reach, yielding phantom
+regressions):
 
 ```bash
 uv run python .../skill_load_cost.py resolve_closure <SKILL.md> --json          # closure file list
@@ -204,7 +206,7 @@ and only to an explicit `--out`; engines and guards print to stdout.
 
 Scoped to this tree via `pyproject.toml`: **stdlib-only, `target-version=py311`,
 `line-length=100`, ruff lint select `E,F,W,I,UP,B`, `mypy --strict`.** The gate
-is [`../../../../../tests/lean_audit_python_standard_test.py`](../../../../../tests/lean_audit_python_standard_test.py),
+is `tests/lean_audit_python_standard_test.py` (at the marketplace source-repo root),
 which shells out to three checks (it **skips**, not fails, when the toolchain is
 offline — a green offline run may mean "skipped," so confirm it actually ran):
 
@@ -219,21 +221,21 @@ Run `uv` from the repo root (or a wrapper that `cd`s there) so the repo-local
 
 ## Test matrix
 
-All tests live at the repo root under `tests/`. Run one with
+All tests live at the marketplace source-repo root under `tests/`. Run one with
 `uv run python -m unittest tests.<module>`. Keep every one green after a change.
 
 | Test | Covers |
 |---|---|
-| [`tests/lean_audit_python_standard_test.py`](../../../../../tests/lean_audit_python_standard_test.py) | ruff + `mypy --strict` gate. |
-| [`tests/lean_audit_shims_test.py`](../../../../../tests/lean_audit_shims_test.py) | Shim↔package parity: each shim re-exports its module's `__all__`; `--help` smoke; every public name is declared in `__all__`. |
-| [`tests/lean_engine_test.py`](../../../../../tests/lean_engine_test.py) | Markdown engine + ledger calibration ([`tests/lean_engine_ledger.jsonl`](../../../../../tests/lean_engine_ledger.jsonl)) at **≥0.90 precision AND recall**. |
-| [`tests/lean_verbosity_test.py`](../../../../../tests/lean_verbosity_test.py) | Verbosity nominator (`LA-VERBOSE-1`) helpers + ledger calibration ([`tests/lean_verbosity_ledger.jsonl`](../../../../../tests/lean_verbosity_ledger.jsonl)) at **≥0.90 precision AND recall**, plus a bounded live-repo residual. |
-| [`tests/lean_code_lens_test.py`](../../../../../tests/lean_code_lens_test.py) | Clone lens + ledger calibration ([`tests/lean_code_ledger.jsonl`](../../../../../tests/lean_code_ledger.jsonl)) at the shipped `DEFAULT_MIN_CLONE_TOKENS`, **≥0.90 precision/recall**. |
-| [`tests/skill_load_cost_test.py`](../../../../../tests/skill_load_cost_test.py) | Per-use harness; plus every committed baseline must be satisfiable by the guard's own closure. |
-| [`tests/lean_guard_test.py`](../../../../../tests/lean_guard_test.py) | PreToolUse dup guard, incl. subprocess `main()` smoke. |
-| [`tests/load_cost_guard_test.py`](../../../../../tests/load_cost_guard_test.py) | Per-use guard (PreToolUse + Stop); plus the guard stays silent on a clean tree for every committed baseline. |
+| `tests/lean_audit_python_standard_test.py` | ruff + `mypy --strict` gate. |
+| `tests/lean_audit_shims_test.py` | Shim↔package parity: each shim re-exports its module's `__all__`; `--help` smoke; every public name is declared in `__all__`. |
+| `tests/lean_engine_test.py` | Markdown engine + ledger calibration (`tests/lean_engine_ledger.jsonl`) at **≥0.90 precision AND recall**. |
+| `tests/lean_verbosity_test.py` | Verbosity nominator (`LA-VERBOSE-1`) helpers + ledger calibration (`tests/lean_verbosity_ledger.jsonl`) at **≥0.90 precision AND recall**, plus a bounded live-repo residual. |
+| `tests/lean_code_lens_test.py` | Clone lens + ledger calibration (`tests/lean_code_ledger.jsonl`) at the shipped `DEFAULT_MIN_CLONE_TOKENS`, **≥0.90 precision/recall**. |
+| `tests/skill_load_cost_test.py` | Per-use harness; plus every committed baseline must be satisfiable by the guard's own closure. |
+| `tests/lean_guard_test.py` | PreToolUse dup guard, incl. subprocess `main()` smoke. |
+| `tests/load_cost_guard_test.py` | Per-use guard (PreToolUse + Stop); plus the guard stays silent on a clean tree for every committed baseline. |
 
-Shared helper [`tests/surface_test_lib.py`](../../../../../tests/surface_test_lib.py)
+Shared helper `tests/surface_test_lib.py`
 (`REPO_ROOT`, `load_script_module`, `assert_precision_recall_at_least`) is
 imported, not run. Run the whole set at once:
 
@@ -284,8 +286,9 @@ tests, then [§ Before you finish](#before-you-finish).
   changed markdown and confirm no unexpected `LA-DUP-*` / `LA-STALE-1`. This
   guide, being under `references/`, is itself scanned: cite, don't restate.
 - Regenerate any affected baseline/snapshot the sanctioned way — never a glob.
-- Run [`../../../../../scripts/skill-architecture-report.sh`](../../../../../scripts/skill-architecture-report.sh)`.`
-  and `git diff --check`.
+- Run `scripts/skill-architecture-report.sh .` (at the marketplace source-repo
+  root; repo tooling, not bundled with the installed plugin) and
+  `git diff --check`.
 - **Version stamping happens at integration on `main`, never in the worktree.**
   A change under this tree is a mandatory `souroldgeezer-audit` stamp; the feature
   branch must touch no version cell. See CLAUDE.md § Plugin versioning.

@@ -227,4 +227,6 @@ shim→`leanaudit/` package contract, module map, finding codes, the ruff/mypy
 standard, config/data files, and this test matrix — read the maintainer guide
 `references/scripts/README.md` (referenced as an inline path, not a link, so this
 dev doc stays out of the runtime load closure; CLAUDE.md link-checks the path).
-After skill-surface edits, rerun `scripts/skill-architecture-report.sh .`.
+After skill-surface edits in the marketplace source repo, rerun its
+`scripts/skill-architecture-report.sh .` (repo tooling, not bundled with the
+installed plugin).

@@ -138,6 +138,6 @@ in-depth).
 
 ## Verification
 
-After editing this skill or references, rerun
-`scripts/skill-architecture-report.sh .` from the target repo root when
-available.
+After editing this skill or references in the marketplace source repo, rerun
+its `scripts/skill-architecture-report.sh .` from the repo root when available
+(repo tooling, not bundled with the installed plugin).
