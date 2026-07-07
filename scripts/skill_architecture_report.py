@@ -513,6 +513,15 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "Add the plugin to .claude-plugin/marketplace.json or remove the orphan manifests.",
         ),
         Rule(
+            "SAC-RUNTIME-BUNDLED-SCRIPT-VAR",
+            "Runtime Parity",
+            "high",
+            "docs/skill-architecture.md#4-deterministic-machinery",
+            "deterministic",
+            ("bundled-script-bare-shell-var", "bundled-script-documented-substitution"),
+            "Reference the bundled script through ${CLAUDE_SKILL_DIR} or ${CLAUDE_PLUGIN_ROOT}, establishing the value in SKILL.md and carrying it into any procedure.",
+        ),
+        Rule(
             "SAC-DOC-MISSING-ENTRYPOINT",
             "Repo Guidance Drift",
             "low",
@@ -2062,6 +2071,125 @@ def native_validate_findings(
     return findings
 
 
+# Variable names Claude Code documents as path substitutions that expand inline
+# in skill/agent content (skill-root and plugin-root bases). Any other shell
+# variable in front of a bundled-script path is bare and expands to empty for an
+# installed plugin.
+DOCUMENTED_PATH_VARS = ("CLAUDE_SKILL_DIR", "CLAUDE_PLUGIN_ROOT")
+
+_DOCUMENTED_SUBSTITUTION_RE = re.compile(
+    r"\$\{?(?:" + "|".join(DOCUMENTED_PATH_VARS) + r")\}?"
+)
+
+# A `$VAR`/`${VAR}` (optionally wrapped in one shell quote) immediately followed
+# by a `/`-rooted path. The path is captured so the caller can decide whether it
+# points at a bundled script.
+_SCRIPT_VAR_INVOCATION_RE = re.compile(
+    r'"?\$\{?(?P<var>[A-Za-z_][A-Za-z0-9_]*)\}?"?(?P<path>/[A-Za-z0-9_./-]+)'
+)
+
+# The captured path counts as a bundled script when it lives under a scripts/
+# directory or ends in a recognized script extension.
+_BUNDLED_SCRIPT_PATH_RE = re.compile(
+    r"(?:/scripts/|\.(?:sh|bash|py|js|mjs|cjs|ts|rb|pl|ps1)\b)"
+)
+
+
+def references_documented_substitution(*texts: str) -> bool:
+    return any(_DOCUMENTED_SUBSTITUTION_RE.search(text) for text in texts)
+
+
+def bundled_script_bare_var_invocations(text: str) -> list[tuple[str, str]]:
+    """(var, matched-invocation) for each bundled-script invocation in `text`
+    whose base is a bare shell variable rather than a documented Claude Code
+    substitution. A bundled-script invocation is `$VAR`/`${VAR}` (optionally
+    quoted) immediately followed by a `/`-rooted path that lives under a scripts/
+    directory or ends in a script extension. Documented substitution variables
+    (${CLAUDE_SKILL_DIR}, ${CLAUDE_PLUGIN_ROOT}) are valid and skipped. Deduped by
+    (var, path) so one repeated command is reported once."""
+    hits: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for match in _SCRIPT_VAR_INVOCATION_RE.finditer(text):
+        var = match.group("var")
+        path = match.group("path")
+        if var in DOCUMENTED_PATH_VARS:
+            continue
+        if not _BUNDLED_SCRIPT_PATH_RE.search(path):
+            continue
+        key = (var, path)
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append((var, match.group(0).strip()))
+    return hits
+
+
+def scan_bundled_script_vars(repo_root: Path) -> list[Finding]:
+    """Runtime Parity: flag a bundled-script invocation in a skill's SKILL.md,
+    its matching Claude agent, or a references/extensions procedure that resolves
+    through a bare shell variable (e.g. $SKILL_DIR) instead of a documented
+    Claude Code path substitution. A bare variable expands to empty once the
+    plugin is installed, so the bundled script is silently unfindable while still
+    appearing to work in the marketplace source repo via a guessable relative
+    path (the #79 regression).
+
+    Precision-first suppression: a scanned file or its owning SKILL.md that
+    references a documented substitution (${CLAUDE_SKILL_DIR}/${CLAUDE_PLUGIN_ROOT})
+    demonstrably knows the convention and may bind a local alias such as
+    `$SKILL_DIR` from it — the established-alias pattern the standard permits
+    (§4: establish the value in SKILL.md and carry it into any procedure). Its
+    invocations are not flagged; establishing an alias is impossible without
+    referencing the substitution, so "no documented substitution in context"
+    reliably means "not established." A file that invokes a bundled script through
+    a bare variable with no documented substitution anywhere in context is the
+    regression this targets. Trade-off: a file that legitimately establishes one
+    alias but also has an unrelated bare-variable bug is not flagged (precision
+    over recall, matching the standard's "confirm the false-positive rate on the
+    real corpus" caution). Markdown citation surfaces only (SKILL.md, agents,
+    references/**.md, extensions/**.md); shell scripts that legitimately compute
+    their own directory are out of scope."""
+    findings: list[Finding] = []
+    for skill_rel in find_skill_files(repo_root):
+        skill = load_skill(repo_root, skill_rel)
+        skill_md_text = skill.path.read_text(encoding="utf-8")
+
+        targets: list[str] = [skill.rel]
+        for bucket in ("references", "extensions"):
+            bucket_root = repo_root / skill.skill_dir / bucket
+            if bucket_root.exists():
+                for path in sorted(bucket_root.rglob("*.md")):
+                    if path.is_file() and not path_is_ignored(path):
+                        targets.append(relpath(repo_root, path))
+        if skill.scope == "published":
+            expected_name = Path(skill.skill_dir).name
+            plugin_dir = plugin_dir_from_skill_dir(skill.skill_dir)
+            agent_rel = f"{plugin_dir}/agents/{expected_name}.md"
+            if (repo_root / agent_rel).is_file():
+                targets.append(agent_rel)
+
+        for target_rel in targets:
+            text = (repo_root / target_rel).read_text(encoding="utf-8")
+            if references_documented_substitution(text, skill_md_text):
+                continue
+            for var, matched in bundled_script_bare_var_invocations(text):
+                findings.append(
+                    make_finding(
+                        "Runtime Parity",
+                        "high",
+                        "SAC-RUNTIME-BUNDLED-SCRIPT-VAR",
+                        target_rel,
+                        f"bundled-script invocation resolves through bare shell variable ${var}: {matched}",
+                        "Bundled-script invocations must resolve through a documented Claude Code path "
+                        "substitution (${CLAUDE_SKILL_DIR} or ${CLAUDE_PLUGIN_ROOT}), not a bare shell variable.",
+                        "A bare variable expands to empty once the plugin is installed, so Claude cannot "
+                        "find the bundled script even though it appears to work in the marketplace source repo.",
+                        "Reference the bundled script through ${CLAUDE_SKILL_DIR} (or ${CLAUDE_PLUGIN_ROOT}), "
+                        "establishing the value in SKILL.md and carrying it into any procedure the workflow enters.",
+                    )
+                )
+    return findings
+
+
 def collect_findings(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
     for skill_rel in find_skill_files(repo_root):
@@ -2070,6 +2198,7 @@ def collect_findings(repo_root: Path) -> list[Finding]:
     findings.extend(scan_private_plugin_root_references(repo_root))
     findings.extend(scan_manifest_sync(repo_root))
     findings.extend(scan_repo_guidance(repo_root))
+    findings.extend(scan_bundled_script_vars(repo_root))
     return findings
 
 

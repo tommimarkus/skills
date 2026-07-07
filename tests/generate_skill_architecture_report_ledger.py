@@ -619,6 +619,31 @@ def case_agent_missing_skill_tool(complexity: str, index: str, scenario: str) ->
     )
 
 
+def case_runtime_bundled_script_var(complexity: str, index: str, scenario: str) -> dict:
+    name = f"{scenario}-skill"
+    body = clean_body(scenario) + (
+        "\nResolve the bundled checker from the skill directory before reporting:\n\n"
+        "```bash\n"
+        'bash "$SKILL_DIR"/references/scripts/check.sh --strict\n'
+        "```\n"
+    )
+    return skill_case(
+        "SAC-RUNTIME-BUNDLED-SCRIPT-VAR",
+        complexity,
+        index,
+        scenario,
+        f"Use when checking {scenario} bundled-script path substitution.",
+        body,
+        skill_name=name,
+        expected_findings=[
+            {
+                "code": "SAC-RUNTIME-BUNDLED-SCRIPT-VAR",
+                "path": f"example-plugin/skills/{name}/SKILL.md",
+            }
+        ],
+    )
+
+
 def case_runtime_wrapper_workflow_duplication(complexity: str, index: str, scenario: str) -> dict:
     name = f"{scenario}-skill"
     description = f"Use when checking {scenario} runtime wrapper size."
@@ -702,6 +727,7 @@ BUILDERS: list[tuple[str, CaseBuilder]] = [
     ("agent-name-drift", case_agent_name_drift),
     ("agent-missing-skill-tool", case_agent_missing_skill_tool),
     ("missing-entrypoint", case_doc_missing_entrypoint),
+    ("bundled-script-var", case_runtime_bundled_script_var),
 ]
 
 
@@ -860,6 +886,19 @@ def build_guard_cases() -> list[dict]:
                 "SAC-RUNTIME-MARKETPLACE-MISSING-ENTRY",
             ],
             "complete marketplace and plugin manifests avoid runtime parity findings",
+        ),
+        guard_skill(
+            "guard-established-skill-dir-alias",
+            clean_body("guard-established-skill-dir-alias")
+            + (
+                "\nThe skill directory is `${CLAUDE_SKILL_DIR}`; use it wherever a "
+                'bundled-script command shows `"$SKILL_DIR"`.\n\n'
+                "```bash\n"
+                'bash "$SKILL_DIR"/references/scripts/check.sh --strict\n'
+                "```\n"
+            ),
+            ["SAC-RUNTIME-BUNDLED-SCRIPT-VAR"],
+            "skill-dir alias established from CLAUDE_SKILL_DIR is not a bare-variable regression",
         ),
         case_runtime_wrapper_workflow_duplication(
             "adversarial",
