@@ -131,13 +131,13 @@ duplicate that here. What a maintainer needs to know about the code:
 - `load_cost_guard.py` branches on the payload: a `file_path` present ⇒
   PreToolUse; absent ⇒ Stop mode (`run_stop_mode`, which diffs session-changed
   markdown against committed baselines). **The Stop path is the one wired into
-  this repo**, via [`../../../../../scripts/agent-hooks/stop-lean-cost.sh`](../../../../../scripts/agent-hooks/stop-lean-cost.sh)
-  (registered in `.claude/settings.json`), which runs the guard with `uv` as the
-  primary interpreter (it provisions the required Python ≥3.11 even when the
-  system `python3` is older), falls back to a ≥3.11 `python3`, and fails open
-  (exit 0) when neither is available. Stdlib-only is not enough on its own —
-  `tomllib` is stdlib only from 3.11 — so the floor, not the dependency set, is
-  what makes the interpreter choice matter.
+  this repo**, via `scripts/agent-hooks/stop-lean-cost.sh` (at the marketplace
+  source-repo root, registered in `.claude/settings.json`), which runs the guard
+  with `uv` as the primary interpreter (it provisions the required Python ≥3.11
+  even when the system `python3` is older), falls back to a ≥3.11 `python3`, and
+  fails open (exit 0) when neither is available. Stdlib-only is not enough on
+  its own — `tomllib` is stdlib only from 3.11 — so the floor, not the dependency
+  set, is what makes the interpreter choice matter.
 - Fidelity regression **blocks**; cost growth is **advisory** (tolerance 200
   tokens) and never blocks.
 
@@ -168,7 +168,7 @@ before/after delta is meaningful, so a stable proxy is sufficient.
 
 **Read by the tooling:**
 
-- [`../../../../../.lean-audit.toml`](../../../../../.lean-audit.toml) (repo root) —
+- `.lean-audit.toml` (at the marketplace source-repo root) —
   the registry the engines read: `[[carve_out]]` glob pairs (declared intentional
   parallels, with `{name}` captures), `[[canonical_home]]`, `exempt_paths`, and
   `code_extensions`. This repo's file is carve-out-only.

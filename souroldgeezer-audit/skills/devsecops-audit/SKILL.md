@@ -75,4 +75,6 @@ Stop when scope is missing, sibling ownership dominates, live evidence is absent
 cost-gated findings lack stance, MCP/tool failure would be retried, output would
 copy rubric/vendor prose, or confidence is too low.
 
-Rerun `scripts/skill-architecture-report.sh .` after skill edits.
+After skill-surface edits in the marketplace source repo, rerun its
+`scripts/skill-architecture-report.sh .` (repo tooling, not bundled with the
+installed plugin).

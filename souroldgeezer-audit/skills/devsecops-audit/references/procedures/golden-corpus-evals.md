@@ -3,7 +3,7 @@
 **When this runs:** after changing `devsecops-audit` rubric wording, smell
 catalog, output contract, extension files, or examples. Empirical accuracy
 guardrail realizing [audit-craft.md §8](../../../../docs/audit-reference/audit-craft.md); complements
-`scripts/skill-architecture-report.sh .` (structure, not accuracy).
+`scripts/skill-architecture-report.sh .` (marketplace source-repo tooling; structure, not accuracy).
 
 ## Inputs
 - Seed corpus: [../golden-corpus/devsecops-audit-cases.jsonl](../golden-corpus/devsecops-audit-cases.jsonl)
