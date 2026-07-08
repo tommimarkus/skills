@@ -170,12 +170,13 @@ views. Otherwise render with the generated per-view metadata declared in the
 view's `metadata.output`, after confirming the generated metadata profile
 matches the render policy profile.
 
-The `render` plugin emits the SVG artifact that remains the canonical proof. Its
-policy may also carry an optional `raster` block (for example
-`"raster": { "scale": 2 }`); when present the runtime additionally returns a
-base64-encoded `png` artifact (`encoding: base64`) alongside the SVG, for
-consumers that need a bitmap. SVG stays the evidence of record; treat the bitmap
-as an optional convenience export.
+The `render` plugin emits the SVG artifact that remains the canonical proof. It
+no longer produces PNG: Dediren dropped native raster rendering in 2026.07.13,
+retiring the `raster` render-policy block and the `png` `artifact_kind` so that
+only `svg` (plus interactive `html`) is returned. SVG stays the evidence of
+record. When a consumer needs a bitmap, generate it downstream as a separate
+step by running the emitted SVG through any general-purpose SVG converter —
+librsvg's `rsvg-convert`, `resvg`, ImageMagick, and Inkscape each handle this.
 
 The render policy also controls SVG interactivity through the `interactive`
 field (`none` | `svg` | `html` | `both`; default `none`). On the pinned

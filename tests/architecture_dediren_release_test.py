@@ -37,7 +37,7 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.10"
+EXPECTED_DEDIREN_VERSION = "2026.07.13"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 EXPECTED_RELEASE_PLUGIN_IDS = {
     "generic-graph",
@@ -111,9 +111,10 @@ def envelope(result: subprocess.CompletedProcess[str]) -> dict:
 
 def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
     # render-result.schema returns data.artifacts[] (since v2, Dediren 2026.06.4); the
-    # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) adds a `png`
-    # artifact_kind and an `encoding` field but keeps the artifacts[] shape and the svg
-    # artifact. Mirror the bundle's documented extraction:
+    # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) added a `png`
+    # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.13) removed native raster
+    # rendering, dropping `png` from artifact_kind (only `svg`/`html` remain) while keeping
+    # the artifacts[] shape and the svg artifact. Mirror the bundle's documented extraction:
     # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
     data = envelope(result)["data"]
     for artifact in data["artifacts"]:
@@ -524,7 +525,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
             self.assertEqual(
                 envelope(render_result)["data"]["render_result_schema_version"],
-                "render-result.schema.v3",
+                "render-result.schema.v4",
             )
             svg = svg_render_content(render_result)
             self.assertIn("<svg", svg)
@@ -604,7 +605,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             # a sequence layout through validate-layout). We assert only the envelope *shape*
             # we parse per the Fast Path contract (.status / .diagnostics[]), never a
             # specific verdict. Sequence Message edges legitimately terminate on the lifeline
-            # (node center-x, not the head-node box perimeter), which dediren 2026.07.10+
+            # (node center-x, not the head-node box perimeter), which dediren 2026.07.13+
             # routes correctly and the perimeter check then reports as
             # DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER (status "error", exit 2) — a
             # correct-layout side effect, not an adoption blocker. Render + export below are

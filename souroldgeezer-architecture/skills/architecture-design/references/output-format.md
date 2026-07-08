@@ -123,7 +123,7 @@ Semantic grouping: layout-only groups are not ArchiMate Grouping elements | sema
 Customization profile: none | local properties | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none
 Grouped layout fallback: not needed | used ungrouped fallback | not run
-Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free) | interactive <svg|html|both> (verified; mouse-only limits disclosed); raster png no | yes
+Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free) | interactive <svg|html|both> (verified; mouse-only limits disclosed)
 Implementation readiness: sufficient | partial | insufficient | not assessed
 Build readiness disclosure: <n> of 7 concern classes present; absent <list|none> | not build mode
 Finding split: <n> architecture-documentation findings; <n> other source material findings
