@@ -227,7 +227,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `app-design` | `souroldgeezer-design` | Frontend app design (React / Next.js / Blazor™ WASM); WCAG 2.2 / i18n / Core Web Vitals baselines |
 | `api-design` | `souroldgeezer-design` | HTTP API design; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |
 | `infra-design` | `souroldgeezer-design` | Infrastructure / IaC design; core `ID-*` + Azure® / Terraform™ / Bicep™ extensions |
-| `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, drift, reverse lookup |
+| `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, shareable HTML gallery, drift, reverse lookup |
 
 Design and audit skills share the Build / Extract / Review / Lookup (design) and Quick / Deep (audit) mode dispatch from § "Skill architecture (shared pattern across skills)".
 
