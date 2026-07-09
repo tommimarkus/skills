@@ -1,0 +1,19 @@
+{
+  "schema": "souroldgeezer.architecture.dediren.project.v2",
+  "feature": "rendered",
+  "models": [
+    { "id": "arch", "file": "model.json", "profile": "archimate" },
+    { "id": "uml", "file": "model-uml.json", "profile": "uml" }
+  ],
+  "views": [
+    { "id": "app-cooperation", "model": "arch", "title": "Applicant — system context", "diagramKind": "Application Cooperation", "question": "How do the applicant system and the service cooperate?",
+      "render": { "output": "generated/svg/app-cooperation.svg" },
+      "metadata": { "output": "generated/render-metadata/app-cooperation.json" } },
+    { "id": "domain-class", "model": "uml", "title": "Message domain model", "diagramKind": "UML Class", "question": "What entities does the message interface carry?",
+      "render": { "output": "generated/svg/domain-class.svg" },
+      "metadata": { "output": "generated/render-metadata/domain-class.json" } },
+    { "id": "order-sequence", "model": "uml", "title": "Submission sequence", "diagramKind": "UML Sequence", "question": "What is the message exchange for a submission?",
+      "render": { "output": "generated/svg/order-sequence.svg" },
+      "metadata": { "output": "generated/render-metadata/order-sequence.json" } }
+  ]
+}
