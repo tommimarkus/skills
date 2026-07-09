@@ -114,7 +114,19 @@ Build.
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
    do not mutate by default.
 6. Validate before quality claims; return [output](references/output-format.md).
-7. Stop when required evidence is missing, dediren returns an error envelope,
+7. Whenever this run (re)generates a view's SVG output, rebuild the package
+   gallery as the next action:
+   `"$SKILL_DIR"/references/scripts/build-gallery.py <package>` — a
+   self-contained shareable `gallery.html` inside the package. The gallery is a
+   pure function of the rendered SVGs plus `project.json`, so a changed or added
+   SVG means a stale gallery; this is mode-agnostic (any run that re-renders
+   rebuilds; a Lookup or a read-only Review that renders nothing does not). On a
+   read-only pass, run `... build-gallery.py --check <package>` to detect a
+   committed gallery that has drifted from its SVGs. The gallery is an outer
+   viewer over the static SVGs — distinct from a view's own render-policy
+   `interactive: html` wrapper. Disclose the outcome in the footer `Gallery:`
+   line. See [`references/gallery.md`](references/gallery.md).
+8. Stop when required evidence is missing, dediren returns an error envelope,
    the notation is unsupported, or a blocking finding prevents requested
    readiness.
 
@@ -138,3 +150,4 @@ Build.
 | Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md) |
+| Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
