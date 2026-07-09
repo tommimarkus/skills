@@ -79,5 +79,61 @@ class ProfileResolverTest(unittest.TestCase):
         self.assertEqual(prof(proj["views"][0]), "archimate")
 
 
+FIXTURE = os.path.join(
+    REPO, "souroldgeezer-architecture", "skills", "architecture-design",
+    "references", "fixtures", "dediren", "rendered")
+
+
+class BuildHtmlTest(unittest.TestCase):
+    def setUp(self):
+        self.m = _load()
+        self.html = self.m.build_html(FIXTURE)
+
+    def test_self_contained_no_external_refs(self):
+        # no external stylesheet/script/font/image hosts
+        for needle in ("http://", "https://", "src=\"//", "@import"):
+            self.assertNotIn(needle, self.html)
+
+    def test_every_svg_inlined_as_template(self):
+        self.assertEqual(self.html.count('class="plate"'), 3)
+        self.assertIn('data-id="app-cooperation"', self.html)
+        self.assertIn('data-id="domain-class"', self.html)
+        self.assertIn('data-id="order-sequence"', self.html)
+        self.assertIn("data-dediren-node-id", self.html)
+
+    def test_sections_derived_from_real_profiles(self):
+        # ArchiMate view -> A/ArchiMate views ; UML class -> T ; UML sequence -> S
+        self.assertIn("ArchiMate views", self.html)
+        self.assertIn("Structure & data", self.html)
+        self.assertIn("Sequences", self.html)
+        self.assertIn('"code": "A1"', self.html)
+        self.assertIn('"code": "T1"', self.html)
+        self.assertIn('"code": "S1"', self.html)
+
+    def test_english_chrome_and_lang(self):
+        self.assertIn('lang="en"', self.html)
+        self.assertNotIn("tiheä", self.html)
+        self.assertNotIn("asettelu", self.html)
+        self.assertNotIn("Konteksti", self.html)
+        self.assertNotIn("solmua", self.html)
+
+    def test_counts_from_render_metadata(self):
+        self.assertIn('"nodes": 2', self.html)
+        self.assertIn('"edges": 1', self.html)
+
+    def test_model_titles_pass_through(self):
+        self.assertIn("Message domain model", self.html)
+
+    def test_missing_source_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"schema": "v2", "models": [], "views": [
+                    {"id": "x", "model": "m", "title": "X", "diagramKind": "UML Class",
+                     "render": {"output": "generated/svg/x.svg"},
+                     "metadata": {"output": "generated/render-metadata/x.json"}}]}, fh)
+            with self.assertRaises(self.m.SourceMissing):
+                self.m.build_html(d)
+
+
 if __name__ == "__main__":
     unittest.main()
