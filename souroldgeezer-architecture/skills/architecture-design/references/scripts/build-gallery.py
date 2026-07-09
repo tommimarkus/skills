@@ -34,7 +34,7 @@ def classify(profile, diagram_kind):
     """(section_key, section_title, section_note, code_letter) for a view.
 
     The code letter encodes the notation you are looking at (the one structural
-    device carried over from the Uljas design): ArchiMate is A; UML splits into
+    device carried over from the adopted design): ArchiMate is A; UML splits into
     families by diagram kind. Falls back to a generic UML bucket for kinds not
     matched, and to ArchiMate for any non-uml profile.
     """
@@ -73,8 +73,9 @@ def profile_resolver(proj, pkg_dir):
         with open(os.path.join(pkg_dir, proj.get("model", "model.json")),
                   encoding="utf-8") as fh:
             model = json.load(fh)
-        shared = model.get("plugins", {}).get("generic-graph", {}).get(
-            "semantic_profile", "archimate")
+        if isinstance(model, dict):
+            shared = model.get("plugins", {}).get("generic-graph", {}).get(
+                "semantic_profile", "archimate")
     except (OSError, ValueError):
         shared = "archimate"
 
@@ -434,8 +435,10 @@ addEventListener('hashchange', () => {
   if (byId[id] && id !== current) select(id);
 });
 
-const start = byId[location.hash.slice(1)] ? location.hash.slice(1) : DATA[0].id;
-select(start);
+if (DATA.length) {
+  const start = byId[location.hash.slice(1)] ? location.hash.slice(1) : DATA[0].id;
+  select(start);
+}
 </script>
 </body>
 </html>

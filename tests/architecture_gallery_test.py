@@ -80,6 +80,14 @@ class ProfileResolverTest(unittest.TestCase):
         prof = self.m.profile_resolver(proj, "/nonexistent")
         self.assertEqual(prof(proj["views"][0]), "archimate")
 
+    def test_v1_non_dict_model_defaults_to_archimate(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "model.json"), "w", encoding="utf-8") as fh:
+                _json.dump([], fh)  # valid JSON, not an object
+            proj = {"schema": "...v1", "model": "model.json", "views": [{"id": "x"}]}
+            prof = self.m.profile_resolver(proj, d)
+            self.assertEqual(prof(proj["views"][0]), "archimate")
+
 
 FIXTURE = os.path.join(
     REPO, "souroldgeezer-architecture", "skills", "architecture-design",
@@ -149,6 +157,15 @@ class BuildHtmlTest(unittest.TestCase):
                      "metadata": {"output": "generated/render-metadata/x.json"}}]}, fh)
             with self.assertRaises(self.m.SourceMissing):
                 self.m.build_html(d)
+
+    def test_empty_views_package_builds_with_guarded_bootstrap(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"schema": "...v2", "feature": "empty",
+                            "models": [], "views": []}, fh)
+            html = self.m.build_html(d)          # must not raise
+            self.assertIn("const DATA = []", html)
+            self.assertIn("if (DATA.length)", html)
 
 
 class CliTest(unittest.TestCase):
