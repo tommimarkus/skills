@@ -121,8 +121,8 @@ Build.
    pure function of the rendered SVGs plus `project.json`, so a changed or added
    SVG means a stale gallery; this is mode-agnostic (any run that re-renders
    rebuilds; a Lookup or a read-only Review that renders nothing does not). On a
-   read-only pass, run `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` to detect a
-   committed gallery that has drifted from its SVGs. The gallery is an outer
+   read-only pass, run `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` when a
+   committed gallery may have drifted from its SVGs. The gallery is an outer
    viewer over the static SVGs — distinct from a view's own render-policy
    `interactive: html` wrapper. Disclose the outcome in the footer `Gallery:`
    line. See [`references/gallery.md`](references/gallery.md).
@@ -151,3 +151,4 @@ Build.
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md) |
 | Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
+| Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — v2 package with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |
