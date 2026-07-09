@@ -127,11 +127,6 @@ def collect(pkg_dir):
         })
         with open(svg_path, encoding="utf-8") as fh:
             svg = fh.read().strip()
-        # Inline <svg> is parsed as foreign content by any HTML5 parser regardless
-        # of an explicit namespace declaration; drop it so the gallery's raw text
-        # stays free of anything URL-shaped (self-contained-ness is asserted on
-        # the whole document, not just the outer chrome).
-        svg = svg.replace(' xmlns="http://www.w3.org/2000/svg"', "")
         plates.append(
             '<template class="plate" data-id="%s">%s</template>' % (vid, svg))
     return data, "\n".join(plates)

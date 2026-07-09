@@ -90,9 +90,15 @@ class BuildHtmlTest(unittest.TestCase):
         self.html = self.m.build_html(FIXTURE)
 
     def test_self_contained_no_external_refs(self):
-        # no external stylesheet/script/font/image hosts
-        for needle in ("http://", "https://", "src=\"//", "@import"):
+        # No external fetches. Namespace URIs (xmlns / xmlns:xlink) are inert
+        # identifiers, never fetched, so they are not external references.
+        for needle in ('src="http', "src='http", 'src="//', "src='//",
+                       'href="http', "href='http", "@import", "url(http"):
             self.assertNotIn(needle, self.html)
+
+    def test_svgs_inlined_verbatim_keep_namespace(self):
+        # Verbatim inlining preserves the renderer's SVG namespace (not stripped).
+        self.assertIn('xmlns="http://www.w3.org/2000/svg"', self.html)
 
     def test_every_svg_inlined_as_template(self):
         self.assertEqual(self.html.count('class="plate"'), 3)
