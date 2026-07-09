@@ -1,6 +1,7 @@
 import importlib.util
 import json as _json
 import os
+import re
 import tempfile
 import unittest
 
@@ -91,10 +92,18 @@ class BuildHtmlTest(unittest.TestCase):
 
     def test_self_contained_no_external_refs(self):
         # No external fetches. Namespace URIs (xmlns / xmlns:xlink) are inert
-        # identifiers, never fetched, so they are not external references.
-        for needle in ('src="http', "src='http", 'src="//', "src='//",
-                       'href="http', "href='http", "@import", "url(http"):
-            self.assertNotIn(needle, self.html)
+        # identifiers, never fetched, so they are NOT external references and
+        # must not trip this guard. Catch real fetches in any quote style:
+        # src/href to an http(s) or protocol-relative URL, @import, and
+        # url(...) pointing at http(s).
+        external = re.search(
+            r'(?:src|href)\s*=\s*["\']?(?:https?:)?//'
+            r'|@import'
+            r'|url\(\s*["\']?https?:',
+            self.html)
+        self.assertIsNone(external,
+                          "external resource reference found: %r"
+                          % (external.group(0) if external else None))
 
     def test_svgs_inlined_verbatim_keep_namespace(self):
         # Verbatim inlining preserves the renderer's SVG namespace (not stripped).
