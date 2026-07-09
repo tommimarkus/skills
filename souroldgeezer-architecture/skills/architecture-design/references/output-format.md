@@ -68,6 +68,13 @@ never the render-policy intent. A policy/artifact/footer mismatch is
 entry. When interactive output ships, disclose the `architecture.md` §3
 mouse-only and embedding limits to the audience.
 
+Gallery: when a run (re)generates SVG output, the package-level shareable
+`gallery.html` is rebuilt (`references/gallery.md`) and its state reported on the
+footer `Gallery:` line. It is an outer viewer over the static SVGs — not a view's
+own `interactive: html` wrapper, so it never bears on the render-mode check. A
+committed gallery that has drifted from its SVGs (detected via
+`build-gallery.py --check`) is an `ARCH-R-2` render-evidence finding.
+
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:
 
@@ -124,6 +131,7 @@ Customization profile: none | local properties | profile/attribute/specializatio
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none
 Grouped layout fallback: not needed | used ungrouped fallback | not run
 Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free) | interactive <svg|html|both> (verified; mouse-only limits disclosed)
+Gallery: built (<n> views) <path> | refreshed | stale (run build-gallery) | not built (<reason>) | not applicable (no render this run)
 Implementation readiness: sufficient | partial | insufficient | not assessed
 Build readiness disclosure: <n> of 7 concern classes present; absent <list|none> | not build mode
 Finding split: <n> architecture-documentation findings; <n> other source material findings

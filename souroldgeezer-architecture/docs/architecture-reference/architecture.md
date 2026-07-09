@@ -202,6 +202,18 @@ from the fixture's presence. Static SVG stays the default and the evidence of
 record; keep the `data-dediren-node-id` / `data-dediren-edge-id` markers
 required by §9.
 
+Separately from a view's own interactivity, the skill can emit a package-level
+**shareable gallery** — one self-contained `gallery.html` inside the package that
+inlines every view's SVG as an inert `<template>`, with a notation-grouped
+register, zoom, light/dark theme, deep-linking, and keyboard navigation. It is
+built by the bundled `references/scripts/build-gallery.py` from the package's own
+sources (`project.json`, `generated/svg/*.svg`, `generated/render-metadata/*.json`)
+and is a pure function of them, so it is rebuilt whenever SVG output is
+(re)generated (mode-agnostic). It is an outer viewer over the static SVGs and
+does not alter or substitute for the per-view render mode or the §9 render-mode
+check; a committed gallery that has drifted from its SVGs (`build-gallery.py
+--check`) is `ARCH-R-2`. Design system and tuning: `references/gallery.md`.
+
 The render policy may also carry an optional `accessibility` block (`title`,
 `description`) that names the emitted SVG for assistive technology: the root
 element gets `role="img"` with a `<title>` (falling back to the layout view id

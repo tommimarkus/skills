@@ -30,7 +30,7 @@ Severity: `block` invalid source or failed projection/layout/render/export;
   accessible-name markup (`role="img"`, nonempty `<title>`, visible title
   block), or authored UML association end adornments (roles/multiplicities)
   present in the view's render metadata (`architecture.md` §9 end-adornment
-  coverage check).
+  coverage check); or a package gallery drifted from its SVGs.
 - `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
 - `ARCH-R-5`: emitted artifact interactivity contradicts the render policy or
   the footer disclosure: a `<script>` despite `interactive` unset/`none`, a
