@@ -1095,7 +1095,16 @@ def has_rationalization_gate(text: str) -> bool:
 def unconditional_support_loads(text: str) -> list[str]:
     matches: list[str] = []
     condition = re.compile(r"\b(when|if|for|after|before|based on|conditional on|only when|as needed)\b", re.I)
-    load_line = re.compile(r"^(?:[*_` ]*)\b(read|load|consult|open)\b.*\b(references|extensions|examples|fixtures)/[A-Za-z0-9_./-]+", re.I)
+    # The line-opening verb must be a genuine load imperative, not an adjectival
+    # compound whose first word happens to be read/load/open ("read-only pass",
+    # "load balancer config", "open source note", "read replica ..."). Exclude a
+    # verb immediately continued by a hyphen+word or by only/source/replica/balancer.
+    load_line = re.compile(
+        r"^(?:[*_` ]*)\b(read|load|consult|open)\b"
+        r"(?!-\w|\s+(?:only|source|replica|balancer)\b)"
+        r".*\b(references|extensions|examples|fixtures)/[A-Za-z0-9_./-]+",
+        re.I,
+    )
     path_pattern = re.compile(r"\b(?:references|extensions|examples|fixtures)/[A-Za-z0-9_./-]+")
     for line in text.splitlines():
         if not load_line.search(line) or condition.search(line):

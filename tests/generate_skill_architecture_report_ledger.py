@@ -918,6 +918,24 @@ def build_guard_cases() -> list[dict]:
             "guard",
             "runtime-wrapper-duplicates-workflow",
         ),
+        guard_skill(
+            "guard-adjectival-load-opener",
+            clean_body("guard-adjectival-load-opener")
+            + (
+                "\nRead-only pass: inspect references/gallery-notes.md output.\n"
+                "Load balancer notes live in references/topology-notes.md today.\n"
+                "Open source attribution sits in references/licence-notes.md here.\n"
+                "Read replica guidance sits in references/db-notes.md now.\n"
+            ),
+            ["SAC-REF-UNCONDITIONAL-LOAD", "SAC-REF-UNADVERTISED-SUPPORT"],
+            "adjectival read-/load-/open- compound opener next to a bundled path is not an unconditional support load",
+            extra_files=[
+                {"path": "example-plugin/skills/guard-adjectival-load-opener-skill/references/gallery-notes.md", "content": "# Gallery notes\n"},
+                {"path": "example-plugin/skills/guard-adjectival-load-opener-skill/references/topology-notes.md", "content": "# Topology notes\n"},
+                {"path": "example-plugin/skills/guard-adjectival-load-opener-skill/references/licence-notes.md", "content": "# Licence notes\n"},
+                {"path": "example-plugin/skills/guard-adjectival-load-opener-skill/references/db-notes.md", "content": "# DB notes\n"},
+            ],
+        ),
     ]
 
 
