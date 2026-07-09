@@ -440,3 +440,53 @@ select(start);
 </body>
 </html>
 """
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    check = False
+    positional = []
+    for a in argv:
+        if a in ("-h", "--help"):
+            sys.stdout.write(__doc__)
+            return 0
+        if a == "--check":
+            check = True
+        elif a.startswith("-"):
+            sys.stderr.write("unknown option: %s\n" % a)
+            return 2
+        else:
+            positional.append(a)
+    if len(positional) != 1:
+        sys.stderr.write("usage: build-gallery.py [--check] <package-dir>\n")
+        return 2
+    pkg = positional[0]
+    try:
+        html = build_html(pkg)
+    except SourceMissing as exc:
+        sys.stderr.write("sources incomplete: %s\n" % exc)
+        return 3
+    except (OSError, ValueError, KeyError) as exc:
+        sys.stderr.write("error: %s\n" % exc)
+        return 2
+    out = os.path.join(pkg, "gallery.html")
+    if check:
+        try:
+            with open(out, encoding="utf-8") as fh:
+                current = fh.read()
+        except OSError:
+            sys.stderr.write("stale: %s is missing\n" % out)
+            return 1
+        if current != html:
+            sys.stderr.write("stale: %s differs from current sources\n" % out)
+            return 1
+        sys.stdout.write("fresh: %s\n" % out)
+        return 0
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    sys.stdout.write("wrote %s (%d views)\n" % (out, html.count('class="plate"')))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

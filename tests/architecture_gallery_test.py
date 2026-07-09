@@ -2,6 +2,7 @@ import importlib.util
 import json as _json
 import os
 import re
+import shutil
 import tempfile
 import unittest
 
@@ -148,6 +149,53 @@ class BuildHtmlTest(unittest.TestCase):
                      "metadata": {"output": "generated/render-metadata/x.json"}}]}, fh)
             with self.assertRaises(self.m.SourceMissing):
                 self.m.build_html(d)
+
+
+class CliTest(unittest.TestCase):
+    def setUp(self):
+        self.m = _load()
+
+    def _copy_fixture(self, dst):
+        shutil.copytree(FIXTURE, dst)
+        return dst
+
+    def test_help_is_zero(self):
+        self.assertEqual(self.m.main(["--help"]), 0)
+
+    def test_usage_error_is_two(self):
+        self.assertEqual(self.m.main([]), 2)
+        self.assertEqual(self.m.main(["a", "b"]), 2)
+
+    def test_build_writes_gallery_and_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            self.assertEqual(self.m.main([pkg]), 0)
+            out = os.path.join(pkg, "gallery.html")
+            self.assertTrue(os.path.exists(out))
+            first = open(out, encoding="utf-8").read()
+            self.assertEqual(self.m.main([pkg]), 0)  # rerun
+            self.assertEqual(open(out, encoding="utf-8").read(), first)  # idempotent
+
+    def test_check_fresh_then_stale(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            self.m.main([pkg])
+            self.assertEqual(self.m.main(["--check", pkg]), 0)  # fresh
+            # mutate a source; the committed gallery is now stale
+            svg = os.path.join(pkg, "generated", "svg", "app-cooperation.svg")
+            open(svg, "a", encoding="utf-8").write("<!-- changed -->")
+            self.assertEqual(self.m.main(["--check", pkg]), 1)  # stale
+
+    def test_check_missing_gallery_is_stale(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            self.assertEqual(self.m.main(["--check", pkg]), 1)
+
+    def test_incomplete_sources_is_three(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            os.remove(os.path.join(pkg, "generated", "svg", "domain-class.svg"))
+            self.assertEqual(self.m.main([pkg]), 3)
 
 
 if __name__ == "__main__":
