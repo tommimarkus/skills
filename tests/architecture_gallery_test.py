@@ -1,5 +1,7 @@
 import importlib.util
+import json as _json
 import os
+import tempfile
 import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +47,36 @@ class ClassifyTest(unittest.TestCase):
     def test_density(self):
         self.assertEqual(self.m.status_of(49), "ok")
         self.assertEqual(self.m.status_of(50), "warning")
+
+
+class ProfileResolverTest(unittest.TestCase):
+    def setUp(self):
+        self.m = _load()
+
+    def test_v2_reads_models_profile(self):
+        proj = {
+            "schema": "souroldgeezer.architecture.dediren.project.v2",
+            "models": [{"id": "arch", "file": "model.json", "profile": "archimate"},
+                       {"id": "uml", "file": "model-uml.json", "profile": "uml"}],
+            "views": [{"id": "a", "model": "arch"}, {"id": "b", "model": "uml"}],
+        }
+        prof = self.m.profile_resolver(proj, "/nonexistent")
+        self.assertEqual(prof(proj["views"][0]), "archimate")
+        self.assertEqual(prof(proj["views"][1]), "uml")
+
+    def test_v1_reads_model_semantic_profile(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "model.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"plugins": {"generic-graph": {"semantic_profile": "uml"}}}, fh)
+            proj = {"schema": "souroldgeezer.architecture.dediren.project.v1",
+                    "model": "model.json", "views": [{"id": "main"}]}
+            prof = self.m.profile_resolver(proj, d)
+            self.assertEqual(prof(proj["views"][0]), "uml")
+
+    def test_defaults_to_archimate_when_unresolvable(self):
+        proj = {"schema": "...v1", "model": "missing.json", "views": [{"id": "x"}]}
+        prof = self.m.profile_resolver(proj, "/nonexistent")
+        self.assertEqual(prof(proj["views"][0]), "archimate")
 
 
 if __name__ == "__main__":

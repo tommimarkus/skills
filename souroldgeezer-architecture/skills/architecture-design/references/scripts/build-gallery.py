@@ -56,3 +56,28 @@ def classify(profile, diagram_kind):
 def status_of(edges):
     """'warning' when a view carries enough relationships to be hard to route."""
     return "warning" if edges >= DENSE_EDGES else "ok"
+
+
+def profile_resolver(proj, pkg_dir):
+    """Return view -> notation-profile resolver for a v1 or v2 project."""
+    if proj.get("models") is not None:  # v2: profile per model registry entry
+        models = {m["id"]: m for m in proj.get("models", [])}
+
+        def prof(view):
+            return (models.get(view.get("model")) or {}).get("profile", "archimate")
+        return prof
+
+    # v1: one model for the whole package; profile lives in the model file.
+    shared = "archimate"
+    try:
+        with open(os.path.join(pkg_dir, proj.get("model", "model.json")),
+                  encoding="utf-8") as fh:
+            model = json.load(fh)
+        shared = model.get("plugins", {}).get("generic-graph", {}).get(
+            "semantic_profile", "archimate")
+    except (OSError, ValueError):
+        shared = "archimate"
+
+    def prof(view):
+        return shared
+    return prof
