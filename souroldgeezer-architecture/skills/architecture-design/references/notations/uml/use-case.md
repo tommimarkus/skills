@@ -34,7 +34,7 @@ Synthetic `uml-use-case` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.13"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.07.16"}],
   "nodes": [
     {"id": "system-lms", "type": "Class", "label": "Library System", "properties": {"uml": {"use_case_subject": true}}},
     {"id": "member", "type": "Actor", "label": "Member", "properties": {"uml": {}}},

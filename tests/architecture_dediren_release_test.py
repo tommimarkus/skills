@@ -37,15 +37,15 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.13"
+EXPECTED_DEDIREN_VERSION = "2026.07.16"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
-EXPECTED_RELEASE_PLUGIN_IDS = {
-    "generic-graph",
-    "elk-layout",
-    "render",
-    "archimate-oef",
-    "uml-xmi",
-}
+# Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
+# first-party engines are in-process libraries behind a typed engine-api, so the bundle
+# ships one launcher and no plugin executables, manifests, or capability probes. The
+# engine ids below survive only as `--plugin` selector values on the decomposed
+# commands; they are no longer discoverable from `bundle.json`, and the pipeline tests
+# — not manifest introspection — are what prove they still resolve.
+EXPECTED_BUNDLE_SCHEMA_VERSION = "dediren-bundle.schema.v2"
 EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS = {
     "generic-graph",
     "elk-layout",
@@ -112,7 +112,7 @@ def envelope(result: subprocess.CompletedProcess[str]) -> dict:
 def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
     # render-result.schema returns data.artifacts[] (since v2, Dediren 2026.06.4); the
     # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) added a `png`
-    # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.13) removed native raster
+    # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.16) removed native raster
     # rendering, dropping `png` from artifact_kind (only `svg`/`html` remain) while keeping
     # the artifacts[] shape and the svg artifact. Mirror the bundle's documented extraction:
     # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
@@ -400,22 +400,35 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
         self.assertEqual(bundle_manifest["version"], EXPECTED_DEDIREN_VERSION)
-        self.assertEqual(bundle_manifest["elk_helper"], "bin/dediren-plugin-elk-layout")
+        self.assertEqual(bundle_manifest["bundle_schema_version"], EXPECTED_BUNDLE_SCHEMA_VERSION)
 
-    def test_release_bundle_contains_java_runtime_plugins_schemas_and_guide(self) -> None:
+    def test_release_bundle_ships_a_single_launcher_with_no_plugin_protocol(self) -> None:
+        """Bundle schema v2 deleted the process-plugin protocol.
+
+        Guards the contract the v1 bundle advertised and v2 removed: no `plugins[]` /
+        `elk_helper` manifest keys, no `plugins/` manifest directory, and exactly one
+        executable in `bin/` (no per-engine child executables to spawn).
+        """
         bundle = release_bundle()
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
-        expected_versions = {plugin["id"]: plugin["version"] for plugin in bundle_manifest["plugins"]}
 
-        self.assertEqual(set(expected_versions), EXPECTED_RELEASE_PLUGIN_IDS)
-        self.assertEqual(set(expected_versions.values()), {EXPECTED_DEDIREN_VERSION})
+        self.assertNotIn("plugins", bundle_manifest)
+        self.assertNotIn("elk_helper", bundle_manifest)
+        self.assertFalse((bundle / "plugins").exists())
+        self.assertEqual(sorted(path.name for path in (bundle / "bin").iterdir()), ["dediren"])
+
+    def test_release_bundle_contains_java_runtime_engines_schemas_and_guide(self) -> None:
+        bundle = release_bundle()
 
         required_paths = [
-            "plugins/generic-graph.manifest.json",
-            "plugins/elk-layout.manifest.json",
-            "plugins/render.manifest.json",
-            "plugins/archimate-oef.manifest.json",
-            "plugins/uml-xmi.manifest.json",
+            # The five first-party engines now ship as in-process libraries behind the
+            # typed engine-api rather than as plugin executables + manifests.
+            f"lib/engine-api-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/render-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/archimate-oef-export-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/uml-xmi-export-{EXPECTED_DEDIREN_VERSION}.jar",
+            # One-shot `dediren build` result contract (new in bundle schema v2).
+            "schemas/build-result.schema.json",
             "schemas/model.schema.json",
             "schemas/layout-request.schema.json",
             "schemas/layout-result.schema.json",
@@ -465,10 +478,6 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, guide)
-
-        elk_manifest = json.loads((bundle / "plugins" / "elk-layout.manifest.json").read_text(encoding="utf-8"))
-        self.assertIn("JAVA_HOME", elk_manifest["allowed_env"])
-        self.assertIn("PATH", elk_manifest["allowed_env"])
 
     def test_release_fixture_model_validates_and_renders(self) -> None:
         project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
@@ -605,7 +614,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             # a sequence layout through validate-layout). We assert only the envelope *shape*
             # we parse per the Fast Path contract (.status / .diagnostics[]), never a
             # specific verdict. Sequence Message edges legitimately terminate on the lifeline
-            # (node center-x, not the head-node box perimeter), which dediren 2026.07.13+
+            # (node center-x, not the head-node box perimeter), which dediren 2026.07.16+
             # routes correctly and the perimeter check then reports as
             # DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER (status "error", exit 2) — a
             # correct-layout side effect, not an adoption blocker. Render + export below are

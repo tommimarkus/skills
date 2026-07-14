@@ -113,7 +113,10 @@ Build.
    an existing package. Keep a compact rationale for every non-obvious
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
    do not mutate by default.
-6. Validate before quality claims; return [output](references/output-format.md).
+6. Validate before quality claims. When a run (re)generates package output, build
+   it with the one-shot path — `"$SKILL_DIR"/references/scripts/dediren-build.py
+   <pkg>` (self-check § Building a package) — then complete each rendered SVG's
+   accessible name. Return [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
    `"$SKILL_DIR"/references/scripts/build-gallery.py <package>` — a
@@ -142,6 +145,7 @@ Build.
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
 | Dediren release resolver | [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh); use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
+| Package build (project → layout → render/export) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) via `"$SKILL_DIR"/references/scripts/dediren-build.py <package>`; one-shot `dediren build` per (model, render-policy) group, writes every artifact to its `project.json`-declared path; templates and the decomposed fallback in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
 | SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
