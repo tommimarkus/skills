@@ -37,7 +37,7 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.16"
+EXPECTED_DEDIREN_VERSION = "2026.07.17"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
@@ -112,7 +112,7 @@ def envelope(result: subprocess.CompletedProcess[str]) -> dict:
 def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
     # render-result.schema returns data.artifacts[] (since v2, Dediren 2026.06.4); the
     # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) added a `png`
-    # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.16) removed native raster
+    # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.17) removed native raster
     # rendering, dropping `png` from artifact_kind (only `svg`/`html` remain) while keeping
     # the artifacts[] shape and the svg artifact. Mirror the bundle's documented extraction:
     # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
@@ -614,7 +614,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             # a sequence layout through validate-layout). We assert only the envelope *shape*
             # we parse per the Fast Path contract (.status / .diagnostics[]), never a
             # specific verdict. Sequence Message edges legitimately terminate on the lifeline
-            # (node center-x, not the head-node box perimeter), which dediren 2026.07.16+
+            # (node center-x, not the head-node box perimeter), which dediren 2026.07.17+
             # routes correctly and the perimeter check then reports as
             # DEDIREN_LAYOUT_ROUTE_ENDPOINT_OFF_NODE_PERIMETER (status "error", exit 2) — a
             # correct-layout side effect, not an adoption blocker. Render + export below are
