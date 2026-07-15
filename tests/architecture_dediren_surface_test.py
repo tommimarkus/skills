@@ -399,13 +399,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "schema validation plus ArchiMate semantic validation",
             architecture_reference,
         )
-        self.assertIn("validate --plugin generic-graph --profile archimate", architecture_reference)
-        # workflow.md cites self-check.md for command templates rather than
-        # duplicating them; the command itself is asserted in self_check below.
-        self.assertIn("validate --plugin generic-graph --profile archimate", self_check)
-        # output-format.md cites architecture.md §9 for the source-valid commands
-        # rather than restating them (refactor ad4db28).
-        self.assertIn("`source-valid` validation commands", output_format)
+        self.assertIn('dediren_validate {profile: "archimate"}', architecture_reference)
+        # self-check.md drives semantic validation through the MCP tool with a profile.
+        self.assertIn("dediren_validate", self_check)
+        self.assertIn('profile: "archimate"', self_check)
+        # output-format.md cites architecture.md §9 for the source-valid tools
+        # rather than restating them.
+        self.assertIn("`source-valid` validation", output_format)
         self.assertIn("`architecture.md` §9", output_format)
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
@@ -413,42 +413,37 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
     def test_dediren_release_runtime_contract_is_documented(self) -> None:
         expectations = {
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
-                "release-resolved Dediren runtime",
-                "ArchiMate® 3.2 relationship endpoint legality",
+                "bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint",
                 "`Node`, not `TechnologyNode`",
-                "close parallel route channels",
-                "parallel per-view ELK layout",
-                "serial rerun only as a diagnostic fallback",
+                "close parallel route channels during layout validation",
+                "`dediren_build` call walks its views through projection",
             ],
             # The operational workflow and output-format cite architecture.md §9
-            # for endpoint/Node/route semantics instead of restating them
-            # (refactor ad4db28).
+            # for endpoint/Node/route semantics instead of restating them.
             ARCH_PLUGIN
             / "skills"
             / "architecture-design"
             / "references"
             / "procedures"
             / "architecture-operational-workflow.md": [
-                "release-resolved Dediren runtime",
+                "bundled MCP server",
                 "plugins.generic-graph.semantic_profile",
                 "architecture.md` §9",
                 "endpoint legality",
                 "`Node` naming",
-                "parallel per-view ELK layout",
-                "rerun parallel-only failures serially",
+                "in-build layout",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
-                "release-resolved Dediren runtime version",
+                "bundled Dediren MCP server's availability and runtime",
                 "Runtime semantics",
                 "are defined in `architecture.md` §9",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
-                "release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
+                "bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
                 "`Node`, not `TechnologyNode`",
                 "reports close parallel route channels",
                 "plugins.generic-graph.semantic_profile",
-                "allows parallel per-view ELK layout",
-                "keeps serial rerun fallback",
+                "runs projection, layout, layout validation, and rendering inside each `dediren_build` call",
             ],
             # The Dediren upstream release adoption procedure (carrying the
             # runtime-evidence delegation) was relocated from CLAUDE.md to
@@ -487,7 +482,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 for version in ["0.10.0", "0.11.1", "0.11.2"]:
                     self.assertNotIn(version, content)
 
-    def test_self_check_command_templates_match_dediren_cli_shape(self) -> None:
+    def test_self_check_documents_mcp_tool_calls(self) -> None:
         self_check = (
             ARCH_PLUGIN
             / "skills"
@@ -497,21 +492,22 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "self-check.md"
         ).read_text(encoding="utf-8")
         expected_phrases = [
-            '"$DEDIREN" validate --input <pkg>/model.json',
-            '"$DEDIREN" validate --plugin generic-graph --profile archimate --input <pkg>/model.json',
-            '"$DEDIREN" project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json',
-            '"$DEDIREN" project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json',
-            '"$DEDIREN" layout --plugin elk-layout --input <layout-request.json>',
-            '"$DEDIREN" render --plugin render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>',
-            '"$DEDIREN" export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>',
+            'dediren_validate {source: "<pkg>/model.json", profile: "archimate"}',
+            "dediren_build",
+            'dediren_guide {topic: "source-json"}',
+            '"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>',
+            '"$SKILL_DIR"/references/scripts/dediren-build.py map',
         ]
 
         for phrase in expected_phrases:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self_check)
-        self.assertNotIn("dediren project <pkg>/project.json --view <view-id>", self_check)
+        # The decomposed dediren CLI chain is retired; the skill drives the MCP tools.
+        for absent in ['"$DEDIREN"', "layout --plugin elk-layout", "project --target layout-request"]:
+            with self.subTest(absent=absent):
+                self.assertNotIn(absent, self_check)
 
-    def test_guidance_points_to_release_agent_usage_guide(self) -> None:
+    def test_guidance_points_to_dediren_guide_tool(self) -> None:
         self_check = (
             ARCH_PLUGIN
             / "skills"
@@ -527,7 +523,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for content in [self_check, architecture_reference]:
             with self.subTest():
                 normalized = " ".join(content.split())
-                self.assertIn("dediren-release.sh --agent-guide", content)
+                self.assertIn("dediren_guide", content)
                 self.assertIn("Minimal Source JSON", normalized)
                 self.assertIn("Command Handoff", normalized)
                 self.assertIn("Repair Rules", normalized)
@@ -560,12 +556,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "references"
             / "procedures"
             / "self-check.md": [
-                "validate --plugin generic-graph --profile uml",
+                'profile: "uml"',
                 "uml-xmi",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
                 "ArchiMate and UML are supported `generic-graph` semantic profiles",
-                "validate --plugin generic-graph --profile uml",
+                'dediren_validate {profile: "uml"}',
                 "uml-xmi",
                 "uml-sequence",
             ],
@@ -589,13 +585,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         archimate_phrases = [
             "ArchiMate frames the architectural concern",
-            "validate --plugin generic-graph --profile archimate",
+            'dediren_validate {profile: "archimate"}',
             "archimate-oef",
             "relationship connectors and junctions unsupported",
         ]
         uml_phrases = [
             "UML elaborates one bounded part",
-            "validate --plugin generic-graph --profile uml",
+            'dediren_validate {profile: "uml"}',
             'kind: "uml-sequence"',
             "uml-xmi",
             "properties.uml.architecture_context",
@@ -691,8 +687,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
                 "generated/render-metadata",
                 "render-metadata",
-                "parallel per-view ELK layout",
-                "serial rerun only as a diagnostic fallback",
+                "Layout runs inside each `dediren_build` call",
                 "hand-authored",
                 "reproducible output",
                 "plugins.generic-graph.semantic_profile",
@@ -708,7 +703,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "architecture-operational-workflow.md": [
                 "generated/render-metadata",
                 "render-metadata",
-                "parallel per-view ELK layout",
+                "run inside one `dediren_build` call",
                 "reproducible output",
                 "plugins.generic-graph.semantic_profile",
                 "archimate-oef",
@@ -735,8 +730,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
                 "generated/render-metadata",
                 "render-metadata",
-                "parallel per-view ELK layout",
-                "serial rerun",
+                "bundled dediren MCP server",
+                "dediren_build",
                 "hand-authored",
                 "reproducible output",
                 "plugins.generic-graph.semantic_profile",
@@ -1100,12 +1095,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "Companion material",
             ],
             procedures / "self-check.md": [
-                "Command templates",
-                '"$DEDIREN" validate --plugin generic-graph --profile archimate',
-                "project --target render-metadata",
+                "Reading tool results",
+                "dediren_build",
+                "dediren_validate",
             ],
             procedures / "architecture-operational-workflow.md": [
-                "Command templates live in `self-check.md`",
+                "The MCP tool call flow lives in `self-check.md`",
             ],
         }
 
@@ -1204,7 +1199,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "procedures"
             / "architecture-operational-workflow.md": [
                 "imported upstream evidence",
-                "do not patch cached release files or future packaged bundles",
+                "do not patch cached release files",
                 "Dediren tool issues",
             ],
             ARCH_PLUGIN
