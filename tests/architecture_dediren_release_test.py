@@ -642,6 +642,47 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(export_result.returncode, 0, export_result.stderr)
             self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "uml-xmi+xml")
 
+    def test_mcp_server_exposes_the_three_tools_the_skill_drives(self) -> None:
+        """The shipped surface: the bundled `dediren mcp` stdio server the plugin
+        declares exposes dediren_validate / dediren_build / dediren_guide, and a
+        profile-scoped validate returns an ok envelope."""
+        bundle = release_bundle()
+        requests = [
+            {
+                "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05", "capabilities": {},
+                    "clientInfo": {"name": "release-test", "version": "0"},
+                },
+            },
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+            {
+                "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                "params": {
+                    "name": "dediren_validate",
+                    "arguments": {"source": "model.json", "profile": "archimate"},
+                },
+            },
+        ]
+        stdin = "".join(json.dumps(request) + "\n" for request in requests)
+        proc = subprocess.run(
+            [bundle / "bin" / "dediren", "mcp", "--root", str(FIXTURE)],
+            input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=os.environ.copy(), timeout=120,
+        )
+        by_id = {}
+        for line in proc.stdout.splitlines():
+            if line.strip().startswith("{"):
+                message = json.loads(line)
+                if "id" in message:
+                    by_id[message["id"]] = message
+
+        tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
+        self.assertEqual(tools, {"dediren_validate", "dediren_build", "dediren_guide"})
+        validation = json.loads(by_id[3]["result"]["content"][0]["text"])
+        self.assertEqual(validation["status"], "ok", validation)
+
 
 if __name__ == "__main__":
     unittest.main()

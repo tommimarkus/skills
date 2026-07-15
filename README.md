@@ -55,9 +55,11 @@ For local development, point Claude at the clone instead:
   marketplace entry on `name` and `description`. `version` lives only in
   `plugin.json` — Claude Code always resolves it over a marketplace-entry copy
   without warning, so marketplace entries never carry a `version` key.
-- `architecture-design` resolves its Dediren runtime from GitHub™ Releases into
-  `.cache/dediren/releases/`; do not commit that cache. The current Dediren
-  bundle is Java™-backed and needs Java™ 21 or newer for runtime checks.
+- `architecture-design` drives Dediren through the plugin's bundled MCP server
+  (`souroldgeezer-architecture/.claude-plugin/plugin.json` `mcpServers`); its
+  launcher resolves the pinned Dediren runtime from GitHub™ Releases on first use —
+  into `${CLAUDE_PLUGIN_DATA}` for installed users, or `.cache/dediren/releases/` in
+  this repo (do not commit that cache) — and needs Java™ 21 or newer.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 
