@@ -2,20 +2,28 @@
 # Launcher for the bundled dediren Model Context Protocol (MCP) stdio server.
 #
 # Declared as the plugin's `mcpServers.dediren` command (plugin.json). Claude Code
-# spawns and owns this process when the plugin is enabled; stdout carries JSON-RPC
-# only. It resolves the pinned dediren release bundle through the sibling resolver
-# (downloading on first use into ${CLAUDE_PLUGIN_DATA} via the DEDIREN_CACHE_DIR the
-# mcpServers env block sets), then execs the bundle's `dediren mcp` server rooted at
-# the project directory so every tool path resolves inside the user's workspace.
+# spawns and owns this process automatically when the plugin is enabled; stdout
+# carries JSON-RPC only.
 #
-# Java 21+ is a host prerequisite (the bundle is Java-backed), exactly as a Node- or
-# Python-based plugin MCP server needs its runtime installed. If the bundle cannot be
-# resolved or Java 21+ is absent, the resolver exits non-zero and the MCP server never
-# starts; the architecture-design skill detects the unavailable server and caps its
-# runtime evidence at source-valid rather than failing.
+# Fail-fast, no session-start network I/O. Plugin MCP servers auto-start every
+# session, so this launcher must stay cheap: it starts the server ONLY when the
+# pinned bundle is already resolved on disk (checked via the resolver's
+# non-downloading `--print-path` / `--bundle-dir`). It never downloads. When the
+# bundle is absent it exits non-zero and the server simply does not start — the
+# architecture-design skill's internal fallback lane resolves the bundle on demand
+# (via the sibling resolver, into the same ${CLAUDE_PLUGIN_DATA} cache) the first
+# time architecture work runs, and the MCP server comes up on the next session or
+# after `/reload-plugins`. Java 21+ is a host prerequisite; if it is absent the
+# `exec` below fails and the server does not start (non-fatal).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dediren="$("$script_dir/dediren-release.sh" --ensure)"
+bin="$("$script_dir/dediren-release.sh" --print-path)"
+bundle_dir="$("$script_dir/dediren-release.sh" --bundle-dir)"
 
-exec "$dediren" mcp --root "${CLAUDE_PROJECT_DIR:-$PWD}" "$@"
+if [ ! -x "$bin" ] || [ ! -f "$bundle_dir/bundle.json" ]; then
+  printf 'dediren-mcp: pinned bundle not resolved yet; not starting the MCP server (no session-start download). The architecture-design skill resolves it on demand; the server starts next session or after /reload-plugins.\n' >&2
+  exit 1
+fi
+
+exec "$bin" mcp --root "${CLAUDE_PROJECT_DIR:-$PWD}" "$@"

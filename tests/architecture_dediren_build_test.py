@@ -317,6 +317,36 @@ class MapSmokeTest(unittest.TestCase):
             with self.subTest(declared=declared):
                 self.assertGreater((pkg / declared).stat().st_size, 0, declared)
 
+    def test_run_fallback_builds_via_cli_and_materializes(self):
+        require_smoke()
+        dediren = self._resolve_dediren()
+        tmp = tempfile.mkdtemp(prefix="pkg-runsmoke-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        pkg = Path(tmp) / "basic"
+        shutil.copytree(FIXTURES / "basic", pkg)
+
+        # `run` is the internal CLI fallback: resolve + build + materialize in one call.
+        # Preset $DEDIREN and the schema cache so it drives the already-resolved bundle.
+        env = os.environ.copy()
+        env["DEDIREN"] = dediren
+        env.setdefault("DEDIREN_SCHEMA_CACHE_DIR", str(Path(tempfile.gettempdir()) / "dediren-schemas"))
+        proc = subprocess.run(
+            ["python3", str(SCRIPT), "run", str(pkg), "--json"],
+            check=False, text=True, capture_output=True, env=env,
+        )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        summary = json.loads(proc.stdout)
+        self.assertEqual(summary["status"], "ok")
+        for declared in (
+            "generated/svg/main.svg",
+            "generated/render-metadata/main.json",
+            "generated/layout/main.json",
+            "generated/export/basic.oef.xml",
+        ):
+            with self.subTest(declared=declared):
+                self.assertGreater((pkg / declared).stat().st_size, 0, declared)
+
 
 if __name__ == "__main__":
     unittest.main()

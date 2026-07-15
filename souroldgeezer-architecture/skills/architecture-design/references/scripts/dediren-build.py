@@ -9,7 +9,10 @@ writes each view's artifacts under `<out>/<view-id>/` — `diagram.svg`, and the
 does not: deciding which `dediren_build` calls a package needs, and moving the built
 output into the canonical `project.json` paths.
 
-It never runs dediren itself. Two subcommands:
+The MCP server is the primary path; `plan` + `map` bracket the tool calls. When the
+server is not available, `run` is the internal fallback that drives the same builds
+through the dediren CLI (resolving the pinned bundle on demand) — invisible to the
+user, who never types a dediren command. Three subcommands:
 
     dediren-build.py plan <package-dir> [--views a,b] [--no-export]
         Print the JSON list of `dediren_build` MCP tool calls to make for the
@@ -22,6 +25,12 @@ It never runs dediren itself. Two subcommands:
         artifact to the path `project.json` declares, unwrapping the `--emit` stage
         envelopes to their `.data` payload, and remove the staging dir. Verifies each
         declared artifact is present and non-empty.
+
+    dediren-build.py run <package-dir> [--views a,b] [--no-export] [--json]
+        Internal fallback when the MCP server is not running: resolve the pinned
+        dediren bundle (downloading on demand into the shared cache) and execute each
+        planned build through the CLI into the staging dir, then materialize exactly
+        as `map` does. Same output as `map`. Honours a preset $DEDIREN.
 
 Two shape rules this script exists to enforce (getting either backwards writes an
 empty or wrong-shaped package file):
@@ -37,14 +46,16 @@ architecture.md section 9 — then the gallery (`build-gallery.py`).
 An export policy's identity fields apply to a whole `dediren_build` invocation rather
 than to each view within it, so `plan` scopes every export to a single view.
 
-Exit codes: 0 ok; 1 a declared artifact was missing or empty (map); 2 usage or
-package-input error.
+Exit codes: 0 ok; 1 a declared artifact was missing or empty; 2 usage or
+package-input error; 3 the dediren runtime could not be resolved (run).
 
 Stdlib-only; Python >= 3.9.
 """
 import argparse
 import json
+import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -282,6 +293,67 @@ def run_map(pkg, models, views, exports):
     return summary
 
 
+class RuntimeUnavailable(Exception):
+    """The pinned dediren release bundle could not be resolved (fallback lane)."""
+
+
+def resolve_dediren(script_dir):
+    """Absolute path to the pinned dediren CLI (honours a preset $DEDIREN)."""
+    preset = os.environ.get("DEDIREN")
+    if preset:
+        return preset
+    resolver = script_dir / "dediren-release.sh"
+    if not resolver.is_file():
+        raise RuntimeUnavailable(f"release resolver not found: {resolver}")
+    proc = subprocess.run(
+        ["bash", str(resolver), "--ensure"],
+        check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeUnavailable(
+            "dediren-release.sh --ensure failed; disclose "
+            "'not run (dediren MCP server unavailable)' and cap at source-valid.\n"
+            + proc.stderr.strip()
+        )
+    return proc.stdout.strip()
+
+
+# dediren_build MCP argument name -> dediren CLI flag, for the fallback lane.
+_CLI_FLAGS = {"render_policy": "--render-policy", "oef_policy": "--oef-policy", "xmi_policy": "--xmi-policy"}
+
+
+def run_cli(pkg, models, views, exports, script_dir):
+    """Internal fallback: execute each planned build through the dediren CLI, then map.
+
+    Mirrors the MCP path — same staging dir, same per-(model, render-policy) render
+    groups and single-view exports the plan emits — but drives the runtime via the
+    CLI when the MCP server is not warm. The user never sees a dediren command.
+    """
+    dediren = resolve_dediren(script_dir)
+    for call in plan(pkg, models, views, exports)["calls"]:
+        arguments = call["arguments"]
+        cmd = [dediren, "build", "--input", arguments["source"], "--out", arguments["out"],
+               "--views", ",".join(arguments["views"])]
+        for arg, flag in _CLI_FLAGS.items():
+            if arg in arguments:
+                cmd += [flag, arguments[arg]]
+        if "emit" in arguments:
+            cmd += ["--emit", ",".join(arguments["emit"])]
+        proc = subprocess.run(cmd, check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            document = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            raise PackageError(
+                f"dediren build emitted no JSON (exit {proc.returncode}): "
+                f"{proc.stderr.strip() or proc.stdout.strip()}"
+            ) from None
+        if "build_result_schema_version" not in document:
+            diagnostics = document.get("diagnostics", [])
+            codes = ", ".join(d.get("code", "?") for d in diagnostics) or "unknown"
+            raise PackageError(f"dediren build rejected the request ({codes})")
+    return run_map(pkg, models, views, exports)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="dediren-build.py",
@@ -291,12 +363,13 @@ def main(argv=None):
     for name, help_text in (
         ("plan", "print the dediren_build MCP calls to make"),
         ("map", "materialize staged build output into project.json paths"),
+        ("run", "internal fallback: build via the dediren CLI, then materialize"),
     ):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("package", help="path to docs/architecture/<feature>.dediren")
         p.add_argument("--views", help="comma-separated view ids (default: every view)")
         p.add_argument("--no-export", action="store_true", help="skip OEF/XMI export lanes")
-        if name == "map":
+        if name in ("map", "run"):
             p.add_argument("--json", action="store_true", help="machine-readable summary")
     args = parser.parse_args(argv)
 
@@ -312,10 +385,16 @@ def main(argv=None):
             print(json.dumps(plan(pkg, models, views, exports), indent=2))
             return 0
 
-        summary = run_map(pkg, models, views, exports)
+        if args.command == "run":
+            summary = run_cli(pkg, models, views, exports, Path(__file__).resolve().parent)
+        else:
+            summary = run_map(pkg, models, views, exports)
     except PackageError as exc:
         print(f"dediren-build: {exc}", file=sys.stderr)
         return 2
+    except RuntimeUnavailable as exc:
+        print(f"dediren-build: {exc}", file=sys.stderr)
+        return 3
 
     if args.json:
         print(json.dumps(summary, indent=2))
@@ -332,7 +411,7 @@ def main(argv=None):
                 print(f"  wrote {entry['output']}")
             elif entry.get("error"):
                 print(f"  {entry['error']}")
-        print(f"map: {summary['status']}")
+        print(f"{args.command}: {summary['status']}")
         if summary["status"] != "error":
             print("next: complete each rendered SVG's accessible name (svg-accessible-name.sh),")
             print("      then rebuild the package gallery (build-gallery.py).")

@@ -81,9 +81,12 @@ Build.
    **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
    plugin is enabled); drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide` — never a CLI, and never ask the user to locate
-   or install Dediren. The server downloads the pinned runtime on first use and
-   needs Java™ 21+; if it cannot start, disclose `not run (dediren MCP server
-   unavailable)` and cap at `source-valid` (self-check § Server availability). Defer
+   or install Dediren. The server starts only when the pinned runtime is already
+   resolved (the launcher does no session-start download) and needs Java™ 21+; when
+   the tools are absent, the skill falls back to an internal CLI lane that resolves
+   the runtime on demand and drives the same builds — capping at `source-valid` only
+   when no Java™ 21+ runtime can be resolved at all (self-check § Server
+   availability). Defer
    the format guide (`dediren_guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
@@ -122,8 +125,10 @@ Build.
    `"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>` for the exact
    `dediren_build` tool calls, make each call, then
    `"$SKILL_DIR"/references/scripts/dediren-build.py map <pkg>` to materialize the
-   `project.json`-declared paths (self-check § Building a package). Then complete
-   each rendered SVG's accessible name. Return [output](references/output-format.md).
+   `project.json`-declared paths (self-check § Building a package); when the server
+   is unavailable, `dediren-build.py run <pkg>` does the same through the internal
+   CLI fallback. Then complete each rendered SVG's accessible name. Return
+   [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
    `"$SKILL_DIR"/references/scripts/build-gallery.py <package>` — a
@@ -152,7 +157,7 @@ Build.
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
 | Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). Run `bash -n` on both when editing them. |
-| Package build (plan → dediren_build → map) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py): `plan <package>` emits the `dediren_build` MCP calls (one per (model, render-policy) group, one per export view); after making them, `map <package>` materializes the staged output into each `project.json`-declared path. Call flow in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
+| Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py): `plan <package>` emits the `dediren_build` MCP calls (one per (model, render-policy) group, one per export view); after making them, `map <package>` materializes the staged output into each `project.json`-declared path. `run <package>` is the internal CLI fallback when the MCP server is unavailable (resolves + builds + materializes in one call). Call flow in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
 | SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |

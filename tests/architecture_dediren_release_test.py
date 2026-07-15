@@ -642,6 +642,27 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(export_result.returncode, 0, export_result.stderr)
             self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "uml-xmi+xml")
 
+    def test_mcp_launcher_fail_fasts_without_session_start_download(self) -> None:
+        """Plugin MCP servers auto-start every session, so the launcher must not
+        download at session start. It resolves the path without ensuring, and with no
+        cached bundle exits non-zero having fetched nothing."""
+        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
+        script = launcher.read_text(encoding="utf-8")
+        self.assertIn("--print-path", script)
+        self.assertIn("--bundle-dir", script)
+        self.assertNotIn("--ensure", script)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                ["bash", str(launcher)],
+                cwd=REPO_ROOT, check=False, text=True,
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env={**os.environ, "DEDIREN_CACHE_DIR": temp_dir},
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("not starting the MCP server", result.stderr)
+            self.assertEqual(list(Path(temp_dir).rglob("*")), [], "launcher must not download")
+
     def test_mcp_server_exposes_the_three_tools_the_skill_drives(self) -> None:
         """The shipped surface: the bundled `dediren mcp` stdio server the plugin
         declares exposes dediren_validate / dediren_build / dediren_guide, and a

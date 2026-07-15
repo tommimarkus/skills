@@ -11,14 +11,23 @@ is this skill's absolute directory, established in `SKILL.md` from the
 
 ## Server availability
 
-The bundled server downloads the pinned Java™-backed runtime on first use (into
-`${CLAUDE_PLUGIN_DATA}`) and needs Java™ 21 or newer on the host — exactly as a
-Node- or Python-based plugin MCP server needs its runtime installed. If the
-`dediren_*` tools are not present (the server failed to start: no Java™ 21+, or the
-bundle could not be downloaded), disclose `not run (dediren MCP server
-unavailable)` and cap at `source-valid` — authoring and hand-written source
-validation remain available; this is a capability cap, not a hard stop. Do not ask
-the user to install or launch Dediren; the plugin owns that.
+The bundled server needs the pinned Java™-backed runtime on the host (Java™ 21 or
+newer) — exactly as a Node- or Python-based plugin MCP server needs its runtime
+installed. To keep every session cheap, the launcher does **no session-start
+download**: it starts the MCP server only when the pinned bundle is already resolved
+on disk, and otherwise fail-fasts, so the `dediren_*` tools are simply absent.
+
+When the tools are absent — bundle not resolved yet, or Java™ 21+ missing — fall back
+to the **internal CLI lane**: `dediren-build.py run` (below) resolves the bundle on
+demand and drives the same runtime through the CLI, and the resolver provides the
+binary for the validate fallback. This is internal machinery; the user never types a
+dediren command. The fallback resolves into the same `${CLAUDE_PLUGIN_DATA}` cache the
+server checks, so a first-use resolution warms the MCP server for the next session (or
+after `/reload-plugins`). Only when the fallback itself cannot resolve a Java™ 21+
+runtime do you disclose `not run (dediren runtime unavailable)` and cap at
+`source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
+footer (`Dediren: MCP server | CLI fallback | not run`). Do not ask the user to
+install or launch Dediren; the plugin owns that.
 
 Every tool path must resolve inside the server's `--root` (the project directory),
 and so must every `fragments[]` path inside a source you pass. A path that escapes
@@ -39,6 +48,13 @@ validation envelope; `dediren_validate` without a `profile` proves schema only. 
 `generic-graph`, `elk-layout`, `render`; set `plugins.generic-graph.semantic_profile`
 to `archimate` or `uml` in the source, and add `archimate-oef` only when OEF export
 is requested, `uml-xmi` only when XMI export is requested.
+
+When the MCP server is unavailable, run the same validation through the internal CLI
+lane (§ Server availability): resolve the binary with
+`DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"`, then
+`"$DEDIREN" validate --input <pkg>/model.json` for schema and
+`"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
+semantic gate. This is the same evidence, obtained without the server.
 
 ## Format guide
 
@@ -94,6 +110,12 @@ the remapping so you never do path arithmetic by hand:
    the staging dir. Exit `0` all declared artifacts materialized; `1` one was
    missing or empty; `2` a package/usage error. Read the per-view/-export lines it
    prints.
+
+When the MCP server is unavailable, build through the internal CLI lane in one call —
+`"$SKILL_DIR"/references/scripts/dediren-build.py run <pkg>` — which resolves the
+bundle on demand, drives the same builds through the CLI, and materializes exactly as
+`map`. Same output; exit `3` if the runtime cannot be resolved. Prefer the MCP tools
+when the server is up; use `run` only as the fallback.
 
 Semantic `dediren_validate` (above) still gates `source-valid` — run it first.
 Rendered SVGs land raw, so the accessible-name step below is still required, and a

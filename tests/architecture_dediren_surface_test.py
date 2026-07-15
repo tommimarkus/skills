@@ -434,7 +434,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "in-build layout",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
-                "bundled Dediren MCP server's availability and runtime",
+                "which Dediren lane ran",
                 "Runtime semantics",
                 "are defined in `architecture.md` §9",
             ],
@@ -502,8 +502,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for phrase in expected_phrases:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self_check)
-        # The decomposed dediren CLI chain is retired; the skill drives the MCP tools.
-        for absent in ['"$DEDIREN"', "layout --plugin elk-layout", "project --target layout-request"]:
+        # The decomposed per-stage chain is retired; the skill drives the MCP tools,
+        # with only a compact internal CLI fallback (`dediren-build.py run` + a
+        # validate command) for a cold server.
+        self.assertIn("dediren-build.py run", self_check)
+        for absent in ["layout --plugin elk-layout", "project --target layout-request"]:
             with self.subTest(absent=absent):
                 self.assertNotIn(absent, self_check)
 
