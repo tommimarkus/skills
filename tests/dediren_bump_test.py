@@ -162,6 +162,45 @@ class BumpTest(unittest.TestCase):
                 db.bump(root, NEW)
 
 
+class HistoricalMarkerTest(unittest.TestCase):
+    """A pin bump must move live pins but leave 'Dediren <version>' release markers — the
+    version a capability first landed in — fixed, even when a marker cites the version
+    being bumped away from (the case a blanket old->new replace silently corrupts)."""
+
+    def test_scoped_replace_moves_pins_but_protects_runtime_qualified_markers(self):
+        text = (
+            'DEDIREN_VERSION_DEFAULT="2026.07.19"\n'
+            '  {"id": "x", "version": "2026.07.19"}\n'
+            "verified on the pinned 2026.07.19 bundle\n"
+            "Dediren 2026.07.19 added the mcp server\n"  # historical marker: must stay
+        )
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 3)  # the three live pins move; the marker does not
+        self.assertIn('DEDIREN_VERSION_DEFAULT="2099.12.7"', out)
+        self.assertIn('"version": "2099.12.7"', out)
+        self.assertIn("pinned 2099.12.7 bundle", out)
+        self.assertIn("Dediren 2026.07.19 added the mcp server", out)
+        self.assertNotIn("Dediren 2099.12.7", out)
+
+    def test_bump_preserves_marker_citing_the_current_pin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_temp_repo(Path(tmp))
+            grounding_path = root / SOURCE_GROUNDING_REL
+            grounding_path.write_text(
+                grounding_path.read_text(encoding="utf-8")
+                + f"\n- Dediren {CURRENT} first shipped the widget; "
+                f"verified on the pinned {CURRENT} bundle.\n",
+                encoding="utf-8",
+            )
+            db.bump(root, NEW)
+            after = grounding_path.read_text(encoding="utf-8")
+            # Historical "Dediren <CURRENT>" marker stays fixed...
+            self.assertIn(f"Dediren {CURRENT} first shipped the widget", after)
+            # ...while every live "pinned <CURRENT>" claim moved to NEW.
+            self.assertIn(f"pinned {NEW} bundle", after)
+            self.assertNotIn(f"pinned {CURRENT} bundle", after)
+
+
 class VerifyTest(unittest.TestCase):
     def test_reports_mismatches(self):
         with tempfile.TemporaryDirectory() as tmp:
