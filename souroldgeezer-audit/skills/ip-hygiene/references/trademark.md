@@ -6,7 +6,8 @@ Load this when triage Q1 hits.
 
 Treat these as public-visible unless target repo guidance says otherwise:
 `README.md`, `AGENTS.md`, `CLAUDE.md`, marketplace manifests, plugin manifests,
-and frontmatter `description:` fields, plus shipped rendered artifacts (galleries, published docs pages).
+and frontmatter `description:` fields, plus shipped rendered artifacts
+(galleries, published docs pages).
 
 ## Convention
 
@@ -41,7 +42,9 @@ holder policy or repo guidance requires them.
   package, and repo names): a third-party mark may appear only as a
   trailing compatibility descriptor under your own leading brand, never as
   the artifact's own brand; check the holder's naming rules before keeping
-  one.
+  one. A bare per-technology filename inside your own artifact (an
+  extension or config file named after the target stack) is a descriptive
+  descriptor, not an artifact brand.
 - Do not add `®` to a mark without a verified registration in the relevant
   register; use `™` when a mark is claimed but registration is unverified.
   A false `®` claim is a misleading commercial practice (UCPD 2005/29/EC).

@@ -20,5 +20,5 @@ If any condition fails, defer and flag.
 
 ## Output Templates
 
-- `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>]`
+- `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>]; consequence: <effect if unaddressed>`
 - `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`
