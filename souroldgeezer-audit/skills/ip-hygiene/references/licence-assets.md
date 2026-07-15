@@ -11,6 +11,13 @@ schemas, samples, binaries, logos, SDKs, or other bundled assets.
 - Do not bundle GPL-family, AGPL, LGPL, CC BY-SA, or unclear-licence content
   into a permissive plugin/skill bundle without an explicit compatible
   distribution decision.
+- Do not bundle CC BY-NC / CC BY-ND or other use-restricted content into a
+  permissive plugin/skill bundle; reference it by canonical URL instead.
+- No licence statement means all rights reserved; treat unlicensed
+  third-party content as non-bundleable.
+- Attribution and integrity (moral) rights can persist independent of the
+  licence in EU member states; keep author attribution when reproducing
+  permitted material (fonts add reserved-name conditions under the OFL).
 - Apache 2.0, BSD, MIT, public-domain, CC0, and clearly compatible assets may
   be bundled only after verifying the specific file licence and preserving
   required attribution.
