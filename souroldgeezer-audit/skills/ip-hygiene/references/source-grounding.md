@@ -19,3 +19,8 @@ external docs.
   `souroldgeezer-audit/docs/audit-reference/materiality.md`.
   Handling: local bundled references owned by this repo; eval cases exercise
   audit craft and materiality output contracts and do not reproduce rubric prose.
+- Source: `souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/`.
+  Handling: repo-authored planted-defect fixtures scoring recall and
+  false-positive rate; every case declares its third party or upstream as
+  fictional (FictionalCloud, FictionalMark, ExampleLib, Synthetic Docs Ltd)
+  inline, and no content is copied from any real source.
