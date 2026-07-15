@@ -178,6 +178,17 @@ or important enough to rerun after every change. Prose should explain why a
 rule matters and how to interpret edge cases; scripts should calculate what can
 be calculated.
 
+A bundled compensating script is not automatically a thin shim just because a
+pinned upstream runtime ships a new tool surface (for example an MCP server)
+that appears to subsume it. Before migrating or deleting it, enumerate what it
+does *beyond* invoking the runtime and attribute each responsibility to either
+an upstream capability gap or a local convention of ours. When the new surface
+has the same shape as the old one, those gaps persist — migrating cannot remove
+the compensating layer, it only relocates tested machinery into per-run model
+judgment, the silent-corruption class the script existed to prevent. Keep the
+script for the gap lanes, file the capability gaps upstream, and migrate only the
+lanes where the new surface is a genuine switch.
+
 When a gate or pre-filter is meant to widen what gets caught, check it against
 each subclass of the target signal: a heuristic can silently exclude the very
 case it was added for (e.g. a turn-count filter drops single-turn self-correction).
