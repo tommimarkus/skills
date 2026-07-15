@@ -224,13 +224,30 @@ download_release() {
 }
 
 ensure_bundle() {
-  local bin manifest
+  local bin manifest lock_file
   bin="$(binary_path)"
   manifest="$(bundle_dir)/bundle.json"
 
-  if [ ! -x "$bin" ] || [ ! -f "$manifest" ]; then
-    download_release
+  if [ -x "$bin" ] && [ -f "$manifest" ]; then
+    return 0
   fi
+
+  # The plugin's bundled MCP server auto-starts per session, so several sessions
+  # can resolve the bundle at once against a shared DEDIREN_CACHE_DIR. Serialize
+  # the extract/install (download_release's rm -rf + mv) so a concurrent resolver
+  # cannot observe or clobber a half-installed bundle. flock is best-effort: where
+  # it is unavailable, fall back to the bare download (prior behavior).
+  mkdir -p "$DEDIREN_CACHE_DIR"
+  if command -v flock >/dev/null 2>&1; then
+    lock_file="$DEDIREN_CACHE_DIR/.dediren-$DEDIREN_VERSION.lock"
+    exec 9>"$lock_file"
+    flock 9
+    # Re-check under the lock: another resolver may have finished while we waited.
+    if [ -x "$bin" ] && [ -f "$manifest" ]; then
+      return 0
+    fi
+  fi
+  download_release
 }
 
 ensure_runtime() {

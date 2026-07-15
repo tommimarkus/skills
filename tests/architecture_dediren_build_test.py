@@ -1,8 +1,11 @@
-"""Coverage for the architecture-design one-shot build script.
+"""Coverage for the architecture-design plan/map build helper.
 
-The pure tests (project.json normalization, envelope unwrapping, refusal cases) always
-run. The end-to-end tests drive the real pinned dediren runtime and are gated behind
-DEDIREN_RELEASE_SMOKE=1, like the release suite beside them.
+The skill drives dediren through the bundled MCP server's `dediren_build` tool; this
+helper owns the two deterministic halves the tool does not — planning the tool calls
+and mapping their `<out>/<view-id>/` output into the canonical `project.json` paths.
+The pure tests (normalize, plan, envelope unwrap, map) always run. The end-to-end map
+smoke drives the real pinned runtime to populate a staging dir and is gated behind
+DEDIREN_RELEASE_SMOKE=1, like the release suite beside it.
 """
 import importlib.util
 import json
@@ -16,6 +19,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SKILL = REPO / "souroldgeezer-architecture" / "skills" / "architecture-design"
 SCRIPT = SKILL / "references" / "scripts" / "dediren-build.py"
+RELEASE_SCRIPT = SKILL / "references" / "scripts" / "dediren-release.sh"
 FIXTURES = SKILL / "references" / "fixtures" / "dediren"
 
 
@@ -59,7 +63,7 @@ class NormalizeTest(unittest.TestCase):
             {"app-cooperation": "arch", "domain-class": "uml"},
         )
         # Distinct render policies per notation must survive normalization: they decide
-        # how many build invocations the render lane needs.
+        # how many dediren_build calls the render lane needs.
         self.assertEqual(
             {view["id"]: view["render_policy"] for view in views},
             {"app-cooperation": "render-policy.json", "domain-class": "render-policy-uml.json"},
@@ -94,6 +98,69 @@ class NormalizeTest(unittest.TestCase):
 
         with self.assertRaises(self.module.PackageError):
             self.module.normalize(project)
+
+
+class PlanTest(unittest.TestCase):
+    """`plan` emits exactly the dediren_build MCP calls a package needs."""
+
+    def setUp(self):
+        self.module = load_module()
+
+    def _plan(self, name, views_filter=None, no_export=False):
+        pkg = FIXTURES / name
+        models, views, exports = self.module.normalize(
+            json.loads((pkg / "project.json").read_text(encoding="utf-8"))
+        )
+        views, exports = self.module.select(views, exports, views_filter, no_export)
+        return self.module.plan(pkg, models, views, exports)
+
+    def test_v1_plan_is_one_render_call_and_one_export_call(self):
+        calls = self._plan("basic")["calls"]
+
+        self.assertEqual([c["tool"] for c in calls], ["dediren_build", "dediren_build"])
+        render, export = calls
+        # Every call writes into the one staging dir; each view lands under <out>/<view>/.
+        self.assertTrue(all(c["arguments"]["out"].endswith(self.module.STAGING_DIR) for c in calls))
+        self.assertEqual(render["arguments"]["views"], ["main"])
+        self.assertTrue(render["arguments"]["source"].endswith("model.json"))
+        self.assertTrue(render["arguments"]["render_policy"].endswith("render-policy.json"))
+        self.assertEqual(render["arguments"]["emit"], list(self.module.EMIT_KINDS))
+        self.assertNotIn("oef_policy", render["arguments"])
+        # Export is a single-view call so the OEF identity fields are its own.
+        self.assertEqual(export["arguments"]["views"], ["main"])
+        self.assertTrue(export["arguments"]["oef_policy"].endswith("export-policy.json"))
+        self.assertNotIn("render_policy", export["arguments"])
+
+    def test_v2_plan_splits_render_by_policy_and_scopes_each_export(self):
+        calls = self._plan("mixed")["calls"]
+        render = [c["arguments"] for c in calls if "render_policy" in c["arguments"]]
+        oef = [c["arguments"] for c in calls if "oef_policy" in c["arguments"]]
+        xmi = [c["arguments"] for c in calls if "xmi_policy" in c["arguments"]]
+
+        # Distinct notations => distinct render policies => one render call each.
+        self.assertEqual(
+            sorted(tuple(a["views"]) for a in render), [("app-cooperation",), ("domain-class",)]
+        )
+        self.assertEqual([a["views"] for a in oef], [["app-cooperation"]])
+        self.assertEqual([a["views"] for a in xmi], [["domain-class"]])
+
+    def test_views_filter_scopes_plan_and_drops_the_other_export(self):
+        calls = self._plan("mixed", views_filter="domain-class")["calls"]
+        views = {tuple(c["arguments"]["views"]) for c in calls}
+
+        self.assertEqual(views, {("domain-class",)})
+        self.assertTrue(any("xmi_policy" in c["arguments"] for c in calls))
+        self.assertFalse(any("oef_policy" in c["arguments"] for c in calls))
+
+    def test_no_export_drops_every_export_call(self):
+        calls = self._plan("basic", no_export=True)["calls"]
+
+        self.assertEqual(len(calls), 1)
+        self.assertIn("render_policy", calls[0]["arguments"])
+
+    def test_unknown_view_filter_is_refused(self):
+        with self.assertRaises(self.module.PackageError):
+            self._plan("basic", views_filter="ghost")
 
 
 class EnvelopeTest(unittest.TestCase):
@@ -131,115 +198,124 @@ class EnvelopeTest(unittest.TestCase):
                 self.module.payload_of(document)
 
 
-class BuildEndToEndTest(unittest.TestCase):
-    """Drives the real pinned runtime over the shipped fixture packages."""
+class MapTest(unittest.TestCase):
+    """`map` drains a staging dir into the canonical project.json paths."""
 
-    def run_build(self, package, *args):
-        env = os.environ.copy()
-        # The OEF/XMI lanes fetch their XSDs into a cache dir; keep it inside the
-        # sandbox-writable temp tree rather than the user's home cache.
-        env.setdefault("DEDIREN_SCHEMA_CACHE_DIR", str(Path(tempfile.gettempdir()) / "dediren-schemas"))
-        return subprocess.run(
-            ["python3", str(SCRIPT), str(package), *args],
-            check=False,
-            text=True,
-            capture_output=True,
-            env=env,
-        )
+    def setUp(self):
+        self.module = load_module()
 
-    def stage(self, name):
+    def _stage(self, name):
         tmp = tempfile.mkdtemp(prefix=f"pkg-{name}-")
         self.addCleanup(shutil.rmtree, tmp, True)
-        package = Path(tmp) / name
-        shutil.copytree(FIXTURES / name, package)
-        return package
+        pkg = Path(tmp) / name
+        shutil.copytree(FIXTURES / name, pkg)
+        return pkg
 
-    def test_v1_package_builds_every_declared_artifact_in_one_pass(self):
+    def _write_view_stage(self, pkg, view_id, *, oef=False, xmi=False):
+        stage = pkg / self.module.STAGING_DIR / view_id
+        stage.mkdir(parents=True)
+        (stage / "diagram.svg").write_text("<svg></svg>", encoding="utf-8")
+        for kind in ("render-metadata", "layout-result"):
+            (stage / f"{kind}.json").write_text(
+                json.dumps({"status": "ok", "data": {"nodes": {}, "kind": kind}}), encoding="utf-8"
+            )
+        if oef:
+            (stage / "oef.xml").write_text("<model/>", encoding="utf-8")
+        if xmi:
+            (stage / "xmi.xml").write_text("<xmi/>", encoding="utf-8")
+
+    def _run_map(self, pkg):
+        return self.module.main(["map", str(pkg), "--json"])
+
+    def test_map_moves_artifacts_and_unwraps_emitted_envelopes(self):
+        pkg = self._stage("basic")
+        self._write_view_stage(pkg, "main", oef=True)
+
+        rc = self._run_map(pkg)
+
+        self.assertEqual(rc, 0)
+        self.assertTrue((pkg / "generated/svg/main.svg").is_file())
+        self.assertTrue((pkg / "generated/export/basic.oef.xml").is_file())
+        metadata = json.loads((pkg / "generated/render-metadata/main.json").read_text())
+        # The emitted envelope's .data payload is stored, not the envelope itself.
+        self.assertNotIn("data", metadata)
+        self.assertNotIn("envelope_schema_version", metadata)
+        self.assertEqual(metadata["kind"], "render-metadata")
+        # Staging is drained after a successful map.
+        self.assertFalse((pkg / self.module.STAGING_DIR).exists())
+
+    def test_map_reports_error_and_exit_1_for_a_missing_declared_artifact(self):
+        pkg = self._stage("basic")
+        # Stage the render lane but not the export lane the package declares.
+        self._write_view_stage(pkg, "main", oef=False)
+
+        rc = self._run_map(pkg)
+
+        self.assertEqual(rc, 1)
+        # The render view still materialized; only the export is the error.
+        self.assertTrue((pkg / "generated/svg/main.svg").is_file())
+        self.assertFalse((pkg / "generated/export/basic.oef.xml").exists())
+
+    def test_map_without_a_staging_dir_is_a_usage_error(self):
+        pkg = self._stage("basic")
+
+        rc = self._run_map(pkg)
+
+        self.assertEqual(rc, 2)
+
+
+class MapSmokeTest(unittest.TestCase):
+    """Drains a staging dir populated by the real pinned runtime (gated)."""
+
+    def setUp(self):
+        self.module = load_module()
+
+    def _resolve_dediren(self):
+        proc = subprocess.run(
+            ["bash", str(RELEASE_SCRIPT), "--ensure"],
+            check=False, text=True, capture_output=True,
+        )
+        if proc.returncode != 0:
+            raise AssertionError(f"resolver failed: {proc.stderr}")
+        return proc.stdout.strip()
+
+    def test_real_build_output_maps_to_canonical_paths(self):
         require_smoke()
-        package = self.stage("basic")
+        dediren = self._resolve_dediren()
+        tmp = tempfile.mkdtemp(prefix="pkg-mapsmoke-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        pkg = Path(tmp) / "basic"
+        shutil.copytree(FIXTURES / "basic", pkg)
 
-        result = self.run_build(package, "--json")
+        # The MCP dediren_build tool writes <out>/<view>/diagram.svg identically to the
+        # CLI build; stage via the CLI (same engine) so this test exercises map, not the
+        # MCP transport (which the release suite's mcp smoke covers).
+        staging = pkg / self.module.STAGING_DIR
+        env = os.environ.copy()
+        env.setdefault("DEDIREN_SCHEMA_CACHE_DIR", str(Path(tempfile.gettempdir()) / "dediren-schemas"))
+        subprocess.run(
+            [dediren, "build", "--input", str(pkg / "model.json"), "--out", str(staging),
+             "--views", "main", "--render-policy", str(pkg / "render-policy.json"),
+             "--emit", "render-metadata,layout-result"],
+            check=True, text=True, capture_output=True, env=env,
+        )
+        subprocess.run(
+            [dediren, "build", "--input", str(pkg / "model.json"), "--out", str(staging),
+             "--views", "main", "--oef-policy", str(pkg / "export-policy.json")],
+            check=True, text=True, capture_output=True, env=env,
+        )
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        summary = json.loads(result.stdout)
-        self.assertEqual(summary["status"], "ok")
-        self.assertEqual([view["status"] for view in summary["views"]], ["ok"])
-        self.assertEqual([e["status"] for e in summary["exports"]], ["ok"])
+        rc = self.module.main(["map", str(pkg), "--json"])
 
-        for declared in [
+        self.assertEqual(rc, 0)
+        for declared in (
             "generated/svg/main.svg",
             "generated/render-metadata/main.json",
             "generated/layout/main.json",
             "generated/export/basic.oef.xml",
-        ]:
+        ):
             with self.subTest(declared=declared):
-                artifact = package / declared
-                self.assertTrue(artifact.is_file(), declared)
-                self.assertGreater(artifact.stat().st_size, 0, declared)
-
-    def test_emitted_stage_artifacts_land_unwrapped_not_as_envelopes(self):
-        require_smoke()
-        package = self.stage("basic")
-
-        self.assertEqual(self.run_build(package, "--no-export").returncode, 0)
-
-        metadata = json.loads((package / "generated/render-metadata/main.json").read_text())
-        self.assertNotIn("envelope_schema_version", metadata)
-        self.assertNotIn("data", metadata)
-        self.assertIn("nodes", metadata)
-        self.assertEqual(metadata["semantic_profile"], "archimate")
-
-        layout = json.loads((package / "generated/layout/main.json").read_text())
-        self.assertNotIn("envelope_schema_version", layout)
-        self.assertIn("nodes", layout)
-
-    def test_v2_multimodel_package_routes_each_view_to_its_own_notation(self):
-        require_smoke()
-        package = self.stage("mixed")
-
-        result = self.run_build(package, "--json")
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        summary = json.loads(result.stdout)
-        self.assertEqual(summary["status"], "ok")
-        self.assertEqual(
-            {view["view"]: view["status"] for view in summary["views"]},
-            {"app-cooperation": "ok", "domain-class": "ok"},
-        )
-
-        profiles = {
-            view: json.loads((package / f"generated/render-metadata/{view}.json").read_text())[
-                "semantic_profile"
-            ]
-            for view in ("app-cooperation", "domain-class")
-        }
-        self.assertEqual(profiles, {"app-cooperation": "archimate", "domain-class": "uml"})
-
-        for declared in ("generated/export/mixed.oef.xml", "generated/export/mixed.uml.xmi"):
-            with self.subTest(declared=declared):
-                self.assertGreater((package / declared).stat().st_size, 0)
-
-    def test_views_flag_scopes_the_build_and_its_exports(self):
-        require_smoke()
-        package = self.stage("mixed")
-
-        result = self.run_build(package, "--views", "domain-class", "--json")
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        summary = json.loads(result.stdout)
-        self.assertEqual([view["view"] for view in summary["views"]], ["domain-class"])
-        # The OEF export belongs to the view we did not build, so it must not run.
-        self.assertEqual([e["export"] for e in summary["exports"]], ["uml-xmi"])
-        self.assertFalse((package / "generated/svg/app-cooperation.svg").exists())
-
-    def test_unknown_view_is_a_usage_error(self):
-        require_smoke()
-        package = self.stage("basic")
-
-        result = self.run_build(package, "--views", "ghost")
-
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("unknown view", result.stderr)
+                self.assertGreater((pkg / declared).stat().st_size, 0, declared)
 
 
 if __name__ == "__main__":
