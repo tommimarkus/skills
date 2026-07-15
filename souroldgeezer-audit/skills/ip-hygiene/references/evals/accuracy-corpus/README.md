@@ -7,4 +7,7 @@ compare emitted findings to `expected.jsonl` (match on case id + bucket),
 and report recall (expected found / expected) and false positives
 (unexpected findings). Every file here is repo-authored; nothing is copied
 from any third-party source. `cases/c6-clean-control` MUST stay
-finding-free — it is the false-positive control.
+finding-free — it is the false-positive control. A `stopped:` output line
+whose question names a case's planted issue counts as a recall hit for
+that case; its bucket matches when the stop reason concerns that bucket's
+subject matter.

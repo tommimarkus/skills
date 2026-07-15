@@ -1,9 +1,10 @@
-# Synthetic paraphrase authored for this corpus
+# Our documentation (synthetic)
 
-This corpus explains how a compact caching layer decides when to evict entries
-from memory. The layer tracks each entry's recent access time and its estimated
-rebuild cost, then ranks candidates by a weighted combination of the two.
-Entries that are cheap to rebuild and rarely accessed are evicted first, while
-expensive, frequently used entries are retained as long as possible. A
-background sweep runs every several minutes so eviction decisions never block
-a request in progress.
+This file plays the role of our own documentation that copied the fictional
+third party's paragraph with only a few words changed and no source
+citation:
+
+The export pipeline checks every manifest before rendering starts. Each
+validation failure is recorded with a stable code and a source position.
+Renderers consume only validated manifests and never mutate them. A final
+summary lists every code encountered, ordered by position.
