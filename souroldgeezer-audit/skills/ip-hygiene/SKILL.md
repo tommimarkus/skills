@@ -47,7 +47,7 @@ Load only hit buckets:
 - following a pre-split citation that targets `ip-hygiene-reference.md`: [references/ip-hygiene-reference.md](references/ip-hygiene-reference.md)
 
 When changing this skill's trigger/workflow/gates/source/evals, inspect
-`references/evals/` and [references/source-grounding.md](references/source-grounding.md).
+`references/evals/` (including `references/evals/accuracy-corpus/`) and [references/source-grounding.md](references/source-grounding.md).
 Evals stay synthetic or originally paraphrased.
 
 ## Core Conformance

@@ -1,0 +1,6 @@
+{"case":"c1-mark-led-name","bucket":"trademark","expect":"finding","note":"third-party mark as leading artifact brand"}
+{"case":"c2-false-registration","bucket":"trademark","expect":"finding","note":"registration symbol without verified registration"}
+{"case":"c3-dropped-notice","bucket":"copyright","expect":"finding","note":"permissive snippet incorporated without its notice"}
+{"case":"c4-vendored-no-license","bucket":"licence/assets","expect":"finding","note":"vendored dir with no licence file"}
+{"case":"c5-near-verbatim","bucket":"copyright","expect":"finding","note":"near-verbatim copy of the synthetic source"}
+{"case":"c6-clean-control","bucket":"none","expect":"no-finding","note":"false-positive control"}
