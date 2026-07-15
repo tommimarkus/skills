@@ -138,8 +138,7 @@ Build.
    rebuilds; a Lookup or a read-only Review that renders nothing does not). On a
    read-only pass, run `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` when a
    committed gallery may have drifted from its SVGs. The gallery is an outer
-   viewer over the static SVGs — distinct from a view's own render-policy
-   `interactive: html` wrapper. Disclose the outcome in the footer `Gallery:`
+   viewer over the static SVGs. Disclose the outcome in the footer `Gallery:`
    line. See [`references/gallery.md`](references/gallery.md).
 8. Stop when required evidence is missing, a dediren MCP tool returns an error
    envelope (or the server is unavailable), the notation is unsupported, or a

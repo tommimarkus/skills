@@ -167,13 +167,13 @@ the view-id fallback) and add the visible title:
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 `wrapping` / `routing`, plus the ELK Layered tuning knobs and per-node placement
 hints; enums and guidance in `architecture.md` §9) on the view in the source model,
-then rebuild. For navigable output, set the render policy `interactive` field (§3);
-static SVG is the default. After every render, verify the mode from the artifact
-before disclosing it — `grep -c '<script' <svg>` is `0` for a static policy and
-`≥ 1` when `interactive` scripts the SVG — and report that verified mode, never the
-policy intent, in the footer `Layout/render options` line. A mismatch is `ARCH-R-5`;
-a script despite a static policy additionally goes upstream under `Dediren tool
-issues` (`architecture.md` §9 render-mode check).
+then rebuild. Renders are static SVG (the runtime retired the interactive render
+policy, §3). After every render, verify the artifact is static before disclosing
+it — `grep -c '<script' <svg>` must be `0` — and report that verified static
+mode, never the policy intent, in the footer `Layout/render options` line. A
+`≥ 1` script count, or a footer that misreports the artifact, is `ARCH-R-5`; a
+script additionally goes upstream under `Dediren tool issues`
+(`architecture.md` §9 render-mode check).
 
 For a UML view whose render metadata authors association end adornments (edge
 `properties.source_role` / `target_role` / `source_multiplicity` /

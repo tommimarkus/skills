@@ -173,36 +173,27 @@ matches the render policy profile.
 The `render` plugin emits the SVG artifact that remains the canonical proof. It
 no longer produces PNG: Dediren dropped native raster rendering in 2026.07.13,
 retiring the `raster` render-policy block and the `png` `artifact_kind` so that
-only `svg` (plus interactive `html`) is returned. SVG stays the evidence of
+only `svg` is returned. SVG stays the evidence of
 record. When a consumer needs a bitmap, generate it downstream as a separate
 step by running the emitted SVG through any general-purpose SVG converter —
 librsvg's `rsvg-convert`, `resvg`, ImageMagick, and Inkscape each handle this.
 
-The render policy also controls SVG interactivity through the `interactive`
-field (`none` | `svg` | `html` | `both`; default `none`). On the pinned
-runtime the default emits a static SVG with no embedded script; runtimes
-≤ 2026.07.0 embedded a script regardless of policy, so always verify the mode
-from the emitted artifact, not the policy (§9 render-mode check). Opting in
-embeds a click-to-highlight script — clicking a node highlights its connected
-edges, clicking again or `Escape` clears, and the policy `style.interaction`
-block styles the highlight stroke: `svg` scripts the SVG artifact, `html`
-emits an HTML wrapper artifact, `both` emits both. The embedded interactivity
-is mouse-only — nodes are not focusable, leaving `Escape`-clear the only
-keyboard operation (WCAG 2.2 SC 2.1.1) — carries no visible affordance or
-hint, and is inert when the SVG is embedded through `<img>` or markdown image
-syntax. Offer it only when the audience opens the artifact directly in a
-browser, tell them how to operate it, and disclose the verified mode and
-these limits in the footer `Layout/render options` line. The selected release
-bundle ships `interactive-svg` and `rich-svg` render-policy fixtures as
-starting points for navigable and richer-styled output, plus a `dark-svg`
-fixture (dark canvas, light labels) as a dark-theme starting point. A dark
-policy is still held to the same WCAG 2.2 SC 1.4.11 non-text and label-text
-contrast bars as a light one — verify contrast from the emitted artifact, not
-from the fixture's presence. Static SVG stays the default and the evidence of
-record; keep the `data-dediren-node-id` / `data-dediren-edge-id` markers
-required by §9.
+Renders are static SVG only. Dediren retired the interactive render policy
+(render-policy schema v3, 2026.07.18): the `interactive` field and the
+`style.interaction` block no longer exist, and there is no scripted-SVG or
+HTML-wrapper output. Still verify the mode from the emitted artifact, not the
+policy (§9 render-mode check): a `<script>` element is a defect — runtimes
+≤ 2026.07.0 embedded a click-to-highlight script regardless of policy — reported
+as `ARCH-R-5` plus a `Dediren tool issues` entry, never disclosed as intended
+output. The selected release bundle ships `rich-svg` (richer-styled) and
+`dark-svg` (dark canvas, light labels) render-policy fixtures as starting
+points. A dark policy is still held to the same WCAG 2.2 SC 1.4.11 non-text and
+label-text contrast bars as a light one — verify contrast from the emitted
+artifact, not from the fixture's presence. Static SVG stays the default and the
+evidence of record; keep the `data-dediren-node-id` / `data-dediren-edge-id`
+markers required by §9.
 
-Separately from a view's own interactivity, the skill can emit a package-level
+Beyond the per-view SVG, the skill can emit a package-level
 **shareable gallery** — one self-contained `gallery.html` inside the package that
 inlines every view's SVG as an inert `<template>`, with a notation-grouped
 register, zoom, light/dark theme, deep-linking, and keyboard navigation. It is
@@ -700,16 +691,13 @@ Render-ready requires inspecting SVG for:
   when the view declares its architecture question (post-render step above);
 - a visible per-view title block so the artifact stays identifiable when
   embedded outside the package;
-- interactivity that matches the render policy and the footer disclosure
-  (render-mode check): with `interactive` unset or `none`, no `<script>`
-  element — an embedded script despite a static policy is `ARCH-R-5` plus a
-  `Dediren tool issues` entry (runtimes ≤ 2026.07.0 scripted every SVG); with
-  `interactive` set, the expected artifacts present (`svg` scripted SVG,
-  `html` HTML wrapper, `both` both) and the §3 mouse-only and embedding
-  limits disclosed. Read the mode from artifact content — the render envelope
-  discloses only `artifact_kind` — and report that verified mode, never the
-  policy intent, in the footer `Layout/render options` line (a mismatch is
-  `ARCH-R-5`);
+- a static render (render-mode check): no `<script>` element — renders are
+  static-only since the runtime retired the interactive render policy, so an
+  embedded script is `ARCH-R-5` plus a `Dediren tool issues` entry (runtimes
+  ≤ 2026.07.0 scripted every SVG regardless of policy). Read the mode from
+  artifact content — the render envelope discloses only `artifact_kind` — and
+  report that verified static mode, never the policy intent, in the footer
+  `Layout/render options` line (a misreport is `ARCH-R-5`);
 - labels and markers that do not obscure the main architecture path;
 - for a UML view, authored association end adornments carried by the view's
   render metadata (edge `properties.source_role` / `target_role` /

@@ -62,19 +62,19 @@ route-congested, group-imbalanced, or mixed concerns. Tune `layout_preferences`
 or splitting. Missing `architecture.md` §9 accessible-name markup or visible
 title on rendered evidence is `ARCH-R-2`.
 
-Render mode: the footer `Layout/render options` line reports the mode
-verified from the emitted artifact (`architecture.md` §9 render-mode check),
-never the render-policy intent. A policy/artifact/footer mismatch is
-`ARCH-R-5`; a script despite a static policy adds a `Dediren tool issues`
-entry. When interactive output ships, disclose the `architecture.md` §3
-mouse-only and embedding limits to the audience.
+Render mode: renders are static SVG. The footer `Layout/render options` line
+reports the mode verified from the emitted artifact (`architecture.md` §9
+render-mode check), never the render-policy intent. A `<script>` in the
+artifact, or a footer that misreports the artifact, is `ARCH-R-5`; a script
+also adds a `Dediren tool issues` entry (the runtime retired interactive SVG,
+so a script is an upstream defect).
 
 Gallery: when a run (re)generates SVG output, the package-level shareable
 `gallery.html` is rebuilt (`references/gallery.md`) and its state reported on the
-footer `Gallery:` line. It is an outer viewer over the static SVGs — not a view's
-own `interactive: html` wrapper, so it never bears on the render-mode check. A
-committed gallery that has drifted from its SVGs (detected via
-`build-gallery.py --check`) is an `ARCH-R-2` render-evidence finding.
+footer `Gallery:` line. It is an outer viewer over the static SVGs and never
+bears on the per-view render-mode check. A committed gallery that has drifted
+from its SVGs (detected via `build-gallery.py --check`) is an `ARCH-R-2`
+render-evidence finding.
 
 Source-weighted choices: `<n>`; low-confidence: `<n>`; architect-owned: `<n>`.
 Use `Notable choices` only for non-obvious or challenged decisions:
@@ -131,7 +131,7 @@ Semantic grouping: layout-only groups are not ArchiMate Grouping elements | sema
 Customization profile: none | local properties | profile/attribute/specialization documented
 Unsupported ArchiMate concepts: relationship connectors and junctions unsupported in dediren package source | none
 Grouped layout fallback: not needed | used ungrouped fallback | not run
-Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free) | interactive <svg|html|both> (verified; mouse-only limits disclosed)
+Layout/render options: layout_preferences none | <view: knobs>; render static SVG (verified script-free)
 Gallery: built (<n> views) <path> | refreshed | stale (run build-gallery) | not built (<reason>) | not applicable (no render this run)
 Implementation readiness: sufficient | partial | insufficient | not assessed
 Build readiness disclosure: <n> of 7 concern classes present; absent <list|none> | not build mode

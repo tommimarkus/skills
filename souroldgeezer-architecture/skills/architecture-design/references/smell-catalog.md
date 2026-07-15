@@ -32,11 +32,10 @@ Severity: `block` invalid source or failed projection/layout/render/export;
   present in the view's render metadata (`architecture.md` §9 end-adornment
   coverage check); or a package gallery drifted from its SVGs.
 - `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
-- `ARCH-R-5`: emitted artifact interactivity contradicts the render policy or
-  the footer disclosure: a `<script>` despite `interactive` unset/`none`, a
-  missing script or artifact kind when `interactive` is set, or a
-  `Layout/render options` line that misreports what the artifact contains
-  (`architecture.md` §9 render-mode check).
+- `ARCH-R-5`: emitted SVG is not static as required: a `<script>` element in the
+  rendered artifact (renders are static-only — the runtime retired the
+  interactive render policy), or a `Layout/render options` line that misreports
+  what the artifact contains (`architecture.md` §9 render-mode check).
 - `ARCH-E-4`: committed export output is stale against current package source or layout evidence.
 - `ARCH-Q-1`: claimed quality level exceeds the validation stages actually proven.
 - `ARCH-Q-4`: required output footer fields are missing or mutually inconsistent (a quality-level over-claim is `ARCH-Q-1`).
