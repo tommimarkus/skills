@@ -24,6 +24,8 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             "references/authority-index.md",
             "references/copyright.md",
             "references/drive-by.md",
+            "references/evals/accuracy-corpus/README.md",
+            "references/evals/accuracy-corpus/expected.jsonl",
             "references/evals/behavior-cases.jsonl",
             "references/evals/trigger-cases.jsonl",
             "references/fence-posts.md",

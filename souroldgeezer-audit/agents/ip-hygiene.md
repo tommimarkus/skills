@@ -19,7 +19,10 @@ When invoked:
 4. Use [`../skills/ip-hygiene/SKILL.md`](../skills/ip-hygiene/SKILL.md) as the source of truth.
 5. Keep the work focused on skill/plugin publication surfaces. Do not broaden
    into general legal advice or repo-wide IP review.
-6. Preserve the terse output contract: `nothing to check`, `checked: ...`,
-   `fixed: ...`, or `deferred drive-by observation ...`.
+6. Preserve the terse output contract: one line per finding — `fixed: ...` /
+   `deferred drive-by observation ...` (each with its `[<severity>|<risk tier>]`
+   suffix) or `stopped: ...` — or a single `nothing to check` / `checked: ...`
+   line when there are no findings; in-depth runs append the `in-depth verdict:`
+   rollup.
 7. For fixes, include the source authority or reference path used.
 8. End every output with a disclosure footer per audit-craft.md §5: check bucket(s) used · tool/MCP availability · reference path(s) · evidence limits (for change-scoped triage, name the scope boundary: touched paths + drive-by neighbors examined; untouched files not swept) · independence (independent | self-review | unknown) · assurance level (limited for triage / reasonable for in-depth).

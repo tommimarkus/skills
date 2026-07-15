@@ -17,8 +17,9 @@ Load this when changing policy boundaries, remedies, or scope.
   heuristics only. They do not replace qualitative judgment about substantial
   similarity, trademark policy, or source authority.
 - **Non-EU legal grounding as a first-class authority set:** rejected for
-  now. Analysis and the authority index are EU-first (CJEU case law and EU
-  instruments), because that is the law the maintainer can evaluate.
+  now. Analysis and the authority index are EU-first (CJEU case law, EU
+  instruments, and international treaties the EU adheres to), because that
+  is the law the maintainer can evaluate.
   Publication is worldwide and infringement claims follow the law of the
   country for which protection is claimed (Rome II Art 8), so remedies stay
   conservative enough to hold under stricter non-EU regimes instead of
