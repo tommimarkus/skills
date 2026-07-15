@@ -22,6 +22,10 @@ Default convention: descriptive nominative references, no default per-mark
 attribution block, and mark-symbol handling driven by public-visible context.
 Treat this as a fallback project convention, not a universal legal rule.
 
+Legal grounding is EU-first (see
+[references/fence-posts.md](references/fence-posts.md)); remedies are chosen
+to hold under stricter regimes, and non-EU authority is persuasive-only.
+
 ## Scope
 
 Use this skill for skill/plugin publication surfaces: skills, agents,
@@ -40,7 +44,7 @@ Load only hit buckets:
 - Q5 drive-by: [references/drive-by.md](references/drive-by.md)
 - source authority: [references/authority-index.md](references/authority-index.md)
 - policy boundary changes: [references/fence-posts.md](references/fence-posts.md)
-- older links: [references/ip-hygiene-reference.md](references/ip-hygiene-reference.md)
+- following a pre-split citation that targets `ip-hygiene-reference.md`: [references/ip-hygiene-reference.md](references/ip-hygiene-reference.md)
 
 When changing this skill's trigger/workflow/gates/source/evals, inspect
 `references/evals/` and [references/source-grounding.md](references/source-grounding.md).
@@ -49,12 +53,12 @@ Evals stay synthetic or originally paraphrased.
 ## Core Conformance
 
 Apply audit core principles before judging:
-- Conform to `../../docs/audit-reference/audit-craft.md` §2 (skepticism,
+- Conform to [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2 (skepticism,
   criteria-citation, independence/self-review, false-positive discipline), §3
   (the full finding contract), and §5 (disclosure footer). This skill keeps
   its IP-issue finding shape and
   triage/in-depth modes in place of §4's Quick/Deep names or a smell catalog.
-- Apply `../../docs/audit-reference/materiality.md` risk tier where an IP
+- Apply [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) risk tier where an IP
   issue's consequence varies (e.g. published trademark vs internal note).
 
 ## Triage
@@ -86,6 +90,26 @@ Before finishing, answer:
    1-4, especially copied or linked by this edit?
 
 All no: exit with `nothing to check`. Any yes: load only the relevant bucket.
+
+## In-Depth
+
+Run in-depth instead of change-scoped triage when the user asks for it by
+name (in-depth, full, whole-surface), when repo guidance gates a breaking or
+additive change on an in-depth run, or when the requested scope is a whole
+plugin or publication surface rather than a change set. If the mode is
+ambiguous, ask.
+
+1. Enumerate the in-scope publication surfaces: skills, agents, references,
+   extensions, fixtures, templates, scripts, assets, manifests,
+   marketplace/runtime metadata, and guidance sections describing them.
+2. Run the objective pre-filter over the full enumeration.
+3. Answer the five triage questions per surface, loading every hit bucket.
+4. Tier each finding per the materiality reference (Core Conformance); when
+   enumeration exceeds budget, sample and project per audit-craft §6 and
+   disclose the sampling basis.
+5. Emit one Output Contract line per finding, then the closing rollup line
+   `in-depth verdict: <clean | N issue(s): <bucket counts>>`, and the
+   disclosure footer at reasonable assurance.
 
 ## Rationalization Gates
 
@@ -120,12 +144,19 @@ Stop and ask before finishing when:
 
 ## Output Contract
 
-Return exactly one of:
+Emit one line per finding; a single run may emit several. A run with no
+findings emits exactly one line: `nothing to check` (no triage hits) or
+`checked: <bucket list>; no IP hygiene changes needed`. Finding lines use
+one of:
 
-- `nothing to check`
-- `checked: <bucket list>; no IP hygiene changes needed`
-- `fixed: <path:line> - <remedy summary>; consequence: <effect if unaddressed>`
-- `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit`
+- `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>]; consequence: <effect if unaddressed>`
+- `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`
+- `stopped: <the load-bearing question>` (a Stop Condition fired; ask
+  instead of inventing a remedy)
+
+Severity is block | warn | info (audit-craft §3); risk tier is high |
+medium | low | unknown (materiality). In-depth runs append the rollup line
+from the In-Depth section.
 
 For fixes, include the source authority or reference path used.
 
@@ -141,3 +172,6 @@ in-depth).
 After editing this skill or references in the marketplace source repo, rerun
 its `scripts/skill-architecture-report.sh .` from the repo root when available
 (repo tooling, not bundled with the installed plugin).
+
+When editing `references/authority-index.md`, spot-check that the affected
+external links still resolve to the cited documents before finishing.
