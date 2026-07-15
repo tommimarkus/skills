@@ -16,7 +16,7 @@ When invoked:
    run the five-question triage, load only hit buckets, apply rationalization
    gates, and stop when authority, licence, holder policy, or target convention
    is load-bearing and unclear.
-4. Use `souroldgeezer-audit/skills/ip-hygiene/SKILL.md` as the source of truth.
+4. Use [`../skills/ip-hygiene/SKILL.md`](../skills/ip-hygiene/SKILL.md) as the source of truth.
 5. Keep the work focused on skill/plugin publication surfaces. Do not broaden
    into general legal advice or repo-wide IP review.
 6. Preserve the terse output contract: `nothing to check`, `checked: ...`,

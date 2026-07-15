@@ -53,7 +53,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
 
         self.assertIn("name: ip-hygiene", claude_agent)
         self.assertIn("Invoke the `ip-hygiene` skill", claude_agent)
-        self.assertIn(PUBLIC_SKILL_PATH, claude_agent)
+        self.assertIn("../skills/ip-hygiene/SKILL.md", claude_agent)
         self.assertNotIn(INTERNAL_SKILL_PATH, claude_agent)
 
     def test_audit_plugin_version_and_description_are_synchronized(self) -> None:
