@@ -21,4 +21,4 @@ Load this when triage Q2 or Q3 hits.
 
 ## Source Anchors
 
-Use `authority-index.md` for: Berne Convention, InfoSoc Directive, Software Directive, Database Directive, US Copyright Act, Microsoft Learn licensing, OpenAPI Specification licence, IETF Trust, W3C document licence, The Open Group publications, OMG specs.
+Use `authority-index.md` for: Berne Convention, InfoSoc Directive, Software Directive, Database Directive, SAS C-406/10, Infopaq C-5/08, Football Dataco C-604/10, Pelham C-476/17, Microsoft Learn licensing, OpenAPI Specification licence, IETF Trust, W3C document licence, The Open Group publications, OMG specs.

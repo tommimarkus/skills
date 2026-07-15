@@ -38,4 +38,4 @@ schemas, samples, binaries, logos, SDKs, or other bundled assets.
 
 ## Source Anchors
 
-Use `authority-index.md` for: MIT, Apache 2.0, BSD, GPL/LGPL/AGPL, Creative Commons, CC0, OSI index, GNU compatibility notes, Microsoft Learn, OpenAPI, IETF, W3C, ArchiMate, BPMN, UML, WCAG, AI-authored content authorities.
+Use `authority-index.md` for: MIT, Apache 2.0, BSD, GPL/LGPL/AGPL, Creative Commons, CC0, SIL OFL 1.1, OSI index, GNU compatibility notes, Microsoft Learn, OpenAPI, IETF, W3C, ArchiMate, BPMN, UML, WCAG, AI-authored content authorities.

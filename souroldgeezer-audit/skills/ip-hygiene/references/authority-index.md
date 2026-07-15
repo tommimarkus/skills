@@ -2,15 +2,14 @@
 
 Short source notes only. Use primary sources for consequential interpretations.
 
+The index is EU-first; see [fence-posts.md](fence-posts.md).
+
 ## Trademark Law
 
-- **EU Trade Mark Regulation 2017/1001, Art 14** - Use this for EU descriptive-use limits and honest-practices qualification. https://eur-lex.europa.eu/eli/reg/2017/1001/oj
-- **Lanham Act, 15 U.S.C. section 1125** - Use this for US false-designation and unfair-competition analysis. https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section1125
-- **New Kids on the Block v. News America Publishing** - Use this for the US nominative-fair-use test. https://law.justia.com/cases/federal/appellate-courts/F2/971/302/235791/
-- **Playboy Enterprises v. Welles** - Use this for US descriptive and factual trademark-reference applications. https://law.justia.com/cases/federal/appellate-courts/F3/279/796/628194/
+- **EU Trade Mark Regulation 2017/1001, Art 14** - Use this for EU referential-use limits — Art 14(1)(c) (referring to the proprietor's goods, e.g. compatibility) with the Art 14(2) honest-practices condition. https://eur-lex.europa.eu/eli/reg/2017/1001/oj
+- **Unfair Commercial Practices Directive 2005/29/EC** - Use this for misleading-practice analysis such as a false registration claim (`®` without registration). https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32005L0029
 - **Gillette v. LA-Laboratories, C-228/03** - Use this for EU honest-practices factors in descriptive use. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62003CJ0228
 - **BMW v. Deenik, C-63/97** - Use this for the EU commercial-connection boundary in descriptive use. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:61997CJ0063
-- **UK Trade Marks Act 1994, s.11(2)(b)** - Use this as the UK descriptive-use analogue. https://www.legislation.gov.uk/ukpga/1994/26/section/11
 
 ## Copyright Software And Database Law
 
@@ -18,8 +17,10 @@ Short source notes only. Use primary sources for consequential interpretations.
 - **Database Directive 96/9/EC** - Use this for EU sui generis database-right checks. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:31996L0009
 - **InfoSoc Directive 2001/29/EC** - Use this for EU quotation exceptions and the three-step test. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32001L0029
 - **Software Directive 2009/24/EC** - Use this for EU software idea-expression and interoperability rules. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32009L0024
-- **US Copyright Act section 102** - Use this for US copyright subject matter and idea-expression boundaries. https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title17-section102
-- **US Copyright Act section 107** - Use this for US fair-use factor analysis. https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title17-section107
+- **SAS Institute v. World Programming, C-406/10** - Use this for the EU rule that program functionality, programming languages, and data formats are not protected expression. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0406
+- **Infopaq, C-5/08** - Use this for the EU originality standard and the protectability of short extracts. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62008CJ0005
+- **Football Dataco v. Yahoo!, C-604/10** - Use this for originality limits on database and table structure. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0604
+- **Pelham, C-476/17** - Use this for EU quotation-exception limits (exhaustive exceptions; quotation must engage with the quoted work). https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62017CJ0476
 
 ## Holder Policies And Content Licences
 
@@ -42,13 +43,18 @@ Short source notes only. Use primary sources for consequential interpretations.
 
 - **MIT License** - Use this for the repo baseline and permissive-licence checks. https://opensource.org/license/mit
 - **Apache License 2.0** - Use this for Apache-licensed source and notice checks. https://www.apache.org/licenses/LICENSE-2.0
-- **BSD 2-Clause and BSD 3-Clause licences** - Use this for BSD permissive-licence checks. https://opensource.org/license/bsd-3-clause
+- **BSD 2-Clause License** - Use this for BSD permissive-licence checks. https://opensource.org/license/bsd-2-clause
+- **BSD 3-Clause License** - Use this for BSD permissive-licence checks. https://opensource.org/license/bsd-3-clause
 - **GNU GPL, LGPL, and AGPL licences** - Use this for GPL-family licence text checks. https://www.gnu.org/licenses/
 - **Creative Commons licences** - Use this for Creative Commons licence and attribution checks. https://creativecommons.org/licenses/
 - **CC0 Public Domain Dedication** - Use this for public-domain dedication checks. https://creativecommons.org/public-domain/cc0/
+- **SIL Open Font License 1.1** - Use this for font bundling and reserved-font-name conditions. https://opensource.org/license/ofl-1-1
 - **OSI-approved licences index** - Use this for open-source licence identification. https://opensource.org/licenses
 - **GNU licence notes** - Use this for GPL-family compatibility guidance. https://www.gnu.org/licenses/license-list.html
 - **GPL FAQ** - Use this for GPL, LGPL, and AGPL compatibility questions. https://www.gnu.org/licenses/gpl-faq.html
 - **OSI licence categories** - Use this for OSI licence grouping and category checks. https://opensource.org/licenses/category
-- **Thaler v. Perlmutter** - Use this for current US judicial guidance on non-human authorship. https://www.courtlistener.com/
+
+### Non-EU (US) — persuasive only; no EU authority yet
+
+- **Thaler v. Perlmutter, No. 23-5233 (D.C. Cir. 2025)** - Use this for US judicial guidance on non-human authorship (persuasive only). https://www.courtlistener.com/
 - **US Copyright Office AI guidance** - Use this for US registration and policy guidance on AI-generated material. https://www.copyright.gov/ai/

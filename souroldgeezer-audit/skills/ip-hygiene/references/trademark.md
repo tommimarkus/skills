@@ -60,6 +60,4 @@ holder policy or repo guidance requires them.
 
 ## Source Anchors
 
-Use `authority-index.md` for: EUTMR Art 14, Lanham Act, New Kids, Welles,
-Gillette, BMW v Deenik, The Open Group trademarks, Microsoft trademark
-guidelines, OMG, W3C, GitHub, IETF.
+Use `authority-index.md` for: EUTMR Art 14 (esp. 14(1)(c)), UCPD 2005/29/EC, Gillette, BMW v Deenik, The Open Group trademarks, Microsoft trademark guidelines, OMG, W3C, GitHub, IETF.
