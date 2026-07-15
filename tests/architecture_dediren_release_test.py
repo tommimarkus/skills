@@ -37,7 +37,7 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.18"
+EXPECTED_DEDIREN_VERSION = "2026.07.19"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
@@ -421,12 +421,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         bundle = release_bundle()
 
         required_paths = [
-            # The five first-party engines now ship as in-process libraries behind the
-            # typed engine-api rather than as plugin executables + manifests.
-            f"lib/engine-api-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/render-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/archimate-oef-export-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/uml-xmi-export-{EXPECTED_DEDIREN_VERSION}.jar",
+            # The first-party engines ship as in-process libraries behind the typed
+            # engine-api (not plugin executables + manifests). Since dediren 2026.07.19
+            # they are consolidated into a single application jar instead of one jar per
+            # engine (a bundle size optimization within schema v2), so the file-level
+            # check is the one bundle jar; the pipeline tests below prove each engine id
+            # still resolves through the launcher.
+            f"lib/dediren-bundle-{EXPECTED_DEDIREN_VERSION}.jar",
             # One-shot `dediren build` result contract (new in bundle schema v2).
             "schemas/build-result.schema.json",
             "schemas/model.schema.json",
@@ -451,10 +452,6 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             "fixtures/export/uml-sequence-basic.xmi",
             "docs/agent-usage.md",
             "THIRD-PARTY-NOTICES.md",
-            f"lib/cli-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/core-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/uml-{EXPECTED_DEDIREN_VERSION}.jar",
-            f"lib/elk-layout-{EXPECTED_DEDIREN_VERSION}.jar",
             "LICENSE",
         ]
 
