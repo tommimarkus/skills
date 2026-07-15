@@ -36,11 +36,11 @@ reported in the footer; they are not added as placeholders.
 
 - `source-valid`: `model.json` passes schema validation, ids are unique,
   relationships resolve, and the assessed ArchiMate relationships have passed
-  schema validation plus ArchiMate semantic validation with
-  `dediren validate --plugin generic-graph --profile archimate`.
+  schema validation plus ArchiMate semantic validation via
+  `dediren_validate {source, profile: "archimate"}`.
 - `view-readable`: source-valid plus every actual view in `project.json`
-  projects, lays out, and layout-validates. This proves layout validity, not
-  visual cleanliness.
+  projects, lays out, and layout-validates (inside `dediren_build`). This proves
+  layout validity, not visual cleanliness.
 - `render-ready`: view-readable plus SVG render evidence exists for changed or
   requested views, the artifact is nonblank, framed, carries dediren node/edge
   markers, and visual-readiness has been inspected for density, framing, label
@@ -113,7 +113,7 @@ fails, fix package source or export policy first, then recreate output.
 
 For ArchiMate SVG policy with generated per-view render metadata, set
 `plugins.generic-graph.semantic_profile` to `archimate` in `model.json`. With
-the release-resolved Dediren runtime, generated ArchiMate render metadata no
+the bundled Dediren runtime, generated ArchiMate render metadata no
 longer depends on the `archimate-oef` export plugin.
 
 ### Package JSON Generation
@@ -338,8 +338,8 @@ interface. Name services for the exposed behavior or capability, not for the
 transport surface, unless the source label is quoted as evidence and the
 architecture label resolves the role.
 
-Endpoint legality belongs to `validate --plugin generic-graph --profile
-archimate`, not local guesswork. If validation accepts Application Component to
+Endpoint legality belongs to `dediren_validate {profile: "archimate"}`, not local
+guesswork. If validation accepts Application Component to
 Application Interface Realization, do not report it as endpoint-illegal. Prefer
 Composition or Aggregation for component-interface ownership when the
 architecture claim is that a component provides or owns an access point. Use
@@ -546,32 +546,30 @@ the package or update the source.
 
 ## 9. Runtime Evidence
 
-The skill uses the Dediren agent bundle published in GitHub™ Releases. Dediren is
-an internal engine the agent resolves and runs silently — users are never asked
-to locate it or its version. `$SKILL_DIR` is this skill's absolute directory, set
-in `SKILL.md` from the `${CLAUDE_SKILL_DIR}` substitution (which resolves the
-installed-plugin cache path and this source repo alike; it contains the skill's
-`SKILL.md`), then resolve the pinned release with:
+The skill drives Dediren through the plugin's bundled MCP server (`plugin.json`
+`mcpServers.dediren`), which Claude Code auto-starts when the plugin is enabled.
+Dediren is an internal engine — users are never asked to locate, install, or
+version it. Call its tools (`dediren_validate`, `dediren_build`, `dediren_guide`),
+never a CLI. `$SKILL_DIR` is this skill's absolute directory, set in `SKILL.md`
+from the `${CLAUDE_SKILL_DIR}` substitution (which resolves the installed-plugin
+cache path and this source repo alike; it contains the skill's `SKILL.md`); it
+locates this skill's own helper scripts, not Dediren.
 
-```bash
-DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"
-```
+Read the format contract through `dediren_guide` (`{}` for the topic index, then
+`{topic: "source-json"}`) before authoring or repairing source JSON. It is the
+fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
+Handoff, and Repair Rules. The server downloads the pinned Java™-backed runtime on
+first use into `${CLAUDE_PLUGIN_DATA}` and requires Java™ 21 or newer on the host;
+if it cannot start (no Java™ 21+, or the bundle could not be downloaded) the
+`dediren_*` tools are absent — disclose `not run (dediren MCP server unavailable)`
+and cap runtime checks at `source-valid`, not a hard stop (see
+`references/procedures/self-check.md`).
 
-Use `dediren-release.sh --agent-guide` to locate the selected release bundle's
-`docs/agent-usage.md` file, then read it before loading schemas. It is the fast
-contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
-Handoff, and Repair Rules. The current release bundle is Java™-backed and
-requires Java™ 21 or newer for runnable CLI checks; the resolver finds it via
-`JAVACMD`, `JAVA_HOME`, a sdkman-managed Java™ ≥21, or `java` on `PATH`, and
-sdkman is the recommended provisioner when the host lacks one (`sdk install java
-21-tem`). Missing Java™ caps runtime checks at `source-valid`, not a hard stop
-(see `references/procedures/self-check.md`).
-
-The release-resolved Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
-legality, uses the technology element name `Node`, not `TechnologyNode`, reports
-close parallel route channels during layout validation, and allows parallel
-per-view ELK layout. Keep serial rerun only as a diagnostic fallback when a
-parallel batch produces an error envelope or other parallel-only failure.
+The bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
+legality, uses the technology element name `Node`, not `TechnologyNode`, and
+reports close parallel route channels during layout validation. Each
+`dediren_build` call walks its views through projection, layout, layout
+validation, and rendering inside the server.
 
 GitHub™ release bundles and any future checked-in platform bundles are upstream Dediren distribution artifacts. Do not patch bundled schemas, plugin
 manifests, binaries, Java helpers, fixtures, or `bundle.json` in this repository
@@ -582,41 +580,39 @@ minimal repro evidence. Change only repo-owned skill, fixture, or documentation
 guidance unless the task is explicitly to move to a different upstream Dediren
 release.
 
-Evidence gates:
+Evidence gates (all via the bundled MCP tools):
 
-- Source schema: `validate`
-- Source semantics: `validate --plugin generic-graph --profile archimate`
-- View projection: `project`
-- Per-view render metadata: `project --target render-metadata`
-- Layout: `layout`
-- Layout validation: `validate-layout`
-- SVG render: `render`
-- Optional OEF export: `export`
+- Source schema: `dediren_validate {source}`
+- Source semantics: `dediren_validate {source, profile: "archimate"}` (or `"uml"`)
+- View projection, layout, layout validation, and SVG render: `dediren_build` — one
+  call walks a view through all of them; the mapped `generated/layout/<view>.json`
+  carries the layout-validation verdict and `generated/render-metadata/<view>.json`
+  the render metadata
+- Optional OEF/XMI export: `dediren_build` with an `oef_policy` / `xmi_policy`
 
-Each command returns an envelope. Error envelopes are findings and cap the
-quality level at the highest stage already proven. Plain `dediren validate` is
-schema validation only; use `validate --plugin generic-graph --profile
-archimate` before claiming ArchiMate semantic source validity. Projection,
-layout, render, and optional export remain downstream evidence gates.
+Each tool returns an envelope (`dediren_build`'s is the unwrapped build-result
+document; see `self-check.md` § Reading tool results). Error envelopes are findings
+and cap the quality level at the highest stage already proven. `dediren_validate`
+without a `profile` is schema validation only; pass `profile` before claiming
+semantic source validity. Layout, render, and optional export remain downstream
+evidence gates inside the build.
 
 For ArchiMate SVG render policy, treat a generated render-metadata profile
 mismatch as a package or policy defect until proven otherwise. Check
 `plugins.generic-graph.semantic_profile`, the generated metadata
 `semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
-Per-view `layout --plugin elk-layout` commands may run in parallel with the
-release-resolved Dediren runtime. If a parallel batch fails, rerun the exact
-failing layout inputs serially before reporting `ARCH-L-1`; disclose repeated
-parallel-only failures under `Dediren tool issues` with repro evidence. This
-parallel-only layout failure has regressed before, so include the serial-rerun
-comparison in the repro evidence.
+Layout runs inside each `dediren_build` call; there is no separate layout command
+to parallelize. If a view's build reports an `ARCH-L-1` layout failure, rebuild
+that single view (`dediren-build.py plan --views <view-id>`) to isolate it, and
+disclose a reproducible layout-engine failure under `Dediren tool issues` with the
+build-result diagnostics and the mapped `generated/layout/<view-id>.json` counts.
 
-The `project --target layout-request` output carries an optional
-`layout_preferences` object the agent may set before `layout` to influence how
-ELK positions nodes and routes edges. It changes presentation only and never
-edits source semantics, so re-run `validate-layout` after tuning. Use the
-selected release bundle's `schemas/layout-request.schema.json` for the
-authoritative enums:
+A view carries an optional `layout_preferences` object (set on the view in the
+source model) that influences how ELK positions nodes and routes edges. It changes
+presentation only and never edits source semantics, so rebuild the view after
+tuning to re-run layout validation. The bundle's
+`schemas/layout-request.schema.json` holds the authoritative enums:
 
 - `mode`: `flow` runs ELK Layered when the relationships give the view a reading
   order; `packed` runs ELK Rectangle Packing when the view has only nodes and
@@ -667,7 +663,7 @@ with both validation counts.
 
 ### Accessible-Name Post-Render Step
 
-The release-resolved Dediren runtime names every emitted SVG for assistive
+The bundled Dediren runtime names every emitted SVG for assistive
 technology (WCAG 2.2 SC 1.1.1 Non-text Content): the root element carries
 `role="img"` with a `<title>` set from the render policy `accessibility` block
 (§3), falling back to the layout view id, plus a `<desc>` when the block
@@ -743,9 +739,9 @@ Render-ready requires inspecting SVG for:
   `uml-sequence`, each lifeline in a distinct column/stem and every message
   spanning its two lifelines (per the UML sequence notation reference).
   Superimposed participants are an `ARCH-R-*` defect; inspect the SVG structure
-  independently, in addition to the self-check "Envelope handling" verdict
-  (envelope `status: warning` on dediren 2026.07.1+, and the `data.status` /
-  `overlap_count` payload gate on any runtime).
+  independently, in addition to the self-check § Layout quality verdict (a
+  `warning` status on the `dediren_build` view entry, and the `data.status` /
+  `overlap_count` payload gate in the mapped `generated/layout/<view>.json`).
 
 ### Relationship Connectors And Junctions
 
@@ -803,21 +799,20 @@ For each package:
    actual views.
 2. Confirm every view has a clear architecture question.
 3. Validate `model.json`.
-4. Project each actual view through its configured plugin and target.
-5. Project render metadata for each actual view when the render step depends
-   on semantic node or edge metadata; verify the generated metadata
-   `semantic_profile` matches the render policy.
-6. Run ELK layout for changed or requested views; parallel per-view layout is
-   allowed with the release-resolved Dediren runtime, but rerun any parallel failure serially before
-   reporting it as a layout defect.
-7. Render SVG for changed or requested views, then run the accessible-name
-   post-render step (§9) on each rendered view.
-8. Inspect SVG for nonblank, marker-rich, accessible-named, visually readable
+4. Build the package through the bundled MCP server (`dediren-build.py plan` →
+   the `dediren_build` calls → `map`), which projects, lays out, layout-validates,
+   renders, and — when requested — exports each actual view in one call per group;
+   verify each mapped `generated/render-metadata/<view>.json` `semantic_profile`
+   matches its render policy. Isolate a failing view by rebuilding it alone
+   (`dediren-build.py plan --views <view-id>`).
+5. Run the accessible-name post-render step (§9) on each rendered view.
+6. Inspect SVG for nonblank, marker-rich, accessible-named, visually readable
    output.
-9. Run optional export only when requested.
-10. Run drift detection only when source comparison is requested.
-11. Report quality level, export readiness, evidence, missing diagram kinds,
-    and findings.
+7. Include the optional OEF/XMI export lane (`oef_policy` / `xmi_policy`) only
+   when requested.
+8. Run drift detection only when source comparison is requested.
+9. Report quality level, export readiness, evidence, missing diagram kinds,
+   and findings.
 
 ## 14. Modeling Pitfalls
 

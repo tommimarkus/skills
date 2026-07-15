@@ -16,9 +16,9 @@ Guards: apply `architecture.md` §5 (interface/service semantics,
 component-interface ownership, Triggering for process sequencing); define the
 view concern, allowed element types, and relationship types.
 
-Evidence: disclose the selected release-resolved Dediren runtime version.
-Runtime semantics and the notation-specific `source-valid` validation commands
-are defined in `architecture.md` §9.
+Evidence: disclose the bundled Dediren MCP server's availability and runtime
+version. Runtime semantics and the notation-specific `source-valid` validation
+tools (`dediren_validate` with `profile`) are defined in `architecture.md` §9.
 
 Ownership/layout: imported release bundles are upstream artifacts; report
 `Dediren tool issues`. Packages define per-view `projection`, `metadata`,
@@ -120,7 +120,7 @@ Mode: build | extract | review | lookup
 Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.md
 Package: docs/architecture/<feature>.dediren/
 Notation: archimate | uml | mixed | unsupported
-Dediren runtime: <path|not run>; Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
+Dediren MCP server: available (<version>) | not run (dediren MCP server unavailable); Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
 Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked
 Cross-notation links: none | UML elaborates ArchiMate <ids> | broken <ids> | not assessed
 Cross-package identity: single package | consistent | conflicts <n>, candidates <n> | not assessed

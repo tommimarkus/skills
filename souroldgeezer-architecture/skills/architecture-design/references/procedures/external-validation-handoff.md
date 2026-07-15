@@ -7,7 +7,7 @@ validation.
 
 1. Normal Build/Extract/Review/Lookup does not require export.
 2. Requested export without `export-policy.json`: `ARCH-E-3`, blocked.
-3. `dediren export` failure: `ARCH-E-1`.
+3. `dediren_build` export-lane (`oef_policy` / `xmi_policy`) failure: `ARCH-E-1`.
 4. Supplied downstream finding: map to `ARCH-E-2` or narrower model/view/render
    code when one fits.
 5. Footer: supplied, mapped, unresolved, and unmapped counts.

@@ -198,7 +198,8 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   "Colour tokens". Every surface is a token.
 - **Add a view:** add it to the package's `project.json` `views[]` (with the
   right `model`/profile so it lands in the right section), render its SVG and
-  render-metadata through the normal dediren pipeline, then rebuild the
+  render-metadata by building the package through the bundled MCP server
+  (`dediren-build.py plan`/`map` over `dediren_build`), then rebuild the
   gallery. Section, code letter, and counts are all derived — nothing to
   hand-edit in the markup.
 - **Density rule:** a view is flagged `chip-warn` ("dense layout") at

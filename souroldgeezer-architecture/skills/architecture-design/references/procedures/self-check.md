@@ -1,145 +1,142 @@
 # Dediren Self-Check
 
-Before runtime claims, resolve the pinned Dediren GitHub™ release. Dediren is an
-internal engine: resolve and run it yourself so the user never has to find it or
-its version. `$SKILL_DIR` is this skill's absolute directory, established in
-`SKILL.md` from the `${CLAUDE_SKILL_DIR}` substitution (the directory that
-contains this skill's `SKILL.md`) — not a guessed plugin-cache or
-working-directory path.
+Before runtime claims, drive Dediren through the plugin's **bundled MCP server**.
+Dediren is an internal engine: the plugin declares it in `plugin.json`
+(`mcpServers.dediren`) and Claude Code auto-starts it when the plugin is enabled,
+so the user never has to find, install, or version it. Call its tools —
+`dediren_validate`, `dediren_build`, `dediren_guide` — never a CLI. `$SKILL_DIR`
+is this skill's absolute directory, established in `SKILL.md` from the
+`${CLAUDE_SKILL_DIR}` substitution; it locates this skill's own helper scripts
+(`dediren-build.py`, `build-gallery.py`, `svg-accessible-name.sh`), not Dediren.
 
-```bash
-DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"
+## Server availability
+
+The bundled server downloads the pinned Java™-backed runtime on first use (into
+`${CLAUDE_PLUGIN_DATA}`) and needs Java™ 21 or newer on the host — exactly as a
+Node- or Python-based plugin MCP server needs its runtime installed. If the
+`dediren_*` tools are not present (the server failed to start: no Java™ 21+, or the
+bundle could not be downloaded), disclose `not run (dediren MCP server
+unavailable)` and cap at `source-valid` — authoring and hand-written source
+validation remain available; this is a capability cap, not a hard stop. Do not ask
+the user to install or launch Dediren; the plugin owns that.
+
+Every tool path must resolve inside the server's `--root` (the project directory),
+and so must every `fragments[]` path inside a source you pass. A path that escapes
+it returns a `DEDIREN_MCP_PATH_OUTSIDE_ROOT` error envelope — keep packages and
+their fragments under the project root.
+
+## Validate
+
+`source-valid` requires semantic validation, not schema alone. Call
+`dediren_validate` with the source path **and** `profile` set to the model's
+notation:
+
+- `dediren_validate {source: "<pkg>/model.json", profile: "archimate"}` for ArchiMate.
+- `dediren_validate {source: "<pkg>/model.json", profile: "uml"}` for UML.
+
+The tool runs schema validation plus semantic-profile validation and returns the
+validation envelope; `dediren_validate` without a `profile` proves schema only. Use
+`generic-graph`, `elk-layout`, `render`; set `plugins.generic-graph.semantic_profile`
+to `archimate` or `uml` in the source, and add `archimate-oef` only when OEF export
+is requested, `uml-xmi` only when XMI export is requested.
+
+## Format guide
+
+Resolving evidence does not require the guide. Defer it until authoring, repairing,
+or handing off source JSON is imminent; a resolve-and-validate or review-only check
+never needs it. When that point is reached, read the guide through the tool:
+
+```
+dediren_guide {}                       # index of topics
+dediren_guide {topic: "source-json"}   # start here
 ```
 
-The resolver caches release bundles under `.cache/dediren/releases/`; do not
-commit that cache. The pinned release bundle is Java™-backed; commands that
-return or execute the runnable Dediren CLI require Java™ 21 or newer. The
-resolver selects it in order: `JAVACMD`, then `JAVA_HOME`, then a sdkman-managed
-Java™ ≥21 (`$SDKMAN_DIR/candidates/java/current`, default `~/.sdkman`), then
-`java` on `PATH`. **sdkman is the recommended way to provision Java™ 21+ when the
-host lacks it** — `sdk install java 21-tem` (or any ≥21 distribution) — analogous
-to how `uv` provisions Python® for the audit engines; the resolver does not
-auto-install it. If the resolver cannot download or select a supported platform,
-disclose `not run (missing dediren release bundle)` and cap at `source-valid`
-unless Lookup only. If no Java™ 21+ runtime can be resolved, disclose `not run
-(missing Java 21+ runtime)` for runtime steps and cap at `source-valid`
-(authoring and source validation remain available; this is a capability cap, not
-a hard stop).
-
-The selected release bundle is an imported upstream Dediren artifact. Do not
-patch cached release files or future packaged bundles; report defects under
-`Dediren tool issues` per `architecture.md` §9.
-
-Resolving the bundle above does not require the agent guide. Defer it until
-authoring, repairing, or handing off source JSON is imminent; a resolve-and-
-validate or review-only runtime check never needs it. When that point is
-reached, read the selected release bundle guide before loading schemas:
-
-```bash
-"$SKILL_DIR"/references/scripts/dediren-release.sh --agent-guide
-```
-
-It is the fast contract for Minimal Source JSON, Artifact Map, Semantic
-Profiles, Command Handoff, and Repair Rules.
-
-Use `generic-graph`, `elk-layout`, `render`. For generated notation SVG
-metadata, set `plugins.generic-graph.semantic_profile` to `archimate` or `uml`;
-add `archimate-oef` only when OEF export is requested and `uml-xmi` only when
-UML/XMI export is requested. Plain `validate` proves schema only; `source-valid`
-requires `validate` plus `validate --plugin generic-graph --profile archimate`
-for ArchiMate or `validate --plugin generic-graph --profile uml` for UML.
-When running OEF or XMI export, follow the selected release guide's schema-cache
-instructions. The export engines run in-process and inherit the agent's own
-environment (the pinned runtime spawns no child process, so `HTTP_PROXY` /
-`HTTPS_PROXY` / `NO_PROXY` do reach them). Export downloads its validation XSDs
-into a cache directory, so it still fails with `DEDIREN_*_SCHEMA_UNAVAILABLE`
-when that directory is unwritable or the host is offline — a read-only `$HOME`
-is the common sandbox case. Point `DEDIREN_SCHEMA_CACHE_DIR` at a writable
-directory, or skip the download entirely by pre-fetching the XSDs and passing
-absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.
-Read the diagnostic's `message`: it names which of the two remedies applies.
-`DEDIREN_XMI_SCHEMA_PATH` at the bare `XMI.xsd` validates only the XMI envelope;
-full UML-content schema validation needs the driver schema in
-[external-validation-handoff](external-validation-handoff.md) required
-disclosure 4.
-Command order: `validate`; semantic validate; build the package (one-shot below,
-or the decomposed chain); accessible-name post-render step. The
-release-resolved Dediren runtime allows parallel per-view layout; rerun
-parallel-only failures serially before `ARCH-L-1`.
+It is the fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles,
+Command Handoff, and Repair Rules. When running OEF or XMI export, follow the
+guide's schema-cache instructions. The export engines run in-process and inherit
+the server's environment; the plugin points `DEDIREN_SCHEMA_CACHE_DIR` at a writable
+`${CLAUDE_PLUGIN_DATA}` directory so the XSD download succeeds. If export still
+fails with `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
+`message`: it names whether to make that cache writable or to pre-fetch the XSDs and
+pass absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.
+`DEDIREN_XMI_SCHEMA_PATH` at the bare `XMI.xsd` validates only the XMI envelope; full
+UML-content schema validation needs the driver schema in
+[external-validation-handoff](external-validation-handoff.md) required disclosure 4.
 
 ## Building a package (default path)
 
-A single `dediren build` call takes a view through every stage the decomposed
-commands below run one at a time — projection, layout, layout validation, then
-whichever of the render, OEF, and XMI lanes are enabled — without leaving the
-JVM. Prefer it: a package that cost 13-15 process starts now costs one per
-(model, render-policy) group. The flag and result contracts are specified in the
-bundle's own agent guide (`dediren-release.sh --agent-guide`, § Build).
-
-Drive it through the bundled script, which reads `project.json`, picks the
-lanes, and writes every artifact to the path the package declares:
+A `dediren_build` call takes a view through every stage — projection, layout, layout
+validation, then whichever of the render, OEF, and XMI lanes are enabled — inside
+the server, and writes each view's artifacts under its `out` directory as
+`<out>/<view-id>/diagram.svg` (plus `oef.xml` / `xmi.xml`), which is *not* where
+`project.json` declares them. The skill's bundled helper owns both the planning and
+the remapping so you never do path arithmetic by hand:
 
 ```bash
-"$SKILL_DIR"/references/scripts/dediren-build.py <pkg>            # every view + declared exports
-"$SKILL_DIR"/references/scripts/dediren-build.py <pkg> --views <view-id>
-"$SKILL_DIR"/references/scripts/dediren-build.py <pkg> --json     # machine-readable summary
+"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>            # emits the dediren_build calls
+"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg> --views <view-id>
+"$SKILL_DIR"/references/scripts/dediren-build.py map  <pkg>            # materialize + summary
+"$SKILL_DIR"/references/scripts/dediren-build.py map  <pkg> --json
 ```
 
-It exits `0` when every view and export is `ok` (warnings are reported, not
-fatal), `1` when a view or export failed or an artifact came back empty, `2` on
-a package/usage error, `3` when the runtime could not be resolved. Read the
-per-view diagnostics it prints; one failing view never aborts the others.
-Semantic `validate` (above) still gates `source-valid` — run it first. Rendered
-SVGs land raw, so the accessible-name step below is still required, and a
+1. Run `plan <pkg>`. It reads `project.json` and prints the JSON list of
+   `dediren_build` tool calls the package needs — one per (model, render-policy)
+   render group, and one **single-view** call per export (an OEF/XMI policy's
+   identity fields apply per invocation, so each export runs one view at a time).
+   Every call writes into one staging dir, `<pkg>/.dediren-build`, so views never
+   collide.
+2. Make each planned `dediren_build` call with the bundled MCP tool, passing its
+   `arguments` verbatim (`source`, `out`, `views`, and the `render_policy` /
+   `oef_policy` / `xmi_policy` / `emit` keys the plan set).
+3. Run `map <pkg>`. It moves each declared artifact from staging to the
+   `project.json` path, unwraps the `--emit`ted stage envelopes to their `.data`
+   payload, verifies every declared artifact is present and non-empty, and removes
+   the staging dir. Exit `0` all declared artifacts materialized; `1` one was
+   missing or empty; `2` a package/usage error. Read the per-view/-export lines it
+   prints.
+
+Semantic `dediren_validate` (above) still gates `source-valid` — run it first.
+Rendered SVGs land raw, so the accessible-name step below is still required, and a
 re-render still means a stale gallery (`SKILL.md` step 7).
 
-## Command templates
+## Reading tool results
 
-The decomposed chain. Use it to debug a single stage, to repair a failing view,
-or when a per-view OEF identity is required (see below). Run from the target
-repository root and
-replace `<pkg>` with `docs/architecture/<feature>.dediren`. Render metadata uses
-`dediren project --target render-metadata` with the selected model file and
-view id. These commands emit JSON envelopes to stdout; when materializing
-`generated/` by hand, write each envelope `data` payload to the matching path
-declared by `project.json`.
+MCP tool results carry the same envelope JSON the CLI printed, so the guide's
+Command Handoff rules apply unchanged. Check `isError` on the tool result and the
+envelope `status` before trusting output.
 
-```bash
-"$DEDIREN" validate --input <pkg>/model.json
-"$DEDIREN" validate --plugin generic-graph --profile archimate --input <pkg>/model.json
-"$DEDIREN" validate --plugin generic-graph --profile uml --input <pkg>/model.json
-"$DEDIREN" project --target layout-request --plugin generic-graph --view <view-id> --input <pkg>/model.json
-"$DEDIREN" project --target render-metadata --plugin generic-graph --view <view-id> --input <pkg>/model.json
-"$DEDIREN" layout --plugin elk-layout --input <layout-request.json>
-"$DEDIREN" validate-layout --input <layout-result.json>
-"$DEDIREN" render --plugin render --policy <pkg>/render-policy.json --metadata <render-metadata.json> --input <layout-result.json>
-"$DEDIREN" export --plugin archimate-oef --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
-"$DEDIREN" export --plugin uml-xmi --policy <pkg>/export-policy.json --source <pkg>/model.json --layout <layout-result.json>
-```
+- `dediren_validate` returns a generic envelope: read `.status` and `.diagnostics[]`.
+- `dediren_build` is the exception — what it returns **is** the build-result
+  document (`build-result.schema` family), not wrapped in a `.data`. Roll up its
+  top-level `.status` together with every entry in `.views[]`: a stage failure is
+  scoped to the view it happened in, so the remaining views still run and still
+  report, and reading only the first entry hides them. `.views[].artifacts[]` names
+  each written file (`{artifact_kind, path}`) relative to `out`. A build-level
+  failure (no lane selected, or the source itself fails `validate`) leaves `.views`
+  empty with the failure on the top-level `.diagnostics[]`.
+- The `--emit`ted stage files under `<out>/<view-id>/` invert this: they *are*
+  ordinary envelopes, and the package stores their unwrapped `.data` payload —
+  `dediren-build.py map` does that, so never write a whole envelope into a package
+  file.
 
-Omit export unless OEF or XMI was requested.
+### Layout quality
 
-The one-shot form, when driving the runtime directly instead of through the
-script above (enable at least one lane — the runtime rejects a build that
-selects none):
+`dediren_build` runs `validate-layout` inside the build and emits the
+`layout-result` stage (mapped to `generated/layout/<view-id>.json`). Read the
+mapped payload as the authoritative source: `data.status` and the `data.*_count`
+quality fields (`overlap_count`, `connector_through_node_count`,
+`invalid_route_count`, and the other §9 gate counts; `edge_crossing_count` is
+informational). A layout quality problem surfaces as a `warning` status on the
+view entry with a `DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic naming the offending
+count. Treat `data.status: "warning"` or any nonzero non-informational count as a
+blocking layout finding (`ARCH-L-*`) to resolve or disclose before claiming render
+evidence; an overlap can superimpose two nodes in the rendered SVG.
 
-```bash
-"$DEDIREN" build --input <pkg>/model.json --out <dir> --views <view-id> \
-  --render-policy <pkg>/render-policy.json \
-  --emit render-metadata,layout-result
-```
+### Rendered SVG
 
-`build` writes `<dir>/<view-id>/diagram.svg` (plus `oef.xml` / `xmi.xml` for the
-export lanes), which is *not* where `project.json` declares them — the script
-above does that mapping. One export caveat in the pinned runtime: an export
-policy's identity fields apply to the invocation as a whole rather than to each
-view it covers, so exporting two views at once stamps both with the same
-identity. Give every export its own single-view invocation.
-
-After materializing a rendered SVG, complete its accessible name (the runtime
-emits `role="img"` + `<title>` natively; render-policy `accessibility` block
-or view-id fallback) and add the visible title (`architecture.md` §9
-post-render step; `--check` verifies presence):
+After `map` materializes a rendered SVG, complete its accessible name (the runtime
+emits `role="img"` + `<title>` natively; the render-policy `accessibility` block or
+the view-id fallback) and add the visible title:
 
 ```bash
 "$SKILL_DIR"/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
@@ -147,64 +144,26 @@ post-render step; `--check` verifies presence):
 
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 `wrapping` / `routing`, plus the ELK Layered tuning knobs and per-node placement
-hints; enums and guidance in `architecture.md` §9) in the
-layout-request before `layout`, then re-run `validate-layout`. For navigable
-output, set the render policy `interactive` field (§3); static SVG is the
-default. After every render, verify the mode from the artifact before
-disclosing it — `grep -c '<script' <svg>` is `0` for a static policy and
-`≥ 1` when `interactive` scripts the SVG — and report that verified mode,
-never the policy intent, in the footer `Layout/render options` line. A
-mismatch is `ARCH-R-5`; a script despite a static policy additionally goes
-upstream under `Dediren tool issues` (`architecture.md` §9 render-mode
-check).
+hints; enums and guidance in `architecture.md` §9) on the view in the source model,
+then rebuild. For navigable output, set the render policy `interactive` field (§3);
+static SVG is the default. After every render, verify the mode from the artifact
+before disclosing it — `grep -c '<script' <svg>` is `0` for a static policy and
+`≥ 1` when `interactive` scripts the SVG — and report that verified mode, never the
+policy intent, in the footer `Layout/render options` line. A mismatch is `ARCH-R-5`;
+a script despite a static policy additionally goes upstream under `Dediren tool
+issues` (`architecture.md` §9 render-mode check).
 
-## Envelope handling
-
-Every command **except `build`** emits a JSON envelope on stdout. Check the
-envelope `status` before feeding output to the next command — a downstream stage
-fed an error envelope fails one stage late with `DEDIREN_COMMAND_INPUT_INVALID`,
-pointing diagnosis at the wrong command.
-
-`build` is the exception: what it prints is already the build-result document
-(`build-result.schema.v1`) — there is no envelope around it, and no `.data` to
-unwrap. Roll up its top-level `.status` together with every entry in `.views[]`:
-a stage failure is scoped to the view it happened in, so the remaining views
-still run and still report, and reading only the first entry hides them. Take
-written files from `.views[].artifacts[]`, whose paths are relative to `--out`.
-The `--emit`ted stage files invert this — they *are* ordinary envelopes, so what
-the package stores is their `.data` payload. Confusing the two directions writes
-a package file holding a whole envelope, or nothing at all; `dediren-build.py`
-exists to keep them straight.
-
-On the pinned runtime (dediren 2026.07.1+), `validate-layout` surfaces its
-quality verdict at the envelope: a nonzero non-informational count sets envelope
-`status: "warning"` and emits a `DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic
-naming the offending `data.*` count (the exit code stays `0` — a warning is not
-a failure). Still read the payload as the authoritative source: `data.status`
-and the `data.*_count` quality fields (`overlap_count`,
-`connector_through_node_count`, `invalid_route_count`, and the other §9 gate
-counts; `edge_crossing_count` is informational). Older runtimes (≤ dediren
-2026.07.0) reported envelope `status: ok` with empty `diagnostics` even when
-`data.status` was `warning`, so never treat an `ok` envelope alone as a quality
-verdict — for an artifact from one of those runtimes the payload is the only
-signal. Treat `data.status: "warning"` or any nonzero non-informational count as
-a blocking layout finding (`ARCH-L-*`) to resolve or disclose before claiming
-render evidence; an overlap can superimpose two nodes in the rendered SVG.
-
-Artifact extraction differs by command and yields silent empty files when
-mixed up: `render` returns artifacts in `.data.artifacts[]` (select the entry
-whose `artifact_kind` is `svg` and write its `.content`), while `export`
-returns a single artifact directly as `.data.content` (with `.data.artifact_kind`
-naming the format). After materializing any artifact, verify it is non-empty
-before claiming render or export evidence.
-
-For a UML view whose render metadata authors association end adornments
-(edge `properties.source_role` / `target_role` / `source_multiplicity` /
-`target_multiplicity`), also verify end-adornment coverage after
-materializing the SVG: collect the nonempty adornment values from the
-metadata edges (e.g. `jq` over `.edges[].properties`) and confirm each
-appears as an SVG `<text>` label. Report the count in the footer quality
-qualifier (`render-ready (end adornments <rendered> of <authored>)`); a
+For a UML view whose render metadata authors association end adornments (edge
+`properties.source_role` / `target_role` / `source_multiplicity` /
+`target_multiplicity`), also verify end-adornment coverage after materializing the
+SVG: collect the nonempty adornment values from the mapped render metadata
+(`generated/render-metadata/<view-id>.json`, e.g. `jq` over `.edges[].properties`)
+and confirm each appears as an SVG `<text>` label. Report the count in the footer
+quality qualifier (`render-ready (end adornments <rendered> of <authored>)`); a
 missing adornment is `ARCH-R-2` plus a `Dediren tool issues` entry per
 `architecture.md` §9 — this content has dropped with every stage reporting
 `status: ok`, so envelope checks never prove it.
+
+The bundled release is an imported upstream Dediren artifact. Do not patch cached
+release files or future packaged bundles; report defects under `Dediren tool issues`
+per `architecture.md` §9.

@@ -77,22 +77,24 @@ Build.
    before running Build/Extract/Review operational steps; a Lookup that makes no
    runtime claim may skip it.
 2. Before any runtime claim, run
-   [self-check](references/procedures/self-check.md); it uses
-   [dediren-release.sh](references/scripts/dediren-release.sh) to resolve the
-   pinned GitHub™ release bundle. Dediren is an internal engine — resolve and run
-   it silently from this skill's own directory; never ask the user to locate
-   Dediren, its release bundle, or its version. That directory is
-   `${CLAUDE_SKILL_DIR}`, which Claude Code™ expands to the skill's absolute path
-   on load (resolving the installed-plugin cache and this source repo alike); use
-   it wherever a bundled-script command shows `"$SKILL_DIR"` (here, in self-check,
-   and in architecture §9). If it does not expand, fall back to the skill base
-   directory reported at invocation, or
+   [self-check](references/procedures/self-check.md). Dediren runs as the plugin's
+   **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
+   plugin is enabled); drive it through its tools — `dediren_validate`,
+   `dediren_build`, `dediren_guide` — never a CLI, and never ask the user to locate
+   or install Dediren. The server downloads the pinned runtime on first use and
+   needs Java™ 21+; if it cannot start, disclose `not run (dediren MCP server
+   unavailable)` and cap at `source-valid` (self-check § Server availability). Defer
+   the format guide (`dediren_guide`) until authoring source JSON, a command
+   handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
+   that reaches no runtime command never loads it. Lookup may skip self-check
+   entirely when the answer makes no runtime claim.
+   The skill's own bundled helper scripts (`dediren-build.py`, `build-gallery.py`,
+   `svg-accessible-name.sh`) resolve from `${CLAUDE_SKILL_DIR}`, which Claude Code™
+   expands to the skill's absolute path on load (resolving the installed-plugin
+   cache and this source repo alike); use it wherever a bundled-script command shows
+   `"$SKILL_DIR"` (here, in self-check, and in architecture §9). If it does not
+   expand, fall back to the skill base directory reported at invocation, or
    `souroldgeezer-architecture/skills/architecture-design` in this source repo.
-   Defer the bundle agent guide
-   (`dediren-release.sh --agent-guide`) until authoring source JSON, a command
-   handoff, or a repair loop is imminent — a notation Lookup or a mechanical
-   edit that reaches no runtime command never loads it. Lookup may skip
-   self-check entirely when the answer makes no runtime claim.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load
    [`references/notations/archimate.md`](references/notations/archimate.md) for
@@ -113,10 +115,15 @@ Build.
    an existing package. Keep a compact rationale for every non-obvious
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
    do not mutate by default.
-6. Validate before quality claims. When a run (re)generates package output, build
-   it with the one-shot path — `"$SKILL_DIR"/references/scripts/dediren-build.py
-   <pkg>` (self-check § Building a package) — then complete each rendered SVG's
-   accessible name. Return [output](references/output-format.md).
+6. Validate before quality claims — call the bundled dediren MCP server's
+   `dediren_validate` tool (pass the model's `profile`) so `source-valid` covers
+   schema plus semantic-profile validation. When a run (re)generates package
+   output, build it through the MCP server: run
+   `"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>` for the exact
+   `dediren_build` tool calls, make each call, then
+   `"$SKILL_DIR"/references/scripts/dediren-build.py map <pkg>` to materialize the
+   `project.json`-declared paths (self-check § Building a package). Then complete
+   each rendered SVG's accessible name. Return [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
    `"$SKILL_DIR"/references/scripts/build-gallery.py <package>` — a
@@ -129,9 +136,9 @@ Build.
    viewer over the static SVGs — distinct from a view's own render-policy
    `interactive: html` wrapper. Disclose the outcome in the footer `Gallery:`
    line. See [`references/gallery.md`](references/gallery.md).
-8. Stop when required evidence is missing, dediren returns an error envelope,
-   the notation is unsupported, or a blocking finding prevents requested
-   readiness.
+8. Stop when required evidence is missing, a dediren MCP tool returns an error
+   envelope (or the server is unavailable), the notation is unsupported, or a
+   blocking finding prevents requested readiness.
 
 ## References
 
@@ -144,8 +151,8 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren release resolver | [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh); use through self-check before runtime claims, and run `bash -n references/scripts/dediren-release.sh` when editing the resolver |
-| Package build (project → layout → render/export) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) via `"$SKILL_DIR"/references/scripts/dediren-build.py <package>`; one-shot `dediren build` per (model, render-policy) group, writes every artifact to its `project.json`-declared path; templates and the decomposed fallback in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
+| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). Run `bash -n` on both when editing them. |
+| Package build (plan → dediren_build → map) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py): `plan <package>` emits the `dediren_build` MCP calls (one per (model, render-policy) group, one per export view); after making them, `map <package>` materializes the staged output into each `project.json`-declared path. Call flow in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
 | SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |

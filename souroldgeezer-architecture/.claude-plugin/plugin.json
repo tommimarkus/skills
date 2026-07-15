@@ -11,7 +11,8 @@
     "dediren": {
       "command": "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
       "env": {
-        "DEDIREN_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/dediren/releases"
+        "DEDIREN_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/dediren/releases",
+        "DEDIREN_SCHEMA_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/dediren/schema-cache"
       }
     }
   }

@@ -15,9 +15,9 @@ Shared contract for every UML view kind; the per-kind files under `uml/` add
 only their deltas to it.
 
 - A UML view is `source-valid` only with schema validation plus
-  `validate --plugin generic-graph --profile uml`.
-- The SVG render path needs generated render metadata from
-  `dediren project --target render-metadata --plugin generic-graph`.
+  `dediren_validate {profile: "uml"}`.
+- The SVG render path needs generated render metadata, which `dediren_build`
+  produces (mapped to `generated/render-metadata/<view>.json`).
 - UML/XMI compatibility export (`uml-xmi`) runs only when requested and
   carries class-diagram structure only. When an exported view holds content
   the XMI cannot represent (the kind's file names it), the runtime declares

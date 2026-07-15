@@ -69,9 +69,10 @@ the rendered SVG.
   spans the horizontal gap between its two lifelines. Two lifelines sharing a
   head position or stem, or a message drawn as a stub inside a merged box, is an
   `ARCH-R-*` defect; inspect the SVG structure independently, and cross-check the
-  `validate-layout` verdict (envelope `status: warning` on dediren 2026.07.1+,
-  and the `data.status` / `overlap_count` payload on any runtime) per
-  [self-check](../../procedures/self-check.md) "Envelope handling".
+  layout verdict — a layout-quality problem surfaces as a `warning` status on the
+  `dediren_build` view entry, and as the `data.status` / `overlap_count` payload in
+  the mapped `generated/layout/<view>.json` — per
+  [self-check](../../procedures/self-check.md) § Layout quality.
 
 ## Findings
 

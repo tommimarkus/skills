@@ -11,7 +11,7 @@ needs class, data, package, or activity detail.
 ## Validation
 
 - `source-valid` requires schema validation plus
-  `validate --plugin generic-graph --profile archimate`.
+  `dediren_validate {profile: "archimate"}`.
 - Generated SVG metadata uses `plugins.generic-graph.semantic_profile:
   "archimate"`.
 - OEF compatibility export uses `archimate-oef` only when requested or when
