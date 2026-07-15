@@ -521,6 +521,12 @@ Before finishing a skill change, inspect for these common regressions:
   deriving it, so the copy drifts (e.g. an ignore list that misses a worktree
   directory `.gitignore` already lists). Derive it from the authority (git,
   `.gitignore`) and keep a graceful fallback for non-git targets.
+- A defect was resolved only by a local workaround — warming a runtime cache,
+  editing installed state, hand-downloading a runtime — that repairs the current
+  machine but not a fresh install. The durable fix must change the distributed
+  artifact (launcher, manifest, skill, agent) so an empty-state install
+  self-heals, verified against the cold/fresh-install path, not the warmed local
+  machine.
 
 ## Source Anchors
 

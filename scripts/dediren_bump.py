@@ -18,10 +18,12 @@ Stdlib-only responsibilities:
 - ``latest``: print the newest published release, resolved by following GitHub's
   ``/releases/latest`` redirect (stdlib-only, no API token). ``bump`` / ``parity`` /
   ``adopt`` also accept ``--to latest`` to target it without a lookup.
-- ``bump --to X [--check]``: literal-replace the current pin with ``X`` across *only* the
-  known dediren-pin surfaces, then re-run the same pin discovery the release test's
-  guard uses and fail if any pin still differs. ``--check`` reports the plan without
-  writing. Refuses when a pin has already drifted off the SoT.
+- ``bump --to X [--check]``: replace the current pin with ``X`` across *only* the known
+  dediren-pin surfaces — and, within those, only the live pins, leaving historical
+  ``Dediren <version>`` release markers (the version a capability landed in) fixed — then
+  re-run the same pin discovery the release test's guard uses and fail if any pin still
+  differs. ``--check`` reports the plan without writing. Refuses when a pin has already
+  drifted off the SoT.
 - ``parity --to X``: fetch the current and target release bundles via the release
   resolver and diff the judgment surfaces (agent-usage guide, plugin manifests, schemas,
   fixtures, bundle manifest) so the human feature-parity classification reads a diff.
@@ -214,12 +216,27 @@ def verify(repo_root: Path, expected: str) -> list[str]:
     return mismatches
 
 
+def scoped_pin_replace(text: str, old: str, new: str) -> tuple[str, int]:
+    """Replace live-pin occurrences of ``old`` with ``new`` while leaving historical
+    ``Dediren <old>`` release markers fixed. Returns ``(new_text, replacements)``.
+
+    A live pin is only ever the bare version string in a machine surface
+    (``"version": "<v>"``, ``DEDIREN_VERSION_DEFAULT="<v>"``,
+    ``EXPECTED_DEDIREN_VERSION = "<v>"``) or a "pinned <v>" claim — none of them
+    runtime-name-qualified. A historical marker names the release a capability landed in
+    ("Dediren <v> added/retired ...") and must stay fixed across a bump. A blanket
+    ``str.replace`` corrupts those markers the moment one cites the currently-pinned
+    version; a negative lookbehind on the runtime name keeps only live pins in scope."""
+    return re.compile(r"(?<!Dediren )" + re.escape(old)).subn(new, text)
+
+
 def bump(repo_root: Path, new_version: str, *, check: bool = False) -> BumpReport:
     """Move every embedded pin from the current SoT to ``new_version``.
 
     Validates the target CalVer shape, refuses when the current pins have drifted apart,
-    performs a scoped literal replace, and (unless ``check``) re-verifies that no pin was
-    missed. ``check`` reports the plan without writing."""
+    performs a pin-scoped replace that leaves historical ``Dediren <version>`` release
+    markers fixed (see ``scoped_pin_replace``), and (unless ``check``) re-verifies that no
+    pin was missed. ``check`` reports the plan without writing."""
     if not CALVER_RE.match(new_version):
         raise ValueError(f"not a CalVer version: {new_version!r}")
 
@@ -237,13 +254,13 @@ def bump(repo_root: Path, new_version: str, *, check: bool = False) -> BumpRepor
 
     for path in target_files(repo_root):
         text = path.read_text(encoding="utf-8")
-        occurrences = text.count(old)
+        replaced, occurrences = scoped_pin_replace(text, old, new_version)
         if not occurrences:
             continue
         report.changed_files.append(str(path.relative_to(repo_root)))
         report.replacements += occurrences
         if not check:
-            path.write_text(text.replace(old, new_version), encoding="utf-8")
+            path.write_text(replaced, encoding="utf-8")
 
     report.changed_files.sort()
 
