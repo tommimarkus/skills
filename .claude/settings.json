@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/pretooluse-worktree-commit-guard.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
