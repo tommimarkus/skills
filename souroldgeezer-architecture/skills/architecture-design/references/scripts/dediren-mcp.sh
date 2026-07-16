@@ -26,4 +26,11 @@ if [ ! -x "$bin" ] || [ ! -f "$bundle_dir/bundle.json" ]; then
   exit 1
 fi
 
-exec "$bin" mcp --root "${CLAUDE_PROJECT_DIR:-$PWD}" "$@"
+root="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ -z "${CLAUDE_PROJECT_DIR:-}" ]; then
+  printf 'dediren-mcp: CLAUDE_PROJECT_DIR unset; using %s as the workspace root.\n' "$root" >&2
+fi
+if [ ! -d "$root" ]; then
+  printf 'dediren-mcp: workspace root %s is not a directory; tool paths will not resolve.\n' "$root" >&2
+fi
+exec "$bin" mcp --root "$root" "$@"
