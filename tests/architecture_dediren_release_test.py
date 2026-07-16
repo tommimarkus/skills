@@ -82,6 +82,50 @@ def release_bundle() -> Path:
     return Path(result.stdout.strip())
 
 
+def mcp_session(bundle: Path, root: Path, calls: list[dict]) -> dict[int, dict]:
+    """Drive the bundled `dediren mcp` stdio server through one initialize handshake and
+    return the JSON-RPC responses keyed by id. ``calls`` carry ids from 2 up (id 1 is the
+    handshake). One server run per session, matching how a client drives it."""
+    requests = [
+        {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05", "capabilities": {},
+                "clientInfo": {"name": "release-test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        *calls,
+    ]
+    stdin = "".join(json.dumps(request) + "\n" for request in requests)
+    proc = subprocess.run(
+        [bundle / "bin" / "dediren", "mcp", "--root", str(root)],
+        input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=os.environ.copy(), timeout=120,
+    )
+    by_id = {}
+    for line in proc.stdout.splitlines():
+        if line.strip().startswith("{"):
+            message = json.loads(line)
+            if "id" in message:
+                by_id[message["id"]] = message
+    # Responses come back out of order, and a server that stops early simply omits one.
+    # Without this check a dropped response surfaces as a bare KeyError at the call site,
+    # so assert completeness here where stdout/stderr are still around to say why.
+    missing = [r["id"] for r in requests if "id" in r and r["id"] not in by_id]
+    if missing:
+        raise AssertionError(
+            f"dediren mcp returned no response for id(s) {missing}\n"
+            f"stdout={proc.stdout}\nstderr={proc.stderr}"
+        )
+    return by_id
+
+
+def tool_envelope(response: dict) -> dict:
+    """Unwrap the dediren command envelope an MCP tools/call response carries as text."""
+    return json.loads(response["result"]["content"][0]["text"])
+
+
 def run_dediren(*args: str | Path) -> subprocess.CompletedProcess[str]:
     bundle = release_bundle()
     env = os.environ.copy()
@@ -665,15 +709,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         declares exposes dediren_validate / dediren_build / dediren_guide, and a
         profile-scoped validate returns an ok envelope."""
         bundle = release_bundle()
-        requests = [
-            {
-                "jsonrpc": "2.0", "id": 1, "method": "initialize",
-                "params": {
-                    "protocolVersion": "2024-11-05", "capabilities": {},
-                    "clientInfo": {"name": "release-test", "version": "0"},
-                },
-            },
-            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        by_id = mcp_session(bundle, FIXTURE, [
             {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
             {
                 "jsonrpc": "2.0", "id": 3, "method": "tools/call",
@@ -682,24 +718,50 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                     "arguments": {"source": "model.json", "profile": "archimate"},
                 },
             },
-        ]
-        stdin = "".join(json.dumps(request) + "\n" for request in requests)
-        proc = subprocess.run(
-            [bundle / "bin" / "dediren", "mcp", "--root", str(FIXTURE)],
-            input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=os.environ.copy(), timeout=120,
-        )
-        by_id = {}
-        for line in proc.stdout.splitlines():
-            if line.strip().startswith("{"):
-                message = json.loads(line)
-                if "id" in message:
-                    by_id[message["id"]] = message
-
+        ])
         tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
         self.assertEqual(tools, {"dediren_validate", "dediren_build", "dediren_guide"})
-        validation = json.loads(by_id[3]["result"]["content"][0]["text"])
+        validation = tool_envelope(by_id[3])
         self.assertEqual(validation["status"], "ok", validation)
+
+    def test_cross_package_identity_property_validates_with_and_without_profile(self) -> None:
+        """`source-grounding.md` claims `properties.identity` — the repo-owned
+        cross-package identity convention (`architecture.md` §15) — is schema-legal and
+        semantically accepted by `dediren_validate` both with and without an explicit
+        profile, on the *pinned* bundle. The dediren runtime enforces none of that
+        convention, so no other gate re-checks the claim: `scoped_pin_replace` rewrites
+        "on the pinned <v> bundle" as a live pin, which without this test would silently
+        re-assert the claim against a runtime nobody probed. Pin the claim to the runtime
+        so a bump that breaks open `properties` fails here instead of shipping.
+
+        One session per call on purpose: a server that errors on the first tools/call
+        answers only one of two batched calls (and non-deterministically which), so
+        batching would report the regression this test exists to catch as a missing
+        response rather than as the failing envelope."""
+        bundle = release_bundle()
+        model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
+        for node in model["nodes"]:
+            node["properties"]["identity"] = f"canon-{node['id']}"
+        # Non-vacuity: the probe must actually carry the property under test, or both
+        # calls would pass by validating a plain fixture and prove nothing.
+        self.assertTrue(
+            model["nodes"] and all(n["properties"].get("identity") for n in model["nodes"]),
+            "probe model must carry properties.identity on every node",
+        )
+        # The claim names both invocations; profile is optional on the MCP tool (the CLI
+        # requires --profile), so an omitted profile must still resolve and accept.
+        for arguments in ({"source": "model.json", "profile": "archimate"},
+                          {"source": "model.json"}):
+            with self.subTest(profile=arguments.get("profile", "<omitted>")):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    (root / "model.json").write_text(json.dumps(model), encoding="utf-8")
+                    by_id = mcp_session(bundle, root, [{
+                        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                        "params": {"name": "dediren_validate", "arguments": arguments},
+                    }])
+                envelope = tool_envelope(by_id[2])
+                self.assertEqual(envelope["status"], "ok", envelope)
 
 
 if __name__ == "__main__":
