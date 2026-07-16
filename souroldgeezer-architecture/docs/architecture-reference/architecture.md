@@ -549,12 +549,15 @@ locates this skill's own helper scripts, not Dediren.
 Read the format contract through `dediren_guide` (`{}` for the topic index, then
 `{topic: "source-json"}`) before authoring or repairing source JSON. It is the
 fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
-Handoff, and Repair Rules. The server downloads the pinned Java™-backed runtime on
-first use into `${CLAUDE_PLUGIN_DATA}` and requires Java™ 21 or newer on the host;
-if it cannot start (no Java™ 21+, or the bundle could not be downloaded) the
-`dediren_*` tools are absent — disclose `not run (dediren MCP server unavailable)`
-and cap runtime checks at `source-valid`, not a hard stop (see
-`references/procedures/self-check.md`).
+Handoff, and Repair Rules. The server does no session-start download: it starts
+only when the pinned Java™-backed runtime is already resolved under
+`${CLAUDE_PLUGIN_DATA}`, and requires Java™ 21 or newer on the host. When the
+runtime is not yet resolved (or Java™ 21+ is missing) the `dediren_*` tools are
+absent that session; the skill's internal CLI fallback resolves the runtime on
+demand into the same cache, and the server comes up on the next session or after
+`/reload-plugins`. While the tools are absent, disclose `not run (dediren MCP
+server unavailable)` and cap runtime checks at `source-valid`, not a hard stop
+(see `references/procedures/self-check.md`).
 
 The bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
 legality, uses the technology element name `Node`, not `TechnologyNode`, and
