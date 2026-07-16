@@ -182,6 +182,16 @@ class HistoricalMarkerTest(unittest.TestCase):
         self.assertIn("Dediren 2026.07.19 added the mcp server", out)
         self.assertNotIn("Dediren 2099.12.7", out)
 
+    def test_scoped_replace_protects_lowercased_markers(self):
+        """Prose and code comments lowercase the runtime name mid-sentence, so the marker
+        guard must be case-insensitive on it. A case-sensitive guard silently rewrote the
+        release test's 'Since dediren <v> they are consolidated into a single application
+        jar' into a false claim during the 2026.07.21 bump."""
+        text = "Since dediren 2026.07.19 they are consolidated into a single jar\n"
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 0)
+        self.assertEqual(text, out)
+
     def test_bump_preserves_marker_citing_the_current_pin(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = build_temp_repo(Path(tmp))

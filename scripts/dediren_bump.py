@@ -224,10 +224,12 @@ def scoped_pin_replace(text: str, old: str, new: str) -> tuple[str, int]:
     (``"version": "<v>"``, ``DEDIREN_VERSION_DEFAULT="<v>"``,
     ``EXPECTED_DEDIREN_VERSION = "<v>"``) or a "pinned <v>" claim — none of them
     runtime-name-qualified. A historical marker names the release a capability landed in
-    ("Dediren <v> added/retired ...") and must stay fixed across a bump. A blanket
-    ``str.replace`` corrupts those markers the moment one cites the currently-pinned
-    version; a negative lookbehind on the runtime name keeps only live pins in scope."""
-    return re.compile(r"(?<!Dediren )" + re.escape(old)).subn(new, text)
+    ("Dediren <v> added/retired ...", "Since dediren <v> ...") and must stay fixed across
+    a bump. A blanket ``str.replace`` corrupts those markers the moment one cites the
+    currently-pinned version; a negative lookbehind on the runtime name keeps only live
+    pins in scope. The lookbehind is case-insensitive on the runtime name because prose
+    and code comments lowercase it mid-sentence ("Since dediren <v>")."""
+    return re.compile(r"(?<![Dd]ediren )" + re.escape(old)).subn(new, text)
 
 
 def bump(repo_root: Path, new_version: str, *, check: bool = False) -> BumpReport:
