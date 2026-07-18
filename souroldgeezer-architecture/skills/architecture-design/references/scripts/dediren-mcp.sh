@@ -5,16 +5,22 @@
 # spawns and owns this process automatically when the plugin is enabled; stdout
 # carries JSON-RPC only.
 #
-# Fail-fast, no session-start network I/O. Plugin MCP servers auto-start every
-# session, so this launcher must stay cheap: it starts the server ONLY when the
-# pinned bundle is already resolved on disk (checked via the resolver's
-# non-downloading `--print-path` / `--bundle-dir`). It never downloads. When the
-# bundle is absent it exits non-zero and the server simply does not start — the
-# architecture-design skill's internal fallback lane resolves the bundle on demand
-# (via the sibling resolver, into the same ${CLAUDE_PLUGIN_DATA} cache) the first
-# time architecture work runs, and the MCP server comes up on the next session or
-# after `/reload-plugins`. Java 21+ is a host prerequisite; if it is absent the
-# `exec` below fails and the server does not start (non-fatal).
+# Resolve-on-demand, bounded. Plugin MCP servers auto-start every session, and a
+# stdio server that exits at spawn gets no auto-retry — it stays dead until the
+# next session or `/reload-plugins`. So a launcher that merely fail-fasts when the
+# bundle is missing guarantees a dead session after every pin bump (the pinned
+# bundle changes; the shared ${CLAUDE_PLUGIN_DATA} cache still holds the old one).
+#
+# The bundle caches per-user under ${CLAUDE_PLUGIN_DATA} (set in plugin.json), not
+# per-project, so resolving here downloads at most once per pinned version per user
+# — not once per repo. The fast path (bundle already resolved) does NO network I/O.
+# Only a cold cache resolves, and that resolve is bounded (the resolver caps curl
+# with --connect-timeout/--max-time and the install lock with `flock -w`) so it can
+# never hang session start. Session start is non-blocking in Claude Code — only a
+# turn that needs a `dediren_*` tool waits — so the one-time resolve is cheap.
+# `--ensure-bundle` prints to stdout, which on this launcher is the JSON-RPC
+# channel, so its output is redirected away. Java 21+ is a host prerequisite; if it
+# is absent the `exec` below fails and the server does not start (non-fatal).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,8 +28,10 @@ bin="$("$script_dir/dediren-release.sh" --print-path)"
 bundle_dir="$("$script_dir/dediren-release.sh" --bundle-dir)"
 
 if [ ! -x "$bin" ] || [ ! -f "$bundle_dir/bundle.json" ]; then
-  printf 'dediren-mcp: pinned bundle not resolved yet; not starting the MCP server (no session-start download). The architecture-design skill resolves it on demand; the server starts next session or after /reload-plugins.\n' >&2
-  exit 1
+  if ! "$script_dir/dediren-release.sh" --ensure-bundle >&2; then
+    printf 'dediren-mcp: on-demand bundle resolve failed; MCP server not started (will retry next session).\n' >&2
+    exit 1
+  fi
 fi
 
 root="${CLAUDE_PROJECT_DIR:-$PWD}"

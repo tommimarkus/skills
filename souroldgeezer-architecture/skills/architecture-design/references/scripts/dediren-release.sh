@@ -199,8 +199,11 @@ download_release() {
   DEDIREN_TMP_EXTRACT="$tmp_extract"
   trap cleanup_release_tmp EXIT
 
-  curl -fsSL --retry 3 --retry-delay 1 -o "$tmp_archive" "$base/$archive"
-  curl -fsSL --retry 3 --retry-delay 1 -o "$tmp_checksums" "$base/SHA256SUMS"
+  # Bounded: the launcher resolves on demand at session start, so an unreachable
+  # or wedged peer must never hang. --connect-timeout fails a dead host fast;
+  # --max-time caps each attempt so --retry cannot compound into an unbounded wait.
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 60 -o "$tmp_archive" "$base/$archive"
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 -o "$tmp_checksums" "$base/SHA256SUMS"
   mv "$tmp_archive" "$archive_path"
   mv "$tmp_checksums" "$checksum_path"
 
@@ -241,7 +244,13 @@ ensure_bundle() {
   if command -v flock >/dev/null 2>&1; then
     lock_file="$DEDIREN_CACHE_DIR/.dediren-$DEDIREN_VERSION.lock"
     exec 9>"$lock_file"
-    flock 9
+    # Bounded wait: the launcher resolves on demand at session start, so a peer
+    # holding the lock (a concurrent download) must not hang us indefinitely.
+    # On timeout, proceed best-effort — the re-check below, then download_release's
+    # own atomic tmp+mv, keep a lost race from corrupting the install.
+    if ! flock -w 60 9; then
+      printf 'dediren-release: timed out waiting for the install lock; proceeding best-effort.\n' >&2
+    fi
     # Re-check under the lock: another resolver may have finished while we waited.
     if [ -x "$bin" ] && [ -f "$manifest" ]; then
       return 0

@@ -13,19 +13,25 @@ is this skill's absolute directory, established in `SKILL.md` from the
 
 The bundled server needs the pinned Java™-backed runtime on the host (Java™ 21 or
 newer) — exactly as a Node- or Python-based plugin MCP server needs its runtime
-installed. To keep every session cheap, the launcher does **no session-start
-download**: it starts the MCP server only when the pinned bundle is already resolved
-on disk, and otherwise fail-fasts, so the `dediren_*` tools are simply absent.
+installed. The launcher **resolves the pinned bundle on demand** at session start
+when the cache is cold, then starts the server. The resolve is bounded (the resolver
+caps curl with `--connect-timeout`/`--max-time` and the install lock with `flock -w`)
+so it can never hang session start, and it caches per-user under
+`${CLAUDE_PLUGIN_DATA}` — at most one download per pinned version per user, not per
+repo. The fast path, when the bundle is already resolved, does no network I/O. The
+`dediren_*` tools are absent only when the resolve cannot complete (host offline) or
+Java™ 21+ is missing.
 
-When the tools are absent — bundle not resolved yet, or Java™ 21+ missing — fall back
-to the **internal CLI lane**: `dediren-build.py run` (below) resolves the bundle on
-demand and drives the same runtime through the CLI, and the resolver provides the
-binary for the validate fallback. This is internal machinery; the user never types a
-dediren command. The fallback resolves into the same `${CLAUDE_PLUGIN_DATA}` cache the
-server checks, so a first-use resolution warms the MCP server for the next session (or
-after `/reload-plugins`). Only when the fallback itself cannot resolve a Java™ 21+
-runtime do you disclose `not run (dediren runtime unavailable)` and cap at
-`source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
+When the tools are absent — resolve failed, Java™ 21+ missing, or the freshly-resolved
+server not yet reconnected this session — fall back to the **internal CLI lane**:
+`dediren-build.py run` (below) resolves the bundle on demand and drives the same
+runtime through the CLI, and the resolver provides the binary for the validate
+fallback. This is internal machinery; the user never types a dediren command. Both
+lanes share the same `${CLAUDE_PLUGIN_DATA}` cache, so once the bundle is present the
+server starts on its own at the next session start — a pin bump no longer strands the
+server, because the launcher resolves the newly-pinned bundle itself. Only when the
+fallback itself cannot resolve a Java™ 21+ runtime do you disclose `not run (dediren
+runtime unavailable)` and cap at `source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
 footer (`Dediren: MCP server | CLI fallback | not run`). Do not ask the user to
 install or launch Dediren; the plugin owns that.
 

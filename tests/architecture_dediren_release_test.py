@@ -683,26 +683,109 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(export_result.returncode, 0, export_result.stderr)
             self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "uml-xmi+xml")
 
-    def test_mcp_launcher_fail_fasts_without_session_start_download(self) -> None:
-        """Plugin MCP servers auto-start every session, so the launcher must not
-        download at session start. It resolves the path without ensuring, and with no
-        cached bundle exits non-zero having fetched nothing."""
-        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
-        script = launcher.read_text(encoding="utf-8")
-        self.assertIn("--print-path", script)
-        self.assertIn("--bundle-dir", script)
-        self.assertNotIn("--ensure", script)
+    def _stub_bundle(self, cache_dir: Path, version: str, marker: str) -> None:
+        """Materialize a resolved-looking bundle (executable `dediren` + `bundle.json`)
+        so the launcher's warm path fires without a real download. The stub `dediren`
+        echoes `marker` for `mcp` so the test can prove the launcher exec'd it."""
+        bundle = cache_dir / f"dediren-agent-bundle-{version}"
+        (bundle / "bin").mkdir(parents=True)
+        binary = bundle / "bin" / "dediren"
+        binary.write_text(
+            "#!/usr/bin/env bash\n"
+            f"printf '{marker} %s\\n' \"$*\"\n"
+            "exit 0\n",
+            encoding="utf-8",
+        )
+        binary.chmod(0o755)
+        (bundle / "bundle.json").write_text("{}\n", encoding="utf-8")
 
+    def test_mcp_launcher_starts_from_a_warm_cache_without_network(self) -> None:
+        """The overwhelmingly common path: bundle already resolved. The launcher must
+        exec the server without touching the network — a sabotaged `curl` that fails if
+        called proves the warm path does no session-start download."""
+        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
         with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            cache = temp_path / "cache"
+            cache.mkdir()
+            self._stub_bundle(cache, "0.0.0-test", "STUB-STARTED")
+
+            fake_bin = temp_path / "bin"
+            fake_bin.mkdir()
+            fake_curl = fake_bin / "curl"
+            fake_curl.write_text(
+                "#!/usr/bin/env bash\nprintf 'curl must not run on the warm path\\n' >&2\nexit 6\n",
+                encoding="utf-8",
+            )
+            fake_curl.chmod(0o755)
+
             result = subprocess.run(
                 ["bash", str(launcher)],
                 cwd=REPO_ROOT, check=False, text=True,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                env={**os.environ, "DEDIREN_CACHE_DIR": temp_dir},
+                timeout=60,
+                env={
+                    **os.environ,
+                    "DEDIREN_CACHE_DIR": str(cache),
+                    "DEDIREN_VERSION": "0.0.0-test",
+                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                },
             )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("not starting the MCP server", result.stderr)
-            self.assertEqual(list(Path(temp_dir).rglob("*")), [], "launcher must not download")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("STUB-STARTED", result.stdout)
+        self.assertIn("mcp --root", result.stdout)
+        self.assertNotIn("curl must not run", result.stderr)
+
+    def test_mcp_launcher_resolves_on_demand_then_fails_bounded_when_download_fails(self) -> None:
+        """A cold cache (fresh install, or a pin bump orphaned the prior bundle) must no
+        longer silently give up: the launcher resolves on demand. When the resolve itself
+        fails it exits non-zero — no worse than before — but the `subprocess` timeout is
+        the regression guard that it stays *bounded* and never hangs session start."""
+        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            cache = temp_path / "cache"
+            fake_bin = temp_path / "bin"
+            fake_bin.mkdir()
+            fake_curl = fake_bin / "curl"
+            fake_curl.write_text(
+                "#!/usr/bin/env bash\nprintf 'curl: simulated DNS failure\\n' >&2\nexit 6\n",
+                encoding="utf-8",
+            )
+            fake_curl.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(launcher)],
+                cwd=REPO_ROOT, check=False, text=True,
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=90,
+                env={
+                    **os.environ,
+                    "DEDIREN_CACHE_DIR": str(cache),
+                    "DEDIREN_VERSION": "0.0.0-test",
+                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                },
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        # It attempted the resolve (curl ran) rather than refusing outright,
+        # and the JSON-RPC stdout channel stayed clean on the failure path.
+        self.assertIn("simulated DNS failure", result.stderr)
+        self.assertIn("resolve", result.stderr.lower())
+        self.assertEqual(result.stdout, "")
+
+    def test_launcher_and_resolver_bound_session_start_network(self) -> None:
+        """Session start must never hang on a dead socket or a wedged peer. The launcher
+        resolves the bundle on demand, so the resolver's network and lock waits carry
+        hard bounds; assert they are present so a later edit cannot quietly drop them."""
+        launcher_script = (RELEASE_SCRIPT.parent / "dediren-mcp.sh").read_text(encoding="utf-8")
+        self.assertIn("--ensure-bundle", launcher_script)
+
+        resolver = RELEASE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("--connect-timeout", resolver)
+        self.assertIn("--max-time", resolver)
+        self.assertIn("flock -w", resolver)
 
     def test_mcp_server_exposes_the_three_tools_the_skill_drives(self) -> None:
         """The shipped surface: the bundled `dediren mcp` stdio server the plugin

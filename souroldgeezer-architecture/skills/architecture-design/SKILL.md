@@ -81,12 +81,12 @@ Build.
    **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
    plugin is enabled); drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide` — never a CLI, and never ask the user to locate
-   or install Dediren. The server starts only when the pinned runtime is already
-   resolved (the launcher does no session-start download) and needs Java™ 21+; when
-   the tools are absent, the skill falls back to an internal CLI lane that resolves
-   the runtime on demand and drives the same builds — capping at `source-valid` only
-   when no Java™ 21+ runtime can be resolved at all (self-check § Server
-   availability). Defer
+   or install Dediren. The launcher resolves the pinned runtime on demand at session
+   start (bounded, cached per-user under `${CLAUDE_PLUGIN_DATA}`) and needs Java™ 21+;
+   when the tools are absent, the skill falls back to an internal CLI lane that
+   resolves the runtime on demand and drives the same builds — capping at
+   `source-valid` only when no Java™ 21+ runtime can be resolved at all (self-check §
+   Server availability). Defer
    the format guide (`dediren_guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
