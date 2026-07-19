@@ -149,16 +149,22 @@ envelope `status` before trusting output.
 
 ### Layout quality
 
-`dediren_build` runs `validate-layout` inside the build and emits the
-`layout-result` stage (mapped to `generated/layout/<view-id>.json`). Read the
-mapped payload as the authoritative source: `data.status` and the `data.*_count`
-quality fields (`overlap_count`, `connector_through_node_count`,
-`invalid_route_count`, and the other §9 gate counts; `edge_crossing_count` is
-informational). A layout quality problem surfaces as a `warning` status on the
-view entry with a `DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic naming the offending
-count. Treat `data.status: "warning"` or any nonzero non-informational count as a
-blocking layout finding (`ARCH-L-*`) to resolve or disclose before claiming render
-evidence; an overlap can superimpose two nodes in the rendered SVG.
+`dediren_build` runs `validate-layout` inside the build; its verdict lands on the
+build-result document, not in the mapped layout file. Read the `dediren_build`
+view entry as the authoritative source: `.views[].status` (`ok` / `warning` /
+`error`) and the gate counts carried by its `.views[].diagnostics[]`. A layout
+quality problem surfaces as a `warning` on the view entry with a
+`DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic that names the offending count (for
+example `overlap_count`, `route_detour_count`, or `edge_label_dissociation_count`;
+take the field names from the diagnostic itself — the runtime's gate-count set has
+drifted — and `edge_crossing_count` is informational). The mapped
+`generated/layout/<view-id>.json` (`layout-result.schema.v2`) carries layout
+*geometry* — `nodes` / `edges` / `groups` and a `warnings[]` array — not the
+quality verdict, so do not read `data.status` or `data.*_count` from it; the
+runtime stopped emitting them there (see source grounding). Treat a `warning` view
+status or any nonzero non-informational count as a blocking layout finding
+(`ARCH-L-*`) to resolve or disclose before claiming render evidence; an overlap can
+superimpose two nodes in the rendered SVG.
 
 ### Rendered SVG
 

@@ -70,8 +70,8 @@ the rendered SVG.
   head position or stem, or a message drawn as a stub inside a merged box, is an
   `ARCH-R-*` defect; inspect the SVG structure independently, and cross-check the
   layout verdict — a layout-quality problem surfaces as a `warning` status on the
-  `dediren_build` view entry, and as the `data.status` / `overlap_count` payload in
-  the mapped `generated/layout/<view>.json` — per
+  `dediren_build` view entry with the offending gate counts in its
+  `.views[].diagnostics[]` — per
   [self-check](../../procedures/self-check.md) § Layout quality.
 
 ## Findings

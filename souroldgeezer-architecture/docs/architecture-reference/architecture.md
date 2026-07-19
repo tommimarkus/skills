@@ -580,9 +580,10 @@ Evidence gates (all via the bundled MCP tools):
 - Source schema: `dediren_validate {source}`
 - Source semantics: `dediren_validate {source, profile: "archimate"}` (or `"uml"`)
 - View projection, layout, layout validation, and SVG render: `dediren_build` — one
-  call walks a view through all of them; the mapped `generated/layout/<view>.json`
-  carries the layout-validation verdict and `generated/render-metadata/<view>.json`
-  the render metadata
+  call walks a view through all of them; the layout-validation verdict is on the
+  build-result `.views[].status` / `.views[].diagnostics[]`, the mapped
+  `generated/layout/<view>.json` carries the layout geometry, and
+  `generated/render-metadata/<view>.json` the render metadata
 - Optional OEF/XMI export: `dediren_build` with an `oef_policy` / `xmi_policy`
 
 Each tool returns an envelope (`dediren_build`'s is the unwrapped build-result
@@ -601,7 +602,8 @@ Layout runs inside each `dediren_build` call; there is no separate layout comman
 to parallelize. If a view's build reports an `ARCH-L-1` layout failure, rebuild
 that single view (`dediren-build.py plan --views <view-id>`) to isolate it, and
 disclose a reproducible layout-engine failure under `Dediren tool issues` with the
-build-result diagnostics and the mapped `generated/layout/<view-id>.json` counts.
+build-result `.views[].diagnostics[]` counts and the mapped
+`generated/layout/<view-id>.json` geometry.
 
 A view carries an optional `layout_preferences` object (set on the view in the
 source model) that influences how ELK positions nodes and routes edges. It changes
@@ -617,9 +619,11 @@ tuning to re-run layout validation. The bundle's
 - `density`: `compact` | `readable` | `spacious` to relieve a dense view.
 - `wrapping`: `auto` | `off` | `multi-edge` to relieve hub fanout and parallel
   edges.
-- `routing`: `style` (`orthogonal` | `polyline` | `spline`), `profile`
-  (`compact` | `readable` | `spacious`), and `endpoint_merging` (`off` |
-  `local` | `auto`) to relieve route congestion and detours.
+- `routing`: `style` (`orthogonal` | `polyline` | `spline`) and
+  `endpoint_merging` (`off` | `local` | `auto`) to relieve route congestion and
+  detours. Route density comes from the top-level `density` knob; the pinned
+  runtime's `layout-request` schema rejects a `routing.profile` key with a hard
+  `DEDIREN_SCHEMA_INVALID` (see source grounding), so do not author one.
 - `algorithm`: `layered` selects ELK Layered explicitly (currently the only
   value; `mode: flow` already implies it) — set it alongside the layered-only
   tuning below so the intent is self-documenting.
@@ -732,8 +736,8 @@ Render-ready requires inspecting SVG for:
   spanning its two lifelines (per the UML sequence notation reference).
   Superimposed participants are an `ARCH-R-*` defect; inspect the SVG structure
   independently, in addition to the self-check § Layout quality verdict (a
-  `warning` status on the `dediren_build` view entry, and the `data.status` /
-  `overlap_count` payload gate in the mapped `generated/layout/<view>.json`).
+  `warning` status on the `dediren_build` view entry and the gate counts in its
+  `.views[].diagnostics[]`).
 
 ### Relationship Connectors And Junctions
 
