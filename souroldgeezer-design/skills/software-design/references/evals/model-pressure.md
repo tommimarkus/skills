@@ -32,3 +32,15 @@ delegate api/app-design. Retest: trigger evals
 `software-design-behavior-python-packaging-surface`. Merge back (re-narrow to
 tooling) if fresh-agent Python application reviews show no lift over core
 `SD-*`.
+
+2026-07 §3.9 concurrency/error-contract expansion: added `SD-C-6`, `SD-S-5`,
+and `SD-Q-4` with playbook §3.9 (concurrency/cancellation ownership and
+error-contract design); the core-only baseline missed unowned background
+work, collapsed failure taxonomies, and stacked retries, or misrouted the
+specialist slices instead of delegating them. Retest: behavior evals
+`software-design-behavior-core-smell-unowned-concurrency`,
+`software-design-behavior-core-smell-error-contract-collapse`,
+`software-design-behavior-core-smell-stacked-retries`, and
+`software-design-behavior-error-contract-delegation`. Merge back (retire the
+codes into family prose) if fresh-agent reviews show no lift over core
+`SD-C-4`/`SD-S-1`/`SD-Q-2`.

@@ -50,6 +50,9 @@ drift without translator; `typescript.SD-E-1` exported type is too structurally
 easy to depend on; `typescript.SD-Q-1` type-only boundary is treated as runtime
 validation.
 
+Only these key codes are citable; the `Smell codes:` families above describe
+scope only. Emit core `SD-*` for anything not covered by a key code.
+
 Do not flag TypeScript syntax, generics, barrels, package exports, project
 references, or path aliases by themselves. Flag the boundary, coupling,
 semantic, evolution, or tradeoff risk and name the smaller shape.

@@ -34,6 +34,7 @@ Rules cite source families rather than copying source prose.
 - Dependency freshness measurement: Cox, Bouwers, van Eekelen, and Visser, "Measuring Dependency Freshness in Software Systems," ICSE 2015, https://ericbouwers.github.io/papers/icse15.pdf
 - Safe backward-incompatible interface change: Parallel Change (expand/contract), Joshua Kerievsky via Martin Fowler, https://martinfowler.com/bliki/ParallelChange.html
 - Change-history communication for consumers: Keep a Changelog, https://keepachangelog.com/
+- Concurrency ownership and failure-contract design as reliability quality attributes: ISO/IEC 25010 reliability characteristics (fault tolerance, recoverability), https://www.iso.org/standard/78176.html, applied through the SEI quality-attribute tradeoff discipline above, with detached concurrency treated as a coupling concern per the propagation-cost calibration above.
 
 Source roles:
 
@@ -121,6 +122,16 @@ A deprecation is a staged lifecycle — replacement, owner, removal trigger — 
 Delegate HTTP versioning and `Sunset`/`Deprecation` headers to `api-design`, runtime config/fleet convergence and rollout to `infra-design`, upgrade CVE/supply-chain risk to `devsecops-audit`, and characterization tests to `test-quality-audit`.
 
 Default: make the compatibility contract explicit and the next upgrade small.
+
+### 3.9 Concurrency, Cancellation, And Error-Contract Ownership
+
+Concurrent work is a designed responsibility, not an implementation detail. Every spawned task, background job, or parallel flow has one owner for its lifetime: who starts it, who joins or supervises it, and how the caller's cancellation reaches it. Detached work that outlives its owner, or ignores cancellation, couples flows through timing and shared state the same way hidden globals do (`SD-C-4`, `SD-C-6`). Static evidence shows the spawn and the missing join or cancellation path; runtime evidence shows the leak, starvation, or shutdown hang.
+
+A boundary's failure contract is part of its interface. Name the failure taxonomy (domain rule, transport, infrastructure), how each class propagates or translates at the boundary, and which classes are retryable versus terminal. Collapsing distinct failures into one shape, or swallowing them mid-path, hides ownership the way a duplicate model does (`SD-S-5`). Retry, timeout, and fallback are failure-handling tactics with exactly one owning layer and an explicit budget; stacking them across layers multiplies load and duplicates non-idempotent side effects (`SD-Q-4`).
+
+Delegate HTTP error payload shape and status-code mapping to `api-design`, runtime failure SLIs/SLOs and rollout of failure-handling changes to `infra-design`, security consequences of failure modes (error-message disclosure, retry-driven denial of service) to `devsecops-audit`, and characterization tests of current failure behavior to `test-quality-audit`.
+
+Default: give every concurrent path one cancellation owner, and every failure class one meaning, one propagation path, and one retry owner with a budget.
 
 ## 4. Decision Defaults
 
@@ -250,7 +261,7 @@ Checklist:
 - `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability, HTTP versioning and `Sunset`/`Deprecation` headers.
 - `infra-design`: infrastructure/IaC topology, cloud resources, environment and
   state boundaries, rollout/rollback, runtime config/fleet convergence, operations handoff.
-- `architecture-design`: ArchiMate models, OEF XML, enterprise/solution views, architecture drift.
+- `architecture-design`: ArchiMate models, OEF XML, enterprise/solution views, architecture drift. `architecture-design` owns the paired package at `docs/architecture/<feature>.dediren/`; when one exists, `software-design` checks it after module/boundary restructuring and dispatches drift review to `architecture-design` rather than running drift checks itself.
 - `devsecops-audit`: application and IaC security posture, workflows, release
   artifacts, secrets, pipeline controls, dependency-upgrade CVE and supply-chain risk.
 - `test-quality-audit`: test quality, characterization/specification classification, integration/E2E scope, mutation-testing worklists, characterization tests before converging or removing observable behavior.

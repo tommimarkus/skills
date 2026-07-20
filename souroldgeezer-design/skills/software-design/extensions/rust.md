@@ -43,3 +43,6 @@ feature flags are non-additive or change public semantics; `rust.SD-C-3` trait
 wraps one implementation for tests/ceremony; `rust.SD-S-1` error type collapses
 domain/transport/infrastructure failures; `rust.SD-Q-1` unsafe/FFI/generated
 boundary is too wide to review independently.
+
+Only these key codes are citable; the `Smell codes:` families above describe
+scope only. Emit core `SD-*` for anything not covered by a key code.

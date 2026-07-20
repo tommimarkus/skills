@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python®. Defer UI, API, infra, architecture, security, tests.
+  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python®. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -41,6 +41,12 @@ Load
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
 when existing source, diffs, manifests, generated clients, shared libraries,
 adapters, state owners, domain vocabulary, or module boundaries are in scope.
+Load
+[references/procedures/architecture-pairing.md](references/procedures/architecture-pairing.md)
+when a paired `docs/architecture/<feature>.dediren/` package exists and module,
+boundary, or dependency-direction restructuring may affect a code-lifted
+architecture view, or the user asks to update architecture after
+software-design work.
 Before stack claims, load matching extensions:
 [dotnet](extensions/dotnet.md), [java](extensions/java.md), [rust](extensions/rust.md),
 [typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
@@ -62,9 +68,12 @@ Before changing workflow/selection/grounding/evals/scope, load
 3. Assimilate modules/imports, adapters, shared code, terms, models, state
    owners, principle claims, pattern ceremony, seams, and debt; apply project
    assimilation before choosing reuse, migration, or legacy-debt treatment.
-4. Separate fact from inference, choose the smallest coherent move, validate,
+4. Check for a paired `docs/architecture/<feature>.dediren/` package when
+   module, boundary, or dependency-direction changes may affect a code-lifted
+   architecture view.
+5. Separate fact from inference, choose the smallest coherent move, validate,
    then emit contract/footer.
-5. For Build implementation, record the design decision, implement
+6. For Build implementation, record the design decision, implement
    the smallest coherent move, review diff against the design decision,
    validate, then classify adjacent audit triggers: use/request devsecops-audit
    Quick for security-sensitive edits and test-quality-audit Quick for
@@ -75,16 +84,19 @@ Before changing workflow/selection/grounding/evals/scope, load
 
 Build outputs forces, principle/pattern decision, responsibilities, deps, state
 owner, validation, and delegations. Extract outputs modules, boundaries, deps,
-hotspots, debt, and next move. Review outputs findings only: block unsafe
-fragmentation/cycles/inversions/duplicate models/shared state/speculation or
-load-bearing legacy; warn risks; info notes. Lookup gives rule, exception,
-citation, delegation, and footer.
+hotspots, debt, and next move. Review outputs findings only: block the
+`Default blocks:` classes in
+[references/smell-catalog.md](references/smell-catalog.md); warn risks; info
+notes. Lookup gives rule, exception, citation, delegation, and footer.
 
 Answers report mode, extensions, reference path, layers (`static`,
-`graph`, `history`, `runtime`, `human`), assimilation, delegations, and limits.
+`graph`, `history`, `runtime`, `human`), assimilation, architecture pairing,
+delegations, and limits.
 Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer, severity,
-evidence, action, and citation. Principle/pattern decisions name force,
-fit/rule, avoid case, smell reduced/introduced, cheapest validation layer.
+evidence, action, and citation; extension findings cite only that extension's
+defined key codes, never its family globs. Principle/pattern decisions name
+force, fit/rule, avoid case, smell reduced/introduced, cheapest validation
+layer.
 
 ## Stop Conditions
 <!-- lean-audit:sync-intentional -->

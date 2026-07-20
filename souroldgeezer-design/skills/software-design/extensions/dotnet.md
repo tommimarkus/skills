@@ -37,3 +37,6 @@ Key codes: `dotnet.SD-C-1` project cycle or policy-to-adapter reference;
 EF/DTO/domain collapse hides ownership; `dotnet.SD-W-1` repository/unit-of-work
 wraps EF with pass-through CRUD; `dotnet.SD-Q-1` reflection/generated boundary
 lacks owner and validation.
+
+Only these key codes are citable; the `Smell codes:` families above describe
+scope only. Emit core `SD-*` for anything not covered by a key code.

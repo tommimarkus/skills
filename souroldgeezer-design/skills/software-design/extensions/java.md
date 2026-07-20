@@ -9,6 +9,11 @@ Covers Java package/module/build/API design. Delegate Spring or HTTP contracts
 to `api-design`, security/dependencies to `devsecops-audit`, and tests to
 `test-quality-audit`.
 
+Kotlin sources and Kotlin-DSL builds (`build.gradle.kts`) load this extension
+for build-graph and module facts only (Maven/Gradle graph, source sets,
+artifacts); Kotlin language semantics are unsupported, so language-level
+review uses core `SD-*` only, not Java-language defaults.
+
 Sources: JLS packages/modules
 https://docs.oracle.com/javase/specs/jls/se21/html/jls-7.html, Maven POM
 https://maven.apache.org/pom.html, Gradle Java plugin
@@ -44,3 +49,6 @@ Key codes: `java.SD-B-1` package, build module, and runtime module disagree;
 `java.SD-S-2` DTO/entity/domain model collapse hides ownership; `java.SD-W-1`
 interface/base class wraps one implementation; `java.SD-Q-1`
 reflection/service-loading/generated boundary lacks owner and validation.
+
+Only these key codes are citable; the `Smell codes:` families above describe
+scope only. Emit core `SD-*` for anything not covered by a key code.

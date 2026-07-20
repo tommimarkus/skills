@@ -70,6 +70,9 @@ consumers deep-import internals, bypassing the package's public surface;
 collapse distinct failures; `python.SD-E-1` version/dependency/tool pin
 contract is undeclared.
 
+Only these key codes are citable; the `Smell codes:` families above describe
+scope only. Emit core `SD-*` for anything not covered by a key code.
+
 Do not flag `src/` vs flat layout, namespace packages, `__init__.py`
 re-exports, relative imports, or missing type annotations by themselves. Flag
 the boundary, coupling, semantic, evolution, or tradeoff risk and name the

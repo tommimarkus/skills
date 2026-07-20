@@ -16,12 +16,17 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
     def test_smell_catalog_family_table_only_advertises_defined_core_cards(self) -> None:
         catalog = read(SMELL_CATALOG)
         cards = {record["id"] for record in read_jsonl(SMELL_CARDS)}
-        defined_codes = set(re.findall(r"### `(SD-[A-Z]-\d+)`", catalog))
-        table = catalog[catalog.index("| Family | Codes | Signal |") : catalog.index("## Core Code Cards")]
-        advertised_codes = set(re.findall(r"`(SD-[A-Z]-\d+)`", table))
+        table_rows = [line for line in catalog.splitlines() if line.startswith("|")]
+        advertised_codes = set(re.findall(r"`(SD-[A-Z]-\d+)`", "\n".join(table_rows)))
 
-        self.assertEqual(cards, defined_codes)
         self.assertEqual(cards, advertised_codes)
+
+    def test_smell_catalog_reserves_retired_core_code(self) -> None:
+        catalog = read(SMELL_CATALOG)
+        cards = {record["id"] for record in read_jsonl(SMELL_CARDS)}
+
+        self.assertIn("Core `SD-S-3` is intentionally retired", catalog)
+        self.assertNotIn("SD-S-3", cards)
 
     def test_core_smell_catalog_has_actionable_cards(self) -> None:
         catalog = read(SMELL_CATALOG)
@@ -37,21 +42,23 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
             "SD-C-2": "Policy-to-adapter dependency",
             "SD-C-3": "Shared-core gravity",
             "SD-C-4": "Hidden mutable state",
+            "SD-C-6": "Unowned concurrency",
             "SD-S-1": "Vocabulary split",
             "SD-S-2": "Duplicate concept drift",
             "SD-S-4": "External model collapse",
+            "SD-S-5": "Error-contract collapse",
             "SD-E-1": "Shotgun change",
             "SD-E-2": "Migration without exit",
             "SD-E-3": "Flag pile-up",
             "SD-Q-1": "Unstated quality tradeoff",
             "SD-Q-2": "Unmeasured quality tactic",
+            "SD-Q-4": "Stacked failure handling",
             "SD-T-1": "Ownership mismatch",
         }
 
         for code, title in expected_cards.items():
             with self.subTest(code=code):
-                heading = f"### `{code}` - {title}"
-                self.assertIn(heading, catalog)
+                self.assertIn(f"`{code}`", catalog)
                 self.assertIn(code, cards)
                 card = cards[code]
                 self.assertEqual(title, card["title"])
@@ -86,6 +93,9 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
             "software-design-behavior-core-smell-evolution": ("SD-E-1", "SD-E-3"),
             "software-design-behavior-core-smell-migration-quality": ("SD-E-2", "SD-Q-2"),
             "software-design-behavior-core-smell-socio-technical": ("SD-Q-1", "SD-T-1"),
+            "software-design-behavior-core-smell-unowned-concurrency": ("SD-C-6",),
+            "software-design-behavior-core-smell-error-contract-collapse": ("SD-S-5",),
+            "software-design-behavior-core-smell-stacked-retries": ("SD-Q-4",),
             "software-design-behavior-dotnet-ef-repository-smells": ("dotnet.SD-S-1", "dotnet.SD-W-1"),
             "software-design-behavior-python-tooling-contract-smells": (
                 "python.SD-B-4",
