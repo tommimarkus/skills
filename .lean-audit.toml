@@ -1,4 +1,12 @@
 # lean-audit registry for THIS repo. carve_out = intentional parallel structure.
+
+# ip-hygiene accuracy-corpus fixtures are detection test data: the near-verbatim
+# pair IS the fixture (expected.jsonl case c5), and the case files are referenced
+# by case directory from expected.jsonl / README.md, not by markdown link.
+exempt_paths = [
+  "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/**",
+]
+
 [[carve_out]]                                   # compact catalog restates its own plugin's rubric
 a = "{plugin}/skills/*/references/smell-catalog.md"
 b = "{plugin}/docs/*-reference/**/*.md"

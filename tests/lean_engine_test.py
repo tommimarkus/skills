@@ -335,6 +335,17 @@ class DeadRefs(unittest.TestCase):
         files = {"x/SKILL.md": "body", "CLAUDE.md": "guide"}
         self.assertEqual(eng.find_dead_refs(files), [])
 
+    def test_exempt_path_is_not_dead(self):
+        """exempt_paths must silence the dead-file lens too, not only duplication —
+        eval corpora are referenced by directory, never by markdown link."""
+        eng = load_engine()
+        files = {"x/SKILL.md": "the workflow", "x/references/evals/corpus/orphan.md": "# O\nstuff"}
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / ".lean-audit.toml"
+            path.write_text('exempt_paths = ["x/references/evals/**"]\n', encoding="utf-8")
+            reg = eng.load_registry(path)
+        self.assertEqual(eng.find_dead_refs(files, reg), [])
+
 
 class Bloat(unittest.TestCase):
     def test_oversized_skill_flagged(self):

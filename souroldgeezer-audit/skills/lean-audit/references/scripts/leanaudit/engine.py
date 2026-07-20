@@ -293,12 +293,17 @@ def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Fin
     return findings
 
 
-def find_dead_refs(files: dict[str, str]) -> list[Finding]:
+def find_dead_refs(files: dict[str, str], reg: Registry | None = None) -> list[Finding]:
     """Flag references/ or extensions/ files whose basename no other guarded file
-    mentions — likely dead weight nothing loads."""
+    mentions — likely dead weight nothing loads.
+
+    Honors the registry's exempt_paths: corpora referenced by directory rather
+    than by markdown link (eval fixtures) are live inputs, not dead weight."""
     findings: list[Finding] = []
     for path in files:
         if "/references/" not in path and "/extensions/" not in path:
+            continue
+        if reg is not None and path_exempt(reg, path):
             continue
         name = posixpath.basename(path)
         if not any(name in text for other, text in files.items() if other != path):
@@ -549,7 +554,7 @@ def main(argv: list[str]) -> int:
             findings = (
                 scan(files, reg)
                 + scan_stale_refs(files, root)
-                + find_dead_refs(files)
+                + find_dead_refs(files, reg)
                 + scan_bloat(files)
                 + scan_verbosity(files, reg)
             )
