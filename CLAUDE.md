@@ -112,7 +112,7 @@ internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of 
 .claude-plugin/marketplace.json        ← shared Claude Code marketplace manifest
 souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
   docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + provider-agnostic lifecycle/escalation core + extension-authoring template (github.md, gitlab.md, provider-lifecycle-core.md, authoring.md)
-souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy)
+souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy, tdd-policy)
 souroldgeezer-audit/        ← published audit plugin (devsecops-audit, test-quality-audit, ip-hygiene, lean-audit)
   docs/audit-reference/     ← shared audit craft core (audit-craft.md, materiality.md, sampling-projection.md)
 souroldgeezer-design/       ← published design plugin (software-design, app-design, api-design, infra-design)
@@ -220,6 +220,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `pr-ops` | `souroldgeezer-ops` | Explicit PR/MR operations and prepared branches; provider-agnostic core + GitHub™ / GitLab™ extensions |
 | `git-workflow-policy` | `souroldgeezer-policy` | Passive developer git workflow policy; standing enforcement once initialized in target-repo guidance |
 | `release-policy` | `souroldgeezer-policy` | Passive distribution policy (versions, changelog, tags, publication); standing enforcement once initialized |
+| `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path |
 | `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain; cost stance via `config.yaml` |
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces |
@@ -236,6 +237,7 @@ Design and audit skills share the Build / Extract / Review / Lookup (design) and
 - `software-design` → `app-design` (frontend), `api-design` (HTTP), `infra-design` (IaC), `architecture-design` (ArchiMate®/UML® drift), `devsecops-audit` (security), `test-quality-audit` (tests).
 - `app-design` / `api-design` / `infra-design` / `software-design` → `architecture-design` drift review via the paired package at `docs/architecture/<feature>.dediren/`; `app-design` ↔ `api-design` at the frontend/API boundary.
 - `git-workflow-policy` → `pr-ops`, `issue-ops`, `release-policy`; `release-policy` applies `git-workflow-policy` preflight then → `pr-ops`; `issue-ops` ↔ `pr-ops` handoff.
+- `tdd-policy` → `test-quality-audit` (test adequacy), `software-design` (design), `git-workflow-policy` preflight; siblings hand test-first enforcement to `tdd-policy`.
 - `lean-audit` → `devsecops-audit` (security), `test-quality-audit` (tests), `ip-hygiene` (copyright / marks / licence), the design skills (code / structure); sibling skills may hand duplication / waste assessment to `lean-audit`.
 
 **Extension composition order** (load in order when the target spans layers): app `react.md` → `nextjs.md` (Blazor™ WASM is standalone); api picks one base — `azure-functions-dotnet.md` (Azure® Functions™ .NET) *or* `nodejs.md` (hosted Node, then `nextjs.md` for Next.js) — plus `azure-cosmosdb.md` / `azure-blob-storage.md` data/storage extensions as the stack spans; infra `azure.md` + (`bicep.md` | `terraform.md`); test-quality `nodejs-core.md` → `nextjs-core.md` (Next.js is a strict superset of Node.js).

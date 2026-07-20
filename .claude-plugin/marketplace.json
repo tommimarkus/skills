@@ -24,7 +24,7 @@
     {
       "name": "souroldgeezer-policy",
       "source": "./souroldgeezer-policy",
-      "description": "Passive policy skills for repo-initialized git workflow and release versioning."
+      "description": "Passive policy skills for repo-initialized git workflow, release versioning, and test-driven development."
     },
     {
       "name": "souroldgeezer-ops",
