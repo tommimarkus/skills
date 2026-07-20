@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python® tooling. Defer UI, API, infra, architecture, security, tests.
+  Use when designing/reviewing code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or .NET™, Java™, Rust®, TypeScript, shell, Python®. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -15,7 +15,9 @@ scope/evidence is missing, destructive, or sibling-owned with no safe default,
 ask the user; otherwise continue.
 Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 `api-design`, `infra-design`, `architecture-design`, `devsecops-audit`, and
-`test-quality-audit`.
+`test-quality-audit`; delegate mechanical copy-paste duplication scans
+(token-window clones, `LA-CODE-DUP-*`) to `lean-audit` — semantic
+duplication/DRY ownership stays here (`SD-S-2`).
 
 ## Load Map
 
@@ -43,7 +45,9 @@ Before stack claims, load matching extensions:
 [dotnet](extensions/dotnet.md), [java](extensions/java.md), [rust](extensions/rust.md),
 [typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
 [python](extensions/python.md).
-Unknown stacks use core only; Python web/ASGI delegates app/API.
+Unknown stacks use core only; Python module/package/application/library
+design is owned here — only Python web/ASGI HTTP contracts delegate
+`api-design`, and UI delegates `app-design`.
 
 When editing extensions, read
 [references/procedures/extension-authoring.md](references/procedures/extension-authoring.md).

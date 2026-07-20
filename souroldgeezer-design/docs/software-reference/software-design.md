@@ -254,6 +254,11 @@ Checklist:
 - `devsecops-audit`: application and IaC security posture, workflows, release
   artifacts, secrets, pipeline controls, dependency-upgrade CVE and supply-chain risk.
 - `test-quality-audit`: test quality, characterization/specification classification, integration/E2E scope, mutation-testing worklists, characterization tests before converging or removing observable behavior.
+- `lean-audit`: mechanical copy-paste duplication — token-window clone
+  detection across source and prose (`LA-CODE-DUP-*`) — and duplication/waste
+  audits of docs and skill surfaces. Semantic duplication — which boundary
+  owns a duplicated concept and where its one meaning lives (`SD-S-2`, the
+  DRY principle) — stays with `software-design`.
 
 ## 10. Output Contracts
 

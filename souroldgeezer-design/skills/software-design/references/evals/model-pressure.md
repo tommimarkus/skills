@@ -18,3 +18,17 @@ matching row -> Review/Build or ask). Retest: behavior evals
 `software-design-behavior-lookup-escalation`; scenario `sd-lookup-principle`.
 Merge back (drop the cap) if fresh-agent lookups under-answer or mis-cite
 sections.
+
+2026-07 Python application/library expansion: python.md broadened from
+tooling-only to package/module/application/library design, closing the
+routing residue where api-design hands general module design back while
+python.md delegated all web/ASGI — Python service internals and libraries
+landed core-only. Added `python.SD-B-1`, `python.SD-C-2`, `python.SD-C-3`,
+`python.SD-S-1`; kept the tooling codes; web/ASGI HTTP contracts and UI still
+delegate api/app-design. Retest: trigger evals
+`software-design-trigger-yes-python-library-review` and
+`software-design-trigger-yes-python-service-internals`; behavior evals
+`software-design-behavior-python-application-module-smells` and
+`software-design-behavior-python-packaging-surface`. Merge back (re-narrow to
+tooling) if fresh-agent Python application reviews show no lift over core
+`SD-*`.

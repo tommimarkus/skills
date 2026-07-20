@@ -29,7 +29,7 @@ Inspect source-readable locations before deciding:
 6. Evolution signals: feature flags, migration branches, branch-by-abstraction
    code, deprecated paths, ownership notes, and churn/history when available.
 7. Stack signals: load the matching extension for .NET, Java, Rust,
-   TypeScript, shell, or Python tooling when its files or manifests are present.
+   TypeScript, shell, or Python when its files or manifests are present.
 
 Loaded extensions own deeper stack-specific discovery and carve-outs.
 
