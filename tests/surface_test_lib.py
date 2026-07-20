@@ -3,6 +3,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import textwrap
 from pathlib import Path
 
@@ -70,6 +71,31 @@ def assert_precision_recall_at_least(tc, tp: int, fp: int, fn: int, threshold: f
     recall = tp / (tp + fn) if (tp + fn) else 1.0
     tc.assertGreaterEqual(precision, threshold, f"precision {precision:.2f}")
     tc.assertGreaterEqual(recall, threshold, f"recall {recall:.2f}")
+
+
+def run_ledger_calibration(engine, ledger_path, *, scan, expect_key, min_cases=12):
+    """Drive a lean-engine detector over a JSONL calibration ledger.
+
+    Shared by the markdown-engine and verbosity calibration gates, which differ
+    only in which detector they call and which expectation key they read.
+    `scan(files, registry, expect_source) -> bool` reports whether the detector
+    fired on the case's source file. Returns (tp, fp, fn)."""
+    text = Path(ledger_path).read_text(encoding="utf-8")
+    cases = [json.loads(line) for line in text.splitlines() if line.strip()]
+    assert len(cases) >= min_cases, f"ledger too small to calibrate: {len(cases)}"
+
+    tp = fp = fn = 0
+    for case in cases:
+        files = {f["path"]: f["content"] for f in case["files"]}
+        registry = engine.load_registry(None)
+        if case.get("registry"):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / ".lean-audit.toml"
+                path.write_text(case["registry"], encoding="utf-8")
+                registry = engine.load_registry(path)
+        fired = scan(files, registry, case["expect_source"])
+        tp, fp, fn = classify_tp_fp_fn(case[expect_key], fired, tp, fp, fn)
+    return tp, fp, fn
 
 
 def assert_test_quality_stack_pack(tc, stack: str, core_markers: tuple[str, ...]) -> None:

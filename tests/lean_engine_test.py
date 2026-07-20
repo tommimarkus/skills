@@ -13,6 +13,7 @@ from tests.surface_test_lib import (
     classify_tp_fp_fn,
     load_script_module,
     run_git,
+    run_ledger_calibration,
 )
 
 ENGINE = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "lean_engine.py"
@@ -301,21 +302,14 @@ class StaleRefs(unittest.TestCase):
 class Calibration(unittest.TestCase):
     def test_precision_recall_bar(self):
         eng = load_engine()
-        cases = [json.loads(line) for line in LEDGER.read_text(encoding="utf-8").splitlines() if line.strip()]
-        self.assertGreaterEqual(len(cases), 12, "ledger too small to calibrate")
-        tp = fp = fn = 0
-        for case in cases:
-            files = {f["path"]: f["content"] for f in case["files"]}
-            reg = eng.load_registry(None)
-            if case.get("registry"):
-                with tempfile.TemporaryDirectory() as d:
-                    p = Path(d) / ".lean-audit.toml"
-                    p.write_text(case["registry"], encoding="utf-8")
-                    reg = eng.load_registry(p)
-            blocks = [f for f in eng.scan(files, reg)
-                      if f.severity == "block" and f.path == case["expect_source"]]
-            fired = bool(blocks)
-            tp, fp, fn = classify_tp_fp_fn(case["expect_block"], fired, tp, fp, fn)
+
+        def scan(files, registry, expect_source):
+            return bool([f for f in eng.scan(files, registry)
+                         if f.severity == "block" and f.path == expect_source])
+
+        tp, fp, fn = run_ledger_calibration(
+            eng, LEDGER, scan=scan, expect_key="expect_block"
+        )
         assert_precision_recall_at_least(self, tp, fp, fn)
 
 

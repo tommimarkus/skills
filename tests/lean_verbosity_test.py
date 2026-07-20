@@ -13,6 +13,7 @@ from tests.surface_test_lib import (
     assert_precision_recall_at_least,
     classify_tp_fp_fn,
     load_script_module,
+    run_ledger_calibration,
 )
 
 ENGINE = REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "lean_engine.py"
@@ -265,23 +266,14 @@ class VerbosityRepoResidual(unittest.TestCase):
 class VerbosityCalibration(unittest.TestCase):
     def test_precision_recall_bar(self):
         eng = load_engine()
-        cases = [json.loads(line) for line in LEDGER.read_text(encoding="utf-8").splitlines() if line.strip()]
-        self.assertGreaterEqual(len(cases), 12, "ledger too small to calibrate")
-        tp = fp = fn = 0
-        for case in cases:
-            files = {f["path"]: f["content"] for f in case["files"]}
-            reg = eng.load_registry(None)
-            if case.get("registry"):
-                with tempfile.TemporaryDirectory() as d:
-                    p = Path(d) / ".lean-audit.toml"
-                    p.write_text(case["registry"], encoding="utf-8")
-                    reg = eng.load_registry(p)
-            nominated = [
-                f for f in eng.scan_verbosity(files, reg)
-                if f.code == "LA-VERBOSE-1" and f.path == case["expect_source"]
-            ]
-            fired = bool(nominated)
-            tp, fp, fn = classify_tp_fp_fn(case["expect_nominate"], fired, tp, fp, fn)
+
+        def scan(files, registry, expect_source):
+            return bool([f for f in eng.scan_verbosity(files, registry)
+                         if f.code == "LA-VERBOSE-1" and f.path == expect_source])
+
+        tp, fp, fn = run_ledger_calibration(
+            eng, LEDGER, scan=scan, expect_key="expect_nominate"
+        )
         assert_precision_recall_at_least(self, tp, fp, fn)
 
 
