@@ -1,5 +1,7 @@
 # lean-audit prevention hook — enablement recipe
 
+<!-- lean-audit:sync-intentional: SKILL.md §"Prevention hook (opt-in)" carries a compact summary of this file. The summary is deliberate — collapsing it to a citation would force this 172-line recipe into every contract-awareness load, a net per-use loss. -->
+
 The `lean-audit` engine backs an **opt-in** PreToolUse guard that soft-blocks an
 edit which would introduce a **new block-severity duplication** into guarded
 markdown. It ships **off** — installing the plugin does not enable enforcement.
