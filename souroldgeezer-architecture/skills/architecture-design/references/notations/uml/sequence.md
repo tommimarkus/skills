@@ -40,7 +40,7 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.21"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.07.22"}],
   "nodes": [
     {"id": "ix-login", "type": "Interaction", "label": "Login", "properties": {"uml": {}}},
     {"id": "user", "type": "Lifeline", "label": "User", "properties": {"uml": {"interaction": "ix-login"}}},
