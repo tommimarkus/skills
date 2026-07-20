@@ -24,7 +24,7 @@ Rules cite source families rather than copying source prose.
 - Quality-attribute taxonomy: ISO/IEC 25010 (SQuaRE) product quality model, https://www.iso.org/standard/78176.html
 - Socio-technical fit and maintainability: DORA loosely coupled teams and code maintainability capabilities, https://dora.dev/capabilities/loosely-coupled-teams/ and https://dora.dev/capabilities/code-maintainability/
 - Coupling and propagation-cost calibration: MacCormack and Sturtevant, Journal of Systems and Software study page, https://www.hbs.edu/faculty/Pages/item.aspx?num=51343
-- DRY as knowledge-ownership discipline: Hunt and Thomas, *The Pragmatic Programmer*, https://www.pragmatic.org/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/
+- DRY as knowledge-ownership discipline: Hunt and Thomas, *The Pragmatic Programmer*, https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/
 - Code smells/refactoring calibration: Lacerda, Petrillo, Pimenta, and Gueheneuc, tertiary systematic review, https://www.sciencedirect.com/science/article/pii/S0164121220300881
 - DDD empirical calibration: systematic literature review, https://www.sciencedirect.com/science/article/pii/S0164121225002055
 - Software maintenance lifecycle and maintenance-type taxonomy: ISO/IEC/IEEE 14764:2022 on ISO/IEC/IEEE 12207:2017, https://www.iso.org/standard/80710.html and https://www.iso.org/standard/63712.html
@@ -133,6 +133,16 @@ Delegate HTTP error payload shape and status-code mapping to `api-design`, runti
 
 Default: give every concurrent path one cancellation owner, and every failure class one meaning, one propagation path, and one retry owner with a budget.
 
+### 3.10 Testability And Seams
+
+Testability is a design property, not a property of the test suite: a unit is testable when the collaborators it depends on can be observed and substituted at its owning boundary. Put a genuine seam where isolation is actually needed — IO, time/clock, randomness, network, and global or singleton state — by taking the dependency as a parameter, port, or injected collaborator and constructing the real implementation at the composition edge. Policy that reaches those dependencies through hidden collaborators or constructor work resists substitution and can only be exercised against live externals (`SD-B-5`); when the hardwired dependency is shared mutable state, the coupling compounds (`SD-C-4`). Static evidence shows the hidden construction or direct external call inside policy; graph evidence shows policy referencing the concrete dependency instead of an owned contract.
+
+Do not over-seam. A seam that exists only so a test double can be injected — an interface or trait wrapping a single concrete implementation nothing else varies — is ceremony, not isolation (`SD-W-1`, `SD-W-2`); deterministic pure logic needs no seam at all. Seam count follows the real isolation boundaries, not the class count.
+
+Delegate judging the tests themselves — assertion quality, coverage, flakiness, characterization scope — to `test-quality-audit`; this section owns designing code to be testable, not the tests.
+
+Default: one seam per genuine isolation boundary, construction at the composition edge, and no seam whose only consumer is a test double.
+
 ## 4. Decision Defaults
 
 1. Start with one concrete use case before adding extension mechanisms.
@@ -147,6 +157,7 @@ Default: give every concurrent path one cancellation owner, and every failure cl
 10. Prefer a reversible local change when evidence is weak.
 11. Make each release's compatibility contract explicit and classify every externally-visible change as breaking, additive, or cosmetic — independent of scheme (SemVer, CalVer, or live-at-HEAD). Treat a deprecation as a staged lifecycle with a replacement, an owner, and a removal trigger, not a permanent marker.
 12. Keep dependencies and internal consumers converging on one supported version; prefer incremental upgrades over a big-bang, and give any divergence a convergence owner and exit.
+13. A library or module owns emitting diagnostics through injected or standard logging/tracing interfaces; it does not configure logging — root logger, sinks, levels — or own trace-context transport (the application entrypoint or composition root is the one place that configures). Treat trace/correlation context crossing a boundary as part of the boundary contract. Delegate API observability to `api-design` and ops/runtime observability to `infra-design`.
 
 ## 5. Design Primitives
 
@@ -260,7 +271,7 @@ Checklist:
   underneath frontend features.
 - `api-design`: HTTP API contract, auth, runtime reliability, data-service patterns, API observability, HTTP versioning and `Sunset`/`Deprecation` headers.
 - `infra-design`: infrastructure/IaC topology, cloud resources, environment and
-  state boundaries, rollout/rollback, runtime config/fleet convergence, operations handoff.
+  state boundaries, rollout/rollback, runtime config/fleet convergence, ops/runtime observability, operations handoff.
 - `architecture-design`: ArchiMate models, OEF XML, enterprise/solution views, architecture drift. `architecture-design` owns the paired package at `docs/architecture/<feature>.dediren/`; when one exists, `software-design` checks it after module/boundary restructuring and dispatches drift review to `architecture-design` rather than running drift checks itself.
 - `devsecops-audit`: application and IaC security posture, workflows, release
   artifacts, secrets, pipeline controls, dependency-upgrade CVE and supply-chain risk.

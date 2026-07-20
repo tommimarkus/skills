@@ -1,10 +1,36 @@
 # Software Design Model Pressure
 
-Use before adding detail. Core IDs: `SD-MP-1`, `SD-MP-2`, `SD-MP-3`, `SD-MP-4`, `SD-MP-PAT-1`, `SD-MP-PRINCIPLE-1`, `SD-MP-SMELL-1`. Core lift: force fit, evidence layers, smell-code output, sibling delegation, false-positive guards, and anti-ceremony stops.
+Use this file before adding detail to the skill or its references. Core
+pressure IDs: `SD-MP-1`, `SD-MP-2`, `SD-MP-3`, `SD-MP-4`, `SD-MP-PAT-1`,
+`SD-MP-PRINCIPLE-1`, `SD-MP-SMELL-1`. The lift the core demonstrated under
+those pressures: force fit, evidence layers, smell-code output, sibling
+delegation, false-positive guards, and anti-ceremony stops.
 
-Stack records use baseline failure, accepted extension rule, retest, and merge-back condition: `SD-MP-TS-1` DTO/export drift -> exports, translation, aliases, validation ownership -> TS case -> package/export/type-runtime drift; `SD-MP-RS-1` feature/trait drift -> `pub`, features, traits as contracts -> Rust case -> feature/trait ceremony; `SD-MP-JAVA-1` module/interface drift -> exports, source sets, singletons, one-use interfaces -> Java case -> module/export/singleton/interface drift; `SD-MP-DOTNET-1` familiar EF/hosted-service patterns -> refs, friends, DI roots, EF/domain collapse, hosted-service ownership -> .NET case -> EF ceremony and hosted-service policy.
+Each stack record carries four fields: the baseline failure the generic core
+showed, the accepted extension rule that fixed it, the retest case, and the
+merge-back condition — the failure class to re-check in a fresh-agent retest;
+if the core alone no longer shows it, the extension rule merges back.
 
-Smell-catalog expansion gate: record baseline failure, accepted smell-catalog rule, behavior eval ID, and merge-back condition. Expansion gate: record why shorter rule fails, rerun command, and removal condition.
+- `SD-MP-TS-1` — baseline failure: DTO/export drift. Accepted extension rule:
+  exports, translation, aliases, validation ownership. Retest: the TS case.
+  Merge-back condition: package/export/type-runtime drift.
+- `SD-MP-RS-1` — baseline failure: feature/trait drift. Accepted extension
+  rule: `pub`, features, traits as contracts. Retest: the Rust case.
+  Merge-back condition: feature/trait ceremony.
+- `SD-MP-JAVA-1` — baseline failure: module/interface drift. Accepted
+  extension rule: exports, source sets, singletons, one-use interfaces.
+  Retest: the Java case. Merge-back condition:
+  module/export/singleton/interface drift.
+- `SD-MP-DOTNET-1` — baseline failure: familiar EF/hosted-service patterns.
+  Accepted extension rule: refs, friends, DI roots, EF/domain collapse,
+  hosted-service ownership. Retest: the .NET case. Merge-back condition: EF
+  ceremony and hosted-service policy.
+
+Two expansion gates apply. A smell-catalog expansion must record the baseline
+failure, the accepted smell-catalog rule, the behavior eval ID that exercises
+it, and the merge-back condition. Any other expansion of skill detail must
+record why the shorter rule fails, the rerun command, and the removal
+condition.
 
 2026-06-01 smell expansion: fixed undefined ranges; added `SD-B-2`, `SD-B-4`,
 `SD-C-2`, `SD-C-4`, `SD-S-2`, `SD-E-2`, `SD-Q-2`, and .NET/Python evals.
@@ -44,3 +70,13 @@ specialist slices instead of delegating them. Retest: behavior evals
 `software-design-behavior-error-contract-delegation`. Merge back (retire the
 codes into family prose) if fresh-agent reviews show no lift over core
 `SD-C-4`/`SD-S-1`/`SD-Q-2`.
+
+2026-07 §3.10 testability/seam expansion: added `SD-B-5` with playbook §3.10
+(testability and seams) and a false-positive guard on `rust.SD-C-3` for trait
+seams at genuine isolation boundaries; the core-only baseline had no owner
+for designing code to be testable, and the Rust extension flagged legitimate
+isolation seams as ceremony with no counterweight. Retest: behavior evals
+`software-design-behavior-core-smell-missing-seam` and
+`software-design-behavior-rust-legitimate-seam`. Merge back (retire `SD-B-5`
+into family prose and drop the guard) if fresh-agent reviews show no lift
+over core `SD-C-4`/`SD-W-1`.

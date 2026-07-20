@@ -63,7 +63,11 @@ Before changing workflow/selection/grounding/evals/scope, load
 
 ## Workflow
 
-1. Select Build, Extract, Review, or Lookup; name scope/question.
+1. Select Build, Extract, Review, or Lookup; name scope/question. Existing
+   code with no requested change defaults to Extract; a new
+   module/feature/component defaults to Build; review/audit/check wording
+   defaults to Review; a narrow principle/pattern/status question defaults
+   to Lookup; if still ambiguous, ask.
 2. Prefer `rg`; inspect inputs, detect stack, announce extensions.
 3. Assimilate modules/imports, adapters, shared code, terms, models, state
    owners, principle claims, pattern ceremony, seams, and debt; apply project

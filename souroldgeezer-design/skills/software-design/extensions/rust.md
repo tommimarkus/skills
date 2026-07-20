@@ -40,7 +40,9 @@ ownership contract drift; `rust.SD-E-*` for brittle public traits/enums;
 
 Key codes: `rust.SD-B-3` `pub`/re-export exposes internals; `rust.SD-C-2`
 feature flags are non-additive or change public semantics; `rust.SD-C-3` trait
-wraps one implementation for tests/ceremony; `rust.SD-S-1` error type collapses
+wraps one implementation for tests/ceremony — a trait seam at a genuine
+isolation boundary (IO, time, network, an external service) is legitimate
+design, not ceremony, and is not this smell; `rust.SD-S-1` error type collapses
 domain/transport/infrastructure failures; `rust.SD-Q-1` unsafe/FFI/generated
 boundary is too wide to review independently.
 
