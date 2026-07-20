@@ -53,8 +53,21 @@ release_base_url() {
   printf 'https://github.com/%s/releases/download/v%s\n' "$DEDIREN_REPO" "$DEDIREN_VERSION"
 }
 
-archive_name() {
-  printf 'dediren-agent-bundle-%s.tar.gz\n' "$DEDIREN_VERSION"
+# The release's SHA256SUMS names exactly one agent bundle, extension included, so
+# the compression format is read from the release rather than pinned here (upstream
+# moved .tar.gz -> .tar.xz in 2026.07.22; both resolve unchanged through this path).
+archive_name_from_checksums() {
+  local checksum_file names count
+  checksum_file="$1"
+  names="$(awk -v prefix="dediren-agent-bundle-$DEDIREN_VERSION." \
+    'index($2, prefix) == 1 {print $2}' "$checksum_file")"
+  count="$(printf '%s' "$names" | grep -c . || true)"
+  if [ "$count" != "1" ]; then
+    printf 'Expected exactly one dediren-agent-bundle-%s.* entry in %s, found %s\n' \
+      "$DEDIREN_VERSION" "$checksum_file" "$count" >&2
+    return 1
+  fi
+  printf '%s\n' "$names"
 }
 
 bundle_dir() {
@@ -184,17 +197,13 @@ download_release() {
   need_cmd awk
 
   base="$(release_base_url)"
-  archive="$(archive_name)"
-  archive_path="$DEDIREN_CACHE_DIR/$archive"
   checksum_path="$DEDIREN_CACHE_DIR/SHA256SUMS-$DEDIREN_VERSION"
-  tmp_archive="$archive_path.tmp.$$"
   tmp_checksums="$checksum_path.tmp.$$"
   tmp_extract="$DEDIREN_CACHE_DIR/.extract-$DEDIREN_VERSION-$$"
   final_dir="$(bundle_dir)"
 
   mkdir -p "$DEDIREN_CACHE_DIR"
   rm -rf "$tmp_extract"
-  DEDIREN_TMP_ARCHIVE="$tmp_archive"
   DEDIREN_TMP_CHECKSUMS="$tmp_checksums"
   DEDIREN_TMP_EXTRACT="$tmp_extract"
   trap cleanup_release_tmp EXIT
@@ -202,15 +211,24 @@ download_release() {
   # Bounded: the launcher resolves on demand at session start, so an unreachable
   # or wedged peer must never hang. --connect-timeout fails a dead host fast;
   # --max-time caps each attempt so --retry cannot compound into an unbounded wait.
-  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 60 -o "$tmp_archive" "$base/$archive"
+  # Checksums come first: they name the archive to fetch, so no format is assumed.
   curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 -o "$tmp_checksums" "$base/SHA256SUMS"
+  archive="$(archive_name_from_checksums "$tmp_checksums")"
+  case "$archive" in
+  *.tar.xz) need_cmd xz ;;
+  esac
+  archive_path="$DEDIREN_CACHE_DIR/$archive"
+  tmp_archive="$archive_path.tmp.$$"
+  DEDIREN_TMP_ARCHIVE="$tmp_archive"
+
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 60 -o "$tmp_archive" "$base/$archive"
   mv "$tmp_archive" "$archive_path"
   mv "$tmp_checksums" "$checksum_path"
 
   verify_archive "$archive_path" "$checksum_path"
 
   mkdir -p "$tmp_extract"
-  tar -xzf "$archive_path" -C "$tmp_extract"
+  tar -xf "$archive_path" -C "$tmp_extract"
   extracted_dir="$(find "$tmp_extract" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
   if [ -z "$extracted_dir" ]; then
     printf 'Archive did not contain a top-level bundle directory: %s\n' "$archive_path" >&2
