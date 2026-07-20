@@ -116,6 +116,5 @@ Maintenance: for rubric/dispatch/output/extension/example edits, run
 [`references/procedures/golden-corpus-evals.md`](references/procedures/golden-corpus-evals.md)
 and use `references/golden-corpus/`. For trigger/workflow/grounding/eval edits, read `references/evals`.
 For those edits, read [`references/source-grounding.md`](references/source-grounding.md);
-keep evals synthetic. After skill-surface edits in the marketplace source repo, rerun its
-`scripts/skill-architecture-report.sh .` (repo tooling, not bundled with the
-installed plugin).
+keep evals synthetic. Rerun obligations after craft or skill-surface changes:
+[`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.
