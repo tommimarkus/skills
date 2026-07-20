@@ -124,6 +124,7 @@ or newer on `JAVA_HOME`, `JAVACMD`, or `PATH`.
 - [souroldgeezer-architecture/docs/architecture-reference/architecture.md](souroldgeezer-architecture/docs/architecture-reference/architecture.md)
 - [souroldgeezer-policy/skills/git-workflow-policy/SKILL.md](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md)
 - [souroldgeezer-policy/skills/release-policy/SKILL.md](souroldgeezer-policy/skills/release-policy/SKILL.md)
+- [souroldgeezer-policy/skills/tdd-policy/SKILL.md](souroldgeezer-policy/skills/tdd-policy/SKILL.md)
 - [souroldgeezer-ops/docs/provider-reference/github.md](souroldgeezer-ops/docs/provider-reference/github.md)
 - [souroldgeezer-ops/docs/provider-reference/gitlab.md](souroldgeezer-ops/docs/provider-reference/gitlab.md)
 - [souroldgeezer-ops/docs/provider-reference/authoring.md](souroldgeezer-ops/docs/provider-reference/authoring.md)
