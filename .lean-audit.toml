@@ -44,3 +44,11 @@ b = "souroldgeezer-ops/skills/*/extensions/**/*.md"
 [[carve_out]]                                   # design-skill extension READMEs are intentionally parallel boilerplate (CLAUDE.md § Subagents-style intentional parallelism)
 a = "souroldgeezer-design/skills/*/extensions/README.md"
 b = "souroldgeezer-design/skills/*/extensions/README.md"
+
+[[carve_out]]                                   # extension-authoring templates are parallel by design ACROSS plugins; a shared file is impossible here because plugins install independently, so no cross-plugin relative path resolves (the souroldgeezer-ops authoring.md model works only within one plugin)
+a = "souroldgeezer-*/skills/*/references/procedures/extension-authoring.md"
+b = "souroldgeezer-*/skills/*/extensions/README.md"
+
+[[carve_out]]                                   # CLAUDE.md § Repo-internal skills mandates each internal skill state its own deferred-MCP/ToolSearch tooling order; the depth differs per skill (github-issue-lifecycle adds multi-server disambiguation and gh/REST fallback), so a shared file would bloat one closure or lose precision from the other
+a = "internal-skills/*/SKILL.md"
+b = "internal-skills/*/SKILL.md"
