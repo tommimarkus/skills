@@ -1,13 +1,11 @@
 # Dediren Self-Check
 
-Before runtime claims, drive Dediren through the plugin's **bundled MCP server**.
-Dediren is an internal engine: the plugin declares it in `plugin.json`
-(`mcpServers.dediren`) and Claude Code auto-starts it when the plugin is enabled,
-so the user never has to find, install, or version it. Call its tools —
-`dediren_validate`, `dediren_build`, `dediren_guide` — never a CLI. `$SKILL_DIR`
-is this skill's absolute directory, established in `SKILL.md` from the
-`${CLAUDE_SKILL_DIR}` substitution; it locates this skill's own helper scripts
-(`dediren-build.py`, `build-gallery.py`, `svg-accessible-name.sh`), not Dediren.
+Before runtime claims, drive Dediren through the plugin's **bundled MCP server**:
+call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — never a
+CLI. The server contract and the `$SKILL_DIR` / `${CLAUDE_SKILL_DIR}` semantics
+are canonical in `architecture.md` §9 Runtime Evidence; `$SKILL_DIR` locates this
+skill's own helper scripts (`dediren-build.py`, `build-gallery.py`,
+`svg-accessible-name.sh`), not Dediren.
 
 ## Server availability
 
@@ -73,12 +71,13 @@ dediren_guide {}                       # index of topics
 dediren_guide {topic: "source-json"}   # start here
 ```
 
-It is the fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles,
-Command Handoff, and Repair Rules. When running OEF or XMI export, follow the
-guide's schema-cache instructions. The export engines run in-process and inherit
-the server's environment; the plugin points `DEDIREN_SCHEMA_CACHE_DIR` at a writable
-`${CLAUDE_PLUGIN_DATA}` directory so the XSD download succeeds. If export still
-fails with `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
+Its topic scope (Minimal Source JSON, Artifact Map, Semantic Profiles, Command
+Handoff, Repair Rules) is stated in `architecture.md` §9. When running OEF or
+XMI export, follow the guide's schema-cache instructions. The export engines run
+in-process and inherit the server's environment; the plugin points
+`DEDIREN_SCHEMA_CACHE_DIR` at a writable `${CLAUDE_PLUGIN_DATA}` directory so the
+XSD download succeeds. If export still fails with
+`DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
 `message`: it names whether to make that cache writable or to pre-fetch the XSDs and
 pass absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.
 `DEDIREN_XMI_SCHEMA_PATH` at the bare `XMI.xsd` validates only the XMI envelope; full
