@@ -44,9 +44,11 @@ as a way to "do TDD."
 
 ## Config options
 
-- `variant`, `scope` (globs), `exceptions` (list), `enforcement`
-  (`model` | `model+gate`), `coverage-floor` (optional numeric). Semantics one
-  line each.
+- `variant` — which discipline satisfies the invariant (`test-first` | `test-alongside`; see Variants).
+- `scope` — globs the policy governs (default: production source).
+- `exceptions` — categories exempt from the failing-test-first gate, always logged.
+- `enforcement` — `model` (behavioral default) or `model+gate` (adds the phase-2 PreToolUse backstop).
+- `coverage-floor` — optional numeric minimum for the `test-after` downgrade.
 
 ## Opt-out ladder (must stay low-friction — this is where choice lives)
 
