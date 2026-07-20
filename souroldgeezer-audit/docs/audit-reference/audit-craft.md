@@ -89,5 +89,6 @@ false-positive rate after any rubric / dispatch / output-contract / smell-catalo
 snippets (no external oracle exists); devsecops plants objectively verifiable
 defects (seeded secrets, known-CVE / CISA-KEV recall). A skill that measures only
 triggering/behavior, never recall, has no audit-of-the-audit. After any craft
-change in the marketplace source repo, rerun its `scripts/skill-architecture-report.sh .`
-(repo tooling, not bundled with the installed plugin).
+change or skill-surface edit in the marketplace source repo, rerun its
+`scripts/skill-architecture-report.sh .` (repo tooling, not bundled with the
+installed plugin).
