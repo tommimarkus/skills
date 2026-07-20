@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — irreducible per-detector calibration adapter; the shared loop is already extracted to surface_test_lib.run_ledger_calibration
 import contextlib
 import io
 import json

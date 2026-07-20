@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import subprocess
 import sys

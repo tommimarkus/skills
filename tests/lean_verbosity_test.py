@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — irreducible per-detector calibration adapter; the shared loop is already extracted to surface_test_lib.run_ledger_calibration
 """Tests for the LA-VERBOSE-1 deterministic verbosity nominator (engine + registry).
 
 The judgment layer (LA-VERBOSE-2, fuzzy-waste.md) is not code; it is covered by the

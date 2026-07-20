@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — identifier-rich parallel test bodies (CLAUDE.md § Repo-local Python® tooling)
 """Coverage for the architecture-design plan/map build helper.
 
 The skill drives dediren through the bundled MCP server's `dediren_build` tool; this
