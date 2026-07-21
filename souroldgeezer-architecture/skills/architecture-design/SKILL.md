@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: Use when building, extracting, reviewing, rendering, validating, or looking up architecture models and diagrams as ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, shareable HTML gallery, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup — including plain-language requests for an architecture diagram or model kept and maintained in the repo, even without dediren, ArchiMate®, or UML® vocabulary. Not for one-off diagrams or flowcharts in other formats; UI component hierarchies belong to app-design, code/module structure sketches to software-design.
+description: Use when building, extracting, reviewing, rendering, validating, or looking up architecture models and diagrams as ArchiMate® or UML® dediren packages, SVG/OEF/XMI evidence, shareable HTML gallery, drift, cross-notation handoff links, or code/IaC/API/UI/workflow reverse lookup — including plain-language requests for an architecture diagram or model kept and maintained in the repo, even without dediren, ArchiMate®, or UML® vocabulary. Not for diagrams the user wants kept in another format (Mermaid, PlantUML, draw.io), one-off or maintained; UI component hierarchies belong to app-design, code/module structure sketches to software-design.
 ---
 
 # Architecture Design
@@ -81,12 +81,10 @@ Build.
    **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
    plugin is enabled); drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide` — never a CLI, and never ask the user to locate
-   or install Dediren. The launcher resolves the pinned runtime on demand at session
-   start (bounded, cached per-user under `${CLAUDE_PLUGIN_DATA}`) and needs Java™ 21+;
-   when the tools are absent, the skill falls back to an internal CLI lane that
-   resolves the runtime on demand and drives the same builds — capping at
-   `source-valid` only when no Java™ 21+ runtime can be resolved at all (self-check §
-   Server availability). Defer
+   or install Dediren. When the `dediren_*` tools are absent, an internal CLI fallback
+   lane drives the same builds; self-check § Server availability owns the on-demand
+   resolution, the per-lane cache locations, and the exact `source-valid` cap
+   condition. Defer
    the format guide (`dediren_guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
@@ -121,25 +119,20 @@ Build.
 6. Validate before quality claims — call the bundled dediren MCP server's
    `dediren_validate` tool (pass the model's `profile`) so `source-valid` covers
    schema plus semantic-profile validation. When a run (re)generates package
-   output, build it through the MCP server: run
-   `"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>` for the exact
-   `dediren_build` tool calls, make each call, then
-   `"$SKILL_DIR"/references/scripts/dediren-build.py map <pkg>` to materialize the
-   `project.json`-declared paths (self-check § Building a package); when the server
-   is unavailable, `dediren-build.py run <pkg>` does the same through the internal
-   CLI fallback. Then complete each rendered SVG's accessible name. Return
+   output, build it through the MCP server following self-check § Building a package
+   (`dediren-build.py plan` → the `dediren_build` calls → `map`; `run` is the CLI
+   fallback when the server is unavailable). Then complete each rendered SVG's
+   accessible name. Return
    [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
-   `"$SKILL_DIR"/references/scripts/build-gallery.py <package>` — a
-   self-contained shareable `gallery.html` inside the package. The gallery is a
-   pure function of the rendered SVGs plus `project.json`, so a changed or added
-   SVG means a stale gallery; this is mode-agnostic (any run that re-renders
-   rebuilds; a Lookup or a read-only Review that renders nothing does not). On a
-   read-only pass, run `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` when a
-   committed gallery may have drifted from its SVGs. The gallery is an outer
-   viewer over the static SVGs. Disclose the outcome in the footer `Gallery:`
-   line. See [`references/gallery.md`](references/gallery.md).
+   `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`. This is
+   mode-agnostic (any run that re-renders rebuilds; a Lookup or a read-only Review
+   that renders nothing does not). On a read-only pass, run
+   `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` when a
+   committed gallery may have drifted. Disclose the outcome in the footer `Gallery:`
+   line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
+   its full input set, and when it goes stale.
 8. Stop when required evidence is missing, a dediren MCP tool returns an error
    envelope (or the server is unavailable), the notation is unsupported, or a
    blocking finding prevents requested readiness.
@@ -155,8 +148,8 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). Run `bash -n` on both when editing them. |
-| Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py): `plan <package>` emits the `dediren_build` MCP calls (one per (model, render-policy) group, one per export view); after making them, `map <package>` materializes the staged output into each `project.json`-declared path. `run <package>` is the internal CLI fallback when the MCP server is unavailable (resolves + builds + materializes in one call). Call flow in [`references/procedures/self-check.md`](references/procedures/self-check.md) |
+| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
+| Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) entry points; the plan → `dediren_build` → map call flow (with its per-(model, render-policy) and per-export grouping) and the `run` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
@@ -164,6 +157,6 @@ Build.
 | GitHub Actions extraction | [`references/procedures/lifting-rules-gha.md`](references/procedures/lifting-rules-gha.md) |
 | Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
-| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md) |
+| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n` on the launcher scripts (`dediren-mcp.sh`, `dediren-release.sh`) after editing them |
 | Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
 | Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — v2 package with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

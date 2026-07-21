@@ -164,9 +164,11 @@ drifted — and `edge_crossing_count` is informational). The mapped
 *geometry* — `nodes` / `edges` / `groups` and a `warnings[]` array — not the
 quality verdict, so do not read `data.status` or `data.*_count` from it; the
 runtime stopped emitting them there (see source grounding). Treat a `warning` view
-status or any nonzero non-informational count as a blocking layout finding
-(`ARCH-L-*`) to resolve or disclose before claiming render evidence; an overlap can
-superimpose two nodes in the rendered SVG.
+status or any nonzero non-informational count as a `warn`-class `ARCH-L-3` finding —
+resolve or disclose it before claiming render-ready, but it is not a hard block (a
+layout *validation error* — connector-through-node, invalid route, group-boundary —
+is the blocking case, `ARCH-L-2`). An `overlap_count` that superimposes two nodes in
+the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
 
 ### Rendered SVG
 
