@@ -24,10 +24,13 @@ When the tools are absent — resolve failed, Java™ 21+ missing, or the freshl
 server not yet reconnected this session — fall back to the **internal CLI lane**:
 `dediren-build.py run` (below) resolves the bundle on demand and drives the same
 runtime through the CLI, and the resolver provides the binary for the validate
-fallback. This is internal machinery; the user never types a dediren command. Both
-lanes share the same `${CLAUDE_PLUGIN_DATA}` cache, so once the bundle is present the
-server starts on its own at the next session start — a pin bump no longer strands the
-server, because the launcher resolves the newly-pinned bundle itself. Only when the
+fallback. This is internal machinery; the user never types a dediren command. Each lane
+caches outside the target repo tree: the launcher/MCP lane under `${CLAUDE_PLUGIN_DATA}`
+(set via `plugin.json`), and the CLI lane under the per-user `${XDG_CACHE_HOME:-$HOME/.cache}`
+when writable, else a sandbox-writable temp dir (`${TMPDIR:-/tmp}`) — because
+`plugin.json` env vars do not reach Bash-tool subprocesses, so the CLI resolver cannot
+read `${CLAUDE_PLUGIN_DATA}` and resolves its own default. A pin bump no longer strands
+the server: the launcher resolves the newly-pinned bundle itself at the next session start. Only when the
 fallback itself cannot resolve a Java™ 21+ runtime do you disclose `not run (dediren
 runtime unavailable)` and cap at `source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
 footer (`Dediren: MCP server | CLI fallback | not run`). Do not ask the user to

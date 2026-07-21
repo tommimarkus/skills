@@ -553,11 +553,12 @@ Handoff, and Repair Rules. The launcher resolves the pinned Java™-backed runti
 demand at session start, bounded so a cold cache or a slow network can never hang
 startup, and caches it per-user under `${CLAUDE_PLUGIN_DATA}` (at most one download
 per pinned version per user, not per repo); the fast path does no network I/O. It
-requires Java™ 21 or newer on the host. When the runtime cannot be resolved (host
-offline) or Java™ 21+ is missing, the `dediren_*` tools are absent that session and
-the skill's internal CLI fallback drives the same runtime from the shared cache.
-While the tools are absent, disclose `not run (dediren MCP server unavailable)` and
-cap runtime checks at `source-valid`, not a hard stop
+requires Java™ 21 or newer on the host. When the `dediren_*` MCP tools are absent
+that session (the host was offline at resolve, or the server has not yet reconnected
+after a pinned-version change), the skill's internal CLI fallback resolves the
+runtime on demand and drives the same builds. Only when the fallback itself cannot
+resolve a Java™ 21+ runtime do runtime checks cap at `source-valid` (not a hard
+stop) and disclose `not run (dediren runtime unavailable)`
 (see `references/procedures/self-check.md`).
 
 The bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint

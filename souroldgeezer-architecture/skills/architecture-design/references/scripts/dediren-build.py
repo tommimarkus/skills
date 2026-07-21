@@ -312,7 +312,7 @@ def resolve_dediren(script_dir):
     if proc.returncode != 0 or not proc.stdout.strip():
         raise RuntimeUnavailable(
             "dediren-release.sh --ensure failed; disclose "
-            "'not run (dediren MCP server unavailable)' and cap at source-valid.\n"
+            "'not run (dediren runtime unavailable)' and cap at source-valid.\n"
             + proc.stderr.strip()
         )
     return proc.stdout.strip()

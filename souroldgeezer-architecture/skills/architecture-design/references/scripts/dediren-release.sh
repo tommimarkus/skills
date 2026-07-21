@@ -6,7 +6,22 @@ DEDIREN_VERSION_DEFAULT="2026.07.22"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
-DEDIREN_CACHE_DIR="${DEDIREN_CACHE_DIR:-$PWD/.cache/dediren/releases}"
+# CLI-lane cache default: a location that is NOT the target repo tree, so a fallback
+# resolve never writes bundle files into the user's project. Prefer the persistent
+# per-user cache; fall back to a sandbox-writable temp dir when that is not writable
+# (the default Bash sandbox makes $HOME read-only) so the resolve still works. The MCP
+# lane overrides this via DEDIREN_CACHE_DIR=${CLAUDE_PLUGIN_DATA}/... from plugin.json.
+_dediren_cache_default() {
+  local base="${XDG_CACHE_HOME:-$HOME/.cache}/dediren/releases"
+  # mkdir -p is a no-op success on a pre-existing read-only dir, so test an actual
+  # write capability with -w (which reflects a read-only mount, e.g. a Bash sandbox).
+  if mkdir -p "$base" 2>/dev/null && [ -w "$base" ]; then
+    printf '%s\n' "$base"
+  else
+    printf '%s\n' "${TMPDIR:-/tmp}/dediren/releases"
+  fi
+}
+DEDIREN_CACHE_DIR="${DEDIREN_CACHE_DIR:-$(_dediren_cache_default)}"
 DEDIREN_TMP_ARCHIVE=""
 DEDIREN_TMP_CHECKSUMS=""
 DEDIREN_TMP_EXTRACT=""
@@ -36,7 +51,8 @@ Usage:
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
   DEDIREN_VERSION    Release version without leading v, default 2026.07.22
-  DEDIREN_CACHE_DIR  Cache directory, default .cache/dediren/releases
+  DEDIREN_CACHE_DIR  Cache dir; default per-user ${XDG_CACHE_HOME:-~/.cache}/dediren/releases,
+                     or ${TMPDIR:-/tmp}/dediren/releases when that is not writable (sandbox)
   JAVA_HOME/JAVACMD  Explicit Java 21+ runtime for the packaged Dediren launchers
   SDKMAN_DIR         sdkman install dir, default ~/.sdkman
 
