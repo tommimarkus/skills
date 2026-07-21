@@ -45,4 +45,4 @@ Remaining codes are defined where they are used: `ARCH-X-1`, `ARCH-X-3`,
 `ARCH-E-3` in `procedures/external-validation-handoff.md`; `ARCH-V-2` in
 `procedures/process-view-emission.md`; `ARCH-V-3` in
 `procedures/implementation-readiness-review.md`; `ARCH-L-1` in
-`../../../docs/architecture-reference/architecture.md` §9 and `procedures/self-check.md`.
+`../../../docs/architecture-reference/architecture.md` §9 and `procedures/architecture-operational-workflow.md`.

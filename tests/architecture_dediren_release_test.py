@@ -37,6 +37,15 @@ MIXED_FIXTURE = (
     / "dediren"
     / "mixed"
 )
+RENDERED_FIXTURE = (
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "fixtures"
+    / "dediren"
+    / "rendered"
+)
 EXPECTED_DEDIREN_VERSION = "2026.07.22"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
@@ -393,6 +402,33 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         for context in links:
             self.assertEqual(context["profile"], "archimate")
             self.assertIn(context["element_id"], arch_ids)
+
+    def test_rendered_fixture_declares_canonical_multimodel_layout(self) -> None:
+        # The rendered/ gallery fixture is a canonical v2 multi-model package: each
+        # models[] entry resolves to a real source file whose semantic_profile matches
+        # the declared profile, and each model declares exactly the views project.json
+        # binds to it. (It carries no export or cross-notation handoff — that shape is
+        # exercised by the mixed fixture above.)
+        project = json.loads((RENDERED_FIXTURE / "project.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(project["schema"], "souroldgeezer.architecture.dediren.project.v2")
+        models = {model["id"]: model for model in project["models"]}
+        self.assertEqual({model["profile"] for model in models.values()}, {"archimate", "uml"})
+        for model in models.values():
+            data = json.loads((RENDERED_FIXTURE / model["file"]).read_text(encoding="utf-8"))
+            self.assertEqual(
+                data["plugins"]["generic-graph"]["semantic_profile"], model["profile"]
+            )
+            model_view_ids = {view["id"] for view in data["plugins"]["generic-graph"]["views"]}
+            bound_view_ids = {
+                view["id"] for view in project["views"] if view["model"] == model["id"]
+            }
+            self.assertEqual(model_view_ids, bound_view_ids)
+
+        # Every view binds a declared model; the models partition the views.
+        for view in project["views"]:
+            self.assertIn(view["model"], models)
+        self.assertEqual({view["model"] for view in project["views"]}, set(models))
 
     def test_every_embedded_dediren_version_pin_matches_expected(self) -> None:
         # A Dediren version bump must update every copy of the pinned version.

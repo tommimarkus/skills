@@ -2,9 +2,9 @@
 
 Before runtime claims, drive Dediren through the plugin's **bundled MCP server**:
 call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — never a
-CLI. The server contract and the `$SKILL_DIR` / `${CLAUDE_SKILL_DIR}` semantics
-are canonical in `architecture.md` §9 Runtime Evidence; `$SKILL_DIR` locates this
-skill's own helper scripts (`dediren-build.py`, `build-gallery.py`,
+CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
+`architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
+own helper scripts (`dediren-build.py`, `build-gallery.py`,
 `svg-accessible-name.sh`), not Dediren.
 
 ## Server availability
@@ -58,7 +58,7 @@ is requested, `uml-xmi` only when XMI export is requested.
 
 When the MCP server is unavailable, run the same validation through the internal CLI
 lane (§ Server availability): resolve the binary with
-`DEDIREN="$("$SKILL_DIR"/references/scripts/dediren-release.sh --ensure)"`, then
+`DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"`, then
 `"$DEDIREN" validate --input <pkg>/model.json` for schema and
 `"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
 semantic gate. This is the same evidence, obtained without the server.
@@ -97,10 +97,10 @@ the server, and writes each view's artifacts under its `out` directory as
 the remapping so you never do path arithmetic by hand:
 
 ```bash
-"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>            # emits the dediren_build calls
-"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg> --views <view-id>
-"$SKILL_DIR"/references/scripts/dediren-build.py map  <pkg>            # materialize + summary
-"$SKILL_DIR"/references/scripts/dediren-build.py map  <pkg> --json
+${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg>            # emits the dediren_build calls
+${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg> --views <view-id>
+${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map  <pkg>            # materialize + summary
+${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map  <pkg> --json
 ```
 
 1. Run `plan <pkg>`. It reads `project.json` and prints the JSON list of
@@ -120,7 +120,7 @@ the remapping so you never do path arithmetic by hand:
    prints.
 
 When the MCP server is unavailable, build through the internal CLI lane in one call —
-`"$SKILL_DIR"/references/scripts/dediren-build.py run <pkg>` — which resolves the
+`${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py run <pkg>` — which resolves the
 bundle on demand, drives the same builds through the CLI, and materializes exactly as
 `map`. Same output; exit `3` if the runtime cannot be resolved. Prefer the MCP tools
 when the server is up; use `run` only as the fallback.
@@ -177,7 +177,7 @@ emits `role="img"` + `<title>` natively; the render-policy `accessibility` block
 the view-id fallback) and add the visible title:
 
 ```bash
-"$SKILL_DIR"/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
+${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
 ```
 
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /

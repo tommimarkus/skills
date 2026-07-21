@@ -90,12 +90,13 @@ Build.
    that reaches no runtime command never loads it. Lookup may skip self-check
    entirely when the answer makes no runtime claim.
    The skill's own bundled helper scripts (`dediren-build.py`, `build-gallery.py`,
-   `svg-accessible-name.sh`) resolve from `${CLAUDE_SKILL_DIR}`, which Claude Code™
-   expands to the skill's absolute path on load (resolving the installed-plugin
-   cache and this source repo alike); use it wherever a bundled-script command shows
-   `"$SKILL_DIR"` (here, in self-check, and in architecture §9). If it does not
-   expand, fall back to the skill base directory reported at invocation, or
-   `souroldgeezer-architecture/skills/architecture-design` in this source repo.
+   `svg-accessible-name.sh`) live under `${CLAUDE_SKILL_DIR}/references/scripts/`.
+   Claude Code™ expands `${CLAUDE_SKILL_DIR}` to the skill's absolute path in this
+   SKILL.md body (resolving the installed-plugin cache and this source repo alike);
+   the reference procedures (self-check, architecture §9) are read raw and reuse that
+   same resolved value. If it does not expand, fall back to the skill base directory
+   reported at invocation, or `souroldgeezer-architecture/skills/architecture-design`
+   in this source repo.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load
    [`references/notations/archimate.md`](references/notations/archimate.md) for
@@ -126,10 +127,10 @@ Build.
    [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
-   `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`. This is
+   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>`. This is
    mode-agnostic (any run that re-renders rebuilds; a Lookup or a read-only Review
    that renders nothing does not). On a read-only pass, run
-   `"$SKILL_DIR"/references/scripts/build-gallery.py --check <package>` when a
+   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py --check <package>` when a
    committed gallery may have drifted. Disclose the outcome in the footer `Gallery:`
    line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
    its full input set, and when it goes stale.
@@ -158,5 +159,5 @@ Build.
 | Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n` on the launcher scripts (`dediren-mcp.sh`, `dediren-release.sh`) after editing them |
-| Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `"$SKILL_DIR"/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
+| Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
 | Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — v2 package with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

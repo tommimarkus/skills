@@ -541,10 +541,11 @@ The skill drives Dediren through the plugin's bundled MCP server (`plugin.json`
 `mcpServers.dediren`), which Claude Code auto-starts when the plugin is enabled.
 Dediren is an internal engine — users are never asked to locate, install, or
 version it. Call its tools (`dediren_validate`, `dediren_build`, `dediren_guide`),
-never a CLI. `$SKILL_DIR` is this skill's absolute directory, set in `SKILL.md`
-from the `${CLAUDE_SKILL_DIR}` substitution (which resolves the installed-plugin
-cache path and this source repo alike; it contains the skill's `SKILL.md`); it
-locates this skill's own helper scripts, not Dediren.
+never a CLI. `${CLAUDE_SKILL_DIR}` is this skill's absolute directory; Claude Code
+expands it in `SKILL.md` (it resolves the installed-plugin cache path and this
+source repo alike, and contains the skill's `SKILL.md`), and the reference
+procedures reuse that resolved value read raw. It locates this skill's own helper
+scripts, not Dediren.
 
 Read the format contract through `dediren_guide` (`{}` for the topic index, then
 `{topic: "source-json"}`) before authoring or repairing source JSON. It is the
@@ -675,7 +676,7 @@ repo-owned post-render step on every rendered or re-rendered view to close
 both:
 
 ```bash
-"$SKILL_DIR"/references/scripts/svg-accessible-name.sh \
+${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.sh \
   --title "<view label>" --desc "<the view's architecture question>" \
   <pkg>/generated/svg/<view-id>.svg
 ```

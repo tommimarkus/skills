@@ -208,7 +208,7 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
 - **Build / refresh:**
 
   ```bash
-  "$SKILL_DIR"/references/scripts/build-gallery.py <package>
+  ${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>
   ```
 
   writes (or overwrites) `<package>/gallery.html` from the package's current
@@ -216,7 +216,7 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   pre-commit or CI gate — without writing:
 
   ```bash
-  "$SKILL_DIR"/references/scripts/build-gallery.py --check <package>
+  ${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py --check <package>
   ```
 
   Exit codes: `0` built/fresh, `1` stale or missing gallery (`--check` only),

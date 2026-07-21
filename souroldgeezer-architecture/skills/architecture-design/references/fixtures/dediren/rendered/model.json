@@ -1,0 +1,27 @@
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [
+    { "id": "generic-graph", "version": "2026.07.22" }
+  ],
+  "nodes": [
+    { "id": "applicant", "type": "ApplicationComponent", "label": "Applicant System", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },
+    { "id": "svc-submission", "type": "ApplicationComponent", "label": "Submission Service", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } }
+  ],
+  "relationships": [
+    { "id": "svc-serves-applicant", "type": "Serving", "source": "svc-submission", "target": "applicant", "label": "serves", "properties": { "visible": true } }
+  ],
+  "plugins": {
+    "generic-graph": {
+      "semantic_profile": "archimate",
+      "views": [
+        {
+          "id": "app-cooperation",
+          "label": "Applicant — system context",
+          "nodes": ["applicant", "svc-submission"],
+          "relationships": ["svc-serves-applicant"],
+          "groups": []
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "model_schema_version": "model.schema.v1",
+  "required_plugins": [
+    { "id": "generic-graph", "version": "2026.07.22" }
+  ],
+  "nodes": [
+    { "id": "pkg-messaging", "type": "Package", "label": "Messaging", "properties": { "uml": { "kind": "package" } } },
+    { "id": "class-message", "type": "Class", "label": "Message", "properties": { "uml": { "package": "pkg-messaging", "attributes": [ { "name": "subject", "type": "String", "visibility": "public", "multiplicity": "1" }, { "name": "sentOn", "type": "Timestamp", "visibility": "public", "multiplicity": "1" } ], "operations": [] } } },
+    { "id": "class-attachment", "type": "Class", "label": "Attachment", "properties": { "uml": { "package": "pkg-messaging", "attributes": [ { "name": "filename", "type": "String", "visibility": "public", "multiplicity": "1" }, { "name": "sizeBytes", "type": "Integer", "visibility": "public", "multiplicity": "1" } ], "operations": [] } } },
+    { "id": "ix-submission", "type": "Interaction", "label": "Submission", "properties": { "uml": {} } },
+    { "id": "lifeline-applicant", "type": "Lifeline", "label": "Applicant", "properties": { "uml": { "interaction": "ix-submission" } } },
+    { "id": "lifeline-service", "type": "Lifeline", "label": "Submission Service", "properties": { "uml": { "interaction": "ix-submission" } } }
+  ],
+  "relationships": [
+    { "id": "message-has-attachment", "type": "Composition", "source": "class-message", "target": "class-attachment", "label": "attachment", "properties": { "uml": { "source_role": "message", "target_role": "attachment", "source_multiplicity": "1", "target_multiplicity": "0..*" } } },
+    { "id": "m-submit", "type": "Message", "source": "lifeline-applicant", "target": "lifeline-service", "label": "submit", "properties": { "uml": { "interaction": "ix-submission", "sequence": 1, "message_sort": "synchCall" } } }
+  ],
+  "plugins": {
+    "generic-graph": {
+      "semantic_profile": "uml",
+      "views": [
+        {
+          "id": "domain-class",
+          "label": "Message domain model",
+          "kind": "uml-class",
+          "nodes": ["pkg-messaging", "class-message", "class-attachment"],
+          "relationships": ["message-has-attachment"],
+          "groups": [
+            { "id": "messaging-boundary", "label": "Messaging", "role": "semantic-boundary", "semantic_source_id": "pkg-messaging", "members": ["class-message", "class-attachment"] }
+          ]
+        },
+        {
+          "id": "order-sequence",
+          "label": "Submission sequence",
+          "kind": "uml-sequence",
+          "nodes": ["ix-submission", "lifeline-applicant", "lifeline-service"],
+          "relationships": ["m-submit"]
+        }
+      ]
+    }
+  }
+}

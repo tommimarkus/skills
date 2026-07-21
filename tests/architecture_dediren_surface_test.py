@@ -495,8 +495,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             'dediren_validate {source: "<pkg>/model.json", profile: "archimate"}',
             "dediren_build",
             'dediren_guide {topic: "source-json"}',
-            '"$SKILL_DIR"/references/scripts/dediren-build.py plan <pkg>',
-            '"$SKILL_DIR"/references/scripts/dediren-build.py map',
+            '${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg>',
+            '${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map',
         ]
 
         for phrase in expected_phrases:
