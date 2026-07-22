@@ -686,10 +686,14 @@ text to the view label and ensures a `<desc>` carrying the view's architecture
 question from `project.json` — or injects the full markup (`role="img"`,
 `aria-labelledby` `<title>`, optional `aria-describedby` `<desc>`) for
 artifacts from runtimes without native accessible names, and always adds a
-visible per-view title block in a band above the diagram. It edits generated
-render output only — never the upstream bundle — is idempotent, and offers
-`--check` for verification. Missing accessible-name markup or a missing
-visible title on rendered evidence is `ARCH-R-2`.
+visible per-view title block in a band above the diagram. The band expands the
+`viewBox` upward; the step keeps the root `width`/`height` in sync with it (so
+browsers do not letterbox the diagram) and paints the band with the diagram's
+own background colour with a contrasting title fill (so the title stays readable
+on a non-light render policy), both derived from the diagram's background
+`<rect>`. It edits generated render output only — never the upstream bundle — is
+idempotent, and offers `--check` for verification. Missing accessible-name
+markup or a missing visible title on rendered evidence is `ARCH-R-2`.
 
 Render-ready requires inspecting SVG for:
 

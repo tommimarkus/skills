@@ -30,6 +30,21 @@ NATIVE_SVG = (
     "<title>Native name</title><rect/>\n"
     "</svg>"
 )
+# Native renders that carry a full-viewBox background rect, as dediren emits.
+# The band background and title fill are derived from that rect, so these cover
+# the theme-matching that RENDERED_SVG (no background rect) cannot. Dediren
+# emits float geometry (400.0) against an integer viewBox; the detection must
+# match numerically. Node rects carry stroke + a dediren marker and must not be
+# mistaken for the background.
+DARK_BG_SVG = (
+    f'<svg xmlns="{SVG_NS}" role="img" viewBox="0 0 400 300" width="400" height="300">\n'
+    "<title>Native name</title>\n"
+    '<rect x="0.0" y="0.0" width="400.0" height="300.0" fill="#0B1021"/>\n'
+    '<g data-dediren-node-id="n1"><rect x="10" y="10" width="80" height="40"'
+    ' fill="#123456" stroke="#8899aa"/></g>\n'
+    "</svg>\n"
+)
+LIGHT_BG_SVG = DARK_BG_SVG.replace("#0B1021", "#ffffff")
 
 
 def run_script(*args: str | Path) -> subprocess.CompletedProcess[str]:
@@ -55,6 +70,22 @@ class SvgAccessibleNameTest(unittest.TestCase):
             result.returncode, 0, f"stdout={result.stdout}\nstderr={result.stderr}"
         )
         return result
+
+    @staticmethod
+    def _band_rects(root: ET.Element) -> list[ET.Element]:
+        return [
+            el
+            for el in root.iter(f"{{{SVG_NS}}}rect")
+            if el.get("data-arch-a11y") == "band-bg"
+        ]
+
+    @staticmethod
+    def _visible_titles(root: ET.Element) -> list[ET.Element]:
+        return [
+            el
+            for el in root.iter(f"{{{SVG_NS}}}text")
+            if el.get("data-arch-a11y") == "visible-title"
+        ]
 
     def test_apply_injects_accessible_name_and_visible_title(self) -> None:
         self.apply("--title", "Order flow", "--desc", "Which components serve checkout?")
@@ -82,6 +113,20 @@ class SvgAccessibleNameTest(unittest.TestCase):
 
         self.assertEqual(root.get("viewBox"), "0 -32 400 332")
         self.assertEqual(root.get("data-arch-a11y-viewbox"), "0 0 400 300")
+
+        # Defect 1: the root width/height stay in sync with the band-expanded
+        # viewBox, or the aspect mismatch letterboxes the diagram. Width is
+        # unchanged (the band is added above); height grows by the 32px band;
+        # the original height is recorded so reruns restore then re-grow it.
+        self.assertEqual(root.get("width"), "400")
+        self.assertEqual(root.get("height"), "332")
+        self.assertEqual(root.get("data-arch-a11y-height"), "300")
+
+        # RENDERED_SVG has no full-viewBox background rect, so the theme-aware
+        # band is not derivable: no band rect is painted and the title keeps the
+        # default fill (prior behavior preserved on the fallback path).
+        self.assertEqual(self._band_rects(root), [])
+        self.assertIsNone(visible[0].get("fill"))
 
         # Runtime-owned markers must survive untouched.
         self.assertIn('data-dediren-node-id="n1"', content)
@@ -200,6 +245,66 @@ class SvgAccessibleNameTest(unittest.TestCase):
         titles = root.findall(f"{{{SVG_NS}}}title")
         self.assertEqual(len(titles), 1)
         self.assertEqual(titles[0].text, "New")
+
+    def test_width_height_synced_keeps_aspect_ratio(self) -> None:
+        # The rendered aspect ratio is preserved: width/height agree with the
+        # band-expanded viewBox, so browsers don't letterbox with transparent
+        # bars that read as a border on light surfaces (issue #99, defect 1).
+        before = ET.fromstring(RENDERED_SVG)
+        self.apply("--title", "Order flow")
+        after = ET.fromstring(self.svg.read_text(encoding="utf-8"))
+        self.assertEqual(after.get("width"), before.get("width"))
+        self.assertEqual(int(after.get("height") or 0), int(before.get("height") or 0) + 32)
+        vb = [float(n) for n in (after.get("viewBox") or "").split()]
+        self.assertEqual(float(after.get("width") or 0), vb[2])
+        self.assertEqual(float(after.get("height") or 0), vb[3])
+
+    def test_dark_background_paints_matching_band_and_light_title(self) -> None:
+        # Dark render policy: the band is painted with the diagram's own dark
+        # background and the title takes a light, contrasting fill, so it is not
+        # a black-on-dark invisible title (issue #99, defect 2).
+        self.svg.write_text(DARK_BG_SVG, encoding="utf-8")
+        self.apply("--title", "Amber CRT model", "--desc", "What cooperates?")
+        content = self.svg.read_text(encoding="utf-8")
+        root = ET.fromstring(content)
+
+        band = self._band_rects(root)
+        self.assertEqual(len(band), 1)
+        # Band matches the diagram background verbatim, and spans the band above.
+        self.assertEqual(band[0].get("fill"), "#0B1021")
+        self.assertEqual(band[0].get("y"), "-32")
+        self.assertEqual(band[0].get("height"), "32")
+        self.assertEqual(band[0].get("width"), "400")
+
+        visible = self._visible_titles(root)
+        self.assertEqual(len(visible), 1)
+        self.assertEqual(visible[0].get("fill"), "#ffffff")
+
+        # Paint order: the band rect precedes the title text so it sits under it.
+        self.assertLess(
+            content.index('data-arch-a11y="band-bg"'),
+            content.index('data-arch-a11y="visible-title"'),
+        )
+        # The node rect (stroke + dediren marker) is never taken for the bg.
+        self.assertNotIn('fill="#123456"', content.split("band-bg", 1)[0])
+
+    def test_light_background_paints_matching_band_and_dark_title(self) -> None:
+        self.svg.write_text(LIGHT_BG_SVG, encoding="utf-8")
+        self.apply("--title", "Light view")
+        root = ET.fromstring(self.svg.read_text(encoding="utf-8"))
+
+        band = self._band_rects(root)
+        self.assertEqual(len(band), 1)
+        self.assertEqual(band[0].get("fill"), "#ffffff")
+        visible = self._visible_titles(root)
+        self.assertEqual(visible[0].get("fill"), "#000000")
+
+    def test_background_fixture_rerun_is_idempotent(self) -> None:
+        self.svg.write_text(DARK_BG_SVG, encoding="utf-8")
+        self.apply("--title", "Amber CRT model", "--desc", "What cooperates?")
+        first = self.svg.read_text(encoding="utf-8")
+        self.apply("--title", "Amber CRT model", "--desc", "What cooperates?")
+        self.assertEqual(first, self.svg.read_text(encoding="utf-8"))
 
     def test_non_svg_input_exits_3(self) -> None:
         self.svg.write_text("not an svg", encoding="utf-8")

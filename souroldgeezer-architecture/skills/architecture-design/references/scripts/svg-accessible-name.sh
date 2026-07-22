@@ -24,9 +24,21 @@ visible title:
   role="img", aria-labelledby to an injected <title>, aria-describedby to an
   optional <desc>, and the visible title block.
 
-The visible per-view title renders in a band added above the diagram; the
-original viewBox is preserved in a data-arch-a11y-viewbox attribute so reruns
-replace the previous band instead of stacking.
+The visible per-view title renders in a band added above the diagram by
+expanding the viewBox upward. To keep the band readable on any render policy
+the step also:
+
+- syncs the root width/height with the expanded viewBox (the root height grows
+  by the band) so browsers do not letterbox the diagram with transparent bars;
+- paints the band with the diagram's own background colour and picks a title
+  fill that contrasts with it, so a dark render policy does not yield a black,
+  invisible title. Both are derived from the diagram's background <rect> (the
+  one whose geometry matches the pre-band viewBox); when no such rect exists the
+  band stays transparent with a default title fill, as before.
+
+The original viewBox and root height are preserved in data-arch-a11y-viewbox
+and data-arch-a11y-height attributes so reruns restore then re-expand instead of
+stacking the band or accumulating height.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
@@ -107,6 +119,47 @@ run_awk() {
       return s
     }
     function fmt(n) { return sprintf("%.6g", n) }
+    function hexval(c) { return index("0123456789abcdef", tolower(c)) - 1 }
+    # Rec.601 luminance threshold on a #rrggbb colour: a light background gets a
+    # black title, a dark background gets a white one.
+    function contrast_fill(hex,    r, g, b) {
+      r = hexval(substr(hex, 2, 1)) * 16 + hexval(substr(hex, 3, 1))
+      g = hexval(substr(hex, 4, 1)) * 16 + hexval(substr(hex, 5, 1))
+      b = hexval(substr(hex, 6, 1)) * 16 + hexval(substr(hex, 7, 1))
+      return (0.299 * r + 0.587 * g + 0.114 * b >= 128) ? "#000000" : "#ffffff"
+    }
+    function near(a, b) { return (a - b <= 0.5 && b - a <= 0.5) }
+    # Numeric value of attribute "name" in a self-closing element string, or
+    # "NaN" when absent.
+    function attr_num(seg, name,    v) {
+      if (!match(seg, " " name "=\"[-0-9.]+\"")) { return "NaN" }
+      v = substr(seg, RSTART, RLENGTH)
+      sub("^ " name "=\"", "", v)
+      sub(/"$/, "", v)
+      return v + 0
+    }
+    # Find the diagram background rect: a self-closing <rect> whose x/y/width/
+    # height match the pre-band viewBox and that carries neither a stroke nor a
+    # dediren marker (node rects carry both). Return its #rrggbb fill verbatim
+    # (so the band matches the diagram background exactly; the luminance math
+    # tolerates any case), or "" when none qualifies.
+    function find_bg_fill(b, minx, miny, w, h,    s, seg, f) {
+      s = b
+      while (match(s, /<rect [^>]*\/>/)) {
+        seg = substr(s, RSTART, RLENGTH)
+        s = substr(s, RSTART + RLENGTH)
+        if (seg ~ /stroke=/ || seg ~ /data-dediren-/) { continue }
+        if (seg !~ /fill="#[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]"/) { continue }
+        if (near(attr_num(seg, "x"), minx) && near(attr_num(seg, "y"), miny) && \
+            near(attr_num(seg, "width"), w) && near(attr_num(seg, "height"), h)) {
+          f = seg
+          sub(/^.*fill="/, "", f)
+          sub(/".*$/, "", f)
+          return f
+        }
+      }
+      return ""
+    }
     # Append attrs to the root <svg> tag (mutates the global tag), handling
     # both self-closing and open tag endings.
     function inject_root_attrs(attrs) {
@@ -157,18 +210,29 @@ run_awk() {
         exit (ok ? 0 : 1)
       }
 
-      # Remove any previous injection from this script (both the current
-      # attribute shape and the earlier combined aria-labelledby shape).
-      if (match(tag, / data-arch-a11y="root" data-arch-a11y-viewbox="[^"]*"( role="img" aria-labelledby="arch-a11y-title( arch-a11y-desc)?"( aria-describedby="arch-a11y-desc")?)?/)) {
+      # Remove any previous injection from this script (the current attribute
+      # shape, the earlier combined aria-labelledby shape, and the optional
+      # data-arch-a11y-height marker added by the width/height sync). Restore
+      # the original viewBox, and the original root height when the marker is
+      # present (older injected artifacts predate the height sync and grew the
+      # viewBox without recording a height).
+      if (match(tag, / data-arch-a11y="root" data-arch-a11y-viewbox="[^"]*"( data-arch-a11y-height="[^"]*")?( role="img" aria-labelledby="arch-a11y-title( arch-a11y-desc)?"( aria-describedby="arch-a11y-desc")?)?/)) {
         injected = substr(tag, RSTART, RLENGTH)
         origvb = injected
         sub(/^.*data-arch-a11y-viewbox="/, "", origvb)
         sub(/".*$/, "", origvb)
         tag = substr(tag, 1, RSTART - 1) substr(tag, RSTART + RLENGTH)
         sub(/ viewBox="[^"]*"/, " viewBox=\"" origvb "\"", tag)
+        if (injected ~ /data-arch-a11y-height="/) {
+          origh = injected
+          sub(/^.*data-arch-a11y-height="/, "", origh)
+          sub(/".*$/, "", origh)
+          sub(/ height="[^"]*"/, " height=\"" origh "\"", tag)
+        }
       }
       gsub(/\n?<title id="arch-a11y-title">[^<]*<\/title>/, "", body)
       gsub(/\n?<desc id="arch-a11y-desc">[^<]*<\/desc>/, "", body)
+      gsub(/\n?<rect data-arch-a11y="band-bg"[^>]*\/>/, "", body)
       gsub(/\n?<text data-arch-a11y="visible-title"[^>]*>[^<]*<\/text>/, "", body)
 
       if (match(tag, / viewBox="[^"]*"/) == 0) { exit 3 }
@@ -184,13 +248,43 @@ run_awk() {
       newvb = fmt(minx) " " fmt(miny - band) " " fmt(w) " " fmt(h + band)
       sub(/ viewBox="[^"]*"/, " viewBox=\"" newvb "\"", tag)
 
-      visible = "\n<text data-arch-a11y=\"visible-title\" x=\"" fmt(minx + pad) "\" y=\"" fmt(miny - 12) "\" font-family=\"sans-serif\" font-size=\"" fontsize "\" font-weight=\"bold\">" title "</text>"
+      # Keep the root height in sync with the band-expanded viewBox, or the
+      # aspect ratio mismatch makes browsers letterbox the diagram with
+      # transparent bars that read as a border. Grow the numeric root height by
+      # the band (width is unchanged: the band is added above, not beside) and
+      # record the original so a rerun restores then re-grows rather than
+      # accumulating. Skip when the root carries no numeric height (nothing to
+      # letterbox against a container-scaled SVG).
+      heightattr = ""
+      if (match(tag, / height="[0-9.]+"/)) {
+        hseg = substr(tag, RSTART, RLENGTH)
+        sub(/^ height="/, "", hseg)
+        sub(/"$/, "", hseg)
+        origheight = hseg + 0
+        sub(/ height="[0-9.]+"/, " height=\"" fmt(origheight + band) "\"", tag)
+        heightattr = " data-arch-a11y-height=\"" fmt(origheight) "\""
+      }
+
+      # Paint the band with the diagram background colour and give the title a
+      # contrasting fill, so it stays readable on a non-light render policy.
+      # Fall back to the prior behaviour (no band rect, default title fill) when
+      # the background rect is missing or not a #rrggbb colour.
+      bandbg = find_bg_fill(body, minx, miny, w, h)
+      bandrect = ""
+      fillattr = ""
+      if (bandbg != "") {
+        bandrect = "\n<rect data-arch-a11y=\"band-bg\" x=\"" fmt(minx) "\" y=\"" fmt(miny - band) "\" width=\"" fmt(w) "\" height=\"" fmt(band) "\" fill=\"" bandbg "\"/>"
+        fillattr = " fill=\"" contrast_fill(bandbg) "\""
+      }
+
+      # Band rect before the title text: the band paints under the title.
+      visible = bandrect "\n<text data-arch-a11y=\"visible-title\" x=\"" fmt(minx + pad) "\" y=\"" fmt(miny - 12) "\" font-family=\"sans-serif\" font-size=\"" fontsize "\" font-weight=\"bold\"" fillattr ">" title "</text>"
 
       # Runtime-native accessible name: keep the native markup, upgrade the
       # title text to the view label, and ensure the desc.
       native = (tag ~ / role="img"/ && body ~ /<title[^>]*>[^<]*<\/title>/)
       if (native) {
-        inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\""
+        inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\"" heightattr
         inject_root_attrs(inject)
 
         replace_elem_text("title", title)
@@ -217,7 +311,7 @@ run_awk() {
       sub(/ role="img"/, "", tag)
       ids = " role=\"img\" aria-labelledby=\"arch-a11y-title\""
       if (desc != "") { ids = ids " aria-describedby=\"arch-a11y-desc\"" }
-      inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\"" ids
+      inject = " data-arch-a11y=\"root\" data-arch-a11y-viewbox=\"" vb "\"" heightattr ids
       inject_root_attrs(inject)
 
       block = "\n<title id=\"arch-a11y-title\">" title "</title>"
