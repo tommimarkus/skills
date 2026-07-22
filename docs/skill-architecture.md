@@ -113,6 +113,18 @@ Use progressive disclosure deliberately:
   check whether this repo's own practice already uses a different one (e.g.
   CalVer, not SemVer) — mandating an option the repo contradicts in its own
   dogfooding is an internal-consistency smell.
+- A reference that disclaims a concern to a runtime layer — an "X cannot be
+  proven from static source" line, or assigning X *only* to a runtime evidence
+  layer — has bounded the *evidence*, not the *design obligation*. That concern
+  still owes a design-time expectation: a decision default, and where reviewable
+  a named smell, for the design intent of X — or an explicit delegation to the
+  sibling that owns it. A concern that appears *only* in the disclaimer or
+  "cannot prove" list is an undelegated hole, not a scope-out; when authoring or
+  reviewing a reference, cross-check each such disclaimer for its paired
+  obligation. Validated on the design references —
+  [infra-design §3.11](../souroldgeezer-design/docs/infra-reference/infra-design.md)
+  pairs the "actual spend is a runtime fact" disclaimer with a cost-intent
+  default and the `ID-COST-1` smell, the shape to copy.
 - Cite cross-file reference paths as markdown links, not bare relative paths in
   inline-code spans, so a depth-wrong or stale citation surfaces in link checks
   instead of passing the gate silently.
