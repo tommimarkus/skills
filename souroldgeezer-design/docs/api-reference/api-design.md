@@ -96,7 +96,7 @@ Long-running or deferred work is an explicit design choice with a named pattern;
 ### 3.10 Rate limiting & throttling
 Throttling is a first-class response, not an implementation detail. Clients that retry without observing `Retry-After` create amplification loops.
 
-**Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` informational headers on successful responses so clients can self-pace. Rate limiting is enforced at the edge (API gateway, reverse proxy, CDN/WAF, Front Door / API Management on Azure) on public endpoints; origin-only limiting is a fallback, not a primary defence.
+**Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit` / `RateLimit-Policy` structured-field informational headers (IETF httpapi draft) on successful responses so clients can self-pace. Rate limiting is enforced at the edge (API gateway, reverse proxy, CDN/WAF, Front Door / API Management on Azure) on public endpoints; origin-only limiting is a fallback, not a primary defence.
 
 *When to deviate:* internal service-to-service endpoints with a small, trusted set of callers can skip `RateLimit-*` informational headers, but 429 + `Retry-After` remains mandatory.
 
@@ -191,7 +191,7 @@ Modern HTTP and API primitives with one-line purpose, minimal shape, and the key
 - **`If-None-Match`** — "only return if ETag has changed." 304 on match (cache validation).
 - **`Idempotency-Key`** — client-supplied dedup token for non-idempotent POSTs. Server stores `(key, result)` in a TTL'd cache.
 - **`traceparent`** / **`tracestate`** — W3C Trace Context. Inbound propagated into logs and outbound calls.
-- **`RateLimit-Limit`** / **`RateLimit-Remaining`** / **`RateLimit-Reset`** — IETF httpapi draft headers for client self-pacing (still draft as of 2026-04; check IETF status when authoring).
+- **`RateLimit`** / **`RateLimit-Policy`** — the two structured-field response headers the IETF httpapi draft (`draft-ietf-httpapi-ratelimit-headers`) defines for client self-pacing; still draft as of 2026-07, so check IETF status when authoring. The older `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` named triple is the superseded earlier-draft form still emitted by many services — read it for compatibility, emit the structured fields.
 - **`Content-Range`** — response to a `Range` request: `bytes <start>-<end>/<total>`.
 - **`Cache-Control`** — `no-store` on authenticated responses by default; `max-age` on genuinely cacheable resources.
 - **`WWW-Authenticate`** — scheme and realm on 401.

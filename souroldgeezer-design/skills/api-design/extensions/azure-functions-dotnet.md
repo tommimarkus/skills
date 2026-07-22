@@ -66,7 +66,7 @@ Input / output / trigger bindings for Cosmos, Service Bus, Blob, Queue, Table, S
 
 ### Managed identity and secrets
 
-- **`DefaultAzureCredential`** — the primary credential type. Chains managed identity (in Azure) → Azure CLI / VS / environment (locally) → interactive (dev fallback). Tokens cached by the SDK.
+- **`DefaultAzureCredential`** — the primary credential type. Tries a fixed chain in order — environment → workload identity → managed identity (in Azure) → Visual Studio / VS Code / Azure CLI / Azure PowerShell / Azure Developer CLI (local dev) — stopping at the first that yields a token; tokens cached by the SDK. `InteractiveBrowserCredential` is **excluded by default** (`ExcludeInteractiveBrowserCredential` defaults to `true`); enable it explicitly only for a deliberate interactive dev fallback.
 - **Cosmos auth** — `new CosmosClient(accountEndpoint, new DefaultAzureCredential())`. No account keys.
 - **SQL auth** — connection string `Server=...;Database=...;Authentication=Active Directory Default;`.
 - **Service Bus auth** — `new ServiceBusClient(fqdn, new DefaultAzureCredential())`.

@@ -73,7 +73,7 @@ Hosted API guidance belongs in runtime extensions, not in the core workflow. The
 5. Add stack-specific patterns if the stack's idiomatic solution differs structurally from reference §5 — otherwise cite the core pattern.
 6. Add smell codes, namespaced with the prefix.
 7. Add carve-outs for idiomatic patterns the stack enforces.
-8. Add the extension to the table in `../SKILL.md` § "Extensions" with its detection mapping.
+8. Add the extension to the list in `../SKILL.md` § "Load Map" with its detection mapping.
 9. Add the extension to the table above.
 10. If the extension composes with an existing one (e.g., a Service Bus extension that commonly pairs with `azure-functions-dotnet`), document the composition in the "Extensions compose" section above.
 
