@@ -32,3 +32,10 @@ Keep opt-out low-friction: a disable line, a one-phrase per-task override
 (applied and logged, never silent), and scope/exception globs. Enforcement is
 hard once adopted; choice lives at the on-switch and the opt-out, never in
 enforcement leniency.
+
+## Honest about enforcement limits
+
+Enforcement is honest about its limits: phase-1 is an enforced-by-default
+posture, not a mechanical guarantee (standing instructions decay; the trigger is
+fuzzy). Any mechanical gate (a PreToolUse backstop) is a possible phase-2 and is
+deferred unless a skill states otherwise. Do not oversell.

@@ -52,3 +52,15 @@ b = "souroldgeezer-*/skills/*/extensions/README.md"
 [[carve_out]]                                   # CLAUDE.md § Repo-internal skills mandates each internal skill state its own deferred-MCP/ToolSearch tooling order; the depth differs per skill (github-issue-lifecycle adds multi-server disambiguation and gh/REST fallback), so a shared file would bloat one closure or lose precision from the other
 a = "internal-skills/*/SKILL.md"
 b = "internal-skills/*/SKILL.md"
+
+[[carve_out]]                                   # design pairing procedures are thin citing wrappers over docs/design-reference/architecture-pairing-core.md (the canonical mechanics); the residual per-skill files are parallel by design, like agents/*.md
+a = "souroldgeezer-design/skills/*/references/procedures/architecture-pairing.md"
+b = "souroldgeezer-design/skills/*/references/procedures/architecture-pairing.md"
+
+[[carve_out]]                                   # a policy SKILL.md is the always-loaded summary of its own core-workflow (summary+depth layering); the invariant recurs by design — policy-posture-core's standing-line rule requires it to be embeddable standalone
+a = "souroldgeezer-policy/skills/{skill}/references/core-workflow.md"
+b = "souroldgeezer-policy/skills/{skill}/SKILL.md"
+
+[[carve_out]]                                   # policy sibling SKILL.md files share the mandated family scaffolding (Modes/Rules/Ask-vs-continue shape); the shared posture itself is single-sourced in docs/policy-reference/policy-posture-core.md, so the residual parallel is structural, not restated prose
+a = "souroldgeezer-policy/skills/*/SKILL.md"
+b = "souroldgeezer-policy/skills/*/SKILL.md"

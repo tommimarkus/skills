@@ -50,10 +50,9 @@ are clear. Stop and ask on ambiguous scope, an unlogged exception request, or wh
 the test command cannot run and no substitute exists. Malformed or ambiguous
 adopting guidance → stop-and-ask or no-op; never mass-generate.
 
-Enforcement is honest about its limits: phase-1 is an enforced-by-default posture,
-not a mechanical guarantee (standing instructions decay; the trigger is fuzzy).
-The only mechanical enforcement is the optional `enforcement: model+gate`
-PreToolUse hook, deferred to phase 2. Do not oversell.
+Enforcement honesty follows the posture core's limits rule (enforced-by-default
+posture, no mechanical guarantee; the only mechanical path is the optional
+`enforcement: model+gate` PreToolUse hook, deferred to phase 2).
 
 Stop before letting implementation land with no failing test first unless an
 explicit, logged exception applies. Stop if the required test run cannot happen and

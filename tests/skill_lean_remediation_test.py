@@ -1,21 +1,6 @@
-import json
 import unittest
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def read(relative_path: str) -> str:
-    return (REPO_ROOT / relative_path).read_text(encoding="utf-8")
-
-
-def read_jsonl(relative_path: str) -> list[dict]:
-    records = []
-    for line in read(relative_path).splitlines():
-        if line.strip():
-            records.append(json.loads(line))
-    return records
+from tests.surface_test_lib import read, read_jsonl
 
 
 class SkillLeanRemediationTest(unittest.TestCase):

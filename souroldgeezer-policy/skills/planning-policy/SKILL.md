@@ -67,10 +67,8 @@ scope (flag decomposition first), a missing success criterion, or a request that
 is really domain work a sibling owns. Never start implementing inside this skill;
 approval via `ExitPlanMode` is the terminal step.
 
-Enforcement is honest about its limits: phase-1 is an enforced-by-default
-posture, not a mechanical guarantee (standing instructions decay; the
-"about to build" trigger is fuzzy). A mechanical PreToolUse backstop is a
-possible phase-2 and is deferred. Do not oversell.
+Enforcement honesty follows the posture core's limits rule (enforced-by-default
+posture, no mechanical guarantee; the PreToolUse backstop is deferred phase-2).
 
 Stop before letting new build work proceed with no approved plan unless an
 explicit, logged opt-out applies. Stop if plan mode cannot be entered in the

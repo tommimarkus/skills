@@ -67,10 +67,15 @@ def normalize(text: str) -> list[str]:
     return _WORD.findall(text.lower())
 
 
+def _shingle_seq(tokens: list[str], k: int) -> list[tuple[str, ...]]:
+    """Every k-token window of tokens, in order (callers need len(tokens) >= k)."""
+    return [tuple(tokens[i : i + k]) for i in range(len(tokens) - k + 1)]
+
+
 def shingle_set(tokens: list[str], k: int = DEFAULT_K) -> set[tuple[str, ...]]:
     if len(tokens) < k:
         return {tuple(tokens)} if tokens else set()
-    return {tuple(tokens[i : i + k]) for i in range(len(tokens) - k + 1)}
+    return set(_shingle_seq(tokens, k))
 
 
 def containment(added: frozenset[tuple[str, ...]], other: frozenset[tuple[str, ...]]) -> float:
@@ -155,38 +160,20 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
         return None
     if path_exempt(reg, best.path) or carved_out(reg, sec.path, best.path):
         return None
+    hit, score = best, round(best_c, 3)
+
+    def dup(code: str, severity: str, action: str) -> Finding:
+        return Finding(code, severity, sec.path, sec.heading, score, hit.path, hit.heading, action)
+
     if best_c >= HIGH_BAND:
-        if _is_home(reg, best.path, best.heading):
-            return Finding(
-                "LA-DUP-2",
-                "block",
-                sec.path,
-                sec.heading,
-                round(best_c, 3),
-                best.path,
-                best.heading,
-                f'Cite {best.path} §"{best.heading}" instead of restating it.',
-            )
-        return Finding(
+        if _is_home(reg, hit.path, hit.heading):
+            return dup("LA-DUP-2", "block", f'Cite {hit.path} §"{hit.heading}" instead of restating it.')
+        return dup(
             "LA-DUP-1",
             "block",
-            sec.path,
-            sec.heading,
-            round(best_c, 3),
-            best.path,
-            best.heading,
-            f'Duplicates {best.path} §"{best.heading}" — cite it or mark sync-intentional.',
+            f'Duplicates {hit.path} §"{hit.heading}" — cite it or mark sync-intentional.',
         )
-    return Finding(
-        "LA-DUP-1",
-        "info",
-        sec.path,
-        sec.heading,
-        round(best_c, 3),
-        best.path,
-        best.heading,
-        f'Overlaps {best.path} §"{best.heading}" (advisory).',
-    )
+    return dup("LA-DUP-1", "info", f'Overlaps {hit.path} §"{hit.heading}" (advisory).')
 
 
 def evaluate_added_block(
@@ -235,6 +222,12 @@ def _heading_slugs(text: str) -> set[str]:
     return {slugify(h) for h, _ in split_sections(text) if h}
 
 
+def _flag(code: str, severity: str, path: str, action: str) -> Finding:
+    """A path-level finding with no duplication metadata (heading/containment/match
+    fields empty) — the shape LA-STALE-1, LA-DEAD-1, and LA-BLOAT-1 share."""
+    return Finding(code, severity, path, "", 0.0, "", "", action)
+
+
 def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
     for path, text in files.items():
@@ -246,32 +239,14 @@ def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Fin
             if rel == "":
                 if anchor and slugify(anchor) not in _heading_slugs(text):
                     findings.append(
-                        Finding(
-                            "LA-STALE-1",
-                            "warn",
-                            path,
-                            "",
-                            0.0,
-                            "",
-                            "",
-                            f"Anchor '#{anchor}' not found in this file.",
-                        )
+                        _flag("LA-STALE-1", "warn", path, f"Anchor '#{anchor}' not found in this file.")
                     )
                 continue
             resolved = posixpath.normpath(posixpath.join(parent, rel))
             present = resolved in files or (root is not None and (Path(root) / resolved).exists())
             if not present:
                 findings.append(
-                    Finding(
-                        "LA-STALE-1",
-                        "warn",
-                        path,
-                        "",
-                        0.0,
-                        "",
-                        "",
-                        f"Broken reference: {target} does not resolve.",
-                    )
+                    _flag("LA-STALE-1", "warn", path, f"Broken reference: {target} does not resolve.")
                 )
             elif (
                 anchor
@@ -279,15 +254,8 @@ def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Fin
                 and slugify(anchor) not in _heading_slugs(files[resolved])
             ):
                 findings.append(
-                    Finding(
-                        "LA-STALE-1",
-                        "warn",
-                        path,
-                        "",
-                        0.0,
-                        "",
-                        "",
-                        f"Broken anchor: '#{anchor}' not found in {resolved}.",
+                    _flag(
+                        "LA-STALE-1", "warn", path, f"Broken anchor: '#{anchor}' not found in {resolved}."
                     )
                 )
     return findings
@@ -445,7 +413,7 @@ def repeat_ratio(tokens: list[str], k: int = DEFAULT_K) -> float:
     (multiset variant of shingle_set). High when a section restates itself."""
     if len(tokens) < k:
         return 0.0
-    shingles = [tuple(tokens[i : i + k]) for i in range(len(tokens) - k + 1)]
+    shingles = _shingle_seq(tokens, k)
     total = len(shingles)
     if total == 0:
         return 0.0

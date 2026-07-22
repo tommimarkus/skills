@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-scenario guard fixtures; the shared corpus/payload/_run/_stderr_from_forced_engine_failure helpers are already extracted, and each remaining parallel is a payload+assert pair whose path/marker/tool variant is the scenario under test
 import contextlib
 import io
 import json

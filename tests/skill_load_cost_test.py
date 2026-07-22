@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — one-factor CLI and guard fixtures; the shared run_cli/_fixture_entry/_run_resolve_closure/_guard helpers are already extracted, and each remaining parallel is a per-subcommand or per-token-class variant whose explicit inline fixture is the assertion
 # tests/skill_load_cost_test.py
 import contextlib
 import io
@@ -16,6 +17,13 @@ SCRIPT = (REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit"
 # Load the script by path — repo convention (no `scripts/__init__.py`), matching
 # tests/skill_architecture_report_test.py and tests/lessons_issue_test.py.
 slc = load_script_module("skill_load_cost", SCRIPT)
+
+
+def run_cli(*args: str) -> subprocess.CompletedProcess:
+    """Run the skill_load_cost.py shim CLI in a subprocess with the given args."""
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args], capture_output=True, text=True,
+    )
 
 
 class EstimateTokensTest(unittest.TestCase):
@@ -301,11 +309,8 @@ class CliExitContractTest(unittest.TestCase):
         self.fix = Path(__file__).parent / "skill_load_cost" / "fixtures"
 
     def test_missing_patterns_file_exits_2_without_traceback(self):
-        proc = subprocess.run(
-            [sys.executable, str(SCRIPT), "baseline", "--files", str(SCRIPT),
-             "--code-patterns", "/nonexistent/patterns.json"],
-            capture_output=True, text=True,
-        )
+        proc = run_cli("baseline", "--files", str(SCRIPT),
+                       "--code-patterns", "/nonexistent/patterns.json")
         self.assertEqual(proc.returncode, 2)
         self.assertNotIn("Traceback", proc.stderr)
         self.assertIn("patterns", proc.stderr.lower())
@@ -314,11 +319,8 @@ class CliExitContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             scenarios = Path(d) / "scenarios.json"
             scenarios.write_text(json.dumps([{"id": "known", "files": ["alpha.md"]}]))
-            proc = subprocess.run(
-                [sys.executable, str(SCRIPT), "measure",
-                 "--scenarios", str(scenarios), "--id", "nope", "--root", str(self.fix)],
-                capture_output=True, text=True,
-            )
+            proc = run_cli("measure", "--scenarios", str(scenarios),
+                           "--id", "nope", "--root", str(self.fix))
             self.assertEqual(proc.returncode, 2)
             self.assertNotIn("Traceback", proc.stderr)
             self.assertIn("nope", proc.stderr)
@@ -328,12 +330,8 @@ class CliExitContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             patterns = Path(d) / "patterns.json"
             patterns.write_text(json.dumps(["(unterminated"]))
-            proc = subprocess.run(
-                [sys.executable, str(SCRIPT), "baseline",
-                 "--files", str(self.fix / "alpha.md"),
-                 "--code-patterns", str(patterns)],
-                capture_output=True, text=True,
-            )
+            proc = run_cli("baseline", "--files", str(self.fix / "alpha.md"),
+                           "--code-patterns", str(patterns))
             self.assertEqual(proc.returncode, 2)
             self.assertNotIn("Traceback", proc.stderr)
 
@@ -407,11 +405,8 @@ class GuardTokensCliTest(unittest.TestCase):
             bf.write_text(before, encoding="utf-8")
             af.write_text(after, encoding="utf-8")
             pat.write_text(json.dumps(CODE_PATTERNS), encoding="utf-8")
-            return subprocess.run(
-                [sys.executable, str(SCRIPT), "guard_tokens",
-                 "--before", str(bf), "--after", str(af), "--code-patterns", str(pat)],
-                capture_output=True, text=True,
-            )
+            return run_cli("guard_tokens", "--before", str(bf), "--after", str(af),
+                           "--code-patterns", str(pat))
 
     def test_clean_rewrite_exits_0(self):
         proc = self._run(_BEFORE, _BEFORE)
@@ -426,12 +421,9 @@ class GuardTokensCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             pat = Path(d) / "patterns.json"
             pat.write_text(json.dumps(CODE_PATTERNS))
-            proc = subprocess.run(
-                [sys.executable, str(SCRIPT), "guard_tokens",
-                 "--before", "/nonexistent/b.md", "--after", "/nonexistent/a.md",
-                 "--code-patterns", str(pat)],
-                capture_output=True, text=True,
-            )
+            proc = run_cli("guard_tokens",
+                           "--before", "/nonexistent/b.md", "--after", "/nonexistent/a.md",
+                           "--code-patterns", str(pat))
             self.assertEqual(proc.returncode, 2)
             self.assertNotIn("Traceback", proc.stderr)
 
