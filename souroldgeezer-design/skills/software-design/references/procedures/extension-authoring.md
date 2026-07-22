@@ -8,6 +8,10 @@ assimilation signals, design defaults, mandatory validation, smell codes, and
 review notes. Add support only when pressure cases show the core plus a strong
 base model misses stack-specific design signals.
 
+Before landing a new or materially restructured extension, run the
+clean-context expert probe in `../evals/expert-probe.md` and record the run
+there; never re-run it against unchanged content.
+
 Each extension declares two code surfaces: the `Smell codes:` family globs
 (`<ext>.SD-B-*`) describe coverage scope only and are never citable; the
 `Key codes:` line defines the extension's fixed citable set. Reviews emit only
