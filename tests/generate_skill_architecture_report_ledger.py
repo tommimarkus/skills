@@ -936,6 +936,28 @@ def build_guard_cases() -> list[dict]:
                 {"path": "example-plugin/skills/guard-adjectival-load-opener-skill/references/db-notes.md", "content": "# DB notes\n"},
             ],
         ),
+        guard_skill(
+            "guard-and-stop-terminal",
+            "Inputs: repository files.\n"
+            "Evidence: cite files and commands.\n"
+            "Output: report.\n"
+            "Clarify scope with the requester when the request is ambiguous.\n"
+            "Finish the checks and stop.\n"
+            "Rerun validation after edits.\n",
+            ["SAC-WORKFLOW-STOP-CONDITIONS"],
+            "and-stop terminal phrasing satisfies the stop-condition contract",
+        ),
+        guard_skill(
+            "guard-safe-default-arm",
+            "Inputs: repository files.\n"
+            "Evidence: cite files and commands.\n"
+            "Output: report.\n"
+            "Stop when complete.\n"
+            "If you are unsure, take the documented default.\n"
+            "Rerun validation after edits.\n",
+            ["SAC-WORKFLOW-ASK-CONTINUE"],
+            "if-unsure safe-default arm satisfies the ask-vs-continue contract",
+        ),
     ]
 
 

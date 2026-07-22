@@ -937,7 +937,8 @@ def has_ask_continue_contract(text: str) -> bool:
     return bool(
         re.search(
             r"\b(if .*ambiguous|ambiguous request|ask the user|ask —|ask --|don't invent|do not guess|"
-            r"if .*missing|halt and ask|stop and ask|clarify|confirm .* if)\b",
+            r"if .*missing|halt and ask|stop and ask|clarify|confirm .* if|"
+            r"if .*(?:not confident|unsure|uncertain|in doubt))\b",
             text,
             re.I,
         )
@@ -1327,7 +1328,7 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
             )
         )
 
-    if not re.search(r"\b(stop when|stop if|do not proceed|halt|blocker|exit nonzero|exit 0|ask the user|escalate|unsupported|cannot proceed)\b", full_text, re.I):
+    if not re.search(r"\b(stop when|stop if|stop and report|and stop|do not proceed|halt|blocker|exit nonzero|exit 0|ask the user|escalate|unsupported|cannot proceed)\b", full_text, re.I):
         findings.append(
             make_finding(
                 "Workflow Body",

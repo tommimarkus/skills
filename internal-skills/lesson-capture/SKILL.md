@@ -11,6 +11,9 @@ happened holds a reusable lesson, then file **at most one** generalizable candid
 question, or steering **from the user**, or a wrong path you took and **corrected yourself** —
 treat both the same.
 
+**Inputs:** this session's transcript — the changed skill-craft surfaces and the
+corrections, questions, or steering (the user's or your own) that surfaced a candidate rule.
+
 ## Workflow
 
 1. **Source + Layer + scope self-check.** The lesson may come from a user
@@ -45,7 +48,7 @@ treat both the same.
    ```
 
    It prints one JSON line with `title`, `labels`, `fingerprint`, and `body`.
-7. **Hard secret-scan gate (required — capture is publishing).** Scan the rendered body:
+7. **Hard secret-scan gate (required — capture is publishing).** Verify the rendered body is clean:
 
    ```bash
    printf '%s' "<body>" | python3 scripts/lessons_secret_scan.py
