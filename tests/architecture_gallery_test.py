@@ -143,8 +143,18 @@ class BuildHtmlTest(unittest.TestCase):
         self.assertNotIn("solmua", self.html)
 
     def test_counts_from_render_metadata(self):
-        self.assertIn('"nodes": 2', self.html)
-        self.assertIn('"edges": 1', self.html)
+        # Each view's node/edge counts are read from its own render-metadata,
+        # not a single global pair. Parse the embedded DATA array and assert
+        # every view's counts match its committed metadata exactly.
+        match = re.search(r"const DATA = (\[.*?\]);", self.html, re.S)
+        self.assertIsNotNone(match, "gallery DATA array not found")
+        counts = {v["id"]: (v["nodes"], v["edges"])
+                  for v in _json.loads(match.group(1))}
+        self.assertEqual(counts, {
+            "app-cooperation": (2, 1),
+            "domain-class": (3, 1),
+            "order-sequence": (3, 1),
+        })
 
     def test_model_titles_pass_through(self):
         self.assertIn("Message domain model", self.html)

@@ -1,1 +1,37 @@
-{ "nodes": { "n1": {}, "n2": {} }, "edges": { "e1": {} } }
+{
+  "render_metadata_schema_version": "render-metadata.schema.v1",
+  "semantic_profile": "uml",
+  "nodes": {
+    "ix-submission": {
+      "type": "Interaction",
+      "source_id": "ix-submission",
+      "properties": {}
+    },
+    "lifeline-applicant": {
+      "type": "Lifeline",
+      "source_id": "lifeline-applicant",
+      "properties": {
+        "interaction": "ix-submission"
+      }
+    },
+    "lifeline-service": {
+      "type": "Lifeline",
+      "source_id": "lifeline-service",
+      "properties": {
+        "interaction": "ix-submission"
+      }
+    }
+  },
+  "edges": {
+    "m-submit": {
+      "type": "Message",
+      "source_id": "m-submit",
+      "properties": {
+        "interaction": "ix-submission",
+        "sequence": 1,
+        "message_sort": "synchCall"
+      }
+    }
+  },
+  "groups": {}
+}
