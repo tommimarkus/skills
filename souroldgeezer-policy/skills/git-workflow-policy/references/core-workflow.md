@@ -1,10 +1,11 @@
 # Git Workflow Policy Core Workflow
 
-This workflow governs how code moves inside a repository. It is passive until
-loaded repo guidance initializes `git-workflow-policy`, or until the user
-explicitly asks for lookup, adoption, or enforcement. Once initialized, it is a
-standing enforcement gate before matching git workflow actions. It does not
-publish artifacts or execute PR/MR lifecycle actions.
+This workflow governs how code moves inside a repository. Enforcement posture
+per [`../../../docs/policy-reference/policy-posture-core.md`](../../../docs/policy-reference/policy-posture-core.md):
+passive until initialized (or the user explicitly asks for lookup, adoption, or
+enforcement); once initialized, a standing enforcement gate before matching git
+workflow actions. It does not publish artifacts or execute PR/MR lifecycle
+actions.
 
 ## Evidence Contract
 

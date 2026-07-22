@@ -6,10 +6,11 @@ description: "Use when loaded repo guidance initializes git-workflow-policy, or 
 # Git Workflow Policy
 
 Own standing developer git rules for repositories that explicitly initialize
-this policy. Installing the plugin is passive; a consuming repo must opt in
-through its own guidance, such as `AGENTS.md` or `CLAUDE.md`.
-Once loaded repo guidance initializes this policy, that guidance is standing
-enforcement authority for matching git workflow actions.
+this policy. The shared enforcement posture — passive install, opt-in through
+the consumer's own guidance, the standing line as enforcement authority — is
+canonical in
+[`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md);
+once initialized, that guidance is authority for matching git workflow actions.
 
 Inputs: request, repo identity/remotes, repo guidance, branch/worktree/upstream
 state, base/default branch, provider evidence when available, version-policy

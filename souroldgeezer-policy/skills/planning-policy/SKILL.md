@@ -7,13 +7,14 @@ description: "Use when loaded repo or user guidance initializes planning-policy,
 
 Own standing plan-first discipline for repositories — or a user's global guidance
 file — that explicitly initialize this policy, and answer explicit "plan this
-first" requests. Installing the plugin is passive; a consuming repo or user must
-opt in through its own guidance, such as `AGENTS.md` or `CLAUDE.md`. Once
-initialized, that standing line is enforcement authority before new feature or
-build work: the model brainstorms an approach in plan mode and gets it approved
-before implementing. Enforcement lives in that standing line (always in context),
-not in this skill firing; this skill supplies the cycle, config, adoption, and
-opt-out handling on demand.
+first" requests. The shared enforcement posture — passive install, opt-in
+through the consumer's own guidance, the standing line as enforcement authority,
+low-friction opt-out — is canonical in
+[`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md).
+Once initialized, the standing line is authority before new feature or build
+work — brainstorm an approach in plan mode and get it approved before
+implementing; this skill supplies the cycle, config, adoption, and opt-out
+handling on demand.
 
 Inputs: request, repo/user guidance, initialized options/exceptions, the work
 about to start, relevant files and recent history.

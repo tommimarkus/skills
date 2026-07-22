@@ -1,10 +1,11 @@
 # Release Policy Core Workflow
 
-This workflow governs distribution. It is passive until loaded repo guidance
-initializes `release-policy`, or until the user explicitly asks for lookup,
-adoption, preflight, or release action. Once initialized, it is a standing
-enforcement gate before matching release and distribution actions. Code movement
-belongs to `git-workflow-policy`; PR/MR lifecycle actions belong to `pr-ops`.
+This workflow governs distribution. Enforcement posture per
+[`../../../docs/policy-reference/policy-posture-core.md`](../../../docs/policy-reference/policy-posture-core.md):
+passive until initialized (or the user explicitly asks for lookup, adoption,
+preflight, or release action); once initialized, a standing enforcement gate
+before matching release and distribution actions. Code movement belongs to
+`git-workflow-policy`; PR/MR lifecycle actions belong to `pr-ops`.
 
 ## Evidence Contract
 

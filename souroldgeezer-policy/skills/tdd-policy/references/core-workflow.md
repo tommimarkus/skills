@@ -1,29 +1,25 @@
 # TDD Policy Core Workflow
 
 Standing test-first discipline for repositories that initialize this policy, and
-the on-demand "enforce TDD now" path. Installing the plugin is passive; a
-consuming repo opts in through its own guidance. Once initialized, that guidance
-is standing enforcement authority before implementation-code changes.
+the on-demand "enforce TDD now" path. Enforcement posture per
+[`../../../docs/policy-reference/policy-posture-core.md`](../../../docs/policy-reference/policy-posture-core.md):
+once initialized, the standing line is authority before implementation-code
+changes.
 
 ## Invariant
 
 Every behavioral code change is preceded by a failing test that specifies the
 intent, and shipped behavior is covered by a test that would fail if it
-regressed. Enforcement of this invariant lives in the standing guidance line
-(always in context), not in this skill — the skill supplies procedure, config,
-variants, and opt-out handling on demand.
+regressed.
 
 ## Standing block template
 
-`adopt-guidance` and the default init block MUST write a standing line that
-carries the invariant inline, not a bare pointer. Template:
+`adopt-guidance` and the default init block follow the posture core's
+standing-line rule — the invariant inline, never a bare pointer. Template:
 
 > `tdd-policy: <variant> — a failing test precedes implementation; RED→GREEN→REFACTOR;
 > shipped behavior stays covered by a test that fails on regression. Scope <globs>.
 > Exceptions <list> (logged). Enforcement <model|model+gate>.`
-
-Design test: a model must be able to enforce the core behavior from this line
-alone, skill unloaded. If it cannot, the line is underspecified — expand it.
 
 ## Default profile
 

@@ -6,10 +6,11 @@ description: "Use when loaded repo guidance initializes tdd-policy, or when aske
 # TDD Policy
 
 Own standing test-first discipline for repositories that explicitly initialize
-this policy, and answer explicit "enforce TDD now" requests. Installing the
-plugin is passive; a consuming repo must opt in through its own guidance, such as
-`AGENTS.md` or `CLAUDE.md`. Enforcement lives in that standing guidance line
-(always in context) — which must carry the invariant itself — not in this skill;
+this policy, and answer explicit "enforce TDD now" requests. The shared
+enforcement posture — passive install, opt-in through the consumer's own
+guidance, the standing line (which carries the invariant itself) as enforcement
+authority, low-friction opt-out — is canonical in
+[`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md);
 this skill supplies procedure, config, variants, and opt-out handling on demand.
 
 Inputs: request, repo guidance, initialized options/exceptions, the code about to

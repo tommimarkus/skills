@@ -1,5 +1,6 @@
 # Dediren Self-Check
 
+<!-- lean-audit:sync-intentional -->
 Before runtime claims, drive Dediren through the plugin's **bundled MCP server**:
 call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — never a
 CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in

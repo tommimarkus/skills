@@ -1,19 +1,17 @@
 # Planning Policy Core Workflow
 
 Standing plan-first discipline for repositories or users that initialize this
-policy, and the on-demand "plan this first" path. Installing the plugin is
-passive; a consuming repo or user opts in through its own guidance. Once
-initialized, that guidance is standing enforcement authority before new feature
-or build work.
+policy, and the on-demand "plan this first" path. Enforcement posture per
+[`../../../docs/policy-reference/policy-posture-core.md`](../../../docs/policy-reference/policy-posture-core.md):
+once initialized, the standing line is authority before new feature or build
+work.
 
 ## Invariant
 
 New feature or build work is preceded by a brief brainstorm in plan mode that
 converges on an approach the user approves (through `ExitPlanMode`) before any
 implementation begins. Shipped work traces back to an approach the user agreed
-to, not one assumed mid-edit. Enforcement of this invariant lives in the standing
-guidance line (always in context), not in this skill — the skill supplies the
-cycle, config, adoption, and opt-out handling on demand.
+to, not one assumed mid-edit.
 
 ## Enforcement cycle
 
@@ -42,16 +40,13 @@ running the cycle interactively.
 
 ## Standing block template
 
-`adopt-guidance` and the default init block MUST write a standing line that
-carries the invariant inline, not a bare pointer. Template:
+`adopt-guidance` and the default init block follow the posture core's
+standing-line rule — the invariant inline, never a bare pointer. Template:
 
 > `planning-policy: <profile> — before new feature or build work, brainstorm the
 > approach in plan mode and get it approved (ExitPlanMode) before implementing.
 > Scope <task-types/globs>. Opt out per task by saying "skip planning" (logged).
 > Enforcement <model>.`
-
-Design test: a model must be able to enforce plan-first from this line alone,
-skill unloaded. If it cannot, the line is underspecified — expand it.
 
 ## Default profile
 
@@ -67,7 +62,7 @@ domain skill owns end to end (logged); enforcement `model`.
   implementation edits until an approved plan exists is a possible phase-2 and is
   deferred; do not claim it is active.
 
-## Opt-out ladder (must stay low-friction — this is where choice lives)
+## Opt-out ladder
 
 - **Disable:** negate/remove the init line, or `planning-policy: off`.
 - **Per-task:** a single phrase ("skip planning" / "just do it") → applied and

@@ -33,7 +33,7 @@ Load [`extensions/github-actions.md`](extensions/github-actions.md) and [`../../
 Load [`extensions/bicep.md`](extensions/bicep.md) and [`../../docs/security-reference/devsecops-extensions/bicep.md`](../../docs/security-reference/devsecops-extensions/bicep.md) when Bicep/Azure IaC matches.
 Load [`extensions/dockerfile.md`](extensions/dockerfile.md) and [`../../docs/security-reference/devsecops-extensions/dockerfile.md`](../../docs/security-reference/devsecops-extensions/dockerfile.md) when Docker/Compose/container targets match.
 Load [`extensions/dotnet-security.md`](extensions/dotnet-security.md) and [`../../docs/security-reference/devsecops-extensions/dotnet-security.md`](../../docs/security-reference/devsecops-extensions/dotnet-security.md) when C#/.NET/appsettings targets match.
-Load [`references/procedures/cost-stance-detection.md`](references/procedures/cost-stance-detection.md) when resolving cost stance.
+Load [`references/procedures/cost-stance-detection.md`](references/procedures/cost-stance-detection.md) when cost stance is not given by the invocation or `config.yaml` (an explicitly given stance needs only disclosure, not the detection procedure).
 Load [`references/procedures/threat-model-planning.md`](references/procedures/threat-model-planning.md) first when running Deep mode.
 Load [`references/procedures/stage-coverage-matrix.md`](references/procedures/stage-coverage-matrix.md), [`references/procedures/evidence-per-release.md`](references/procedures/evidence-per-release.md), and [`references/procedures/mcp-github-probes.md`](references/procedures/mcp-github-probes.md) when running Deep mode.
 Load [`references/procedures/extension-authoring.md`](references/procedures/extension-authoring.md) only when editing extensions.
