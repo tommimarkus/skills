@@ -38,7 +38,7 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
 
     def test_extensions_define_concrete_smell_codes(self) -> None:
         expected_codes = {
-            "dotnet": ["dotnet.SD-C-1", "dotnet.SD-W-1", "dotnet.SD-Q-1"],
+            "csharp": ["csharp.SD-C-1", "csharp.SD-W-1", "csharp.SD-Q-1"],
             "java": ["java.SD-B-1", "java.SD-C-2", "java.SD-W-1"],
             "python": ["python.SD-B-4", "python.SD-C-1", "python.SD-S-2"],
             "rust": ["rust.SD-B-3", "rust.SD-C-2", "rust.SD-Q-1"],
@@ -95,7 +95,7 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
     def test_model_pressure_justifies_stack_extensions(self) -> None:
         pressure = read(f"{SOFTWARE_SKILL}/references/evals/model-pressure.md")
 
-        for case_id in ("SD-MP-TS-1", "SD-MP-RS-1", "SD-MP-JAVA-1", "SD-MP-DOTNET-1"):
+        for case_id in ("SD-MP-TS-1", "SD-MP-RS-1", "SD-MP-JAVA-1", "SD-MP-CSHARP-1"):
             self.assertIn(case_id, pressure)
 
         for phrase in ("baseline failure", "accepted extension rule", "retest", "merge-back condition"):

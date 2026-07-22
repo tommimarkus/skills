@@ -48,7 +48,7 @@ boundary, or dependency-direction restructuring may affect a code-lifted
 architecture view, or the user asks to update architecture after
 software-design work.
 Before stack claims, load matching extensions:
-[dotnet](extensions/dotnet.md), [java](extensions/java.md), [rust](extensions/rust.md),
+[csharp](extensions/csharp.md), [java](extensions/java.md), [rust](extensions/rust.md),
 [typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
 [python](extensions/python.md).
 Unknown stacks use core only; Python module/package/application/library

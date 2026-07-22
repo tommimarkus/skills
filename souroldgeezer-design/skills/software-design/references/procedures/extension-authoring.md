@@ -14,5 +14,5 @@ Each extension declares two code surfaces: the `Smell codes:` family globs
 defined key codes (or core `SD-*`). To report a new finding kind, add and
 define a key code first.
 
-Current extensions: `dotnet.md`, `java.md`, `rust.md`, `typescript.md`,
+Current extensions: `csharp.md`, `java.md`, `rust.md`, `typescript.md`,
 `shell-script.md`, and `python.md`.

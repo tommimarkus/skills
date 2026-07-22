@@ -96,7 +96,7 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
             "software-design-behavior-core-smell-unowned-concurrency": ("SD-C-6",),
             "software-design-behavior-core-smell-error-contract-collapse": ("SD-S-5",),
             "software-design-behavior-core-smell-stacked-retries": ("SD-Q-4",),
-            "software-design-behavior-dotnet-ef-repository-smells": ("dotnet.SD-S-1", "dotnet.SD-W-1"),
+            "software-design-behavior-csharp-ef-repository-smells": ("csharp.SD-S-1", "csharp.SD-W-1"),
             "software-design-behavior-python-tooling-contract-smells": (
                 "python.SD-B-4",
                 "python.SD-S-2",

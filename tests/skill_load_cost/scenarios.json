@@ -96,13 +96,13 @@
     ]
   },
   {
-    "id": "sd-build-dotnet",
+    "id": "sd-build-csharp",
     "skill": "software-design",
     "files": [
       "souroldgeezer-design/skills/software-design/SKILL.md",
       "souroldgeezer-design/docs/software-reference/software-design.md",
       "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/software-design/extensions/dotnet.md"
+      "souroldgeezer-design/skills/software-design/extensions/csharp.md"
     ]
   },
   {

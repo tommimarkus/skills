@@ -21,7 +21,7 @@ if the core alone no longer shows it, the extension rule merges back.
   extension rule: exports, source sets, singletons, one-use interfaces.
   Retest: the Java case. Merge-back condition:
   module/export/singleton/interface drift.
-- `SD-MP-DOTNET-1` — baseline failure: familiar EF/hosted-service patterns.
+- `SD-MP-CSHARP-1` — baseline failure: familiar EF/hosted-service patterns.
   Accepted extension rule: refs, friends, DI roots, EF/domain collapse,
   hosted-service ownership. Retest: the .NET case. Merge-back condition: EF
   ceremony and hosted-service policy.

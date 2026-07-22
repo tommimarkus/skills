@@ -127,13 +127,13 @@ cross-reference review the diff gate cannot automate.
 
 # software-design per-use load cost
 
-Guard coverage added 2026-07: scenarios (`sd-lookup-principle`, `sd-build-dotnet`,
+Guard coverage added 2026-07: scenarios (`sd-lookup-principle`, `sd-build-csharp`,
 `sd-review-typescript`), committed baseline, `SD-*` code patterns.
 
 | Scenario | Before | After | Delta |
 |---|---|---|---|
 | sd-lookup-principle | 4484 | 1542 | -2942 |
-| sd-build-dotnet | 5359 | 5447 | +88 |
+| sd-build-csharp | 5359 | 5447 | +88 |
 | sd-review-typescript | 8041 | 8129 | +88 |
 
 The lookup drop is a load-SET change: Lookup no longer loads the core
