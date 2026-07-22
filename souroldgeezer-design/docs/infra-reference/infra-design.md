@@ -37,7 +37,10 @@ delegated to their sibling skills.
 
 Default to topology grouped by workload boundary and operational ownership.
 Shared platform resources are separate only when their lifecycle, access model,
-or blast radius is different from the workload that consumes them.
+or blast radius is different from the workload that consumes them. Make ownership
+visible at resource granularity with tags or labels (owner, cost center,
+environment) where the platform supports them, so ownership stays queryable below
+the resource-group, stack, or module boundary.
 
 ### 3.2 IaC Module Boundaries
 
@@ -83,7 +86,11 @@ infrastructure-design concerns.
 
 Each deployable topology should name its telemetry sink, alert owner, dashboard
 or query handoff, backup/restore expectation, and rollout verification layer.
-Static source can verify wiring intent; runtime telemetry proves behavior.
+For availability-critical or stateful resources, also name the recovery objective
+(RPO/RTO) and the failover or multi-region expectation. Name where cost and spend
+are made visible — budget alerts, cost telemetry, or a spend dashboard handoff —
+as part of the operability contract. Static source can verify wiring intent;
+runtime telemetry proves behavior, failover, and spend.
 
 ### 3.9 Rollout, Rollback, and Migration
 
@@ -97,6 +104,15 @@ user has already supplied that policy.
 Design for drift detection between source, state, cloud control-plane truth,
 and architecture models. Generated artifacts should be either ignored and
 rebuildable or committed with a clear source-of-truth rule.
+
+### 3.11 Cost as a Design Input
+
+Cost is a design lever, not only a runtime outcome. Name the right-sizing intent
+(the SKU, tier, or plan chosen against a capacity or availability need), the
+budget or quota guardrail that bounds spend, and the cost-allocation mechanism
+(the tags or labels that map resources to an owner or cost center). Static source
+can express this intent; actual spend is a runtime fact and is not inferred from
+source.
 
 ## 4. Primitives
 
@@ -173,6 +189,7 @@ part of infrastructure design.
 | `ID-OPS-3` | Restore path absent | Stateful resources have no backup/restore or recovery expectation in the design. | warn |
 | `ID-EVO-1` | Drift reconciliation absent | No process or tooling reconciles source, state, and cloud control-plane truth. | warn |
 | `ID-EVO-2` | Versionless platform dependency | Provider, module, CLI, or deployment action version is unconstrained where changes can alter plans. | warn |
+| `ID-COST-1` | Cost design absent | Resources are sized, promoted, or scaled with no right-sizing intent, budget/quota guardrail, or cost-allocation tagging where the platform supports them. | warn |
 
 ## 7. Checklist with Verification Layers
 
@@ -185,9 +202,10 @@ part of infrastructure design.
 | Runtime identity and deployment identity are distinct design actors. | iac |
 | Secret material is referenced, not embedded. | static; delegate hardening to `devsecops-audit` |
 | Telemetry sink and operations handoff are declared. | iac; runtime confirms behavior |
-| Backup/restore expectation is named for stateful resources. | iac; runtime confirms restore success |
+| Cost design intent — right-sizing, budget/quota guardrail, and cost-allocation tags — is declared. | static; runtime confirms spend |
+| Backup/restore, recovery objective (RPO/RTO), and failover/multi-region expectation are named for stateful or availability-critical resources. | iac; runtime confirms restore and failover |
 | Destructive replacements and migrations have approval and recovery path. | plan; human |
-| Architecture model drift is checked when `docs/architecture/<feature>.oef.xml` exists. | static; delegate to `architecture-design` |
+| Architecture model drift is checked when `docs/architecture/<feature>.dediren/` exists. | static; delegate to `architecture-design` |
 
 ## 8. Out of Scope and Delegation Map
 

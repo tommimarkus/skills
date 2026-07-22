@@ -60,6 +60,10 @@ Inspect:
   platform layer that owns them.
 - Use Azure Well-Architected pillars as tradeoff lenses, not as generic review
   filler.
+- Treat cost as a design input (core §3.11): choose SKU, tier, or plan for
+  right-sizing, declare budget or Cost Management guardrails, and use resource
+  tags for cost allocation; apply the Well-Architected Cost Optimization pillar
+  as the tradeoff lens, while leaving actual spend as a runtime fact.
 
 ## Smells
 
@@ -72,6 +76,7 @@ Inspect:
 | `azure.ID-NET-1` | Network dependency orphan | Private endpoint, DNS, subnet, ingress, or egress config lives outside workload/platform ownership. | warn |
 | `azure.ID-OPS-1` | Diagnostic routing absent | Resource deploys without diagnostic setting, telemetry sink, or operations handoff. | warn |
 | `azure.ID-EVO-1` | Portal-only platform drift | Source assumes resources or settings created only in the Azure portal. | warn |
+| `azure.ID-COST-1` | Cost design absent | Resources omit SKU/tier right-sizing intent, budget or Cost Management guardrails, or cost-allocation tags where the workload needs spend accountability. | warn |
 
 ## Review Notes
 
@@ -84,4 +89,4 @@ Inspect:
 
 ## Applies To Reference Sections
 
-Core sections 3.1, 3.5, 3.6, 3.7, 3.8, 3.9, and 3.10.
+Core sections 3.1, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, and 3.11.
