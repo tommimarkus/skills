@@ -5,6 +5,21 @@ framework-neutral app-design workflow. It covers standalone Blazor WebAssembly
 apps and Blazor Web App `.Client` projects that run interactive WebAssembly
 components in the browser.
 
+Source anchors used for this extension:
+
+- ASP.NET Core Blazor overview and hosting models:
+  <https://learn.microsoft.com/aspnet/core/blazor>.
+- Blazor render modes: <https://learn.microsoft.com/aspnet/core/blazor/components/render-modes>.
+- Blazor globalization and localization:
+  <https://learn.microsoft.com/aspnet/core/blazor/globalization-localization>.
+- Blazor app download size (WebAssembly size levers):
+  <https://learn.microsoft.com/aspnet/core/blazor/performance/app-download-size>.
+- Blazor JavaScript interoperability:
+  <https://learn.microsoft.com/aspnet/core/blazor/javascript-interoperability>.
+
+Re-check those official pages when .NET/Blazor major version, render-mode
+support, or the WebAssembly runtime/globalization payload is load-bearing.
+
 ## Detection Signals
 
 - `*.razor`, `*.razor.css`, or `*.razor.cs` in the target.
@@ -146,9 +161,17 @@ semantics behind a client/service boundary and delegate the contract review.
   actual project configuration.
 - Navigation, menus, and dialogs must work with keyboard, touch, coarse/fine
   pointers, reduced motion, forced colors, 400% zoom, and RTL.
-- WebAssembly boot, lazy-loaded assemblies, AOT, trimming, image/font loading,
-  and JS interop cost affect LCP/CLS/INP posture. Static review can flag
-  posture only; runtime metrics require browser tooling or RUM.
+- Translated content uses Blazor first-party localization (`AddLocalization`,
+  `IStringLocalizer` with resx satellite assemblies, `CultureInfo` /
+  `CultureInfo.CurrentUICulture`); pair it with the core reference i18n
+  primitives for logical layout, `dir`, and text-expansion room so localized
+  strings do not break the layout.
+- WebAssembly boot, lazy-loaded assemblies, AOT, trimming, the globalization-data
+  (ICU) payload (`InvariantGlobalization` and
+  `BlazorWebAssemblyLoadAllGlobalizationData` decide how much culture data
+  ships), image/font loading, and JS interop cost affect LCP/CLS/INP posture.
+  Static review can flag posture only; runtime metrics require browser tooling
+  or RUM.
 
 ## Positive Signals
 
@@ -181,8 +204,9 @@ semantics behind a client/service boundary and delegate the contract review.
   fallback, disposal, owner, or failure behavior.
 - `blazor.APP-RSP-1`: isolated CSS uses physical properties, fixed label
   widths, device breakpoints, bare viewport heights, or hover-only behavior.
-- `blazor.APP-PERF-1`: WebAssembly boot, lazy assembly, image/font, or
-  interop cost is treated as performance-verified without runtime evidence.
+- `blazor.APP-PERF-1`: WebAssembly boot, lazy assembly, globalization-data
+  payload, image/font, or interop cost is treated as performance-verified
+  without runtime evidence.
 
 ## Carve-Outs
 

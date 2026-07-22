@@ -44,7 +44,7 @@ runtime evidence, or diffs are in scope;
 rendering, hydration, or browser-runtime signals; [extensions/nextjs.md](extensions/nextjs.md)
 for Next.js App Router or Pages Router app surfaces, and load it after the React extension;
 [extensions/blazor-wasm.md](extensions/blazor-wasm.md) for `*.razor`, Blazor
-WebAssembly project/host/render-mode signals, or Blazor™ app-shell/component
+WebAssembly project/host/render-mode signals, or Blazor app-shell/component
 work; [extensions/README.md](extensions/README.md) only when editing extensions.
 Unknown stacks use core only.
 

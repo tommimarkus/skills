@@ -41,3 +41,13 @@ documentation.
   original and limited to app-design implications for routing, layouts,
   Server/Client Component boundaries, cache/freshness behavior, navigation,
   forms, metadata/assets, and sibling-skill delegation.
+- Source: ASP.NET Core Blazor official docs, including
+  `learn.microsoft.com/aspnet/core/blazor`,
+  `learn.microsoft.com/aspnet/core/blazor/components/render-modes`,
+  `learn.microsoft.com/aspnet/core/blazor/globalization-localization`,
+  `learn.microsoft.com/aspnet/core/blazor/performance/app-download-size`, and
+  `learn.microsoft.com/aspnet/core/blazor/javascript-interoperability`.
+  Handling: Blazor facts are linked as source anchors; extension wording is
+  original and limited to app-design implications for render modes, component
+  contracts, state/JS interop, forms/navigation, globalization/localization, and
+  responsive/accessibility/i18n/performance posture.

@@ -56,6 +56,10 @@ Classify conflicts as `reused`, `legacy debt`, `blocking debt`, or
   migration scope or propose the smallest safe app migration move.
 - If a legacy pattern is not migrated, name the file, violated rule or finding
   family, and reason it remains out of scope.
+- `blocking debt` is a stop-and-ask state, not a footer line: once resolved it is
+  disclosed as `Migrations performed` (if migrated) or `Legacy debt` (if the user
+  accepts the smallest safe move without migrating). The footer discloses those
+  end states; `reused` needs no debt line.
 
 ## Footer Block
 
