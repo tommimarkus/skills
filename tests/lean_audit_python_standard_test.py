@@ -1,9 +1,8 @@
 """Enforces the lean-audit Python standard (ruff + mypy) inside `python -m unittest`."""
 import subprocess
 import unittest
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT
 CHECKS = (
     ("ruff-check", ["uv", "run", "--frozen", "ruff", "check", "."]),
     ("ruff-format", ["uv", "run", "--frozen", "ruff", "format", "--check", "."]),

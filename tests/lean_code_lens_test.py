@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — one-factor detector fixtures; the shared corpus builders (stream/toks/words/run_lens/_discover) are already extracted, and each remaining parallel is a test body varying a single corpus or CLI factor that must stay explicit
 import json
 import subprocess
 import sys
@@ -31,18 +32,29 @@ def run_lens(*args, stdin=None):
                           cwd=REPO_ROOT, input=stdin, capture_output=True, text=True, check=False)
 
 
-class Tokenizer(unittest.TestCase):
-    def _tok(self, ext: str, text: str) -> list[str]:
-        lens = load_lens()
-        return [t for t, _ in lens.strip_and_tokenize(text, lens.profile_for(ext))]
+def stream(lens, text, ext=".py"):
+    """Tokenize text with the profile for ext (the (token, line) pair stream)."""
+    return lens.strip_and_tokenize(text, lens.profile_for(ext))
 
+
+def toks(text, ext):
+    """Just the token strings for text under the profile for ext."""
+    return [t for t, _ in stream(load_lens(), text, ext)]
+
+
+def words(n, prefix="t"):
+    """A synthetic n-token corpus body of distinct identifiers."""
+    return " ".join(f"{prefix}{i}" for i in range(n))
+
+
+class Tokenizer(unittest.TestCase):
     def test_strips_line_and_block_comments(self):
-        toks = self._tok(".js", "a = 1 // hi\n/* x */ b = 2\n")
-        self.assertEqual(toks, ["a", "=", "NUM", "b", "=", "NUM"])
+        self.assertEqual(toks("a = 1 // hi\n/* x */ b = 2\n", ".js"),
+                         ["a", "=", "NUM", "b", "=", "NUM"])
 
     def test_string_and_number_normalized(self):
-        toks = self._tok(".py", 'x = "hello" + 42')
-        self.assertEqual(toks, ["x", "=", "STR", "+", "NUM"])
+        self.assertEqual(toks('x = "hello" + 42', ".py"),
+                         ["x", "=", "STR", "+", "NUM"])
 
     def test_line_numbers_tracked(self):
         lens = load_lens()
@@ -56,13 +68,10 @@ class Tokenizer(unittest.TestCase):
 
 
 class Clones(unittest.TestCase):
-    def _stream(self, lens, text, ext=".py"):
-        return lens.strip_and_tokenize(text, lens.profile_for(ext))
-
     def _cross_file_clones(self, n: int, min_tokens: int = 8):
         lens = load_lens()
-        body = " ".join(f"t{i}" for i in range(n))
-        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
+        body = words(n)
+        streams = {"a.py": stream(lens, body), "b.py": stream(lens, body)}
         return lens.find_clones(streams, min_tokens=min_tokens)
 
     def test_verbatim_cross_file_clone_blocks(self):
@@ -81,20 +90,20 @@ class Clones(unittest.TestCase):
 
     def test_below_threshold_no_clone(self):
         lens = load_lens()
-        body = " ".join(f"t{i}" for i in range(5))
-        streams = {"a.py": self._stream(lens, body), "b.py": self._stream(lens, body)}
+        body = words(5)
+        streams = {"a.py": stream(lens, body), "b.py": stream(lens, body)}
         self.assertEqual(lens.find_clones(streams, min_tokens=8), [])
 
     def test_distinct_files_no_clone(self):
         lens = load_lens()
-        streams = {"a.py": self._stream(lens, " ".join(f"a{i}" for i in range(30))),
-                   "b.py": self._stream(lens, " ".join(f"b{i}" for i in range(30)))}
+        streams = {"a.py": stream(lens, words(30, "a")),
+                   "b.py": stream(lens, words(30, "b"))}
         self.assertEqual(lens.find_clones(streams, min_tokens=8), [])
 
     def test_intra_file_nonoverlapping_clone(self):
         lens = load_lens()
-        block = " ".join(f"t{i}" for i in range(12))
-        streams = {"a.py": self._stream(lens, block + " sep " + block)}
+        block = words(12)
+        streams = {"a.py": stream(lens, block + " sep " + block)}
         clones = lens.find_clones(streams, min_tokens=8)
         self.assertTrue(clones)
         self.assertEqual(clones[0].path, "a.py")
@@ -102,9 +111,9 @@ class Clones(unittest.TestCase):
 
     def test_comment_only_difference_still_clone(self):
         lens = load_lens()
-        body = " ".join(f"t{i}" for i in range(20))
-        streams = {"a.py": self._stream(lens, "# header\n" + body),
-                   "b.py": self._stream(lens, body + "\n# trailer")}
+        body = words(20)
+        streams = {"a.py": stream(lens, "# header\n" + body),
+                   "b.py": stream(lens, body + "\n# trailer")}
         self.assertTrue(lens.find_clones(streams, min_tokens=8))
 
     def test_windows_straddling_file_boundaries_do_not_crash(self):
@@ -112,7 +121,7 @@ class Clones(unittest.TestCase):
         # concatenates files, so a naive seed window straddles a file boundary.
         # Must not raise IndexError and must report no (phantom cross-file) clone.
         lens = load_lens()
-        streams = {f"f{n}.py": self._stream(lens, "a b c") for n in range(3)}
+        streams = {f"f{n}.py": stream(lens, "a b c") for n in range(3)}
         self.assertEqual(lens.find_clones(streams, min_tokens=4), [])
 
 
@@ -160,7 +169,7 @@ class Discovery(unittest.TestCase):
 class Cli(unittest.TestCase):
     def test_json_and_exit1_on_block(self):
         with tempfile.TemporaryDirectory() as d:
-            body = " ".join(f"t{i}" for i in range(30)) + "\n"
+            body = words(30) + "\n"
             (Path(d) / "a.py").write_text(body, encoding="utf-8")
             (Path(d) / "b.py").write_text(body, encoding="utf-8")
             r = run_lens(d, "--min-tokens", "8", "--format", "json")
@@ -170,8 +179,8 @@ class Cli(unittest.TestCase):
 
     def test_clean_tree_exit0(self):
         with tempfile.TemporaryDirectory() as d:
-            (Path(d) / "a.py").write_text(" ".join(f"a{i}" for i in range(30)) + "\n", encoding="utf-8")
-            (Path(d) / "b.py").write_text(" ".join(f"b{i}" for i in range(30)) + "\n", encoding="utf-8")
+            (Path(d) / "a.py").write_text(words(30, "a") + "\n", encoding="utf-8")
+            (Path(d) / "b.py").write_text(words(30, "b") + "\n", encoding="utf-8")
             r = run_lens(d, "--min-tokens", "8", "--format", "json")
             self.assertEqual(r.returncode, 0)
             self.assertEqual(json.loads(r.stdout)["findings"], [])
@@ -210,17 +219,14 @@ class Calibration(unittest.TestCase):
 
 
 class TokenizerFixes(unittest.TestCase):
-    def _toks(self, lens, text, ext):
-        return [t for t, _ in lens.strip_and_tokenize(text, lens.profile_for(ext))]
-
     def test_kotlin_swift_php_scala_have_comment_profiles(self):
         lens = load_lens()
         for ext in (".kt", ".swift", ".php", ".scala"):
             self.assertIsNot(lens.profile_for(ext), lens.GENERIC_PROFILE,
                              f"{ext} must strip comments")
-            self.assertEqual(self._toks(lens, "x = 1 // note", ext), ["x", "=", "NUM"])
+            self.assertEqual(toks("x = 1 // note", ext), ["x", "=", "NUM"])
         # PHP also treats `#` as a line comment.
-        self.assertEqual(self._toks(lens, "$x = 1 # note", ".php"), ["$", "x", "=", "NUM"])
+        self.assertEqual(toks("$x = 1 # note", ".php"), ["$", "x", "=", "NUM"])
 
     def test_identical_license_header_is_not_a_clone(self):
         lens = load_lens()
@@ -229,46 +235,40 @@ class TokenizerFixes(unittest.TestCase):
                  "as decorative boilerplate and carries no shared program logic").split())
         a = header + "\nfun alpha() { return readAlpha().value }\n"
         b = header + "\nclass Beta { fun gamma() { return this.delta.times(2) } }\n"
-        streams = {"a.kt": lens.strip_and_tokenize(a, lens.profile_for(".kt")),
-                   "b.kt": lens.strip_and_tokenize(b, lens.profile_for(".kt"))}
+        streams = {"a.kt": stream(lens, a, ".kt"), "b.kt": stream(lens, b, ".kt")}
         self.assertEqual(lens.find_clones(streams, 20), [],
                          "shared comment header must not tokenize into a clone")
 
     def test_go_raw_string_preserves_following_tokens(self):
-        lens = load_lens()
-        toks = self._toks(lens, "x = `a\\`\ny = load()\n", ".go")
-        self.assertIn("y", toks)          # a `\` in a raw string must not swallow the rest
-        self.assertIn("load", toks)
+        got = toks("x = `a\\`\ny = load()\n", ".go")
+        self.assertIn("y", got)           # a `\` in a raw string must not swallow the rest
+        self.assertIn("load", got)
 
     def test_triple_quoted_string_value_is_single_token(self):
-        lens = load_lens()
-        self.assertEqual(self._toks(lens, 'sql = """SELECT a FROM t"""', ".py"),
+        self.assertEqual(toks('sql = """SELECT a FROM t"""', ".py"),
                          ["sql", "=", "STR"])
         # a bare docstring collapses to one STR too (not deleted)
-        self.assertEqual(self._toks(lens, '"""module doc"""\nx = 1', ".py"),
+        self.assertEqual(toks('"""module doc"""\nx = 1', ".py"),
                          ["STR", "x", "=", "NUM"])
 
     def test_ruby_begin_midline_is_not_a_block_comment(self):
-        lens = load_lens()
-        toks = self._toks(lens, "x=begin\n  risky\nend\nz = 1", ".rb")
-        self.assertIn("z", toks)          # mid-line =begin must not swallow the file
+        got = toks("x=begin\n  risky\nend\nz = 1", ".rb")
+        self.assertIn("z", got)           # mid-line =begin must not swallow the file
         # a real column-0 =begin block is still stripped
-        self.assertEqual(self._toks(lens, "=begin\n comment\n=end\nz = 1", ".rb"),
+        self.assertEqual(toks("=begin\n comment\n=end\nz = 1", ".rb"),
                          ["z", "=", "NUM"])
 
     def test_string_backslash_newline_counts_line(self):
-        lens = load_lens()
-        pairs = lens.strip_and_tokenize('a = "x\\\ny"\nb = 1\n', lens.profile_for(".py"))
+        pairs = stream(load_lens(), 'a = "x\\\ny"\nb = 1\n')
         b_line = next(ln for tok, ln in pairs if tok == "b")
         self.assertEqual(b_line, 3, "line continuation inside a string must advance the line")
 
     def test_numeric_literals_normalized(self):
-        lens = load_lens()
         for lit in ("0xFF", "0b1010", "1_000", "1e9"):
-            self.assertEqual(self._toks(lens, f"x = {lit}", ".py"), ["x", "=", "NUM"],
+            self.assertEqual(toks(f"x = {lit}", ".py"), ["x", "=", "NUM"],
                              f"{lit} should normalize to NUM")
         # identifiers that merely look numeric are left alone
-        self.assertEqual(self._toks(lens, "cafe = 1", ".py"), ["cafe", "=", "NUM"])
+        self.assertEqual(toks("cafe = 1", ".py"), ["cafe", "=", "NUM"])
 
 
 class ExclusionFixes(unittest.TestCase):
@@ -286,18 +286,15 @@ class ExclusionFixes(unittest.TestCase):
 
 
 class CloneLogicFixes(unittest.TestCase):
-    def _stream(self, lens, text, ext=".py"):
-        return lens.strip_and_tokenize(text, lens.profile_for(ext))
-
     def test_min_tokens_below_one_raises(self):
         lens = load_lens()
         with self.assertRaises(ValueError):
-            lens.find_clones({"a.py": self._stream(lens, "a b c")}, 0)
+            lens.find_clones({"a.py": stream(lens, "a b c")}, 0)
 
     def test_periodic_blocks_reported_once(self):
         lens = load_lens()
-        block = " ".join(f"t{i}" for i in range(25))
-        streams = {"a.py": self._stream(lens, "\n".join([block, block, block, block]))}
+        block = words(25)
+        streams = {"a.py": stream(lens, "\n".join([block, block, block, block]))}
         clones = lens.find_clones(streams, 25)
         # no smaller clone whose region nests inside a larger one on the same file
         for c in clones:
@@ -310,11 +307,11 @@ class CloneLogicFixes(unittest.TestCase):
 
     def test_distinct_crossfile_clones_not_deduped(self):
         lens = load_lens()
-        big = " ".join(f"t{i}" for i in range(40))
-        small = " ".join(f"t{i}" for i in range(10))       # ⊂ big's token run
-        streams = {"a.py": self._stream(lens, big),
-                   "b.py": self._stream(lens, big),
-                   "c.py": self._stream(lens, small)}
+        big = words(40)
+        small = words(10)                                 # ⊂ big's token run
+        streams = {"a.py": stream(lens, big),
+                   "b.py": stream(lens, big),
+                   "c.py": stream(lens, small)}
         clones = lens.find_clones(streams, 8)
         pairs = {frozenset((c.path, c.matched_path)) for c in clones}
         self.assertIn(frozenset(("a.py", "b.py")), pairs)

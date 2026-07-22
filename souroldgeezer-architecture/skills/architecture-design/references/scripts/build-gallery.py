@@ -25,6 +25,16 @@ from urllib.parse import quote
 
 DENSE_EDGES = 50  # a view is flagged "dense" at this many relationships
 
+# Ordered UML diagram-kind keyword families for classify(): first matching row wins.
+_UML_FAMILIES = (
+    (("sequence", "communication"), ("uml-seq", "Sequences", "UML 2.5", "S")),
+    (("class", "object", "data"), ("uml-data", "Structure & data", "UML 2.5", "T")),
+    (("component", "deployment", "package"),
+     ("uml-depl", "Components & deployment", "UML 2.5", "C")),
+    (("activity", "state", "use case", "use-case", "usecase"),
+     ("uml-behavior", "Behaviour", "UML 2.5", "B")),
+)
+
 
 class SourceMissing(Exception):
     """A required rendered source (svg or render-metadata) is absent."""
@@ -40,15 +50,9 @@ def classify(profile, diagram_kind):
     """
     k = (diagram_kind or "").lower()
     if profile == "uml":
-        if "sequence" in k or "communication" in k:
-            return ("uml-seq", "Sequences", "UML 2.5", "S")
-        if "class" in k or "object" in k or "data" in k:
-            return ("uml-data", "Structure & data", "UML 2.5", "T")
-        if "component" in k or "deployment" in k or "package" in k:
-            return ("uml-depl", "Components & deployment", "UML 2.5", "C")
-        if "activity" in k or "state" in k or "use case" in k \
-                or "use-case" in k or "usecase" in k:
-            return ("uml-behavior", "Behaviour", "UML 2.5", "B")
+        for keywords, family in _UML_FAMILIES:
+            if any(word in k for word in keywords):
+                return family
         return ("uml", "UML views", "UML 2.5", "U")
     return ("arch", "ArchiMate views", "ArchiMate 3.2", "A")
 
@@ -96,10 +100,15 @@ def _favicon():
         "<text y='.9em' font-size='88'>\U0001F4D0</text></svg>")
 
 
+def _load_project(pkg_dir):
+    """Parsed project.json for the package."""
+    with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def collect(pkg_dir):
     """Return (data, plates_html) for the package, or raise SourceMissing."""
-    with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
-        proj = json.load(fh)
+    proj = _load_project(pkg_dir)
     prof = profile_resolver(proj, pkg_dir)
     counters, data, plates = {}, [], []
     for v in proj["views"]:
@@ -145,8 +154,7 @@ def _notation_summary(data):
 
 def build_html(pkg_dir):
     """Full standalone HTML for the package (pure function of its sources)."""
-    with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
-        proj = json.load(fh)
+    proj = _load_project(pkg_dir)
     data, plates_html = collect(pkg_dir)
     feature = proj.get("feature", os.path.basename(os.path.normpath(pkg_dir)))
     lang = proj.get("lang", "en")

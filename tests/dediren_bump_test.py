@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — parallel per-function assertion bodies kept literal; the pin-surface fixture is extracted to temp_repo/build_temp_repo
 """Coverage for scripts/dediren_bump.py — the scoped Dediren pin-bump tool.
 
 Mirrors version_stamp_test.py: load the script module, exercise its pure functions
@@ -5,6 +6,7 @@ against a throwaway copy of the real pin surfaces, and drive the CLI via subproc
 The load-bearing safety property is scope: the bump must never touch the coincidental
 souroldgeezer-design / marketplace CalVer that can equal the dediren pin.
 """
+import contextlib
 import io
 import json
 import re
@@ -67,21 +69,26 @@ def build_temp_repo(tmp: Path, *, with_decoys: bool = False) -> Path:
     return tmp
 
 
+@contextlib.contextmanager
+def temp_repo(**kwargs):
+    """A throwaway build_temp_repo copy inside a TemporaryDirectory."""
+    with tempfile.TemporaryDirectory() as tmp:
+        yield build_temp_repo(Path(tmp), **kwargs)
+
+
 def read(root: Path, rel: str) -> str:
     return (root / rel).read_text(encoding="utf-8")
 
 
 class CurrentVersionTest(unittest.TestCase):
     def test_reads_release_script_sot(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             self.assertEqual(db.current_version(root), CURRENT)
 
 
 class DiscoverPinsTest(unittest.TestCase):
     def test_covers_fixtures_and_notations_all_at_current(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             pins = db.discover_pins(root)
             self.assertTrue(pins, "expected discovered pins")
             self.assertTrue(any("fixtures/dediren" in key for key in pins))
@@ -91,8 +98,7 @@ class DiscoverPinsTest(unittest.TestCase):
 
 class BumpTest(unittest.TestCase):
     def test_rewrites_every_pin_and_reverifies_clean(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             report = db.bump(root, NEW)
 
             self.assertEqual(report.old, CURRENT)
@@ -108,8 +114,7 @@ class BumpTest(unittest.TestCase):
             self.assertEqual(db.verify(root, NEW), [])
 
     def test_release_script_default_and_usage_both_bump(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             db.bump(root, NEW)
             script = read(root, RELEASE_SCRIPT_REL)
             self.assertIn(f'DEDIREN_VERSION_DEFAULT="{NEW}"', script)
@@ -117,16 +122,14 @@ class BumpTest(unittest.TestCase):
             self.assertNotIn(CURRENT, script)
 
     def test_leaves_coincidental_calver_untouched(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp), with_decoys=True)
+        with temp_repo(with_decoys=True) as root:
             db.bump(root, NEW)
             self.assertIn(CURRENT, read(root, "souroldgeezer-design/.claude-plugin/plugin.json"))
             self.assertNotIn(NEW, read(root, "souroldgeezer-design/.claude-plugin/plugin.json"))
             self.assertIn(CURRENT, read(root, ".claude-plugin/marketplace.json"))
 
     def test_check_writes_nothing_but_reports_plan(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             before = read(root, RELEASE_SCRIPT_REL)
             report = db.bump(root, NEW, check=True)
             self.assertTrue(report.changed_files)
@@ -137,21 +140,18 @@ class BumpTest(unittest.TestCase):
             self.assertEqual(set(db.discover_pins(root).values()), {CURRENT})
 
     def test_noop_when_already_at_target(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             report = db.bump(root, CURRENT)
             self.assertEqual(report.changed_files, [])
 
     def test_rejects_non_calver_target(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             for bad in ("1.2", "not-a-version", "2026.7.6", "v2026.07.6"):
                 with self.subTest(bad=bad), self.assertRaises(ValueError):
                     db.bump(root, bad)
 
     def test_rejects_predrifted_pin(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             # Corrupt one notation example so a pin no longer equals the SoT.
             drifted = root / ARCH_REFS_REL / "notations" / "uml" / "class.md"
             drifted.write_text(
@@ -193,8 +193,7 @@ class HistoricalMarkerTest(unittest.TestCase):
         self.assertEqual(text, out)
 
     def test_bump_preserves_marker_citing_the_current_pin(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             grounding_path = root / SOURCE_GROUNDING_REL
             grounding_path.write_text(
                 grounding_path.read_text(encoding="utf-8")
@@ -213,8 +212,7 @@ class HistoricalMarkerTest(unittest.TestCase):
 
 class VerifyTest(unittest.TestCase):
     def test_reports_mismatches(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             self.assertEqual(db.verify(root, CURRENT), [])
             mismatches = db.verify(root, NEW)
             self.assertTrue(mismatches)
@@ -222,8 +220,7 @@ class VerifyTest(unittest.TestCase):
 
 class ParityPlanTest(unittest.TestCase):
     def test_reports_both_versions_and_surface_globs(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             plan = db.parity_plan(root, NEW)
             self.assertEqual(plan["current"], CURRENT)
             self.assertEqual(plan["target"], NEW)
@@ -244,16 +241,14 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), CURRENT)
 
     def test_bump_check_is_nonmutating(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             before = read(root, RELEASE_SCRIPT_REL)
             result = self._run("bump", "--to", NEW, "--check", "--repo-root", str(root))
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(read(root, RELEASE_SCRIPT_REL), before)
 
     def test_bump_rejects_bad_version_nonzero_exit(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             result = self._run("bump", "--to", "not-a-version", "--repo-root", str(root))
             self.assertNotEqual(result.returncode, 0)
 
@@ -306,13 +301,11 @@ class ParseReleaseTagTest(unittest.TestCase):
 
 class RepoSlugTest(unittest.TestCase):
     def test_reads_release_script_default(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             self.assertEqual(db._repo_slug(root), "tommimarkus/dediren")
 
     def test_env_override_wins(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             with mock.patch.dict(db.os.environ, {"DEDIREN_REPO": "fork/dediren"}):
                 self.assertEqual(db._repo_slug(root), "fork/dediren")
 
@@ -332,16 +325,14 @@ class ResolveLatestTest(unittest.TestCase):
             return self._url
 
     def test_follows_redirect_and_parses_tag(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             target = "https://github.com/tommimarkus/dediren/releases/tag/v2027.01.3"
             with mock.patch.object(db.urllib.request, "urlopen",
                                    return_value=self._Resp(target)):
                 self.assertEqual(db.resolve_latest(root), "2027.01.3")
 
     def test_network_failure_raises_runtimeerror(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_temp_repo(Path(tmp))
+        with temp_repo() as root:
             with mock.patch.object(db.urllib.request, "urlopen",
                                    side_effect=db.urllib.error.URLError("boom")):
                 with self.assertRaises(RuntimeError):

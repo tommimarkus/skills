@@ -54,35 +54,39 @@ grep -Eq '(^|[[:space:]])(-h|--help)([[:space:]]|$)' <<<"$cmd" && exit 0
 # 2) Explicit override for deliberate integration onto main.
 grep -Eq '(^|[[:space:]])ALLOW_MAIN_COMMIT=1([[:space:]]|$)' <<<"$cmd" && exit 0
 
-# 3) Resolve the effective directory the commit would run in.
+# 3) Resolve the effective directory the commit would run in: first a leading
+#    `cd <path> &&|;` prefix (the recommended dispatch pattern), then a
+#    `git -C <path>` override of the directory git operates on.
+# resolve_against BASE TARGET: TARGET verbatim when absolute, else BASE/TARGET.
+resolve_against() {
+  case "$2" in
+    /*) printf '%s\n' "$2" ;;
+    *)  printf '%s\n' "$1/$2" ;;
+  esac
+}
 dir="$cwd"
-# Leading `cd <path> &&|;` prefix (the recommended dispatch pattern).
-if [[ "$cmd" =~ ^[[:space:]]*cd[[:space:]]+([^[:space:]\;\&\|]+) ]]; then
-  cd_target="${BASH_REMATCH[1]}"
-  case "$cd_target" in
-    /*) dir="$cd_target" ;;
-    *)  dir="$cwd/$cd_target" ;;
-  esac
-fi
-# `git -C <path>` overrides the directory git operates on.
-if [[ "$cmd" =~ git[[:space:]]+-C[[:space:]]+([^[:space:]\;\&\|]+) ]]; then
-  gc_target="${BASH_REMATCH[1]}"
-  case "$gc_target" in
-    /*) dir="$gc_target" ;;
-    *)  dir="$dir/$gc_target" ;;
-  esac
-fi
+for pattern in '^[[:space:]]*cd[[:space:]]+([^[:space:];&|]+)' \
+               'git[[:space:]]+-C[[:space:]]+([^[:space:];&|]+)'; do
+  if [[ "$cmd" =~ $pattern ]]; then
+    dir=$(resolve_against "$dir" "${BASH_REMATCH[1]}")
+  fi
+done
 
 # 4) Must be inside a git work tree.
 git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
+# abs_git_path DIR FLAG: absolute path from `git rev-parse` for FLAG in DIR.
+abs_git_path() {
+  git -C "$1" rev-parse --path-format=absolute "$2" 2>/dev/null
+}
+
 # 5) Scope to this marketplace repo only.
-common_dir=$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || exit 0
+common_dir=$(abs_git_path "$dir" --git-common-dir) || exit 0
 repo_root=$(dirname "$common_dir")
 [[ -f "$repo_root/.claude-plugin/marketplace.json" ]] || exit 0
 
 # 6) PRIMARY checkout? (git-dir == git-common-dir only in the primary work tree)
-git_dir=$(git -C "$dir" rev-parse --path-format=absolute --git-dir 2>/dev/null) || exit 0
+git_dir=$(abs_git_path "$dir" --git-dir) || exit 0
 [[ "$git_dir" == "$common_dir" ]] || exit 0
 
 # 7) On branch `main`?

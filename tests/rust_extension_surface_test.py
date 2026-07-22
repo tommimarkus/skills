@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-stack grounding literals (source URLs, smell codes, eval IDs) are the assertion payload; the shared pack/eval contract checks are already extracted to surface_test_lib
 import unittest
 
 from tests.surface_test_lib import (

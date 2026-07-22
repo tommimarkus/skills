@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-extension grounding literals (source URLs, smell codes, eval IDs) are the assertion payload behind the shared read/read_jsonl helpers
 import unittest
 
 from tests.surface_test_lib import read, read_jsonl

@@ -22,6 +22,12 @@ def compact(text: str) -> str:
     return " ".join(text.split())
 
 
+def eval_ids(path: str) -> set[str]:
+    """The set of case ids in an evals JSONL corpus. Shared by the synthetic
+    eval-coverage checks here and in the per-stack surface tests."""
+    return {record["id"] for record in read_jsonl(path)}
+
+
 def load_script_module(name: str, path: Path):
     """Dynamically load a scripts/*.py file as an importable module, registering it
     in sys.modules under `name`. Shared by the tests that exercise repo scripts
@@ -153,24 +159,10 @@ def assert_stack_has_synthetic_eval_coverage(
 ) -> None:
     """The four-corpus (test-quality trigger/behavior, software-design trigger/behavior)
     synthetic eval coverage check shared by the java/rust/... surface tests."""
-    test_quality_trigger_ids = {
-        record["id"]
-        for record in read_jsonl("souroldgeezer-audit/skills/test-quality-audit/references/evals/trigger-cases.jsonl")
-    }
-    test_quality_behavior_ids = {
-        record["id"]
-        for record in read_jsonl("souroldgeezer-audit/skills/test-quality-audit/references/evals/behavior-cases.jsonl")
-    }
-    software_trigger_ids = {
-        record["id"]
-        for record in read_jsonl("souroldgeezer-design/skills/software-design/references/evals/trigger-cases.jsonl")
-    }
-    software_behavior_ids = {
-        record["id"]
-        for record in read_jsonl("souroldgeezer-design/skills/software-design/references/evals/behavior-cases.jsonl")
-    }
+    test_quality_evals = "souroldgeezer-audit/skills/test-quality-audit/references/evals"
+    software_evals = "souroldgeezer-design/skills/software-design/references/evals"
 
-    tc.assertIn(test_quality_trigger_id, test_quality_trigger_ids)
-    tc.assertIn(test_quality_behavior_id, test_quality_behavior_ids)
-    tc.assertIn(software_trigger_id, software_trigger_ids)
-    tc.assertIn(software_behavior_id, software_behavior_ids)
+    tc.assertIn(test_quality_trigger_id, eval_ids(f"{test_quality_evals}/trigger-cases.jsonl"))
+    tc.assertIn(test_quality_behavior_id, eval_ids(f"{test_quality_evals}/behavior-cases.jsonl"))
+    tc.assertIn(software_trigger_id, eval_ids(f"{software_evals}/trigger-cases.jsonl"))
+    tc.assertIn(software_behavior_id, eval_ids(f"{software_evals}/behavior-cases.jsonl"))

@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-case broken-fixture payloads kept literal; the run/flag machinery is already extracted to _assert_broken_fixture_flags/make_clean_fixture
 import subprocess
 import sys
 import tempfile

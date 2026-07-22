@@ -23,12 +23,14 @@ from leanaudit.hook_envelope import HookPayload
 __all__ = ["evaluate", "main"]
 
 
+# Which tool_input key holds the added text for the single-payload tools.
+_ADDED_TEXT_KEY = {"Write": "content", "Edit": "new_string"}
+
+
 def _added_content(tool_name: str, tool_input: dict[str, Any]) -> str | None:
-    if tool_name == "Write":
-        c = tool_input.get("content")
-        return c if isinstance(c, str) and c else None
-    if tool_name == "Edit":
-        c = tool_input.get("new_string")
+    key = _ADDED_TEXT_KEY.get(tool_name)
+    if key is not None:
+        c = tool_input.get(key)
         return c if isinstance(c, str) and c else None
     if tool_name == "MultiEdit":
         edits = tool_input.get("edits")

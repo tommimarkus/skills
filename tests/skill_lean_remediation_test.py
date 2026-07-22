@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — surface-verification bodies whose entire content is literal paths and strings the tokenizer normalizes to STR; the shared read/read_jsonl helpers are already imported from surface_test_lib, so remaining matches are read()+assert scaffolds around distinct literals
 import unittest
 
 from tests.surface_test_lib import read, read_jsonl

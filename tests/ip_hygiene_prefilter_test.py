@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-flag CLI behavior cases kept as named short tests; the flagged-category body is extracted to _assert_flagged
 import json
 import subprocess
 import tempfile
@@ -29,6 +30,12 @@ class IpPrefilterTest(unittest.TestCase):
         p.write_text(body)
         return p
 
+    def _assert_flagged(self, rel, body, category):
+        p = self._touch(rel, body)
+        r = run(str(p))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(category, r.stdout)
+
     def test_help_exits_zero(self):
         r = run("--help")
         self.assertEqual(r.returncode, 0)
@@ -41,16 +48,10 @@ class IpPrefilterTest(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "")
 
     def test_binary_asset_flagged(self):
-        p = self._touch("assets/logo.png", "")
-        r = run(str(p))
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("asset-binary", r.stdout)
+        self._assert_flagged("assets/logo.png", "", "asset-binary")
 
     def test_vendored_without_license_flagged(self):
-        p = self._touch("vendor/lib/index.js", "// synthetic\n")
-        r = run(str(p))
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("vendored-no-license", r.stdout)
+        self._assert_flagged("vendor/lib/index.js", "// synthetic\n", "vendored-no-license")
 
     def test_vendored_with_license_not_flagged(self):
         self._touch("vendor/ok/LICENSE", "MIT synthetic\n")
@@ -60,10 +61,7 @@ class IpPrefilterTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_schema_spec_flagged(self):
-        p = self._touch("api/thing.schema.json", "{}\n")
-        r = run(str(p))
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("schema-spec", r.stdout)
+        self._assert_flagged("api/thing.schema.json", "{}\n", "schema-spec")
 
     def test_json_format_parses(self):
         p = self._touch("assets/logo.png", "")

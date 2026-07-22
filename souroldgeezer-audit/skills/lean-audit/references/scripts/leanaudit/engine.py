@@ -167,7 +167,9 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
 
     if best_c >= HIGH_BAND:
         if _is_home(reg, hit.path, hit.heading):
-            return dup("LA-DUP-2", "block", f'Cite {hit.path} §"{hit.heading}" instead of restating it.')
+            return dup(
+                "LA-DUP-2", "block", f'Cite {hit.path} §"{hit.heading}" instead of restating it.'
+            )
         return dup(
             "LA-DUP-1",
             "block",
@@ -230,6 +232,10 @@ def _flag(code: str, severity: str, path: str, action: str) -> Finding:
 
 def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
+
+    def stale(path: str, msg: str) -> None:
+        findings.append(_flag("LA-STALE-1", "warn", path, msg))
+
     for path, text in files.items():
         parent = posixpath.dirname(path)
         for target in link_targets(text):
@@ -238,26 +244,18 @@ def scan_stale_refs(files: dict[str, str], root: Path | None = None) -> list[Fin
             rel, _, anchor = target.partition("#")
             if rel == "":
                 if anchor and slugify(anchor) not in _heading_slugs(text):
-                    findings.append(
-                        _flag("LA-STALE-1", "warn", path, f"Anchor '#{anchor}' not found in this file.")
-                    )
+                    stale(path, f"Anchor '#{anchor}' not found in this file.")
                 continue
             resolved = posixpath.normpath(posixpath.join(parent, rel))
             present = resolved in files or (root is not None and (Path(root) / resolved).exists())
             if not present:
-                findings.append(
-                    _flag("LA-STALE-1", "warn", path, f"Broken reference: {target} does not resolve.")
-                )
+                stale(path, f"Broken reference: {target} does not resolve.")
             elif (
                 anchor
                 and resolved in files
                 and slugify(anchor) not in _heading_slugs(files[resolved])
             ):
-                findings.append(
-                    _flag(
-                        "LA-STALE-1", "warn", path, f"Broken anchor: '#{anchor}' not found in {resolved}."
-                    )
-                )
+                stale(path, f"Broken anchor: '#{anchor}' not found in {resolved}.")
     return findings
 
 
@@ -276,14 +274,10 @@ def find_dead_refs(files: dict[str, str], reg: Registry | None = None) -> list[F
         name = posixpath.basename(path)
         if not any(name in text for other, text in files.items() if other != path):
             findings.append(
-                Finding(
+                _flag(
                     "LA-DEAD-1",
                     "info",
                     path,
-                    "",
-                    0.0,
-                    "",
-                    "",
                     f"No other guarded file mentions {name}; possibly dead weight.",
                 )
             )
@@ -310,14 +304,10 @@ def scan_bloat(files: dict[str, str]) -> list[Finding]:
         lines = len(strip_frontmatter(text).splitlines())
         if lines > BLOAT_BUDGET_LINES:
             findings.append(
-                Finding(
+                _flag(
                     "LA-BLOAT-1",
                     "warn",
                     path,
-                    "",
-                    0.0,
-                    "",
-                    "",
                     f"SKILL.md body is {lines} lines (> {BLOAT_BUDGET_LINES}); "
                     "move heavy detail to references/.",
                 )

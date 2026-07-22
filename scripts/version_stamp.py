@@ -139,14 +139,11 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
     entries are deliberately excluded — see ``marketplace_version_offenders``."""
     versions: dict[str, str] = {}
     for plugin in PLUGINS:
-        rel = f"{plugin}/.claude-plugin/plugin.json"
-        text = _git_show(repo_root, ref, rel)
-        if text is None:
-            continue
         try:
-            versions[rel] = json.loads(text)["version"]
-        except (json.JSONDecodeError, KeyError, TypeError):
+            version = read_version(repo_root, plugin, ref)
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError):
             continue
+        versions[f"{plugin}/.claude-plugin/plugin.json"] = version
     readme_text = _git_show(repo_root, ref, "README.md")
     if readme_text is not None:
         for plugin, version in read_readme_versions(readme_text).items():

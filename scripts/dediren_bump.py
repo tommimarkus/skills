@@ -106,13 +106,18 @@ class BumpReport:
     replacements: int = 0
 
 
+def _release_script_value(pattern: re.Pattern[str], what: str, repo_root: Path) -> str:
+    """First capture group of ``pattern`` in the release script, or raise."""
+    text = (repo_root / RELEASE_SCRIPT_REL).read_text(encoding="utf-8")
+    match = pattern.search(text)
+    if not match:
+        raise RuntimeError(f"{RELEASE_SCRIPT_REL}: {what} not found")
+    return match.group(1)
+
+
 def current_version(repo_root: Path = REPO_ROOT) -> str:
     """Return the pinned version from the single source of truth."""
-    text = (repo_root / RELEASE_SCRIPT_REL).read_text(encoding="utf-8")
-    match = _DEFAULT_RE.search(text)
-    if not match:
-        raise RuntimeError(f"{RELEASE_SCRIPT_REL}: DEDIREN_VERSION_DEFAULT not found")
-    return match.group(1)
+    return _release_script_value(_DEFAULT_RE, "DEDIREN_VERSION_DEFAULT", repo_root)
 
 
 def _repo_slug(repo_root: Path = REPO_ROOT) -> str:
@@ -121,11 +126,7 @@ def _repo_slug(repo_root: Path = REPO_ROOT) -> str:
     env = os.environ.get("DEDIREN_REPO")
     if env:
         return env
-    text = (repo_root / RELEASE_SCRIPT_REL).read_text(encoding="utf-8")
-    match = _REPO_SLUG_RE.search(text)
-    if not match:
-        raise RuntimeError(f"{RELEASE_SCRIPT_REL}: DEDIREN_REPO_DEFAULT not found")
-    return match.group(1)
+    return _release_script_value(_REPO_SLUG_RE, "DEDIREN_REPO_DEFAULT", repo_root)
 
 
 def _parse_release_tag(url: str) -> str:
@@ -318,9 +319,11 @@ def _bundle_surface_names(current_bundle: Path, target_bundle: Path) -> list[str
     return sorted(names)
 
 
-def collect_parity(
-    repo_root: Path, current: str, target: str
-) -> list[tuple[str, str | bytes | None, str | bytes | None]]:
+# One parity surface: (name, current_content, target_content); each side str/bytes/None.
+Surface = tuple[str, str | bytes | None, str | bytes | None]
+
+
+def collect_parity(repo_root: Path, current: str, target: str) -> list[Surface]:
     """Fetch both release bundles (in parallel) and return one ``(name, current, target)``
     triple per parity surface, each side ``str`` / ``bytes`` / ``None``. Shared by the
     ``parity`` diff and the ``adopt`` auto-classifier so the glob/read logic lives once."""
@@ -329,7 +332,7 @@ def collect_parity(
         target_future = pool.submit(_ensure_bundle, repo_root, target)
         current_bundle = current_future.result()
         target_bundle = target_future.result()
-    surfaces: list[tuple[str, str | bytes | None, str | bytes | None]] = []
+    surfaces: list[Surface] = []
     for name in _bundle_surface_names(current_bundle, target_bundle):
         surfaces.append(
             (name, _read_surface(current_bundle / name), _read_surface(target_bundle / name))
@@ -421,7 +424,7 @@ def preflight_problems(current: str, target: str, *, dirty_pin_paths: list[str])
 
 
 def classify_bundle_change(
-    surfaces: list[tuple[str, str | bytes | None, str | bytes | None]], old: str, new: str
+    surfaces: list[Surface], old: str, new: str
 ) -> tuple[str, list[str]]:
     """Auto-classify an adoption from the upstream bundle diff.
 
@@ -562,31 +565,39 @@ def _emit_verdict(verdict: AdoptVerdict, *, out=sys.stdout, json_out: bool = Fal
     print(f"\nresult: {'READY' if verdict.ok else 'BLOCKED'}", file=out)
 
 
+def _verify_summary(repo_root: Path) -> tuple[bool, list[tuple[str, bool]], list[str]]:
+    """Run the verify gates; return (all_ok, (name, passed) pairs, failure problems)."""
+    results = run_verify(repo_root)
+    ok = all(passed for _, passed, _ in results)
+    pairs = [(name, passed) for name, passed, _ in results]
+    problems = [f"verify gate '{name}' failed" for name, passed, _ in results if not passed]
+    return ok, pairs, problems
+
+
 def run_adopt(
     repo_root: Path, target: str, *, plan_only: bool = False, json_out: bool = False, out=sys.stdout
 ) -> int:
     """Drive a whole adoption non-interactively and print one verdict. See the module
     docstring for the stage sequence and exit codes."""
-    if not CALVER_RE.match(target):
-        _emit_verdict(
-            AdoptVerdict("?", target, "preflight", ok=False,
-                         problems=[f"target {target!r} is not CalVer (YYYY.0M.MICRO)"]),
-            out=out, json_out=json_out,
-        )
+
+    def fail(current: str, stage: str, problems: list[str]) -> int:
+        _emit_verdict(AdoptVerdict(current, target, stage, ok=False, problems=problems),
+                      out=out, json_out=json_out)
         return 2
+
+    if not CALVER_RE.match(target):
+        return fail("?", "preflight", [f"target {target!r} is not CalVer (YYYY.0M.MICRO)"])
 
     current = current_version(repo_root)
 
     # Idempotent re-run: already pinned to the target -> re-verify only (no re-classify,
     # since the previous version is gone and parity needs two distinct versions).
     if current == target and not plan_only:
-        results = run_verify(repo_root)
-        ok = all(passed for _, passed, _ in results)
-        problems = [] if ok else [f"verify gate '{n}' failed" for n, p, _ in results if not p]
+        ok, pairs, problems = _verify_summary(repo_root)
         _emit_verdict(
             AdoptVerdict(
                 current, target, "ready" if ok else "verify", ok,
-                verify_results=[(name, passed) for name, passed, _ in results],
+                verify_results=pairs,
                 next_actions=[f"Already pinned to {target}; re-verified.",
                               "If integrating, use the recipe below."],
                 integration=integration_recipe(target) if ok else [],
@@ -598,19 +609,12 @@ def run_adopt(
 
     problems = preflight_problems(current, target, dirty_pin_paths=_dirty_pin_paths(repo_root))
     if problems:
-        _emit_verdict(AdoptVerdict(current, target, "preflight", ok=False, problems=problems),
-                      out=out, json_out=json_out)
-        return 2
+        return fail(current, "preflight", problems)
 
     try:
         surfaces = collect_parity(repo_root, current, target)
     except (subprocess.SubprocessError, OSError) as exc:
-        _emit_verdict(
-            AdoptVerdict(current, target, "parity", ok=False,
-                         problems=[f"could not fetch release bundles: {exc}"]),
-            out=out, json_out=json_out,
-        )
-        return 2
+        return fail(current, "parity", [f"could not fetch release bundles: {exc}"])
     classification, substantive = classify_bundle_change(surfaces, current, target)
 
     if plan_only:
@@ -629,24 +633,21 @@ def run_adopt(
     try:
         bump(repo_root, target)
     except (ValueError, PinDriftError) as exc:
-        _emit_verdict(AdoptVerdict(current, target, "preflight", ok=False, problems=[str(exc)]),
-                      out=out, json_out=json_out)
-        return 2
+        return fail(current, "preflight", [str(exc)])
 
-    results = run_verify(repo_root)
-    ok = all(passed for _, passed, _ in results)
+    ok, pairs, problems = _verify_summary(repo_root)
     if ok:
         verdict = AdoptVerdict(
             current, target, "ready", True, classification, substantive,
-            verify_results=[(name, passed) for name, passed, _ in results],
+            verify_results=pairs,
             next_actions=next_actions(classification, target),
             integration=integration_recipe(target),
         )
     else:
         verdict = AdoptVerdict(
             current, target, "verify", False, classification, substantive,
-            verify_results=[(name, passed) for name, passed, _ in results],
-            problems=[f"verify gate '{name}' failed" for name, passed, _ in results if not passed],
+            verify_results=pairs,
+            problems=problems,
             next_actions=[f"A verify gate failed. Inspect it, fix the cause, then re-run "
                           f"`adopt --to {target}` (idempotent)."],
         )

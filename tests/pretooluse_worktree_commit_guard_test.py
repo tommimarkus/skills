@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-scenario guard cases kept as named three-line tests; repo/worktree/deny machinery is extracted to _make_repo/_add_worktree/_run_guard/_assert_denied
 """End-to-end tests for the PreToolUse worktree commit guard.
 
 The guard (scripts/agent-hooks/pretooluse-worktree-commit-guard.sh) refuses
@@ -16,18 +17,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT, run_git as _git
+
 GUARD = REPO_ROOT / "scripts" / "agent-hooks" / "pretooluse-worktree-commit-guard.sh"
-
-
-def _git(cwd: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
 
 
 def _run_guard(command: str, cwd: Path, tool_name: str = "Bash") -> dict | None:

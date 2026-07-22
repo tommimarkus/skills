@@ -1,8 +1,6 @@
 import unittest
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.surface_test_lib import REPO_ROOT
 
 
 def read(relative_path: str) -> str:

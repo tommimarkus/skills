@@ -34,10 +34,11 @@ def _transcript(tmp: Path, text: str) -> Path:
     return path
 
 
-def _run(tmp: Path, transcript: Path):
-    stdin = json.dumps({"session_id": "s1", "cwd": str(tmp),
-                        "transcript_path": str(transcript), "stop_hook_active": False})
-    return subprocess.run(["bash", str(HOOK)], input=stdin,
+def _run(tmp: Path, transcript: Path | None):
+    payload = {"session_id": "s1", "cwd": str(tmp), "stop_hook_active": False}
+    if transcript is not None:
+        payload["transcript_path"] = str(transcript)
+    return subprocess.run(["bash", str(HOOK)], input=json.dumps(payload),
                           capture_output=True, text=True)
 
 
@@ -48,29 +49,23 @@ class HookTest(unittest.TestCase):
         self.assertIn("lesson-capture", out.stdout)
         self.assertIn("lesson-candidate", out.stdout)
 
-    def _run_hook_with_transcript(self, text: str):
+    def _run_hook_after_authoring_change(self, text: str | None):
+        """Run the hook after an authoring change; None means no transcript at all."""
         with tempfile.TemporaryDirectory() as t:
             tmp = Path(t)
             _repo(tmp)
             _authoring_change(tmp)
-            return _run(tmp, _transcript(tmp, text))
+            transcript = _transcript(tmp, text) if text is not None else None
+            return _run(tmp, transcript)
 
     def test_fires_on_authoring_change_plus_correction(self):
-        self._assert_hook_blocks(self._run_hook_with_transcript("revert that, not what I asked"))
+        self._assert_hook_blocks(self._run_hook_after_authoring_change("revert that, not what I asked"))
 
     def test_fires_on_authoring_change_without_correction(self):
-        self._assert_hook_blocks(self._run_hook_with_transcript("add another validation case please"))
+        self._assert_hook_blocks(self._run_hook_after_authoring_change("add another validation case please"))
 
     def test_fires_on_authoring_change_without_transcript(self):
-        with tempfile.TemporaryDirectory() as t:
-            tmp = Path(t)
-            _repo(tmp)
-            _authoring_change(tmp)
-            stdin = json.dumps({"session_id": "s1", "cwd": str(tmp),
-                                "stop_hook_active": False})
-            out = subprocess.run(["bash", str(HOOK)], input=stdin,
-                                 capture_output=True, text=True)
-            self._assert_hook_blocks(out)
+        self._assert_hook_blocks(self._run_hook_after_authoring_change(None))
 
     def test_silent_without_authoring_change(self):
         with tempfile.TemporaryDirectory() as t:

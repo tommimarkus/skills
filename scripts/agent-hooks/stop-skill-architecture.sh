@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# lean-audit:dup-intentional — irreducible Stop-hook wrapper: every hook must
+# independently self-locate, source stop-hook-lib.sh, and emit the same
+# bootstrap/mark/emit contract; the shared logic is already extracted to the lib.
 set -euo pipefail
 
 hook_name="skill-architecture"

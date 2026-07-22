@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-case one-line CalVer/CLI assertions kept as named tests; the guard fixture loop is extracted to _feature_branch/_commit_content_note
 import contextlib
 import io
 import json
@@ -143,6 +144,13 @@ def _write_readme(root: Path, plugin: str, version: str) -> None:
     )
 
 
+def _commit_content_note(root: Path) -> None:
+    """Add a plugin-content file — the change a content-only branch is allowed to carry."""
+    note = root / "souroldgeezer-audit" / "skills" / "note.md"
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text("content\n", encoding="utf-8")
+
+
 class GuardTest(unittest.TestCase):
     def _seed(self, root: Path) -> None:
         _init_repo(root)
@@ -156,41 +164,36 @@ class GuardTest(unittest.TestCase):
         return vs.main(["--repo-root", str(root), "guard",
                         "--base", "main", "--head", "feature"])
 
-    def test_fails_when_branch_stamps_a_version(self):
+    @contextlib.contextmanager
+    def _feature_branch(self):
+        """A seeded repo checked out on a `feature` branch off main."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._seed(root)
             _git(root, "checkout", "-q", "-b", "feature")
+            yield root
+
+    def test_fails_when_branch_stamps_a_version(self):
+        with self._feature_branch() as root:
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "premature stamp")
             self.assertEqual(self._guard(root), 1)
 
     def test_fails_when_branch_stamps_the_readme_cell(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
+        with self._feature_branch() as root:
             _write_readme(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "premature readme stamp")
             self.assertEqual(self._guard(root), 1)
 
     def test_passes_for_content_only_branch(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
-            note = root / "souroldgeezer-audit" / "skills" / "note.md"
-            note.parent.mkdir(parents=True, exist_ok=True)
-            note.write_text("content\n", encoding="utf-8")
+        with self._feature_branch() as root:
+            _commit_content_note(root)
             _git(root, "add", "-A")
             _git(root, "commit", "-qm", "content only")
             self.assertEqual(self._guard(root), 0)
 
     def test_no_false_positive_when_main_advances_independently(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
+        with self._feature_branch() as root:
             (root / "f.txt").write_text("x\n", encoding="utf-8")
             _git(root, "add", "-A")
             _git(root, "commit", "-qm", "branch work")
@@ -204,22 +207,14 @@ class GuardTest(unittest.TestCase):
         """The marketplace entry must never carry a version key — plugin.json is
         the sole authority. Reintroducing one is a guard failure even when its
         value matches plugin.json, because presence alone is the drift risk."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
+        with self._feature_branch() as root:
             _write_marketplace(root, "souroldgeezer-audit", "2026.06.3")
             _git(root, "commit", "-qam", "stamp marketplace entry")
             self.assertEqual(self._guard(root), 1)
 
     def test_passes_when_marketplace_entry_has_no_version_key(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            _git(root, "checkout", "-q", "-b", "feature")
-            note = root / "souroldgeezer-audit" / "skills" / "note.md"
-            note.parent.mkdir(parents=True, exist_ok=True)
-            note.write_text("content\n", encoding="utf-8")
+        with self._feature_branch() as root:
+            _commit_content_note(root)
             _write_marketplace(root, "souroldgeezer-audit")
             _git(root, "add", "-A")
             _git(root, "commit", "-qm", "content only, marketplace stays clean")

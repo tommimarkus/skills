@@ -18,22 +18,28 @@ def _transcript(tmp: Path, *entries: dict) -> Path:
     return path
 
 
-def _user(text: str) -> dict:
-    return {"type": "user", "message": {"role": "user",
+def _entry(role: str, text: str) -> dict:
+    return {"type": role, "message": {"role": role,
             "content": [{"type": "text", "text": text}]}}
+
+
+def _user(text: str) -> dict:
+    return _entry("user", text)
 
 
 def _assistant(text: str) -> dict:
-    return {"type": "assistant", "message": {"role": "assistant",
-            "content": [{"type": "text", "text": text}]}}
+    return _entry("assistant", text)
 
 
 class DetectorTest(unittest.TestCase):
-    def _detect_user_turn(self, text: str) -> list[str]:
+    def _detect(self, entry: dict) -> list[str]:
         sig = load_signals()
         with tempfile.TemporaryDirectory() as tmp:
-            t = _transcript(Path(tmp), _user(text))
+            t = _transcript(Path(tmp), entry)
             return sig.detect_corrections(t)
+
+    def _detect_user_turn(self, text: str) -> list[str]:
+        return self._detect(_user(text))
 
     def test_strong_phrase_in_user_turn_is_detected(self):
         self.assertEqual(
@@ -44,10 +50,7 @@ class DetectorTest(unittest.TestCase):
         self.assertEqual(self._detect_user_turn("add a new validation case to the rubric"), [])
 
     def test_phrase_only_in_assistant_turn_is_ignored(self):
-        sig = load_signals()
-        with tempfile.TemporaryDirectory() as tmp:
-            t = _transcript(Path(tmp), _assistant("I will revert that now"))
-            self.assertEqual(sig.detect_corrections(t), [])
+        self.assertEqual(self._detect(_assistant("I will revert that now")), [])
 
     def test_bare_no_is_not_a_signal(self):
         self.assertEqual(self._detect_user_turn("no, add another one please"), [])

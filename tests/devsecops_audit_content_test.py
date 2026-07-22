@@ -1,9 +1,9 @@
 import json
 import unittest
-from pathlib import Path
+
+from tests.surface_test_lib import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 DOTNET_EXTENSION = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops-extensions/dotnet-security.md"
 SMELL_CATALOG = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops-smell-catalog.md"
 DEVSECOPS_REFERENCE = REPO_ROOT / "souroldgeezer-audit/docs/security-reference/devsecops.md"
