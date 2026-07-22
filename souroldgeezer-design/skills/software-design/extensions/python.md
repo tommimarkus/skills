@@ -25,9 +25,10 @@ and uv docs https://docs.astral.sh/uv/.
 
 Inspect package layout (`src/` or flat, `__init__.py` re-exports, `__all__`,
 PEP 420 namespace packages), import graph and dependency direction,
-distribution surface (`[project]` metadata, extras, entry points, wheel
-contents), ORM/schema/DTO/domain splits, entrypoints, packaging/lock/version
-pins, import-time behavior, `sys.path`, globals/caches, env reads,
+distribution surface (`[project]` metadata, extras, entry points, `py.typed`,
+wheel contents), ORM/schema/DTO/domain splits, entrypoints,
+packaging/lock/version pins, import-time behavior, generated code, async
+event-loop/executor ownership, `sys.path`, globals/caches, env reads,
 stdout/stderr, exit codes, subprocess argv/cwd/env/timeout, `PATH`
 resolution, and validation (`ruff`, mypy/pyright, `python -m py_compile`,
 import smoke, or a distribution build).
@@ -41,7 +42,7 @@ do not run workflow, mutate `sys.path`, configure root logging, or do I/O;
 workflow state moves through args/returns; machine stdout stays clean; exit
 codes/cwd/tools/paths are public contracts when other tooling depends on
 them; prefer stdlib unless a dependency removes more maintenance than it
-adds.
+adds; a shipped `py.typed` makes the annotated public surface a contract.
 
 For Build mode, include `devsecops-audit` Quick review when available.
 Otherwise use `ruff check`, `mypy --strict`, `pyright`,

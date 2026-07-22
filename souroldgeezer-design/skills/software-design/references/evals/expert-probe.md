@@ -50,3 +50,57 @@ Run log:
   Extension-side surplus (non-hierarchical package access, `java.SD-B-1`
   module identity, `java.SD-Q-1` generated boundaries) confirmed the
   build-graph-first priority.
+- 2026-07-22 `java.md` lens B (Fable 5): two gaps fixed — shaded/relocated
+  artifacts added to inspect plus a shading default (findings route
+  `java.SD-B-1`/core), and published-artifact compatibility named binary,
+  not source, with an API-compatibility diff added to validation.
+  Adjudicated covered: Gradle `api`-vs-`implementation` leakage (dependency
+  scopes + core `SD-B-3`), convention-plugin coupling (core `SD-C-3`),
+  classloader-scoped state (core `SD-C-4`), executable architecture rules
+  (core evidence layers). Merge back either addition if fresh-agent reviews
+  catch the class via core alone.
+- 2026-07-22 `csharp.md` lenses A+B (Fable 5): three gaps fixed —
+  `Directory.Packages.props` load cue (central package management was
+  uncued), API-compatibility diff in validation plus binary-not-source
+  default (parity with java), and DI lifetimes as contracts with captive
+  dependencies named (routes core `SD-C-4`). Adjudicated covered: TFM
+  strategy (core §3.8/`SD-E-5`), source-generator packaging depth
+  (`csharp.SD-Q-1`), artifact naming alignment (core `SD-B-1`), build
+  provenance (devsecops-audit). Same merge-back condition.
+- 2026-07-22 `rust.md` lenses A+B (Fable 5): two gaps fixed — a
+  semantic-carrier default (enums/newtypes/typestate; both lenses flagged
+  the always-`Some` two-phase smell, and siblings all carry the parity
+  line), and semver discipline (API/semver diff in validation; auto-trait
+  status named part of the contract — a silent major break neither family
+  glob reached). Adjudicated covered: `[workspace.dependencies]`
+  (`Cargo.toml` cue + core `SD-C-5`), `#[non_exhaustive]`/sealed traits
+  (`rust.SD-E-*` scope → core `SD-E`), MSRV/publish hygiene (core §3.8 +
+  release-policy), compile-time blast radius (core §3.6). Same merge-back.
+- 2026-07-22 `typescript.md` lenses A+B (Fable 5): three defaults plus
+  validation parity fixed — discriminated-union/literal-union semantic
+  carriers; project-reference graph and package dependency graph tell one
+  story (the java `SD-B-1` analog, previously family-only); module-level
+  state duplicates per module instance under dual-format or skewed loads
+  (the dual-package hazard class, also covering peer-dep misclassification
+  consequences); public-types compatibility diff in validation. Adjudicated
+  covered: phantom dependencies (core hidden coupling), type masquerading
+  (`typescript.SD-B-2` exactly), barrels (family scope), `sideEffects` flag
+  (`SD-B-2`-adjacent). Same merge-back.
+- 2026-07-22 `python.md` lenses A+B (Fable 5): three inspect/default gaps
+  fixed — async event-loop/executor ownership in inspect (sole extension
+  without a concurrency-ownership item; `contextvars`-vs-thread-local under
+  async routes core §3.9), `py.typed` in the distribution surface plus a
+  typed-public-surface contract default (parity with csharp's
+  nullable-contract line), and generated code in inspect (sole extension
+  not naming it). Surfaced, not added: a generated-boundary key code
+  (`SD-Q-1` parity with java/rust/csharp) — needs an owner decision.
+  Adjudicated covered: root-facade import cost (`python.SD-B-*` → core),
+  `lru_cache` hidden singletons (`python.SD-C-1`), metaclass ladder (core).
+  Same merge-back.
+- 2026-07-22 `shell-script.md` lenses A+B (Fable 5): one gap fixed — env
+  added to the inspected contracts (the inbound env-var config surface;
+  parity with python's env reads). Otherwise the tightest mapping of the
+  sweep: both lenses' material lands on the five key codes repeatedly
+  (`shell.SD-B-1`, `SD-C-1`, `SD-S-3`, `SD-S-4`, `SD-Q-1`). Adjudicated
+  covered: flat-namespace prefix discipline (core `SD-S-1`), errexit-stance
+  inheritance across sourcing (`shell.SD-C-1` restore contract).

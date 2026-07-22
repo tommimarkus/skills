@@ -22,16 +22,18 @@ https://docs.gradle.org/current/userguide/java_testing.html.
 
 Java packages may be grouped into a module when cohesive; use that as a
 platform fact, not a design recommendation. Inspect Maven/Gradle graph, source
-sets, dependency scopes, `module-info.java`, public/exported surface,
-annotation processors, generated code, DTO/entity/domain splits, static state,
-concurrency owners, and validation (`mvn test`, `mvn verify`, `./gradlew
-check`, compile, or smoke).
+sets, dependency scopes, `module-info.java`, public/exported surface, shaded
+or relocated artifacts, annotation processors, generated code,
+DTO/entity/domain splits, static state, concurrency owners, and validation
+(`mvn test`, `mvn verify`, `./gradlew check`, compile, an API-compatibility
+diff for published artifacts, or smoke).
 
 Defaults: package access is not hierarchical; public/exported types are
 contracts; source sets are boundaries when classpath/artifacts differ;
 entrypoints/adapters stay thin; records/sealed/enums/value objects carry
 semantics; interfaces need current variation, external isolation, or real
-duplication.
+duplication; published-artifact compatibility is binary, not source; shading
+relocates embedded packages and merges service registrations.
 
 For Build mode, include `devsecops-audit` Quick review for reflection, dynamic
 loading, serialization, JNI/JNA, process execution, annotation processors,

@@ -18,13 +18,15 @@ Inspect workspace members/default-members, features, profiles, library/binary
 crates, `pub`/`pub(crate)`/re-exports, traits/generics/errors, build scripts,
 generated code, proc macros, async/runtime ownership, globals, locks, channels,
 and validation (`cargo check`, `cargo clippy`, `cargo fmt`, feature matrix,
-docs/examples, or smoke).
+docs/examples, an API/semver diff for published crates, or smoke).
 
 Defaults: crate boundaries reflect policy, adapter, release, or reuse; binary
 entrypoints stay thin; `pub`/`pub use` are contracts; features are additive and
 feature unification means mutually exclusive semantics need separate packages,
 runtime config, or matrix evidence; traits need current variation or external
-isolation; unsafe/FFI/generated code gets a small safe wrapper.
+isolation; unsafe/FFI/generated code gets a small safe wrapper; enums,
+newtypes, and typestate carry state semantics; public-surface compatibility
+follows semver, auto-trait status (`Send`/`Sync`) included.
 
 For Build mode, include `devsecops-audit` Quick review for unsafe, FFI, build
 scripts, command execution, generated code, or dependency-sensitive changes

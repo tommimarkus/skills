@@ -71,6 +71,11 @@ specialist slices instead of delegating them. Retest: behavior evals
 codes into family prose) if fresh-agent reviews show no lift over core
 `SD-C-4`/`SD-S-1`/`SD-Q-2`.
 
+2026-07 expert-probe adoption: coverage-gap inspect/default additions from
+clean-context probe runs are recorded in `../evals/expert-probe.md` (each run
+entry carries the gap, the addition, and the merge-back condition); retest by
+re-running the probe lens against the changed extension.
+
 2026-07 §3.10 testability/seam expansion: added `SD-B-5` with playbook §3.10
 (testability and seams) and a false-positive guard on `rust.SD-C-3` for trait
 seams at genuine isolation boundaries; the core-only baseline had no owner

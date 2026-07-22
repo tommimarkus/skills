@@ -10,7 +10,7 @@ to `test-quality-audit`.
 
 Use GNU Bash, Z Shell, POSIX shell, Apple Terminal, and Microsoft WSL docs only
 for platform facts. Inspect interpreter contract, sourcing graph, options/traps
-and globals, cwd/stdout/stderr/exit contracts, platform probes, dependency
+and globals, cwd/env/stdout/stderr/exit contracts, platform probes, dependency
 checks, temp resources, background jobs, and validation (`bash -n`, `zsh -n`,
 ShellCheck, Bats/ZUnit, or smoke).
 

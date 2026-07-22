@@ -27,13 +27,17 @@ Defaults: boundaries match ownership, release, runtime, or policy; entrypoints
 and framework adapters stay thin; exports, subpaths, declarations, and `.d.ts`
 are compatibility contracts; `paths`/`baseUrl` must not bypass public exports;
 types do not validate runtime input; generic utilities, decorators, and plugin
-points need current variation.
+points need current variation; discriminated unions and literal-union types
+carry state semantics; the project-reference graph and the package dependency
+graph tell one story; module-level mutable state duplicates per module
+instance under dual-format or skewed loads.
 
 For Build mode, include `devsecops-audit` Quick review when dynamic import/eval,
 process execution, installer scripts, generated code, package export changes,
 untrusted deserialization, browser/server splits, or dependency/tooling changes
 are in scope and available. Otherwise use `npm/pnpm/yarn run typecheck`,
-`tsc --noEmit`, `tsc -b`, build/declaration generation, or public-surface smoke.
+`tsc --noEmit`, `tsc -b`, build/declaration generation, a public-types
+compatibility diff for published packages, or public-surface smoke.
 
 Smell codes: `typescript.SD-B-*` for package/export/tsconfig/barrel/framework
 boundary drift; `typescript.SD-C-*` for dependency direction, path-alias, module

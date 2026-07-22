@@ -1,8 +1,9 @@
 # C# and .NET Software Design Extension
 
 Load for `.sln`, `.slnx`, `.csproj`, `.fsproj`, `.vbproj`, `Directory.Build.*`,
-`global.json`, `InternalsVisibleTo`, `IServiceCollection`, `DbContext`,
-`BackgroundService`, worker services, package refs, or C# modules.
+`Directory.Packages.props`, `global.json`, `InternalsVisibleTo`,
+`IServiceCollection`, `DbContext`, `BackgroundService`, worker services,
+package refs, or C# modules.
 
 Covers C# on .NET — project/assembly/DI/EF/hosted-service structure **and** C#
 language semantics. Delegate HTTP to `api-design`, security to `devsecops-audit`,
@@ -20,7 +21,8 @@ and EF modeling https://learn.microsoft.com/en-us/ef/core/modeling/.
 
 Inspect project references, namespaces, public/internal/friend types, DI
 composition, EF entities, hosted services, options, shared projects, generated
-code, and validation (`dotnet build`, `dotnet test`, analyzers, or smoke).
+code, and validation (`dotnet build`, `dotnet test`, analyzers, an
+API-compatibility diff for published packages, or smoke).
 
 Defaults: project refs are the dependency graph; public APIs/friend assemblies
 are contracts; composition roots own DI; controllers/workers stay thin; EF
@@ -29,7 +31,9 @@ Repository/MediatR/CQRS ceremony needs current force; records/`readonly struct`/
 value objects carry semantics; nullable-reference annotations are part of the
 contract; `IDisposable`/`IAsyncDisposable` and
 `async`/`Task`/`ValueTask`/`CancellationToken` name lifetime and concurrency
-ownership.
+ownership; DI lifetimes are contracts — a singleton capturing a scoped
+service breaks ownership; published-package compatibility is binary, not
+source.
 
 For Build mode, include `devsecops-audit` Quick review for reflection, dynamic
 loading, serialization, process execution, generated code, or hosting-boundary
