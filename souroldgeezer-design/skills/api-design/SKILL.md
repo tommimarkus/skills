@@ -42,6 +42,8 @@ Load what applies:
   when existing source, OpenAPI, auth, errors, observability, IaC, data clients,
   or runtime wiring are in scope.
 - [references/procedures/architecture-pairing.md](references/procedures/architecture-pairing.md)
+  (mechanics canonical in
+  [../../docs/design-reference/architecture-pairing-core.md](../../docs/design-reference/architecture-pairing-core.md))
   when a paired `docs/architecture/<feature>.dediren/` package exists or the
   user asks to update architecture after API work.
 - [references/procedures/red-flags.md](references/procedures/red-flags.md)

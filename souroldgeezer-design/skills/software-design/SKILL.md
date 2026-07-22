@@ -43,6 +43,8 @@ when existing source, diffs, manifests, generated clients, shared libraries,
 adapters, state owners, domain vocabulary, or module boundaries are in scope.
 Load
 [references/procedures/architecture-pairing.md](references/procedures/architecture-pairing.md)
+(mechanics canonical in
+[../../docs/design-reference/architecture-pairing-core.md](../../docs/design-reference/architecture-pairing-core.md))
 when a paired `docs/architecture/<feature>.dediren/` package exists and module,
 boundary, or dependency-direction restructuring may affect a code-lifted
 architecture view, or the user asks to update architecture after
