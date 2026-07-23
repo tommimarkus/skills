@@ -46,7 +46,7 @@ RENDERED_FIXTURE = (
     / "dediren"
     / "rendered"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.26"
+EXPECTED_DEDIREN_VERSION = "2026.07.27"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
@@ -1051,7 +1051,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         against the model's recomputed provenance hash on the pinned bundle — `current`
         (ok, exit 0), `stale` (`DEDIREN_ARTIFACT_STALE`, exit 2, the CI drift gate), and
         `unstamped` (`DEDIREN_ARTIFACT_UNSTAMPED`, warning, exit 0). New in Dediren
-        2026.07.26; pin every branch to the runtime."""
+        2026.07.27; pin every branch to the runtime."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             model_path = temp_path / "model.json"

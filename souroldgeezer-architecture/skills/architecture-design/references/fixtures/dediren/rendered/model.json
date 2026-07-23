@@ -1,7 +1,7 @@
 {
   "model_schema_version": "model.schema.v1",
   "required_plugins": [
-    { "id": "generic-graph", "version": "2026.07.26" }
+    { "id": "generic-graph", "version": "2026.07.27" }
   ],
   "nodes": [
     { "id": "applicant", "type": "ApplicationComponent", "label": "Applicant System", "properties": { "layer": "Application", "viewpoint": "Application Cooperation" } },
