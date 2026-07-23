@@ -74,7 +74,10 @@ metadata. A node needs a stable id, ArchiMate type, human label, and enough
 stable id, type, source id, target id, and an optional label. The model schema
 sets `additionalProperties: false` on nodes and relationships and rejects a
 `documentation` field on either; the schema-legal home for prose and evidence is
-the free-form `properties` object, through the canonical keys below.
+the free-form `properties` object, through the canonical keys below. Bounded
+structural questions over the model — a node's dependents, orphaned
+relationships or nodes, per-view node coverage — are answered read-only by
+`dediren_query` (§9), without editing source.
 
 Canonical `properties` keys keep prose and evidence machine-readable, so Review,
 drift detection, and cross-package queries can rely on them instead of a
@@ -126,7 +129,11 @@ architecture.
 For ArchiMate packages that render with generated per-view metadata and an
 ArchiMate SVG policy, include `generic-graph` in `model.json.required_plugins`
 and set `plugins.generic-graph.semantic_profile` to `archimate`. Add
-`archimate-oef` only when the package needs OEF export.
+`archimate-oef` only when the package needs OEF export. As of the current
+release, `required_plugins` is informational only — it names the engines a
+package expects, for human readers; the in-memory registry no longer enforces
+it. Keep listing the engines the package uses (a truthful manifest), but a
+`required_plugins` mismatch is not a runtime gate.
 
 For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
 start from the selected Dediren release bundle's UML source fixture that
@@ -539,13 +546,25 @@ Drift review compares source evidence in the package with current repo state.
 When source and package disagree, report whether the likely action is to update
 the package or update the source.
 
+That source drift is complemented by the §9 freshness tools: `dediren_verify`
+(the artifact-freshness gate — a stale artifact is a blocking drift finding),
+`dediren_status` (a non-gating workspace freshness index), and `dediren_diff`
+(a report-only comparison of two revisions of this package's *own* source model,
+distinct from repo-source drift and raising no `ARCH-X-*`). The procedure that
+applies them, with the finding codes, is
+`references/procedures/drift-detection.md`.
+
 ## 9. Runtime Evidence
 
 The skill drives Dediren through the plugin's bundled MCP server (`plugin.json`
 `mcpServers.dediren`), which Claude Code auto-starts when the plugin is enabled.
 Dediren is an internal engine — users are never asked to locate, install, or
-version it. Call its tools (`dediren_validate`, `dediren_build`, `dediren_guide`),
-never a CLI. `${CLAUDE_SKILL_DIR}` is this skill's absolute directory; Claude Code
+version it. Call its tools, never a CLI. The server exposes seven: three that
+author, validate, and build — `dediren_validate`, `dediren_build`,
+`dediren_guide` — and four read-only model-intelligence and verification tools —
+`dediren_diff`, `dediren_query`, `dediren_verify`, `dediren_status` — defined
+under Read-Only Model-Intelligence Tools below.
+`${CLAUDE_SKILL_DIR}` is this skill's absolute directory; Claude Code
 expands it in `SKILL.md` (it resolves the installed-plugin cache path and this
 source repo alike, and contains the skill's `SKILL.md`), and the reference
 procedures reuse that resolved value read raw. It locates this skill's own helper
@@ -591,6 +610,11 @@ Evidence gates (all via the bundled MCP tools):
   `generated/layout/<view>.json` carries the layout geometry, and
   `generated/render-metadata/<view>.json` the render metadata
 - Optional OEF/XMI export: `dediren_build` with an `oef_policy` / `xmi_policy`
+- Artifact freshness (the drift gate): `dediren_verify {source, artifacts}` — the
+  machine check that generated output is still a pure function of source (Read-Only
+  Model-Intelligence Tools below)
+- Workspace freshness index (non-gating): `dediren_status {dir}` — a read-only
+  index of the models and artifacts under a directory (below)
 
 Each tool returns an envelope (`dediren_build`'s is the unwrapped build-result
 document; see `self-check.md` § Reading tool results). Error envelopes are findings
@@ -598,6 +622,78 @@ and cap the quality level at the highest stage already proven. `dediren_validate
 without a `profile` is schema validation only; pass `profile` before claiming
 semantic source validity. Layout, render, and optional export remain downstream
 evidence gates inside the build.
+
+### Read-Only Model-Intelligence Tools
+
+Beyond `dediren_validate` / `dediren_build` / `dediren_guide`, the server exposes
+four read-only tools that answer model questions and verify build freshness
+without mutating source or regenerating output. They belong to the read-only tool
+subset — launching the server `dediren mcp --read-only` withholds only
+`dediren_build` and keeps these plus `dediren_validate` / `dediren_guide` (six
+tools), so Extract, Review, and Lookup need only the read-only subset. The bundled
+server stays full because Build needs `dediren_build`; the skill never passes
+`--read-only`.
+
+- **`dediren_diff {old, new}`** compares two revisions of one package's source
+  model — two source paths sharing the same schema id — and returns a
+  `diff-result.schema` document: `nodes` and `relationships` each as
+  `{added, removed, changed}` (a `changed` entry carries field-level
+  `{field, from, to}` where `field` is `type` / `label` / `source` / `target` or
+  a `properties.<key>`), and `views` as `{added, removed, changed}`. It is
+  report-only and deterministic (sorted output). It surfaces model-revision facts
+  and is complementary to, and distinct from, the §8 source drift that compares a
+  package against current repo code/IaC/API/UI/workflow source (`ARCH-X-*`): diff
+  compares two revisions of the package's own source model and raises no finding
+  on its own.
+- **`dediren_query {source, kind, id?}`** answers a bounded structural question
+  over one model and returns a `query-result.schema` document. `kind:
+  "dependents"` (requires `id`) returns `{id, inbound, outbound}` with each edge
+  `{relationship_id, type, node_id}` — a node's fan-in and fan-out; `kind:
+  "orphans"` returns `{relationship_orphans, view_orphans}`; `kind:
+  "view-coverage"` returns a `view_coverage` `{views[], model_node_count,
+  model_relationship_count, uncovered_node_ids}`. An unknown `kind`, or a
+  `dependents` query with no `id`, returns `DEDIREN_COMMAND_INPUT_INVALID`. These
+  are Lookup facts and a Review readiness aid; they feed existing `ARCH-M-*` /
+  `ARCH-V-*` judgments and are not a new finding class.
+- **`dediren_verify {source, artifacts}`** verifies that built artifacts under a
+  directory are a pure function of the current source, returning a
+  `verify-result.schema` document `{model_sha256, artifacts: [{path, status}]}`
+  with each status `current` | `stale` | `unstamped`. All `current` → `ok`; any
+  `stale` → the `DEDIREN_ARTIFACT_STALE` error (exit-2 CI drift gate) — a stale
+  rendered SVG or package gallery is `ARCH-R-2`, a stale OEF/XMI export is
+  `ARCH-E-4`; an `unstamped` artifact → the `DEDIREN_ARTIFACT_UNSTAMPED` warning
+  (non-error), a valid disclosable state, not a finding on its own.
+- **`dediren_status {dir?}`** returns a read-only workspace freshness index — a
+  `status-result.schema` document `{models: [{path, sha256}], artifacts:
+  [{path, status, model_sha256?}]}` (omit `dir` to index the server `--root`). It
+  is an index, not a gate — `dediren_verify` is the gate — and complements the
+  gallery `build-gallery.py --check` freshness check (§3,
+  `references/gallery.md`).
+
+**Provenance stamps.** These freshness checks work because every `dediren_build`
+artifact now carries a deterministic, timestamp-free provenance stamp: an SVG
+`<metadata id="dediren-provenance">` element, and a leading
+`<!-- dediren-provenance … -->` comment on OEF/XMI. The stamp holds compact JSON
+— `model_schema_version`, `model_sha256`, `view_id`, one of
+`render_policy_sha256` / `oef_policy_sha256` / `xmi_policy_sha256`, and
+`dediren_version`. Only whole `dediren_build` output is stamped; decomposed
+per-stage `--emit` outputs are unstamped. Committed rendered fixtures that predate
+stamping read as `unstamped`; that is expected and disclosable — do not regenerate
+fixtures to stamp them.
+
+**MCP resources.** The server also serves read-only resources returning bundle
+bytes: `dediren://schema/<file>`, `dediren://fixture/<relative-path>`,
+`dediren://guide/<topic>`, and `dediren://diagnostics/catalog` (every `DEDIREN_*`
+code with its repair text). Read a resource for the exact schema, fixture, guide
+topic, or diagnostic repair text; the repair loop still runs through
+`dediren_guide`, with the diagnostics catalog as a direct lookup.
+
+**Migration operations.** A `DEDIREN_SCHEMA_VERSION_OUTDATED` diagnostic now
+carries a machine-readable `migration` object `{from, to, operations: [{op,
+pointer?, to?, value?}]}`, where `op` is `rename_field` | `remove_key` |
+`set_version` | `regenerate`. Dediren never rewrites the file: apply the listed
+operations in order to upgrade the outdated source or policy, then re-validate
+(`self-check.md` § Migrating an outdated input).
 
 For ArchiMate SVG render policy, treat a generated render-metadata profile
 mismatch as a package or policy defect until proven otherwise. Check
@@ -778,6 +874,34 @@ Rules:
 - Treat unresolved downstream validation evidence as `ARCH-E-2` unless a
   narrower model, view, layout, render, or quality code applies.
 - Fix source and policy, then recreate export output.
+
+### Whole-Model Interchange
+
+The per-view export lane above stays the default: one export policy binds one
+view, so a source with more views declares the omission through `info`
+diagnostics (`DEDIREN_OEF_VIEWS_OMITTED` / `DEDIREN_XMI_ELEMENTS_OMITTED` /
+`DEDIREN_XMI_RELATIONSHIPS_OMITTED`) and coverage is disclosed as e.g. `OEF ready
+(1 of 2 views)` (`references/procedures/external-validation-handoff.md`).
+
+Alongside it, a build additionally emits one whole-model interchange document per
+requested notation. `dediren_build` with an `oef_policy` also writes
+`model.oef.xml` at the out-root (every built view in one OEF document);
+`dediren_build` with an `xmi_policy` also writes `model.uml.xml` (one `uml:Model`
+plus OMG UMLDI diagrams). These whole-model documents are complete across the
+built views and carry **no** omission diagnostic — they coexist with, and do not
+replace, the per-view exports. The build-result lists them under its
+`model_artifacts[]` array.
+
+The UMLDI diagram content in `model.uml.xml` is emitted only for
+classifier-diagram views (`uml-class` / `uml-data`) and is **provisional** —
+unverified against real UML importers — so treat that diagram interchange as
+best-effort and keep the per-view `uml-xmi` export the schema-validatable
+evidence (`references/procedures/external-validation-handoff.md`).
+
+OEF and XMI export policies also gain an optional per-view identity `views` map:
+OEF takes `view_identifier` / `view_name` / `viewpoint`, XMI takes
+`diagram_identifier` / `diagram_name`, so an exported view can carry a stable
+identifier and human name into the interchange document.
 
 ## 11. Customization Profile
 

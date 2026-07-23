@@ -280,6 +280,12 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   `2` usage or input error, `3` a required rendered source (SVG or
   render-metadata) is missing — re-render before building. The script is
   stdlib-only Python ≥ 3.9; no dependencies to install.
+
+  `--check` verifies the gallery against its own SVGs specifically. For
+  package/workspace freshness alongside it, `dediren_status` (architecture §9) is
+  the read-only index of a package's models and built artifacts, and
+  `dediren_verify` is the gate behind which a stale gallery or SVG is `ARCH-R-2`.
+  Use them together with `--check` for gallery and workspace staleness.
 - **File-size caveat:** `gallery.html` is one file, so its size grows with
   view count and with the size of each inlined SVG. The `<template>` design
   keeps the DOM cost bounded — only the active plate is ever live — but the

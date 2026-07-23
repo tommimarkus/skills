@@ -46,7 +46,7 @@ RENDERED_FIXTURE = (
     / "dediren"
     / "rendered"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.22"
+EXPECTED_DEDIREN_VERSION = "2026.07.26"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
@@ -91,10 +91,11 @@ def release_bundle() -> Path:
     return Path(result.stdout.strip())
 
 
-def mcp_session(bundle: Path, root: Path, calls: list[dict]) -> dict[int, dict]:
+def mcp_session(bundle: Path, root: Path, calls: list[dict], read_only: bool = False) -> dict[int, dict]:
     """Drive the bundled `dediren mcp` stdio server through one initialize handshake and
     return the JSON-RPC responses keyed by id. ``calls`` carry ids from 2 up (id 1 is the
-    handshake). One server run per session, matching how a client drives it."""
+    handshake). One server run per session, matching how a client drives it. ``read_only``
+    launches with `--read-only`, which withholds the artifact-writing `dediren_build`."""
     requests = [
         {
             "jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -107,8 +108,11 @@ def mcp_session(bundle: Path, root: Path, calls: list[dict]) -> dict[int, dict]:
         *calls,
     ]
     stdin = "".join(json.dumps(request) + "\n" for request in requests)
+    command = [bundle / "bin" / "dediren", "mcp", "--root", str(root)]
+    if read_only:
+        command.append("--read-only")
     proc = subprocess.run(
-        [bundle / "bin" / "dediren", "mcp", "--root", str(root)],
+        command,
         input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         env=os.environ.copy(), timeout=120,
     )
@@ -167,7 +171,10 @@ def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
     # SVG moved out of the v1 data.content scalar. v3 (Dediren 2026.06.8) added a `png`
     # artifact_kind and an `encoding` field; v4 (Dediren 2026.07.17) removed native raster
     # rendering, dropping `png` from artifact_kind (only `svg`/`html` remain) while keeping
-    # the artifacts[] shape and the svg artifact. Mirror the bundle's documented extraction:
+    # the artifacts[] shape and the svg artifact. v5 (Dediren 2026.07.26) narrowed
+    # artifact_kind to `svg` only (dropping `html`) and encoding to `utf-8` only (dropping
+    # `base64`) — the skill only ever consumes the svg/utf-8 artifact, so extraction is
+    # unchanged. Mirror the bundle's documented extraction:
     # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
     data = envelope(result)["data"]
     for artifact in data["artifacts"]:
@@ -196,6 +203,19 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         payload = envelope(result)
         self.assertEqual(payload["status"], "ok")
         return payload
+
+    def _build_ok(self, out_dir: Path, *args: str | Path) -> dict:
+        """Run `dediren build --out <out_dir> <args>` and assert it succeeds, returning
+        the build-result document. Unlike the enveloped commands, `build` prints its
+        result document *unwrapped*, so the returned dict is the build-result itself
+        (`build_result_schema_version` / `status` / `views` / `model_artifacts`). Shared
+        by the provenance, verify, status, and whole-model-interchange probes below, all
+        of which need provenance-stamped artifacts a whole `build` produces."""
+        result = run_dediren("build", "--out", out_dir, *args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        build_result = envelope(result)
+        self.assertEqual(build_result["status"], "ok", build_result)
+        return build_result
 
     def test_dediren_runtime_bundle_is_not_tracked_in_plugin_source(self) -> None:
         self.assertFalse((ARCH_PLUGIN / "tools" / "dediren-linux").exists())
@@ -611,7 +631,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
             self.assertEqual(
                 envelope(render_result)["data"]["render_result_schema_version"],
-                "render-result.schema.v4",
+                "render-result.schema.v5",
             )
             svg = svg_render_content(render_result)
             self.assertIn("<svg", svg)
@@ -823,9 +843,11 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertIn("--max-time", resolver)
         self.assertIn("flock -w", resolver)
 
-    def test_mcp_server_exposes_the_three_tools_the_skill_drives(self) -> None:
+    def test_mcp_server_exposes_the_seven_tools_the_skill_drives(self) -> None:
         """The shipped surface: the bundled `dediren mcp` stdio server the plugin
-        declares exposes dediren_validate / dediren_build / dediren_guide, and a
+        declares exposes the seven tools the skill drives as of Dediren 2026.07.26 —
+        dediren_validate / dediren_build / dediren_guide plus the four model-intelligence
+        tools dediren_diff / dediren_query / dediren_verify / dediren_status — and a
         profile-scoped validate returns an ok envelope."""
         bundle = release_bundle()
         by_id = mcp_session(bundle, FIXTURE, [
@@ -839,7 +861,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             },
         ])
         tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
-        self.assertEqual(tools, {"dediren_validate", "dediren_build", "dediren_guide"})
+        self.assertEqual(tools, {
+            "dediren_validate", "dediren_build", "dediren_guide",
+            "dediren_diff", "dediren_query", "dediren_verify", "dediren_status",
+        })
         validation = tool_envelope(by_id[3])
         self.assertEqual(validation["status"], "ok", validation)
 
@@ -881,6 +906,343 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                     }])
                 envelope = tool_envelope(by_id[2])
                 self.assertEqual(envelope["status"], "ok", envelope)
+
+    def test_dediren_query_answers_the_three_fixed_kinds_and_rejects_bad_input(self) -> None:
+        """`source-grounding.md` claims `dediren_query` answers the three fixed kinds
+        (`dependents` / `orphans` / `view-coverage`) on the pinned bundle and rejects an
+        unknown `--kind` or a `dependents` call missing `--id`. The query engine is new
+        in Dediren 2026.07.26 and the runtime is the only thing that answers it, so
+        `scoped_pin_replace` would re-assert the claim against an unprobed runtime; pin it.
+
+        `build`-less CLI probe: the four model-intelligence commands print the standard
+        `envelope.schema.v1` with the result document under `.data` (only `build` is
+        unwrapped)."""
+        dependents = envelope(run_dediren(
+            "query", "--kind", "dependents", "--id", "orders-service",
+            "--input", FIXTURE / "model.json",
+        ))
+        self.assertEqual(dependents["status"], "ok", dependents)
+        dep_data = dependents["data"]
+        self.assertEqual(dep_data["query_result_schema_version"], "query-result.schema.v1")
+        self.assertEqual(dep_data["kind"], "dependents")
+        self.assertEqual(dep_data["dependents"]["id"], "orders-service")
+        self.assertEqual(
+            {edge["relationship_id"] for edge in dep_data["dependents"]["inbound"]},
+            {"orders-component-realizes-service"},
+        )
+        self.assertEqual(
+            {edge["relationship_id"] for edge in dep_data["dependents"]["outbound"]},
+            {"orders-service-serves-client"},
+        )
+
+        orphans = envelope(run_dediren(
+            "query", "--kind", "orphans", "--input", FIXTURE / "model.json",
+        ))
+        self.assertEqual(orphans["status"], "ok", orphans)
+        self.assertEqual(orphans["data"]["kind"], "orphans")
+        self.assertIn("relationship_orphans", orphans["data"]["orphans"])
+        self.assertIn("view_orphans", orphans["data"]["orphans"])
+
+        coverage = envelope(run_dediren(
+            "query", "--kind", "view-coverage", "--input", FIXTURE / "model.json",
+        ))
+        self.assertEqual(coverage["status"], "ok", coverage)
+        # data key is view_coverage (underscore); the --kind vocabulary is view-coverage.
+        cov = coverage["data"]["view_coverage"]
+        self.assertEqual({view["id"] for view in cov["views"]}, {"main"})
+        # Assert the per-view counts source-grounding names, not just the view id, so the
+        # "per-view counts" claim has a probe: main covers all 4 nodes / 3 relationships.
+        main_view = next(view for view in cov["views"] if view["id"] == "main")
+        self.assertEqual(main_view["node_count"], 4)
+        self.assertEqual(main_view["relationship_count"], 3)
+        self.assertEqual(cov["model_node_count"], 4)
+        self.assertEqual(cov["model_relationship_count"], 3)
+        self.assertEqual(cov["uncovered_node_ids"], [])
+
+        # Fixed vocabulary: an unknown kind and a missing --id are both usage errors.
+        for args in (["query", "--kind", "nonsense", "--input", str(FIXTURE / "model.json")],
+                     ["query", "--kind", "dependents", "--input", str(FIXTURE / "model.json")]):
+            with self.subTest(args=args):
+                result = run_dediren(*args)
+                self.assertEqual(result.returncode, 2, result.stdout)
+                bad = envelope(result)
+                self.assertEqual(bad["status"], "error", bad)
+                self.assertIn(
+                    "DEDIREN_COMMAND_INPUT_INVALID",
+                    {diag["code"] for diag in bad["diagnostics"]},
+                )
+
+    def test_dediren_diff_reports_field_level_model_changes_deterministically(self) -> None:
+        """`source-grounding.md` claims `dediren_diff` reports node / relationship / view
+        add / remove / change with field-level `{field, from, to}` on the pinned bundle.
+        The diff engine is new in Dediren 2026.07.26; pin the claim to the runtime so a
+        bump that regresses it fails here instead of shipping."""
+        base = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
+        revised = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
+        # One of each diff class: remove a node + its relationship, add a node +
+        # relationship, change a node label and a relationship label, touch the view.
+        revised["nodes"] = [n for n in revised["nodes"] if n["id"] != "orders-api"]
+        for node in revised["nodes"]:
+            if node["id"] == "client":
+                node["label"] = "Client (external)"
+        revised["nodes"].append({
+            "id": "audit-log", "type": "ApplicationComponent", "label": "Audit Log",
+            "properties": {"layer": "Application", "evidence": "architect-owned"},
+        })
+        revised["relationships"] = [
+            r for r in revised["relationships"] if r["id"] != "orders-component-provides-api"
+        ]
+        for rel in revised["relationships"]:
+            if rel["id"] == "orders-service-serves-client":
+                rel["label"] = "calls"
+        revised["relationships"].append({
+            "id": "orders-service-writes-audit", "type": "Serving",
+            "source": "orders-service", "target": "audit-log", "label": "writes",
+            "properties": {"visible": True},
+        })
+        view = revised["plugins"]["generic-graph"]["views"][0]
+        view["nodes"] = ["client", "orders-component", "orders-service", "audit-log"]
+        view["relationships"] = [
+            "orders-component-realizes-service", "orders-service-serves-client",
+            "orders-service-writes-audit",
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            old_path = temp_path / "old.json"
+            new_path = temp_path / "new.json"
+            old_path.write_text(json.dumps(base), encoding="utf-8")
+            new_path.write_text(json.dumps(revised), encoding="utf-8")
+
+            first = run_dediren("diff", "--old", old_path, "--new", new_path)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            diff = envelope(first)["data"]
+            self.assertEqual(diff["diff_result_schema_version"], "diff-result.schema.v1")
+            self.assertEqual({n["id"] for n in diff["nodes"]["added"]}, {"audit-log"})
+            self.assertEqual({n["id"] for n in diff["nodes"]["removed"]}, {"orders-api"})
+            self.assertEqual(
+                [(c["id"], c["changes"][0]["field"], c["changes"][0]["from"], c["changes"][0]["to"])
+                 for c in diff["nodes"]["changed"]],
+                [("client", "label", "Client Application", "Client (external)")],
+            )
+            self.assertEqual(
+                {r["id"] for r in diff["relationships"]["added"]}, {"orders-service-writes-audit"}
+            )
+            self.assertEqual(
+                {r["id"] for r in diff["relationships"]["removed"]}, {"orders-component-provides-api"}
+            )
+            self.assertEqual(
+                [(c["id"], c["changes"][0]["field"]) for c in diff["relationships"]["changed"]],
+                [("orders-service-serves-client", "label")],
+            )
+            changed_view = diff["views"]["changed"][0]
+            self.assertEqual(changed_view["id"], "main")
+            self.assertEqual(changed_view["nodes_added"], ["audit-log"])
+            self.assertEqual(changed_view["nodes_removed"], ["orders-api"])
+            self.assertEqual(changed_view["relationships_added"], ["orders-service-writes-audit"])
+            self.assertEqual(changed_view["relationships_removed"], ["orders-component-provides-api"])
+
+            # Determinism: the guide promises byte-identical stdout for identical inputs.
+            second = run_dediren("diff", "--old", old_path, "--new", new_path)
+            self.assertEqual(second.stdout, first.stdout)
+
+    def test_dediren_verify_gates_stale_build_artifacts_against_provenance(self) -> None:
+        """`source-grounding.md` claims `dediren_verify` classifies built artifacts
+        against the model's recomputed provenance hash on the pinned bundle — `current`
+        (ok, exit 0), `stale` (`DEDIREN_ARTIFACT_STALE`, exit 2, the CI drift gate), and
+        `unstamped` (`DEDIREN_ARTIFACT_UNSTAMPED`, warning, exit 0). New in Dediren
+        2026.07.26; pin every branch to the runtime."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            model_path = temp_path / "model.json"
+            model_path.write_text(
+                (FIXTURE / "model.json").read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            artifacts = temp_path / "artifacts"
+            self._build_ok(
+                artifacts, "--input", model_path,
+                "--render-policy", FIXTURE / "render-policy.json",
+                "--oef-policy", FIXTURE / "export-policy.json",
+            )
+
+            fresh = run_dediren("verify", "--input", model_path, "--artifacts", artifacts)
+            self.assertEqual(fresh.returncode, 0, fresh.stderr)
+            fresh_env = envelope(fresh)
+            self.assertEqual(fresh_env["status"], "ok", fresh_env)
+            self.assertEqual(
+                fresh_env["data"]["verify_result_schema_version"], "verify-result.schema.v1"
+            )
+            self.assertTrue(
+                all(a["status"] == "current" for a in fresh_env["data"]["artifacts"]),
+                fresh_env["data"]["artifacts"],
+            )
+
+            # Mutate the source: the built artifacts are now stale, and verify is the gate.
+            mutated = json.loads(model_path.read_text(encoding="utf-8"))
+            for node in mutated["nodes"]:
+                if node["id"] == "client":
+                    node["label"] = "Renamed Client"
+            model_path.write_text(json.dumps(mutated), encoding="utf-8")
+
+            stale = run_dediren("verify", "--input", model_path, "--artifacts", artifacts)
+            self.assertEqual(stale.returncode, 2, stale.stdout)
+            stale_env = envelope(stale)
+            self.assertEqual(stale_env["status"], "error", stale_env)
+            self.assertIn(
+                "DEDIREN_ARTIFACT_STALE", {d["code"] for d in stale_env["diagnostics"]}
+            )
+            self.assertTrue(
+                any(a["status"] == "stale" for a in stale_env["data"]["artifacts"]),
+                stale_env["data"]["artifacts"],
+            )
+
+            # A hand-written, unstamped SVG is a warning, not a gate failure.
+            unstamped_dir = temp_path / "hand"
+            unstamped_dir.mkdir()
+            (unstamped_dir / "hand.svg").write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n', encoding="utf-8"
+            )
+            unstamped = run_dediren(
+                "verify", "--input", model_path, "--artifacts", unstamped_dir
+            )
+            self.assertEqual(unstamped.returncode, 0, unstamped.stderr)
+            unstamped_env = envelope(unstamped)
+            self.assertEqual(unstamped_env["status"], "warning", unstamped_env)
+            self.assertIn(
+                "DEDIREN_ARTIFACT_UNSTAMPED", {d["code"] for d in unstamped_env["diagnostics"]}
+            )
+
+    def test_dediren_status_indexes_workspace_models_and_artifacts(self) -> None:
+        """`source-grounding.md` claims `dediren_status` indexes a workspace's source
+        models (path + sha256) and stamped artifacts (path + status) on the pinned
+        bundle. New in Dediren 2026.07.26; an index, not a gate (exit 0). Pin it."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            model_path = temp_path / "model.json"
+            model_path.write_text(
+                (FIXTURE / "model.json").read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            self._build_ok(
+                temp_path / "generated", "--input", model_path,
+                "--render-policy", FIXTURE / "render-policy.json",
+            )
+
+            result = run_dediren("status", "--root", temp_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = envelope(result)
+            self.assertEqual(status["status"], "ok", status)
+            data = status["data"]
+            self.assertEqual(data["status_result_schema_version"], "status-result.schema.v1")
+            self.assertEqual({m["path"] for m in data["models"]}, {"model.json"})
+            self.assertTrue(
+                all(re.fullmatch(r"[0-9a-f]{64}", m["sha256"]) for m in data["models"]),
+                data["models"],
+            )
+            self.assertTrue(data["artifacts"], "status should index the built artifacts")
+            for artifact in data["artifacts"]:
+                self.assertIn("path", artifact)
+                self.assertIn(artifact["status"], {"current", "stale", "unstamped"})
+
+    def test_dediren_build_stamps_deterministic_provenance_into_svg(self) -> None:
+        """`source-grounding.md` claims every `dediren build` SVG carries a deterministic
+        `<metadata id="dediren-provenance">` stamp — compact JSON with `model_sha256` /
+        `view_id` / `dediren_version`, never a timestamp — on the pinned bundle, the basis
+        `verify` checks. New in Dediren 2026.07.26; pin the shape and the determinism."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            first_out = temp_path / "a"
+            second_out = temp_path / "b"
+            for out in (first_out, second_out):
+                self._build_ok(
+                    out, "--input", FIXTURE / "model.json",
+                    "--render-policy", FIXTURE / "render-policy.json",
+                )
+            first_svg = (first_out / "main" / "diagram.svg").read_text(encoding="utf-8")
+            second_svg = (second_out / "main" / "diagram.svg").read_text(encoding="utf-8")
+
+            match = re.search(
+                r'<metadata id="dediren-provenance">(.*?)</metadata>', first_svg, re.DOTALL
+            )
+            self.assertIsNotNone(match, "SVG carries no dediren-provenance metadata")
+            stamp = json.loads(match.group(1))
+            self.assertRegex(stamp["model_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(stamp["view_id"], "main")
+            self.assertEqual(stamp["dediren_version"], EXPECTED_DEDIREN_VERSION)
+            # The lane policy hash is part of the stamp shape source-grounding claims;
+            # assert it explicitly, or a field-rename bump would pass the determinism
+            # check below (two identical stamps) while silently dropping it.
+            self.assertRegex(stamp["render_policy_sha256"], r"^[0-9a-f]{64}$")
+
+            # No timestamp: identical inputs → byte-identical stamped SVG.
+            self.assertEqual(first_svg, second_svg)
+
+    def test_dediren_build_writes_whole_model_interchange_for_oef_and_xmi(self) -> None:
+        """`source-grounding.md` claims `dediren build --oef-policy` writes a whole-model
+        `model.oef.xml` at the out root (listed in build-result `model_artifacts[]`) and,
+        on a UML model, `--xmi-policy` writes `model.uml.xml`, both on the pinned bundle.
+        New in Dediren 2026.07.26; pin both interchange legs."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            oef_out = temp_path / "oef"
+            oef_result = self._build_ok(
+                oef_out, "--input", FIXTURE / "model.json",
+                "--render-policy", FIXTURE / "render-policy.json",
+                "--oef-policy", FIXTURE / "export-policy.json",
+            )
+            self.assertTrue((oef_out / "model.oef.xml").is_file())
+            self.assertIn(
+                "model.oef.xml", {a["path"] for a in oef_result["model_artifacts"]}
+            )
+
+            xmi_out = temp_path / "xmi"
+            xmi_result = self._build_ok(
+                xmi_out, "--input", MIXED_FIXTURE / "model-uml.json",
+                "--render-policy", MIXED_FIXTURE / "render-policy-uml.json",
+                "--xmi-policy", MIXED_FIXTURE / "export-policy-uml.json",
+            )
+            self.assertTrue((xmi_out / "model.uml.xml").is_file())
+            self.assertIn(
+                "model.uml.xml", {a["path"] for a in xmi_result["model_artifacts"]}
+            )
+
+    def test_mcp_read_only_server_withholds_the_build_tool(self) -> None:
+        """`source-grounding.md` claims `dediren mcp --read-only` withholds the
+        artifact-writing `dediren_build` and keeps exactly the six read-only tools on the
+        pinned bundle. New in Dediren 2026.07.26; assert the exact set, so a read-only
+        tool going missing fails here too, not only `dediren_build` leaking in."""
+        bundle = release_bundle()
+        by_id = mcp_session(bundle, FIXTURE, [
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        ], read_only=True)
+        tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
+        self.assertEqual(tools, {
+            "dediren_validate", "dediren_guide", "dediren_diff",
+            "dediren_query", "dediren_verify", "dediren_status",
+        })
+        self.assertNotIn("dediren_build", tools)
+
+    def test_mcp_server_serves_the_four_product_resource_schemes(self) -> None:
+        """`source-grounding.md` claims the `dediren mcp` server serves product-owned MCP
+        resources under four URI schemes (`dediren://schema/`, `dediren://fixture/`,
+        `dediren://guide/`, and `dediren://diagnostics/catalog`) on the pinned bundle, and
+        that a `resources/read` returns non-empty content. New in Dediren 2026.07.26;
+        assert scheme presence as a superset — a benign fixture add would shift a hard
+        resource count but never drop a scheme — and read one resource."""
+        bundle = release_bundle()
+        by_id = mcp_session(bundle, FIXTURE, [
+            {"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}},
+            {"jsonrpc": "2.0", "id": 3, "method": "resources/read",
+             "params": {"uri": "dediren://diagnostics/catalog"}},
+        ])
+        uris = {resource["uri"] for resource in by_id[2]["result"]["resources"]}
+        self.assertTrue(any(uri.startswith("dediren://schema/") for uri in uris), uris)
+        self.assertTrue(any(uri.startswith("dediren://fixture/") for uri in uris), uris)
+        self.assertTrue(any(uri.startswith("dediren://guide/") for uri in uris), uris)
+        self.assertIn("dediren://diagnostics/catalog", uris)
+
+        contents = by_id[3]["result"]["contents"]
+        self.assertTrue(contents, by_id[3])
+        self.assertTrue(contents[0]["text"].strip(), "diagnostics catalog resource is empty")
 
 
 if __name__ == "__main__":

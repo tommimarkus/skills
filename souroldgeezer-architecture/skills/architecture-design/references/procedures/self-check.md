@@ -21,6 +21,13 @@ repo. The fast path, when the bundle is already resolved, does no network I/O. T
 `dediren_*` tools are absent only when the resolve cannot complete (host offline) or
 Java™ 21+ is missing.
 
+`dediren_validate` / `dediren_guide` plus the four read-only tools (`dediren_diff` /
+`dediren_query` / `dediren_verify` / `dediren_status`) are the read-only subset that
+a `dediren mcp --read-only` server keeps — only `dediren_build` is withheld — so
+Extract, Review, and Lookup work against a read-only server. The bundled server
+runs full because Build needs `dediren_build`; the launcher never passes
+`--read-only` (architecture §9).
+
 When the tools are absent — resolve failed, Java™ 21+ missing, or the freshly-resolved
 server not yet reconnected this session — fall back to the **internal CLI lane**:
 `dediren-build.py run` (below) resolves the bundle on demand and drives the same
@@ -63,6 +70,19 @@ lane (§ Server availability): resolve the binary with
 `"$DEDIREN" validate --input <pkg>/model.json` for schema and
 `"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
 semantic gate. This is the same evidence, obtained without the server.
+
+## Migrating an outdated input
+
+When validation (or a build) rejects an input with
+`DEDIREN_SCHEMA_VERSION_OUTDATED`, the diagnostic carries a machine-readable
+`migration` object `{from, to, operations: [{op, pointer?, to?, value?}]}`
+(architecture §9). Dediren never rewrites the file — the skill upgrades it. Apply
+the `operations` in order to the outdated source or policy: `rename_field`,
+`remove_key`, or `set_version` at the diagnostic's JSON `pointer` (using its `to` /
+`value`), or `regenerate` to rebuild the named artifact. Then re-run
+`dediren_validate` to confirm the input now passes. Only migrate an input the task
+already edits or owns; for a package you were asked only to review, report the
+version-outdated state as a finding rather than silently upgrading it.
 
 ## Format guide
 
@@ -149,6 +169,17 @@ envelope `status` before trusting output.
   ordinary envelopes, and the package stores their unwrapped `.data` payload —
   `dediren-build.py map` does that, so never write a whole envelope into a package
   file.
+- `dediren_diff`, `dediren_query`, `dediren_verify`, and `dediren_status` carry
+  their result document (`diff-result` / `query-result` / `verify-result` /
+  `status-result` schema; architecture §9) in the tool result — check `isError` and
+  the envelope `status` first, as for `dediren_validate`. `dediren_verify` is an
+  error (`isError`, `DEDIREN_ARTIFACT_STALE`) when any artifact is `stale` — the
+  drift gate: a stale SVG or gallery → `ARCH-R-2`, a stale export → `ARCH-E-4`; an
+  `unstamped` artifact is the non-error `DEDIREN_ARTIFACT_UNSTAMPED` warning,
+  disclosable and not a finding on its own (committed pre-stamping evidence reads
+  `unstamped`). `dediren_query` returns `DEDIREN_COMMAND_INPUT_INVALID` on an
+  unknown `kind` or a `dependents` query with no `id`. `dediren_status` is a
+  non-gating index; `dediren_diff` is report-only.
 
 ### Layout quality
 

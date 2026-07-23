@@ -18,6 +18,27 @@ Classify each difference before assigning an `ARCH-*` code:
 
 Source implies omitted or reversed relationship: `ARCH-X-4`.
 
+## Freshness And Revision Checks
+
+Three read-only Dediren tools complement the source-drift `ARCH-X-*` checks above
+(all defined in architecture §9):
+
+- **Artifact freshness — the gate (`dediren_verify {source, artifacts}`).** The
+  machine check that a package's generated output is still a pure function of its
+  source. A `stale` rendered SVG or gallery is `ARCH-R-2`; a `stale` OEF/XMI export
+  is `ARCH-E-4`. An `unstamped` artifact — e.g. committed evidence predating
+  provenance stamping — is disclosable, not a finding.
+- **Workspace freshness index (`dediren_status {dir?}`).** A read-only index of the
+  models and artifacts under a directory; use it to spot which packages may have
+  drifted before running `dediren_verify`. Non-gating — `dediren_verify` is the
+  gate, `dediren_status` only points at it.
+- **Model-revision comparison (`dediren_diff {old, new}`).** Compares two revisions
+  of one package's *own* source model (added / removed / changed nodes,
+  relationships, and views, with field-level changes). It surfaces what changed
+  between revisions and is complementary to — and distinct from — the source-drift
+  classification above; it raises no `ARCH-X-*` on its own. Use it to explain a
+  revision, not to assign a drift code.
+
 ## Cross-Package Consistency
 
 Use when Review scope spans more than one package under `docs/architecture/`,
@@ -54,4 +75,7 @@ unverified intent instead of deleting it.
 Report added/removed/changed/unverified counts and likely reconciliation:
 update package, update source, or confirm architect-owned intent. When the
 cross-package leg ran, also report conflict and fragmentation-candidate counts
-and the packages compared.
+and the packages compared. When the freshness checks ran, report the
+`dediren_verify` stale / unstamped counts (stale mapped to `ARCH-R-2` /
+`ARCH-E-4`, unstamped disclosed) and note any `dediren_diff` revision comparison
+used.

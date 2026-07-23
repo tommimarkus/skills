@@ -48,8 +48,14 @@ qualifier (see [output-format](../output-format.md)):
    `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the
    envelope `status` stays `ok`; read `.diagnostics[]`, qualify as e.g. `XMI
    ready (classes only)`, and report the gap under `Dediren tool issues`.
-4. **Schema validation.** Disclose which schema the evidence used — and, for
-   XMI, which validation level was reached.
+4. **Schema validation.** Dediren runs its own OEF/XMI schema validation in-JVM
+   — it no longer shells out to `xmllint` internally, so there is no
+   `*_SCHEMA_VALIDATOR` override to configure; the `DEDIREN_OEF_SCHEMA_DIR` /
+   `DEDIREN_XMI_SCHEMA_PATH` / `DEDIREN_SCHEMA_CACHE_DIR` variables still govern
+   where the XSDs are sourced and cached ([self-check](self-check.md)). The
+   user-side deeper check below (a driver schema plus `xmllint`) is a separate,
+   downstream option, not something Dediren runs. Disclose which schema the
+   evidence used — and, for XMI, which validation level was reached.
    - *OEF (ArchiMate).* The OEF document always carries a `<views>`/`<diagrams>`
      element, so it declares and validates against the Open Group
      `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that diagram

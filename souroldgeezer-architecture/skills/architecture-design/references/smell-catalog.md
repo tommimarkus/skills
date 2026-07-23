@@ -30,13 +30,15 @@ Severity: `block` invalid source or failed projection/layout/render/export;
   accessible-name markup (`role="img"`, nonempty `<title>`, visible title
   block), or authored UML association end adornments (roles/multiplicities)
   present in the view's render metadata (`architecture.md` §9 end-adornment
-  coverage check); or a package gallery drifted from its SVGs.
+  coverage check); or a package gallery drifted from its SVGs. A `stale` verdict
+  from `dediren_verify` on a rendered SVG or gallery artifact also backs this
+  (`architecture.md` §9).
 - `ARCH-R-4`: `plugins.generic-graph.semantic_profile`, the generated metadata profile, and the `render-policy.json` profile disagree.
 - `ARCH-R-5`: emitted SVG is not static as required: a `<script>` element in the
   rendered artifact (renders are static-only — the runtime retired the
   interactive render policy), or a `Layout/render options` line that misreports
   what the artifact contains (`architecture.md` §9 render-mode check).
-- `ARCH-E-4`: committed export output is stale against current package source or layout evidence.
+- `ARCH-E-4`: committed export output is stale against current package source or layout evidence; a `stale` verdict from `dediren_verify` on an OEF/XMI export artifact backs this (`architecture.md` §9).
 - `ARCH-Q-1`: claimed quality level exceeds the validation stages actually proven.
 - `ARCH-Q-4`: required output footer fields are missing or mutually inconsistent (a quality-level over-claim is `ARCH-Q-1`).
 

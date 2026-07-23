@@ -44,8 +44,11 @@ edits/findings.
   architect-owned content. Put source-backed groups in `model.json` under
   `plugins.generic-graph.views[].groups`, not `project.json`.
 - **Review**: assess validity, readability, SVG, optional export, and drift;
-  lead with findings.
-- **Lookup**: answer bounded notation/package/reverse-lookup questions only.
+  lead with findings. `dediren_verify` is the artifact-freshness drift gate and
+  `dediren_diff` compares two model revisions (architecture §9).
+- **Lookup**: answer bounded notation/package/reverse-lookup questions only,
+  including structural queries (dependents / orphans / view-coverage) via
+  `dediren_query` (architecture §9).
 
 Default: architect intent -> Build; source without package -> Extract; supplied
 package/readiness/drift -> Review; narrow fact -> Lookup. Refuse forward-only
@@ -64,7 +67,8 @@ Build.
      runtime evidence, §12 finding taxonomy, §13 review checklist; add §5
      relationship discipline and §4 layers/aspects when auditing element or
      relationship legality.
-   - **Lookup**: only the section the question cites.
+   - **Lookup**: only the section the question cites (a structural-query Lookup
+     cites §9 for `dediren_query`).
    - Any mode adds §15 cross-package identity when more than one
      `docs/architecture/*.dediren/` package exists and the task touches a
      shared element or the landscape package.
@@ -80,8 +84,12 @@ Build.
    [self-check](references/procedures/self-check.md). Dediren runs as the plugin's
    **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
    plugin is enabled); drive it through its tools — `dediren_validate`,
-   `dediren_build`, `dediren_guide` — never a CLI, and never ask the user to locate
-   or install Dediren. When the `dediren_*` tools are absent, an internal CLI fallback
+   `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
+   `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
+   mode above) — never a CLI, and never ask the user to locate or install Dediren.
+   Extract, Review, and Lookup need only the read-only tool subset; the bundled
+   server stays full because Build needs `dediren_build` (architecture §9). When the
+   `dediren_*` tools are absent, an internal CLI fallback
    lane drives the same builds; self-check § Server availability owns the on-demand
    resolution, the per-lane cache locations, and the exact `source-valid` cap
    condition. Defer
@@ -131,8 +139,9 @@ Build.
    mode-agnostic (any run that re-renders rebuilds; a Lookup or a read-only Review
    that renders nothing does not). On a read-only pass, run
    `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py --check <package>` when a
-   committed gallery may have drifted. Disclose the outcome in the footer `Gallery:`
-   line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
+   committed gallery may have drifted; `dediren_status` indexes package/workspace
+   freshness alongside it (architecture §9, non-gating). Disclose the outcome in the
+   footer `Gallery:` line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
    its full input set, and when it goes stale.
 8. Stop when required evidence is missing, a dediren MCP tool returns an error
    envelope (or the server is unavailable), the notation is unsupported, or a
@@ -149,7 +158,7 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
+| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes seven tools — `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
 | Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) entry points; the plan → `dediren_build` → map call flow (with its per-(model, render-policy) and per-export grouping) and the `run` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG accessible name | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |

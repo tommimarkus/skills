@@ -15,7 +15,10 @@ needs class, data, package, or activity detail.
 - Generated SVG metadata uses `plugins.generic-graph.semantic_profile:
   "archimate"`.
 - OEF compatibility export uses `archimate-oef` only when requested or when
-  downstream validation evidence is supplied.
+  downstream validation evidence is supplied. Beyond that per-view export, a
+  build with an `oef_policy` also emits one whole-model `model.oef.xml`
+  interchange document — every built view in one OEF document, complete across
+  the built views with no omission diagnostic (architecture.md §10).
 - relationship connectors and junctions unsupported in dediren package source;
   report them instead of inventing silent replacements.
 

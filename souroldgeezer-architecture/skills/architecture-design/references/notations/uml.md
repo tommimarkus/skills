@@ -26,6 +26,12 @@ only their deltas to it.
   (dediren 2026.07.1+); read `.diagnostics[]` and qualify readiness as
   `XMI ready (classes only)` per
   [external-validation-handoff](../procedures/external-validation-handoff.md).
+- Beyond that per-view `uml-xmi` export, a build with an `xmi_policy` also emits
+  one whole-model `model.uml.xml` interchange document (one `uml:Model` plus OMG
+  UMLDI diagrams), complete across the built views. Its UMLDI diagram content is
+  **provisional** — classifier-diagram views only (`uml-class` / `uml-data`),
+  unverified against real UML importers — so keep the per-view `uml-xmi` export
+  the schema-validatable evidence (architecture.md §10).
 
 `properties.uml.*` placement is documented per kind — load the kind's file
 under `uml/`.

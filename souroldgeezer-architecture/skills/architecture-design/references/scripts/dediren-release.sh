@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
-DEDIREN_VERSION_DEFAULT="2026.07.22"
+DEDIREN_VERSION_DEFAULT="2026.07.26"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
@@ -50,7 +50,7 @@ Usage:
 
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
-  DEDIREN_VERSION    Release version without leading v, default 2026.07.22
+  DEDIREN_VERSION    Release version without leading v, default 2026.07.26
   DEDIREN_CACHE_DIR  Cache dir; default per-user ${XDG_CACHE_HOME:-~/.cache}/dediren/releases,
                      or ${TMPDIR:-/tmp}/dediren/releases when that is not writable (sandbox)
   JAVA_HOME/JAVACMD  Explicit Java 21+ runtime for the packaged Dediren launchers
@@ -71,7 +71,7 @@ release_base_url() {
 
 # The release's SHA256SUMS names exactly one agent bundle, extension included, so
 # the compression format is read from the release rather than pinned here (upstream
-# moved .tar.gz -> .tar.xz in 2026.07.22; both resolve unchanged through this path).
+# moved .tar.gz -> .tar.xz in 2026.07.26; both resolve unchanged through this path).
 archive_name_from_checksums() {
   local checksum_file names count
   checksum_file="$1"

@@ -19,7 +19,11 @@ view concern, allowed element types, and relationship types.
 Evidence: disclose which Dediren lane ran — the bundled MCP server or the internal
 CLI fallback — and its runtime version. Runtime semantics and the notation-specific
 `source-valid` validation tools (`dediren_validate` with `profile`) are defined in
-`architecture.md` §9.
+`architecture.md` §9. When the read-only evidence tools were run, disclose only
+what actually ran: `dediren_verify` stale results as `ARCH-R-2` / `ARCH-E-4` on the
+relevant finding, its freshness on the `Gallery:` line alongside `dediren_status`
+and `build-gallery.py --check`, and `dediren_diff` / `dediren_query` facts inline
+where they support a finding or answer (`architecture.md` §9).
 
 Ownership/layout: imported release bundles are upstream artifacts; report
 `Dediren tool issues`. Packages define per-view `projection`, `metadata`,
@@ -35,7 +39,12 @@ required disclosures) — e.g. `OEF ready (1 of 2 views)`, `XMI ready (classes
 only)`. A single-view or classes-only export keeps an `ok` envelope but carries
 `info` omission diagnostics (`DEDIREN_OEF_VIEWS_OMITTED`,
 `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`); read
-`.diagnostics[]` — a partial export is still partial evidence.
+`.diagnostics[]` — a partial export is still partial evidence. A whole-model
+interchange document (`model.oef.xml` / `model.uml.xml`, `architecture.md` §10) is
+a separate artifact, complete across the built views with no omission diagnostic;
+disclose it distinctly from the per-view coverage qualifier. Its `model.uml.xml`
+UMLDI diagram content is provisional (classifier-diagram views only), so it does
+not upgrade a per-view `XMI ready (classes only)` claim.
 
 Render readiness for a UML view that authors association end adornments
 qualifies the same way: count rendered vs. authored end-adornment labels per
