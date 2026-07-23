@@ -464,5 +464,81 @@ class EmitVerdictTest(unittest.TestCase):
         self.assertIn("smoke", text)
 
 
+class WrongCheckoutGuardTest(unittest.TestCase):
+    """A mutating run must target the checkout the caller is standing in. When
+    --repo-root is left at its __file__-derived default, invoking one checkout's
+    copy from inside another git worktree must be refused, not silently applied to
+    the wrong tree (docs/skill-architecture.md § Deterministic machinery)."""
+
+    def test_foreign_checkout_true_only_on_proven_distinct_toplevels(self):
+        # A nested worktree's toplevel differs from the primary's — the exact case a
+        # path-ancestor test misses, since the primary IS an ancestor of the nest.
+        self.assertTrue(db._foreign_checkout("/a/primary", "/a/primary/.worktrees/x"))
+        self.assertFalse(db._foreign_checkout("/a/primary", "/a/primary"))
+
+    def test_foreign_checkout_degrades_open_when_unresolvable(self):
+        # Either side unknown (non-git dir / git absent) -> never block.
+        self.assertFalse(db._foreign_checkout(None, "/a/primary"))
+        self.assertFalse(db._foreign_checkout("/a/primary", None))
+        self.assertFalse(db._foreign_checkout(None, None))
+
+    def test_git_toplevel_none_outside_a_git_repo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(db._git_toplevel(Path(tmp)))
+
+    def test_git_toplevel_reports_this_repo_root(self):
+        top = db._git_toplevel(REPO_ROOT)
+        self.assertIsNotNone(top)
+        self.assertEqual(Path(top).resolve(), REPO_ROOT.resolve())
+
+    def test_explicit_repo_root_skips_the_guard(self):
+        # An explicit --repo-root is a deliberate target: never blocked, even when it
+        # names a different checkout than cwd (and without touching git at all).
+        self.assertIsNone(
+            db.guard_local_checkout(REPO_ROOT, explicit_root=True, cwd=Path("/nowhere"))
+        )
+
+    def test_guard_allows_default_root_from_its_own_checkout(self):
+        self.assertIsNone(
+            db.guard_local_checkout(REPO_ROOT, explicit_root=False, cwd=REPO_ROOT)
+        )
+
+    def test_guard_blocks_default_root_from_a_foreign_worktree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            foreign = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(foreign)], check=True)
+            msg = db.guard_local_checkout(REPO_ROOT, explicit_root=False, cwd=foreign)
+            self.assertIsNotNone(msg)
+            self.assertIn("different checkout", msg)
+
+    def test_cli_bump_refuses_foreign_checkout_without_mutating(self):
+        before = db.current_version(REPO_ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            foreign = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(foreign)], check=True)
+            # Default --repo-root resolves to REPO_ROOT (the real repo); cwd is a
+            # different worktree, so the guard must block before any write.
+            result = subprocess.run(
+                [sys.executable, str(MODULE), "bump", "--to", NEW],
+                cwd=foreign, text=True, capture_output=True,
+            )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("different checkout", result.stderr)
+        self.assertEqual(db.current_version(REPO_ROOT), before)
+
+    def test_cli_bump_check_is_exempt_from_the_guard(self):
+        # A dry-run mutates nothing, so the guard does not apply even cross-checkout:
+        # --check plans against REPO_ROOT (read-only) and exits 0.
+        with tempfile.TemporaryDirectory() as tmp:
+            foreign = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(foreign)], check=True)
+            result = subprocess.run(
+                [sys.executable, str(MODULE), "bump", "--to", NEW, "--check"],
+                cwd=foreign, text=True, capture_output=True,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("different checkout", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

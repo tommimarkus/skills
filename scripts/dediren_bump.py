@@ -40,6 +40,12 @@ The tool performs the *mechanical* bump, *auto-classifies* against the bundle di
 feeds the residual *judgment* steps as next actions; it never edits architecture.md,
 never applies the CalVer stamp, and never mutates ``main`` (both owned by
 ``version_stamp.py`` at integration).
+
+Mutating subcommands (``bump`` without ``--check``, ``adopt`` without ``--plan``)
+refuse to run when ``--repo-root`` is left at its ``__file__``-derived default and
+the working directory is a *different* git worktree, so invoking one checkout's
+copy from inside another never silently mutates the wrong tree
+(docs/skill-architecture.md § Deterministic machinery).
 """
 from __future__ import annotations
 
@@ -655,10 +661,69 @@ def run_adopt(
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------------------
+# Wrong-checkout guard: a mutating run must target the checkout you are standing
+# in. --repo-root defaults to this script's own REPO_ROOT (Path(__file__)), so
+# invoking one checkout's copy from inside another git worktree without an
+# explicit --repo-root would otherwise silently mutate the wrong tree
+# (docs/skill-architecture.md § Deterministic machinery).
+# ---------------------------------------------------------------------------
+
+
+def _git_toplevel(path: Path) -> str | None:
+    """The git worktree toplevel containing ``path``, or ``None`` when ``path`` is
+    not inside a git worktree (or git is unavailable). Each linked worktree has its
+    own toplevel, so this distinguishes the primary checkout from a worktree nested
+    under it (``.worktrees/**``, ``.claude/worktrees/**``) — a plain path-ancestor
+    test cannot: the primary root *is* an ancestor of a nested worktree's dir."""
+    proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+        text=True, capture_output=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def _foreign_checkout(root_toplevel: str | None, cwd_toplevel: str | None) -> bool:
+    """``True`` only when both worktree toplevels resolve *and* differ — the proven
+    wrong-checkout hazard. When either side is unresolvable (non-git dir, git
+    absent) the guard degrades open (``False``): it blocks only on a mismatch it can
+    prove, never on missing evidence (skill-architecture.md § Degradation Checks)."""
+    if root_toplevel is None or cwd_toplevel is None:
+        return False
+    return Path(root_toplevel).resolve() != Path(cwd_toplevel).resolve()
+
+
+def guard_local_checkout(
+    repo_root: Path, *, explicit_root: bool, cwd: Path | None = None
+) -> str | None:
+    """Return an error message when a *mutating* run would hit a different git
+    worktree than the caller is standing in, else ``None``.
+
+    Skipped when the caller passed ``--repo-root`` explicitly: that is a deliberate
+    target, not the silent default the hazard is about. Callers guard only their
+    mutating paths (``bump`` without ``--check``, ``adopt`` without ``--plan``);
+    read-only subcommands never call this."""
+    if explicit_root:
+        return None
+    cwd = cwd if cwd is not None else Path.cwd()
+    root_top = _git_toplevel(repo_root)
+    cwd_top = _git_toplevel(cwd)
+    if not _foreign_checkout(root_top, cwd_top):
+        return None
+    return (
+        f"refusing to mutate a different checkout: --repo-root defaulted to "
+        f"{root_top} (this script's own checkout) but the working directory is in "
+        f"{cwd_top}. cd into {root_top}, run that checkout's own copy of the script, "
+        f"or pass --repo-root explicitly to choose a target."
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--repo-root", type=Path, default=REPO_ROOT,
-                        help="repo root to operate on (default: this repo)")
+    common.add_argument("--repo-root", type=Path, default=None,
+                        help="repo root to operate on (default: this script's checkout)")
 
     parser = argparse.ArgumentParser(
         prog="dediren_bump.py",
@@ -699,7 +764,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    repo_root: Path = args.repo_root
+    root_was_explicit = args.repo_root is not None
+    repo_root: Path = args.repo_root if args.repo_root is not None else REPO_ROOT
 
     if args.command == "current":
         print(current_version(repo_root))
@@ -722,6 +788,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"resolved latest release -> {args.to}", file=sys.stderr)
 
     if args.command == "bump":
+        if not args.check:
+            blocked = guard_local_checkout(repo_root, explicit_root=root_was_explicit)
+            if blocked:
+                print(f"error: {blocked}", file=sys.stderr)
+                return 2
         try:
             report = bump(repo_root, args.to, check=args.check)
         except (ValueError, PinDriftError) as exc:
@@ -749,6 +820,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     if args.command == "adopt":
+        if not args.plan:
+            blocked = guard_local_checkout(repo_root, explicit_root=root_was_explicit)
+            if blocked:
+                print(f"error: {blocked}", file=sys.stderr)
+                return 2
         return run_adopt(repo_root, args.to, plan_only=args.plan, json_out=args.json)
 
     return 1
