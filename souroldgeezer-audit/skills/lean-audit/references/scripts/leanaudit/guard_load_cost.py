@@ -171,7 +171,7 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
                 snap_filtered = {
                     k: v for k, v in snap.items() if k in {s["id"] for s in skill_scens}
                 }
-                msgs = slc.cost_regressions(snap_filtered, skill_scens, repo_root, tolerance=200)
+                msgs = slc.cost_regressions(snap_filtered, skill_scens, repo_root)
                 cost_warnings.extend(msgs)
 
     if fidelity_problems:
@@ -286,7 +286,6 @@ def main() -> int:
                 {k: v for k, v in snap.items() if k in owned},
                 list(owned.values()),
                 repo_root,
-                tolerance=200,
             )
             warn = cost_warn_decision(msgs)
             if warn is not None:

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
 __all__ = [
+    "COST_TOLERANCE",
     "Inventory",
     "TOKEN_RE",
     "check_pointers",
@@ -46,6 +47,14 @@ TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 
 def estimate_tokens(text: str) -> int:
     return len(TOKEN_RE.findall(text))
+
+
+# Per-use cost tolerance, in proxy tokens. Growth beyond this on a scenario is the
+# guard's advisory-warning threshold (guard_load_cost.py), and the committed
+# cost-snapshot must stay within it of a fresh measurement — the deterministic
+# freshness gate in tests/skill_load_cost_freshness_test.py. Single-sourced here so
+# the advisory and the freshness gate share one threshold.
+COST_TOLERANCE = 200
 
 
 def measure_scenario(scenario: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -251,10 +260,10 @@ def cost_regressions(
     snapshot: dict[str, int],
     scenarios: list[dict[str, Any]],
     root: str | Path,
-    tolerance: int,
+    tolerance: int = COST_TOLERANCE,
 ) -> list[str]:
     """Re-measure each snapshotted scenario's token total against root and flag it
-    when growth over the snapshot exceeds tolerance."""
+    when growth over the snapshot exceeds tolerance (defaults to COST_TOLERANCE)."""
     by_id = {s["id"]: s for s in scenarios}
     problems = []
     for sid, old in snapshot.items():
