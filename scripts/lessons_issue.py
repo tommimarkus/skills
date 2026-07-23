@@ -24,6 +24,13 @@ class LessonIssueError(ValueError):
 
 
 _COMMON_DOD = (
+    "- Re-derive the rule against current repo reality before applying it — the "
+    "capture's named examples and any proposed predicate are hypotheses, not facts. "
+    "Where the lesson names an offender set or a check, grep the pattern for the true "
+    "set (don't trust the example list) and validate the check against the repo's "
+    "actual topology (e.g. worktrees nest under the primary checkout). Land the "
+    "corrected distillation, not a transcription, and record any correction on the "
+    "issue.\n"
     "- Apply the rule in clean words — never commit secrets or verbatim untrusted "
     "session/file text.\n"
     "- Secret-scan the staged diff before committing: "

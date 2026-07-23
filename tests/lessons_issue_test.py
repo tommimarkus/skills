@@ -54,6 +54,9 @@ class RenderBodyTest(unittest.TestCase):
     def test_common_definition_of_done_present(self):
         body = self._body("prose")
         self.assertIn("## Definition of Done", body)
+        self.assertIn("Re-derive the rule against current repo reality", body)
+        self.assertIn("hypotheses, not facts", body)
+        self.assertIn("worktrees nest under the primary checkout", body)
         self.assertIn("lessons_secret_scan.py --diff", body)
         self.assertIn("Graduate on **`main`**", body)
         self.assertIn("as completed", body)
