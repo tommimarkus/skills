@@ -26,9 +26,11 @@ file name. See "Section and code derivation" below.
 
 The rest is deliberately quiet: a warm paper ground, ink text, hairline
 dividers, and a **single accent colour** used only for the active plate,
-focus rings, and accent text. The diagram canvas (the "sheet") stays light in
-both themes because the SVGs carry their own colours and must stay legible —
-a functional rule, not a stylistic one.
+focus rings, and accent text. The diagram canvas (the "sheet") is derived per
+view from each SVG's own background, so a dark render policy gets a dark,
+harmonized card instead of a jarring white rectangle; a white or transparent
+render keeps the default light sheet. See "Sheet derivation and author theme"
+below.
 
 No build step needs a network: fonts are the OS's own UI stack, and the
 favicon is an inlined `data:image/svg+xml` glyph, so the page opens correctly
@@ -86,8 +88,14 @@ values), a `@media (prefers-color-scheme: dark)` block scoped to
 chose light), and an explicit `:root[data-theme="dark"]` block so a manual
 dark toggle always wins over system preference. Choosing light manually needs
 no extra block — it is simply the default `:root` values, which the dark
-media block's `:not([data-theme="light"])` guard steps aside for. To
-re-theme, edit these values — nothing else references a raw hex colour.
+media block's `:not([data-theme="light"])` guard steps aside for.
+
+These three blocks are **emitted** by `build-gallery.py` from its `_LIGHT` /
+`_DARK` palette dicts, merged with any package `gallery-theme.json` override
+(see "Sheet derivation and author theme"); only `--sans` / `--mono` are
+theme-independent and stay inline in `:root`. To re-theme every package, edit
+the palette dicts in the script; to re-theme one package, ship a
+`gallery-theme.json`. Nothing else references a raw hex colour.
 
 | Token | Role | Light | Dark |
 |-------|------|-------|------|
@@ -102,14 +110,61 @@ re-theme, edit these values — nothing else references a raw hex colour.
 | `--accent` | active marker, focus | `#4b45c4` | `#9b96f6` |
 | `--accent-ink` | accent text (active code, kind chip) | `#3a34a6` | `#b9b5fb` |
 | `--wash` | accent tint (kind chip background) | `#ecebfb` | `#22233a` |
-| `--sheet` | diagram canvas — always light | `#ffffff` | `#ffffff` |
-| `--sheet-line` | sheet border | `#e7e3d8` | `#d8d4cb` |
+| `--sheet` | diagram canvas — default; derived per view (see below) | `#ffffff` | `#ffffff` |
+| `--sheet-line` | sheet border — derived with the sheet | `#e7e3d8` | `#d8d4cb` |
 | `--ok` / `--ok-wash` | `chip-ok` ("layout ok") | `#2f6b45` / `#e6f1ea` | `#7ad3a0` / `#123123` |
 | `--warn` / `--warn-wash` | `chip-warn` ("dense layout") | `#8a5a12` / `#f6ead0` | `#e7c17c` / `#332913` |
 | `--shadow` | elevation | soft, warm | soft, black |
 
 Hover states are derived, not stored: `color-mix(in srgb, var(--accent)
 7–10%, transparent)`.
+
+## Sheet derivation and author theme
+
+Two mechanisms let the gallery match the diagrams it presents instead of
+forcing every sheet white.
+
+**Per-view sheet (automatic).** For each view, `build-gallery.py` reads the
+SVG's own full-canvas background `<rect>` — the same rect
+`svg-accessible-name.sh` locates, matched against the pre-band viewBox in
+`data-arch-a11y-viewbox` and skipping stroked, `data-dediren-*`, and
+`data-arch-a11y` rects. A **non-white** background is carried into the view's
+`sheet` / `sheetLine` data and pinned on `#sheet` at selection time (`--sheet`
+= the background verbatim, `--sheet-line` = a small luminance step off it so
+the card edge stays visible). A **white (`#ffffff`) or transparent** render
+derives nothing, so light galleries keep the default warm sheet unchanged.
+Because the sheet follows the diagram, it is independent of the light/dark
+chrome toggle — a dark diagram shows a dark card in either chrome.
+
+**Author theme (optional override).** An optional `gallery-theme.json` beside
+`project.json` overrides the design tokens for that one package:
+
+```json
+{
+  "theme": {
+    "accent": "#e8a33d",
+    "sheet": "#0C0A06",
+    "dark": { "paper": "#0C0A06", "panel": "#151008" }
+  }
+}
+```
+
+- Keys are token names from the Colour-tokens table **without** the leading
+  `--` (e.g. `accent`, `sheet-line`, `warn-wash`); values are any CSS colour
+  string.
+- Keys outside `light` / `dark` apply to **both** themes; the optional
+  `light` / `dark` maps override per theme. Precedence per token:
+  per-theme > shared > built-in default.
+- Setting `sheet` or `sheet-line` (in any theme) **pins** the sheet and turns
+  off per-view derivation, so the authored value wins (author override >
+  per-view derived > built-in default).
+- Unknown tokens, non-string values, or unexpected top-level keys fail the
+  build (exit `2`) rather than silently no-op.
+
+The override is baked into the emitted `:root` rule blocks at build time, so
+there is no runtime cost and no CSS-precedence surprise. `gallery-theme.json`
+is optional; absent, a package gets the built-in palette plus per-view sheet
+derivation.
 
 ## Typography
 
@@ -194,8 +249,10 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
 
 ## Extending
 
-- **Re-theme:** edit the theme-scoped `:root` rule blocks described in
-  "Colour tokens". Every surface is a token.
+- **Re-theme one package:** ship a `gallery-theme.json` beside `project.json`
+  (see "Sheet derivation and author theme"). **Re-theme the built-in default
+  for every package:** edit the `_LIGHT` / `_DARK` palette dicts in
+  `build-gallery.py`. Every surface is a token.
 - **Add a view:** add it to the package's `project.json` `views[]` (with the
   right `model`/profile so it lands in the right section), render its SVG and
   render-metadata by building the package through the bundled MCP server

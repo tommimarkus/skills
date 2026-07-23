@@ -196,10 +196,14 @@ markers required by §9.
 Beyond the per-view SVG, the skill can emit a package-level
 **shareable gallery** — one self-contained `gallery.html` inside the package that
 inlines every view's SVG as an inert `<template>`, with a notation-grouped
-register, zoom, light/dark theme, deep-linking, and keyboard navigation. It is
-built by the bundled `references/scripts/build-gallery.py` from the package's own
-sources (`project.json`, `generated/svg/*.svg`, `generated/render-metadata/*.json`)
-and is a pure function of them, so it is rebuilt whenever SVG output is
+register, zoom, light/dark theme, deep-linking, and keyboard navigation. The
+diagram sheet is derived per view from each SVG's own background (so a dark
+render policy is not framed by a white card), and an optional
+`gallery-theme.json` beside `project.json` overrides the gallery palette per
+package. It is built by the bundled `references/scripts/build-gallery.py` from
+the package's own sources (`project.json`, `generated/svg/*.svg`,
+`generated/render-metadata/*.json`, and the optional `gallery-theme.json`) and
+is a pure function of them, so it is rebuilt whenever SVG output is
 (re)generated (mode-agnostic). It is an outer viewer over the static SVGs and
 does not alter or substitute for the per-view render mode or the §9 render-mode
 check; a committed gallery that has drifted from its SVGs (`build-gallery.py
