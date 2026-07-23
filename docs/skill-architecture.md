@@ -237,10 +237,11 @@ A mutating script that resolves its target repository root from its own location
 `--repo-root` can silently write to the *wrong* checkout: run one checkout's copy
 from inside another git worktree with the root left at its `__file__`-derived
 default, and the mutation lands where the script lives, not where you are
-standing. Guard every *mutating* subcommand — refuse, or at least warn — unless
-the resolved root is the same git worktree as the current directory
-(`git -C <cwd> rev-parse --show-toplevel` equals the resolved root's toplevel). A
-plain path-ancestor test is not enough where worktrees nest under the primary
+standing. Guard every *mutating* subcommand whose root was left at that default — refuse,
+or at least warn — unless the resolved root is the same git worktree as the
+current directory (`git -C <cwd> rev-parse --show-toplevel` equals the resolved
+root's toplevel); an explicit `--repo-root` is a deliberate target and is exempt.
+A plain path-ancestor test is not enough where worktrees nest under the primary
 checkout (`.worktrees/**`, `.claude/worktrees/**`): the primary root is an
 ancestor of a nested worktree's directory, so the check passes while the write
 still hits the wrong tree. Read-only subcommands are exempt; the safest default
