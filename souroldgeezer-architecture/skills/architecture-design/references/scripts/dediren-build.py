@@ -40,7 +40,7 @@ empty or wrong-shaped package file):
     ordinary envelope; the package stores its unwrapped `.data` payload.
 
 Rendered SVG is written raw. Completing its accessible name (and visible title) is
-the caller's next step — `svg-accessible-name.sh` per rendered view, per
+the caller's next step — `svg-accessible-name.py` per rendered view, per
 architecture.md section 9 — then the gallery (`build-gallery.py`).
 
 An export policy's identity fields apply to a whole `dediren_build` invocation rather
@@ -413,7 +413,7 @@ def main(argv=None):
                 print(f"  {entry['error']}")
         print(f"{args.command}: {summary['status']}")
         if summary["status"] != "error":
-            print("next: complete each rendered SVG's accessible name (svg-accessible-name.sh),")
+            print("next: complete each rendered SVG's accessible name (svg-accessible-name.py),")
             print("      then rebuild the package gallery (build-gallery.py).")
 
     return 1 if summary["status"] == "error" else 0

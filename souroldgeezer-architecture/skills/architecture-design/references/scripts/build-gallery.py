@@ -139,7 +139,7 @@ def _load_project(pkg_dir):
 # ------------------------------------------------------- per-view sheet ----
 # The diagram "sheet" is derived from each SVG's own background so a dark
 # render policy gets a dark, harmonized card instead of a white rectangle.
-# This mirrors find_bg_fill in svg-accessible-name.sh (same rect, same rule),
+# This mirrors find_bg_fill in svg-accessible-name.py (same rect, same rule),
 # ported here because build-gallery.py reads the *final* SVG in Python.
 
 def _original_viewbox(svg):
@@ -147,7 +147,7 @@ def _original_viewbox(svg):
 
     Prefers data-arch-a11y-viewbox (recorded before the a11y title band grew
     the root viewBox); falls back to the root viewBox when the SVG never went
-    through svg-accessible-name.sh.
+    through svg-accessible-name.py.
     """
     m = re.search(r'\bdata-arch-a11y-viewbox="([^"]*)"', svg)
     if m:

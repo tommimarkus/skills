@@ -126,7 +126,7 @@ forcing every sheet white.
 
 **Per-view sheet (automatic).** For each view, `build-gallery.py` reads the
 SVG's own full-canvas background `<rect>` — the same rect
-`svg-accessible-name.sh` locates, matched against the pre-band viewBox in
+`svg-accessible-name.py` locates, matched against the pre-band viewBox in
 `data-arch-a11y-viewbox` and skipping stroked, `data-dediren-*`, and
 `data-arch-a11y` rects. A **non-white** background is carried into the view's
 `sheet` / `sheetLine` data and pinned on `#sheet` at selection time (`--sheet`

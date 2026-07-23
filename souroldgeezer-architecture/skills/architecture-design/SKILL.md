@@ -90,7 +90,7 @@ Build.
    that reaches no runtime command never loads it. Lookup may skip self-check
    entirely when the answer makes no runtime claim.
    The skill's own bundled helper scripts (`dediren-build.py`, `build-gallery.py`,
-   `svg-accessible-name.sh`) live under `${CLAUDE_SKILL_DIR}/references/scripts/`.
+   `svg-accessible-name.py`) live under `${CLAUDE_SKILL_DIR}/references/scripts/`.
    Claude Code™ expands `${CLAUDE_SKILL_DIR}` to the skill's absolute path in this
    SKILL.md body (resolving the installed-plugin cache and this source repo alike);
    the reference procedures (self-check, architecture §9) are read raw and reuse that
@@ -151,7 +151,7 @@ Build.
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
 | Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes `dediren_validate` / `dediren_build` / `dediren_guide`; launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
 | Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) entry points; the plan → `dediren_build` → map call flow (with its per-(model, render-policy) and per-export grouping) and the `run` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
-| SVG accessible name | [`references/scripts/svg-accessible-name.sh`](references/scripts/svg-accessible-name.sh); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
+| SVG accessible name | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
 | Bicep extraction | [`references/procedures/lifting-rules-bicep.md`](references/procedures/lifting-rules-bicep.md) |

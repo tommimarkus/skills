@@ -1,5 +1,6 @@
 # lean-audit:dup-intentional — identifier-rich parallel test bodies (CLAUDE.md § Repo-local Python® tooling)
 import subprocess
+import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -14,7 +15,7 @@ SCRIPT = (
     / "architecture-design"
     / "references"
     / "scripts"
-    / "svg-accessible-name.sh"
+    / "svg-accessible-name.py"
 )
 
 SVG_NS = "http://www.w3.org/2000/svg"
@@ -49,7 +50,7 @@ LIGHT_BG_SVG = DARK_BG_SVG.replace("#0B1021", "#ffffff")
 
 def run_script(*args: str | Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["bash", str(SCRIPT), *map(str, args)],
+        [sys.executable, str(SCRIPT), *map(str, args)],
         check=False,
         text=True,
         stdout=subprocess.PIPE,

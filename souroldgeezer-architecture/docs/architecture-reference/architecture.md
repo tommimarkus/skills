@@ -680,7 +680,7 @@ repo-owned post-render step on every rendered or re-rendered view to close
 both:
 
 ```bash
-${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.sh \
+${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
   --title "<view label>" --desc "<the view's architecture question>" \
   <pkg>/generated/svg/<view-id>.svg
 ```
@@ -695,9 +695,15 @@ visible per-view title block in a band above the diagram. The band expands the
 browsers do not letterbox the diagram) and paints the band with the diagram's
 own background colour with a contrasting title fill (so the title stays readable
 on a non-light render policy), both derived from the diagram's background
-`<rect>`. It edits generated render output only — never the upstream bundle — is
-idempotent, and offers `--check` for verification. Missing accessible-name
-markup or a missing visible title on rendered evidence is `ARCH-R-2`.
+`<rect>`. It is an XML-aware transform — it parses the rendered `<svg>` with the
+Python standard library and makes structural edits rather than string surgery on
+markup — so its output is canonical SVG serialization (the committed rendered
+evidence is in that form, and comparing a re-render is a post-step comparison,
+not a raw-byte one); any XML-declaration prolog and trailing newline are
+preserved verbatim. It edits generated render output only — never the upstream
+bundle — is idempotent, and offers `--check` for verification. Missing
+accessible-name markup or a missing visible title on rendered evidence is
+`ARCH-R-2`.
 
 Render-ready requires inspecting SVG for:
 

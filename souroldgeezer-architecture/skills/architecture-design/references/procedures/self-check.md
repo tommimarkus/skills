@@ -6,7 +6,7 @@ call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — neve
 CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
 own helper scripts (`dediren-build.py`, `build-gallery.py`,
-`svg-accessible-name.sh`), not Dediren.
+`svg-accessible-name.py`), not Dediren.
 
 ## Server availability
 
@@ -178,7 +178,7 @@ emits `role="img"` + `<title>` natively; the render-policy `accessibility` block
 the view-id fallback) and add the visible title:
 
 ```bash
-${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.sh --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
+${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
 ```
 
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
