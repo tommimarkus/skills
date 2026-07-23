@@ -18,13 +18,16 @@ only their deltas to it.
   `dediren_validate {profile: "uml"}`.
 - The SVG render path needs generated render metadata, which `dediren_build`
   produces (mapped to `generated/render-metadata/<view>.json`).
-- UML/XMI compatibility export (`uml-xmi`) runs only when requested and
-  carries class-diagram structure only. When an exported view holds content
-  the XMI cannot represent (the kind's file names it), the runtime declares
-  the omission with `info` diagnostics `DEDIREN_XMI_ELEMENTS_OMITTED` /
-  `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the envelope `status` stays `ok`
-  (dediren 2026.07.1+); read `.diagnostics[]` and qualify readiness as
-  `XMI ready (classes only)` per
+- UML/XMI compatibility export (`uml-xmi`) runs only when requested and emits
+  conformant UML 2.5.1 abstract syntax for whatever view kind is exported —
+  class, data, activity, sequence, state-machine, use-case, component, and
+  deployment (the model *abstract syntax*; diagram *geometry* interchange is a
+  separate whole-model concern, below). When an exported view holds content
+  outside it, or in-view content the mapping cannot yet represent, the runtime
+  declares it — never dropped silently — with `info` diagnostics
+  `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` (the
+  message states which case) while the envelope `status` stays `ok`; read
+  `.diagnostics[]` and qualify readiness from what they report per
   [external-validation-handoff](../procedures/external-validation-handoff.md).
 - Beyond that per-view `uml-xmi` export, a build with an `xmi_policy` also emits
   one whole-model `model.uml.xml` interchange document (one `uml:Model` plus OMG
