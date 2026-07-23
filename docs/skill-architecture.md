@@ -232,6 +232,21 @@ downstream check needs machine-readable results. Stateful scripts should expose
 a dry-run mode or be idempotent enough that rerunning them cannot silently
 corrupt the repository or generated artifacts.
 
+A mutating script that resolves its target repository root from its own location
+(`Path(__file__)…`) instead of from the working directory or an explicit
+`--repo-root` can silently write to the *wrong* checkout: run one checkout's copy
+from inside another git worktree with the root left at its `__file__`-derived
+default, and the mutation lands where the script lives, not where you are
+standing. Guard every *mutating* subcommand — refuse, or at least warn — unless
+the resolved root is the same git worktree as the current directory
+(`git -C <cwd> rev-parse --show-toplevel` equals the resolved root's toplevel). A
+plain path-ancestor test is not enough where worktrees nest under the primary
+checkout (`.worktrees/**`, `.claude/worktrees/**`): the primary root is an
+ancestor of a nested worktree's directory, so the check passes while the write
+still hits the wrong tree. Read-only subcommands are exempt; the safest default
+is to resolve the root from the working directory (as `scripts/version_stamp.py`
+does), so a missing `--repo-root` targets the checkout you are in.
+
 A skill that invokes a script bundled beside its `SKILL.md` must reference it
 through a documented Claude Code path substitution — canonically
 `${CLAUDE_SKILL_DIR}` (the skill's own directory), or another documented
