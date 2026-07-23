@@ -72,10 +72,13 @@ Synthetic `uml-deployment` source (lending domain):
 
 ## Validation, Render, Export
 
-Shared contract: [uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
-XMI-omitted here: devices, execution environments, artifacts,
-`Deployment`/`Manifestation`/`CommunicationPath` relationships; keep
-deployment handoff to the rendered SVG.
+Shared UML contract — validation, render metadata, on-request XMI export:
+[uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
+No `uml-deployment`-specific deltas: the `uml-xmi` export emits the full
+deployment abstract syntax above (the node and relationship types this file
+lists) with no `DEDIREN_XMI_*_OMITTED` diagnostic. Verified on the pinned bundle
+by `test_release_uml_deployment_worked_example_xmi_full_pipeline`, which exports
+this file's own Worked Example.
 
 ## Findings
 

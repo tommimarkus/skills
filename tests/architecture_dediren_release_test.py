@@ -46,6 +46,15 @@ RENDERED_FIXTURE = (
     / "dediren"
     / "rendered"
 )
+DEPLOYMENT_NOTATION_DOC = (
+    ARCH_PLUGIN
+    / "skills"
+    / "architecture-design"
+    / "references"
+    / "notations"
+    / "uml"
+    / "deployment.md"
+)
 EXPECTED_DEDIREN_VERSION = "2026.07.27"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
@@ -181,6 +190,20 @@ def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
         if artifact.get("artifact_kind") == "svg":
             return artifact["content"]
     raise AssertionError(f"no svg artifact in render result: {data}")
+
+
+def _sole_json_block(md_path: Path) -> dict:
+    """Return the single fenced ```json block from a notation doc, parsed. The per-kind
+    notation docs carry exactly one Worked Example JSON block; a surface test exports it so
+    the doc's own example is runtime-verified in place instead of being duplicated into a
+    separate fixture. Assert exactly one block, so a second example added later fails loudly
+    rather than silently exporting the wrong one."""
+    blocks = re.findall(r"```json\n(.*?)\n```", md_path.read_text(encoding="utf-8"), re.S)
+    if len(blocks) != 1:
+        raise AssertionError(
+            f"expected exactly one ```json block in {md_path}, found {len(blocks)}"
+        )
+    return json.loads(blocks[0])
 
 
 class ArchitectureDedirenReleaseTest(unittest.TestCase):
@@ -737,7 +760,82 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 "--source", source, "--layout", layout_result_path,
             )
             self.assertEqual(export_result.returncode, 0, export_result.stderr)
-            self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "uml-xmi+xml")
+            exported = envelope(export_result)
+            self.assertEqual(exported["data"]["artifact_kind"], "uml-xmi+xml")
+            # #106: the sequence XMI emits its full abstract syntax — one uml:Interaction
+            # packagedElement with nested <lifeline>/<message> children and
+            # MessageOccurrenceSpecification fragments (plus CombinedFragment for the
+            # fragments in this fixture) — with no omission diagnostic. Pins the corrected
+            # `uml/sequence.md` claim (was "XMI-omitted: interactions, lifelines, messages").
+            content = exported["data"]["content"]
+            for xmi_type in (
+                "uml:Interaction", "uml:MessageOccurrenceSpecification", "uml:CombinedFragment",
+            ):
+                self.assertIn(f'xmi:type="{xmi_type}"', content)
+            self.assertIn("<lifeline", content)
+            self.assertIn("<message", content)
+            sequence_codes = {d["code"] for d in exported.get("diagnostics", [])}
+            self.assertNotIn("DEDIREN_XMI_ELEMENTS_OMITTED", sequence_codes)
+            self.assertNotIn("DEDIREN_XMI_RELATIONSHIPS_OMITTED", sequence_codes)
+
+    def test_release_uml_deployment_worked_example_xmi_full_pipeline(self) -> None:
+        """`uml/deployment.md`'s `Validation, Render, Export` note claims the `uml-xmi`
+        export emits the full deployment abstract syntax with no `DEDIREN_XMI_*_OMITTED`
+        diagnostic. Verify it end-to-end by running the doc's own Worked Example through
+        project -> layout -> uml-xmi export on the pinned bundle and asserting the emitted
+        element/relationship types. Closes the #106 non-class XMI coverage gap: before this
+        only the `uml-class` view was XMI-exercised, so a false per-kind claim like the
+        pre-#106 deployment/sequence "XMI-omitted" text could rot undetected. Exports the
+        doc's example in place (single-sourced), so the claim and its evidence cannot
+        drift apart."""
+        bundle = release_bundle()
+        source_doc = _sole_json_block(DEPLOYMENT_NOTATION_DOC)
+        view_id = source_doc["plugins"]["generic-graph"]["views"][0]["id"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            source = temp_path / "deployment-model.json"
+            source.write_text(json.dumps(source_doc), encoding="utf-8")
+
+            layout_request = run_dediren(
+                "project", "--target", "layout-request", "--plugin", "generic-graph",
+                "--view", view_id, "--input", source,
+            )
+            self.assertEqual(layout_request.returncode, 0, layout_request.stderr)
+            layout_request_path = temp_path / "layout-request.json"
+            layout_request_path.write_text(
+                json.dumps(envelope(layout_request)["data"]), encoding="utf-8"
+            )
+
+            layout_result = run_dediren(
+                "layout", "--plugin", "elk-layout", "--input", layout_request_path
+            )
+            self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
+            layout_result_path = temp_path / "layout-result.json"
+            layout_result_path.write_text(
+                json.dumps(envelope(layout_result)["data"]), encoding="utf-8"
+            )
+
+            # uml-xmi export validates against the OMG XMI schema; the runtime fetches it
+            # from www.omg.org on first run and caches it under DEDIREN_SCHEMA_CACHE_DIR,
+            # so reruns are offline.
+            export_result = run_dediren(
+                "export", "--plugin", "uml-xmi",
+                "--policy", bundle / "fixtures" / "export-policy" / "default-uml-xmi.json",
+                "--source", source, "--layout", layout_result_path,
+            )
+            self.assertEqual(export_result.returncode, 0, export_result.stderr)
+            exported = envelope(export_result)
+            self.assertEqual(exported["data"]["artifact_kind"], "uml-xmi+xml")
+            content = exported["data"]["content"]
+            for xmi_type in (
+                "uml:Device", "uml:ExecutionEnvironment", "uml:Node", "uml:Artifact",
+                "uml:DeploymentSpecification", "uml:Component", "uml:Deployment",
+                "uml:Manifestation", "uml:CommunicationPath",
+            ):
+                self.assertIn(f'xmi:type="{xmi_type}"', content)
+            deployment_codes = {d["code"] for d in exported.get("diagnostics", [])}
+            self.assertNotIn("DEDIREN_XMI_ELEMENTS_OMITTED", deployment_codes)
+            self.assertNotIn("DEDIREN_XMI_RELATIONSHIPS_OMITTED", deployment_codes)
 
     def _stub_bundle(self, cache_dir: Path, version: str, marker: str) -> None:
         """Materialize a resolved-looking bundle (executable `dediren` + `bundle.json`)

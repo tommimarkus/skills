@@ -60,9 +60,17 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 
 ## Validation, Render, Export
 
-Shared contract: [uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
-XMI-omitted here: interactions, lifelines, messages; keep sequence handoff to
-the rendered SVG.
+Shared UML contract — validation, render metadata, on-request XMI export:
+[uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
+`uml-sequence`-specific delta: the `uml-xmi` export maps the view to one
+`uml:Interaction` `packagedElement` whose `Lifeline`s and `Message`s are nested
+child elements (`<lifeline>`, `<message>`) plus `uml:MessageOccurrenceSpecification`
+message-end fragments — not peer `packagedElement`s — and a `CombinedFragment`
+source adds `uml:CombinedFragment` / `uml:InteractionConstraint` /
+`uml:OpaqueExpression`. The authored interaction is emitted whole with no
+`DEDIREN_XMI_*_OMITTED` diagnostic; sequence XMI is fully supported even though
+the runtime's per-kind XMI summary enumerates only the classifier kinds. Verified
+on the pinned bundle by `test_release_uml_sequence_fragments_full_pipeline`.
 
 - SVG inspection (render-ready): confirm each `Lifeline` renders as its own
   column — a distinct head box and vertical stem — and that every `Message`
