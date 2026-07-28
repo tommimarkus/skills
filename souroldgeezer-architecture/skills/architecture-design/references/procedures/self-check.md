@@ -122,9 +122,9 @@ arithmetic, no per-view fan-out: the runtime owns the build graph.
    the standard envelope — read `.data` for the `package-build-result`. Roll up its
    `.status` together with every `.views[]` and `.exports[]` entry: each carries its
    own `status` and `diagnostics`, so reading only the rollup hides a failed lane.
-   A cross-reference or declared-path collision the package cannot satisfy is a
-   `DEDIREN_PACKAGE_*` error raised **before any build begins**, so a rejected
-   package leaves no half-written artifacts.
+   Manifest-level rejections — an id that resolves to nothing, two entries claiming
+   one output path — surface as `DEDIREN_PACKAGE_*` and are raised up front, so a
+   package the runtime refuses leaves no half-written artifacts behind.
 
 When the MCP server is unavailable, build through the internal CLI lane:
 

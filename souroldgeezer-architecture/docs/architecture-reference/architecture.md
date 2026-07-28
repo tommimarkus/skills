@@ -248,9 +248,10 @@ declared here — it rides on each `model.json`'s own
 `plugins.generic-graph.semantic_profile`, the single authority. Each view
 carries the same `render_policy` / `presentation` / `outputs` shape shown above.
 
-A model-scoped `uml-xmi` export aggregates only its class-family views
-(`uml-class`, `uml-data`), so other view kinds keep view-scoped exports and a
-model with zero class-family views cannot produce that aggregate.
+The `uml-xmi` aggregate is class-family only. Scope that export to a `model` and
+it gathers the model's `uml-class` and `uml-data` views; every other kind needs a
+`view`-scoped export of its own, and a model offering no class-family view has
+nothing to aggregate.
 
 ```json
 {
