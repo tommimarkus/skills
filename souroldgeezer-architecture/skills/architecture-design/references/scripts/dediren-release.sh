@@ -71,7 +71,7 @@ release_base_url() {
 
 # The release's SHA256SUMS names exactly one agent bundle, extension included, so
 # the compression format is read from the release rather than pinned here (upstream
-# moved .tar.gz -> .tar.xz in 2026.07.28; both resolve unchanged through this path).
+# moved .tar.gz -> .tar.xz in 2026.07.27; both resolve unchanged through this path).
 archive_name_from_checksums() {
   local checksum_file names count
   checksum_file="$1"
