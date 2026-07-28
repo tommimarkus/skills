@@ -477,6 +477,11 @@ def next_actions(classification: str, target: str) -> list[str]:
     return [
         "Non-cosmetic bump: the upstream bundle changed the contract surfaces listed above.",
         "Run the ip-hygiene skill IN-DEPTH over the changed architecture surface before finishing.",
+        "Before judging capability, search this repo's and tommimarkus/dediren's issue trackers "
+        "for prior feature requests and recorded roadmap dependencies on these surfaces. A closed "
+        "or not-planned upstream request is NOT durable evidence — a superseding issue can ship "
+        "it later; the shipped bundle outranks any recorded closure and the superseding issue's "
+        "own lifecycle marker.",
         "Review each substantive surface for a NEW capability. If one needs architecture-design "
         "support, that is feature work — file a follow-up issue and STOP before integrating.",
         'If no new capability is needed, record "maintenance-only, no contract change", commit, '

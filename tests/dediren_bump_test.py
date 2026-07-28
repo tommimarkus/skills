@@ -425,6 +425,20 @@ class NextActionsAndVerifyPlanTest(unittest.TestCase):
         self.assertIn("IN-DEPTH", actions)
         self.assertIn("NEW capability", actions)
 
+    def test_non_cosmetic_sends_capability_judgement_to_the_issue_trackers_first(self):
+        """A capability judged from the shipped surface alone misses the repo's own record of
+        what was asked upstream: a `not_planned` closure is not durable evidence (dediren #62
+        -> #63 shipped days later), and the bundle outranks the superseding issue's marker."""
+        actions = db.next_actions("non-cosmetic", "2026.08.0")
+        joined = " ".join(actions)
+        self.assertIn("issue trackers", joined)
+        self.assertIn("NOT durable evidence", joined)
+        self.assertIn("lifecycle marker", joined)
+        # The consult step must precede the capability judgement it informs.
+        consult = next(i for i, line in enumerate(actions) if "issue trackers" in line)
+        judge = next(i for i, line in enumerate(actions) if "NEW capability" in line)
+        self.assertLess(consult, judge)
+
     def test_verify_plan_runs_smoke_with_flag_plus_surface_and_diff_checks(self):
         plan = db.verify_plan()
         names = {name for name, _, _ in plan}
