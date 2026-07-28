@@ -156,7 +156,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(expected_phrase, surface.read_text(encoding="utf-8"))
 
     def test_extract_group_guidance_names_generic_graph_model_location(self) -> None:
-        expected_phrase = "model.json` under `plugins.generic-graph.views[].groups`, not `project.json`"
+        expected_phrase = "model.json` under `plugins.generic-graph.views[].groups`, not `package.json`"
         surfaces = [
             ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
             ARCH_PLUGIN
@@ -495,18 +495,24 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             'dediren_validate {source: "<pkg>/model.json", profile: "archimate"}',
             "dediren_build",
             'dediren_guide {topic: "source-json"}',
-            '${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg>',
-            '${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map',
+            # The native package lane: one call, artifacts at their declared paths.
+            "package",
+            "package-build-result",
+            '"$DEDIREN" build --package <pkg>/package.json',
         ]
 
         for phrase in expected_phrases:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self_check)
-        # The decomposed per-stage chain is retired; the skill drives the MCP tools,
-        # with only a compact internal CLI fallback (`dediren-build.py run` + a
-        # validate command) for a cold server.
-        self.assertIn("dediren-build.py run", self_check)
-        for absent in ["layout --plugin elk-layout", "project --target layout-request"]:
+        # The consumer-side orchestration is retired with the package lane: no staging
+        # dir, no plan/map remap, no per-view export fan-out, and no bundled build
+        # helper. The CLI fallback is the release resolver driving `build --package`.
+        for absent in [
+            "layout --plugin elk-layout",
+            "project --target layout-request",
+            "dediren-build.py",
+            ".dediren-build",
+        ]:
             with self.subTest(absent=absent):
                 self.assertNotIn(absent, self_check)
 
@@ -676,7 +682,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("Cross-notation links field", behavior["expected_artifacts"])
         self.assertIn(
             "verify referenced ArchiMate ids exist in the package's ArchiMate model "
-            "(the archimate entry in project.json models[]) before claiming cross-notation readiness",
+            "(the archimate entry in package.json models[]) before claiming cross-notation readiness",
             behavior["required_checks"],
         )
         self.assertIn(

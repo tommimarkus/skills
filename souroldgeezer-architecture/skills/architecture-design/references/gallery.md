@@ -9,8 +9,9 @@ scripts, no separate stylesheet.
 ## Concept
 
 **A self-contained view gallery.** `build-gallery.py` reads a dediren
-package's own sources — `project.json` (titles, questions, `diagramKind`,
-model references), the rendered `generated/svg/*.svg`, and
+package's own sources — `package.json` (view order, per-view `presentation`
+titles/questions/`diagram_kind`, model bindings, declared output paths), each
+model's own `semantic_profile`, the rendered `generated/svg/*.svg`, and
 `generated/render-metadata/*.json` (node/edge counts) — and writes one
 standalone `<package>/gallery.html`. Every view's SVG is inlined as an inert
 `<template class="plate" data-id="<view-id>">`; only the currently selected
@@ -36,8 +37,9 @@ No build step needs a network: fonts are the OS's own UI stack, and the
 favicon is an inlined `data:image/svg+xml` glyph, so the page opens correctly
 straight from disk, from a static host, or from GitHub Pages.
 
-**Internationalization.** `<html lang dir>` are set from the package's own
-`project.json` (`lang`, default `en`; `dir`, default `ltr`) — an
+**Internationalization.** `<html lang dir>` are set from the package's optional
+`project.json` (`lang`, default `en`; `dir`, default `ltr`) — the skill-owned
+presentation file, since `package.schema.v1` is closed to these fields — an
 already-authored right-to-left package renders with `dir="rtl"` without any
 gallery-specific configuration.
 
@@ -53,31 +55,27 @@ distinct notations present, in first-seen order (e.g. `3 views · ArchiMate
 
 ### Section and code derivation
 
-Sections and the one-letter code come from `classify(profile, diagramKind)`
+Sections and the one-letter code come from `classify(profile, diagram_kind)`
 in `build-gallery.py` — **not** an id-prefix guess. `profile` is read from the
-model itself:
+model itself, always: each view names a `model` id in `package.json` `models[]`
+(or binds to the single declared model), and the profile is that model file's
+`plugins.generic-graph.semantic_profile` field, defaulting to `archimate` when
+the model is missing, unreadable, or does not declare one. `package.schema.v1`
+has no per-model profile field, so there is no registry copy to drift.
 
-- **v2 project schema** (`project.json` has a `models[]` registry): each view
-  names a `model` id; the profile is that registry entry's `profile` field
-  (default `archimate` if the model id or field is missing).
-- **v1 project schema** (a single package-wide `model`, default
-  `model.json`): the profile is that model file's
-  `plugins.generic-graph.semantic_profile` field (default `archimate`),
-  applied to every view in the package.
+`classify()` then maps `(profile, diagram_kind)` to a section and letter:
 
-`classify()` then maps `(profile, diagramKind)` to a section and letter:
-
-| Code | Section | Notation | Matched by (case-insensitive substring of `diagramKind`) |
+| Code | Section | Notation | Matched by (case-insensitive substring of `diagram_kind`) |
 |------|---------|----------|-----------------------------------------------------------|
 | `A` | ArchiMate views | ArchiMate 3.2 | any view whose profile is not `uml` (the default fallback) |
 | `S` | Sequences | UML 2.5 | `sequence`, `communication` |
 | `T` | Structure & data | UML 2.5 | `class`, `object`, `data` |
 | `C` | Components & deployment | UML 2.5 | `component`, `deployment`, `package` |
 | `B` | Behaviour | UML 2.5 | `activity`, `state`, `use case` / `use-case` / `usecase` |
-| `U` | UML views | UML 2.5 | any other UML `diagramKind` (fallback) |
+| `U` | UML views | UML 2.5 | any other UML `diagram_kind` (fallback) |
 
 The numeric suffix is a per-section counter, assigned as views are walked in
-`project.json` order — so the first view classified into a section is `1`,
+`package.json` `views[]` order — so the first view classified into a section is `1`,
 the second `2`, and so on; sections are not globally numbered.
 
 ## Colour tokens
@@ -137,7 +135,7 @@ Because the sheet follows the diagram, it is independent of the light/dark
 chrome toggle — a dark diagram shows a dark card in either chrome.
 
 **Author theme (optional override).** An optional `gallery-theme.json` beside
-`project.json` overrides the design tokens for that one package:
+`package.json` overrides the design tokens for that one package:
 
 ```json
 {
@@ -216,7 +214,7 @@ the content.
   lifts onto `--panel` with a 2px `--accent` left border and `--shadow`; the
   code turns `--accent-ink`.
 - **Chips** — mono pills: `chip-kind` (accent wash, shows the raw
-  `diagramKind`), `chip-ok` / `chip-warn` (layout status), `chip-count`
+  `diagram_kind`), `chip-ok` / `chip-warn` (layout status), `chip-count`
   (outline only, node/relationship counts). One notation/status/size read at
   a glance.
 - **Zoom group** — segmented `– · Fit · +`, mono, hairline-divided; range
@@ -249,14 +247,14 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
 
 ## Extending
 
-- **Re-theme one package:** ship a `gallery-theme.json` beside `project.json`
+- **Re-theme one package:** ship a `gallery-theme.json` beside `package.json`
   (see "Sheet derivation and author theme"). **Re-theme the built-in default
   for every package:** edit the `_LIGHT` / `_DARK` palette dicts in
   `build-gallery.py`. Every surface is a token.
-- **Add a view:** add it to the package's `project.json` `views[]` (with the
-  right `model`/profile so it lands in the right section), render its SVG and
-  render-metadata by building the package through the bundled MCP server
-  (`dediren-build.py plan`/`map` over `dediren_build`), then rebuild the
+- **Add a view:** add it to the package's `package.json` `views[]` (with the
+  right `model` so its notation lands it in the right section), render its SVG
+  and render-metadata by building the package through the bundled MCP server
+  (one `dediren_build` call with the `package` argument), then rebuild the
   gallery. Section, code letter, and counts are all derived — nothing to
   hand-edit in the markup.
 - **Density rule:** a view is flagged `chip-warn` ("dense layout") at

@@ -21,7 +21,7 @@ Severity: `block` invalid source or failed projection/layout/render/export;
 - `ARCH-L-3`: valid layout but hard to scan: density, route congestion, empty groups, long spans, extreme aspect ratio.
 - `ARCH-R-3`: nonblank SVG but labels, icons, or markers obscure the message, or an edge label sits closer to a different edge than its own route.
 - `ARCH-M-2`: package source fails schema validation (`dediren_validate` error envelope).
-- `ARCH-V-1`: `project.json` declares a view with no model content or whose projection fails.
+- `ARCH-V-1`: `package.json` declares a view with no model content or whose projection fails.
 - `ARCH-L-2`: layout validation reports connector-through-node, invalid route, or group-boundary errors.
 - `ARCH-L-4`: grouped layout regresses against its ungrouped rerun; fallback layout used as evidence.
 - `ARCH-R-1`: SVG render fails, or produces blank content or an incoherent `viewBox`.

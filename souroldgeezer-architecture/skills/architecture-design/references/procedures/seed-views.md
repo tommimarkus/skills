@@ -3,7 +3,7 @@
 Use when Build or Extract needs an initial package shape.
 
 Seed diagram kinds are starter coverage, not the full ArchiMate viewpoint
-mechanism. Add only actual views to `project.json`; missing kinds are footer
+mechanism. Add only actual views to `package.json`; missing kinds are footer
 disclosure.
 
 | Seed view | Concern | Typical elements | Typical relationships | Split trigger |

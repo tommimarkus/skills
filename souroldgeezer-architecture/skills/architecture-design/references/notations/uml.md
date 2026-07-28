@@ -108,7 +108,7 @@ Contract:
 - Attach links to a UML package, view-level source record, or high-level UML
   element when it gives detailed design context for an ArchiMate element or view.
 - Verify referenced ArchiMate ids exist in the package's ArchiMate model (the
-  `archimate` entry in a `project.json` `models[]`; architecture.md §3
+  `archimate` entry in a `package.json` `models[]`; architecture.md §3
   mixed-notation packages) or cited evidence; broken links cap cross-notation
   readiness.
 - Do not infer cross-notation links from matching labels alone; require source

@@ -121,13 +121,18 @@ class BumpTest(unittest.TestCase):
         .tar.gz -> .tar.xz in <v>') that must survive the bump; the whole-file scrub this
         used to assert is exactly what made corrupting that marker read as correct."""
         with temp_repo() as root:
+            before = read(root, RELEASE_SCRIPT_REL)
+            marker = next(ln for ln in before.splitlines() if "moved .tar.gz -> .tar.xz in" in ln)
             db.bump(root, NEW)
             script = read(root, RELEASE_SCRIPT_REL)
             self.assertIn(f'DEDIREN_VERSION_DEFAULT="{NEW}"', script)
             self.assertIn(f"default {NEW}", script)
             self.assertNotIn(f'DEDIREN_VERSION_DEFAULT="{CURRENT}"', script)
             self.assertNotIn(f"default {CURRENT}", script)
-            self.assertIn(f"moved .tar.gz -> .tar.xz in {CURRENT}", script)
+            # The marker states when the format switched, which no bump changes. Compare
+            # it to itself rather than to CURRENT: the two coincide only while the pin
+            # happens to equal the switch release.
+            self.assertIn(marker, script)
 
     def test_leaves_coincidental_calver_untouched(self):
         with temp_repo(with_decoys=True) as root:

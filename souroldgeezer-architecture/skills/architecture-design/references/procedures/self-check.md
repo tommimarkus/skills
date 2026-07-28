@@ -5,8 +5,7 @@ Before runtime claims, drive Dediren through the plugin's **bundled MCP server**
 call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — never a
 CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
-own helper scripts (`dediren-build.py`, `build-gallery.py`,
-`svg-accessible-name.py`), not Dediren.
+own helper scripts (`build-gallery.py`, `svg-accessible-name.py`), not Dediren.
 
 ## Server availability
 
@@ -30,9 +29,8 @@ runs full because Build needs `dediren_build`; the launcher never passes
 
 When the tools are absent — resolve failed, Java™ 21+ missing, or the freshly-resolved
 server not yet reconnected this session — fall back to the **internal CLI lane**:
-`dediren-build.py run` (below) resolves the bundle on demand and drives the same
-runtime through the CLI, and the resolver provides the binary for the validate
-fallback. This is internal machinery; the user never types a dediren command. Each lane
+the release resolver (below) provides the binary, and the same `build --package`
+and validate commands run through the CLI. This is internal machinery; the user never types a dediren command. Each lane
 caches outside the target repo tree: the launcher/MCP lane under `${CLAUDE_PLUGIN_DATA}`
 (set via `plugin.json`), and the CLI lane under the per-user `${XDG_CACHE_HOME:-$HOME/.cache}`
 when writable, else a sandbox-writable temp dir (`${TMPDIR:-/tmp}`) — because
@@ -110,45 +108,40 @@ UML-content schema validation needs the driver schema in
 
 ## Building a package (default path)
 
-A `dediren_build` call takes a view through every stage — projection, layout, layout
-validation, then whichever of the render, OEF, and XMI lanes are enabled — inside
-the server, and writes each view's artifacts under its `out` directory as
-`<out>/<view-id>/diagram.svg` (plus `oef.xml` / `xmi.xml`), which is *not* where
-`project.json` declares them. The skill's bundled helper owns both the planning and
-the remapping so you never do path arithmetic by hand:
+One `dediren_build` call with a `package` argument builds the whole package — every
+view across every model, each through projection, layout, layout validation and its
+own render policy, plus the view- or model-scoped export lanes — and writes each
+artifact **directly to the path `package.json` declares**. No staging dir, no path
+arithmetic, no per-view fan-out: the runtime owns the build graph.
+
+1. Call `dediren_build` with `package` set to the package's `package.json` path; add
+   `no_export: true` to suppress the export lanes. `package` is mutually exclusive
+   with the single-model arguments (`source` / `out` / `render_policy` /
+   `oef_policy` / `xmi_policy` / `emit`).
+2. Read the result. Unlike a single-model build, a package build **is** wrapped in
+   the standard envelope — read `.data` for the `package-build-result`. Roll up its
+   `.status` together with every `.views[]` and `.exports[]` entry: each carries its
+   own `status` and `diagnostics`, so reading only the rollup hides a failed lane.
+   A cross-reference or declared-path collision the package cannot satisfy is a
+   `DEDIREN_PACKAGE_*` error raised **before any build begins**, so a rejected
+   package leaves no half-written artifacts.
+
+When the MCP server is unavailable, build through the internal CLI lane:
 
 ```bash
-${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg>            # emits the dediren_build calls
-${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py plan <pkg> --views <view-id>
-${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map  <pkg>            # materialize + summary
-${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py map  <pkg> --json
+DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"
+"$DEDIREN" build --package <pkg>/package.json      # or: "$DEDIREN" build <pkg>
 ```
 
-1. Run `plan <pkg>`. It reads `project.json` and prints the JSON list of
-   `dediren_build` tool calls the package needs — one per (model, render-policy)
-   render group, and one **single-view** call per export (an OEF/XMI policy's
-   identity fields apply per invocation, so each export runs one view at a time).
-   Every call writes into one staging dir, `<pkg>/.dediren-build`, so views never
-   collide.
-2. Make each planned `dediren_build` call with the bundled MCP tool, passing its
-   `arguments` verbatim (`source`, `out`, `views`, and the `render_policy` /
-   `oef_policy` / `xmi_policy` / `emit` keys the plan set).
-3. Run `map <pkg>`. It moves each declared artifact from staging to the
-   `project.json` path, unwraps the `--emit`ted stage envelopes to their `.data`
-   payload, verifies every declared artifact is present and non-empty, and removes
-   the staging dir. Exit `0` all declared artifacts materialized; `1` one was
-   missing or empty; `2` a package/usage error. Read the per-view/-export lines it
-   prints.
+Same `package-build-result` on stdout. Prefer the MCP tool when the server is up;
+use the CLI only as the fallback.
 
-When the MCP server is unavailable, build through the internal CLI lane in one call —
-`${CLAUDE_SKILL_DIR}/references/scripts/dediren-build.py run <pkg>` — which resolves the
-bundle on demand, drives the same builds through the CLI, and materializes exactly as
-`map`. Same output; exit `3` if the runtime cannot be resolved. Prefer the MCP tools
-when the server is up; use `run` only as the fallback.
-
-Semantic `dediren_validate` (above) still gates `source-valid` — run it first.
-Rendered SVGs land raw, so the accessible-name step below is still required, and a
-re-render still means a stale gallery (`SKILL.md` step 7).
+Semantic `dediren_validate` (above) still gates `source-valid` — run it first. Each
+view's `presentation.title` / `question` reaches the render lane as that view's SVG
+accessible name (`<title>` / `<desc>`), per view even under a shared render policy —
+but the *visible* title band is still the skill's own, so the accessible-name step
+below remains required, and a re-render still means a stale gallery
+(`SKILL.md` step 7).
 
 ## Reading tool results
 
@@ -165,10 +158,9 @@ envelope `status` before trusting output.
   each written file (`{artifact_kind, path}`) relative to `out`. A build-level
   failure (no lane selected, or the source itself fails `validate`) leaves `.views`
   empty with the failure on the top-level `.diagnostics[]`.
-- The `--emit`ted stage files under `<out>/<view-id>/` invert this: they *are*
-  ordinary envelopes, and the package stores their unwrapped `.data` payload —
-  `dediren-build.py map` does that, so never write a whole envelope into a package
-  file.
+- A package build's declared `render_metadata` / `layout` outputs are the
+  unwrapped stage payloads, not `--emit` envelopes — the runtime writes them that
+  way, so never hand-write a whole envelope into a package file.
 - `dediren_diff`, `dediren_query`, `dediren_verify`, and `dediren_status` carry
   their result document (`diff-result` / `query-result` / `verify-result` /
   `status-result` schema; architecture §9) in the tool result — check `isError` and

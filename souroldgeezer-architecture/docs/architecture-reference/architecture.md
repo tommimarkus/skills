@@ -10,7 +10,8 @@ The canonical source for a feature architecture is:
 
 ```
 docs/architecture/<feature>.dediren/
-  project.json
+  package.json               # dediren-native build manifest (package.schema.v1)
+  project.json               # optional presentation file: feature, lang, dir
   model.json
   model-<notation>.json      # per-notation model(s) in a mixed package (§3)
   render-policy.json
@@ -29,7 +30,7 @@ not a certified or complete conforming ArchiMate tool. Its quality levels are
 workflow evidence claims about the package, views, render output, and optional
 export evidence that were checked in the current task.
 
-`project.json` lists only actual views. Missing supported diagram kinds are
+`package.json` lists only actual views. Missing supported diagram kinds are
 reported in the footer; they are not added as placeholders.
 
 ## 2. Quality Levels
@@ -38,7 +39,7 @@ reported in the footer; they are not added as placeholders.
   relationships resolve, and the assessed ArchiMate relationships have passed
   schema validation plus ArchiMate semantic validation via
   `dediren_validate {source, profile: "archimate"}`.
-- `view-readable`: source-valid plus every actual view in `project.json`
+- `view-readable`: source-valid plus every actual view in `package.json`
   projects, lays out, and layout-validates (inside `dediren_build`). This proves
   layout validity, not visual cleanliness.
 - `render-ready`: view-readable plus SVG render evidence exists for changed or
@@ -102,8 +103,8 @@ Stable ids matter. Preserve existing ids unless they are duplicate, misleading,
 or tied to removed source evidence. Labels can be human-friendly; id and label
 must not contradict each other semantically.
 
-`project.json` binds actual views to projection, per-view render metadata,
-layout, render, and optional export policy. A view must answer a clear
+`package.json` binds actual views to a render policy, presentation, declared
+outputs, and optional export lanes. A view must answer a clear
 architecture question and should carry the smallest set of elements and
 relationships needed to answer it.
 
@@ -142,34 +143,38 @@ matches the kind in play (see the UML notation hub at
 list).
 
 Treat these files as hand-authored and checked in: `model.json`,
-`project.json`, `render-policy.json`, package-level `render-metadata.json` when
+`package.json`, the optional `project.json`, `render-policy.json`, package-level `render-metadata.json` when
 the package intentionally keeps one shared semantic metadata file, and optional
 `export-policy.json`. Treat `generated/` as reproducible output: projections,
 per-view render metadata, layout results, SVG, and optional OEF intermediates
 stay ignored unless the owning repository deliberately commits selected render
 evidence elsewhere.
 
-For each actual view in `project.json`, define the projection target for
-layout, the render-metadata target, the layout output, and the render output:
+For each actual view in `package.json`, declare the render policy, the
+presentation, and the diagram / render-metadata / layout outputs:
 
 ```json
 {
   "id": "main",
-  "projection": { "plugin": "generic-graph", "target": "layout-request" },
-  "metadata": {
-    "plugin": "generic-graph",
-    "target": "render-metadata",
-    "output": "generated/render-metadata/main.json"
+  "model": "orders",
+  "render_policy": "render-policy.json",
+  "presentation": {
+    "title": "Orders - Application Cooperation",
+    "question": "Which application components cooperate to deliver orders?",
+    "diagram_kind": "Application Cooperation"
   },
-  "layout": { "plugin": "elk-layout", "output": "generated/layout/main.json" },
-  "render": {
-    "plugin": "render",
-    "policy": "render-policy.json",
-    "metadata": "generated/render-metadata/main.json",
-    "output": "generated/svg/main.svg"
+  "outputs": {
+    "diagram": "generated/svg/main.svg",
+    "render_metadata": "generated/render-metadata/main.json",
+    "layout": "generated/layout/main.json"
   }
 }
 ```
+
+Projection, layout and the render stage are the runtime's business — the package
+declares *what* each view is and *where* its artifacts go, never the per-stage
+plugin chain. `presentation.title` / `question` double as that view's SVG
+accessible name, per view even under a shared render policy.
 
 Use the package-level `render-metadata.json` only when a repository chooses a
 checked-in shared metadata policy/cache and can keep it synchronized with the
@@ -206,9 +211,10 @@ inlines every view's SVG as an inert `<template>`, with a notation-grouped
 register, zoom, light/dark theme, deep-linking, and keyboard navigation. The
 diagram sheet is derived per view from each SVG's own background (so a dark
 render policy is not framed by a white card), and an optional
-`gallery-theme.json` beside `project.json` overrides the gallery palette per
+`gallery-theme.json` beside `package.json` overrides the gallery palette per
 package. It is built by the bundled `references/scripts/build-gallery.py` from
-the package's own sources (`project.json`, `generated/svg/*.svg`,
+the package's own sources (`package.json`, the optional `project.json`,
+`generated/svg/*.svg`,
 `generated/render-metadata/*.json`, and the optional `gallery-theme.json`) and
 is a pure function of them, so it is rebuilt whenever SVG output is
 (re)generated (mode-agnostic). It is an outer viewer over the static SVGs and
@@ -234,37 +240,40 @@ single-notation model per notation** — `model.json` for ArchiMate plus
 `model-<notation>.json` (for example `model-uml.json`) for UML — each validated,
 projected, rendered, and exported with its own `--profile`.
 
-`project.json` binds these models with the multi-model
-`souroldgeezer.architecture.dediren.project.v2` shape: a `models[]` registry
-(`{ id, file, profile }`), a `model` reference on every view, and an `exports[]`
-array so each model/view can declare its own export policy. Single-notation
-packages keep the `v1` shape (top-level `model` plus a singular `export`); `v2`
-is required whenever a package spans notations. Each view still carries the same
-`projection`/`metadata`/`layout`/`render` objects shown above.
+`package.json` binds these models: a `models[]` registry (`{ id, source }`), a
+`model` reference on every view (optional when the package declares one model),
+and an `exports[]` array where each entry targets **exactly one** of a `view`
+(one focused file) or a whole `model` (the aggregate lane). The notation is not
+declared here — it rides on each `model.json`'s own
+`plugins.generic-graph.semantic_profile`, the single authority. Each view
+carries the same `render_policy` / `presentation` / `outputs` shape shown above.
+
+A model-scoped `uml-xmi` export aggregates only its class-family views
+(`uml-class`, `uml-data`), so other view kinds keep view-scoped exports and a
+model with zero class-family views cannot produce that aggregate.
 
 ```json
 {
-  "schema": "souroldgeezer.architecture.dediren.project.v2",
-  "feature": "orders",
+  "package_schema_version": "package.schema.v1",
   "models": [
-    { "id": "arch", "file": "model.json", "profile": "archimate" },
-    { "id": "uml", "file": "model-uml.json", "profile": "uml" }
+    { "id": "arch", "source": "model.json" },
+    { "id": "uml", "source": "model-uml.json" }
   ],
   "views": [
-    { "id": "app-cooperation", "model": "arch", "title": "Application Cooperation",
-      "projection": { "plugin": "generic-graph", "target": "layout-request" },
-      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/app-cooperation.json" },
-      "layout": { "plugin": "elk-layout", "output": "generated/layout/app-cooperation.json" },
-      "render": { "plugin": "render", "policy": "render-policy.json", "metadata": "generated/render-metadata/app-cooperation.json", "output": "generated/svg/app-cooperation.svg" } },
-    { "id": "domain-class", "model": "uml", "title": "Domain Class View",
-      "projection": { "plugin": "generic-graph", "target": "layout-request" },
-      "metadata": { "plugin": "generic-graph", "target": "render-metadata", "output": "generated/render-metadata/domain-class.json" },
-      "layout": { "plugin": "elk-layout", "output": "generated/layout/domain-class.json" },
-      "render": { "plugin": "render", "policy": "render-policy-uml.json", "metadata": "generated/render-metadata/domain-class.json", "output": "generated/svg/domain-class.svg" } }
+    { "id": "app-cooperation", "model": "arch", "render_policy": "render-policy.json",
+      "presentation": { "title": "Application Cooperation", "diagram_kind": "Application Cooperation" },
+      "outputs": { "diagram": "generated/svg/app-cooperation.svg",
+                   "render_metadata": "generated/render-metadata/app-cooperation.json",
+                   "layout": "generated/layout/app-cooperation.json" } },
+    { "id": "domain-class", "model": "uml", "render_policy": "render-policy-uml.json",
+      "presentation": { "title": "Domain Class View", "diagram_kind": "UML Class" },
+      "outputs": { "diagram": "generated/svg/domain-class.svg",
+                   "render_metadata": "generated/render-metadata/domain-class.json",
+                   "layout": "generated/layout/domain-class.json" } }
   ],
   "exports": [
-    { "id": "arch-oef", "model": "arch", "view": "app-cooperation", "plugin": "archimate-oef", "policy": "export-policy.json", "output": "generated/export/orders.oef.xml" },
-    { "id": "uml-xmi", "model": "uml", "view": "domain-class", "plugin": "uml-xmi", "policy": "export-policy-uml.json", "output": "generated/export/orders.uml.xmi" }
+    { "id": "arch-oef", "view": "app-cooperation", "lane": "archimate-oef", "policy": "export-policy.json", "output": "generated/export/orders.oef.xml" },
+    { "id": "uml-xmi", "model": "uml", "lane": "uml-xmi", "policy": "export-policy-uml.json", "output": "generated/export/orders.uml.xmi" }
   ]
 }
 ```
@@ -415,7 +424,7 @@ handoff or participant context rarely justifies this view.
 Custom viewpoint path: when the requested concern does not fit a seed diagram
 kind, define the stakeholder concern, allowed element types, allowed
 relationship types, audience, and quality target before editing source. Store
-the resulting view as an actual view in `project.json`; do not create empty
+the resulting view as an actual view in `package.json`; do not create empty
 placeholder views for viewpoint coverage.
 
 ## 7. View Design Rules
@@ -527,7 +536,7 @@ workflow sources only as candidates, each recording `properties.evidence`
 Extracted views should use source-backed groups when source structure supports
 ownership, hosting, trust, environment, dependency, system responsibility, or
 orchestration boundaries. In dediren source, put groups in `model.json` under
-`plugins.generic-graph.views[].groups`, not `project.json`: each group needs a
+`plugins.generic-graph.views[].groups`, not `package.json`: each group needs a
 stable id, human label, and member ids that are also present in the view. Do
 not create decorative groups just to make a flat inventory prettier. Do not add
 groups to small linear process views unless a participant, system
@@ -702,7 +711,7 @@ mismatch as a package or policy defect until proven otherwise. Check
 
 Layout runs inside each `dediren_build` call; there is no separate layout command
 to parallelize. If a view's build reports an `ARCH-L-1` layout failure, rebuild
-that single view (`dediren-build.py plan --views <view-id>`) to isolate it, and
+that single view on its own to isolate it, and
 disclose a reproducible layout-engine failure under `Dediren tool issues` with the
 build-result `.views[].diagnostics[]` counts and the mapped
 `generated/layout/<view-id>.json` geometry.
@@ -783,7 +792,7 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
 
 The script completes a runtime-native accessible name — upgrades the `<title>`
 text to the view label and ensures a `<desc>` carrying the view's architecture
-question from `project.json` — or injects the full markup (`role="img"`,
+question from `package.json` `presentation` — or injects the full markup (`role="img"`,
 `aria-labelledby` `<title>`, optional `aria-describedby` `<desc>`) for
 artifacts from runtimes without native accessible names, and always adds a
 visible per-view title block in a band above the diagram. The band expands the
@@ -931,16 +940,17 @@ Do not claim `review-ready` while any blocking finding remains.
 
 For each package:
 
-1. Confirm `project.json` points to existing source, policies, metadata, and
+1. Confirm `package.json` points to existing source, policies, metadata, and
    actual views.
 2. Confirm every view has a clear architecture question.
 3. Validate `model.json`.
-4. Build the package through the bundled MCP server (`dediren-build.py plan` →
-   the `dediren_build` calls → `map`), which projects, lays out, layout-validates,
-   renders, and — when requested — exports each actual view in one call per group;
-   verify each mapped `generated/render-metadata/<view>.json` `semantic_profile`
-   matches its render policy. Isolate a failing view by rebuilding it alone
-   (`dediren-build.py plan --views <view-id>`).
+4. Build the package through the bundled MCP server (one `dediren_build` call
+   with the `package` argument), which projects, lays out, layout-validates,
+   renders, and — when requested — exports every actual view in that one call,
+   writing each artifact to its declared path; verify each
+   `generated/render-metadata/<view>.json` `semantic_profile` matches its render
+   policy. Read the `package-build-result` per-view and per-export entries to
+   isolate a failing lane.
 5. Run the accessible-name post-render step (§9) on each rendered view.
 6. Inspect SVG for nonblank, marker-rich, accessible-named, visually readable
    output.

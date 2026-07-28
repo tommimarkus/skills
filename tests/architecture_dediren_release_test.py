@@ -64,12 +64,13 @@ EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # commands; they are no longer discoverable from `bundle.json`, and the pipeline tests
 # — not manifest introspection — are what prove they still resolve.
 EXPECTED_BUNDLE_SCHEMA_VERSION = "dediren-bundle.schema.v2"
-EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS = {
-    "generic-graph",
-    "elk-layout",
-    "render",
-    "archimate-oef",
-}
+# The decomposed commands' `--plugin` selectors, driven directly by the pipeline tests
+# below. The package manifest no longer names them: `package.schema.v1` declares views
+# and outputs, and the runtime owns the stage chain.
+STAGE_PLUGIN_GENERIC_GRAPH = "generic-graph"
+STAGE_PLUGIN_LAYOUT = "elk-layout"
+STAGE_PLUGIN_RENDER = "render"
+EXPECTED_ARCHITECTURE_EXPORT_LANES = {"archimate-oef", "uml-xmi"}
 
 
 def run_resolver(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -396,43 +397,49 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
     def test_skill_fixture_declares_current_release_plugin_version(self) -> None:
         fixture_model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
-        fixture_project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
+        fixture_package = json.loads((FIXTURE / "package.json").read_text(encoding="utf-8"))
 
         fixture_versions = {plugin["id"]: plugin["version"] for plugin in fixture_model["required_plugins"]}
-        project_plugin_ids = {
-            fixture_project["views"][0]["projection"]["plugin"],
-            fixture_project["views"][0]["metadata"]["plugin"],
-            fixture_project["views"][0]["layout"]["plugin"],
-            fixture_project["views"][0]["render"]["plugin"],
-            fixture_project["export"]["plugin"],
-        }
-
         self.assertEqual(fixture_versions, {"generic-graph": EXPECTED_DEDIREN_VERSION})
         self.assertEqual(fixture_model["plugins"]["generic-graph"]["semantic_profile"], "archimate")
-        self.assertEqual(project_plugin_ids, EXPECTED_ARCHITECTURE_PROJECT_PLUGIN_IDS)
+
+        # The package declares views and export lanes; the per-stage plugin chain is the
+        # runtime's, not the manifest's.
+        self.assertEqual(fixture_package["package_schema_version"], "package.schema.v1")
+        self.assertEqual({model["source"] for model in fixture_package["models"]}, {"model.json"})
+        lanes = {export["lane"] for export in fixture_package["exports"]}
+        self.assertTrue(lanes <= EXPECTED_ARCHITECTURE_EXPORT_LANES, lanes)
 
     def test_mixed_fixture_declares_canonical_multimodel_layout(self) -> None:
-        project = json.loads((MIXED_FIXTURE / "project.json").read_text(encoding="utf-8"))
+        package = json.loads((MIXED_FIXTURE / "package.json").read_text(encoding="utf-8"))
         arch_model = json.loads((MIXED_FIXTURE / "model.json").read_text(encoding="utf-8"))
         uml_model = json.loads((MIXED_FIXTURE / "model-uml.json").read_text(encoding="utf-8"))
 
-        # v2 multi-model project shape binds one single-notation model per notation.
-        self.assertEqual(project["schema"], "souroldgeezer.architecture.dediren.project.v2")
-        models = {model["id"]: model for model in project["models"]}
-        self.assertEqual({model["profile"] for model in models.values()}, {"archimate", "uml"})
+        # package.schema.v1 binds one single-notation model per notation. It carries no
+        # per-model profile: each model.json's own semantic_profile is the authority.
+        self.assertEqual(package["package_schema_version"], "package.schema.v1")
+        models = {model["id"]: model for model in package["models"]}
+        profiles = set()
         for model in models.values():
-            data = json.loads((MIXED_FIXTURE / model["file"]).read_text(encoding="utf-8"))
-            self.assertEqual(data["plugins"]["generic-graph"]["semantic_profile"], model["profile"])
+            self.assertNotIn("profile", model)
+            data = json.loads((MIXED_FIXTURE / model["source"]).read_text(encoding="utf-8"))
+            profiles.add(data["plugins"]["generic-graph"]["semantic_profile"])
+        self.assertEqual(profiles, {"archimate", "uml"})
 
-        # Every view binds a declared model; every export binds a declared model and view.
-        view_ids = {view["id"] for view in project["views"]}
-        for view in project["views"]:
+        # Every view binds a declared model; every export targets exactly one of a
+        # declared view or a declared model (package.schema.v1's oneOf).
+        view_ids = {view["id"] for view in package["views"]}
+        for view in package["views"]:
             self.assertIn(view["model"], models)
-        for export in project["exports"]:
-            self.assertIn(export["model"], models)
-            self.assertIn(export["view"], view_ids)
-        self.assertEqual({view["model"] for view in project["views"]}, set(models))
-        self.assertEqual({export["plugin"] for export in project["exports"]}, {"archimate-oef", "uml-xmi"})
+        for export in package["exports"]:
+            targets = {key for key in ("view", "model") if key in export}
+            self.assertEqual(len(targets), 1, f"{export['id']} must target exactly one")
+            if "view" in export:
+                self.assertIn(export["view"], view_ids)
+            else:
+                self.assertIn(export["model"], models)
+        self.assertEqual({view["model"] for view in package["views"]}, set(models))
+        self.assertEqual({export["lane"] for export in package["exports"]}, {"archimate-oef", "uml-xmi"})
 
         # The cross-notation handoff resolves into the package's ArchiMate model.
         arch_ids = {node["id"] for node in arch_model["nodes"]}
@@ -452,26 +459,35 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         # the declared profile, and each model declares exactly the views project.json
         # binds to it. (It carries no export or cross-notation handoff — that shape is
         # exercised by the mixed fixture above.)
-        project = json.loads((RENDERED_FIXTURE / "project.json").read_text(encoding="utf-8"))
+        package = json.loads((RENDERED_FIXTURE / "package.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(project["schema"], "souroldgeezer.architecture.dediren.project.v2")
-        models = {model["id"]: model for model in project["models"]}
-        self.assertEqual({model["profile"] for model in models.values()}, {"archimate", "uml"})
+        self.assertEqual(package["package_schema_version"], "package.schema.v1")
+        models = {model["id"]: model for model in package["models"]}
+        profiles = set()
         for model in models.values():
-            data = json.loads((RENDERED_FIXTURE / model["file"]).read_text(encoding="utf-8"))
-            self.assertEqual(
-                data["plugins"]["generic-graph"]["semantic_profile"], model["profile"]
-            )
+            self.assertNotIn("profile", model)
+            data = json.loads((RENDERED_FIXTURE / model["source"]).read_text(encoding="utf-8"))
+            profiles.add(data["plugins"]["generic-graph"]["semantic_profile"])
             model_view_ids = {view["id"] for view in data["plugins"]["generic-graph"]["views"]}
             bound_view_ids = {
-                view["id"] for view in project["views"] if view["model"] == model["id"]
+                view["id"] for view in package["views"] if view["model"] == model["id"]
             }
             self.assertEqual(model_view_ids, bound_view_ids)
+        self.assertEqual(profiles, {"archimate", "uml"})
+
+        # The presentation file carries only what package.schema.v1 is closed to.
+        presentation = json.loads(
+            (RENDERED_FIXTURE / "project.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            presentation["schema"], "souroldgeezer.architecture.dediren.presentation.v1"
+        )
+        self.assertEqual(set(presentation) - {"schema"}, {"feature", "lang", "dir"})
 
         # Every view binds a declared model; the models partition the views.
-        for view in project["views"]:
+        for view in package["views"]:
             self.assertIn(view["model"], models)
-        self.assertEqual({view["model"] for view in project["views"]}, set(models))
+        self.assertEqual({view["model"] for view in package["views"]}, set(models))
 
     def test_every_embedded_dediren_version_pin_matches_expected(self) -> None:
         # A Dediren version bump must update every copy of the pinned version.
@@ -600,8 +616,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 self.assertIn(phrase, guide)
 
     def test_release_fixture_model_validates_and_renders(self) -> None:
-        project = json.loads((FIXTURE / "project.json").read_text(encoding="utf-8"))
-        view = project["views"][0]
+        package = json.loads((FIXTURE / "package.json").read_text(encoding="utf-8"))
+        view = package["views"][0]
 
         self._assert_validate_ok("--input", FIXTURE / "model.json")
         self._assert_validate_ok(
@@ -609,10 +625,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         )
 
         project_payload = self._assert_project_ok(
-            view["projection"]["target"], view["projection"]["plugin"], view["id"]
+            "layout-request", STAGE_PLUGIN_GENERIC_GRAPH, view["id"]
         )
         metadata_payload = self._assert_project_ok(
-            view["metadata"]["target"], view["metadata"]["plugin"], view["id"]
+            "render-metadata", STAGE_PLUGIN_GENERIC_GRAPH, view["id"]
         )
         self.assertEqual(metadata_payload["data"]["semantic_profile"], "archimate")
 
@@ -643,9 +659,9 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             render_result = run_dediren(
                 "render",
                 "--plugin",
-                view["render"]["plugin"],
+                STAGE_PLUGIN_RENDER,
                 "--policy",
-                FIXTURE / view["render"]["policy"],
+                FIXTURE / view["render_policy"],
                 "--metadata",
                 render_metadata_path,
                 "--input",

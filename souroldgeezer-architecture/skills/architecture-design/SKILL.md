@@ -12,7 +12,7 @@ the router; load references only when their conditions apply.
 
 Canonical source is `docs/architecture/<feature>.dediren/`: edit source and
 policies, recreate generated output, use SVG as proof, treat OEF/XMI as optional
-compatibility export, and list only actual views in `project.json`. Elements
+compatibility export, and list only actual views in `package.json`. Elements
 shared across packages and the optional `landscape.dediren/` portfolio rollup
 follow the cross-package identity convention (architecture §15).
 
@@ -42,7 +42,7 @@ edits/findings.
   § Build Readiness Disclosure).
 - **Extract**: lift evidenced code/IaC/API/UI/workflow facts; mark
   architect-owned content. Put source-backed groups in `model.json` under
-  `plugins.generic-graph.views[].groups`, not `project.json`.
+  `plugins.generic-graph.views[].groups`, not `package.json`.
 - **Review**: assess validity, readability, SVG, optional export, and drift;
   lead with findings. `dediren_verify` is the artifact-freshness drift gate and
   `dediren_diff` compares two model revisions (architecture §9).
@@ -97,7 +97,7 @@ Build.
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
    entirely when the answer makes no runtime claim.
-   The skill's own bundled helper scripts (`dediren-build.py`, `build-gallery.py`,
+   The skill's own bundled helper scripts (`build-gallery.py`,
    `svg-accessible-name.py`) live under `${CLAUDE_SKILL_DIR}/references/scripts/`.
    Claude Code™ expands `${CLAUDE_SKILL_DIR}` to the skill's absolute path in this
    SKILL.md body (resolving the installed-plugin cache and this source repo alike);
@@ -113,9 +113,10 @@ Build.
    the per-kind file under `references/notations/uml/` for the kind in play:
    `class`, `data`, `activity`, `sequence`, `state-machine`, `use-case`,
    `component`, or `deployment`. For mixed packages, load both notation files
-   and bind one single-notation model per notation with the `project.json`
-   multi-model `v2` layout (`models[]`, per-view `model`, `exports[]`;
-   architecture.md §3, fixture `references/fixtures/dediren/mixed/`).
+   and bind one single-notation model per notation in `package.json`
+   (`models[]`, per-view `model`, `exports[]`; the notation itself rides on each
+   `model.json`'s own `semantic_profile`; architecture.md §3, fixture
+   `references/fixtures/dediren/mixed/`).
 4. Preserve ids, labels, source evidence, policies, architect-owned intent, and
    explicit cross-notation links.
 5. Load task references below. In Extract mode, load
@@ -129,8 +130,8 @@ Build.
    `dediren_validate` tool (pass the model's `profile`) so `source-valid` covers
    schema plus semantic-profile validation. When a run (re)generates package
    output, build it through the MCP server following self-check § Building a package
-   (`dediren-build.py plan` → the `dediren_build` calls → `map`; `run` is the CLI
-   fallback when the server is unavailable). Then complete each rendered SVG's
+   (one `dediren_build` call with the `package` argument; the release resolver's
+   `build --package` is the CLI fallback when the server is unavailable). Then complete each rendered SVG's
    accessible name. Return
    [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
@@ -159,7 +160,7 @@ Build.
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
 | Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes seven tools — `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
-| Package build (plan → dediren_build → map; `run` fallback) | [`references/scripts/dediren-build.py`](references/scripts/dediren-build.py) entry points; the plan → `dediren_build` → map call flow (with its per-(model, render-policy) and per-export grouping) and the `run` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
+| Package build (native `dediren_build {package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG accessible name | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
