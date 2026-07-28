@@ -1149,7 +1149,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         against the model's recomputed provenance hash on the pinned bundle — `current`
         (ok, exit 0), `stale` (`DEDIREN_ARTIFACT_STALE`, exit 2, the CI drift gate), and
         `unstamped` (`DEDIREN_ARTIFACT_UNSTAMPED`, warning, exit 0). New in Dediren
-        2026.07.28; pin every branch to the runtime."""
+        2026.07.27; pin every branch to the runtime."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             model_path = temp_path / "model.json"
