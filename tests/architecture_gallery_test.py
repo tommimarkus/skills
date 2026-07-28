@@ -56,38 +56,55 @@ class ProfileResolverTest(unittest.TestCase):
     def setUp(self):
         self.m = _load()
 
-    def test_v2_reads_models_profile(self):
-        proj = {
-            "schema": "souroldgeezer.architecture.dediren.project.v2",
-            "models": [{"id": "arch", "file": "model.json", "profile": "archimate"},
-                       {"id": "uml", "file": "model-uml.json", "profile": "uml"}],
-            "views": [{"id": "a", "model": "arch"}, {"id": "b", "model": "uml"}],
-        }
-        prof = self.m.profile_resolver(proj, "/nonexistent")
-        self.assertEqual(prof(proj["views"][0]), "archimate")
-        self.assertEqual(prof(proj["views"][1]), "uml")
+    @staticmethod
+    def _write_model(d, name, profile):
+        with open(os.path.join(d, name), "w", encoding="utf-8") as fh:
+            _json.dump({"model_schema_version": "model.schema.v1",
+                        "plugins": {"generic-graph": {"semantic_profile": profile}}}, fh)
 
-    def test_v1_reads_model_semantic_profile(self):
+    def test_multi_model_reads_each_models_own_semantic_profile(self):
+        """package.schema.v1 has no per-model profile field: the notation comes from the
+        model file itself, which is the authority the retired v2 registry duplicated."""
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "model.json"), "w", encoding="utf-8") as fh:
-                _json.dump({"plugins": {"generic-graph": {"semantic_profile": "uml"}}}, fh)
-            proj = {"schema": "souroldgeezer.architecture.dediren.project.v1",
-                    "model": "model.json", "views": [{"id": "main"}]}
-            prof = self.m.profile_resolver(proj, d)
-            self.assertEqual(prof(proj["views"][0]), "uml")
+            self._write_model(d, "model.json", "archimate")
+            self._write_model(d, "model-uml.json", "uml")
+            pkg = {
+                "package_schema_version": "package.schema.v1",
+                "models": [{"id": "arch", "source": "model.json"},
+                           {"id": "uml", "source": "model-uml.json"}],
+                "views": [{"id": "a", "model": "arch"}, {"id": "b", "model": "uml"}],
+            }
+            prof = self.m.profile_resolver(pkg, d)
+            self.assertEqual(prof(pkg["views"][0]), "archimate")
+            self.assertEqual(prof(pkg["views"][1]), "uml")
+
+    def test_single_model_view_may_omit_its_model_binding(self):
+        """views[].model is optional in package.schema.v1 when the package declares one
+        model, so an unbound view must still resolve to that model's notation."""
+        with tempfile.TemporaryDirectory() as d:
+            self._write_model(d, "model.json", "uml")
+            pkg = {"package_schema_version": "package.schema.v1",
+                   "models": [{"id": "only", "source": "model.json"}],
+                   "views": [{"id": "main"}]}
+            prof = self.m.profile_resolver(pkg, d)
+            self.assertEqual(prof(pkg["views"][0]), "uml")
 
     def test_defaults_to_archimate_when_unresolvable(self):
-        proj = {"schema": "...v1", "model": "missing.json", "views": [{"id": "x"}]}
-        prof = self.m.profile_resolver(proj, "/nonexistent")
-        self.assertEqual(prof(proj["views"][0]), "archimate")
+        pkg = {"package_schema_version": "package.schema.v1",
+               "models": [{"id": "m", "source": "missing.json"}],
+               "views": [{"id": "x", "model": "m"}]}
+        prof = self.m.profile_resolver(pkg, "/nonexistent")
+        self.assertEqual(prof(pkg["views"][0]), "archimate")
 
-    def test_v1_non_dict_model_defaults_to_archimate(self):
+    def test_non_dict_model_defaults_to_archimate(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "model.json"), "w", encoding="utf-8") as fh:
                 _json.dump([], fh)  # valid JSON, not an object
-            proj = {"schema": "...v1", "model": "model.json", "views": [{"id": "x"}]}
-            prof = self.m.profile_resolver(proj, d)
-            self.assertEqual(prof(proj["views"][0]), "archimate")
+            pkg = {"package_schema_version": "package.schema.v1",
+                   "models": [{"id": "m", "source": "model.json"}],
+                   "views": [{"id": "x", "model": "m"}]}
+            prof = self.m.profile_resolver(pkg, d)
+            self.assertEqual(prof(pkg["views"][0]), "archimate")
 
 
 FIXTURE = os.path.join(
@@ -161,22 +178,45 @@ class BuildHtmlTest(unittest.TestCase):
 
     def test_missing_source_raises(self):
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
-                _json.dump({"schema": "v2", "models": [], "views": [
-                    {"id": "x", "model": "m", "title": "X", "diagramKind": "UML Class",
-                     "render": {"output": "generated/svg/x.svg"},
-                     "metadata": {"output": "generated/render-metadata/x.json"}}]}, fh)
+            with open(os.path.join(d, "package.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"package_schema_version": "package.schema.v1",
+                            "models": [], "views": [
+                                {"id": "x", "model": "m",
+                                 "render_policy": "render-policy.json",
+                                 "presentation": {"title": "X",
+                                                  "diagram_kind": "UML Class"},
+                                 "outputs": {
+                                     "diagram": "generated/svg/x.svg",
+                                     "render_metadata":
+                                         "generated/render-metadata/x.json"}}]}, fh)
             with self.assertRaises(self.m.SourceMissing):
                 self.m.build_html(d)
 
     def test_empty_views_package_builds_with_guarded_bootstrap(self):
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
-                _json.dump({"schema": "...v2", "feature": "empty",
+            with open(os.path.join(d, "package.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"package_schema_version": "package.schema.v1",
                             "models": [], "views": []}, fh)
+            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"schema": "souroldgeezer.architecture.dediren"
+                                      ".presentation.v1", "feature": "empty"}, fh)
             html = self.m.build_html(d)          # must not raise
             self.assertIn("const DATA = []", html)
             self.assertIn("if (DATA.length)", html)
+
+    def test_presentation_file_is_optional(self):
+        """project.json carries only feature/lang/dir, so an absent one must fall back to
+        the package dir name plus en/ltr rather than failing the build."""
+        with tempfile.TemporaryDirectory() as d:
+            pkg_dir = os.path.join(d, "orders")
+            os.makedirs(pkg_dir)
+            with open(os.path.join(pkg_dir, "package.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"package_schema_version": "package.schema.v1",
+                            "models": [], "views": []}, fh)
+            html = self.m.build_html(pkg_dir)
+            self.assertIn('lang="en"', html)
+            self.assertIn('dir="ltr"', html)
+            self.assertIn("orders", html)
 
 
 # A dark-render-policy SVG mirroring the real post-#99 structure: a band rect
@@ -194,17 +234,27 @@ _DARK_SVG = (
 
 
 def _mk_pkg(d, svg, theme=None):
-    """Write a one-view package (project.json, svg, render-metadata) into d."""
+    """Write a one-view package (package.json + project.json, svg, render-metadata)
+    into d. The model file carries the notation, so it is written too."""
     os.makedirs(os.path.join(d, "generated", "svg"), exist_ok=True)
     os.makedirs(os.path.join(d, "generated", "render-metadata"), exist_ok=True)
-    proj = {"schema": "...v2", "feature": "amber",
-            "models": [{"id": "u", "file": "m.json", "profile": "uml"}],
-            "views": [{"id": "v", "model": "u", "title": "Dark view",
-                       "diagramKind": "UML Class",
-                       "render": {"output": "generated/svg/v.svg"},
-                       "metadata": {"output": "generated/render-metadata/v.json"}}]}
+    pkg = {"package_schema_version": "package.schema.v1",
+           "models": [{"id": "u", "source": "m.json"}],
+           "views": [{"id": "v", "model": "u",
+                      "render_policy": "render-policy.json",
+                      "presentation": {"title": "Dark view",
+                                       "diagram_kind": "UML Class"},
+                      "outputs": {
+                          "diagram": "generated/svg/v.svg",
+                          "render_metadata": "generated/render-metadata/v.json"}}]}
+    with open(os.path.join(d, "package.json"), "w", encoding="utf-8") as fh:
+        _json.dump(pkg, fh)
+    with open(os.path.join(d, "m.json"), "w", encoding="utf-8") as fh:
+        _json.dump({"model_schema_version": "model.schema.v1",
+                    "plugins": {"generic-graph": {"semantic_profile": "uml"}}}, fh)
     with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
-        _json.dump(proj, fh)
+        _json.dump({"schema": "souroldgeezer.architecture.dediren.presentation.v1",
+                    "feature": "amber"}, fh)
     with open(os.path.join(d, "generated", "svg", "v.svg"), "w", encoding="utf-8") as fh:
         fh.write(svg)
     with open(os.path.join(d, "generated", "render-metadata", "v.json"), "w",

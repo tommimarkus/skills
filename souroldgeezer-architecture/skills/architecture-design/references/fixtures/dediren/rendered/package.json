@@ -1,0 +1,51 @@
+{
+  "package_schema_version": "package.schema.v1",
+  "models": [
+    { "id": "arch", "source": "model.json" },
+    { "id": "uml", "source": "model-uml.json" }
+  ],
+  "views": [
+    {
+      "id": "app-cooperation",
+      "model": "arch",
+      "render_policy": "render-policy.json",
+      "presentation": {
+        "title": "Applicant — system context",
+        "question": "How do the applicant system and the service cooperate?",
+        "diagram_kind": "Application Cooperation"
+      },
+      "outputs": {
+        "diagram": "generated/svg/app-cooperation.svg",
+        "render_metadata": "generated/render-metadata/app-cooperation.json"
+      }
+    },
+    {
+      "id": "domain-class",
+      "model": "uml",
+      "render_policy": "render-policy-uml.json",
+      "presentation": {
+        "title": "Message domain model",
+        "question": "What entities does the message interface carry?",
+        "diagram_kind": "UML Class"
+      },
+      "outputs": {
+        "diagram": "generated/svg/domain-class.svg",
+        "render_metadata": "generated/render-metadata/domain-class.json"
+      }
+    },
+    {
+      "id": "order-sequence",
+      "model": "uml",
+      "render_policy": "render-policy-uml.json",
+      "presentation": {
+        "title": "Submission sequence",
+        "question": "What is the message exchange for a submission?",
+        "diagram_kind": "UML Sequence"
+      },
+      "outputs": {
+        "diagram": "generated/svg/order-sequence.svg",
+        "render_metadata": "generated/render-metadata/order-sequence.json"
+      }
+    }
+  ]
+}

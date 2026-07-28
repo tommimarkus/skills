@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 """Build a self-contained gallery.html from a dediren architecture package.
 
-Reads the package's own sources — project.json (titles/questions/diagramKind/
-model), the rendered generated/svg/*.svg, and generated/render-metadata/*.json
+Reads the package's own sources — package.json (view order, per-view
+presentation title/question/diagram_kind, model bindings, declared output
+paths), each model's own plugins.generic-graph.semantic_profile (the notation),
+the rendered generated/svg/*.svg, and generated/render-metadata/*.json
 (node/edge counts) — and writes one standalone HTML file inside the package with
 every diagram inlined as an inert <template>. No external assets, so it works on
 GitHub Pages, a static host, or opened straight from disk.
 
+package.json is the dediren-native build manifest. The optional project.json
+beside it (schema souroldgeezer.architecture.dediren.presentation.v1) carries
+only what package.schema.v1 is closed to: feature, lang, dir. Omit it and the
+feature falls back to the package dir name with lang="en" dir="ltr".
+
 Theming: the diagram "sheet" (the card each SVG mounts on) is derived per view
 from that SVG's own background, so a dark render policy gets a dark, harmonized
 card instead of a white rectangle; white/transparent renders keep the default
-light sheet. An optional gallery-theme.json beside project.json overrides the
+light sheet. An optional gallery-theme.json beside package.json overrides the
 gallery's design tokens outright (see references/gallery.md).
 
 Usage:
@@ -92,29 +99,39 @@ def status_of(edges):
     return "warning" if edges >= DENSE_EDGES else "ok"
 
 
-def profile_resolver(proj, pkg_dir):
-    """Return view -> notation-profile resolver for a v1 or v2 project."""
-    if proj.get("models") is not None:  # v2: profile per model registry entry
-        models = {m["id"]: m for m in proj.get("models", [])}
-
-        def prof(view):
-            return (models.get(view.get("model")) or {}).get("profile", "archimate")
-        return prof
-
-    # v1: one model for the whole package; profile lives in the model file.
-    shared = "archimate"
+def _semantic_profile(pkg_dir, source):
+    """A model file's own notation, from plugins.generic-graph.semantic_profile.
+    Unreadable or unspecified falls back to archimate, as before."""
+    if not source:
+        return "archimate"
     try:
-        with open(os.path.join(pkg_dir, proj.get("model", "model.json")),
-                  encoding="utf-8") as fh:
+        with open(os.path.join(pkg_dir, source), encoding="utf-8") as fh:
             model = json.load(fh)
-        if isinstance(model, dict):
-            shared = model.get("plugins", {}).get("generic-graph", {}).get(
-                "semantic_profile", "archimate")
     except (OSError, ValueError):
-        shared = "archimate"
+        return "archimate"
+    if not isinstance(model, dict):
+        return "archimate"
+    return model.get("plugins", {}).get("generic-graph", {}).get(
+        "semantic_profile", "archimate")
+
+
+def profile_resolver(pkg, pkg_dir):
+    """Return view -> notation-profile resolver for a package.
+
+    The notation is read from each model's own semantic_profile, never from a
+    registry entry beside it: package.schema.v1 has no per-model profile field,
+    and the model file was always the authority the old v2 registry duplicated.
+    A view without an explicit model binds to the single declared model, matching
+    package.schema.v1's optional views[].model."""
+    sources = {m["id"]: m.get("source") for m in pkg.get("models", [])}
+    only_model = next(iter(sources), None) if len(sources) == 1 else None
+    cache = {}
 
     def prof(view):
-        return shared
+        model_id = view.get("model", only_model)
+        if model_id not in cache:
+            cache[model_id] = _semantic_profile(pkg_dir, sources.get(model_id))
+        return cache[model_id]
     return prof
 
 
@@ -130,10 +147,22 @@ def _favicon():
         "<text y='.9em' font-size='88'>\U0001F4D0</text></svg>")
 
 
-def _load_project(pkg_dir):
-    """Parsed project.json for the package."""
-    with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
+def _load_package(pkg_dir):
+    """Parsed package.json — the dediren-native build manifest, required."""
+    with open(os.path.join(pkg_dir, "package.json"), encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def _load_presentation(pkg_dir):
+    """Parsed project.json — the skill-owned presentation file carrying only what
+    package.schema.v1 is closed to (feature/lang/dir). Optional: an absent or
+    unreadable file means "take every default", never an error."""
+    try:
+        with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
+            loaded = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 # ------------------------------------------------------- per-view sheet ----
@@ -241,7 +270,7 @@ def _plate_sheet(svg):
 
 
 # ------------------------------------------------------- author theme ----
-# An optional gallery-theme.json beside project.json overrides design tokens.
+# An optional gallery-theme.json beside package.json overrides design tokens.
 
 class GalleryThemeError(ValueError):
     """The package's gallery-theme.json is present but malformed."""
@@ -319,16 +348,18 @@ def _emit_tokens(tokens):
 
 def collect(pkg_dir):
     """Return (data, plates_html) for the package, or raise SourceMissing."""
-    proj = _load_project(pkg_dir)
-    prof = profile_resolver(proj, pkg_dir)
+    pkg = _load_package(pkg_dir)
+    prof = profile_resolver(pkg, pkg_dir)
     counters, data, plates = {}, [], []
-    for v in proj["views"]:
+    for v in pkg["views"]:
         vid = v["id"]
-        key, gtitle, gnote, prefix = classify(prof(v), v.get("diagramKind", ""))
+        pres = v.get("presentation", {})
+        outputs = v.get("outputs", {})
+        key, gtitle, gnote, prefix = classify(prof(v), pres.get("diagram_kind", ""))
         counters[key] = counters.get(key, 0) + 1
-        meta_out = v.get("metadata", {}).get(
-            "output", "generated/render-metadata/%s.json" % vid)
-        svg_out = v.get("render", {}).get("output", "generated/svg/%s.svg" % vid)
+        meta_out = outputs.get(
+            "render_metadata", "generated/render-metadata/%s.json" % vid)
+        svg_out = outputs.get("diagram", "generated/svg/%s.svg" % vid)
         meta_path = os.path.join(pkg_dir, meta_out)
         svg_path = os.path.join(pkg_dir, svg_out)
         if not os.path.exists(meta_path):
@@ -343,9 +374,9 @@ def collect(pkg_dir):
             "id": vid,
             "code": "%s%d" % (prefix, counters[key]),
             "group": {"key": key, "title": gtitle, "note": gnote},
-            "title": v.get("title", vid),
-            "q": v.get("question", ""),
-            "kind": v.get("diagramKind", ""),
+            "title": pres.get("title", vid),
+            "q": pres.get("question", ""),
+            "kind": pres.get("diagram_kind", ""),
             "nodes": n, "edges": e,
             "status": status_of(e),
             "sheet": sheet, "sheetLine": sheet_line,
@@ -367,12 +398,12 @@ def _notation_summary(data):
 
 def build_html(pkg_dir):
     """Full standalone HTML for the package (pure function of its sources)."""
-    proj = _load_project(pkg_dir)
+    pres = _load_presentation(pkg_dir)
     data, plates_html = collect(pkg_dir)
     light, dark, sheet_pinned = _resolve_theme(pkg_dir)
-    feature = proj.get("feature", os.path.basename(os.path.normpath(pkg_dir)))
-    lang = proj.get("lang", "en")
-    direction = proj.get("dir", "ltr")
+    feature = pres.get("feature", os.path.basename(os.path.normpath(pkg_dir)))
+    lang = pres.get("lang", "en")
+    direction = pres.get("dir", "ltr")
     n = len(data)
     sub = "%d view%s · %s" % (n, "" if n == 1 else "s", _notation_summary(data))
     foot = os.path.normpath(pkg_dir)

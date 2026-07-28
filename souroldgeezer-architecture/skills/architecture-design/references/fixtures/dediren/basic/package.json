@@ -1,0 +1,32 @@
+{
+  "package_schema_version": "package.schema.v1",
+  "models": [
+    { "id": "basic", "source": "model.json" }
+  ],
+  "views": [
+    {
+      "id": "main",
+      "model": "basic",
+      "render_policy": "render-policy.json",
+      "presentation": {
+        "title": "Basic - Application Cooperation",
+        "question": "Which application components cooperate to deliver the orders capability?",
+        "diagram_kind": "Application Cooperation"
+      },
+      "outputs": {
+        "diagram": "generated/svg/main.svg",
+        "render_metadata": "generated/render-metadata/main.json",
+        "layout": "generated/layout/main.json"
+      }
+    }
+  ],
+  "exports": [
+    {
+      "id": "basic-oef",
+      "view": "main",
+      "lane": "archimate-oef",
+      "policy": "export-policy.json",
+      "output": "generated/export/basic.oef.xml"
+    }
+  ]
+}
