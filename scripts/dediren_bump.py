@@ -223,29 +223,53 @@ def verify(repo_root: Path, expected: str) -> list[str]:
     return mismatches
 
 
-def scoped_pin_replace(text: str, old: str, new: str) -> tuple[str, int]:
-    """Replace live-pin occurrences of ``old`` with ``new`` while leaving historical
-    ``Dediren <old>`` release markers fixed. Returns ``(new_text, replacements)``.
+# Every site a *live* pin can occupy, as regex templates with the version at {VERSION}.
+# Derived by enumerating every occurrence of the current pin across ``target_files`` and
+# classifying each as live pin or historical marker; see ``scoped_pin_replace`` for why
+# this is an allowlist. Adding a pin surface means adding its site here.
+PIN_SITE_TEMPLATES: tuple[str, ...] = (
+    r'DEDIREN_VERSION_DEFAULT="{VERSION}"',            # the release script's SoT default
+    r'EXPECTED_DEDIREN_VERSION\s*=\s*"{VERSION}"',     # the release test's expectation
+    r'"version"\s*:\s*"{VERSION}"',                    # fixture + notation-doc plugin pins
+    r"\bdefault {VERSION}\b",                          # the release script's usage text
+    r"\bpinned {VERSION}\b",                           # "verified on the pinned <v> bundle"
+)
 
-    A live pin is only ever the bare version string in a machine surface
-    (``"version": "<v>"``, ``DEDIREN_VERSION_DEFAULT="<v>"``,
-    ``EXPECTED_DEDIREN_VERSION = "<v>"``) or a "pinned <v>" claim — none of them
-    runtime-name-qualified. A historical marker names the release a capability landed in
-    ("Dediren <v> added/retired ...", "Since dediren <v> ...") and must stay fixed across
-    a bump. A blanket ``str.replace`` corrupts those markers the moment one cites the
-    currently-pinned version; a negative lookbehind on the runtime name keeps only live
-    pins in scope. The lookbehind is case-insensitive on the runtime name because prose
-    and code comments lowercase it mid-sentence ("Since dediren <v>")."""
-    return re.compile(r"(?<![Dd]ediren )" + re.escape(old)).subn(new, text)
+
+def scoped_pin_replace(text: str, old: str, new: str) -> tuple[str, int]:
+    """Replace ``old`` with ``new`` only at the authoritative live-pin sites, leaving every
+    other occurrence untouched. Returns ``(new_text, replacements)``.
+
+    Selection is an **allowlist** of the sites a pin can occupy (``PIN_SITE_TEMPLATES``),
+    not a denylist of the prose that must be protected. Historical markers — the release a
+    capability first landed in — must survive a bump, but they are prose, so the set of
+    ways to write one is unbounded: a denylist has to anticipate every phrasing, and each
+    one it misses silently rewrites a true statement into a false one that no gate catches
+    (the replacement succeeds, ``verify`` still passes, the tests still pass). Two real
+    misses retired the previous negative-lookbehind guard: ``moved .tar.gz -> .tar.xz in
+    <v>``, which never names the runtime at all, and a line-wrapped ``New in Dediren\\n
+    <v>``, which names it but splits the phrase across lines so a same-line lookbehind
+    cannot see it.
+
+    The pin sites are few and enumerable, so the allowlist fails **closed**: a site it
+    forgets is left stale, and ``bump``'s post-bump ``verify`` raises rather than letting
+    prose corrupt silently."""
+    escaped = re.escape(old)
+    total = 0
+    for template in PIN_SITE_TEMPLATES:
+        pattern = re.compile(template.replace("{VERSION}", escaped))
+        text, count = pattern.subn(lambda match: match.group(0).replace(old, new), text)
+        total += count
+    return text, total
 
 
 def bump(repo_root: Path, new_version: str, *, check: bool = False) -> BumpReport:
     """Move every embedded pin from the current SoT to ``new_version``.
 
     Validates the target CalVer shape, refuses when the current pins have drifted apart,
-    performs a pin-scoped replace that leaves historical ``Dediren <version>`` release
-    markers fixed (see ``scoped_pin_replace``), and (unless ``check``) re-verifies that no
-    pin was missed. ``check`` reports the plan without writing."""
+    replaces only at the allowlisted live-pin sites so historical release markers stay
+    fixed (see ``scoped_pin_replace``), and (unless ``check``) re-verifies that no pin was
+    missed. ``check`` reports the plan without writing."""
     if not CALVER_RE.match(new_version):
         raise ValueError(f"not a CalVer version: {new_version!r}")
 

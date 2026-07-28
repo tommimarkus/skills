@@ -109,17 +109,25 @@ class BumpTest(unittest.TestCase):
             self.assertEqual(db.current_version(root), NEW)
             self.assertIn(f'EXPECTED_DEDIREN_VERSION = "{NEW}"', read(root, TEST_FILE_REL))
             grounding = read(root, SOURCE_GROUNDING_REL)
-            self.assertIn(NEW, grounding)
-            self.assertNotIn(CURRENT, grounding)
+            self.assertIn(f"pinned {NEW} bundle", grounding)
+            # Site-scoped, not a whole-file scrub: a historical marker citing the version
+            # being bumped away from is legitimate here too (see HistoricalMarkerTest).
+            self.assertNotIn(f"pinned {CURRENT} bundle", grounding)
             self.assertEqual(db.verify(root, NEW), [])
 
     def test_release_script_default_and_usage_both_bump(self):
+        """Assert the two live-pin *sites* moved, not that the old version vanished from
+        the file. The script also carries a historical marker ('upstream moved
+        .tar.gz -> .tar.xz in <v>') that must survive the bump; the whole-file scrub this
+        used to assert is exactly what made corrupting that marker read as correct."""
         with temp_repo() as root:
             db.bump(root, NEW)
             script = read(root, RELEASE_SCRIPT_REL)
             self.assertIn(f'DEDIREN_VERSION_DEFAULT="{NEW}"', script)
             self.assertIn(f"default {NEW}", script)
-            self.assertNotIn(CURRENT, script)
+            self.assertNotIn(f'DEDIREN_VERSION_DEFAULT="{CURRENT}"', script)
+            self.assertNotIn(f"default {CURRENT}", script)
+            self.assertIn(f"moved .tar.gz -> .tar.xz in {CURRENT}", script)
 
     def test_leaves_coincidental_calver_untouched(self):
         with temp_repo(with_decoys=True) as root:
@@ -181,6 +189,45 @@ class HistoricalMarkerTest(unittest.TestCase):
         self.assertIn("pinned 2099.12.7 bundle", out)
         self.assertIn("Dediren 2026.07.19 added the mcp server", out)
         self.assertNotIn("Dediren 2099.12.7", out)
+
+    def test_scoped_replace_protects_markers_that_never_name_the_runtime(self):
+        """The retired guard keyed on a `dediren ` prefix, so a historical marker phrased
+        without one was rewritten into a false claim. `dediren-release.sh` carried
+        'upstream moved .tar.gz -> .tar.xz in <v>'; the 2026.07.28 bump moved it to .28
+        even though the format switch really happened at .27."""
+        text = "# upstream moved .tar.gz -> .tar.xz in 2026.07.19; both resolve here\n"
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 0)
+        self.assertEqual(text, out)
+
+    def test_scoped_replace_protects_markers_split_across_lines(self):
+        """The retired guard also required the runtime name and the version on one line
+        separated by a single space. A wrapped docstring puts a newline plus indentation
+        between them, so 'New in Dediren\\n        <v>' slipped through the lookbehind and
+        the same bump rewrote it too."""
+        text = (
+            "        `unstamped` (`DEDIREN_ARTIFACT_UNSTAMPED`, exit 0). New in Dediren\n"
+            '        2026.07.19; pin every branch to the runtime."""\n'
+        )
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 0)
+        self.assertEqual(text, out)
+
+    def test_scoped_replace_moves_the_release_script_usage_default(self):
+        """`verify` does not cover the usage text, so if the allowlist forgot this site
+        the stale pin would survive silently rather than raising."""
+        text = "  DEDIREN_VERSION    Release version without leading v, default 2026.07.19\n"
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 1)
+        self.assertIn("default 2099.12.7", out)
+
+    def test_scoped_replace_leaves_a_bare_unsited_version_alone(self):
+        """Allowlist semantics: an occurrence at no known pin site is left stale (and
+        caught by `bump`'s post-bump `verify`) rather than rewritten on a guess."""
+        text = "Some prose mentioning 2026.07.19 with no pin site around it.\n"
+        out, count = db.scoped_pin_replace(text, "2026.07.19", "2099.12.7")
+        self.assertEqual(count, 0)
+        self.assertEqual(text, out)
 
     def test_scoped_replace_protects_lowercased_markers(self):
         """Prose and code comments lowercase the runtime name mid-sentence, so the marker
