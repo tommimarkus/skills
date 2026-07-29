@@ -37,12 +37,12 @@ No build step needs a network: fonts are the OS's own UI stack, and the
 favicon is an inlined `data:image/svg+xml` glyph, so the page opens correctly
 straight from disk, from a static host, or from GitHub Pages.
 
-**Internationalization.** `<html lang dir>` are set from the package's own
-package-level `presentation` (`lang`, default `en`; `dir`, default `ltr`) — the
-same declaration Dediren folds into every view's render policy and emits as
-`xml:lang` / `direction` on each SVG root, so the page and the diagrams it inlines
-never disagree. An already-authored right-to-left package renders with `dir="rtl"`
-from that one declaration, with no gallery-specific configuration.
+**Internationalization.** `<html lang dir>` come from the package's own
+package-level `presentation` (`lang`, falling back to `en`; `dir`, to `ltr`) —
+the one declaration the runtime also stamps onto every SVG root, so the page and
+the diagrams it inlines cannot disagree. A package already authored right-to-left
+renders with `dir="rtl"` from that declaration alone, with no gallery-specific
+configuration.
 
 **Deep-linkable views.** The active view id is mirrored to `location.hash`;
 opening the file with `#<view-id>` selects that plate on load, in-app

@@ -181,17 +181,18 @@ block: a policy-level `title` / `description` overrides the per-view text and
 stamps one view's name onto every view sharing that policy.
 
 A package-level `"presentation": {"lang": "fi", "dir": "rtl"}` beside `models` /
-`views` declares the authored prose's language (BCP 47) and base direction
-(`ltr` | `rtl`) once for the whole package. Dediren folds both into every view's
-effective render policy — a view's own policy still wins — emits them as
-`xml:lang` / `direction` on each SVG root, and they drive the gallery's
-`<html lang dir>`, so assistive technology pronounces the authored `<title>` /
-`<desc>` correctly, right-to-left prose lays out correctly, and page and diagrams
-never disagree. Declare them whenever the package is not in the reader's assumed
-language or is written right-to-left. Nothing is defaulted: omit them and the
-render is byte-identical to an untagged package. `package.json` is the only
-authored manifest — the feature name is the package directory's own, under the
-canonical `docs/architecture/<feature>.dediren/` path.
+`views` tags all of the package's authored text at once: a BCP 47 language and an
+`ltr` / `rtl` base direction. The runtime pushes the pair down into each view's
+render policy (an explicit value in a view's own policy overrides it) and writes
+it onto every emitted SVG root as `xml:lang` / `direction`; the gallery reuses the
+same pair for `<html lang dir>`. Screen readers then pronounce each `<title>` /
+`<desc>` in the right language, right-to-left text is laid out in the direction it
+is read, and the page cannot contradict the diagrams it inlines. Tag any package
+written in something other than the language its audience defaults to, or in a
+right-to-left script. Neither key has a default — leave both out and the artifacts
+are byte-for-byte what an undeclared package has always produced. `package.json`
+is the only authored manifest; the feature name is the package directory's own,
+under the canonical `docs/architecture/<feature>.dediren/` path.
 
 Use the package-level `render-metadata.json` only when a repository chooses a
 checked-in shared metadata policy/cache and can keep it synchronized with the
