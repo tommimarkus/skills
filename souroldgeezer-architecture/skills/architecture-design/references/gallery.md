@@ -42,7 +42,10 @@ package-level `presentation` (`lang`, falling back to `en`; `dir`, to `ltr`) —
 the one declaration the runtime also stamps onto every SVG root, so the page and
 the diagrams it inlines cannot disagree. A package already authored right-to-left
 renders with `dir="rtl"` from that declaration alone, with no gallery-specific
-configuration.
+configuration. A package predating this move may still hold a `project.json`
+declaring `lang` / `dir`; that file is retired and inert, so the build refuses it
+(exit 2) rather than quietly reverting the package to `en` / `ltr` — move the keys
+into `package.json` `presentation` and delete the file.
 
 **Deep-linkable views.** The active view id is mirrored to `location.hash`;
 opening the file with `#<view-id>` selects that plate on load, in-app

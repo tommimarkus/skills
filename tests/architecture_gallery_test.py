@@ -219,6 +219,32 @@ class BuildHtmlTest(unittest.TestCase):
             self.assertIn("<title>orders · architecture gallery</title>", html)
             self.assertIn('<div class="mast-eyebrow">orders</div>', html)
 
+    def test_retired_sidecar_still_declaring_lang_or_dir_is_refused(self):
+        """The migration hazard: a package authored right-to-left before lang/dir went
+        native would render ltr with nothing said if the retired sidecar were merely
+        ignored. Refuse it instead, and name the move in the message."""
+        with tempfile.TemporaryDirectory() as d:
+            pkg_dir = os.path.join(d, "legacy.dediren")
+            os.makedirs(pkg_dir)
+            with open(os.path.join(pkg_dir, "package.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"package_schema_version": "package.schema.v1",
+                            "models": [], "views": []}, fh)
+            with open(os.path.join(pkg_dir, "project.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"schema": "souroldgeezer.architecture.dediren"
+                                      ".presentation.v1", "feature": "legacy",
+                            "lang": "ar-EG", "dir": "rtl"}, fh)
+            with self.assertRaises(ValueError) as caught:
+                self.m.build_html(pkg_dir)
+            self.assertIn("package.json", str(caught.exception))
+
+            # A leftover carrying no live key is harmless — the directory names the
+            # feature — so it must not block a build.
+            with open(os.path.join(pkg_dir, "project.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"schema": "souroldgeezer.architecture.dediren"
+                                      ".presentation.v1", "feature": "legacy"}, fh)
+            self.assertIn("<title>legacy · architecture gallery</title>",
+                          self.m.build_html(pkg_dir))
+
     def test_package_presentation_drives_html_lang_and_dir(self):
         """lang/dir come from the package's own presentation — the same declaration
         dediren folds into every view's render policy — so the page and the SVGs it

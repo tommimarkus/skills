@@ -161,6 +161,29 @@ def _feature_name(pkg_dir):
     return name[:-len(".dediren")] if name.endswith(".dediren") else name
 
 
+def _reject_retired_sidecar(pkg_dir):
+    """Refuse a package still carrying the retired project.json presentation file.
+
+    lang/dir are package.json fields now, and the retired sidecar is inert — so a
+    package authored right-to-left before the move would render ltr with nothing
+    said. Fail on the *live* keys only: a leftover file holding just `feature`
+    (or schema alone) is harmless, since the directory name supplies it."""
+    try:
+        with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
+            loaded = json.load(fh)
+    except (OSError, ValueError):
+        return
+    if not isinstance(loaded, dict):
+        return
+    stale = [key for key in ("lang", "dir") if key in loaded]
+    if stale:
+        raise ValueError(
+            "project.json is retired but still declares %s: move %s into the "
+            'package-level "presentation" object in package.json, which also tags '
+            "every rendered SVG root, then delete project.json"
+            % (" and ".join(stale), "them" if len(stale) > 1 else "it"))
+
+
 # ------------------------------------------------------- per-view sheet ----
 # The diagram "sheet" is derived from each SVG's own background so a dark
 # render policy gets a dark, harmonized card instead of a white rectangle.
@@ -394,6 +417,7 @@ def _notation_summary(data):
 
 def build_html(pkg_dir):
     """Full standalone HTML for the package (pure function of its sources)."""
+    _reject_retired_sidecar(pkg_dir)
     data, plates_html = collect(pkg_dir)
     light, dark, sheet_pinned = _resolve_theme(pkg_dir)
     feature = _feature_name(pkg_dir)
