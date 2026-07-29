@@ -4,7 +4,7 @@ set -euo pipefail
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
 DEDIREN_VERSION_DEFAULT="2026.07.29"
 # Oldest supported release. From 2026.07.28 the render lane takes each view's
-# <title>/<desc> from its own `presentation`, so every emitted SVG names itself.
+# <title>/<desc> from its own `presentation`, so each rendered view arrives labelled.
 # The repo-owned post-render step now *requires* that native name rather than
 # injecting one, so resolving an older bundle would produce artifacts that step
 # refuses. Refuse the resolve instead, where the message can be legible. Raising
@@ -33,7 +33,7 @@ need_supported_version() {
     return 1
   fi
   if [ "$have" -lt "$want" ]; then
-    printf 'Dediren %s is older than the supported floor %s. Since %s each view carries its own accessible name, and the post-render step refuses an artifact without one. Use %s or newer.\n' \
+    printf 'Dediren %s is older than the supported floor %s. From %s the render itself supplies each view'"'"'s accessible name, and the post-render step refuses an artifact without one. Use %s or newer.\n' \
       "$DEDIREN_VERSION" "$DEDIREN_VERSION_FLOOR" "$DEDIREN_VERSION_FLOOR" \
       "$DEDIREN_VERSION_FLOOR" >&2
     return 1

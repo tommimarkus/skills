@@ -63,6 +63,11 @@ EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # resolver refuses anything older, and refuses non-CalVer outright — since these
 # tests are about cache and network behaviour, not version support.
 LAUNCHER_SENTINEL_VERSION = "9999.12.0"
+
+
+def _calver_key(version: str) -> tuple[int, int, int]:
+    year, month, micro = version.split(".")
+    return int(year), int(month), int(micro)
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
 # ships one launcher and no plugin executables, manifests, or capability probes. The
@@ -880,6 +885,42 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         )
         binary.chmod(0o755)
         (bundle / "bundle.json").write_text("{}\n", encoding="utf-8")
+
+    def _release_script(self, version: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(RELEASE_SCRIPT), *args],
+            cwd=REPO_ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
+            env={**os.environ, "DEDIREN_VERSION": version},
+        )
+
+    def test_release_floor_refuses_unsupported_and_malformed_versions(self) -> None:
+        """The support floor is the enforcement half of deleting the band step's
+        name-synthesising path: from DEDIREN_VERSION_FLOOR the render supplies each
+        view's accessible name, and the step refuses artifacts without one. Resolving
+        an older bundle would manufacture exactly that refused input, so refuse the
+        resolve instead — where the message can say why."""
+        script = RELEASE_SCRIPT.read_text(encoding="utf-8")
+        floor_match = re.search(r'DEDIREN_VERSION_FLOOR="([^"]+)"', script)
+        assert floor_match, "release script must define DEDIREN_VERSION_FLOOR"
+        floor = floor_match.group(1)
+
+        # The pinned default must satisfy its own floor, or every resolve fails.
+        self.assertGreaterEqual(_calver_key(EXPECTED_DEDIREN_VERSION), _calver_key(floor))
+
+        below = self._release_script("2026.07.27", "--print-path")
+        self.assertNotEqual(below.returncode, 0)
+        self.assertIn(floor, below.stderr)
+
+        # Non-CalVer is refused too, so the floor cannot be sidestepped with a
+        # version string that simply does not compare.
+        malformed = self._release_script("0.0.0-test", "--print-path")
+        self.assertNotEqual(malformed.returncode, 0)
+        self.assertIn("CalVer", malformed.stderr)
+
+        # At the floor, and for --help at any version, the script still works.
+        self.assertEqual(self._release_script(floor, "--print-path").returncode, 0)
+        self.assertEqual(self._release_script("2026.07.27", "--help").returncode, 0)
 
     def test_mcp_launcher_starts_from_a_warm_cache_without_network(self) -> None:
         """The overwhelmingly common path: bundle already resolved. The launcher must
