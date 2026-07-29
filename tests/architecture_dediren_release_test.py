@@ -55,7 +55,7 @@ DEPLOYMENT_NOTATION_DOC = (
     / "uml"
     / "deployment.md"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.28"
+EXPECTED_DEDIREN_VERSION = "2026.07.29"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
@@ -454,9 +454,9 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertIn(context["element_id"], arch_ids)
 
     def test_rendered_fixture_declares_canonical_multimodel_layout(self) -> None:
-        # The rendered/ gallery fixture is a canonical v2 multi-model package: each
+        # The rendered/ gallery fixture is a canonical multi-model package: each
         # models[] entry resolves to a real source file whose semantic_profile matches
-        # the declared profile, and each model declares exactly the views project.json
+        # the declared profile, and each model declares exactly the views package.json
         # binds to it. (It carries no export or cross-notation handoff — that shape is
         # exercised by the mixed fixture above.)
         package = json.loads((RENDERED_FIXTURE / "package.json").read_text(encoding="utf-8"))
@@ -618,6 +618,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
     def test_release_fixture_model_validates_and_renders(self) -> None:
         package = json.loads((FIXTURE / "package.json").read_text(encoding="utf-8"))
         view = package["views"][0]
+        export_spec = package["exports"][0]
 
         self._assert_validate_ok("--input", FIXTURE / "model.json")
         self._assert_validate_ok(
@@ -680,9 +681,9 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             export_result = run_dediren(
                 "export",
                 "--plugin",
-                project["export"]["plugin"],
+                export_spec["lane"],
                 "--policy",
-                FIXTURE / project["export"]["policy"],
+                FIXTURE / export_spec["policy"],
                 "--source",
                 FIXTURE / "model.json",
                 "--layout",
