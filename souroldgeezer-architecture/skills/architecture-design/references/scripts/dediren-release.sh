@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
-DEDIREN_VERSION_DEFAULT="2026.07.28"
+DEDIREN_VERSION_DEFAULT="2026.07.29"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
@@ -50,7 +50,7 @@ Usage:
 
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
-  DEDIREN_VERSION    Release version without leading v, default 2026.07.28
+  DEDIREN_VERSION    Release version without leading v, default 2026.07.29
   DEDIREN_CACHE_DIR  Cache dir; default per-user ${XDG_CACHE_HOME:-~/.cache}/dediren/releases,
                      or ${TMPDIR:-/tmp}/dediren/releases when that is not writable (sandbox)
   JAVA_HOME/JAVACMD  Explicit Java 21+ runtime for the packaged Dediren launchers

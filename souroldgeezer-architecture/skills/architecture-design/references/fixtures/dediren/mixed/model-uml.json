@@ -1,8 +1,8 @@
 {
   "model_schema_version": "model.schema.v1",
   "required_plugins": [
-    { "id": "generic-graph", "version": "2026.07.28" },
-    { "id": "uml-xmi", "version": "2026.07.28" }
+    { "id": "generic-graph", "version": "2026.07.29" },
+    { "id": "uml-xmi", "version": "2026.07.29" }
   ],
   "nodes": [
     { "id": "pkg-fulfilment", "type": "Package", "label": "Fulfilment", "properties": { "uml": { "kind": "package", "architecture_context": { "profile": "archimate", "element_id": "svc-orders", "relationship": "elaborates" } } } },
