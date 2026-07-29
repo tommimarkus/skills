@@ -6,6 +6,8 @@ Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
 
 (The one architecture-specific version procedure, documented nowhere else.) Adopting a new `tommimarkus/dediren` release is a **mechanical pin bump** across ~14 repo-owned surfaces plus a small **judgment residue** the tool cannot decide. One command — `adopt` — runs the whole mechanical spine and prints exactly what to do next; it never asks a question. The tool (`scripts/dediren_bump.py`, stdlib-only) lives outside every plugin tree, so it needs no CalVer stamp of its own. You don't need to look the version up: `scripts/dediren_bump.py latest` prints the newest published release (it follows GitHub's `/releases/latest` redirect, no API token), and every `--to` accepts the literal `latest`.
 
+**There is a support floor below the pin.** `dediren-release.sh` carries `DEDIREN_VERSION_FLOOR` (currently `2026.07.28`, the release from which every emitted SVG names itself) and refuses to resolve anything older, or any non-CalVer `DEDIREN_VERSION`. `adopt` only moves `DEDIREN_VERSION_DEFAULT` and its preflight requires a *newer* target, so a normal bump never meets the floor — but a **rollback below it fails at resolve time**, by design, because the post-render band step refuses artifacts with no accessible name (`architecture.md` §9). Lowering the floor is a support decision: change it deliberately, and restore the step's name-synthesising path with it.
+
 **Happy path (a maintenance/cosmetic bump — the common case): three commands.**
 
 ```bash

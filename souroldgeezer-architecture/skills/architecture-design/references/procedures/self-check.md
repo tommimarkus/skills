@@ -198,10 +198,9 @@ the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
 
 After the build materializes a rendered SVG, add the visible title band — the
 step's job. The runtime already emits `role="img"` + `<title>` / `<desc>`
-natively from the view's `presentation`, so the step's name half is a no-op on
-the pinned runtime; it is kept only for an artifact rendered by a pre-2026.07.28
-runtime, which an unpinned `DEDIREN_VERSION` can still resolve
-(`architecture.md` §9):
+natively from the view's `presentation`, and the step requires that name rather
+than synthesising one: an artifact without it exits 4, and the remedy is a
+re-render on a supported runtime (`architecture.md` §9):
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg

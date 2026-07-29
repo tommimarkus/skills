@@ -57,6 +57,12 @@ DEPLOYMENT_NOTATION_DOC = (
 )
 EXPECTED_DEDIREN_VERSION = "2026.07.29"
 EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
+# Launcher-mechanics sentinel: a version guaranteed absent from any real cache, so
+# these tests exercise the warm/cold paths without touching a resolved bundle. It
+# must be CalVer at or above DEDIREN_VERSION_FLOOR in the release script — the
+# resolver refuses anything older, and refuses non-CalVer outright — since these
+# tests are about cache and network behaviour, not version support.
+LAUNCHER_SENTINEL_VERSION = "9999.12.0"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
 # ships one launcher and no plugin executables, manifests, or capability probes. The
@@ -884,7 +890,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             temp_path = Path(temp_dir)
             cache = temp_path / "cache"
             cache.mkdir()
-            self._stub_bundle(cache, "0.0.0-test", "STUB-STARTED")
+            self._stub_bundle(cache, LAUNCHER_SENTINEL_VERSION, "STUB-STARTED")
 
             fake_bin = temp_path / "bin"
             fake_bin.mkdir()
@@ -903,7 +909,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 env={
                     **os.environ,
                     "DEDIREN_CACHE_DIR": str(cache),
-                    "DEDIREN_VERSION": "0.0.0-test",
+                    "DEDIREN_VERSION": LAUNCHER_SENTINEL_VERSION,
                     "PATH": f"{fake_bin}:{os.environ['PATH']}",
                 },
             )
@@ -939,7 +945,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 env={
                     **os.environ,
                     "DEDIREN_CACHE_DIR": str(cache),
-                    "DEDIREN_VERSION": "0.0.0-test",
+                    "DEDIREN_VERSION": LAUNCHER_SENTINEL_VERSION,
                     "PATH": f"{fake_bin}:{os.environ['PATH']}",
                 },
             )

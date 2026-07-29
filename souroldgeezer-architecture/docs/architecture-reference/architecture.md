@@ -792,7 +792,7 @@ ungrouped layout validates cleaner, keep source-backed groups in `model.json`,
 use the cleaner layout as evidence and report the grouped-layout regression
 with both validation counts.
 
-### Accessible-Name Post-Render Step
+### Visible Title Band Post-Render Step
 
 Rendered output arrives already labelled for assistive technology (WCAG 2.2
 SC 1.1.1 Non-text Content). The bundled Dediren runtime writes `role="img"` on
@@ -818,15 +818,17 @@ paints the band with the diagram's own background colour with a contrasting
 title fill (so the title stays readable on a non-light render policy), both
 derived from the diagram's background `<rect>`.
 
-The step's accessible-name half is a compatibility path, not a second job: it
-sets a runtime-native `<title>` to the view label and ensures a `<desc>`
-carrying the view's architecture question — a no-op against the pinned runtime,
-which already emitted exactly that from `presentation` — and injects the full
-markup (`role="img"`, `aria-labelledby` `<title>`, optional `aria-describedby`
-`<desc>`) only for an artifact that arrives with no accessible name at all. That
-path survives because `DEDIREN_VERSION` has no floor in the release resolver and
-neither execution lane pins it, so a caller can still resolve a runtime older
-than the `2026.07.28` fix that moved the name into the render lane.
+The step also sets that runtime-written `<title>` to the view label and ensures a
+`<desc>` carrying the view's architecture question — normally the same text
+`presentation` already produced. It does **not** synthesise a name: an artifact
+arriving with none is refused with **exit 4** rather than banded, because a
+banded artifact that still has no accessible name looks processed while failing
+SC 1.1.1 — exactly the `ARCH-R-2` case. The supported input is a render from
+Dediren `2026.07.28` or newer, which the release resolver enforces by refusing to
+resolve an older bundle (`DEDIREN_VERSION_FLOOR`); that floor gates the *render*
+side only, so render output committed in an older era can still reach the step
+and is what exit 4 is for. Generated output is recreated, not maintained, so the
+remedy is a re-render.
 
 It is an XML-aware transform — it parses the rendered `<svg>` with the
 Python standard library and makes structural edits rather than string surgery on
@@ -834,9 +836,9 @@ markup — so its output is canonical SVG serialization (the committed rendered
 evidence is in that form, and comparing a re-render is a post-step comparison,
 not a raw-byte one); any XML-declaration prolog and trailing newline are
 preserved verbatim. It edits generated render output only — never the upstream
-bundle — is idempotent, and offers `--check` for verification: against the
-pinned runtime that verifies the runtime's native name survived the step and the
-band was added, not that an injection landed. Missing accessible-name markup or
+bundle — is idempotent, and offers `--check` for verification: on a supported
+render that verifies the runtime's name survived the step and the band was
+added. Missing accessible-name markup or
 a missing visible title on rendered evidence is `ARCH-R-2`.
 
 Render-ready requires inspecting SVG for:

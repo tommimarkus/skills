@@ -1,4 +1,5 @@
 # lean-audit:dup-intentional — identifier-rich parallel test bodies (CLAUDE.md § Repo-local Python® tooling)
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -19,11 +20,24 @@ SCRIPT = (
 )
 
 SVG_NS = "http://www.w3.org/2000/svg"
+# A supported render: the runtime named it (role="img" + <title>) from the view's
+# own presentation, as every release >= 2026.07.28 does. No background rect, so
+# the band-theming path is not exercised here (DARK_BG_SVG / LIGHT_BG_SVG cover it).
 RENDERED_SVG = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    f'<svg xmlns="{SVG_NS}" role="img" viewBox="0 0 400 300" width="400" height="300">\n'
+    "<title>order-flow</title>\n"
+    '<g data-dediren-node-id="n1"><rect x="10" y="10" width="80" height="40"/></g>\n'
+    '<path data-dediren-edge-id="e1" d="M10 10 L90 50"/>\n'
+    "</svg>\n"
+)
+# Out-of-support input: a render with no accessible name at all. Only reachable
+# from render output committed before 2026.07.28 — dediren-release.sh refuses to
+# resolve such a runtime now, but this step takes a file path, not a runtime.
+UNNAMED_SVG = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'
     f'<svg xmlns="{SVG_NS}" viewBox="0 0 400 300" width="400" height="300">\n'
     '<g data-dediren-node-id="n1"><rect x="10" y="10" width="80" height="40"/></g>\n'
-    '<path data-dediren-edge-id="e1" d="M10 10 L90 50"/>\n'
     "</svg>\n"
 )
 NATIVE_SVG = (
@@ -46,6 +60,29 @@ DARK_BG_SVG = (
     "</svg>\n"
 )
 LIGHT_BG_SVG = DARK_BG_SVG.replace("#0B1021", "#ffffff")
+# An artifact a former version of this step injected a synthesised name into,
+# in the two-id `aria-labelledby` form. Kept as a fixture because `_strip_prior`
+# still has to undo that shape cleanly.
+V1_INJECTED_SVG = (
+    f'<svg xmlns="{SVG_NS}" viewBox="0 -32 400 332" data-arch-a11y="root"'
+    ' data-arch-a11y-viewbox="0 0 400 300" role="img"'
+    ' aria-labelledby="arch-a11y-title arch-a11y-desc">\n'
+    '<title id="arch-a11y-title">Old</title>\n'
+    '<desc id="arch-a11y-desc">Old question?</desc>\n'
+    '<text data-arch-a11y="visible-title" x="8" y="-12" font-family="sans-serif"'
+    ' font-size="16" font-weight="bold">Old</text>\n'
+    "<rect/></svg>"
+)
+
+
+def load_script_module():
+    """Import the step as a module for direct unit tests. The filename has a
+    hyphen, so it is not importable by name; load it from its path."""
+    spec = importlib.util.spec_from_file_location("svg_accessible_name", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def run_script(*args: str | Path) -> subprocess.CompletedProcess[str]:
@@ -88,21 +125,24 @@ class SvgAccessibleNameTest(unittest.TestCase):
             if el.get("data-arch-a11y") == "visible-title"
         ]
 
-    def test_apply_injects_accessible_name_and_visible_title(self) -> None:
+    def test_apply_sets_accessible_name_and_adds_visible_title(self) -> None:
         self.apply("--title", "Order flow", "--desc", "Which components serve checkout?")
         content = self.svg.read_text(encoding="utf-8")
 
         root = ET.fromstring(content)
+        # The runtime's own markup is kept and retitled — never re-labelled
+        # through injected ids and aria-*, which this step no longer emits.
         self.assertEqual(root.get("role"), "img")
-        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
-        self.assertEqual(root.get("aria-describedby"), "arch-a11y-desc")
+        self.assertIsNone(root.get("aria-labelledby"))
+        self.assertIsNone(root.get("aria-describedby"))
         title = root.find(f"{{{SVG_NS}}}title")
         assert title is not None
         self.assertEqual(title.text, "Order flow")
-        self.assertEqual(title.get("id"), "arch-a11y-title")
+        self.assertIsNone(title.get("id"))
         desc = root.find(f"{{{SVG_NS}}}desc")
         assert desc is not None
         self.assertEqual(desc.text, "Which components serve checkout?")
+        self.assertIsNone(desc.get("id"))
 
         visible = [
             el
@@ -133,10 +173,9 @@ class SvgAccessibleNameTest(unittest.TestCase):
         self.assertIn('data-dediren-node-id="n1"', content)
         self.assertIn('data-dediren-edge-id="e1"', content)
 
-    def test_apply_without_desc_labels_by_title_only(self) -> None:
+    def test_apply_without_desc_adds_no_desc_element(self) -> None:
         self.apply("--title", "Order flow")
         root = ET.fromstring(self.svg.read_text(encoding="utf-8"))
-        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
         self.assertIsNone(root.get("aria-describedby"))
         self.assertIsNone(root.find(f"{{{SVG_NS}}}desc"))
 
@@ -157,24 +196,32 @@ class SvgAccessibleNameTest(unittest.TestCase):
         self.apply("--title", "Order flow", "--desc", "Question?")
         self.assertEqual(first, self.svg.read_text(encoding="utf-8"))
 
-    def test_rerun_replaces_previous_injection_without_stacking(self) -> None:
+    def test_rerun_replaces_previous_output_without_stacking(self) -> None:
         self.apply("--title", "Old title", "--desc", "Old question?")
         self.apply("--title", "New title")
         content = self.svg.read_text(encoding="utf-8")
         root = ET.fromstring(content)
         self.assertEqual(root.get("viewBox"), "0 -32 400 332")
-        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
         self.assertNotIn("Old title", content)
-        self.assertNotIn("Old question?", content)
-        self.assertIsNone(root.find(f"{{{SVG_NS}}}desc"))
         titles = root.findall(f"{{{SVG_NS}}}title")
         self.assertEqual(len(titles), 1)
         self.assertEqual(titles[0].text, "New title")
+        self.assertEqual(len(self._visible_titles(root)), 1)
 
-    def test_check_fails_before_apply_and_passes_after(self) -> None:
+        # Ownership rule: the <title>/<desc> belong to the render, not to this
+        # step, so omitting --desc means "leave the description alone" — the
+        # prior run's <desc> survives rather than being silently dropped. (It
+        # carries no marker id, so the step cannot tell it from a runtime one.)
+        descs = root.findall(f"{{{SVG_NS}}}desc")
+        self.assertEqual(len(descs), 1)
+        self.assertEqual(descs[0].text, "Old question?")
+
+    def test_check_fails_on_missing_band_and_passes_after_apply(self) -> None:
+        # A supported render already has its accessible name, so check mode is
+        # really asking "did this step run?" — the band is the discriminator.
         before = run_script("--check", "--title", "Order flow", self.svg)
         self.assertEqual(before.returncode, 1)
-        self.assertIn("accessible-name: missing", before.stdout)
+        self.assertIn("accessible-name: present", before.stdout)
         self.assertIn("visible-title: missing", before.stdout)
 
         self.apply("--title", "Order flow")
@@ -183,15 +230,21 @@ class SvgAccessibleNameTest(unittest.TestCase):
         self.assertIn("accessible-name: present", after.stdout)
         self.assertIn("visible-title: present", after.stdout)
 
+    def test_check_reports_missing_name_on_an_unnamed_artifact(self) -> None:
+        self.svg.write_text(UNNAMED_SVG, encoding="utf-8")
+        result = run_script("--check", "--title", "Order flow", self.svg)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("accessible-name: missing", result.stdout)
+
     def test_check_does_not_modify_the_file(self) -> None:
         before = self.svg.read_text(encoding="utf-8")
         run_script("--check", "--title", "Order flow", self.svg)
         self.assertEqual(before, self.svg.read_text(encoding="utf-8"))
 
-    def test_runtime_native_accessible_name_is_completed(self) -> None:
+    def test_runtime_native_accessible_name_is_retitled_and_banded(self) -> None:
         self.svg.write_text(NATIVE_SVG, encoding="utf-8")
         result = self.apply("--title", "View label", "--desc", "Which parts cooperate?")
-        self.assertIn("completed native accessible name", result.stdout)
+        self.assertIn("visible title block added", result.stdout)
 
         content = self.svg.read_text(encoding="utf-8")
         root = ET.fromstring(content)
@@ -225,27 +278,44 @@ class SvgAccessibleNameTest(unittest.TestCase):
         self.apply("--title", "View label", "--desc", "Which parts cooperate?")
         self.assertEqual(first, self.svg.read_text(encoding="utf-8"))
 
-    def test_v1_injected_artifact_upgrades_without_stacking(self) -> None:
-        v1 = (
-            f'<svg xmlns="{SVG_NS}" viewBox="0 -32 400 332" data-arch-a11y="root"'
-            ' data-arch-a11y-viewbox="0 0 400 300" role="img"'
-            ' aria-labelledby="arch-a11y-title arch-a11y-desc">\n'
-            '<title id="arch-a11y-title">Old</title>\n'
-            '<desc id="arch-a11y-desc">Old question?</desc>\n'
-            '<text data-arch-a11y="visible-title" x="8" y="-12" font-family="sans-serif"'
-            ' font-size="16" font-weight="bold">Old</text>\n'
-            "<rect/></svg>"
-        )
-        self.svg.write_text(v1, encoding="utf-8")
-        self.apply("--title", "New")
-        content = self.svg.read_text(encoding="utf-8")
-        root = ET.fromstring(content)
-        self.assertEqual(root.get("viewBox"), "0 -32 400 332")
-        self.assertEqual(root.get("aria-labelledby"), "arch-a11y-title")
-        self.assertNotIn("Old", content)
-        titles = root.findall(f"{{{SVG_NS}}}title")
-        self.assertEqual(len(titles), 1)
-        self.assertEqual(titles[0].text, "New")
+    def test_unnamed_artifact_is_refused_and_left_unchanged(self) -> None:
+        # Refusing beats banding it: a banded artifact with no accessible name
+        # looks processed while still failing SC 1.1.1 (ARCH-R-2).
+        self.svg.write_text(UNNAMED_SVG, encoding="utf-8")
+        result = run_script("--title", "Order flow", self.svg)
+        self.assertEqual(result.returncode, 4)
+        self.assertEqual(self.svg.read_text(encoding="utf-8"), UNNAMED_SVG)
+
+    def test_v1_injected_artifact_is_refused_after_stripping_to_unnamed(self) -> None:
+        # An artifact a former version of this step injected into: strip removes
+        # the synthesised name, leaving genuinely unnamed input, which is refused.
+        self.svg.write_text(V1_INJECTED_SVG, encoding="utf-8")
+        result = run_script("--title", "New", self.svg)
+        self.assertEqual(result.returncode, 4)
+        self.assertEqual(self.svg.read_text(encoding="utf-8"), V1_INJECTED_SVG)
+
+    def test_strip_prior_drops_role_and_aria_it_once_injected(self) -> None:
+        """`_strip_prior` must key the role/aria cleanup on the id-marked nodes it
+        removed, not on an `aria-labelledby` string. The injected form varied —
+        "arch-a11y-title" alone, or the two-id "arch-a11y-title arch-a11y-desc"
+        used below — so the old string match missed the two-id case and left
+        `role` and `aria-*` pointing at ids that no longer existed. Exercised
+        directly: on the refusal path nothing is written, so the stripped tree is
+        not observable through the file."""
+        root = ET.fromstring(V1_INJECTED_SVG)
+        load_script_module()._strip_prior(root)
+
+        self.assertIsNone(root.get("role"))
+        self.assertIsNone(root.get("aria-labelledby"))
+        self.assertIsNone(root.get("aria-describedby"))
+        # The owned nodes and markers are gone and the viewBox is restored.
+        self.assertEqual(root.get("viewBox"), "0 0 400 300")
+        self.assertIsNone(root.get("data-arch-a11y"))
+        self.assertIsNone(root.get("data-arch-a11y-viewbox"))
+        self.assertEqual(root.findall(f"{{{SVG_NS}}}title"), [])
+        self.assertEqual(root.findall(f"{{{SVG_NS}}}desc"), [])
+        self.assertEqual(self._visible_titles(root), [])
+
 
     def test_width_height_synced_keeps_aspect_ratio(self) -> None:
         # The rendered aspect ratio is preserved: width/height agree with the

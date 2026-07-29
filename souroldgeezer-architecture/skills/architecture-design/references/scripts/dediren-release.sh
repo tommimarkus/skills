@@ -3,9 +3,42 @@ set -euo pipefail
 
 DEDIREN_REPO_DEFAULT="tommimarkus/dediren"
 DEDIREN_VERSION_DEFAULT="2026.07.29"
+# Oldest supported release. From 2026.07.28 the render lane takes each view's
+# <title>/<desc> from its own `presentation`, so every emitted SVG names itself.
+# The repo-owned post-render step now *requires* that native name rather than
+# injecting one, so resolving an older bundle would produce artifacts that step
+# refuses. Refuse the resolve instead, where the message can be legible. Raising
+# this floor is a support decision, not a pin bump: `dediren_bump.py` moves
+# DEDIREN_VERSION_DEFAULT only.
+DEDIREN_VERSION_FLOOR="2026.07.28"
 
 DEDIREN_REPO="${DEDIREN_REPO:-$DEDIREN_REPO_DEFAULT}"
 DEDIREN_VERSION="${DEDIREN_VERSION:-$DEDIREN_VERSION_DEFAULT}"
+
+calver_key() {
+  # YYYY.0M.MICRO -> a zero-padded sortable integer; empty output when not CalVer.
+  printf '%s\n' "$1" | awk -F. '
+    NF == 3 && $1 ~ /^[0-9][0-9][0-9][0-9]$/ && $2 ~ /^[0-9][0-9]$/ && $3 ~ /^[0-9]+$/ {
+      printf "%04d%02d%05d\n", $1, $2, $3
+    }'
+}
+
+need_supported_version() {
+  local want have
+  want="$(calver_key "$DEDIREN_VERSION_FLOOR")"
+  have="$(calver_key "$DEDIREN_VERSION")"
+  if [ -z "$have" ]; then
+    printf 'DEDIREN_VERSION must be CalVer (YYYY.0M.MICRO); got: %s\n' \
+      "$DEDIREN_VERSION" >&2
+    return 1
+  fi
+  if [ "$have" -lt "$want" ]; then
+    printf 'Dediren %s is older than the supported floor %s. Since %s each view carries its own accessible name, and the post-render step refuses an artifact without one. Use %s or newer.\n' \
+      "$DEDIREN_VERSION" "$DEDIREN_VERSION_FLOOR" "$DEDIREN_VERSION_FLOOR" \
+      "$DEDIREN_VERSION_FLOOR" >&2
+    return 1
+  fi
+}
 # CLI-lane cache default: a location that is NOT the target repo tree, so a fallback
 # resolve never writes bundle files into the user's project. Prefer the persistent
 # per-user cache; fall back to a sandbox-writable temp dir when that is not writable
@@ -50,7 +83,9 @@ Usage:
 
 Environment:
   DEDIREN_REPO       GitHub owner/repo, default tommimarkus/dediren
-  DEDIREN_VERSION    Release version without leading v, default 2026.07.29
+  DEDIREN_VERSION    Release version without leading v, default 2026.07.29.
+                     Must be CalVer and >= 2026.07.28, the oldest release whose
+                     SVGs carry a native accessible name; older ones are refused
   DEDIREN_CACHE_DIR  Cache dir; default per-user ${XDG_CACHE_HOME:-~/.cache}/dediren/releases,
                      or ${TMPDIR:-/tmp}/dediren/releases when that is not writable (sandbox)
   JAVA_HOME/JAVACMD  Explicit Java 21+ runtime for the packaged Dediren launchers
@@ -297,6 +332,10 @@ ensure_runtime() {
   ensure_bundle
   need_java_21
 }
+
+if [ "${1:-}" != "--help" ] && [ "${1:-}" != "-h" ]; then
+  need_supported_version
+fi
 
 case "${1:---ensure}" in
   --help|-h)

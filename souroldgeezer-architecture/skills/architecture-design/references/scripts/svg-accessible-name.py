@@ -4,8 +4,8 @@
 This repo-owned step edits generated render output only, never the upstream
 bundle. It is an XML-aware transform: it parses the rendered `<svg>` element
 with the Python standard library (`xml.etree.ElementTree`), makes structural
-edits (set root attributes, add a visible title band, and where needed
-upgrade/inject `<title>`/`<desc>`), and reserialises. Everything before the
+edits (set root attributes, add a visible title band, set the accessible-name
+text), and reserialises. Everything before the
 `<svg>` (any XML-declaration prolog) and after `</svg>` (a trailing newline) is
 preserved verbatim, so only the `<svg>` subtree is canonicalised to the
 serialiser's form.
@@ -16,21 +16,19 @@ text is a WCAG 2.2 SC 1.1.1 double-labelling decision upstream leaves to the
 caller — so without this step an exported diagram is unidentifiable outside its
 package.
 
-The accessible-name half is a compatibility path, not the job. Since Dediren
-2026.07.28 the render lane takes each view's <title>/<desc> from the package's
-`views[].presentation` title/question, so on the pinned runtime both branches
-below leave the name untouched and only the band is added. They are kept because
-the release resolver reads `DEDIREN_VERSION` from the environment with no floor
-and neither lane pins it, so an artifact rendered by a pre-2026.07.28 runtime can
-still reach this step (see the note at the injection branch in `do_apply`):
+The input must already name itself. Since Dediren 2026.07.28 the render lane
+takes each view's <title>/<desc> from its own `presentation`, and
+`dediren-release.sh` refuses to resolve an older bundle. So the step keeps the
+native markup, sets that <title> to the view label and ensures a <desc> carrying
+the view's architecture question — normally the same text the runtime already
+wrote — and adds the band.
 
-- When the artifact already carries a native accessible name (role="img" plus a
-  root <title>), the step keeps the native markup, sets the <title> text to the
-  view label and ensures a <desc> carrying the view's architecture question —
-  the same text the pinned runtime already wrote — and adds the band.
-- When the artifact has no accessible name (a pre-2026.07.28 runtime), the step
-  injects role="img", aria-labelledby to an injected <title>, aria-describedby
-  to an optional <desc>, and the band.
+An artifact with no accessible name is refused (exit 4) rather than banded: a
+banded artifact that still has no name looks processed while failing SC 1.1.1,
+which is exactly what `ARCH-R-2` is for. That input is out of support — the
+floor gates the *render* side, and this step takes a file path, so committed
+render output from an older era can still arrive here. Generated output is
+recreated, not maintained, so the remedy is a re-render.
 
 The band is added above the diagram by expanding the viewBox upward. To keep it
 readable on any render policy the step also:
@@ -49,15 +47,15 @@ stacking the band or accumulating height.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
-block carrying that text. On the pinned runtime that reads as "the runtime's
-native accessible name survived this step, and the band was added" rather than
-"this step's injection landed".
+block carrying that text — that is, the runtime's accessible name survived this
+step and the band was added.
 
 Exit codes:
   0  applied or check passed
   1  check failed
   2  usage error
   3  input is not an SVG with a parseable viewBox
+  4  input carries no accessible name; re-render with Dediren >= 2026.07.28
 """
 import sys
 import xml.etree.ElementTree as ET
@@ -92,22 +90,21 @@ the XML-declaration prolog and trailing newline are preserved verbatim while the
 <svg> subtree is serialised to canonical form.
 
 Apply mode adds the visible per-view title band above the diagram — its job —
-syncing width/height and painting the band with a contrasting title fill. It
-also keeps the accessible name correct for an artifact from a pre-2026.07.28
-runtime (upgrading a runtime-native role="img"/<title>, or injecting the full
-markup); on the pinned runtime the name already comes from the view's
-`presentation`, so that half is a no-op.
+syncing width/height and painting the band with a contrasting title fill, and
+sets the runtime-written accessible name to the view label plus the view's
+architecture question. The input must already carry that name (Dediren
+>= 2026.07.28); one that does not is refused with exit 4, not banded.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
-block carrying that text. On the pinned runtime that reads as "the runtime's
-native accessible name survived this step, and the band was added".
+block carrying that text.
 
 Exit codes:
   0  applied or check passed
   1  check failed
   2  usage error
   3  input is not an SVG with a parseable viewBox
+  4  input carries no accessible name; re-render with Dediren >= 2026.07.28
 """
 
 
@@ -217,11 +214,20 @@ def _remove_block(root, anchor, nodes):
 
 
 def _strip_prior(root):
-    """Undo any previous injection so apply is idempotent: remove the owned
-    child nodes, restore the original viewBox and root height from the markers,
-    and drop the marker attributes (plus the injected role/aria on the
-    older-runtime path)."""
+    """Undo any previous run so apply is idempotent: remove the owned child
+    nodes, restore the original viewBox and root height from the markers, and
+    drop the marker attributes — plus the role/aria that a *former* version of
+    this step injected, back when it synthesised names for pre-2026.07.28
+    artifacts.
+
+    That last cleanup keys on the id-marked `<title>`/`<desc>` actually removed,
+    not on an `aria-labelledby` string: the injected form varied ("arch-a11y-title"
+    alone, or "arch-a11y-title arch-a11y-desc"), so matching the attribute missed
+    the two-id case and left `role`/`aria-*` pointing at ids no longer present."""
     mine = [c for c in list(root) if _is_injected(c)]
+    was_injected = any(
+        c.get("id") in ("arch-a11y-title", "arch-a11y-desc") for c in mine
+    )
     if mine:
         idx0 = list(root).index(mine[0])
         anchor = list(root)[idx0 - 1] if idx0 > 0 else None
@@ -235,7 +241,6 @@ def _strip_prior(root):
         if orig_h is not None and root.get("height") is not None:
             root.set("height", orig_h)
 
-    was_injected = root.get("aria-labelledby") == "arch-a11y-title"
     for key in ("data-arch-a11y", "data-arch-a11y-viewbox", "data-arch-a11y-height"):
         root.attrib.pop(key, None)
     if was_injected:
@@ -333,6 +338,19 @@ def do_apply(root, title, desc):
         minx, miny, w, h = (float(p) for p in parts)
     except ValueError:
         return 3
+    # The band is added to an artifact that already names itself. Since Dediren
+    # 2026.07.28 the render lane writes that name from the view's own
+    # `presentation`, and `dediren-release.sh` refuses to resolve an older
+    # bundle, so an unnamed artifact reaching here is out-of-support input —
+    # typically render output committed in an older era, which the floor cannot
+    # intercept because this step takes a file path, not a runtime. Refuse it
+    # rather than band it: a banded artifact with no accessible name looks
+    # processed while still failing SC 1.1.1 (`ARCH-R-2`). Generated output is
+    # recreated, not maintained, so the remedy is a re-render.
+    native_title = _native_child(root, "title")
+    if root.get("role") != "img" or native_title is None:
+        return 4
+
     orig_vb = " ".join(parts)
 
     root.set("viewBox", "%s %s %s %s" % (fmt(minx), fmt(miny - BAND), fmt(w), fmt(h + BAND)))
@@ -353,51 +371,20 @@ def do_apply(root, title, desc):
     if height_marker is not None:
         root.set("data-arch-a11y-height", height_marker)
 
-    native_title = _native_child(root, "title")
-    native = root.get("role") == "img" and native_title is not None
-
     visible = _visible_block(root, minx, miny, w, h, title)
 
-    if native:
-        native_title.text = title
-        native_desc = _native_child(root, "desc")
-        if desc:
-            if native_desc is not None:
-                native_desc.text = desc
-            else:
-                native_desc = ET.Element(_q("desc"))
-                native_desc.text = desc
-                _insert_block(root, native_title, [native_desc])
-        anchor = native_desc if native_desc is not None else native_title
-        _insert_block(root, anchor, visible)
-        print("completed native accessible name: title set%s; visible title block added"
-              % (" + desc" if desc else ""))
-        return 0
-
-    # No native accessible name: inject the full markup. Kept deliberately (repo
-    # issue #112) after confirming the path is still reachable: `dediren-release.sh`
-    # takes DEDIREN_VERSION from the environment with no floor, and neither lane
-    # pins it — `dediren-mcp.sh` shells out to that same resolver and plugin.json
-    # sets only the cache dirs — so a caller can resolve a release older than the
-    # 2026.07.28 accessible-name fix and reach this step with an unnamed artifact.
-    root.set("role", "img")
-    root.set("aria-labelledby", "arch-a11y-title")
+    native_title.text = title
+    native_desc = _native_child(root, "desc")
     if desc:
-        root.set("aria-describedby", "arch-a11y-desc")
-
-    block = []
-    inj_title = ET.Element(_q("title"))
-    inj_title.set("id", "arch-a11y-title")
-    inj_title.text = title
-    block.append(inj_title)
-    if desc:
-        inj_desc = ET.Element(_q("desc"))
-        inj_desc.set("id", "arch-a11y-desc")
-        inj_desc.text = desc
-        block.append(inj_desc)
-    block.extend(visible)
-    _insert_block(root, None, block)
-    print("applied: role=img + title%s + visible title block; viewBox band added"
+        if native_desc is not None:
+            native_desc.text = desc
+        else:
+            native_desc = ET.Element(_q("desc"))
+            native_desc.text = desc
+            _insert_block(root, native_title, [native_desc])
+    anchor = native_desc if native_desc is not None else native_title
+    _insert_block(root, anchor, visible)
+    print("visible title block added; accessible name set to the view label%s"
           % (" + desc" if desc else ""))
     return 0
 
