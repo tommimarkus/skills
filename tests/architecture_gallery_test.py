@@ -197,26 +197,41 @@ class BuildHtmlTest(unittest.TestCase):
             with open(os.path.join(d, "package.json"), "w", encoding="utf-8") as fh:
                 _json.dump({"package_schema_version": "package.schema.v1",
                             "models": [], "views": []}, fh)
-            with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
-                _json.dump({"schema": "souroldgeezer.architecture.dediren"
-                                      ".presentation.v1", "feature": "empty"}, fh)
             html = self.m.build_html(d)          # must not raise
             self.assertIn("const DATA = []", html)
             self.assertIn("if (DATA.length)", html)
 
-    def test_presentation_file_is_optional(self):
-        """project.json carries only feature/lang/dir, so an absent one must fall back to
-        the package dir name plus en/ltr rather than failing the build."""
+    def test_untagged_package_takes_en_ltr_and_the_directory_feature(self):
+        """A package with no presentation object takes en/ltr — matching the runtime,
+        which defaults neither and leaves an untagged SVG root untouched — and names
+        the feature from its own directory per docs/architecture/<feature>.dediren/."""
         with tempfile.TemporaryDirectory() as d:
-            pkg_dir = os.path.join(d, "orders")
+            pkg_dir = os.path.join(d, "orders.dediren")
             os.makedirs(pkg_dir)
             with open(os.path.join(pkg_dir, "package.json"), "w", encoding="utf-8") as fh:
                 _json.dump({"package_schema_version": "package.schema.v1",
                             "models": [], "views": []}, fh)
             html = self.m.build_html(pkg_dir)
-            self.assertIn('lang="en"', html)
-            self.assertIn('dir="ltr"', html)
-            self.assertIn("orders", html)
+            self.assertIn('<html lang="en" dir="ltr">', html)
+            # The .dediren suffix is package plumbing, not part of the feature name —
+            # asserted where the feature is *named* (page title, masthead eyebrow),
+            # not repo-wide: the rail footer legitimately prints the full package path.
+            self.assertIn("<title>orders · architecture gallery</title>", html)
+            self.assertIn('<div class="mast-eyebrow">orders</div>', html)
+
+    def test_package_presentation_drives_html_lang_and_dir(self):
+        """lang/dir come from the package's own presentation — the same declaration
+        dediren folds into every view's render policy — so the page and the SVGs it
+        inlines can never disagree."""
+        with tempfile.TemporaryDirectory() as d:
+            pkg_dir = os.path.join(d, "tilaukset.dediren")
+            os.makedirs(pkg_dir)
+            with open(os.path.join(pkg_dir, "package.json"), "w", encoding="utf-8") as fh:
+                _json.dump({"package_schema_version": "package.schema.v1",
+                            "presentation": {"lang": "ar-EG", "dir": "rtl"},
+                            "models": [], "views": []}, fh)
+            html = self.m.build_html(pkg_dir)
+            self.assertIn('<html lang="ar-EG" dir="rtl">', html)
 
 
 # A dark-render-policy SVG mirroring the real post-#99 structure: a band rect
@@ -234,8 +249,8 @@ _DARK_SVG = (
 
 
 def _mk_pkg(d, svg, theme=None):
-    """Write a one-view package (package.json + project.json, svg, render-metadata)
-    into d. The model file carries the notation, so it is written too."""
+    """Write a one-view package (package.json, svg, render-metadata) into d. The
+    model file carries the notation, so it is written too."""
     os.makedirs(os.path.join(d, "generated", "svg"), exist_ok=True)
     os.makedirs(os.path.join(d, "generated", "render-metadata"), exist_ok=True)
     pkg = {"package_schema_version": "package.schema.v1",
@@ -252,9 +267,6 @@ def _mk_pkg(d, svg, theme=None):
     with open(os.path.join(d, "m.json"), "w", encoding="utf-8") as fh:
         _json.dump({"model_schema_version": "model.schema.v1",
                     "plugins": {"generic-graph": {"semantic_profile": "uml"}}}, fh)
-    with open(os.path.join(d, "project.json"), "w", encoding="utf-8") as fh:
-        _json.dump({"schema": "souroldgeezer.architecture.dediren.presentation.v1",
-                    "feature": "amber"}, fh)
     with open(os.path.join(d, "generated", "svg", "v.svg"), "w", encoding="utf-8") as fh:
         fh.write(svg)
     with open(os.path.join(d, "generated", "render-metadata", "v.json"), "w",

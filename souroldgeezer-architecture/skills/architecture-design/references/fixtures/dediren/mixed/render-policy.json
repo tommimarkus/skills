@@ -470,9 +470,5 @@
     "node_overrides": {},
     "edge_overrides": {},
     "group_overrides": {}
-  },
-  "accessibility": {
-    "title": "Mixed - Application Cooperation",
-    "description": "Which application components cooperate to deliver order management?"
   }
 }

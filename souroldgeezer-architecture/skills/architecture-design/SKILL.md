@@ -170,4 +170,4 @@ Build.
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n` on the launcher scripts (`dediren-mcp.sh`, `dediren-release.sh`) after editing them |
 | Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
-| Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — v2 package with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |
+| Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — multi-model package (package-level `presentation` lang/dir) with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

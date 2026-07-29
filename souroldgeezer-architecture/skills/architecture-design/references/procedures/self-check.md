@@ -196,9 +196,9 @@ the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
 
 ### Rendered SVG
 
-After `map` materializes a rendered SVG, complete its accessible name (the runtime
-emits `role="img"` + `<title>` natively; the render-policy `accessibility` block or
-the view-id fallback) and add the visible title:
+After the build materializes a rendered SVG, add the visible title (the runtime
+already emits `role="img"` + `<title>` / `<desc>` natively from the view's
+`presentation`, so the step's name completion is a no-op on the pinned runtime):
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg

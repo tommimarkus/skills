@@ -475,14 +475,19 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(model_view_ids, bound_view_ids)
         self.assertEqual(profiles, {"archimate", "uml"})
 
-        # The presentation file carries only what package.schema.v1 is closed to.
-        presentation = json.loads(
-            (RENDERED_FIXTURE / "project.json").read_text(encoding="utf-8")
-        )
-        self.assertEqual(
-            presentation["schema"], "souroldgeezer.architecture.dediren.presentation.v1"
-        )
-        self.assertEqual(set(presentation) - {"schema"}, {"feature", "lang", "dir"})
+        # package.json is the only authored manifest: the former project.json sidecar
+        # is retired (lang/dir went native in 2026.07.29, feature is the dir name).
+        self.assertFalse((RENDERED_FIXTURE / "project.json").exists())
+        self.assertEqual(package["presentation"], {"lang": "en", "dir": "ltr"})
+
+        # A shared render policy must not carry accessibility text: a policy-level
+        # title/description overrides every view's own presentation, which is how two
+        # different UML views once both rendered as "Mixed - Domain Class View".
+        for policy in sorted(RENDERED_FIXTURE.glob("render-policy*.json")):
+            with self.subTest(policy=policy.name):
+                self.assertNotIn(
+                    "accessibility", json.loads(policy.read_text(encoding="utf-8"))
+                )
 
         # Every view binds a declared model; the models partition the views.
         for view in package["views"]:

@@ -10,8 +10,9 @@ The canonical source for a feature architecture is:
 
 ```
 docs/architecture/<feature>.dediren/
-  package.json               # dediren-native build manifest (package.schema.v1)
-  project.json               # optional presentation file: feature, lang, dir
+  package.json               # dediren-native build manifest (package.schema.v1),
+                             # the only authored manifest; its package-level
+                             # presentation declares lang / dir once
   model.json
   model-<notation>.json      # per-notation model(s) in a mixed package (§3)
   render-policy.json
@@ -143,7 +144,7 @@ matches the kind in play (see the UML notation hub at
 list).
 
 Treat these files as hand-authored and checked in: `model.json`,
-`package.json`, the optional `project.json`, `render-policy.json`, package-level `render-metadata.json` when
+`package.json`, `render-policy.json`, package-level `render-metadata.json` when
 the package intentionally keeps one shared semantic metadata file, and optional
 `export-policy.json`. Treat `generated/` as reproducible output: projections,
 per-view render metadata, layout results, SVG, and optional OEF intermediates
@@ -174,7 +175,23 @@ presentation, and the diagram / render-metadata / layout outputs:
 Projection, layout and the render stage are the runtime's business — the package
 declares *what* each view is and *where* its artifacts go, never the per-stage
 plugin chain. `presentation.title` / `question` double as that view's SVG
-accessible name, per view even under a shared render policy.
+accessible name, per view even under a shared render policy — which is why a
+render policy shared by several views must **not** carry its own `accessibility`
+block: a policy-level `title` / `description` overrides the per-view text and
+stamps one view's name onto every view sharing that policy.
+
+A package-level `"presentation": {"lang": "fi", "dir": "rtl"}` beside `models` /
+`views` declares the authored prose's language (BCP 47) and base direction
+(`ltr` | `rtl`) once for the whole package. Dediren folds both into every view's
+effective render policy — a view's own policy still wins — emits them as
+`xml:lang` / `direction` on each SVG root, and they drive the gallery's
+`<html lang dir>`, so assistive technology pronounces the authored `<title>` /
+`<desc>` correctly, right-to-left prose lays out correctly, and page and diagrams
+never disagree. Declare them whenever the package is not in the reader's assumed
+language or is written right-to-left. Nothing is defaulted: omit them and the
+render is byte-identical to an untagged package. `package.json` is the only
+authored manifest — the feature name is the package directory's own, under the
+canonical `docs/architecture/<feature>.dediren/` path.
 
 Use the package-level `render-metadata.json` only when a repository chooses a
 checked-in shared metadata policy/cache and can keep it synchronized with the
@@ -213,8 +230,7 @@ diagram sheet is derived per view from each SVG's own background (so a dark
 render policy is not framed by a white card), and an optional
 `gallery-theme.json` beside `package.json` overrides the gallery palette per
 package. It is built by the bundled `references/scripts/build-gallery.py` from
-the package's own sources (`package.json`, the optional `project.json`,
-`generated/svg/*.svg`,
+the package's own sources (`package.json`, `generated/svg/*.svg`,
 `generated/render-metadata/*.json`, and the optional `gallery-theme.json`) and
 is a pure function of them, so it is rebuilt whenever SVG output is
 (re)generated (mode-agnostic). It is an outer viewer over the static SVGs and
@@ -223,11 +239,14 @@ check; a committed gallery that has drifted from its SVGs (`build-gallery.py
 --check`) is `ARCH-R-2`. Design system and tuning: `references/gallery.md`.
 
 The render policy may also carry an optional `accessibility` block (`title`,
-`description`) that names the emitted SVG for assistive technology: the root
-element gets `role="img"` with a `<title>` (falling back to the layout view id
-when the block is absent) and a `<desc>` when a description is supplied. A
-package-level policy shared by several views cannot carry per-view text; the
-§9 accessible-name post-render step completes per-view labels either way.
+`description`, plus `lang` / `dir`) that names the emitted SVG for assistive
+technology: the root element gets `role="img"` with a `<title>` and a `<desc>`
+when a description is supplied. Leave `title` / `description` out — the per-view
+`presentation.title` / `question` above supply them per view, and a policy-level
+block **overrides** that, stamping one view's text onto every view sharing the
+policy. Reach for the block only for a genuinely policy-wide fact; `lang` / `dir`
+are better declared once at package level (§ package `presentation`), which is
+where a whole package's authored language belongs.
 
 ### Mixed-Notation Packages
 
@@ -776,14 +795,15 @@ with both validation counts.
 
 The bundled Dediren runtime names every emitted SVG for assistive
 technology (WCAG 2.2 SC 1.1.1 Non-text Content): the root element carries
-`role="img"` with a `<title>` set from the render policy `accessibility` block
-(§3), falling back to the layout view id, plus a `<desc>` when the block
-supplies a description. Two gaps remain repo-owned: a package-level policy
-shared by several views cannot carry per-view text (the fallback title is the
-view id, not the view label), and the runtime renders no visible title,
-leaving an exported diagram unidentifiable outside its package. Run the
-repo-owned post-render step on every rendered or re-rendered view to close
-both:
+`role="img"` with a `<title>` and `<desc>` taken from that view's
+`presentation.title` / `question` (§3), tagged with the package's `lang` / `dir`
+where declared. One gap remains repo-owned: the runtime renders no *visible*
+title — deliberately, since visible chrome is the caller's and duplicating the
+accessible name into it is an SC 1.1.1 double-labelling problem the caller must
+decide — so an exported diagram is unidentifiable outside its package. Run the
+repo-owned post-render step on every rendered or re-rendered view to add it (the
+step also completes or injects the accessible name, which keeps an artifact from
+a runtime older than the pinned one correct):
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
@@ -791,12 +811,14 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
   <pkg>/generated/svg/<view-id>.svg
 ```
 
-The script completes a runtime-native accessible name — upgrades the `<title>`
-text to the view label and ensures a `<desc>` carrying the view's architecture
-question from `package.json` `presentation` — or injects the full markup (`role="img"`,
-`aria-labelledby` `<title>`, optional `aria-describedby` `<desc>`) for
-artifacts from runtimes without native accessible names, and always adds a
-visible per-view title block in a band above the diagram. The band expands the
+The script always adds the visible per-view title block in a band above the
+diagram — its one irreducible job. It also keeps the accessible name correct
+whatever produced the artifact: upgrading a runtime-native `<title>` to the view
+label and ensuring a `<desc>` carrying the view's architecture question from
+`package.json` `presentation` (a no-op when the pinned runtime already emitted
+exactly that), or injecting the full markup (`role="img"`, `aria-labelledby`
+`<title>`, optional `aria-describedby` `<desc>`) for artifacts from runtimes
+without native accessible names. The band expands the
 `viewBox` upward; the step keeps the root `width`/`height` in sync with it (so
 browsers do not letterbox the diagram) and paints the band with the diagram's
 own background colour with a contrasting title fill (so the title stays readable

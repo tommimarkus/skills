@@ -26,6 +26,5 @@
     "node_overrides": {},
     "edge_overrides": {},
     "group_overrides": {}
-  },
-  "accessibility": { "title": "Mixed - Domain Class View", "description": "How is the Orders Service application component elaborated as domain classes?" }
+  }
 }

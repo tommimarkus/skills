@@ -9,10 +9,11 @@ the rendered generated/svg/*.svg, and generated/render-metadata/*.json
 every diagram inlined as an inert <template>. No external assets, so it works on
 GitHub Pages, a static host, or opened straight from disk.
 
-package.json is the dediren-native build manifest. The optional project.json
-beside it (schema souroldgeezer.architecture.dediren.presentation.v1) carries
-only what package.schema.v1 is closed to: feature, lang, dir. Omit it and the
-feature falls back to the package dir name with lang="en" dir="ltr".
+package.json is the dediren-native build manifest and the only authored manifest:
+its package-level presentation object supplies <html lang dir> — the same
+declaration dediren folds into every view's render policy, so the page and the
+diagrams it inlines agree (absent: lang="en" dir="ltr"). The feature name is the
+package directory's own, per the docs/architecture/<feature>.dediren/ convention.
 
 Theming: the diagram "sheet" (the card each SVG mounts on) is derived per view
 from that SVG's own background, so a dark render policy gets a dark, harmonized
@@ -120,7 +121,7 @@ def profile_resolver(pkg, pkg_dir):
 
     The notation is read from each model's own semantic_profile, never from a
     registry entry beside it: package.schema.v1 has no per-model profile field,
-    and the model file was always the authority the old v2 registry duplicated.
+    so each model file is the sole notation authority.
     A view without an explicit model binds to the single declared model, matching
     package.schema.v1's optional views[].model."""
     sources = {m["id"]: m.get("source") for m in pkg.get("models", [])}
@@ -153,16 +154,11 @@ def _load_package(pkg_dir):
         return json.load(fh)
 
 
-def _load_presentation(pkg_dir):
-    """Parsed project.json — the skill-owned presentation file carrying only what
-    package.schema.v1 is closed to (feature/lang/dir). Optional: an absent or
-    unreadable file means "take every default", never an error."""
-    try:
-        with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
-            loaded = json.load(fh)
-    except (OSError, ValueError):
-        return {}
-    return loaded if isinstance(loaded, dict) else {}
+def _feature_name(pkg_dir):
+    """The feature this package models, read off its own directory name per the
+    canonical docs/architecture/<feature>.dediren/ convention."""
+    name = os.path.basename(os.path.normpath(pkg_dir))
+    return name[:-len(".dediren")] if name.endswith(".dediren") else name
 
 
 # ------------------------------------------------------- per-view sheet ----
@@ -398,10 +394,12 @@ def _notation_summary(data):
 
 def build_html(pkg_dir):
     """Full standalone HTML for the package (pure function of its sources)."""
-    pres = _load_presentation(pkg_dir)
     data, plates_html = collect(pkg_dir)
     light, dark, sheet_pinned = _resolve_theme(pkg_dir)
-    feature = pres.get("feature", os.path.basename(os.path.normpath(pkg_dir)))
+    feature = _feature_name(pkg_dir)
+    # lang/dir come from the package itself, the same declaration dediren folds into
+    # every view's render policy — one fact, one home, page and diagrams agreeing.
+    pres = _load_package(pkg_dir).get("presentation") or {}
     lang = pres.get("lang", "en")
     direction = pres.get("dir", "ltr")
     n = len(data)
