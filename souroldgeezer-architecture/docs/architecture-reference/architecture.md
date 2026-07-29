@@ -794,17 +794,16 @@ with both validation counts.
 
 ### Accessible-Name Post-Render Step
 
-The bundled Dediren runtime names every emitted SVG for assistive
-technology (WCAG 2.2 SC 1.1.1 Non-text Content): the root element carries
-`role="img"` with a `<title>` and `<desc>` taken from that view's
-`presentation.title` / `question` (§3), tagged with the package's `lang` / `dir`
-where declared. One gap remains repo-owned: the runtime renders no *visible*
+Rendered output arrives already labelled for assistive technology (WCAG 2.2
+SC 1.1.1 Non-text Content). The bundled Dediren runtime writes `role="img"` on
+the root together with a `<title>` and `<desc>`, sourcing their text from that
+view's `presentation.title` / `question` (§3) and tagging it with the package's
+`lang` / `dir` where declared. One gap remains repo-owned: the runtime renders no *visible*
 title — deliberately, since visible chrome is the caller's and duplicating the
 accessible name into it is an SC 1.1.1 double-labelling problem the caller must
-decide — so an exported diagram is unidentifiable outside its package. Run the
-repo-owned post-render step on every rendered or re-rendered view to add it (the
-step also completes or injects the accessible name, which keeps an artifact from
-a runtime older than the pinned one correct):
+decide — so an exported diagram is unidentifiable outside its package. Adding
+that band is the repo-owned step's job. Run it on every rendered or re-rendered
+view:
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
@@ -812,27 +811,33 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
   <pkg>/generated/svg/<view-id>.svg
 ```
 
-The script always adds the visible per-view title block in a band above the
-diagram — its one irreducible job. It also keeps the accessible name correct
-whatever produced the artifact: upgrading a runtime-native `<title>` to the view
-label and ensuring a `<desc>` carrying the view's architecture question from
-`package.json` `presentation` (a no-op when the pinned runtime already emitted
-exactly that), or injecting the full markup (`role="img"`, `aria-labelledby`
-`<title>`, optional `aria-describedby` `<desc>`) for artifacts from runtimes
-without native accessible names. The band expands the
-`viewBox` upward; the step keeps the root `width`/`height` in sync with it (so
-browsers do not letterbox the diagram) and paints the band with the diagram's
-own background colour with a contrasting title fill (so the title stays readable
-on a non-light render policy), both derived from the diagram's background
-`<rect>`. It is an XML-aware transform — it parses the rendered `<svg>` with the
+The band is what the step contributes on the pinned runtime. It sits above the
+diagram, added by expanding the `viewBox` upward; the step keeps the root
+`width`/`height` in sync with it (so browsers do not letterbox the diagram) and
+paints the band with the diagram's own background colour with a contrasting
+title fill (so the title stays readable on a non-light render policy), both
+derived from the diagram's background `<rect>`.
+
+The step's accessible-name half is a compatibility path, not a second job: it
+sets a runtime-native `<title>` to the view label and ensures a `<desc>`
+carrying the view's architecture question — a no-op against the pinned runtime,
+which already emitted exactly that from `presentation` — and injects the full
+markup (`role="img"`, `aria-labelledby` `<title>`, optional `aria-describedby`
+`<desc>`) only for an artifact that arrives with no accessible name at all. That
+path survives because `DEDIREN_VERSION` has no floor in the release resolver and
+neither execution lane pins it, so a caller can still resolve a runtime older
+than the `2026.07.28` fix that moved the name into the render lane.
+
+It is an XML-aware transform — it parses the rendered `<svg>` with the
 Python standard library and makes structural edits rather than string surgery on
 markup — so its output is canonical SVG serialization (the committed rendered
 evidence is in that form, and comparing a re-render is a post-step comparison,
 not a raw-byte one); any XML-declaration prolog and trailing newline are
 preserved verbatim. It edits generated render output only — never the upstream
-bundle — is idempotent, and offers `--check` for verification. Missing
-accessible-name markup or a missing visible title on rendered evidence is
-`ARCH-R-2`.
+bundle — is idempotent, and offers `--check` for verification: against the
+pinned runtime that verifies the runtime's native name survived the step and the
+band was added, not that an injection landed. Missing accessible-name markup or
+a missing visible title on rendered evidence is `ARCH-R-2`.
 
 Render-ready requires inspecting SVG for:
 

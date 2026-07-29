@@ -139,8 +139,8 @@ use the CLI only as the fallback.
 Semantic `dediren_validate` (above) still gates `source-valid` — run it first. Each
 view's `presentation.title` / `question` reaches the render lane as that view's SVG
 accessible name (`<title>` / `<desc>`), per view even under a shared render policy —
-but the *visible* title band is still the skill's own, so the accessible-name step
-below remains required, and a re-render still means a stale gallery
+but the *visible* title band is still the skill's own, so the post-render band
+step below remains required, and a re-render still means a stale gallery
 (`SKILL.md` step 7).
 
 ## Reading tool results
@@ -196,9 +196,12 @@ the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
 
 ### Rendered SVG
 
-After the build materializes a rendered SVG, add the visible title (the runtime
-already emits `role="img"` + `<title>` / `<desc>` natively from the view's
-`presentation`, so the step's name completion is a no-op on the pinned runtime):
+After the build materializes a rendered SVG, add the visible title band — the
+step's job. The runtime already emits `role="img"` + `<title>` / `<desc>`
+natively from the view's `presentation`, so the step's name half is a no-op on
+the pinned runtime; it is kept only for an artifact rendered by a pre-2026.07.28
+runtime, which an unpinned `DEDIREN_VERSION` can still resolve
+(`architecture.md` §9):
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg

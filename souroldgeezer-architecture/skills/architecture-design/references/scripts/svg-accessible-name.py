@@ -1,30 +1,39 @@
 #!/usr/bin/env python3
-"""Post-render accessible-name completion for dediren-rendered SVG views.
+"""Post-render visible title band for dediren-rendered SVG views.
 
 This repo-owned step edits generated render output only, never the upstream
 bundle. It is an XML-aware transform: it parses the rendered `<svg>` element
 with the Python standard library (`xml.etree.ElementTree`), makes structural
-edits (set root attributes, upgrade/inject `<title>`/`<desc>`, add a visible
-title band), and reserialises. Everything before the `<svg>` (any XML-declaration
-prolog) and after `</svg>` (a trailing newline) is preserved verbatim, so only
-the `<svg>` subtree is canonicalised to the serialiser's form.
+edits (set root attributes, add a visible title band, and where needed
+upgrade/inject `<title>`/`<desc>`), and reserialises. Everything before the
+`<svg>` (any XML-declaration prolog) and after `</svg>` (a trailing newline) is
+preserved verbatim, so only the `<svg>` subtree is canonicalised to the
+serialiser's form.
 
-Apply mode ensures the artifact carries a per-view accessible name and a
-visible title:
+The step's job is the *visible* per-view title band. The Dediren runtime emits
+no visible chrome deliberately — duplicating the accessible name into visible
+text is a WCAG 2.2 SC 1.1.1 double-labelling decision upstream leaves to the
+caller — so without this step an exported diagram is unidentifiable outside its
+package.
 
-- When the runtime already emitted a native accessible name (role="img" plus
-  a root <title>, available since the accessible-name fix in the release-
-  resolved runtime; the title falls back to the layout view id), the step
-  keeps the native markup, upgrades the <title> text to the view label,
-  ensures a <desc> carrying the view's architecture question, and adds the
-  visible title block.
-- When the artifact has no accessible name (older runtimes), the step injects
-  role="img", aria-labelledby to an injected <title>, aria-describedby to an
-  optional <desc>, and the visible title block.
+The accessible-name half is a compatibility path, not the job. Since Dediren
+2026.07.28 the render lane takes each view's <title>/<desc> from the package's
+`views[].presentation` title/question, so on the pinned runtime both branches
+below leave the name untouched and only the band is added. They are kept because
+the release resolver reads `DEDIREN_VERSION` from the environment with no floor
+and neither lane pins it, so an artifact rendered by a pre-2026.07.28 runtime can
+still reach this step (see the note at the injection branch in `do_apply`):
 
-The visible per-view title renders in a band added above the diagram by
-expanding the viewBox upward. To keep the band readable on any render policy
-the step also:
+- When the artifact already carries a native accessible name (role="img" plus a
+  root <title>), the step keeps the native markup, sets the <title> text to the
+  view label and ensures a <desc> carrying the view's architecture question —
+  the same text the pinned runtime already wrote — and adds the band.
+- When the artifact has no accessible name (a pre-2026.07.28 runtime), the step
+  injects role="img", aria-labelledby to an injected <title>, aria-describedby
+  to an optional <desc>, and the band.
+
+The band is added above the diagram by expanding the viewBox upward. To keep it
+readable on any render policy the step also:
 
 - syncs the root width/height with the expanded viewBox (the root height grows
   by the band) so browsers do not letterbox the diagram with transparent bars;
@@ -40,7 +49,9 @@ stacking the band or accumulating height.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
-block carrying that text.
+block carrying that text. On the pinned runtime that reads as "the runtime's
+native accessible name survived this step, and the band was added" rather than
+"this step's injection landed".
 
 Exit codes:
   0  applied or check passed
@@ -74,20 +85,23 @@ Usage:
   svg-accessible-name.py --check [--title <text>] <svg-file>
   svg-accessible-name.py --help
 
-Post-render accessible-name completion for dediren-rendered SVG views. This
-repo-owned step edits generated render output only, never the upstream bundle.
-It parses the rendered <svg> with the Python standard library and makes
-structural edits; the XML-declaration prolog and trailing newline are preserved
-verbatim while the <svg> subtree is serialised to canonical form.
+Post-render visible title band for dediren-rendered SVG views. This repo-owned
+step edits generated render output only, never the upstream bundle. It parses
+the rendered <svg> with the Python standard library and makes structural edits;
+the XML-declaration prolog and trailing newline are preserved verbatim while the
+<svg> subtree is serialised to canonical form.
 
-Apply mode completes a per-view accessible name (upgrading a runtime-native
-role="img"/<title>, or injecting the full markup for older runtimes) and adds a
-visible per-view title band above the diagram, syncing width/height and painting
-the band with a contrasting title fill.
+Apply mode adds the visible per-view title band above the diagram — its job —
+syncing width/height and painting the band with a contrasting title fill. It
+also keeps the accessible name correct for an artifact from a pre-2026.07.28
+runtime (upgrading a runtime-native role="img"/<title>, or injecting the full
+markup); on the pinned runtime the name already comes from the view's
+`presentation`, so that half is a no-op.
 
 Check mode verifies presence without editing: role="img" on the root element
 and a nonempty <title>; with --title it also requires the visible title text
-block carrying that text.
+block carrying that text. On the pinned runtime that reads as "the runtime's
+native accessible name survived this step, and the band was added".
 
 Exit codes:
   0  applied or check passed
@@ -360,7 +374,12 @@ def do_apply(root, title, desc):
               % (" + desc" if desc else ""))
         return 0
 
-    # No native accessible name (older runtimes): inject the full markup.
+    # No native accessible name: inject the full markup. Kept deliberately (repo
+    # issue #112) after confirming the path is still reachable: `dediren-release.sh`
+    # takes DEDIREN_VERSION from the environment with no floor, and neither lane
+    # pins it — `dediren-mcp.sh` shells out to that same resolver and plugin.json
+    # sets only the cache dirs — so a caller can resolve a release older than the
+    # 2026.07.28 accessible-name fix and reach this step with an unnamed artifact.
     root.set("role", "img")
     root.set("aria-labelledby", "arch-a11y-title")
     if desc:
