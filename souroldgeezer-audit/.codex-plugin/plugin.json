@@ -1,0 +1,31 @@
+{
+  "name": "souroldgeezer-audit",
+  "version": "2026.7.24",
+  "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and matching Claude Code subagents.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net",
+    "url": "https://github.com/tommimarkus"
+  },
+  "homepage": "https://github.com/tommimarkus/skills",
+  "repository": "https://github.com/tommimarkus/skills",
+  "license": "MIT",
+  "keywords": ["audit", "devsecops", "test-quality", "ip-hygiene", "lean"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Audit",
+    "shortDescription": "Evidence-driven engineering audits",
+    "longDescription": "Audit DevSecOps posture, test quality, IP hygiene, and duplication or waste with focused workflows and stack overlays.",
+    "developerName": "Sour Old Geezer",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+    "defaultPrompt": [
+      "Audit this change for DevSecOps risks.",
+      "Review these tests for false confidence.",
+      "Find duplication and waste in these docs."
+    ]
+  }
+}

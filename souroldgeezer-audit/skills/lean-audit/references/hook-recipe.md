@@ -9,7 +9,7 @@ Enable it deliberately, per this recipe.
 
 ## What it does
 
-On `Edit` / `Write` / `MultiEdit` to a guarded markdown surface (`CLAUDE.md`,
+On Claude `Edit` / `Write` / `MultiEdit` or Codex `apply_patch` to a guarded markdown surface (`CLAUDE.md`,
 `AGENTS.md`, `README.md`, `**/SKILL.md`, `**/agents/*.md`, `docs/*-reference/**`,
 `references/**`, `extensions/**`), `lean_guard.py` scores the edit's added text
 against the repo's guarded-markdown corpus. On a `block`-severity hit it returns
@@ -68,6 +68,37 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 > `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/skills/lean-audit/references/scripts/lean_guard.py`.
 > That path changes when the plugin updates, so re-point it after an update (or
 > point a stable env var at it in your shell profile and reference that).
+
+## Enable in Codex
+
+Add the same opt-in guard to project `.codex/hooks.json` (or user
+`~/.codex/hooks.json`), substituting the real installed script path returned by
+`codex plugin list --json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/lean_guard.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codex maps the `Edit|Write` matcher aliases to its canonical `apply_patch`
+event. The guard understands that event's patch command and checks each added
+markdown block. `${PLUGIN_ROOT}` is available to plugin-bundled hooks, not to a
+hook written in the consuming project's `.codex/hooks.json`; do not leave that
+placeholder in this project-local recipe. Codex requires trust review for a new
+or changed project hook.
 
 ---
 
@@ -142,6 +173,33 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 > `/plugin` (the `souroldgeezer-audit` install path), e.g.
 > `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`.
 > Re-point it after a plugin update.
+
+## Enable in Codex — Stop hook (default)
+
+Use the same post-edit default in project `.codex/hooks.json`, again replacing
+the installed path from `codex plugin list --json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This post-edit Stop lane is the supported Codex form. The at-edit load-cost
+guard below consumes Claude's structured edit payload and does not reconstruct
+a full post-edit file from Codex's patch command; keep it off in Codex until
+that adapter exists. Review and trust the project hook before relying on it.
 
 ## Enable in Claude Code — PreToolUse opt-in (at-edit)
 

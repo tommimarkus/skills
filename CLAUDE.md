@@ -1,17 +1,22 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Codex uses the additive runtime guidance in `AGENTS.md`; neither file replaces
+the other runtime's contract.
 
 ## What this repo is
 
-A **Claude Code plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
+A **Claude Code plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Codex support is additive through `.agents/plugins/marketplace.json` and per-plugin `.codex-plugin/plugin.json` mirrors over the same `skills/` tree. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
 
 ## Runtime documentation cross-checks
 
-When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check the official Claude Code doc set before relying on memory.
+When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check the official Claude Code doc set before relying on memory. When the same change touches Codex packaging, cross-check the official Codex documentation too.
 
 - Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour.
-- Keep `.claude-plugin/marketplace.json` as the single shared marketplace.
+- Codex: use the current official Codex plugin and marketplace documentation as
+  authority for `.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`,
+  `AGENTS.md`, plugin hooks, and `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`.
+- Keep `.claude-plugin/marketplace.json` as the single shared Claude Code marketplace. Keep the separate Codex catalog synchronized on plugin set, order, and source paths; shared skills remain one tree.
 - Local refresh: after local plugin source changes, refresh the changed plugin through `/plugin`, restart Claude Code if a session still shows an older materialized copy, and verify the installed cache path and bundled `skills/` directories.
 - **Bundling an MCP server in a plugin** is supported — declare it as inline `mcpServers` in `plugin.json` *or* a plugin-root `.mcp.json`; here prefer **inline**, because `.gitignore` ignores a bare `.mcp.json` at any depth (a plugin-root `.mcp.json` would be silently untracked). `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}` / `${CLAUDE_PROJECT_DIR}` substitute in the server `command`/`args`/`env`; cache downloaded runtimes under the persistent `${CLAUDE_PLUGIN_DATA}`, never the ephemeral `${CLAUDE_PLUGIN_ROOT}`. Plugin MCP servers auto-start when the plugin is enabled and a stdio server that exits at spawn gets no auto-retry, so a launcher that **fail-fasts on a cold cache leaves the server dead every time the pinned runtime changes** — an orphaned cache after a version bump, and every fresh install. Because the runtime caches **per-user** under `${CLAUDE_PLUGIN_DATA}` (not per-project), the launcher should instead **resolve the runtime on demand with bounded I/O**: the fast path (already resolved) does no network I/O, and the cold-cache resolve is capped — connect/transfer timeouts on the download, a bounded lock wait — so it can never hang session start (which is non-blocking anyway; only a turn needing the tools waits). Bounded and per-user, never unbounded, never per-project. `souroldgeezer-architecture` is the reference: an inline `mcpServers.dediren` entry runs `skills/architecture-design/references/scripts/dediren-mcp.sh` (resolve-on-demand, bounded, caches to `${CLAUDE_PLUGIN_DATA}`); the skill drives the server as its primary lane with an internal, user-invisible CLI fallback for the narrow window before a freshly-resolved server reconnects (or when the host runtime is absent). Because that CLI fallback runs via the Bash tool, any bundled script's default write/cache location must be **sandbox-writable**: the default Bash sandbox mounts `$HOME` read-only (so `$HOME/.cache` / `$XDG_CACHE_HOME` fail) while allowing the project dir and `$TMPDIR`, and `${CLAUDE_PLUGIN_DATA}` reaches only the MCP-server / hook / LSP processes, not Bash-tool subprocesses. So a bundled script must **not** default its cache dir to `$HOME/.cache` (breaks under sandbox) or the repo tree (`$PWD/.cache`, which pollutes downstream repos): prefer a per-user dir, fall back to `${TMPDIR:-/tmp}` when it is not writable, and probe writability with an actual write test (`[ -w ]` after `mkdir -p` — `mkdir -p` is a no-op success on a pre-existing read-only dir, so it falsely reads as writable). Cross-check MCP-in-plugin mechanics against the official Plugins reference.
 
@@ -35,7 +40,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
 
 ## Skill architecture craft standard (MUST)
 
-For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, Claude Code skill wrappers, and the README / CLAUDE sections describing them.
+For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, both runtime wrapper families, and the README / AGENTS / CLAUDE sections describing them.
 
 The standard is the first design input; the report is the repeatable check. Loading the standard only at closeout misses trigger precision, workflow shape, context discipline, runtime parity, and release-hygiene decisions made while changing the code. Before finishing, apply the standard and run `scripts/skill-architecture-report.sh` when available; if it cannot run, record why and what narrower verification was used. When you delegated the edit to a subagent and told it not to run the deterministic gates, its "verified" reports only its own drafting checks — run `scripts/skill-architecture-report.sh` and the lean-audit cost/fidelity guard yourself before integrating, since the Stop hooks fire only at session end (a mid-session integration lands first). The canonical silent breach is a description reword that trips the 1024-char `SAC-TRIGGER-DESC-LENGTH` cap.
 
@@ -84,7 +89,7 @@ Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill
 
 ## Repo-internal skills
 
-The repo ships a small set of **internal** skills under `internal-skills/` — shared repo-scoped workflows, deliberately *not* bundled with the published `souroldgeezer-*` plugins. Keep shared workflow text, references, evals, fixtures, and helper material there. The Claude Code auto-discovery wrapper for each lives under `.claude/skills/<name>/SKILL.md` and holds only the entrypoint, pointing back to `internal-skills/<name>/SKILL.md`. They encode how *we* author this repo, not capabilities shipped downstream.
+The repo ships a small set of **internal** skills under `internal-skills/` — shared repo-scoped workflows, deliberately *not* bundled with the published `souroldgeezer-*` plugins. Keep shared workflow text, references, evals, fixtures, and helper material there. Thin auto-discovery wrappers live under both `.claude/skills/<name>/SKILL.md` and `.agents/skills/<name>/SKILL.md`, pointing back to `internal-skills/<name>/SKILL.md`. They encode how *we* author this repo, not capabilities shipped downstream.
 
 `ip-hygiene` formerly lived here but is now a public skill in `souroldgeezer-audit` at [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md).
 
@@ -109,7 +114,9 @@ tests/generate_skill_architecture_report_ledger.py ← deterministic 500+ case l
 pyproject.toml / uv.lock               ← uv-managed repo-local tooling project
 internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of truth
 .claude/skills/<name>/SKILL.md         ← Claude Code wrappers for repo-internal skills
-.claude-plugin/marketplace.json        ← shared Claude Code marketplace manifest
+.agents/skills/<name>/SKILL.md         ← Codex wrappers for repo-internal skills
+.claude-plugin/marketplace.json        ← Claude Code marketplace manifest
+.agents/plugins/marketplace.json       ← native Codex marketplace manifest
 souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
   docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + provider-agnostic lifecycle/escalation core + extension-authoring template (github.md, gitlab.md, provider-lifecycle-core.md, authoring.md)
 souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy, tdd-policy, planning-policy)
@@ -121,6 +128,7 @@ souroldgeezer-design/       ← published design plugin (software-design, app-de
 souroldgeezer-architecture/ ← published architecture plugin (architecture-design)
 <plugin-name>/
   .claude-plugin/plugin.json           ← Claude Code plugin manifest
+  .codex-plugin/plugin.json            ← native Codex plugin manifest
   docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
   agents/<skill-name>.md               ← one Claude Code subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
@@ -156,21 +164,23 @@ When moving a skill out of `undecided/` into a plugin (or vice versa), **also mo
 Adding a new plugin:
 1. `<plugin-name>/.claude-plugin/plugin.json` (required `name`, `version`, `description`; `author: {name, email}` and `license: MIT` defaults from memory; start at the current CalVer stamp `YYYY.0M.0`, e.g. `2026.06.0`).
 2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `description`).
-3. `name` / `description` must stay in sync across the manifest and `marketplace.json#plugins[]`. `version` lives only in `plugin.json` and never appears in the marketplace entry — Claude Code always resolves `plugin.json` over a marketplace-entry copy without warning, so a stray copy is a silent drift risk. Every re-stamp updates the `plugin.json#version` and README version-table cells together in one commit (the integration commit on `main` for worktree work; see "Plugin versioning (MUST)").
+3. `name` / `description` must stay in sync across the Claude manifest and `marketplace.json#plugins[]`. `version` lives only in the Claude `plugin.json` as the release authority and never appears in the marketplace entry — Claude Code always resolves `plugin.json` over a marketplace-entry copy without warning, so a stray copy is a silent drift risk.
+4. Add the additive Codex mirror at `<plugin-name>/.codex-plugin/plugin.json` and the matching `.agents/plugins/marketplace.json` entry. Keep plugin set, order, and source paths aligned without changing the Claude surfaces above.
+5. Derive the Codex strict-SemVer version from the Claude CalVer authority by normalizing the month (`YYYY.0M.MICRO` → `YYYY.M.MICRO`). Neither marketplace carries a version key.
 
 **Removing a runtime's or tool's support**: on any runtime/tool support-removal, follow [docs/maintenance-procedures.md § Removing a runtime's or tool's support](docs/maintenance-procedures.md) — scope the cut to marketplace-owned surfaces, preserve downstream target-repo conventions, optional handoffs to external plugins, and vendor-named detection patterns, and re-diff the report and gold ledger.
 
 ## Plugin versioning (MUST)
 
-Plugins follow **CalVer** in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. `plugin.json#version` is the sole version authority (Claude Code always resolves it over a marketplace-entry copy without warning, so a mirrored copy is a silent drift risk); `marketplace.json#plugins[]` entries never carry a `version` key. A stamp always pairs with the content change that required it, and updates the plugin manifest (`.claude-plugin/plugin.json#version`) and the root `README.md` version-table cell together as one stamp — the two version-authority cells. **Where that stamp lands depends on where the work happens:**
+Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. The Claude `plugin.json#version` remains the release authority; Claude Code always resolves it over a marketplace-entry copy without warning, so marketplace entries never carry a `version` key. The Codex manifest mirrors the same semantic version in strict-SemVer form (`YYYY.M.MICRO`). A stamp updates the Claude manifest, derived Codex mirror, and README together. **Where that stamp lands depends on where the work happens:**
 
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct next stamp with `uv run python scripts/version_stamp.py compute --plugin <name>` and apply it to both version-authority cells (`plugin.json#version`, the README table cell) in the integration commit.
+Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply all three cells in the integration commit.
 
 **Stamp mechanics:**
-- Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version.
+- Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current Claude version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version; the Codex cell is its normalized mirror.
 - The number encodes *when*, not *how big*. CalVer is monotonic across the semver→CalVer switch (`2026.06.0` sorts above the old `2.8.1`), so installed-plugin update checks pick up the change.
 
 **Mandatory stamp** when a change lands that touches, under a `<plugin>/`: `skills/<skill>/SKILL.md`, `agents/<name>.md`, `docs/<kind>-reference/**`, `skills/<skill>/references/**`, `skills/<skill>/extensions/**`; or adds/removes/renames a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace). One stamp per plugin per landing regardless of how many of its files changed; for worktree work the landing point is the integration commit on `main` (see "Where that stamp lands"), not the feature-branch commit.
@@ -185,8 +195,9 @@ Before integrating a worktree, run `uv run python scripts/version_stamp.py guard
 **No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
 
 **Sibling-file sync** (one commit — the stamp's landing commit; the integration commit on `main` for worktree work):
-- `.claude-plugin/plugin.json#version` and the plugin's `README.md` version-table cell — always both; the README cell must equal the manifest version per plugin. `marketplace.json#plugins[]` entries never carry a `version` key.
-- the two `#description` fields (the manifest and the marketplace entry) — when the change alters the plugin's surface (new skill, new mode).
+- `.claude-plugin/plugin.json#version`, its normalized `.codex-plugin/plugin.json#version` mirror, and the plugin's `README.md` version-table cell — always all three. The README preserves the Claude CalVer spelling; compare the Codex mirror semantically. Marketplace entries never carry a version.
+- both manifest descriptions and the Claude marketplace description — when the
+  change alters the plugin's surface (new skill, new mode).
 - `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").
 - `README.md` and `CLAUDE.md` — per the currency rule above; one commit.
 

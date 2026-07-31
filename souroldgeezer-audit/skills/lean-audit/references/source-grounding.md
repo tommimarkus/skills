@@ -17,9 +17,10 @@ schemas, or code are copied into this skill.
 - Platform-redundancy lens (`LA-NAT-*`): the reinvention-pattern catalog is
   repo-authored (patterns to suspect, in the auditor's own words — not a copied
   feature list). Native verdicts are NOT stored here; they come from a live
-  `claude-code-guide` consultation at audit time and are disclosed with the
-  capability's observed-on date. No third-party doc text is copied into the skill;
-  findings cite the live source.
+  `claude-code-guide` consultation for Claude Code or official OpenAI docs
+  consultation for Codex at audit time and are disclosed with the capability's
+  observed-on date. No third-party doc text is copied into the skill; findings
+  cite the live source and never transfer verdicts across runtimes.
 - Minify lens (`LA-MIN-*`): the Locate → Propose → Fidelity-verify → Emit
   protocol, the obligation-ledger method, and the rejection taxonomy are
   repo-authored, motivated by this repo's own token-reduction lessons

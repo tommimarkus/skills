@@ -75,7 +75,7 @@
     "Source Grounding \u2014 lean-audit",
     "Stage 1 \u2014 Candidate detection (deterministic)",
     "Stage 1 \u2014 Locate (reuse existing detection; no new engine)",
-    "Stage 2 \u2014 Live verification (agent-mediated)",
+    "Stage 2 \u2014 Live verification (runtime-specific)",
     "Stage 2 \u2014 Propose",
     "Stage 3 \u2014 Fidelity-verify (adversarial; fail-closed)",
     "Stage 3 \u2014 Synthesis and tiering",

@@ -17,11 +17,17 @@ targets=$(
     $1 == ".claude" && $2 == "skills" && NF >= 3 {
       print ".claude/skills/" $3
     }
+    $1 == ".agents" && $2 == "skills" && NF >= 3 {
+      print ".agents/skills/" $3
+    }
     $1 == "internal-skills" && NF >= 2 {
       print "internal-skills/" $2
     }
     $1 == ".claude-plugin" && $2 == "marketplace.json" {
       print ".claude-plugin/marketplace.json"
+    }
+    $1 == ".agents" && $2 == "plugins" && $3 == "marketplace.json" {
+      print ".agents/plugins/marketplace.json"
     }
     $1 ~ /^souroldgeezer-/ && $2 == "skills" && NF >= 3 {
       print $1 "/skills/" $3
@@ -35,7 +41,10 @@ targets=$(
     $1 ~ /^souroldgeezer-/ && $2 == ".claude-plugin" {
       print $1
     }
-    $1 == "CLAUDE.md" || $1 == "README.md" {
+    $1 ~ /^souroldgeezer-/ && $2 == ".codex-plugin" {
+      print $1
+    }
+    $1 == "CLAUDE.md" || $1 == "AGENTS.md" || $1 == "README.md" {
       print $1
     }
   ' <<<"$changed" |

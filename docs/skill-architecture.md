@@ -46,8 +46,8 @@ Write trigger metadata to maximize useful activation, not raw activation:
 - Include clear exclusions when sibling skills own nearby work.
 - Avoid broad phrases such as "best practices", "general help", or "any code"
   unless the skill truly owns that surface.
-- Keep runtime metadata synchronized across the Claude Code surfaces: plugin
-  manifests, marketplace entries, and the matching subagent files.
+- Keep runtime metadata synchronized across both hosts: the Claude and Codex
+  manifests and marketplaces, plus the matching Claude subagent files.
 
 Trigger quality is a precision and recall problem. Low precision wastes context
 and can steer agents into the wrong workflow. Low recall means the skill exists
@@ -164,7 +164,8 @@ For extension overlays, `SKILL.md` owns selection:
 This is a runtime contract, not just documentation style. Claude Code keeps
 skill names and descriptions available for selection, then loads the full skill
 when invoked; supporting files are read only when the skill points to them and
-the task needs them. References and extensions must be visible from `SKILL.md`
+the task needs them. Codex follows the same progressive-disclosure goal through
+its own skill loader. References and extensions must be visible from `SKILL.md`
 with enough context for a fresh agent to choose the right file without exploring
 the tree.
 
@@ -268,11 +269,18 @@ bundled script invoked from a frontmatter hook must use `${CLAUDE_PLUGIN_ROOT}`
 (e.g. `${CLAUDE_PLUGIN_ROOT}/skills/<skill>/references/scripts/...`), which the
 plugin reference documents as substituted in hook commands and exported to hook
 processes; reserve `${CLAUDE_SKILL_DIR}` for the skill body and the procedures it
-carries the value into. Before copying a sibling skill's
-invocation convention — or declaring that sibling broken — verify the
-substitution mechanism against the official skills and plugins docs; pinned
-upstream engines vendored inside a skill are internal and resolve through the
-same documented substitution, not a bare variable.
+carries the value into. Before copying a sibling skill's invocation convention
+— or declaring that sibling broken — verify the substitution mechanism against
+the official skills and plugins docs; pinned upstream engines vendored inside a
+skill are internal and resolve through the same documented substitution, not a
+bare variable.
+
+Codex support is additive to that Claude contract. In Codex, resolve an absolute
+`<skill-dir>` from the source path reported for the loaded `SKILL.md`, carry it
+into raw procedures, and use documented `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`
+variables only in Codex manifest, hook, or MCP contexts that support them. Shared
+skill prose may show both runtime forms; it must not delete or generalize away the
+Claude substitutions above.
 
 A skill that ships a hook entrypoint (a guard or gate script) must include an
 integration test that drives the entrypoint's `main()` over the actual hook
@@ -394,8 +402,8 @@ Review skills against these dimensions:
   contract.
 - **Degree-of-freedom calibration:** The skill grants judgment where judgment is
   needed and uses deterministic checks where prose would be brittle.
-- **Runtime metadata sync:** The Claude Code plugin manifest, marketplace entry,
-  and matching subagent describe the same user-facing capability.
+- **Runtime metadata sync:** Both runtime manifests and marketplaces describe
+  one plugin identity; the matching Claude subagent mirrors its skill trigger.
 - **Release hygiene:** Version, manifest, marketplace, README, and install
   guidance changes travel together when a published surface changes.
 - **IP/source hygiene:** Source material is linked, paraphrased in original
@@ -573,6 +581,12 @@ them; do not copy their prose into repo guidance.
   <https://code.claude.com/docs/en/plugin-marketplaces>
 - Claude Code plugin reference:
   <https://code.claude.com/docs/en/plugins-reference>
+- Codex plugin packaging:
+  <https://developers.openai.com/plugins/build/plugins>
+- Codex plugin marketplace CLI:
+  <https://learn.chatgpt.com/docs/developer-commands?surface=cli#cli-codex-plugin>
+- Codex `AGENTS.md` guidance:
+  <https://developers.openai.com/codex/guides/agents-md>
 - ISO 24495-1 plain language:
   <https://www.iso.org/standard/78907.html>
 - ASD-STE100 Simplified Technical English:

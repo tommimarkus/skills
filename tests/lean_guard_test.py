@@ -100,6 +100,26 @@ class Evaluate(unittest.TestCase):
             reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG, tool=tool))
             self.assertIsNotNone(reason, tool)
 
+    def test_codex_apply_patch_shape_is_handled(self):
+        patch = (
+            "*** Begin Patch\n"
+            "*** Add File: aud/skills/s2/SKILL.md\n"
+            "+## Shared\n"
+            f"+{BIG}\n"
+            "*** End Patch\n"
+        )
+        reason = self.guard.evaluate(
+            {"tool_name": "apply_patch", "tool_input": {"command": patch}, "cwd": str(self.root)}
+        )
+        self.assertIsNotNone(reason)
+        self.assertIn("aud/skills/s2/SKILL.md", reason)
+
+    def test_codex_apply_patch_malformed_shape_fails_open(self):
+        reason = self.guard.evaluate(
+            {"tool_name": "apply_patch", "tool_input": {"command": "not a patch"}, "cwd": str(self.root)}
+        )
+        self.assertIsNone(reason)
+
     def test_non_edit_tool_is_allowed(self):
         self.assertIsNone(self.guard.evaluate({"tool_name": "Bash", "tool_input": {"command": "ls"}, "cwd": str(self.root)}))
 

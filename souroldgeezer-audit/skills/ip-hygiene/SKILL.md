@@ -68,9 +68,10 @@ pre-filter to surface bundled-asset / schema / vendored candidates:
 
 `${CLAUDE_SKILL_DIR}/references/scripts/ip-prefilter.sh --format text -- <touched paths>`
 
-(`${CLAUDE_SKILL_DIR}` is this skill's own directory, which Claude Code
-substitutes to the installed path; a bare relative path would not resolve from
-the target repo's working directory.)
+Claude Code substitutes `${CLAUDE_SKILL_DIR}` with this skill's installed path.
+In Codex, replace it with the absolute `<skill-dir>` reported for this loaded
+`SKILL.md`. A bare relative path would not resolve from the target repo's
+working directory.
 
 It scans only objective filesystem facts (Q3/Q4 candidates). Use its hits as
 evidence when answering Q3 and Q4. It does NOT answer any question: an empty

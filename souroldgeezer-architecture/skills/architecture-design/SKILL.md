@@ -102,9 +102,10 @@ Build.
    Claude Code™ expands `${CLAUDE_SKILL_DIR}` to the skill's absolute path in this
    SKILL.md body (resolving the installed-plugin cache and this source repo alike);
    the reference procedures (self-check, architecture §9) are read raw and reuse that
-   same resolved value. If it does not expand, fall back to the skill base directory
-   reported at invocation, or `souroldgeezer-architecture/skills/architecture-design`
-   in this source repo.
+   same resolved value. For Codex, resolve `<skill-dir>` once from the loaded
+   skill's source path and use `<skill-dir>/references/scripts/`; in this source
+   repo that fallback is `souroldgeezer-architecture/skills/architecture-design`.
+   Carry the runtime-appropriate resolved path into raw reference procedures.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load
    [`references/notations/archimate.md`](references/notations/archimate.md) for
@@ -136,10 +137,12 @@ Build.
    [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
    gallery as the next action:
-   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>`. This is
+   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>` (Codex:
+   `<skill-dir>/references/scripts/build-gallery.py <package>`). This is
    mode-agnostic (any run that re-renders rebuilds; a Lookup or a read-only Review
    that renders nothing does not). On a read-only pass, run
-   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py --check <package>` when a
+   `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py --check <package>`
+   (Codex: `<skill-dir>/references/scripts/build-gallery.py --check <package>`) when a
    committed gallery may have drifted; `dediren_status` indexes package/workspace
    freshness alongside it (architecture §9, non-gating). Disclose the outcome in the
    footer `Gallery:` line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
@@ -169,5 +172,5 @@ Build.
 | Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n` on the launcher scripts (`dediren-mcp.sh`, `dediren-release.sh`) after editing them |
-| Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>`; drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
+| Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>` (Claude Code) or `<skill-dir>/references/scripts/build-gallery.py <package>` (Codex); drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
 | Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — multi-model package (package-level `presentation` lang/dir) with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

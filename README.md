@@ -1,7 +1,8 @@
 # souroldgeezer
 
 Claude Code™ plugin marketplace by Sour Old Geezer. This repository
-is the marketplace source and published plugin tree.
+is the marketplace source and published plugin tree. Codex support is additive
+through parallel runtime metadata over the same plugin and skill sources.
 
 ## What this is
 
@@ -16,6 +17,8 @@ The repo currently ships five plugins:
 | `souroldgeezer-ops` | `2026.07.2` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
 ## Install
+
+### Claude Code
 
 Add the shared marketplace, then install the plugins you want:
 
@@ -48,18 +51,46 @@ For local development, point Claude at the clone instead:
 }
 ```
 
+### Codex
+
+Add the Codex marketplace mirror, then install the plugins you want:
+
+```bash
+codex plugin marketplace add tommimarkus/skills
+codex plugin add souroldgeezer-audit@souroldgeezer
+codex plugin add souroldgeezer-design@souroldgeezer
+codex plugin add souroldgeezer-architecture@souroldgeezer
+codex plugin add souroldgeezer-policy@souroldgeezer
+codex plugin add souroldgeezer-ops@souroldgeezer
+```
+
+For local Codex development, use the clone as the marketplace source:
+
+```bash
+codex plugin marketplace add /absolute/path/to/skills
+codex plugin add souroldgeezer-audit@souroldgeezer
+```
+
 ## Local development
 
-- Keep `.claude-plugin/marketplace.json` as the shared marketplace.
+- Keep `.claude-plugin/marketplace.json` as the shared Claude Code marketplace.
 - Keep each plugin's `.claude-plugin/plugin.json` manifest synchronized with its
-  marketplace entry on `name` and `description`. `version` lives only in
-  `plugin.json` — Claude Code always resolves it over a marketplace-entry copy
-  without warning, so marketplace entries never carry a `version` key.
+  Claude marketplace entry on `name` and `description`. `version` lives only in
+  the Claude `plugin.json` as the release authority — Claude Code always resolves
+  it over a marketplace-entry copy without warning, so marketplace entries never
+  carry a `version` key.
+- Keep the additive `.agents/plugins/marketplace.json` Codex catalog aligned on
+  plugin set, order, and paths, and mirror each plugin through
+  `.codex-plugin/plugin.json`. Codex requires strict SemVer, so its version is the
+  normalized form of the Claude CalVer authority (`YYYY.0M.MICRO` →
+  `YYYY.M.MICRO`).
 - `architecture-design` drives Dediren through the plugin's bundled MCP server
   (`souroldgeezer-architecture/.claude-plugin/plugin.json` `mcpServers`); its
   launcher resolves the pinned Dediren runtime from GitHub™ Releases on first use —
-  into `${CLAUDE_PLUGIN_DATA}` for installed users, or `.cache/dediren/releases/` in
-  this repo (do not commit that cache) — and needs Java™ 21 or newer.
+  into `${CLAUDE_PLUGIN_DATA}` for installed Claude users, or a writable
+  per-user/temp fallback for the internal CLI lane — and needs Java™ 21 or newer.
+  The Codex manifest mirrors the MCP server with its own documented plugin-root
+  and plugin-data variables.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 
@@ -79,7 +110,7 @@ For local development, point Claude at the clone instead:
    guidance such as `AGENTS.md`, matching git or release actions must run that
    policy before changing state. Adopt mode consolidates existing related
    guidance into the initialization/options and removes competing policy prose.
-9. Audit a repo, file, or diff for duplication and waste — near-duplicate or restated prose, broken or stale references, dead files, oversized always-loaded context, wastefully verbose passages — with `lean-audit` (read-only; a bundled deterministic engine plus a judgment layer for the cases it cannot decide). When the scope contains skills, commands, or agents, a surface-gated per-use cost lens additionally measures per-mode load cost and recommends fidelity-safe reductions (`LA-PUC-*`). Opt-in hooks can soft-block *new* duplication (PreToolUse) and per-use fidelity regressions (PreToolUse or session-end Stop) and warn on per-use cost growth — fail-open and overridable; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). On explicit request only, an opt-in platform-redundancy lens (`LA-NAT-*`) flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability — verified live via the `claude-code-guide` subagent (never a bundled feature list), surfaced as review-not-delete, and never run as part of a normal waste audit. Also on explicit request only, an opt-in minify lens turns the detected waste into a propose-only reduction: a reviewable diff plus an adversarial fidelity report (verified pointers, target-eval re-run, intent diff, token and per-use closure deltas via the bundled harness) — it never applies edits, and failed reductions are rejected with a reason, never merged.
+9. Audit a repo, file, or diff for duplication and waste — near-duplicate or restated prose, broken or stale references, dead files, oversized always-loaded context, wastefully verbose passages — with `lean-audit` (read-only; a bundled deterministic engine plus a judgment layer for the cases it cannot decide). When the scope contains skills, commands, or agents, a surface-gated per-use cost lens additionally measures per-mode load cost and recommends fidelity-safe reductions (`LA-PUC-*`). Opt-in hooks can soft-block *new* duplication (PreToolUse) and per-use fidelity regressions (PreToolUse or session-end Stop) and warn on per-use cost growth — fail-open and overridable; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). On explicit request only, an opt-in platform-redundancy lens (`LA-NAT-*`) flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability — verified live via the `claude-code-guide` subagent (never a bundled feature list), surfaced as review-not-delete, and never run as part of a normal waste audit. The additive Codex lane verifies Codex candidates against current official OpenAI documentation and never reuses a Claude verdict. Also on explicit request only, an opt-in minify lens turns the detected waste into a propose-only reduction: a reviewable diff plus an adversarial fidelity report (verified pointers, target-eval re-run, intent diff, token and per-use closure deltas via the bundled harness) — it never applies edits, and failed reductions are rejected with a reason, never merged.
 
 ## Validation
 
@@ -92,6 +123,10 @@ scripts/skill-architecture-report.sh --strict .
 git diff --check
 python -m unittest
 ```
+
+The parity check validates both marketplaces and both manifest families. The
+fragmentation gate additionally validates native Codex manifest structure; the
+Codex first-party validator is run directly during packaging changes.
 
 `scripts/validate-fragmentation.sh` includes
 `scripts/test-stop-hooks.sh`.

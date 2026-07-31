@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Worktree-deferred CalVer stamping for the plugins in this marketplace.
 
-``plugin.json#version`` is the sole version authority (Claude Code always
-resolves the plugin.json value over a marketplace-entry copy without warning,
-so a stale marketplace copy is a silent drift risk — see CLAUDE.md "Plugin
-versioning (MUST)"). A stamp therefore touches exactly two cells: a plugin's
-``.claude-plugin/plugin.json#version`` and its row in the root
-``README.md`` version table. Marketplace ``plugins[]`` entries never carry a
+The Claude ``plugin.json#version`` remains the release authority (Claude Code
+always resolves the plugin.json value over a marketplace-entry copy without
+warning, so a stale marketplace copy is a silent drift risk — see CLAUDE.md
+"Plugin versioning (MUST)"). The root README mirrors its zero-padded CalVer;
+the additive Codex manifest mirrors the same semantic version with the month
+normalized for strict SemVer. Marketplace ``plugins[]`` entries never carry a
 ``version`` key.
 
 Two stdlib-only responsibilities:
@@ -38,24 +38,38 @@ PLUGINS = (
     "souroldgeezer-ops",
 )
 
-VERSION_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d+)$")
+VERSION_RE = re.compile(r"^(\d{4})\.(\d{1,2})\.(\d+)$")
 
 
 def parse_version(value: str) -> tuple[int, int, int]:
     match = VERSION_RE.match(value)
     if not match:
         raise ValueError(f"not a CalVer version: {value!r}")
-    return int(match.group(1)), int(match.group(2)), int(match.group(3))
+    year, month, micro = (int(match.group(index)) for index in (1, 2, 3))
+    if not 1 <= month <= 12:
+        raise ValueError(f"not a CalVer version: {value!r}")
+    return year, month, micro
+
+
+def codex_version(value: str) -> str:
+    """Normalize a Claude CalVer stamp to Codex's strict-SemVer spelling."""
+    year, month, micro = parse_version(value)
+    return f"{year}.{month}.{micro}"
 
 
 def compute_next(current: str, month: str) -> str:
     """Return the next CalVer stamp for ``current`` in calendar ``month``.
 
-    ``month`` is ``"YYYY.MM"``. Reset to ``.0`` when ``current`` predates the
+    ``month`` is ``"YYYY.M"`` or ``"YYYY.MM"``. Reset to ``.0`` when ``current`` predates the
     month or is a pre-CalVer semver; increment the micro counter within the same
     month; raise when ``month`` is older than ``current`` (clock skew).
     """
-    myear, mmonth = (int(part) for part in month.split("."))
+    month_match = re.fullmatch(r"(\d{4})\.(\d{1,2})", month)
+    if month_match is None:
+        raise ValueError(f"not a CalVer month: {month!r}")
+    myear, mmonth = int(month_match.group(1)), int(month_match.group(2))
+    if not 1 <= mmonth <= 12:
+        raise ValueError(f"not a CalVer month: {month!r}")
     try:
         cyear, cmonth, cmicro = parse_version(current)
     except ValueError:
@@ -134,8 +148,8 @@ def read_readme_versions(text: str) -> dict[str, str]:
 
 
 def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
-    """The two sole-authority version cells at ``ref``: each plugin's
-    plugin.json#version and its README.md version-table cell. Marketplace
+    """The three mirrored version cells at ``ref``: both runtime manifests and
+    each plugin's README.md version-table cell. Marketplace
     entries are deliberately excluded — see ``marketplace_version_offenders``."""
     versions: dict[str, str] = {}
     for plugin in PLUGINS:
@@ -144,6 +158,13 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError):
             continue
         versions[f"{plugin}/.claude-plugin/plugin.json"] = version
+        codex_rel = f"{plugin}/.codex-plugin/plugin.json"
+        codex_text = _git_show(repo_root, ref, codex_rel)
+        if codex_text is not None:
+            try:
+                versions[codex_rel] = json.loads(codex_text)["version"]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
     readme_text = _git_show(repo_root, ref, "README.md")
     if readme_text is not None:
         for plugin, version in read_readme_versions(readme_text).items():
@@ -153,21 +174,21 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
 
 def marketplace_version_offenders(repo_root: Path, ref: str) -> list[str]:
     """Plugin names whose marketplace.json entry illegally carries a ``version``
-    key at ``ref``. plugin.json is the sole version authority (Claude Code
-    always resolves it over a marketplace-entry copy without warning, so a
-    stray marketplace copy is a silent drift risk). Fail-open: a missing or
-    malformed marketplace.json yields no offenders rather than raising."""
-    market = _git_show(repo_root, ref, ".claude-plugin/marketplace.json")
-    if market is None:
-        return []
-    try:
-        payload = json.loads(market)
-    except json.JSONDecodeError:
-        return []
+    key at ``ref``. Runtime manifests and README mirror the version identity;
+    marketplace copies are drift risks. Fail-open: a missing or malformed
+    marketplace.json yields no offenders rather than raising."""
     offenders: list[str] = []
-    for entry in payload.get("plugins", []):
-        if isinstance(entry, dict) and "version" in entry:
-            offenders.append(str(entry.get("name", "<unnamed>")))
+    for path in (".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"):
+        market = _git_show(repo_root, ref, path)
+        if market is None:
+            continue
+        try:
+            payload = json.loads(market)
+        except json.JSONDecodeError:
+            continue
+        for entry in payload.get("plugins", []):
+            if isinstance(entry, dict) and "version" in entry:
+                offenders.append(f"{path}:{entry.get('name', '<unnamed>')}")
     return offenders
 
 
@@ -199,10 +220,8 @@ def cmd_guard(args: argparse.Namespace) -> int:
         )
     if offenders:
         print(
-            "Marketplace entries must never carry a version key — plugin.json "
-            "is the sole authority (Claude Code always resolves plugin.json over "
-            "a marketplace-entry copy without warning, so a stray copy is a "
-            "silent drift risk):",
+            "Marketplace entries must never carry a version key; runtime "
+            "manifests and the README mirror version identity:",
             file=sys.stderr,
         )
         for name in offenders:

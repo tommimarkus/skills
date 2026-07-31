@@ -446,8 +446,8 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "high",
             "docs/skill-architecture.md#runtime-contract",
             "deterministic",
-            ("manifest-name-description-drift-or-marketplace-version-key", "manifest-surfaces-synchronized"),
-            "Synchronize plugin name and description across the Claude plugin and marketplace manifests; keep version in plugin.json only and remove it from the marketplace entry.",
+            ("runtime-manifest-or-marketplace-drift", "manifest-surfaces-synchronized"),
+            "Synchronize plugin identity and semantic version across Claude and Codex manifests and marketplaces; remove marketplace version keys.",
         ),
         Rule(
             "SAC-RUNTIME-MISSING-CLAUDE-AGENT",
@@ -519,7 +519,7 @@ def build_rule_catalog() -> tuple[Rule, ...]:
             "docs/skill-architecture.md#4-deterministic-machinery",
             "deterministic",
             ("bundled-script-bare-shell-var", "bundled-script-documented-substitution"),
-            "Reference the bundled script through ${CLAUDE_SKILL_DIR} or ${CLAUDE_PLUGIN_ROOT}, establishing the value in SKILL.md and carrying it into any procedure.",
+            "For Claude Code, reference the bundled script through ${CLAUDE_SKILL_DIR} or ${CLAUDE_PLUGIN_ROOT}; for Codex, resolve <skill-dir> from the loaded SKILL.md source. Carry the runtime-appropriate value into each procedure.",
         ),
         Rule(
             "SAC-DOC-MISSING-ENTRYPOINT",
@@ -830,7 +830,7 @@ def find_skill_files(repo_root: Path) -> list[str]:
         rel = relpath(repo_root, path)
         if not path_in_repo(repo_root, rel):
             continue
-        if rel.startswith(".claude/skills/"):
+        if rel.startswith((".claude/skills/", ".agents/skills/")):
             continue
         if re.search(r"^internal-skills/[^/]+/SKILL\.md$", rel):
             skill_files.add(rel)
@@ -1712,7 +1712,7 @@ def find_plugin_reference_docs(repo_root: Path) -> list[str]:
 def skill_texts_by_plugin(repo_root: Path) -> dict[str, list[tuple[str, str]]]:
     texts: dict[str, list[tuple[str, str]]] = {}
     for skill_rel in find_skill_files(repo_root):
-        if "/skills/" not in skill_rel or skill_rel.startswith(".claude/skills/"):
+        if "/skills/" not in skill_rel or skill_rel.startswith((".claude/skills/", ".agents/skills/")):
             continue
         skill_dir = skill_dir_from_rel(skill_rel)
         plugin_dir = plugin_dir_from_skill_dir(skill_dir)
@@ -1725,7 +1725,7 @@ def skill_texts_by_plugin(repo_root: Path) -> dict[str, list[tuple[str, str]]]:
 def advertised_skill_texts_by_plugin(repo_root: Path) -> dict[str, list[tuple[str, str]]]:
     texts: dict[str, list[tuple[str, str]]] = {}
     for skill_rel in find_skill_files(repo_root):
-        if "/skills/" not in skill_rel or skill_rel.startswith(".claude/skills/"):
+        if "/skills/" not in skill_rel or skill_rel.startswith((".claude/skills/", ".agents/skills/")):
             continue
         skill = load_skill(repo_root, skill_rel)
         plugin_dir = plugin_dir_from_skill_dir(skill.skill_dir)
@@ -2007,7 +2007,55 @@ def scan_repo_guidance(repo_root: Path) -> list[Finding]:
                 "Add the missing CLAUDE.md or document why this fixture/repo is intentionally partial.",
             )
         )
+    if (repo_root / ".agents/plugins/marketplace.json").is_file() and not (repo_root / "AGENTS.md").is_file():
+        findings.append(
+            make_finding(
+                "Repo Guidance Drift",
+                "low",
+                "SAC-DOC-MISSING-ENTRYPOINT",
+                ".",
+                "AGENTS.md is missing while a native Codex marketplace is present",
+                "Cross-runtime skill repos need shared Codex-facing guidance.",
+                "Codex contributors may miss packaging, parity, and validation rules.",
+                "Add AGENTS.md with the shared runtime contract.",
+            )
+        )
     return findings
+
+
+def scan_cross_runtime_metadata_checker(repo_root: Path) -> list[Finding]:
+    """Compose the repo's dual-runtime parity checker when the Codex catalog is
+    present. Fixtures without the repo-local checker remain intentionally
+    partial; the dedicated checker owns detailed field-level diagnostics."""
+    codex_marketplace = repo_root / ".agents/plugins/marketplace.json"
+    checker = repo_root / "scripts/check-runtime-metadata-parity.py"
+    if not codex_marketplace.is_file() or not checker.is_file():
+        return []
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(checker), "--check", str(repo_root)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except Exception:
+        return []
+    if completed.returncode == 0:
+        return []
+    summary = " ".join((completed.stdout + completed.stderr).split())
+    return [
+        make_finding(
+            "Runtime Parity",
+            "high",
+            "SAC-RUNTIME-MANIFEST-SYNC",
+            ".agents/plugins/marketplace.json",
+            summary or "dual-runtime metadata checker failed",
+            "Claude and Codex marketplaces, manifests, versions, and internal wrappers must stay synchronized.",
+            "One host may expose a stale or incomplete plugin catalog.",
+            "Run scripts/check-runtime-metadata-parity.py --check . and fix every reported field.",
+        )
+    ]
 
 
 def native_plugin_dirs(repo_root: Path) -> list[str]:
@@ -2091,7 +2139,9 @@ def native_validate_findings(
 
 
 # Variable names Claude Code documents as path substitutions that expand inline
-# in skill/agent content (skill-root and plugin-root bases). Any other shell
+# in skill/agent content (skill-root and plugin-root bases). Shared Codex/Claude
+# workflow prose uses the explicit <skill-dir> contract and therefore has no
+# shell variable to classify. Any other shell
 # variable in front of a bundled-script path is bare and expands to empty for an
 # installed plugin.
 DOCUMENTED_PATH_VARS = ("CLAUDE_SKILL_DIR", "CLAUDE_PLUGIN_ROOT")
@@ -2120,7 +2170,7 @@ def references_documented_substitution(*texts: str) -> bool:
 
 def bundled_script_bare_var_invocations(text: str) -> list[tuple[str, str]]:
     """(var, matched-invocation) for each bundled-script invocation in `text`
-    whose base is a bare shell variable rather than a documented Claude Code
+    whose base is a bare shell variable rather than a documented runtime
     substitution. A bundled-script invocation is `$VAR`/`${VAR}` (optionally
     quoted) immediately followed by a `/`-rooted path that lives under a scripts/
     directory or ends in a script extension. Documented substitution variables
@@ -2146,8 +2196,8 @@ def bundled_script_bare_var_invocations(text: str) -> list[tuple[str, str]]:
 def scan_bundled_script_vars(repo_root: Path) -> list[Finding]:
     """Runtime Parity: flag a bundled-script invocation in a skill's SKILL.md,
     its matching Claude agent, or a references/extensions procedure that resolves
-    through a bare shell variable (e.g. $SKILL_DIR) instead of a documented
-    Claude Code path substitution. A bare variable expands to empty once the
+    through a bare shell variable (e.g. $SKILL_DIR) instead of the shared
+    <skill-dir> contract or a documented runtime substitution. A bare variable expands to empty once the
     plugin is installed, so the bundled script is silently unfindable while still
     appearing to work in the marketplace source repo via a guessable relative
     path (the #79 regression).
@@ -2199,11 +2249,11 @@ def scan_bundled_script_vars(repo_root: Path) -> list[Finding]:
                         target_rel,
                         f"bundled-script invocation resolves through bare shell variable ${var}: {matched}",
                         "Bundled-script invocations must resolve through a documented Claude Code path "
-                        "substitution (${CLAUDE_SKILL_DIR} or ${CLAUDE_PLUGIN_ROOT}), not a bare shell variable.",
-                        "A bare variable expands to empty once the plugin is installed, so Claude cannot "
+                        "substitution or the explicit Codex <skill-dir> contract, not a bare shell variable.",
+                        "A bare variable expands to empty once the plugin is installed, so Claude Code or Codex cannot "
                         "find the bundled script even though it appears to work in the marketplace source repo.",
-                        "Reference the bundled script through ${CLAUDE_SKILL_DIR} (or ${CLAUDE_PLUGIN_ROOT}), "
-                        "establishing the value in SKILL.md and carrying it into any procedure the workflow enters.",
+                        "Use ${CLAUDE_SKILL_DIR} (or ${CLAUDE_PLUGIN_ROOT}) for Claude Code; for Codex, "
+                        "resolve <skill-dir> from the loaded SKILL.md source. Carry it into each procedure.",
                     )
                 )
     return findings
@@ -2216,6 +2266,7 @@ def collect_findings(repo_root: Path) -> list[Finding]:
     findings.extend(scan_plugin_reference_docs(repo_root))
     findings.extend(scan_private_plugin_root_references(repo_root))
     findings.extend(scan_manifest_sync(repo_root))
+    findings.extend(scan_cross_runtime_metadata_checker(repo_root))
     findings.extend(scan_repo_guidance(repo_root))
     findings.extend(scan_bundled_script_vars(repo_root))
     return findings
@@ -2488,6 +2539,7 @@ def owner(path: str) -> str:
     for pattern in (
         r"^internal-skills/[^/]+",
         r"^\.claude/skills/[^/]+",
+        r"^\.agents/skills/[^/]+",
         r"^souroldgeezer-[^/]+/skills/[^/]+",
         r"^souroldgeezer-[^/]+/\.claude-plugin/plugin\.json",
     ):

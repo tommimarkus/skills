@@ -71,8 +71,9 @@ corrections, questions, or steering (the user's or your own) that surfaced a can
 
 This repository has a GitHub MCP server; prefer it for every issue read/write. The MCP
 tools are **deferred** — listed by name (`issue_write`, `search_issues`, `label_write`,
-`get_me`) but not preloaded. Load the ones you need with `ToolSearch`
-(`select:<tool>,<tool>`) before calling them. Treat a GitHub MCP server as present whenever
+`get_me`) but not preloaded. Load the ones you need through the host's deferred-tool
+discovery mechanism (`ToolSearch` in Claude Code; app/tool search when exposed in
+Codex) before calling them. Treat a GitHub MCP server as present whenever
 `mcp__*_github__*` tools are listed; do not open with a `gh` call as the first move.
 
 ## Graduation

@@ -1,0 +1,31 @@
+{
+  "name": "souroldgeezer-design",
+  "version": "2026.7.19",
+  "description": "Reference-driven design skills for sustainable software, web frontend application design, HTTP APIs, and infrastructure. Covers code/module/script boundaries, software design principles/patterns, and dependencies including .NET™, Java™, Rust®, TypeScript, shell, and Python®, app routes/screens/component architecture/state/data/rendering/responsive/accessibility/performance posture with React, Next.js, and Blazor™ WebAssembly extensions, HTTP API design with Azure® Functions™ runtime, Node.js® hosted/serverless and hosted Next.js™ runtime extensions, Azure® Cosmos DB™ / Azure® Blob Storage™ data extensions, infrastructure/IaC design with Azure®, Terraform™, and Bicep™ extensions, and matching Claude Code subagents.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net",
+    "url": "https://github.com/tommimarkus"
+  },
+  "homepage": "https://github.com/tommimarkus/skills",
+  "repository": "https://github.com/tommimarkus/skills",
+  "license": "MIT",
+  "keywords": ["software-design", "app-design", "api-design", "infrastructure"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Design",
+    "shortDescription": "Reference-driven engineering design",
+    "longDescription": "Build, extract, review, and look up sustainable software, frontend, HTTP API, and infrastructure designs.",
+    "developerName": "Sour Old Geezer",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+    "defaultPrompt": [
+      "Design this software change.",
+      "Review this frontend structure.",
+      "Extract the current API design."
+    ]
+  }
+}

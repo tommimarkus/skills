@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Check Sour Old Geezer Claude Code runtime metadata parity.
+"""Check Sour Old Geezer Claude Code and Codex runtime metadata parity.
 
 This is intentionally a checker, not a generator: SKILL.md frontmatter remains
-the canonical skill trigger metadata, and the shared marketplace remains the
-canonical plugin catalog. It keeps the Claude Code surfaces in sync with each
-other — marketplace entry, plugin manifest, the matching subagent, the README
-skill links, and the repo-internal skill Claude wrappers.
+the canonical skill trigger metadata, and the two marketplaces expose one shared
+plugin catalog. It keeps plugin identities and semantic versions synchronized,
+preserves Claude subagent parity, checks README skill links, and requires thin
+Claude and Codex wrappers for repo-internal skills.
 """
 
 from __future__ import annotations
@@ -13,10 +13,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+
+CODEX_VERSION_RE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+CLAUDE_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 
 @dataclass(frozen=True)
@@ -159,43 +164,97 @@ def require_text_contains(
         findings.append(Finding(repo_relative(repo, path), field, expected, "missing"))
 
 
-def marketplace_plugins(repo: Path) -> list[dict[str, Any]]:
-    marketplace_path = repo / ".claude-plugin" / "marketplace.json"
+def marketplace_plugins(repo: Path, marketplace_path: Path) -> list[dict[str, Any]]:
     marketplace = read_json(marketplace_path)
     plugins = marketplace.get("plugins")
     if not isinstance(plugins, list):
-        raise ValueError(".claude-plugin/marketplace.json must contain plugins[]")
+        raise ValueError(f"{repo_relative(repo, marketplace_path)} must contain plugins[]")
     return plugins
+
+
+def marketplace_source_path(plugin: dict[str, Any], *, codex: bool) -> str:
+    source = plugin.get("source")
+    if codex:
+        if not isinstance(source, dict) or source.get("source") != "local":
+            return ""
+        return normalize_text(source.get("path"))
+    return normalize_text(source)
+
+
+def version_core(value: Any, *, codex: bool) -> tuple[int, int, int] | None:
+    text = normalize_text(value)
+    pattern = CODEX_VERSION_RE if codex else CLAUDE_VERSION_RE
+    if not pattern.fullmatch(text):
+        return None
+    major, minor, patch = text.split(".")
+    return int(major), int(minor), int(patch)
 
 
 def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
     plugin_dirs: list[Path] = []
-    marketplace_path = repo / ".claude-plugin" / "marketplace.json"
-    for plugin in marketplace_plugins(repo):
-        source = plugin.get("source", "")
+    claude_marketplace_path = repo / ".claude-plugin" / "marketplace.json"
+    codex_marketplace_path = repo / ".agents" / "plugins" / "marketplace.json"
+    claude_plugins = marketplace_plugins(repo, claude_marketplace_path)
+    codex_plugins = marketplace_plugins(repo, codex_marketplace_path)
+    claude_names = [normalize_text(plugin.get("name")) for plugin in claude_plugins]
+    codex_names = [normalize_text(plugin.get("name")) for plugin in codex_plugins]
+    compare(findings, repo, codex_marketplace_path, "plugin-order", claude_names, codex_names)
+    codex_by_name = {normalize_text(plugin.get("name")): plugin for plugin in codex_plugins}
+
+    for plugin in claude_plugins:
+        plugin_name = normalize_text(plugin.get("name"))
+        source = marketplace_source_path(plugin, codex=False)
         plugin_dir = repo / source.removeprefix("./")
         plugin_dirs.append(plugin_dir)
 
+        codex_entry = codex_by_name.get(plugin_name)
+        if codex_entry is None:
+            findings.append(
+                Finding(repo_relative(repo, codex_marketplace_path), f"plugin:{plugin_name}", "present", "missing")
+            )
+            continue
+        compare(
+            findings,
+            repo,
+            codex_marketplace_path,
+            f"source:{plugin_name}",
+            source,
+            marketplace_source_path(codex_entry, codex=True),
+        )
+
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
+        codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
         claude = read_json(claude_path)
+        codex = read_json(codex_path)
 
         for field in ("name", "description"):
             compare(findings, repo, claude_path, field, plugin.get(field), claude.get(field))
+            compare(findings, repo, codex_path, field, claude.get(field), codex.get(field))
 
-        # plugin.json#version is the sole version authority: Claude Code always
-        # resolves it over a marketplace-entry copy without warning, so a stray
-        # marketplace copy is a silent drift risk rather than a helpful mirror.
-        if claude.get("version") is None:
-            findings.append(Finding(repo_relative(repo, claude_path), "version", "present", "missing"))
-        if "version" in plugin:
-            findings.append(
-                Finding(
-                    repo_relative(repo, marketplace_path),
-                    "version",
-                    "absent (plugin.json#version is the sole authority)",
-                    normalize_text(plugin.get("version")),
+        claude_version = version_core(claude.get("version"), codex=False)
+        codex_version = version_core(codex.get("version"), codex=True)
+        if claude_version is None:
+            findings.append(Finding(repo_relative(repo, claude_path), "version", "numeric X.Y.Z", normalize_text(claude.get("version"))))
+        if codex_version is None:
+            findings.append(Finding(repo_relative(repo, codex_path), "version", "strict SemVer X.Y.Z without leading zeroes", normalize_text(codex.get("version"))))
+        if claude_version is not None and codex_version is not None and claude_version != codex_version:
+            findings.append(Finding(repo_relative(repo, codex_path), "version", ".".join(map(str, claude_version)), normalize_text(codex.get("version"))))
+
+        compare(findings, repo, codex_path, "skills", "./skills/", codex.get("skills"))
+
+        for marketplace_path, marketplace_entry in (
+            (claude_marketplace_path, plugin),
+            (codex_marketplace_path, codex_entry),
+        ):
+            if "version" in marketplace_entry:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, marketplace_path),
+                        f"version:{plugin_name}",
+                        "absent (runtime manifests own version identity)",
+                        normalize_text(marketplace_entry.get("version")),
+                    )
                 )
-            )
 
     return plugin_dirs
 
@@ -270,59 +329,62 @@ def check_internal_skill_wrappers(repo: Path, findings: list[Finding]) -> None:
 
             compare(findings, repo, internal_skill_path, "name", internal_dir_name, internal_name)
 
-            claude_wrapper_path = repo / ".claude" / "skills" / internal_dir_name / "SKILL.md"
-            if claude_wrapper_path.exists():
-                claude_wrapper = read_frontmatter(claude_wrapper_path)
-                claude_wrapper_text = claude_wrapper_path.read_text(encoding="utf-8")
-                compare(findings, repo, claude_wrapper_path, "name", internal_dir_name, claude_wrapper.get("name"))
-                compare(
-                    findings,
-                    repo,
-                    claude_wrapper_path,
-                    "description",
-                    internal_description,
-                    claude_wrapper.get("description"),
-                )
-                require_text_contains(
-                    findings,
-                    repo,
-                    claude_wrapper_path,
-                    "source-of-truth",
-                    shared_skill_ref,
-                    claude_wrapper_text,
-                )
-            else:
-                findings.append(Finding(repo_relative(repo, claude_wrapper_path), "exists", "present", "missing"))
-
-            claude_wrapper_dir = claude_wrapper_path.parent
-            if claude_wrapper_dir.exists():
-                for wrapper_file in sorted(path for path in claude_wrapper_dir.rglob("*") if path.is_file()):
-                    if wrapper_file == claude_wrapper_path:
-                        continue
-                    expected_shared_path = (
-                        repo
-                        / "internal-skills"
-                        / internal_dir_name
-                        / wrapper_file.relative_to(claude_wrapper_dir)
+            for runtime_dir in (".claude", ".agents"):
+                wrapper_path = repo / runtime_dir / "skills" / internal_dir_name / "SKILL.md"
+                if wrapper_path.exists():
+                    wrapper = read_frontmatter(wrapper_path)
+                    wrapper_text = wrapper_path.read_text(encoding="utf-8")
+                    compare(findings, repo, wrapper_path, "name", internal_dir_name, wrapper.get("name"))
+                    compare(
+                        findings,
+                        repo,
+                        wrapper_path,
+                        "description",
+                        internal_description,
+                        wrapper.get("description"),
                     )
-                    findings.append(
-                        Finding(
-                            repo_relative(repo, wrapper_file),
-                            "shared-location",
-                            repo_relative(repo, expected_shared_path),
-                            repo_relative(repo, wrapper_file),
+                    require_text_contains(
+                        findings,
+                        repo,
+                        wrapper_path,
+                        "source-of-truth",
+                        shared_skill_ref,
+                        wrapper_text,
+                    )
+                else:
+                    findings.append(Finding(repo_relative(repo, wrapper_path), "exists", "present", "missing"))
+
+                wrapper_dir = wrapper_path.parent
+                if wrapper_dir.exists():
+                    for wrapper_file in sorted(path for path in wrapper_dir.rglob("*") if path.is_file()):
+                        if wrapper_file == wrapper_path:
+                            continue
+                        expected_shared_path = (
+                            repo
+                            / "internal-skills"
+                            / internal_dir_name
+                            / wrapper_file.relative_to(wrapper_dir)
                         )
-                    )
+                        findings.append(
+                            Finding(
+                                repo_relative(repo, wrapper_file),
+                                "shared-location",
+                                repo_relative(repo, expected_shared_path),
+                                repo_relative(repo, wrapper_file),
+                            )
+                        )
 
-    claude_skills_dir = repo / ".claude" / "skills"
-    if claude_skills_dir.exists():
-        for claude_wrapper_path in sorted(claude_skills_dir.glob("*/SKILL.md")):
-            wrapper_name = claude_wrapper_path.parent.name
+    for runtime_dir in (".claude", ".agents"):
+        skills_dir = repo / runtime_dir / "skills"
+        if not skills_dir.exists():
+            continue
+        for wrapper_path in sorted(skills_dir.glob("*/SKILL.md")):
+            wrapper_name = wrapper_path.parent.name
             if wrapper_name in internal_skill_names:
                 continue
             findings.append(
                 Finding(
-                    repo_relative(repo, claude_wrapper_path),
+                    repo_relative(repo, wrapper_path),
                     "source-of-truth",
                     f"internal-skills/{wrapper_name}/SKILL.md",
                     "missing",
@@ -330,11 +392,38 @@ def check_internal_skill_wrappers(repo: Path, findings: list[Finding]) -> None:
             )
 
 
+def check_stop_hook_parity(repo: Path, findings: list[Finding]) -> None:
+    claude_path = repo / ".claude" / "settings.json"
+    codex_path = repo / ".codex" / "hooks.json"
+    if not claude_path.exists() and not codex_path.exists():
+        return
+    if not claude_path.exists():
+        findings.append(Finding(repo_relative(repo, claude_path), "exists", "present", "missing"))
+        return
+    if not codex_path.exists():
+        findings.append(Finding(repo_relative(repo, codex_path), "exists", "present", "missing"))
+        return
+
+    def commands(path: Path) -> list[str]:
+        payload = read_json(path)
+        groups = payload.get("hooks", {}).get("Stop", [])
+        return [
+            normalize_text(hook.get("command"))
+            for group in groups
+            if isinstance(group, dict)
+            for hook in group.get("hooks", [])
+            if isinstance(hook, dict) and hook.get("type") == "command"
+        ]
+
+    compare(findings, repo, codex_path, "hooks.Stop.commands", commands(claude_path), commands(codex_path))
+
+
 def check_repo(repo: Path) -> list[Finding]:
     findings: list[Finding] = []
     plugin_dirs = check_plugin_metadata(repo, findings)
     check_skill_metadata(repo, plugin_dirs, findings)
     check_internal_skill_wrappers(repo, findings)
+    check_stop_hook_parity(repo, findings)
     return findings
 
 

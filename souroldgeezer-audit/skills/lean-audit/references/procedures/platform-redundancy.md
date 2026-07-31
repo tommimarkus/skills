@@ -1,7 +1,7 @@
 # Platform-Redundancy Lens (LA-NAT-1 / LA-NAT-2) — OPT-IN
 
 Load this ONLY when the request explicitly asks whether custom artifacts reinvent
-a capability Claude Code now provides natively. This lens is never part of a
+a capability Claude Code or Codex now provides natively. This lens is never part of a
 default waste run and is never auto-fired by surface detection. It is read-only,
 advisory, and judgment-based — the engine does not detect `LA-NAT-*`. Disclose its
 findings as inference plus a live check (see
@@ -12,15 +12,17 @@ catalog prose.
 ## Core principle: patterns are static, capabilities are live
 
 This catalog holds **what to suspect**, never **what is native**. Claude Code's
-feature set changes fast, so a verdict is never taken from this file — it comes
-from a live `claude-code-guide` consultation at audit time. A reinvention pattern
+and Codex's feature sets change fast, so a verdict is never taken from this file.
+For Claude Code it comes from a live `claude-code-guide` consultation; for Codex
+it comes from current official OpenAI documentation. A reinvention pattern
 stays useful even when its verdict flips; only the live check decides whether a
 candidate is actually redundant today.
 
 ## When this lens runs
 
 Gate: an explicit native/platform-redundancy request (e.g. "is anything here
-already provided by Claude Code natively?", "am I reinventing platform features?",
+already provided by Claude Code natively?", "is Codex already doing this?",
+"am I reinventing platform features?",
 "platform-redundancy check"). No such request → emit nothing. A plain
 duplication/waste request does NOT activate this lens and triggers no agent or
 network call.
@@ -61,22 +63,32 @@ shape `(custom artifact path + quoted excerpt, suspected native capability)`. Do
 not assign a verdict. Record the artifact family for each candidate (hooks/scripts,
 guidance prose, skills/commands/agents, MCP).
 
-## Stage 2 — Live verification (agent-mediated)
+## Stage 2 — Live verification (runtime-specific)
 
-For each candidate, consult the `claude-code-guide` subagent with a question of the
-form: "Does Claude Code natively provide <capability>? If yes, cite the official
-docs, and note any caveats, required configuration, or version floor. If no, say
-so." Use its cited answer as the evidence.
+First identify the runtime named by the request or active plugin surface. Never
+transfer a capability verdict from one runtime to the other.
 
-**Capability requirement and honest degradation.** This step requires the ability
-to dispatch the `claude-code-guide` subagent. When `lean-audit` runs in the main
-conversation that capability is present. When `lean-audit` runs *as a subagent*
-(its own tool set is `Bash, Read, Grep, Glob, Skill` — no `Agent`/`WebFetch`), the
-live check is unavailable: run Stage 1 only, emit each candidate as an unverified
-`LA-NAT-2` review item, and disclose the degraded coverage. Never promote to
-`LA-NAT-1` without a citation. (Documented fallback when in the main context but
-the agent type is absent: a targeted `WebFetch` of the official Claude Code docs;
-treat its result with the same citation discipline.)
+**Claude Code lane.** For each candidate, consult the `claude-code-guide`
+subagent with a question of the form: "Does Claude Code natively provide
+<capability>? If yes, cite the official docs, and note any caveats, required
+configuration, or version floor. If no, say so." Use its cited answer as the
+evidence. This preserves the established Claude workflow.
+
+This lane requires the ability to dispatch `claude-code-guide`. When
+`lean-audit` runs in the main conversation that capability is present. When it
+runs *as a subagent* (its own tool set is `Bash, Read, Grep, Glob, Skill` — no
+`Agent`/`WebFetch`), the live check is unavailable: run Stage 1 only, emit each
+candidate as an unverified `LA-NAT-2` review item, and disclose the degraded
+coverage. Documented fallback when the main context lacks that agent type: a
+targeted fetch of official Claude Code docs with the same citation discipline.
+
+**Codex lane.** For each candidate, consult the current official OpenAI docs or
+Codex manual capability, cite the supporting page, and record caveats, required
+configuration, or version floors. If official-doc access is unavailable, run
+Stage 1 only, emit each candidate as an unverified `LA-NAT-2` review item, and
+disclose the degraded coverage.
+
+In both lanes, never promote to `LA-NAT-1` without a live citation.
 
 ## Stage 3 — Synthesis and tiering
 

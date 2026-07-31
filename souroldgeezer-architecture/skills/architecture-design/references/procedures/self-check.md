@@ -6,6 +6,9 @@ call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — neve
 CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
 own helper scripts (`build-gallery.py`, `svg-accessible-name.py`), not Dediren.
+Claude Code expands that token in the loaded SKILL.md. In Codex, reuse the
+absolute `<skill-dir>` resolved from the loaded skill source anywhere this raw
+procedure shows `${CLAUDE_SKILL_DIR}`.
 
 ## Server availability
 
@@ -15,7 +18,8 @@ installed. The launcher **resolves the pinned bundle on demand** at session star
 when the cache is cold, then starts the server. The resolve is bounded (the resolver
 caps curl with `--connect-timeout`/`--max-time` and the install lock with `flock -w`)
 so it can never hang session start, and it caches per-user under
-`${CLAUDE_PLUGIN_DATA}` — at most one download per pinned version per user, not per
+`${CLAUDE_PLUGIN_DATA}` in Claude Code, or the Codex manifest's plugin-data
+directory — at most one download per pinned version per user, not per
 repo. The fast path, when the bundle is already resolved, does no network I/O. The
 `dediren_*` tools are absent only when the resolve cannot complete (host offline) or
 Java™ 21+ is missing.
@@ -32,10 +36,12 @@ server not yet reconnected this session — fall back to the **internal CLI lane
 the release resolver (below) provides the binary, and the same `build --package`
 and validate commands run through the CLI. This is internal machinery; the user never types a dediren command. Each lane
 caches outside the target repo tree: the launcher/MCP lane under `${CLAUDE_PLUGIN_DATA}`
-(set via `plugin.json`), and the CLI lane under the per-user `${XDG_CACHE_HOME:-$HOME/.cache}`
+in Claude Code (or the plugin-data directory set by the Codex runtime manifest),
+and the CLI lane under the per-user `${XDG_CACHE_HOME:-$HOME/.cache}`
 when writable, else a sandbox-writable temp dir (`${TMPDIR:-/tmp}`) — because
-`plugin.json` env vars do not reach Bash-tool subprocesses, so the CLI resolver cannot
-read `${CLAUDE_PLUGIN_DATA}` and resolves its own default. A pin bump no longer strands
+`plugin.json` env vars do not reach Bash/shell-tool subprocesses, so the CLI resolver cannot
+read `${CLAUDE_PLUGIN_DATA}` or the Codex manifest's plugin-data value and resolves
+its own default. A pin bump no longer strands
 the server: the launcher resolves the newly-pinned bundle itself at the next session start. Only when the
 fallback itself cannot resolve a Java™ 21+ runtime do you disclose `not run (dediren
 runtime unavailable)` and cap at `source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
@@ -64,7 +70,8 @@ is requested, `uml-xmi` only when XMI export is requested.
 
 When the MCP server is unavailable, run the same validation through the internal CLI
 lane (§ Server availability): resolve the binary with
-`DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"`, then
+`DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"`
+(Codex: replace `${CLAUDE_SKILL_DIR}` with the resolved `<skill-dir>`), then
 `"$DEDIREN" validate --input <pkg>/model.json` for schema and
 `"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
 semantic gate. This is the same evidence, obtained without the server.
@@ -97,7 +104,8 @@ Its topic scope (Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, Repair Rules) is stated in `architecture.md` §9. When running OEF or
 XMI export, follow the guide's schema-cache instructions. The export engines run
 in-process and inherit the server's environment; the plugin points
-`DEDIREN_SCHEMA_CACHE_DIR` at a writable `${CLAUDE_PLUGIN_DATA}` directory so the
+`DEDIREN_SCHEMA_CACHE_DIR` at a writable `${CLAUDE_PLUGIN_DATA}` directory for
+Claude Code, or the corresponding Codex plugin-data directory, so the
 XSD download succeeds. If export still fails with
 `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
 `message`: it names whether to make that cache writable or to pre-fetch the XSDs and
@@ -130,6 +138,7 @@ When the MCP server is unavailable, build through the internal CLI lane:
 
 ```bash
 DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"
+# Codex: replace ${CLAUDE_SKILL_DIR} with the resolved absolute <skill-dir>.
 "$DEDIREN" build --package <pkg>/package.json      # or: "$DEDIREN" build <pkg>
 ```
 
@@ -204,6 +213,7 @@ re-render on a supported runtime (`architecture.md` §9):
 
 ```bash
 ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view label>" --desc "<view architecture question>" <pkg>/generated/svg/<view-id>.svg
+# Codex: replace ${CLAUDE_SKILL_DIR} with the resolved absolute <skill-dir>.
 ```
 
 To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /

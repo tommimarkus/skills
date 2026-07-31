@@ -61,6 +61,13 @@ class ParseVersionTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             vs.parse_version("2.8.1")
 
+    def test_rejects_invalid_month(self):
+        with self.assertRaises(ValueError):
+            vs.parse_version("2026.13.1")
+
+    def test_codex_version_is_a_normalized_derivative(self):
+        self.assertEqual(vs.codex_version("2026.07.24"), "2026.7.24")
+
 
 class CurrentMonthTest(unittest.TestCase):
     def test_format(self):
@@ -68,10 +75,16 @@ class CurrentMonthTest(unittest.TestCase):
 
 
 def _write_plugin_manifest(root: Path, plugin: str, version: str) -> None:
-    manifest_dir = root / plugin / ".claude-plugin"
-    manifest_dir.mkdir(parents=True, exist_ok=True)
-    (manifest_dir / "plugin.json").write_text(
+    claude_dir = root / plugin / ".claude-plugin"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    (claude_dir / "plugin.json").write_text(
         json.dumps({"name": plugin, "version": version}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    codex_dir = root / plugin / ".codex-plugin"
+    codex_dir.mkdir(parents=True, exist_ok=True)
+    (codex_dir / "plugin.json").write_text(
+        json.dumps({"name": plugin, "version": vs.codex_version(version)}, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -132,6 +145,18 @@ def _write_marketplace(root: Path, plugin: str, version: str | None = None) -> N
         json.dumps({"plugins": [entry]}, indent=2) + "\n",
         encoding="utf-8",
     )
+    codex_dir = root / ".agents" / "plugins"
+    codex_dir.mkdir(parents=True, exist_ok=True)
+    codex_entry: dict[str, object] = {
+        "name": plugin,
+        "source": {"source": "local", "path": f"./{plugin}"},
+    }
+    if version is not None:
+        codex_entry["version"] = version
+    (codex_dir / "marketplace.json").write_text(
+        json.dumps({"plugins": [codex_entry]}, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_readme(root: Path, plugin: str, version: str) -> None:
@@ -177,6 +202,16 @@ class GuardTest(unittest.TestCase):
         with self._feature_branch() as root:
             _write_plugin_manifest(root, "souroldgeezer-audit", "2026.06.4")
             _git(root, "commit", "-qam", "premature stamp")
+            self.assertEqual(self._guard(root), 1)
+
+    def test_fails_when_branch_stamps_only_the_codex_manifest(self):
+        with self._feature_branch() as root:
+            manifest = root / "souroldgeezer-audit" / ".codex-plugin" / "plugin.json"
+            manifest.write_text(
+                json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.4"}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            _git(root, "commit", "-qam", "premature codex stamp")
             self.assertEqual(self._guard(root), 1)
 
     def test_fails_when_branch_stamps_the_readme_cell(self):

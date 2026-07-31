@@ -267,9 +267,14 @@ souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md
 souroldgeezer-design/agents/app-design.md
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
 souroldgeezer-audit/.claude-plugin/plugin.json
+souroldgeezer-audit/.codex-plugin/plugin.json
 .claude-plugin/marketplace.json
+.agents/plugins/marketplace.json
 internal-skills/lesson-capture/SKILL.md
 .claude/skills/lesson-capture/SKILL.md
+.agents/skills/lesson-capture/SKILL.md
+.codex/hooks.json
+AGENTS.md
 CLAUDE.md
 README.md
 scripts/skill_architecture_report.py
@@ -279,12 +284,17 @@ EOF
 )
 filtered=$(source scripts/agent-hooks/stop-hook-lib.sh; printf '%s\n' "$filter_input" | stop_hook_filter_authoring_surfaces | LC_ALL=C sort -u)
 expected=$(cat <<'EOF'
+.agents/plugins/marketplace.json
+.agents/skills/lesson-capture/SKILL.md
 .claude-plugin/marketplace.json
 .claude/skills/lesson-capture/SKILL.md
+.codex/hooks.json
+AGENTS.md
 CLAUDE.md
 README.md
 internal-skills/lesson-capture/SKILL.md
 souroldgeezer-audit/.claude-plugin/plugin.json
+souroldgeezer-audit/.codex-plugin/plugin.json
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
 souroldgeezer-audit/skills/lean-audit/SKILL.md
 souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md

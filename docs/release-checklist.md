@@ -4,10 +4,15 @@ Use this before publishing a release or bumping a plugin version.
 
 ## Checklist
 
-- Confirm the shared marketplace still points at existing plugin paths.
-- Confirm each plugin has a Claude `.claude-plugin/plugin.json` manifest.
-- Confirm `name`, `version`, and `description` are synchronized across the
-  marketplace entry and the Claude manifest.
+- Confirm the shared Claude marketplace still points at existing plugin paths.
+- Confirm each plugin retains its Claude `.claude-plugin/plugin.json` manifest
+  and the Claude marketplace entry keeps the same `name` and `description`.
+- Confirm the additive Codex marketplace exposes the same plugin set, order, and
+  local paths, and each plugin has `.codex-plugin/plugin.json`.
+- Confirm both manifests express the same semantic version: padded
+  `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex. Neither
+  marketplace may carry a `version` key.
+- Validate every Codex plugin with the current first-party plugin validator.
 - Confirm the plugin docs still link every shipped skill.
 - Confirm `README.md` still acts as the product map.
 - Run the validation commands listed in `README.md`.
@@ -17,7 +22,8 @@ Use this before publishing a release or bumping a plugin version.
 
 ## Versioning guidance
 
-Use semver at the plugin level.
+Keep the established Claude/README CalVer spelling `YYYY.0M.MICRO` as the
+release authority. Derive Codex's strict-SemVer spelling `YYYY.M.MICRO` from it.
 
 - Patch: documentation-only edits, link fixes, or other changes that do not
   alter shipped skill behavior or installed-plugin update checks.
@@ -27,5 +33,7 @@ Use semver at the plugin level.
   changing a plugin name, moving a canonical reference path, or changing an
   output contract.
 
-When a plugin version changes, update the matching Claude manifest and
-marketplace entry in the same change.
+Feature branches carry no release increment. At integration on `main`, compute
+the next stamp with `scripts/version_stamp.py`, then update the Claude manifest,
+Codex manifest, and matching README cell together. Do not add a version to a
+marketplace entry.

@@ -1,0 +1,27 @@
+{
+  "description": "Repository skill-authoring closeout hooks.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-skill-architecture.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-lean-cost.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-ip-hygiene.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; hook=\"$repo/scripts/agent-hooks/stop-lesson-capture.sh\"; test -f \"$hook\" || exit 0; exec bash \"$hook\"'"
+          }
+        ]
+      }
+    ]
+  }
+}

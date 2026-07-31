@@ -1,16 +1,16 @@
 {
   "quick-node-unit": 20582,
   "deep-nextjs-suite": 45132,
-  "lean-audit-default": 9302,
-  "lean-audit-minify": 15359,
+  "lean-audit-default": 9412,
+  "lean-audit-minify": 15551,
   "lookup-functions": 18450,
   "build-functions-cosmos": 25521,
   "review-functions-cosmos-blob": 31643,
   "sd-lookup-principle": 1871,
   "sd-build-csharp": 7726,
   "sd-review-typescript": 11028,
-  "arch-lookup-notation": 3465,
-  "arch-build-archimate": 23102,
-  "arch-extract-dotnet": 24244,
-  "arch-review-package": 24669
+  "arch-lookup-notation": 3597,
+  "arch-build-archimate": 23570,
+  "arch-extract-dotnet": 24712,
+  "arch-review-package": 25137
 }

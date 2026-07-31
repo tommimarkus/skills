@@ -35,14 +35,20 @@ complied), `adopt-guidance` (write the standing line — MUST embed the invarian
 per the reference template). Modes scope work; the standing line and repo/user
 guidance remain authoritative.
 
-Enforcement cycle (see the reference for the full form): if the session is not
-already in plan mode, call `EnterPlanMode` before asking anything; orient
-briefly; ask clarifying questions, one focused question per message, covering the
-goal, its constraints, and what a good result looks like; converge on an approach
-in one or two sentences, naming a tradeoff and your pick when real alternatives
-exist; present it with `ExitPlanMode` for approval.
-Native plan mode owns the plan — write no spec file, commit nothing, and do not
-hand to a separate planning skill. Implementation is a fresh action after
+Enforcement cycle (see the reference for the full form):
+
+- **Claude Code:** if the session is not already in plan mode, call
+  `EnterPlanMode` before asking anything; orient briefly; ask clarifying
+  questions, one focused question per message, covering the goal, its
+  constraints, and what a good result looks like; converge on an approach in
+  one or two sentences, naming a tradeoff and your pick when real alternatives
+  exist; present it with `ExitPlanMode` for approval.
+- **Codex:** use native Plan mode when active or exposed. Otherwise conduct the
+  same read-only brainstorm, present the proposed plan, and stop for explicit
+  user approval; never claim a mode change the host did not expose.
+
+The selected plan lane owns the plan — write no spec file, commit nothing, and
+do not hand to a separate planning skill. Implementation is a fresh action after
 approval.
 
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
@@ -65,15 +71,19 @@ Ask vs continue: continue when the goal, its constraints, and what a good result
 looks like are clear enough to state an approach. Stop and ask on ambiguous or multi-subsystem
 scope (flag decomposition first), a missing success criterion, or a request that
 is really domain work a sibling owns. Never start implementing inside this skill;
-approval via `ExitPlanMode` is the terminal step.
+approval via `ExitPlanMode` is the terminal step in Claude Code; Codex native
+approval or an explicit user response is the terminal step in Codex.
 
 Enforcement honesty follows the posture core's limits rule (enforced-by-default
 posture, no mechanical guarantee; the PreToolUse backstop is deferred phase-2).
 
 Stop before letting new build work proceed with no approved plan unless an
-explicit, logged opt-out applies. Stop if plan mode cannot be entered in the
-current surface (for example a non-interactive one-shot run): produce the
+explicit, logged opt-out applies. Stop if Claude Code plan mode cannot be entered
+in the current surface (for example a non-interactive one-shot run): produce the
 proposed approach and open questions instead, and say plan mode was not entered.
+For Codex without native Plan mode, the interactive explicit-approval fallback
+is valid; a non-interactive one-shot run can only hand the proposal back and
+cannot claim approval.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
 repo's documented skill-architecture validation. End with the output footer from

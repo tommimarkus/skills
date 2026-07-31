@@ -2,22 +2,25 @@
 # Launcher for the bundled dediren Model Context Protocol (MCP) stdio server.
 #
 # Declared as the plugin's `mcpServers.dediren` command (plugin.json). Claude Code
-# spawns and owns this process automatically when the plugin is enabled; stdout
+# spawns and owns this process automatically when the plugin is enabled; the
+# additive Codex manifest declares the same launcher for Codex. stdout
 # carries JSON-RPC only.
 #
 # Resolve-on-demand, bounded. Plugin MCP servers auto-start every session, and a
 # stdio server that exits at spawn gets no auto-retry — it stays dead until the
 # next session or `/reload-plugins`. So a launcher that merely fail-fasts when the
 # bundle is missing guarantees a dead session after every pin bump (the pinned
-# bundle changes; the shared ${CLAUDE_PLUGIN_DATA} cache still holds the old one).
+# bundle changes; the Claude ${CLAUDE_PLUGIN_DATA} or Codex plugin-data cache still holds the old one).
 #
-# The bundle caches per-user under ${CLAUDE_PLUGIN_DATA} (set in plugin.json), not
+# The bundle caches per-user under ${CLAUDE_PLUGIN_DATA} in Claude Code or the
+# corresponding Codex plugin-data directory (both set as DEDIREN_CACHE_DIR), not
 # per-project, so resolving here downloads at most once per pinned version per user
 # — not once per repo. The fast path (bundle already resolved) does NO network I/O.
 # Only a cold cache resolves, and that resolve is bounded (the resolver caps curl
 # with --connect-timeout/--max-time and the install lock with `flock -w`) so it can
 # never hang session start. Session start is non-blocking in Claude Code — only a
-# turn that needs a `dediren_*` tool waits — so the one-time resolve is cheap.
+# turn that needs a `dediren_*` tool waits — and Codex uses the same bounded
+# launcher, so the one-time resolve is cheap.
 # `--ensure-bundle` prints to stdout, which on this launcher is the JSON-RPC
 # channel, so its output is redirected away. Java 21+ is a host prerequisite; if it
 # is absent the `exec` below fails and the server does not start (non-fatal).

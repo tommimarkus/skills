@@ -116,10 +116,13 @@ pointer target cited from edited files, and disclose the reduced mirror.
 against the shadow copy). Invoke `skill_load_cost.py` and `lean_engine.py` with
 `uv` as the primary runner — it provisions the required Python ≥3.11 even when the
 system `python3` is older:
-`uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/<script>.py" …`
+Claude Code: `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/<script>.py" …`
 (fallback `python3 "${CLAUDE_PLUGIN_ROOT}/…/<script>.py" …` only where `python3` is
-≥3.11). Each bare `skill_load_cost.py` / `lean_engine.py` shorthand below means
-that invocation; if no conforming interpreter is available (shim exit 3 / `uv`
+≥3.11). Codex: use the equivalent
+`uv run "<skill-dir>/references/scripts/<script>.py" …` form with the absolute
+skill directory resolved in the host skill. Each bare `skill_load_cost.py` /
+`lean_engine.py` shorthand below means that invocation; if no conforming
+interpreter is available (shim exit 3 / `uv`
 reports none), STOP per the host skill's interpreter-floor rule:
 
 - **G1 before-inventory:**

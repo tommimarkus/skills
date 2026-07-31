@@ -64,11 +64,12 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
 
 ## Platform redundancy — Lean: over-production (reinventing the platform)
 - `LA-NAT-1` — a custom artifact (hook/script, guidance-prose instruction,
-  skill/command/agent, or MCP server) reproduces a capability Claude Code now
-  provides natively, confirmed by a cited live `claude-code-guide` check.
+  skill/command/agent, or MCP server) reproduces a capability Claude Code or
+  Codex now provides natively, confirmed by the runtime-specific live verifier:
+  `claude-code-guide` for Claude Code or current official OpenAI docs for Codex.
   Confidence field: `HIGH` (drop-in native equivalent) or `MEDIUM` (native covers
   the core with caveats / required config). Severity: info (advisory).
-  Source: inference + live agent verification (`procedures/platform-redundancy.md`).
+  Source: inference + runtime-specific live verification (`procedures/platform-redundancy.md`).
   Opt-in lens only.
 - `LA-NAT-2` — a reinvention candidate the pattern catalog raised that the live
   check could NOT confirm as native (uncertain, no citation, or the live check was
@@ -120,7 +121,7 @@ Intra-passage over-processing (wordy but unique prose) is now in scope via
 `LA-VERBOSE-*` (deterministic nomination + judgment confirmation).
 
 Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
-explicitly asks whether custom artifacts reinvent a native Claude Code capability.
+explicitly asks whether custom artifacts reinvent a native Claude Code or Codex capability.
 
 Minify (`LA-MIN-*`) is an opt-in, propose-only lens: silent unless the request
 explicitly asks for a minification / reduction proposal, and it never applies

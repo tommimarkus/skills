@@ -266,6 +266,9 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   tune that constant, never the generated markup.
 - **Build / refresh:**
 
+  Claude Code expands `${CLAUDE_SKILL_DIR}`. In Codex, replace that token in the
+  commands below with the absolute `<skill-dir>` reported for the loaded skill.
+
   ```bash
   ${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>
   ```

@@ -47,8 +47,10 @@ repo-local application of
 
 The GitHub MCP tools are deferred: they are listed by name (for example
 `mcp__<server>__issue_read`, `issue_write`, `add_issue_comment`, `list_issues`,
-`get_me`) but their schemas are not preloaded. Load the ones you need with
-`ToolSearch` (`select:<tool>,<tool>`) before calling them. Treat a GitHub MCP
+`get_me`) but their schemas are not preloaded. Load the ones you need through
+the host's deferred-tool discovery mechanism (`ToolSearch` with
+`select:<tool>,<tool>` in Claude Code; app/tool search when exposed in Codex)
+before calling them. Treat a GitHub MCP
 server as present whenever such `mcp__*_github__*` tools are listed; do not read
 "no GitHub tool is currently loaded" as "no MCP available," and do not open with
 a `gh auth status` probe or a `gh` call as the first move.

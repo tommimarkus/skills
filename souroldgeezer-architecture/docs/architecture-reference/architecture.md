@@ -588,6 +588,8 @@ applies them, with the finding codes, is
 
 The skill drives Dediren through the plugin's bundled MCP server (`plugin.json`
 `mcpServers.dediren`), which Claude Code auto-starts when the plugin is enabled.
+The additive Codex manifest declares the same server and Codex starts it through
+its own plugin lifecycle.
 Dediren is an internal engine — users are never asked to locate, install, or
 version it. Call its tools, never a CLI. The server exposes seven: three that
 author, validate, and build — `dediren_validate`, `dediren_build`,
@@ -597,15 +599,17 @@ under Read-Only Model-Intelligence Tools below.
 `${CLAUDE_SKILL_DIR}` is this skill's absolute directory; Claude Code
 expands it in `SKILL.md` (it resolves the installed-plugin cache path and this
 source repo alike, and contains the skill's `SKILL.md`), and the reference
-procedures reuse that resolved value read raw. It locates this skill's own helper
-scripts, not Dediren.
+procedures reuse that resolved value read raw. In Codex, resolve the equivalent
+absolute `<skill-dir>` from the loaded skill's source path and carry it into the
+raw procedures. It locates this skill's own helper scripts, not Dediren.
 
 Read the format contract through `dediren_guide` (`{}` for the topic index, then
 `{topic: "source-json"}`) before authoring or repairing source JSON. It is the
 fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, and Repair Rules. The launcher resolves the pinned Java™-backed runtime on
 demand at session start, bounded so a cold cache or a slow network can never hang
-startup, and caches it per-user under `${CLAUDE_PLUGIN_DATA}` (at most one download
+startup, and caches it per-user under `${CLAUDE_PLUGIN_DATA}` in Claude Code or
+the Codex manifest's plugin-data directory (at most one download
 per pinned version per user, not per repo); the fast path does no network I/O. It
 requires Java™ 21 or newer on the host. When the `dediren_*` MCP tools are absent
 that session (the host was offline at resolve, or the server has not yet reconnected
@@ -810,6 +814,8 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
   --title "<view label>" --desc "<the view's architecture question>" \
   <pkg>/generated/svg/<view-id>.svg
 ```
+
+In Codex, replace `${CLAUDE_SKILL_DIR}` with the resolved absolute `<skill-dir>`.
 
 The band is what the step contributes on the pinned runtime. It sits above the
 diagram, added by expanding the `viewBox` upward; the step keeps the root

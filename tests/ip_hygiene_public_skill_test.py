@@ -61,6 +61,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
     def test_audit_plugin_version_and_description_are_synchronized(self) -> None:
         marketplace = json.loads(read(".claude-plugin/marketplace.json"))
         claude_manifest = json.loads(read("souroldgeezer-audit/.claude-plugin/plugin.json"))
+        codex_manifest = json.loads(read("souroldgeezer-audit/.codex-plugin/plugin.json"))
         audit_entry = next(
             plugin for plugin in marketplace["plugins"] if plugin["name"] == "souroldgeezer-audit"
         )
@@ -73,12 +74,18 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         # assigned at integration on main and owned by scripts/version_stamp.py, so
         # a pin here would just be a hand-edited sync cell every bump. The
         # description stays pinned because it is content, and stays synchronized
-        # across both surfaces.
+        # across the existing Claude surfaces plus the additive Codex manifest.
         canonical = claude_manifest["version"]
         self.assertRegex(canonical, r"^\d{4}\.\d{2}\.\d+$")
         self.assertNotIn("version", audit_entry)
         self.assertEqual(audit_entry["description"], AUDIT_DESCRIPTION)
         self.assertEqual(claude_manifest["description"], AUDIT_DESCRIPTION)
+        self.assertEqual(codex_manifest["description"], AUDIT_DESCRIPTION)
+        self.assertEqual(
+            tuple(int(part) for part in canonical.split(".")),
+            tuple(int(part) for part in codex_manifest["version"].split(".")),
+        )
+        self.assertRegex(codex_manifest["version"], r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
     def test_repo_guidance_and_hooks_reference_public_skill(self) -> None:
         checked_paths = [

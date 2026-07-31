@@ -484,8 +484,9 @@ def integration_recipe(target: str, *, plugin: str = INTEGRATION_PLUGIN) -> list
         f"git switch main && git merge --ff-only dediren-{target}",
         "uv run python scripts/version_stamp.py guard   # branch must not have stamped a cell",
         f"uv run python scripts/version_stamp.py compute --plugin {plugin}",
-        f"# apply that stamp to the two version-authority cells: {plugin}/.claude-plugin/plugin.json",
-        "#   and the root README.md version-table row (equal; marketplace entries never carry version),",
+        f"# apply that padded stamp to {plugin}/.claude-plugin/plugin.json and the root README row,",
+        f"#   and its month-normalized derivative to {plugin}/.codex-plugin/plugin.json",
+        "#   (semantically equal; marketplace entries never carry version),",
         "#   sync the version-sync test expectation, then commit the stamp on main.",
     ]
 

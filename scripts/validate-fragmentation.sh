@@ -46,6 +46,25 @@ validate_marketplace_paths() {
     test -d "$plugin_dir/skills"
   done
 
+  jq -c '.plugins[]' .agents/plugins/marketplace.json | while IFS= read -r plugin; do
+    source_kind="$(jq -r '.source.source' <<<"$plugin")"
+    source="$(jq -r '.source.path' <<<"$plugin")"
+
+    test "$source_kind" = "local"
+    case "$source" in
+      ./*) ;;
+      *)
+        printf 'Invalid Codex marketplace source: %s\n' "$source" >&2
+        return 1
+        ;;
+    esac
+
+    plugin_dir="${source#./}"
+    test -d "$plugin_dir"
+    test -f "$plugin_dir/.codex-plugin/plugin.json"
+    test -d "$plugin_dir/skills"
+  done
+
   echo "Marketplace paths OK"
 }
 
@@ -53,6 +72,7 @@ validate_plugin_manifests() {
   jq -c '.plugins[]' .claude-plugin/marketplace.json | while IFS= read -r plugin; do
     plugin_dir="$(jq -r '.source | sub("^./"; "")' <<<"$plugin")"
     claude_manifest="$plugin_dir/.claude-plugin/plugin.json"
+    codex_manifest="$plugin_dir/.codex-plugin/plugin.json"
 
     jq -e '
       type == "object" and
@@ -63,9 +83,19 @@ validate_plugin_manifests() {
       (.license | type == "string")
     ' "$claude_manifest" >/dev/null
 
-    # plugin.json#version is the sole version authority: Claude Code always
-    # resolves it over a marketplace-entry copy without warning, so the
-    # marketplace entry must never carry a version key of its own.
+    jq -e '
+      type == "object" and
+      (.name | type == "string") and
+      (.version | type == "string" and test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")) and
+      (.description | type == "string") and
+      (.author | type == "object") and
+      (.license | type == "string") and
+      .skills == "./skills/" and
+      (.interface | type == "object")
+    ' "$codex_manifest" >/dev/null
+
+    # Runtime manifests own version identity; marketplace entries must never
+    # carry a copy that can drift silently.
     jq -n -e \
       --argjson marketplace "$plugin" \
       --slurpfile claude "$claude_manifest" \
@@ -75,6 +105,10 @@ validate_plugin_manifests() {
       ($marketplace | has("version") | not)
       ' >/dev/null
   done
+
+
+  jq -e 'all(.plugins[]; has("version") | not)' \
+    .agents/plugins/marketplace.json >/dev/null
 
   echo "Plugin manifests OK"
 }

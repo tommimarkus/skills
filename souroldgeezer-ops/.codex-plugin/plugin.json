@@ -1,0 +1,31 @@
+{
+  "name": "souroldgeezer-ops",
+  "version": "2026.7.2",
+  "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions.",
+  "author": {
+    "name": "Sour Old Geezer",
+    "email": "claude-marketplace-a.varsity439@passmail.net",
+    "url": "https://github.com/tommimarkus"
+  },
+  "homepage": "https://github.com/tommimarkus/skills",
+  "repository": "https://github.com/tommimarkus/skills",
+  "license": "MIT",
+  "keywords": ["issues", "pull-requests", "merge-requests", "operations"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sour Old Geezer Ops",
+    "shortDescription": "Issue and change-request operations",
+    "longDescription": "Handle issue, work-item, pull-request, and merge-request lifecycles through provider-neutral workflows and provider overlays.",
+    "developerName": "Sour Old Geezer",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/tommimarkus/skills",
+    "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+    "defaultPrompt": [
+      "Handle this issue end to end.",
+      "Review and update this pull request.",
+      "Resume this work item from its current state."
+    ]
+  }
+}

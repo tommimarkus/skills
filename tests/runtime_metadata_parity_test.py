@@ -78,6 +78,36 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "version",
         )
 
+    def test_codex_manifest_requires_strict_semver(self) -> None:
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/.codex-plugin/plugin.json",
+            """
+            {
+              "name": "souroldgeezer-example",
+              "version": "0.01.0",
+              "description": "Example plugin for runtime metadata parity tests.",
+              "skills": "./skills/"
+            }
+            """,
+            "souroldgeezer-example/.codex-plugin/plugin.json",
+            "strict SemVer",
+        )
+
+    def test_codex_manifest_description_drift_is_detected(self) -> None:
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/.codex-plugin/plugin.json",
+            """
+            {
+              "name": "souroldgeezer-example",
+              "version": "0.1.0",
+              "description": "Drifted Codex description.",
+              "skills": "./skills/"
+            }
+            """,
+            "souroldgeezer-example/.codex-plugin/plugin.json",
+            "description",
+        )
+
     def test_marketplace_entry_with_version_key_is_detected(self) -> None:
         # plugin.json#version is the sole authority (Claude Code always resolves
         # it over a marketplace-entry copy without warning); a marketplace entry
@@ -125,6 +155,20 @@ class RuntimeMetadataParityTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(".claude/skills/internal-review/SKILL.md", result.stdout)
+        self.assertIn("exists", result.stdout)
+        self.assertIn("present", result.stdout)
+        self.assertIn("missing", result.stdout)
+
+    def test_shared_internal_skill_without_codex_wrapper_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            (repo / ".agents" / "skills" / "internal-review" / "SKILL.md").unlink()
+
+            result = run_checker(repo)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".agents/skills/internal-review/SKILL.md", result.stdout)
         self.assertIn("exists", result.stdout)
         self.assertIn("present", result.stdout)
         self.assertIn("missing", result.stdout)
@@ -200,6 +244,22 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
+            repo / ".agents/plugins/marketplace.json",
+            """
+            {
+              "name": "souroldgeezer",
+              "plugins": [
+                {
+                  "name": "souroldgeezer-example",
+                  "source": {"source": "local", "path": "./souroldgeezer-example"},
+                  "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                  "category": "Productivity"
+                }
+              ]
+            }
+            """,
+        )
+        write(
             repo / "souroldgeezer-example/.claude-plugin/plugin.json",
             f"""
             {{
@@ -208,6 +268,17 @@ class RuntimeMetadataParityTest(unittest.TestCase):
               "description": "{plugin_description}",
               "author": {{"name": "Sour Old Geezer", "email": "test@example.invalid"}},
               "license": "MIT"
+            }}
+            """,
+        )
+        write(
+            repo / "souroldgeezer-example/.codex-plugin/plugin.json",
+            f"""
+            {{
+              "name": "souroldgeezer-example",
+              "version": "0.1.0",
+              "description": "{plugin_description}",
+              "skills": "./skills/"
             }}
             """,
         )
@@ -268,6 +339,20 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         )
         write(
             repo / ".claude/skills/internal-review/SKILL.md",
+            f"""
+            ---
+            name: internal-review
+            description: {internal_description}
+            ---
+
+            # Internal Review
+
+            Read `internal-skills/internal-review/SKILL.md` and follow it as the
+            source of truth.
+            """,
+        )
+        write(
+            repo / ".agents/skills/internal-review/SKILL.md",
             f"""
             ---
             name: internal-review

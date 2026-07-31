@@ -245,6 +245,25 @@ class SkillArchitectureReportTest(unittest.TestCase):
 
             self.assertEqual([], module.find_skill_files(repo))
 
+    def test_runtime_internal_wrappers_are_not_scanned_as_published_skills(self) -> None:
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            for runtime_dir in (".claude", ".agents"):
+                write(
+                    repo / runtime_dir / "skills/internal-review/SKILL.md",
+                    """
+                    ---
+                    name: internal-review
+                    description: Use when routing to the shared internal review skill.
+                    ---
+
+                    Read `internal-skills/internal-review/SKILL.md`.
+                    """,
+                )
+
+            self.assertEqual([], module.find_skill_files(repo))
+
     def test_shell_wrapper_help_smoke(self) -> None:
         result = subprocess.run(
             ["bash", str(WRAPPER), "--help"],

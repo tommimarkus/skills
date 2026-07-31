@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, verbose passages, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled token-clone engine, `LA-CODE-DUP-*`); *semantic* duplication/DRY stays with software-design; mechanical source-level dead code is out of scope. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, two opt-in lenses: platform-redundancy flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ capability (verified live, never auto-run); and minify produces a propose-only reduction diff plus fidelity report — never applied.
+  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, verbose passages, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled token-clone engine, `LA-CODE-DUP-*`); *semantic* duplication/DRY stays with software-design; mechanical source-level dead code is out of scope. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, two opt-in lenses: platform-redundancy flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ or Codex capability (verified live, never auto-run); and minify produces a propose-only reduction diff plus fidelity report — never applied.
 ---
 
 # Lean Audit
@@ -16,7 +16,10 @@ Cite [`references/smell-catalog.md`](references/smell-catalog.md) codes (`LA-*`)
 
 Own read-only duplication/waste audits of markdown prose and skill surfaces
 (governance docs, `SKILL.md`, agents, `docs/*-reference/**`, `references/**`,
-`extensions/**`), plus mechanical source-code copy-paste duplication. Delegate: security → `devsecops-audit`; test quality →
+`extensions/**`), plus mechanical source-code copy-paste duplication. Claude Code
+expands `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PLUGIN_ROOT}` in the loaded skill;
+Codex resolves `<skill-dir>` once from the absolute source path reported for this
+loaded `SKILL.md`. Delegate: security → `devsecops-audit`; test quality →
 `test-quality-audit`; copyright / marks / licence → `ip-hygiene`; *semantic* code
 duplication / DRY ownership → the design skills (`software-design`). Source code:
 mechanical copy-paste **duplication** is owned via the bundled `code_lens.py`
@@ -31,10 +34,10 @@ and the waste lens runs unchanged. Both lenses are read-only and advisory.
 
 A third lens — platform redundancy (`LA-NAT-*`) — is OPT-IN, not surface-gated: it
 runs ONLY when the request explicitly asks whether custom artifacts reinvent a
-native Claude Code capability. A normal duplication/waste run never activates it
-and makes zero agent/network calls. It is read-only and advisory, and its native
-verdicts come from a live `claude-code-guide` check (never a bundled capability
-list). See `## Platform-redundancy lens (opt-in)`.
+native Claude Code or Codex capability named by the request. A normal duplication/waste run never
+activates it and makes zero agent/network calls. It is read-only and advisory,
+and its native verdicts come from a live check of that host's official docs
+(never a bundled capability list). See `## Platform-redundancy lens (opt-in)`.
 
 A fourth lens — minify (`LA-MIN-*`) — is OPT-IN and PROPOSE-ONLY: it runs ONLY
 when the request explicitly asks for a minification / reduction proposal. It
@@ -80,7 +83,7 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
   [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
 - **Platform-redundancy lens (opt-in):** load [`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md)
   ONLY when the request explicitly asks for a native/platform-redundancy check. It
-  carries the reinvention-pattern catalog, the live `claude-code-guide` consultation
+  carries the reinvention-pattern catalog, the runtime-specific live consultation
   protocol, the confidence tiering, the degraded-mode rule, and the emit fields.
   Cite `LA-NAT-*` from [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
 - **Minify lens (opt-in, propose-only):** load [`references/procedures/minify.md`](references/procedures/minify.md)
@@ -93,8 +96,8 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
 ## Workflow
 
 1. Establish the scope: the whole repo, a single file, a set of named files, or a diff (its changed files). The bundled engine has no single-file or diff mode — it always scans the markdown tree rooted at a DIRECTORY — so pick the directory to run it in and the in-scope path set to keep. If a `.lean-audit.toml` exists at the scanned root the engine reads it; otherwise it runs heuristic-only — disclose which.
-2. Run the bundled engine and parse its JSON. **Interpreter — `uv` is primary:** the engine needs Python ≥3.11 (it uses `tomllib`), so run it with `uv`, which provisions or selects a conforming interpreter even when the system `python3` is older — `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` (Claude Code expands `${CLAUDE_PLUGIN_ROOT}` inline when this skill loads; reference procedures reuse that same resolved value, as they are read raw without substitution). The `python3 "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` form is a fallback, valid only where `python3` is already ≥3.11. `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1` (info verbosity nominations); exit 1 = a block-severity duplication is present, exit 2 = engine error on input (report the limit, continue with the judgment-only checks), exit 3 = interpreter floor unmet — **STOP**, do not substitute a judgment-only pass (see `## Rules and Stop Conditions`). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
-2b. **Code-duplication lens (surface-gated).** If the scope contains source files (non-markdown code by extension), run `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` (uv primary as in step 2; `python3 "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` fallback only where `python3` is ≥3.11; `<dir>` = repo root, or the nearest common directory of the in-scope files) and parse its JSON. It emits `LA-CODE-DUP-1` (block, clone ≥ 2× min-tokens) and `LA-CODE-DUP-2` (advisory) clone pairs; exit 1 = a block clone present, exit 2 = engine error on input (disclose reduced coverage, continue with the other lenses), exit 3 = interpreter floor unmet — STOP as in step 2. For a file / named-files / diff scope, KEEP ONLY clones whose `path` or `matched_path` is in scope. If no source files are in scope, record "no source surfaces in scope — code lens silent" and skip this step.
+2. Run the bundled engine and parse its JSON. **Interpreter — `uv` is primary:** the engine needs Python ≥3.11 (it uses `tomllib`), so run it with `uv`, which provisions or selects a conforming interpreter even when the system `python3` is older. On Claude Code run `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` (Claude Code expands `${CLAUDE_PLUGIN_ROOT}` inline when this skill loads; reference procedures reuse that same resolved value, as they are read raw without substitution). On Codex run `uv run "<skill-dir>/references/scripts/lean_engine.py" <dir> --format json` with the resolved source path. The corresponding `python3` form is a fallback, valid only where `python3` is already ≥3.11. `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1` (info verbosity nominations); exit 1 = a block-severity duplication is present, exit 2 = engine error on input (report the limit, continue with the judgment-only checks), exit 3 = interpreter floor unmet — **STOP**, do not substitute a judgment-only pass (see `## Rules and Stop Conditions`). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
+2b. **Code-duplication lens (surface-gated).** If the scope contains source files (non-markdown code by extension), run `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` on Claude Code, or `uv run "<skill-dir>/references/scripts/code_lens.py" <dir> --format json` on Codex (uv primary as in step 2; the corresponding `python3` form is a fallback only where `python3` is ≥3.11; `<dir>` = repo root, or the nearest common directory of the in-scope files) and parse its JSON. It emits `LA-CODE-DUP-1` (block, clone ≥ 2× min-tokens) and `LA-CODE-DUP-2` (advisory) clone pairs; exit 1 = a block clone present, exit 2 = engine error on input (disclose reduced coverage, continue with the other lenses), exit 3 = interpreter floor unmet — STOP as in step 2. For a file / named-files / diff scope, KEEP ONLY clones whose `path` or `matched_path` is in scope. If no source files are in scope, record "no source surfaces in scope — code lens silent" and skip this step.
 3. Add the judgment-only checks from [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) —
    `LA-STALE-2` (prose describing a removed/renamed structure), `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context), and `LA-VERBOSE-2`
@@ -121,7 +124,7 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
 Runs ONLY on an explicit native/platform-redundancy request — never as part of a
 default waste run, and never auto-fired by surface detection. When requested, load
 [`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md) and run it end-to-end (candidate
-detection → live `claude-code-guide` verification → synthesis → worklist merge).
+detection → runtime-specific live verification → synthesis → worklist merge).
 Read-only; never auto-migrate. If the live check is unavailable, degrade to
 unverified `LA-NAT-2` review items and disclose.
 
@@ -163,7 +166,8 @@ agent/network calls.
   deterministic findings.
 - When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
 - Platform-redundancy lens (opt-in): never assert "native" from the pattern catalog
-  alone — the catalog only nominates; a cited live `claude-code-guide` answer is
+  alone — the catalog only nominates; a cited live `claude-code-guide` answer
+  for Claude Code or official OpenAI docs answer for Codex is
   what promotes a candidate to `LA-NAT-1`. Surface confirmed redundancy as *review*,
   never *delete*. Disclose the network dependency and the "capabilities as observed
   <date>" recency. If the live check is unavailable, degrade to unverified
@@ -191,7 +195,8 @@ detected) · languages/extensions scanned · min-tokens threshold · fail-open s
 (unreadable/binary/unknown-extension).
 
 When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
-artifact families detected · `claude-code-guide` availability (used | unavailable →
+artifact families detected · runtime verifier + availability (`claude-code-guide`
+for Claude Code | official OpenAI docs for Codex | unavailable →
 degraded) · citations gathered + capabilities as observed `<date>` · network
 dependency.
 
