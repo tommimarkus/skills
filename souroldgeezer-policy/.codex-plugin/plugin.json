@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-policy",
-  "version": "2026.7.3",
+  "version": "2026.8.0",
   "description": "Passive policy skills for repo-initialized git workflow, release versioning, test-driven development, and plan-first brainstorming before new build work.",
   "author": {
     "name": "Sour Old Geezer",
