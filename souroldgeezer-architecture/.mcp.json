@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dediren": {
+      "command": "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+      "env": {
+        "DEDIREN_CACHE_DIR": "${PLUGIN_DATA}/dediren/releases",
+        "DEDIREN_SCHEMA_CACHE_DIR": "${PLUGIN_DATA}/dediren/schema-cache"
+      },
+      "startup_timeout_sec": 180
+    }
+  }
+}

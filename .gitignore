@@ -6,6 +6,7 @@ docs/superpowers/
 __pycache__/
 .superpowers/
 .mcp.json
+!souroldgeezer-architecture/.mcp.json
 tools/architecture-layout-java/.gradle/
 tools/architecture-layout-java/build/
 docs/architecture/*.dediren/generated/

@@ -115,6 +115,32 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
         )
 
+    def test_codex_manifest_uses_file_backed_dediren_mcp_config(self) -> None:
+        """Codex loads bundled MCP servers through a plugin-root .mcp.json file.
+
+        An inline ``mcpServers`` object is valid Claude packaging but leaves the
+        Codex plugin enabled without registering any Dediren tools.
+        """
+        codex_manifest = json.loads(
+            (ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(codex_manifest["mcpServers"], "./.mcp.json")
+
+        mcp_config = json.loads((ARCH_PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
+        dediren = mcp_config["mcpServers"]["dediren"]
+        self.assertEqual(
+            dediren["command"],
+            "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+        )
+        self.assertEqual(
+            dediren["env"],
+            {
+                "DEDIREN_CACHE_DIR": "${PLUGIN_DATA}/dediren/releases",
+                "DEDIREN_SCHEMA_CACHE_DIR": "${PLUGIN_DATA}/dediren/schema-cache",
+            },
+        )
+        self.assertGreaterEqual(dediren["startup_timeout_sec"], 120)
+
     def test_active_surfaces_do_not_reference_retired_arch_layout_contracts(self) -> None:
         retired_terms = [
             "arch-layout",

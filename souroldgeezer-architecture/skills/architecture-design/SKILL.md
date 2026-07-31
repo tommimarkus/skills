@@ -82,8 +82,9 @@ Build.
    runtime claim may skip it.
 2. Before any runtime claim, run
    [self-check](references/procedures/self-check.md). Dediren runs as the plugin's
-   **bundled MCP server** (`plugin.json` `mcpServers.dediren`, auto-started when the
-   plugin is enabled); drive it through its tools — `dediren_validate`,
+   **bundled MCP server** (Claude manifest `mcpServers.dediren`; Codex manifest
+   `mcpServers` -> plugin-root `.mcp.json`; auto-started when the plugin is
+   enabled); drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
    `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
    mode above) — never a CLI, and never ask the user to locate or install Dediren.
@@ -162,7 +163,7 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (`plugin.json` `mcpServers`) exposes seven tools — `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
+| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (Claude manifest inline `mcpServers`; Codex manifest `mcpServers` -> plugin-root `.mcp.json`) exposes seven tools — `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
 | Package build (native `dediren_build {package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG visible title band | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; adds the band and sets the runtime-written name, refusing an unnamed artifact (exit 4); `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |

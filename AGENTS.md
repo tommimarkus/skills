@@ -23,6 +23,8 @@ making either runtime load the other's file first.
 - `.agents/plugins/marketplace.json`: native Codex marketplace.
 - `.claude-plugin/marketplace.json`: Claude Code marketplace.
 - `<plugin>/.codex-plugin/plugin.json`: native Codex manifest.
+- `<plugin>/.mcp.json`: Codex bundled MCP server configuration when the Codex
+  manifest declares `mcpServers`.
 - `<plugin>/.claude-plugin/plugin.json`: Claude manifest.
 - `<plugin>/skills/<skill>/SKILL.md`: shared runtime-neutral workflow.
 - `<plugin>/agents/<skill>.md`: Claude-only subagent wrapper.

@@ -586,10 +586,10 @@ applies them, with the finding codes, is
 
 ## 9. Runtime Evidence
 
-The skill drives Dediren through the plugin's bundled MCP server (`plugin.json`
-`mcpServers.dediren`), which Claude Code auto-starts when the plugin is enabled.
-The additive Codex manifest declares the same server and Codex starts it through
-its own plugin lifecycle.
+The skill drives Dediren through the plugin's bundled MCP server. Claude Code
+loads the inline manifest `mcpServers.dediren` entry; the Codex manifest points
+`mcpServers` to the plugin-root `.mcp.json`. Each host auto-starts the same
+launcher when the plugin is enabled.
 Dediren is an internal engine — users are never asked to locate, install, or
 version it. Call its tools, never a CLI. The server exposes seven: three that
 author, validate, and build — `dediren_validate`, `dediren_build`,

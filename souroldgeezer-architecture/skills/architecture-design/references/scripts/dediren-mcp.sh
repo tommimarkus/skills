@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Launcher for the bundled dediren Model Context Protocol (MCP) stdio server.
 #
-# Declared as the plugin's `mcpServers.dediren` command (plugin.json). Claude Code
-# spawns and owns this process automatically when the plugin is enabled; the
-# additive Codex manifest declares the same launcher for Codex. stdout
-# carries JSON-RPC only.
+# Declared as the Claude manifest's inline `mcpServers.dediren` command and the
+# Codex plugin-root `.mcp.json` `mcpServers.dediren` command. Each host spawns
+# and owns this process automatically when the plugin is enabled. stdout carries
+# JSON-RPC only.
 #
 # Resolve-on-demand, bounded. Plugin MCP servers auto-start every session, and a
 # stdio server that exits at spawn gets no auto-retry — it stays dead until the

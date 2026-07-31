@@ -12,7 +12,7 @@ The repo currently ships five plugins:
 |---|---:|---|---|
 | `souroldgeezer-audit` | `2026.08.0` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md), [lean-audit](souroldgeezer-audit/skills/lean-audit/SKILL.md) | [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md), [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |
 | `souroldgeezer-design` | `2026.07.19` | [software-design](souroldgeezer-design/skills/software-design/SKILL.md), [app-design](souroldgeezer-design/skills/app-design/SKILL.md), [api-design](souroldgeezer-design/skills/api-design/SKILL.md), [infra-design](souroldgeezer-design/skills/infra-design/SKILL.md) | [software](souroldgeezer-design/docs/software-reference/software-design.md), [app](souroldgeezer-design/docs/app-reference/app-design.md), [api](souroldgeezer-design/docs/api-reference/api-design.md), [infra](souroldgeezer-design/docs/infra-reference/infra-design.md) |
-| `souroldgeezer-architecture` | `2026.08.0` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
+| `souroldgeezer-architecture` | `2026.08.1` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
 | `souroldgeezer-policy` | `2026.08.0` | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md) | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md) |
 | `souroldgeezer-ops` | `2026.07.2` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
@@ -85,12 +85,12 @@ codex plugin add souroldgeezer-audit@souroldgeezer
   normalized form of the Claude CalVer authority (`YYYY.0M.MICRO` →
   `YYYY.M.MICRO`).
 - `architecture-design` drives Dediren through the plugin's bundled MCP server
-  (`souroldgeezer-architecture/.claude-plugin/plugin.json` `mcpServers`); its
+  (inline in the Claude manifest and file-backed by
+  `souroldgeezer-architecture/.mcp.json` from the Codex manifest); its
   launcher resolves the pinned Dediren runtime from GitHub™ Releases on first use —
   into `${CLAUDE_PLUGIN_DATA}` for installed Claude users, or a writable
   per-user/temp fallback for the internal CLI lane — and needs Java™ 21 or newer.
-  The Codex manifest mirrors the MCP server with its own documented plugin-root
-  and plugin-data variables.
+  The Codex MCP config uses its documented plugin-root and plugin-data variables.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 
