@@ -24,7 +24,7 @@
     {
       "name": "souroldgeezer-policy",
       "source": "./souroldgeezer-policy",
-      "description": "Passive policy skills for repo-initialized git workflow, release versioning, test-driven development, and plan-first brainstorming before new build work."
+      "description": "Passive policy skills for repo-initialized git workflow, release versioning, test-driven development, and plan-first brainstorming before new build work, plus execution-tier subagents for delegating approved plan steps."
     },
     {
       "name": "souroldgeezer-ops",

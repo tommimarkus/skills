@@ -221,9 +221,13 @@ Skills here follow a recurring shape. Understand it before editing any SKILL.md:
 
 ## Subagents
 
-Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md` — a thin one-shot wrapper that invokes the skill via the `Skill` tool, follows its instructions, and presents results in the skill's required shape. Frontmatter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
+Two agent classes live under `<plugin>/agents/`.
+
+**Skill wrappers** (the default). Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md` — a thin one-shot wrapper that invokes the skill via the `Skill` tool, follows its instructions, and presents results in the skill's required shape. Frontmatter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
 
 When editing a skill's invocation contract (output format, required footer fields), update both together: `SKILL.md` and the Claude Code subagent.
+
+**Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 
 ## Published skills index
 
