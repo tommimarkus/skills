@@ -20,7 +20,7 @@ to, not one assumed mid-edit.
      `EnterPlanMode` before asking anything. If already in plan mode, skip.
    - **Codex lane:** If Codex Plan mode is active or the surface exposes a native
      plan-mode control, use it before asking anything. Otherwise stay read-only
-     and use the explicit-approval fallback in step 5; never claim the mode changed.
+     and use the explicit-approval fallback in step 6; never claim the mode changed.
 2. **Orient briefly.** Skim only what is needed to ask good questions — named
    files, recent commits, obvious structure. Do not deep-dive or start a review.
 3. **Clarify in single, focused questions.** Surface the goal, its constraints,
@@ -31,7 +31,28 @@ to, not one assumed mid-edit.
    involved the work is. When real alternatives exist, name the tradeoff and your
    pick in one line — do not force a menu. State the execution shape with it:
    which steps go to subagents and what the parent keeps (see Execution shape).
-5. **Present for approval.** In the Claude Code lane, put the agreed approach into
+5. **Groom the steps.** A first decomposition is a draft, not the plan — a step
+   can only be sized once the approach is settled, so grooming follows Converge.
+   Test each step and re-cut what fails. The enumeration here is scoped by that
+   settled approach, not a repo survey: step 2 skims only enough to ask good
+   questions; this step lists only what the now-decided steps need to read and
+   write.
+
+   A step is ready when:
+   - **Its read-set is named.** You can list the files it reads and writes. If
+     the step's first act would be searching for them, that search is the
+     parent's work: do it now, while already oriented, and hand the list. One
+     enumeration in the parent replaces the same enumeration repeated in every
+     subagent.
+   - **It has one acceptance check.** Two independent checks means two steps.
+     The check is the narrowest one that would actually fail if the step were
+     wrong, not the whole suite.
+   - **A fresh agent could finish it from the handoff alone.**
+
+   Re-cut what fails: split a step that carries more than one concern or hides
+   discovery inside execution; merge steps that share a read-set and an
+   acceptance check.
+6. **Present for approval.** In the Claude Code lane, put the agreed approach into
    the plan and call `ExitPlanMode` for approval. In the Codex lane, use the
    native plan approval control when exposed; otherwise present the proposed
    plan, ask for explicit approval, and end the turn. The active lane owns the
@@ -42,11 +63,12 @@ Implementation is a fresh action the user drives after approval. Hand domain
 design and coding to the sibling skill that owns it (see Delegation).
 
 Non-interactive surfaces (a one-shot subagent, a headless run) cannot take the
-user through plan-mode approval. There, produce the proposed approach — execution
-shape included — and the open questions that remain. The proposal names the
-delegation it recommends; it does not spawn it. For Claude Code, state that plan
-mode was not entered; for Codex, state that approval was not obtained. Recommend
-running the cycle interactively.
+user through plan-mode approval. There, produce the proposed approach —
+execution shape included, its steps groomed and carrying the same size bands an
+approved plan would — and the open questions that remain. The proposal names
+the delegation it recommends; it does not spawn it. For Claude Code, state that
+plan mode was not entered; for Codex, state that approval was not obtained.
+Recommend running the cycle interactively.
 
 ## Execution shape
 
@@ -79,9 +101,27 @@ A subagent starts with no conversation history, so the plan states, per delegate
 step:
 
 - **Task and boundary** — what to do, and what to leave alone.
-- **Inputs** — paths, commands, and prior decisions it cannot infer.
+- **Inputs** — the named read-set of files it reads and writes, plus the
+  commands and prior decisions it cannot infer.
 - **Acceptance** — how it knows it is done, and what it must not claim.
 - **Return** — the shape the parent needs back in order to integrate.
+- **Size** — one of three bands, derived from Inputs and Acceptance rather than
+  estimated on its own, so it cannot drift from what those two already say:
+
+| Band | The step… |
+|---|---|
+| `small` | touches a handful of named files under one narrow acceptance check, with no discovery |
+| `medium` | spans a named read-set across a subsystem under one scoped acceptance check |
+| `large` | must reason over a bounded read-set before it can edit |
+
+`large` is the exception: name in the plan why the step cannot be cut smaller —
+the same stated-case idiom the delegation departures above already use.
+Unbounded discovery is never a legitimate `large`; that is an ungroomed step.
+
+The band travels to the subagent, not only the plan, because it is what the
+subagent checks reality against: a step told `small` that finds itself reading
+forty files has a concrete mismatch to report back, and the parent re-cuts.
+That pairing is what makes the band load-bearing rather than decorative.
 
 Under-specified handoffs, not mis-tuned runtimes, are how delegation fails. So
 name the agent type when a specialized one fits the step — its definition already
@@ -89,6 +129,10 @@ carries the model and tool set — and otherwise let the model and reasoning eff
 inherit from the session rather than pinning them. Pin either only with a reason
 stated in the plan. Where delegated steps write the same files concurrently, the
 plan says so and isolates them.
+
+Groom before selecting tiers: splitting usually confines the expensive tier to
+the part that needs it — one large analytical step re-cuts into one small
+analytical step plus several mechanical ones — which is a direct cost lever.
 
 This plugin ships an execution-tier roster so a plan names a tier instead of
 tuning knobs per call — each definition already carries its model, effort, and
@@ -104,7 +148,9 @@ tool set:
 Name the cheapest tier the step actually needs. Each tier stops and escalates
 rather than improvising when the step turns out to sit above it, so guessing low
 costs a handoff, while defaulting high costs on every step. Hosts and agent sets
-differ: the tier judgment is the portable part, not these names.
+differ: the tier judgment is the portable part, not these names. Sizing applies
+under `delegation: inline` too: an oversized step blows the parent's own
+context, a context problem rather than a delegation-only one.
 
 - **Claude Code lane:** subagents through the `Agent` tool, one per decomposed
   step.
@@ -179,6 +225,6 @@ Planning policy: <enforced-initialized | on-demand | opt-out applied | not initi
 Source: <initialization line | explicit request>
 Scope/exceptions: <in force>
 Plan mode: <entered | already active | fallback used (reason) | not available (reason)>
-Execution shape: <subagents: steps delegated | inline (case) | delegation unavailable (reason)>
+Execution shape: <subagents: N steps (bands) | inline (case) | delegation unavailable (reason)>
 Opt-outs: <none | phrase logged>
 ```

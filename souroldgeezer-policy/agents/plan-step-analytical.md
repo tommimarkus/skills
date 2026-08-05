@@ -27,6 +27,13 @@ If resolving the unknown invalidates the plan's approach for this step, stop.
 Report what you found and what it means for the approach; a step that quietly
 re-plans around a broken assumption defeats the approval the plan carries.
 
+The unknown's blast radius can outrun the step meant to unblock it. If tracing
+it touches more code paths, more systems, or more evidence than the step's
+size was built for, do not let the investigation quietly become the whole
+engagement. Say where the blast radius currently ends, what it would take
+to finish mapping it, and that this needs its own larger step before any
+edit follows.
+
 Run the acceptance check and report its raw output. Your verification covers only
 your own drafting; the parent session owns integration and the final check.
 

@@ -31,6 +31,27 @@ two runtimes, while the failure mode that actually costs a delegated step — an
 under-specified handoff to a subagent with no conversation history — is squarely
 plan content.
 
+Grooming the plan's steps before presenting it for approval exists because this
+repository's own sessions produced the failure it fixes, not a hypothetical one:
+a single decomposition pass judged only by whether a step could be split at all,
+with no check on whether the resulting steps were actually right-sized, handed
+subagents work that exhausted their context and produced plans that cost far
+more than the work warranted. The size band a groomed step carries is derived
+from the same readiness tests that decide whether to split or merge it — a named
+read-set and a single acceptance check — rather than estimated on its own, so the
+band cannot drift out of step with the structural judgment that produced it.
+
+The band and the execution-tier agents' oversize stop-and-report edge form one
+control loop rather than two separate features: the band gives the executing
+agent something concrete to compare reality against, and the report hands the
+re-cut decision back to the parent, which is where the decomposition judgment
+already lives and where a subagent's local view cannot substitute for it.
+Assigning discovery — enumerating a read-set, finding the call sites a broad ask
+touches — to the parent during grooming follows the same reasoning: one
+enumeration done once, while the parent is already oriented, replaces the same
+search repeated inside every subagent it would otherwise delegate to, and that
+cost asymmetry is the reason, not a preference for tidier handoffs.
+
 ## IP provenance
 
 The idea — a lightweight brainstorm that opens plan mode and hands the approach
@@ -40,7 +61,13 @@ No prose, structure, checklist, or wording was copied from any third-party
 brainstorming or planning skill; only the general concept informed it. The
 execution-shape default likewise generalizes this maintainer's own working
 practice — delegate decomposable steps, keep integration and verification in the
-parent session — and not any third-party delegation or orchestration skill. All
+parent session — and not any third-party delegation or orchestration skill. The
+grooming pass was likewise described independently for this repository, from the
+observed context-exhaustion failure mode described above, not from any
+third-party source. It deliberately uses the plain-English terms "groom",
+"refine", and "ready" rather than any agile or Scrum framework vocabulary,
+ceremony name, or capitalized framework term, and no third-party planning,
+estimation, or backlog-management framework prose was consulted or copied. All
 eval cases are original synthetic prompts. If external material is ever referenced,
 link it by URL and paraphrase in original wording; do not paste third-party text
 into the bundle.

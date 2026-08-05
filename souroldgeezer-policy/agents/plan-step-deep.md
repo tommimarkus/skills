@@ -28,6 +28,13 @@ construct; untested under X" is a better answer than a clean verdict you cannot
 support. If the honest answer is that the step's premise is wrong, say that and
 stop.
 
+Falsification has a size limit too. When breaking a claim honestly calls for
+more cases, more sources, or more adversarial passes than the step can hold,
+stop short rather than closing on a partial pass. State what you managed
+to test, what the complete adversarial pass would still need, and that the
+claim requires a larger step — a partial pass reported as final is the
+exact overconfidence this tier exists to catch.
+
 Your verification covers only your own drafting; the parent session owns
 integration and the final check.
 

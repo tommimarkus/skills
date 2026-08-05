@@ -42,11 +42,12 @@ Enforcement cycle (see the reference for the full form):
   questions, one focused question per message, covering the goal, its
   constraints, and what a good result looks like; converge on an approach in
   one or two sentences, naming a tradeoff and your pick when real alternatives
-  exist, plus the execution shape below; present it with `ExitPlanMode` for
-  approval.
+  exist, plus the execution shape below; groom the steps into a ready, sized
+  set; present it with `ExitPlanMode` for approval.
 - **Codex:** use native Plan mode when active or exposed. Otherwise conduct the
-  same read-only brainstorm, present the proposed plan, and stop for explicit
-  user approval; never claim a mode change the host did not expose.
+  same read-only brainstorm, groom the steps into a ready, sized set, present
+  the proposed plan, and stop for explicit user approval; never claim a mode
+  change the host did not expose.
 
 The selected plan lane owns the plan — write no spec file, commit nothing, and
 do not hand to a separate planning skill. Implementation is a fresh action after
@@ -62,11 +63,16 @@ decomposition, integration, and verification; a subagent's "verified" covers
 only its own drafting. In Codex use the host's delegation mechanism when exposed,
 otherwise keep the decomposition in the plan and say delegation was unavailable.
 
-Each delegated step carries its own task boundary, the inputs and prior decisions
-it cannot infer, its acceptance check, and the return shape the parent needs —
-a subagent starts with no conversation history. Name a specialized agent type
-when one fits; let model and reasoning effort inherit unless the plan states a
-reason to pin them.
+Each delegated step carries its own task boundary, a named read-set of the files
+it reads and writes, one acceptance check narrow enough to fail if the step is
+wrong, a size band, and the return shape the parent needs — a subagent has no
+conversation history and must finish from that handoff alone. The parent
+enumerates the read-set once while grooming instead of leaving every subagent to
+search for it. The band (`small`/`medium`/`large`) follows from the read-set and
+check rather than being estimated apart from them, and travels to the subagent as
+the referent it checks its real scope against; `large` names in the plan why the
+step cannot be cut smaller. Name a specialized agent type when one fits; let
+model and reasoning effort inherit unless the plan states a reason to pin them.
 
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
 repo/user guidance initializes `planning-policy`, or the user explicitly asks to
