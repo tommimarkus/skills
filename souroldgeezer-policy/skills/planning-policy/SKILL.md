@@ -62,6 +62,12 @@ decomposition, integration, and verification; a subagent's "verified" covers
 only its own drafting. In Codex use the host's delegation mechanism when exposed,
 otherwise keep the decomposition in the plan and say delegation was unavailable.
 
+Each delegated step carries its own task boundary, the inputs and prior decisions
+it cannot infer, its acceptance check, and the return shape the parent needs —
+a subagent starts with no conversation history. Name a specialized agent type
+when one fits; let model and reasoning effort inherit unless the plan states a
+reason to pin them.
+
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
 repo/user guidance initializes `planning-policy`, or the user explicitly asks to
 plan first. Treat an initialization line as current-task authority before new

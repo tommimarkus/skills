@@ -22,6 +22,15 @@ absolute: a departure is legitimate when stated in the plan, which keeps the
 choice visible instead of silent. The parent-retained verification exists because
 a subagent's "verified" attests only to its own drafting checks.
 
+The delegation contract covers what the step is handed, not how the host is
+tuned. Runtime knobs are deliberately out of scope: hosts default to inheriting
+the session's model and reasoning effort, agent definitions already carry their
+own model and tool set, and the parameter surface differs per host and moves
+between releases. Enumerating knobs here would date quickly and drift across the
+two runtimes, while the failure mode that actually costs a delegated step — an
+under-specified handoff to a subagent with no conversation history — is squarely
+plan content.
+
 ## IP provenance
 
 The idea — a lightweight brainstorm that opens plan mode and hands the approach

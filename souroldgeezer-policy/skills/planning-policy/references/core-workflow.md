@@ -73,6 +73,23 @@ The parent session keeps decomposition, integration, and the verification the
 plan commits to. A subagent reporting "verified" has verified its own drafting,
 not the integrated result — never let that stand in for the parent's check.
 
+### What a delegated step carries
+
+A subagent starts with no conversation history, so the plan states, per delegated
+step:
+
+- **Task and boundary** — what to do, and what to leave alone.
+- **Inputs** — paths, commands, and prior decisions it cannot infer.
+- **Acceptance** — how it knows it is done, and what it must not claim.
+- **Return** — the shape the parent needs back in order to integrate.
+
+Under-specified handoffs, not mis-tuned runtimes, are how delegation fails. So
+name the agent type when a specialized one fits the step — its definition already
+carries the model and tool set — and otherwise let the model and reasoning effort
+inherit from the session rather than pinning them. Pin either only with a reason
+stated in the plan. Where delegated steps write the same files concurrently, the
+plan says so and isolates them.
+
 - **Claude Code lane:** subagents through the `Agent` tool, one per decomposed
   step.
 - **Codex lane:** the host's own delegation mechanism when exposed; otherwise
