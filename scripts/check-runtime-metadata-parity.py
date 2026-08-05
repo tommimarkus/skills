@@ -4,8 +4,9 @@
 This is intentionally a checker, not a generator: SKILL.md frontmatter remains
 the canonical skill trigger metadata, and the two marketplaces expose one shared
 plugin catalog. It keeps plugin identities and semantic versions synchronized,
-preserves Claude subagent parity, checks README skill links, and requires thin
-Claude and Codex wrappers for repo-internal skills.
+preserves Claude subagent parity, checks README skill links, requires thin
+Claude and Codex wrappers for repo-internal skills, and checks the per-host
+packaging of any plugin that bundles an MCP server.
 """
 
 from __future__ import annotations
@@ -259,6 +260,155 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
     return plugin_dirs
 
 
+def check_mcp_server_block(
+    repo: Path,
+    path: Path,
+    plugin_dir: Path,
+    servers: dict[str, Any],
+    root_token: str,
+    foreign_tokens: tuple[str, ...],
+    findings: list[Finding],
+) -> None:
+    """Check one host's server block: every command resolves to a bundled
+    executable through that host's own substitution token."""
+    for name, server in sorted(servers.items()):
+        field = f"mcpServers.{name}"
+        if not isinstance(server, dict):
+            findings.append(Finding(repo_relative(repo, path), field, "server object", normalize_text(server)))
+            continue
+
+        command = normalize_text(server.get("command"))
+        if not command.startswith(root_token):
+            # A bare or absolute command resolves only on the authoring machine.
+            findings.append(
+                Finding(repo_relative(repo, path), f"{field}.command", f"path under {root_token}", command or "missing")
+            )
+        else:
+            launcher = plugin_dir / command[len(root_token) :].lstrip("/")
+            if not launcher.is_file():
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        f"{field}.command",
+                        f"bundled file at {repo_relative(repo, launcher)}",
+                        "missing",
+                    )
+                )
+            elif not os.access(launcher, os.X_OK):
+                findings.append(
+                    Finding(repo_relative(repo, path), f"{field}.command", "executable launcher", "not executable")
+                )
+
+        env = server.get("env")
+        if isinstance(env, dict):
+            for key, value in sorted(env.items()):
+                for foreign in foreign_tokens:
+                    if foreign in normalize_text(value):
+                        # The other host's token never substitutes here; it would
+                        # reach the server as a literal and silently mis-cache.
+                        findings.append(
+                            Finding(
+                                repo_relative(repo, path),
+                                f"{field}.env.{key}",
+                                "only this host's substitution tokens",
+                                foreign,
+                            )
+                        )
+
+
+def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
+    """Check cross-runtime packaging for plugins that BUNDLE an MCP server.
+
+    The checked set is derived from the manifests, never a hardcoded plugin list,
+    so a second MCP-bundling plugin is covered the day it lands. The two hosts
+    take deliberately different shapes — Claude accepts an inline `mcpServers`
+    object, Codex requires a path to a plugin-root config file — so a shared
+    launcher sitting on disk proves nothing about either host's registration.
+    """
+    for plugin_dir in plugin_dirs:
+        claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
+        codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
+        if not claude_path.exists() or not codex_path.exists():
+            continue
+
+        claude_declared = read_json(claude_path).get("mcpServers")
+        codex_declared = read_json(codex_path).get("mcpServers")
+        if claude_declared is None and codex_declared is None:
+            continue
+
+        # Registering on one host only is the canonical drift: the plugin installs
+        # clean and silently exposes no tools on the other host.
+        if claude_declared is None:
+            findings.append(
+                Finding(repo_relative(repo, claude_path), "mcpServers", "inline object (Codex bundles a server)", "missing")
+            )
+        if codex_declared is None:
+            findings.append(
+                Finding(repo_relative(repo, codex_path), "mcpServers", "config-file path (Claude bundles a server)", "missing")
+            )
+
+        claude_servers: dict[str, Any] = {}
+        if claude_declared is not None:
+            if isinstance(claude_declared, dict):
+                claude_servers = claude_declared
+                check_mcp_server_block(
+                    repo,
+                    claude_path,
+                    plugin_dir,
+                    claude_servers,
+                    "${CLAUDE_PLUGIN_ROOT}",
+                    ("${PLUGIN_ROOT}", "${PLUGIN_DATA}"),
+                    findings,
+                )
+            else:
+                findings.append(
+                    Finding(repo_relative(repo, claude_path), "mcpServers", "inline object", normalize_text(claude_declared))
+                )
+
+        codex_servers: dict[str, Any] = {}
+        if codex_declared is not None:
+            if isinstance(codex_declared, str):
+                config_path = plugin_dir / codex_declared.removeprefix("./")
+                if not config_path.is_file():
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, codex_path),
+                            "mcpServers",
+                            f"resolvable config file at {repo_relative(repo, config_path)}",
+                            "missing",
+                        )
+                    )
+                else:
+                    declared_block = read_json(config_path).get("mcpServers")
+                    if isinstance(declared_block, dict):
+                        codex_servers = declared_block
+                        check_mcp_server_block(
+                            repo,
+                            config_path,
+                            plugin_dir,
+                            codex_servers,
+                            "${PLUGIN_ROOT}",
+                            ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}"),
+                            findings,
+                        )
+                    else:
+                        findings.append(
+                            Finding(repo_relative(repo, config_path), "mcpServers", "server object map", "missing")
+                        )
+            else:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, codex_path),
+                        "mcpServers",
+                        "config-file path (an inline object leaves Codex with no tools)",
+                        normalize_text(codex_declared),
+                    )
+                )
+
+        if claude_servers and codex_servers:
+            compare(findings, repo, codex_path, "mcpServers:names", sorted(claude_servers), sorted(codex_servers))
+
+
 def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> set[str]:
     public_skill_names: set[str] = set()
     readme_path = repo / "README.md"
@@ -421,6 +571,7 @@ def check_stop_hook_parity(repo: Path, findings: list[Finding]) -> None:
 def check_repo(repo: Path) -> list[Finding]:
     findings: list[Finding] = []
     plugin_dirs = check_plugin_metadata(repo, findings)
+    check_mcp_packaging(repo, plugin_dirs, findings)
     check_skill_metadata(repo, plugin_dirs, findings)
     check_internal_skill_wrappers(repo, findings)
     check_stop_hook_parity(repo, findings)

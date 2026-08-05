@@ -1,13 +1,70 @@
 # lean-audit:dup-intentional — per-case broken-fixture payloads kept literal; the run/flag machinery is already extracted to _assert_broken_fixture_flags/make_clean_fixture
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT, write_fixture as write
 
 CHECKER = REPO_ROOT / "scripts" / "check-runtime-metadata-parity.py"
+EXAMPLE_PLUGIN = "souroldgeezer-example"
+EXAMPLE_LAUNCHER = "skills/example-skill/references/scripts/example-mcp.sh"
+
+
+def read_manifest(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_manifest(path: Path, manifest: dict) -> None:
+    path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
+def write_mcp_config(plugin: Path, servers: dict) -> None:
+    (plugin / ".mcp.json").write_text(json.dumps({"mcpServers": servers}, indent=2), encoding="utf-8")
+
+
+def add_mcp_packaging(repo: Path) -> None:
+    """Give the clean fixture a bundled MCP server in the shape each host documents:
+    Claude an inline `mcpServers` object, Codex a path to a plugin-root config file.
+
+    Both point at the same launcher on purpose — that shared file existing is
+    exactly the evidence that must NOT be read as proof either host registered it.
+    """
+    plugin = repo / EXAMPLE_PLUGIN
+
+    claude_path = plugin / ".claude-plugin" / "plugin.json"
+    claude = read_manifest(claude_path)
+    claude["mcpServers"] = {
+        "example": {
+            "command": f"${{CLAUDE_PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+            "env": {"EXAMPLE_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/example"},
+        }
+    }
+    write_manifest(claude_path, claude)
+
+    codex_path = plugin / ".codex-plugin" / "plugin.json"
+    codex = read_manifest(codex_path)
+    codex["mcpServers"] = "./.mcp.json"
+    write_manifest(codex_path, codex)
+
+    write_mcp_config(
+        plugin,
+        {
+            "example": {
+                "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                "startup_timeout_sec": 180,
+            }
+        },
+    )
+
+    launcher = plugin / EXAMPLE_LAUNCHER
+    launcher.parent.mkdir(parents=True, exist_ok=True)
+    launcher.write_text("#!/usr/bin/env bash\nexec example mcp\n", encoding="utf-8")
+    launcher.chmod(0o755)
 
 
 def run_checker(repo: Path) -> subprocess.CompletedProcess[str]:
@@ -223,6 +280,160 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "name",
         )
         self.assertNotIn(".claude/skills/internal-review/SKILL.md :: source-of-truth", result.stdout)
+
+    # --- Bundled MCP server packaging -------------------------------------
+    # A plugin that bundles an MCP server must satisfy BOTH hosts' documented
+    # manifest shapes, and every referenced config file and launcher must
+    # actually resolve. The shared launcher on disk proves neither registration,
+    # so each host is asserted separately.
+
+    def _run_mcp_fixture(self, mutate: Callable[[Path], None] | None = None) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            add_mcp_packaging(repo)
+            if mutate is not None:
+                mutate(repo)
+            return run_checker(repo)
+
+    def _assert_mcp_fixture_flags(self, mutate: Callable[[Path], None], *expect_in_stdout: str) -> None:
+        result = self._run_mcp_fixture(mutate)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        for substring in expect_in_stdout:
+            self.assertIn(substring, result.stdout)
+
+    def test_mcp_equipped_fixture_passes(self) -> None:
+        """Positive control for every mutation case below.
+
+        Without it, a mutation test that fails for an unrelated reason — or a
+        checker that stopped inspecting MCP packaging entirely — is
+        indistinguishable from a working guard.
+        """
+        result = self._run_mcp_fixture()
+
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("Runtime metadata parity OK", result.stdout)
+
+    def test_mcp_server_registered_on_one_host_only_is_detected(self) -> None:
+        """The canonical cross-runtime drift: the plugin installs clean and
+        silently exposes no tools on the host that never registered it."""
+
+        def drop_claude_registration(repo: Path) -> None:
+            path = repo / EXAMPLE_PLUGIN / ".claude-plugin" / "plugin.json"
+            manifest = read_manifest(path)
+            del manifest["mcpServers"]
+            write_manifest(path, manifest)
+
+        self._assert_mcp_fixture_flags(
+            drop_claude_registration,
+            f"{EXAMPLE_PLUGIN}/.claude-plugin/plugin.json",
+            "mcpServers",
+            "missing",
+        )
+
+    def test_codex_inline_mcp_object_is_detected(self) -> None:
+        """Valid Claude packaging, but Codex resolves servers only through a
+        plugin-root config file, so an inline object registers nothing there."""
+
+        def inline_codex_object(repo: Path) -> None:
+            path = repo / EXAMPLE_PLUGIN / ".codex-plugin" / "plugin.json"
+            manifest = read_manifest(path)
+            manifest["mcpServers"] = {"example": {"command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"}}
+            write_manifest(path, manifest)
+
+        self._assert_mcp_fixture_flags(
+            inline_codex_object,
+            f"{EXAMPLE_PLUGIN}/.codex-plugin/plugin.json",
+            "mcpServers",
+        )
+
+    def test_codex_mcp_config_file_that_does_not_resolve_is_detected(self) -> None:
+        def point_at_absent_config(repo: Path) -> None:
+            path = repo / EXAMPLE_PLUGIN / ".codex-plugin" / "plugin.json"
+            manifest = read_manifest(path)
+            manifest["mcpServers"] = "./absent-mcp.json"
+            write_manifest(path, manifest)
+
+        self._assert_mcp_fixture_flags(
+            point_at_absent_config,
+            f"{EXAMPLE_PLUGIN}/.codex-plugin/plugin.json",
+            f"{EXAMPLE_PLUGIN}/absent-mcp.json",
+            "missing",
+        )
+
+    def test_mcp_command_that_does_not_resolve_to_a_bundled_file_is_detected(self) -> None:
+        """Renaming the launcher breaks both manifests while launcher-behaviour
+        tests that hardcode its path stay green."""
+
+        def remove_launcher(repo: Path) -> None:
+            (repo / EXAMPLE_PLUGIN / EXAMPLE_LAUNCHER).unlink()
+
+        self._assert_mcp_fixture_flags(
+            remove_launcher,
+            "mcpServers.example.command",
+            f"bundled file at {EXAMPLE_PLUGIN}/{EXAMPLE_LAUNCHER}",
+        )
+
+    def test_non_executable_mcp_launcher_is_detected(self) -> None:
+        """A stdio server that cannot be exec'd gets no auto-retry from the host."""
+
+        def drop_executable_bit(repo: Path) -> None:
+            (repo / EXAMPLE_PLUGIN / EXAMPLE_LAUNCHER).chmod(0o644)
+
+        self._assert_mcp_fixture_flags(
+            drop_executable_bit,
+            "mcpServers.example.command",
+            "not executable",
+        )
+
+    def test_mcp_command_using_the_other_hosts_root_token_is_detected(self) -> None:
+        """`${CLAUDE_PLUGIN_ROOT}` never substitutes for Codex; it would reach the
+        server as a literal path."""
+
+        def use_claude_token_in_codex_config(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {"example": {"command": f"${{CLAUDE_PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"}},
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_claude_token_in_codex_config,
+            f"{EXAMPLE_PLUGIN}/.mcp.json",
+            "mcpServers.example.command",
+            "${PLUGIN_ROOT}",
+        )
+
+    def test_mcp_env_using_the_other_hosts_data_token_is_detected(self) -> None:
+        def use_claude_data_token_in_codex_config(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "example": {
+                        "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                        "env": {"EXAMPLE_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/example"},
+                    }
+                },
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_claude_data_token_in_codex_config,
+            "mcpServers.example.env.EXAMPLE_CACHE_DIR",
+            "${CLAUDE_PLUGIN_DATA}",
+        )
+
+    def test_mcp_server_names_must_match_across_hosts(self) -> None:
+        def rename_codex_server(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {"renamed": {"command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"}},
+            )
+
+        self._assert_mcp_fixture_flags(
+            rename_codex_server,
+            "mcpServers:names",
+            "example",
+            "renamed",
+        )
 
     def make_clean_fixture(self, repo: Path) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
