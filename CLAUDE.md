@@ -12,7 +12,7 @@ A **Claude Code plugin marketplace**, not an application. The shared root `.clau
 
 When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check the official Claude Code doc set before relying on memory. When the same change touches Codex packaging, cross-check the official Codex documentation too.
 
-- Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour.
+- Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour. [Create custom subagents](https://code.claude.com/docs/en/sub-agents) is the authority for `agents/*.md` frontmatter — the supported field set, `model` / `effort` values, and which fields are ignored for plugin subagents. Verify a field against it before shipping one: an unsupported key is silently dropped, not rejected.
 - Codex: use the current official Codex plugin and marketplace documentation as
   authority for `.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`,
   `AGENTS.md`, plugin hooks, and `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`.
