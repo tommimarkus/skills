@@ -42,7 +42,8 @@ Enforcement cycle (see the reference for the full form):
   questions, one focused question per message, covering the goal, its
   constraints, and what a good result looks like; converge on an approach in
   one or two sentences, naming a tradeoff and your pick when real alternatives
-  exist; present it with `ExitPlanMode` for approval.
+  exist, plus the execution shape below; present it with `ExitPlanMode` for
+  approval.
 - **Codex:** use native Plan mode when active or exposed. Otherwise conduct the
   same read-only brainstorm, present the proposed plan, and stop for explicit
   user approval; never claim a mode change the host did not expose.
@@ -50,6 +51,16 @@ Enforcement cycle (see the reference for the full form):
 The selected plan lane owns the plan — write no spec file, commit nothing, and
 do not hand to a separate planning skill. Implementation is a fresh action after
 approval.
+
+Execution shape: the approved plan names who runs each step. Delegate
+decomposable implementation steps to subagents by default, dispatching
+independent steps together; depart only on a case stated in the plan — the work
+is indivisible or trivial, the step needs the user mid-flight, context cannot
+travel to a subagent, or each step redefines the next. Convenience, familiarity,
+and overlapping file writes do not qualify. The parent session keeps
+decomposition, integration, and verification; a subagent's "verified" covers
+only its own drafting. In Codex use the host's delegation mechanism when exposed,
+otherwise keep the decomposition in the plan and say delegation was unavailable.
 
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
 repo/user guidance initializes `planning-policy`, or the user explicitly asks to

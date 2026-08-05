@@ -13,14 +13,26 @@ approval without claiming a mode change. Enforcement is honest: a default
 posture in phase 1, mechanically guaranteed only by an optional phase-2
 PreToolUse/edit backstop (deferred).
 
+The approved plan also carries an execution shape — subagent delegation by
+default for decomposable steps, with decomposition, integration, and verification
+retained by the parent session. Approval is the last cheap moment to decide how
+work is split, so the decomposition belongs in the approach the user agrees to
+rather than being improvised mid-implementation. The default is strong but not
+absolute: a departure is legitimate when stated in the plan, which keeps the
+choice visible instead of silent. The parent-retained verification exists because
+a subagent's "verified" attests only to its own drafting checks.
+
 ## IP provenance
 
 The idea — a lightweight brainstorm that opens plan mode and hands the approach
 to native plan-mode approval, with an additive explicit-approval fallback for
 Codex — was described independently for this repository.
 No prose, structure, checklist, or wording was copied from any third-party
-brainstorming or planning skill; only the general concept informed it. All eval
-cases are original synthetic prompts. If external material is ever referenced,
+brainstorming or planning skill; only the general concept informed it. The
+execution-shape default likewise generalizes this maintainer's own working
+practice — delegate decomposable steps, keep integration and verification in the
+parent session — and not any third-party delegation or orchestration skill. All
+eval cases are original synthetic prompts. If external material is ever referenced,
 link it by URL and paraphrase in original wording; do not paste third-party text
 into the bundle.
 

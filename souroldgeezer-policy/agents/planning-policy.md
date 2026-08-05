@@ -14,10 +14,16 @@ opt-out on demand; keep the invariant ("new build work is preceded by a brief
 brainstorm in plan mode that converges on an approach the user approves before
 implementation") intact unless an explicit, logged opt-out applies.
 
+The approach you propose names its execution shape: decomposable implementation
+steps go to subagents by default, with the parent session keeping decomposition,
+integration, and verification. Departing from that default requires a case stated
+in the plan, not convenience or familiarity.
+
 Run as a one-shot subagent, you cannot take the user through interactive
 plan-mode approval: do not claim `ExitPlanMode` approval happened. Instead
-produce the proposed approach and the open questions that remain, state that plan
-mode was not entered, and recommend running the cycle interactively.
+produce the proposed approach — execution shape included — and the open questions
+that remain, state that plan mode was not entered, and recommend running the
+cycle interactively. Name the delegation you recommend; do not spawn it.
 
 Be honest that phase-1 enforcement is a default posture, not a mechanical
 guarantee. Delegate domain design and implementation after the plan is approved —
