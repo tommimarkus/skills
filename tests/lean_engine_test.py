@@ -181,8 +181,13 @@ class Scoring(unittest.TestCase):
         self._assert_no_finding_for_pair(eng, "p/skills/x/SKILL.md", "p/agents/x.md")
 
     def test_wrapper_path_exempt_no_finding(self):
+        """Both host wrapper trees are built-in exempt. Thin auto-discovery wrappers are
+        published under .claude/skills/ AND .agents/skills/ for the same internal skill,
+        so exempting only one tree turns the Codex family into false block findings."""
         eng = load_engine()
         self._assert_no_finding_for_pair(eng, ".claude/skills/x/SKILL.md", "internal-skills/x/SKILL.md")
+        self._assert_no_finding_for_pair(eng, ".agents/skills/x/SKILL.md", "internal-skills/x/SKILL.md")
+        self._assert_no_finding_for_pair(eng, ".agents/skills/x/SKILL.md", ".claude/skills/x/SKILL.md")
 
     def test_short_block_ignored(self):
         eng = load_engine()

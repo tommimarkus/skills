@@ -15,7 +15,7 @@ b = "{plugin}/docs/*-reference/**/*.md"
 a = "**/skills/{skill}/**/extensions/**/*.md"
 b = "**/skills/{skill}/**/extensions/**/*.md"
 
-[[carve_out]]                                   # parallel per-stack procedures (mutation-*)
+[[carve_out]]                                   # sibling procedures WITHIN one skill are parallel by design: per-stack packs written to one shape (test-quality-audit mutation-dotnet/mutation-nodejs, architecture-design lifting-rules-dotnet/lifting-rules-java), test-quality-audit's per-lane enumeration procedures (mutation-testing, sut-surface-enumeration, auth-matrix-enumeration, migration-upgrade-path) that share the scope/sampling framing, and lean-audit's opt-in lens procedures (minify, platform-redundancy, per-use-cost) that each restate the same opt-in-gate and Disclosure contract. The {skill} capture keeps this inside a single skill; cross-skill procedure pairs are NOT carved out.
 a = "**/skills/{skill}/references/procedures/**/*.md"
 b = "**/skills/{skill}/references/procedures/**/*.md"
 
