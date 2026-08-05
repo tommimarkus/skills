@@ -191,8 +191,9 @@ inferred dial + basis + any maintainer override · harness availability
 pointer ([`references/hook-recipe.md`](references/hook-recipe.md)).
 
 When the code-duplication lens ran, append: code lens ran (source surfaces
-detected) · languages/extensions scanned · min-tokens threshold · fail-open skips
-(unreadable/binary/unknown-extension).
+detected) · languages/extensions scanned · min-tokens threshold · declared
+`dup-intentional` suppressions honoured (whole-file exempted files / region-scoped
+spans) · fail-open skips (unreadable/binary/unknown-extension).
 
 When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
 artifact families detected · runtime verifier + availability (`claude-code-guide`

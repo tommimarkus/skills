@@ -21,6 +21,19 @@ is the orthogonal subject axis. Cite codes in output; do not restate this catalo
   (min-tokens ≤ length < 2× min-tokens). Severity: info. Source: engine
   (`code_lens.py`).
 
+Declaring a `LA-CODE-DUP-*` clone intentional takes a **line comment** of the
+file's own language (`#`, `//`) — the marker in a string literal is not a
+declaration. Two scopes:
+- `lean-audit:dup-intentional — <rationale>` anywhere in a file exempts the
+  **whole file** (its every clone, present and future);
+- `lean-audit:dup-intentional:begin` … `lean-audit:dup-intentional:end` exempts
+  only the clones **fully contained** in that span — the scope to use on a logic
+  module, where a whole-file marker would blanket unrelated code.
+
+Either side of a clone pair may carry the declaration. A clone that only
+partly overlaps a region is still reported; nesting is depth-counted (an inner
+pair does not close the outer region); an unclosed `:begin` runs to end of file.
+
 ## Staleness — Lean: defects
 - `LA-STALE-1` — broken reference: a link whose file target or `#anchor` does not
   resolve. Severity: warn. Source: engine.

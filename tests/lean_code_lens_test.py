@@ -47,6 +47,52 @@ def words(n, prefix="t"):
     return " ".join(f"{prefix}{i}" for i in range(n))
 
 
+def marker(suffix="", opener="#"):
+    """A line comment carrying the dup-intentional marker (+ optional :begin/:end)."""
+    return f"{opener} {load_lens().INTENTIONAL_MARKER}{suffix}\n"
+
+
+def logic_body(name):
+    """~64 matched tokens of identifier-rich logic — a block clone at min-tokens 20.
+    Mirrors the LCD-T0009+ ledger fixtures so unit and calibration cases agree."""
+    return (f"def {name}(items, cfg):\n"
+            "    total = 0\n"
+            "    for item in items:\n"
+            "        value = transform(item.data, cfg.scale)\n"
+            "        total = total + value\n"
+            "    result = finalize(total, cfg.mode)\n"
+            "    logger.record(cfg.name, result)\n"
+            "    cache.store(cfg.key, result)\n"
+            "    return result\n")
+
+
+def other_body(name):
+    """A second block-clone body sharing no identifiers with logic_body, so the two
+    never extend into one another (the `SEP_*` line between them breaks the run)."""
+    return (f"def {name}(rows, opts):\n"
+            "    out = []\n"
+            "    for row in rows:\n"
+            "        cell = format_cell(row.text, opts.width)\n"
+            "        out.append(cell)\n"
+            "    joined = join_all(out, opts.sep)\n"
+            "    printer.emit(opts.stream, joined)\n"
+            "    buffer.flush(opts.stream, joined)\n"
+            "    return joined\n")
+
+
+def scan_files(contents, min_tokens=20):
+    """Run the real scan_dir over a temp tree — discovery, marker handling, region
+    post-filter and dedupe included (never a re-implementation of any of them)."""
+    clones_mod = load_clones_mod()
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        for rel, text in contents.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        return clones_mod.scan_dir(root, min_tokens, None)
+
+
 class Tokenizer(unittest.TestCase):
     def test_strips_line_and_block_comments(self):
         self.assertEqual(toks("a = 1 // hi\n/* x */ b = 2\n", ".js"),
@@ -157,7 +203,21 @@ class Discovery(unittest.TestCase):
             exempt=("gen.py",),
         )
         self.assertNotIn("gen.py", files)      # exempt_paths
-        self.assertNotIn("b.py", files)        # inline marker
+        self.assertNotIn("b.py", files)        # whole-file (suffix-less) inline marker
+
+    def test_bare_marker_string_is_not_a_whole_file_marker(self):
+        # The engine's own INTENTIONAL_MARKER = "..." assignment must not exempt
+        # the module that defines it (only a LINE COMMENT declares the marker).
+        lens = load_lens()
+        files = self._discover(lens, {"m.py": f'MARK = "{lens.INTENTIONAL_MARKER}"\n'})
+        self.assertIn("m.py", files)
+
+    def test_region_marked_file_stays_in_corpus(self):
+        # A :begin/:end pair scopes suppression to a span; the file itself is still
+        # tokenized (the post-filter in scan_dir drops only the contained clones).
+        lens = load_lens()
+        files = self._discover(lens, {"r.py": marker(":begin") + "y = 2\n" + marker(":end")})
+        self.assertIn("r.py", files)
 
     def test_load_config_defaults_when_no_registry(self):
         lens = load_lens()
@@ -204,15 +264,10 @@ class Calibration(unittest.TestCase):
                         "ledger must calibrate at the shipped default min-tokens")
         tp = fp = fn = 0
         for case in cases:
-            streams = {}
-            skip = False
-            for f in case["files"]:
-                if lens.INTENTIONAL_MARKER in f["content"]:
-                    skip = True                     # marker = file-level opt-out (see read_sources)
-                    continue
-                streams[f["path"]] = lens.strip_and_tokenize(
-                    f["content"], lens.profile_for(Path(f["path"]).suffix))
-            clones = [] if skip and not streams else lens.find_clones(streams, case["min_tokens"])
+            # Drive the real scan_dir. Re-deriving suppression here would calibrate
+            # the ledger against a stand-in instead of the shipped engine.
+            clones = scan_files({f["path"]: f["content"] for f in case["files"]},
+                                case["min_tokens"])
             fired = any(c.severity == "block" for c in clones)
             tp, fp, fn = classify_tp_fp_fn(case["expect_block"], fired, tp, fp, fn)
         assert_precision_recall_at_least(self, tp, fp, fn)
@@ -346,16 +401,103 @@ class CliFixes(unittest.TestCase):
             self.assertEqual(json.loads(r.stdout)["findings"], [])
 
 
+class MarkerRegionsTest(unittest.TestCase):
+    """`:begin`/`:end` region spans, read off the RAW text (markers are comments,
+    which the tokenizer strips). Spans are 1-based and inclusive of both markers."""
+
+    def _regions(self, text, ext=".py"):
+        clones_mod = load_clones_mod()
+        return clones_mod._marked_regions(text, clones_mod.profile_for(ext))
+
+    def test_balanced_pair_spans_both_marker_lines(self):
+        self.assertEqual(self._regions(marker(":begin") + "x = 1\n" + marker(":end") + "y = 2\n"),
+                         ((1, 3),))
+
+    def test_two_pairs_are_separate_spans(self):
+        text = (marker(":begin") + "a = 1\n" + marker(":end")
+                + "gap = 2\n" + marker(":begin") + "b = 3\n" + marker(":end"))
+        self.assertEqual(self._regions(text), ((1, 3), (5, 7)))
+
+    def test_unbalanced_begin_runs_to_eof(self):
+        self.assertEqual(self._regions(marker(":begin") + "a = 1\nb = 2\n"), ((1, 3),))
+
+    def test_nested_begin_closes_only_at_outer_end(self):
+        text = (marker(":begin") + "a = 1\n" + marker(":begin") + marker(":end")
+                + "b = 2\n" + marker(":end"))
+        self.assertEqual(self._regions(text), ((1, 6),))
+
+    def test_stray_end_without_begin_is_ignored(self):
+        self.assertEqual(self._regions("a = 1\n" + marker(":end") + "b = 2\n"), ())
+
+    def test_plain_marker_opens_no_region(self):
+        self.assertEqual(self._regions(marker(" — rationale") + "a = 1\n"), ())
+
+    def test_bare_string_assignment_opens_no_region(self):
+        lens = load_lens()
+        self.assertEqual(self._regions(f'MARK = "{lens.INTENTIONAL_MARKER}:begin"\na = 1\n'), ())
+
+    def test_c_family_uses_its_own_line_comment_opener(self):
+        text = marker(":begin", "//") + "var a = 1\n" + marker(":end", "//")
+        self.assertEqual(self._regions(text, ".js"), ((1, 3),))
+        self.assertEqual(self._regions(text, ".py"), (),
+                         "a `//` comment is not a marker in a `#`-comment language")
+
+
+class MarkerSuppressionScopeTest(unittest.TestCase):
+    """End-to-end suppression through scan_dir: whole-file markers stay file-wide,
+    region markers suppress only clones fully CONTAINED in one marked span, and
+    either side of a pair may carry the declaration."""
+
+    def test_whole_file_marker_still_suppresses_everything(self):
+        found = scan_files({"a.py": logic_body("process"),
+                            "b.py": marker(" — rationale") + logic_body("handle")})
+        self.assertEqual(found, [])
+
+    def test_bare_marker_assignment_does_not_suppress(self):
+        lens = load_lens()
+        found = scan_files({
+            "a.py": logic_body("process"),
+            "b.py": f'INTENTIONAL_MARKER = "{lens.INTENTIONAL_MARKER}"\n' + logic_body("handle"),
+        })
+        self.assertTrue(found, "a marker in a string literal must not exempt the file")
+
+    def test_region_suppresses_only_its_own_span(self):
+        found = scan_files({
+            "a.py": logic_body("process") + "SEP_ALPHA = 1\n" + other_body("render"),
+            "b.py": (marker(":begin") + logic_body("handle") + marker(":end")
+                     + "SEP_BETA = 2\n" + other_body("draw")),
+        })
+        paths = {(c.path, c.matched_path) for c in found}
+        self.assertEqual(paths, {("a.py", "b.py")}, "one surviving cross-file pair")
+        # the surviving clone is the one OUTSIDE the region (the `draw`/`render` body)
+        self.assertTrue(all(int(c.matched_lines.split("-")[0]) > 12 for c in found), found)
+
+    def test_region_on_either_side_suppresses_the_pair(self):
+        wrapped = marker(":begin") + logic_body("process") + marker(":end")
+        self.assertEqual(scan_files({"a.py": wrapped, "b.py": logic_body("handle")}), [])
+        self.assertEqual(scan_files({"a.py": logic_body("handle"), "b.py": wrapped}), [])
+
+    def test_clone_only_partly_inside_a_region_is_not_suppressed(self):
+        # Containment, not overlap: a one-line marked touch must not kill the clone.
+        body = logic_body("handle")
+        head, tail = body.split("\n", 1)
+        found = scan_files({
+            "a.py": logic_body("process"),
+            "b.py": marker(":begin") + head + "\n" + marker(":end") + tail,
+        })
+        self.assertTrue(found, "a region covering only part of the clone must not suppress it")
+
+    def test_unbalanced_begin_suppresses_to_end_of_file(self):
+        found = scan_files({"a.py": logic_body("process"),
+                            "b.py": marker(":begin") + logic_body("handle")})
+        self.assertEqual(found, [])
+
+
 class LiteralListFalsePositiveTest(unittest.TestCase):
     """Declarative literal lists must not clone-match: __all__ blocks, path lists."""
 
     def _scan_two(self, body_a: str, body_b: str) -> list:
-        clones_mod = load_clones_mod()
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            (root / "a.py").write_text(body_a, encoding="utf-8")
-            (root / "b.py").write_text(body_b, encoding="utf-8")
-            return clones_mod.scan_dir(root, 20, None)  # use the file's loaded module handle
+        return scan_files({"a.py": body_a, "b.py": body_b})
 
     def test_two_long_string_lists_do_not_match(self) -> None:
         names = ", ".join(f'"name_{i}"' for i in range(30))

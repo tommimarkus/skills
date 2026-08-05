@@ -52,9 +52,11 @@ Three facts are load-bearing when you touch a shim:
    `leanaudit.<module>` imports resolve. Anything that imports a package module
    must load its shim first — the tests depend on this ordering.
 2. **The `# lean-audit:dup-intentional` marker suppresses the clone lens** on the
-   deliberately-identical boilerplate. Per repo policy that marker belongs on
-   boilerplate/data files, **never on a logic module** — do not copy it into
-   `leanaudit/`.
+   deliberately-identical boilerplate. This is the *whole-file* scope, which is
+   right here (a shim is boilerplate end to end) and wrong on a logic module — do
+   not copy it into `leanaudit/`; a logic module that genuinely needs a
+   declaration uses the region scope
+   ([§ Declaring intentional duplication](#declaring-intentional-duplication)).
 3. **The five paths are a published contract.** Renaming, removing, or changing a
    shim's re-export surface is a breaking change. The shim↔package parity test
    pins it (see the test matrix).
@@ -69,24 +71,29 @@ Three facts are load-bearing when you touch a shim:
 
 ## Module map of `leanaudit/`
 
-Nine files (`__init__.py` + eight modules). No import cycles. Four foundational
+Ten files (`__init__.py` + nine modules). No import cycles. Five foundational
 **leaves**, two analysis **engines**, two hook **drivers**:
 
 ```
 hook_envelope ─┐                              (leaf: envelope parse / decision shaping)
 discovery ─────┼─▶ engine  ─▶ guard_lean       (markdown dup engine + its PreToolUse guard)
 registry ──────┘   clones                      (code-clone engine)
+cli ───────────────▲ ▲                         (leaf: the two engines' shared CLI flags)
 load_cost ─────────────────▶ guard_load_cost   (per-use cost engine + its dual-mode guard)
 ```
+
+Two leaves back no shim of their own (`hook_envelope`, `cli`) — they exist to
+single-source a contract two siblings share.
 
 | Module | Role | Responsibility | Depends on |
 |---|---|---|---|
 | [`hook_envelope.py`](leanaudit/hook_envelope.py) | leaf | Parse the PreToolUse/Stop hook JSON payload, shape the `permissionDecision` envelope Claude Code™ reads, and log one fail-open diagnostic line to stderr. Public: `HookPayload`, `read_payload`, `permission_decision`, `fail_open_log`. | stdlib |
 | [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | stdlib |
 | [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
+| [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution, inventory extraction/diff, pointer and cost-regression checks, plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
-| [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `discovery`, `registry` |
-| [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `discovery` |
+| [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
+| [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
 | [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
 | `__init__.py` | — | Package docstring: states the stdlib-only / Py3.11+ runtime and that the entry paths are the published contract. | — |
@@ -114,6 +121,46 @@ this guide does not redefine them.
 
 Both read the repo registry `.lean-audit.toml` when present
 ([§ Config & data](#config-and-data-files)); absent it, they run heuristic-only.
+
+## Declaring intentional duplication
+
+Each engine honours an in-file **marker** that declares duplication deliberate.
+The markdown side matches an HTML comment (`registry.OVERRIDE` /
+`VERBOSE_OVERRIDE`); the clone lens matches a **line comment** of the scanned
+file's own language, taken from that file's `COMMENT_PROFILES` entry (`#` for
+`.py`/`.sh`/`.rb`, `//` for the C family, either for `.php`). Anchoring to a
+comment is load-bearing: a bare substring test made `clones.py` — whose
+`INTENTIONAL_MARKER = "…"` assignment *is* the marker text — exempt itself from
+its own corpus. A marker inside a string literal declares nothing.
+
+Two scopes, both implemented in `leanaudit/clones.py`:
+
+| Scope | Form | Where it is applied |
+|---|---|---|
+| Whole file | `<comment> lean-audit:dup-intentional — <rationale>` | `read_sources` drops the file from the corpus |
+| Region | `<comment> lean-audit:dup-intentional:begin` … `:end` | `scan_dir` post-filters the clone list |
+
+The region form exists so a **logic module** can declare one intentional clone
+without blanketing the file (repo policy puts the whole-file marker on
+boilerplate/data only). Its rules, all pinned by tests:
+
+- **Containment, not overlap** — a clone is dropped only when its span lies
+  wholly inside *one* marked region; a partly-overlapping region reports as
+  normal, and two adjacent regions never jointly cover a span neither declared.
+- **Either side** — a pair is suppressed when *either* of its two sides is
+  contained in a region of that side's own file, mirroring the whole-file marker.
+- **Raw-line scan** — regions are read off the source text (comments are stripped
+  before tokenizing), then intersected with `Clone.lines` / `Clone.matched_lines`,
+  which are source line ranges.
+- **Edges** — nesting is depth-counted (an inner pair does not close the outer
+  region); an unclosed `:begin` runs to end of file; a stray `:end` is ignored;
+  an unrecognized suffix degrades to the whole-file form.
+
+Region suppression is deliberately **not** in `read_sources`: that function is a
+published re-export ([§ shim → package contract](#the-shim--package-contract)),
+so narrowing its return would be a breaking change. Keep new suppression scopes
+in the `scan_dir` post-filter, which already holds both the raw source text and
+the clone list.
 
 ## The two guard hooks
 

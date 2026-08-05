@@ -12,6 +12,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from leanaudit.cli import add_shared_flags
 from leanaudit.discovery import read_repo
 from leanaudit.registry import (
     Registry,
@@ -482,8 +483,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--added-text", metavar="-", help="read one block from stdin ('-')")
     ap.add_argument("--source", help="repo-relative path the stdin block belongs to")
     ap.add_argument("--corpus-root", default=".", help="repo root for the corpus")
-    ap.add_argument("--registry", help="path to .lean-audit.toml")
-    ap.add_argument("--format", choices=("text", "json"), default="text")
+    add_shared_flags(ap)
     args = ap.parse_args(argv)
 
     if args.added_text is not None and args.added_text != "-":
