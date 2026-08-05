@@ -90,6 +90,22 @@ inherit from the session rather than pinning them. Pin either only with a reason
 stated in the plan. Where delegated steps write the same files concurrently, the
 plan says so and isolates them.
 
+This plugin ships an execution-tier roster so a plan names a tier instead of
+tuning knobs per call — each definition already carries its model, effort, and
+tool set:
+
+| Tier | Use it when the step… |
+|---|---|
+| `plan-step-mechanical` | is already decided and only needs executing exactly |
+| `plan-step-standard` | has a settled approach but needs ordinary implementation judgment (the default) |
+| `plan-step-analytical` | holds a real unknown that must be resolved before editing |
+| `plan-step-deep` | is one where a confident wrong answer is the failure mode |
+
+Name the cheapest tier the step actually needs. Each tier stops and escalates
+rather than improvising when the step turns out to sit above it, so guessing low
+costs a handoff, while defaulting high costs on every step. Hosts and agent sets
+differ: the tier judgment is the portable part, not these names.
+
 - **Claude Code lane:** subagents through the `Agent` tool, one per decomposed
   step.
 - **Codex lane:** the host's own delegation mechanism when exposed; otherwise
