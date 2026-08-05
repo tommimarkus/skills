@@ -90,6 +90,25 @@ or diff input gives limited assurance; full enumeration gives reasonable).
 Reserve mode dispatch for skills whose work needs per-scope LLM-judgment
 calibration.
 
+A declared value in an output or handoff contract — a size band, risk tier,
+weighting prior, assurance level — ships with both ends of its loop in the same
+change: the derivation it comes from, and the consumer that reads it. A value
+with no reader is decorative and drifts from whatever produced it; a check with
+no declared referent falls back to unstated judgment. When adding or reviewing
+one, ask both directions — what reads this value, and what does this check
+compare against — and treat a missing answer either way as unfinished. The two
+shapes to copy:
+[materiality.md](../souroldgeezer-audit/docs/audit-reference/materiality.md)
+grounds the risk tier in an observable signal and the audit worklist consumes it
+as `severity × risk tier`;
+[planning-policy](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
+derives a delegated step's size band from its read-set and acceptance check, then
+hands the band to the subagent as the referent it checks its real scope against.
+Pure disclosure fields are the bounded exception — their reader is the output's
+audience — but they still owe the derivation half, as
+[lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving
+its assurance level from scanned coverage.
+
 ### 3. On-demand knowledge
 
 On-demand knowledge lives behind explicit load conditions:
