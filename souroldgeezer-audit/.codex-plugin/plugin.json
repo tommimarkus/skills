@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-audit",
-  "version": "2026.8.0",
+  "version": "2026.8.1",
   "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and matching Claude Code subagents.",
   "author": {
     "name": "Sour Old Geezer",
@@ -10,7 +10,13 @@
   "homepage": "https://github.com/tommimarkus/skills",
   "repository": "https://github.com/tommimarkus/skills",
   "license": "MIT",
-  "keywords": ["audit", "devsecops", "test-quality", "ip-hygiene", "lean"],
+  "keywords": [
+    "audit",
+    "devsecops",
+    "test-quality",
+    "ip-hygiene",
+    "lean"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Audit",
@@ -18,7 +24,9 @@
     "longDescription": "Audit DevSecOps posture, test quality, IP hygiene, and duplication or waste with focused workflows and stack overlays.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
-    "capabilities": ["Read"],
+    "capabilities": [
+      "Read"
+    ],
     "websiteURL": "https://github.com/tommimarkus/skills",
     "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
