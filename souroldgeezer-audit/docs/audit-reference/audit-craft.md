@@ -22,6 +22,13 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
   seek contradiction (hunt for controls that cannot fail).
 - Evidence sufficiency/appropriateness: re-performance/observed behavior >
   entity-asserted (names, comments, badges).
+- Positive control before absence: when measuring what a suppression/exemption
+  layer hides by stripping its markers, registry, or config, first prove the
+  detector still fires under that instrumentation, and never let the
+  instrumentation edit the detector's own source or a restore path that also
+  holds instrumented data. Without the control, an unchanged count is
+  indistinguishable from a detector you disabled, and the delta reads as
+  evidence of absence.
 - Fact vs inference: mark inferred or static-only conclusions as inference
   requiring verification; do not present them as confirmed fact.
 - Materiality: weight by consequence of the subject being wrong (see materiality.md).
