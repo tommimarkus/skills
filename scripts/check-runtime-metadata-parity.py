@@ -5,8 +5,9 @@ This is intentionally a checker, not a generator: SKILL.md frontmatter remains
 the canonical skill trigger metadata, and the two marketplaces expose one shared
 plugin catalog. It keeps plugin identities and semantic versions synchronized,
 preserves Claude subagent parity, checks README skill links, requires thin
-Claude and Codex wrappers for repo-internal skills, and checks the per-host
-packaging of any plugin that bundles an MCP server.
+Claude and Codex wrappers for repo-internal skills, keeps public Claude skill
+agents as canonical router-only adapters, and checks the per-host packaging of
+any plugin that bundles an MCP server.
 """
 
 from __future__ import annotations
@@ -23,6 +24,16 @@ from typing import Any
 
 CODEX_VERSION_RE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 CLAUDE_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+ALLOWED_UNPAIRED_AGENTS = {
+    "souroldgeezer-policy": frozenset(
+        {
+            "plan-step-analytical",
+            "plan-step-deep",
+            "plan-step-mechanical",
+            "plan-step-standard",
+        }
+    )
+}
 
 
 @dataclass(frozen=True)
@@ -126,6 +137,25 @@ def read_frontmatter(path: Path) -> dict[str, Any]:
         if line.strip() == "---":
             return parse_yaml_mapping("\n".join(lines[1:index]), path)
     raise ValueError(f"{path} has unterminated YAML frontmatter")
+
+
+def read_markdown_body(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        raise ValueError(f"{path} has no YAML frontmatter")
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return "\n".join(lines[index + 1 :]).strip()
+    raise ValueError(f"{path} has unterminated YAML frontmatter")
+
+
+def public_skill_agent_body(skill_name: str) -> str:
+    target = f"../skills/{skill_name}/SKILL.md"
+    return (
+        "Use the `Skill` tool to load and follow "
+        f"[`{target}`]({target}) as the source of truth. "
+        "Present the result in the shape that skill requires."
+    )
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -529,6 +559,7 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
     for plugin_dir in plugin_dirs:
         plugin_name = plugin_dir.name
         skills_dir = plugin_dir / "skills"
+        expected_agent_names: set[str] = set()
         for skill_dir in sorted(path for path in skills_dir.iterdir() if path.is_dir()):
             skill_path = skill_dir / "SKILL.md"
             if not skill_path.exists():
@@ -539,39 +570,66 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
             skill_name = normalize_text(skill.get("name"))
             skill_description = normalize_text(skill.get("description"))
             public_skill_names.add(skill_dir_name)
+            expected_agent_names.add(skill_dir_name)
 
             compare(findings, repo, skill_path, "name", skill_dir_name, skill_name)
 
-            agent_path = plugin_dir / "agents" / f"{skill_name}.md"
+            agent_path = plugin_dir / "agents" / f"{skill_dir_name}.md"
             if agent_path.exists():
                 agent = read_frontmatter(agent_path)
-                compare(findings, repo, agent_path, "name", skill_name, agent.get("name"))
+                compare(findings, repo, agent_path, "name", skill_dir_name, agent.get("name"))
                 compare(findings, repo, agent_path, "description", skill_description, agent.get("description"))
+                compare(
+                    findings,
+                    repo,
+                    agent_path,
+                    "router-body",
+                    public_skill_agent_body(skill_dir_name),
+                    read_markdown_body(agent_path),
+                )
             else:
                 findings.append(Finding(repo_relative(repo, agent_path), "exists", "present", "missing"))
 
-            skill_target = plugin_dir / "skills" / skill_name / "SKILL.md"
-            readme_link = markdown_link(skill_name, f"{plugin_name}/skills/{skill_name}/SKILL.md")
+            skill_target = plugin_dir / "skills" / skill_dir_name / "SKILL.md"
+            readme_link = markdown_link(skill_dir_name, f"{plugin_name}/skills/{skill_dir_name}/SKILL.md")
             if readme and readme_link not in readme:
-                findings.append(Finding("README.md", f"skill-link:{skill_name}", readme_link, "missing"))
+                findings.append(Finding("README.md", f"skill-link:{skill_dir_name}", readme_link, "missing"))
 
             docs_plugins = repo / "docs" / "plugins"
             if docs_plugins.exists():
                 for doc_path in sorted(docs_plugins.glob("*.md")):
                     doc = doc_path.read_text(encoding="utf-8")
                     doc_link = markdown_link(
-                        skill_name,
+                        skill_dir_name,
                         relative_markdown_target(doc_path, skill_target),
                     )
                     if plugin_name in doc and doc_link not in doc:
                         findings.append(
                             Finding(
                                 repo_relative(repo, doc_path),
-                                f"skill-link:{skill_name}",
+                                f"skill-link:{skill_dir_name}",
                                 doc_link,
                                 "missing",
                             )
                         )
+
+        agents_dir = plugin_dir / "agents"
+        actual_agent_names = (
+            {path.stem for path in agents_dir.glob("*.md") if path.is_file()}
+            if agents_dir.exists()
+            else set()
+        )
+        allowed_unpaired = ALLOWED_UNPAIRED_AGENTS.get(plugin_name, frozenset())
+        for agent_name in sorted(actual_agent_names - expected_agent_names - allowed_unpaired):
+            agent_path = agents_dir / f"{agent_name}.md"
+            findings.append(
+                Finding(
+                    repo_relative(repo, agent_path),
+                    "paired-skill",
+                    f"skills/{agent_name}/SKILL.md or an intentional execution-tier carve-out",
+                    "unpaired agent",
+                )
+            )
 
     return public_skill_names
 
