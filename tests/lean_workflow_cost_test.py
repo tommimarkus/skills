@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — detector fixture bodies deliberately repeat one-factor workflow/scenario shapes; shared loaders and ledger calibration are already extracted
 """Run-viability and orchestrator-survivability tests for lean-audit."""
 
 from __future__ import annotations
@@ -62,6 +63,50 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
         self.assertEqual(report["orchestrators"][0]["path"], "plugin/agents/coordinator.md")
         self.assertTrue(report["orchestrators"][0]["signals"]["named_control_plane"])
         self.assertIn("LA-RUN-1", {row["code"] for row in report["findings"]})
+
+    def test_workflow_intentional_marker_is_exact_and_outside_fences(self) -> None:
+        mod = load_workflow_cost()
+        path = "plugin/agents/coordinator.md"
+        workflow = (
+            "The coordinator performs preflight, discovery, plan, build, and verify. "
+            "Delegate worker output and retry until tests pass."
+        )
+
+        unmarked = mod.analyze_sources({path: workflow})
+        marked = mod.analyze_sources(
+            {
+                path: (
+                    "<!-- lean-audit:workflow-intentional — synthetic detector catalog -->\n"
+                    + workflow
+                )
+            }
+        )
+        plain_text = mod.analyze_sources(
+            {path: "The string lean-audit:workflow-intentional is documentation.\n" + workflow}
+        )
+        fenced = mod.analyze_sources(
+            {
+                path: (
+                    "```markdown\n"
+                    "<!-- lean-audit:workflow-intentional — example only -->\n"
+                    "```\n"
+                    + workflow
+                )
+            }
+        )
+        near_match = mod.analyze_sources(
+            {path: "<!-- lean-audit:workflow-intentionality -->\n" + workflow}
+        )
+        missing_rationale = mod.analyze_sources(
+            {path: "<!-- lean-audit:workflow-intentional -->\n" + workflow}
+        )
+
+        self.assertTrue(unmarked["findings"])
+        self.assertEqual(marked["findings"], [])
+        self.assertEqual(marked["intentional_workflow_paths"], [path])
+        for report in (plain_text, fenced, near_match, missing_rationale):
+            self.assertTrue(report["findings"])
+            self.assertEqual(report["intentional_workflow_paths"], [])
 
     def test_retry_contract_routes_bounds_terminals_and_progress_separately(self) -> None:
         mod = load_workflow_cost()
@@ -504,6 +549,19 @@ class ForecastTest(unittest.TestCase):
 
 
 class TraceAdapterTest(unittest.TestCase):
+    def test_trace_reader_accepts_nested_event_lists_and_preserves_scalar_error(self) -> None:
+        mod = load_workflow_cost()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "trace.json"
+            path.write_text(
+                json.dumps({"events": [{"usage": {"input_tokens": 3}}]}),
+                encoding="utf-8",
+            )
+            self.assertEqual(len(mod.read_trace_file(path)), 1)
+            path.write_text("1", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "trace must contain JSON objects"):
+                mod.read_trace_file(path)
+
     def test_provider_and_otel_shapes_normalize(self) -> None:
         mod = load_workflow_cost()
         records = [

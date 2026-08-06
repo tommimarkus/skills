@@ -56,3 +56,10 @@ schemas, or code are copied into this skill.
   [OpenTelemetry GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes-gen-ai/).
   No vendor prose, schemas, raw traces, or third-party fixtures are bundled;
   trace fixtures and evals are synthetic and metadata-only.
+- Workflow catalog declarations: the exact
+  `<!-- lean-audit:workflow-intentional — rationale -->` marker and its
+  outside-fenced-code recognition rule are repo-authored to prevent the local
+  run-viability catalog from self-reporting its synthetic signal examples. It
+  suppresses static source nominations for that marked reference file only;
+  tests retain unmarked positives plus plain-text, near-match, and fenced
+  negatives.

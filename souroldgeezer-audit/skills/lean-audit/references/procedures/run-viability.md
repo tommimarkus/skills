@@ -7,6 +7,8 @@ is read-only, offline by default, and separate from the static closure cost in
 `per-use-cost.md`: closure cost measures what loads; run viability models what
 accumulates, repeats, fans out, and must remain available until verification.
 
+<!-- lean-audit:workflow-intentional — four analyzer-output catalog examples below intentionally name workflow signals without declaring a runnable contract -->
+
 ## Contents
 
 1. [The protected outcome](#the-protected-outcome)
@@ -81,6 +83,14 @@ network, provider, MCP tool, hook-command, or agent call. It emits:
 - a content-free hook registration ledger;
 - source-readable retry, progress, scope-resolution, and checkpoint findings;
 - limits that prevent an exact finishability verdict.
+
+A catalog or example surface that necessarily contains those signal words may
+declare the file-wide source-nomination carve-out with the exact HTML comment
+`<!-- lean-audit:workflow-intentional — rationale -->`. The comment must be a
+real Markdown HTML comment outside fenced code; a bare substring, near-match,
+or fenced example does not declare anything. Use it only when the whole file is
+reference material rather than a runnable workflow, and include the rationale.
+The analyzer still inventories hook/tool metadata from the rest of the scan.
 
 For a file/diff audit, filter source findings to the in-scope paths as the main
 workflow does. A whole-repo scan is needed to claim the entry/orchestrator graph

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-import json
+# Import/export scaffolding intentionally follows sibling metadata leaves.
+# lean-audit:dup-intentional:begin
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from leanaudit.json_rows import read_json_rows
 
 __all__ = [
     "UsageEvent",
@@ -13,6 +16,7 @@ __all__ = [
     "read_trace_file",
     "summarize_trace",
 ]
+# lean-audit:dup-intentional:end
 
 
 @dataclass(frozen=True)
@@ -90,6 +94,8 @@ def _attributes(record: dict[str, Any]) -> dict[str, Any]:
     return attrs if isinstance(attrs, dict) else {}
 
 
+# Adapter and visibility classifiers deliberately share a typed classifier signature.
+# lean-audit:dup-intentional:begin
 def _adapter(record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any]) -> str:
     attr_keys = " ".join(str(key) for key in attrs)
     event_name = " ".join(
@@ -110,6 +116,7 @@ def _adapter(record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any
     if "claude" in event_name:
         return "claude-code"
     return "generic"
+# lean-audit:dup-intentional:end
 
 
 def _visibility(record: dict[str, Any], attrs: dict[str, Any]) -> str:
@@ -227,24 +234,17 @@ def normalize_trace_records(records: list[dict[str, Any]]) -> list[UsageEvent]:
     return events
 
 
+# Evidence-specific readers intentionally remain thin wrappers over json_rows.
+# lean-audit:dup-intentional:begin
 def read_trace_file(path: Path) -> list[dict[str, Any]]:
     """Read a JSON object/list or JSONL trace without interpreting content fields."""
-    text = path.read_text(encoding="utf-8")
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        records = [json.loads(line) for line in text.splitlines() if line.strip()]
-    else:
-        if isinstance(payload, list):
-            records = payload
-        elif isinstance(payload, dict):
-            nested = payload.get("events")
-            records = nested if isinstance(nested, list) else [payload]
-        else:
-            raise ValueError(f"{path}: trace must contain JSON objects")
-    if not all(isinstance(record, dict) for record in records):
-        raise ValueError(f"{path}: every trace record must be an object")
-    return records
+    return read_json_rows(
+        path,
+        nested_list_key="events",
+        scalar_error="trace must contain JSON objects",
+        row_error="every trace record must be an object",
+    )
+# lean-audit:dup-intentional:end
 
 
 def summarize_trace(events: list[UsageEvent]) -> dict[str, Any]:

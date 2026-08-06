@@ -72,7 +72,7 @@ Three facts are load-bearing when you touch a shim:
 
 ## Module map of `leanaudit/`
 
-Thirteen files (`__init__.py` + twelve modules). No import cycles. Seven
+Fourteen files (`__init__.py` + thirteen modules). No import cycles. Eight
 foundational **leaves**, three analysis **engines**, two hook **drivers**:
 
 ```
@@ -83,12 +83,13 @@ cli ───────────────▲ ▲                        
 load_cost ─────────────────▶ guard_load_cost   (per-use cost engine + its dual-mode guard)
 context_trace ─┬───────────▶ workflow_cost     (metadata-only adapters + run forecast)
 hook_cost ─────┤                                (content-free hook registration ledger)
+json_rows ─────┴─▶ context_trace, hook_cost     (shared JSON object/list + JSONL reader)
 discovery ─────┤
 load_cost ─────┘
 ```
 
-Two leaves back no shim of their own (`hook_envelope`, `cli`) — they exist to
-single-source a contract two siblings share.
+Three leaves back no shim of their own (`hook_envelope`, `cli`, `json_rows`) —
+they exist to single-source contracts shared by sibling modules.
 
 | Module | Role | Responsibility | Depends on |
 |---|---|---|---|
@@ -98,6 +99,7 @@ single-source a contract two siblings share.
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
 | [`context_trace.py`](leanaudit/context_trace.py) | leaf | Normalize provider/host usage metadata, split model-visible/out-of-band tool results, and aggregate without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`. | stdlib |
+| [`json_rows.py`](leanaudit/json_rows.py) | leaf | Read JSON object/list or JSONL evidence rows, including one optional nested-list key, while requiring every returned row to be an object. Public: `read_json_rows`. | stdlib |
 | [`hook_cost.py`](leanaudit/hook_cost.py) | leaf | Inventory recognized Claude/Codex hook registrations without returning or executing opaque commands; join optional content-free fixture metadata; multiply only evidenced enabled, model-visible frequency × proxy-token rows. Unknown and unsupported values remain explicit. Public: `analyze_hook_registrations`, `is_hook_config_path`, `read_hook_fixture_file`. | stdlib |
 | [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
 | [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery` |
@@ -132,6 +134,11 @@ this guide does not redefine them.
   `--verification-reserve`, `--format {text,json}`. Exit 1 only when a block
   forecast exists; exit 2 on invalid input. Traces and hook fixtures are
   metadata-only; hook commands are never executed or emitted.
+
+Workflow catalog/example markdown may carry the exact file-wide
+`<!-- lean-audit:workflow-intentional — rationale -->` HTML comment. Recognition
+is line-exact and only outside fenced code; plain text, near-matches, and fenced
+examples are non-declarations. Keep this carve-out off runnable entry workflows.
 
 The markdown and clone engines read `.lean-audit.toml` when present
 ([§ Config & data](#config-and-data-files)); absent it, they run heuristic-only.
