@@ -9,8 +9,8 @@ PUBLIC_SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
 INTERNAL_SKILL_PATH = ".claude/skills/ip-hygiene/SKILL.md"
 AUDIT_DESCRIPTION = (
     "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and "
-    "duplication/waste (Lean), with per-stack extensions and matching Claude Code "
-    "subagents."
+    "duplication/waste (Lean), with per-stack extensions and evidence-focused "
+    "findings."
 )
 
 
@@ -52,10 +52,15 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
 
     def test_runtime_entrypoints_exist_and_point_to_public_skill(self) -> None:
         claude_agent = read("souroldgeezer-audit/agents/ip-hygiene.md")
+        normalized_agent = " ".join(claude_agent.split())
 
         self.assertIn("name: ip-hygiene", claude_agent)
-        self.assertIn("Invoke the `ip-hygiene` skill", claude_agent)
-        self.assertIn("../skills/ip-hygiene/SKILL.md", claude_agent)
+        self.assertIn("Use the `Skill` tool to load and follow", normalized_agent)
+        self.assertIn(
+            "[`../skills/ip-hygiene/SKILL.md`](../skills/ip-hygiene/SKILL.md)",
+            normalized_agent,
+        )
+        self.assertIn("as the source of truth", normalized_agent)
         self.assertNotIn(INTERNAL_SKILL_PATH, claude_agent)
 
     def test_audit_plugin_version_and_description_are_synchronized(self) -> None:
