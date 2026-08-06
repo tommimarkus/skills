@@ -55,6 +55,12 @@ the stack's `core.md` and the matching rubric addon for each loaded stack layer
 | Robot Framework | [`references/extensions/robotframework/core.md`](references/extensions/robotframework/core.md) + selected addon |
 | Rust | [`references/extensions/rust/core.md`](references/extensions/rust/core.md) + selected addon |
 
+For each matched stack layer, resolve the selected addon beside that row's
+`core.md`: load only `unit.md` for the unit/component rubric,
+`integration.md` for the integration rubric, or `e2e.md` for the E2E rubric.
+For Next.js, apply that selection once in the Node.js directory and once in the
+Next.js directory. Do not enumerate or load a whole stack directory.
+
 In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
 determinism, mutation); Quick mode never loads it.
 
