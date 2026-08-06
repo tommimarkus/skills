@@ -128,7 +128,8 @@ uv run python -m unittest discover -s tests -p '*_test.py'
 
 The parity check validates both marketplaces and both manifest families. The
 fragmentation gate additionally validates native Codex manifest structure; the
-Codex first-party validator is run directly during packaging changes.
+first-party Codex plugin validator is run during packaging changes when the
+installed CLI exposes one.
 
 The host smoke creates temporary `CODEX_HOME` and `CLAUDE_CONFIG_DIR` state,
 registers this checkout as both marketplaces, installs all five plugins, checks

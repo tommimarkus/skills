@@ -12,7 +12,8 @@ Use this before publishing a release or bumping a plugin version.
 - Confirm both manifests express the same semantic version: padded
   `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex. Neither
   marketplace may carry a `version` key.
-- Validate every Codex plugin with the current first-party plugin validator.
+- Validate every Codex plugin with the current first-party plugin validator when
+  the installed CLI exposes one.
 - Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
   with both CLIs available; require all five isolated installs, all 15 shared
   skills, Claude component/strict validation, both Dediren adapter handshakes,
