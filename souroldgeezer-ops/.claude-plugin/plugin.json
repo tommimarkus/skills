@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-ops",
-  "version": "2026.07.2",
+  "version": "2026.08.0",
   "description": "Operations skills for issue, work-item, and pull-request lifecycle handling, with provider-agnostic cores and provider-specific extensions.",
   "author": {
     "name": "Sour Old Geezer",
