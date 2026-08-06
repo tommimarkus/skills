@@ -60,15 +60,30 @@ Before committing, run `git ls-files -ci --exclude-standard`. The output must be
 
 Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.mcp.json` — are local-only by default. The one tracked exception is `souroldgeezer-architecture/.mcp.json`, which is the Codex plugin's bundled MCP adapter.
 
+## Git worktree location (MUST)
+
+`git-workflow-policy: feature branches, persistent repo-local worktrees, clean
+worktree, no direct main`.
+
+Create every task worktree under the primary checkout's gitignored, persistent
+`.worktrees/<task-name>/` directory. Never use `/tmp`, `$TMPDIR`, `/var/tmp`, a
+tmpfs/ramdisk, or another ephemeral location for a Git worktree or uncommitted
+task work, even when the task is expected to be short. Gitignored does not mean
+disposable. Run worktree creation from the primary checkout. Native
+Claude/Codex worktree helpers are acceptable only when their resolved path is
+under that `.worktrees/`; otherwise use
+`git worktree add -b <branch> .worktrees/<task-name> <base>`. If that directory
+is unavailable, stop and ask before selecting another persistent location.
+
 ## Repo-local Python® tooling
 
 The public validation command is `scripts/skill-architecture-report.sh [repo-root]`, a thin `uv`-run wrapper around the Python® engine `scripts/skill_architecture_report.py`. It is tool-first: use its deterministic findings and JSON output to keep skill workflows thin, and reserve LLM judgment for explicit manual prompts the tool cannot decide. Use the repo-local `pyproject.toml` / `uv.lock` and a local `.venv/` from `uv venv`; do not commit `.venv/`. The wrapper also composes the native `claude plugin validate --strict` structural validator as a fail-open pre-pass (engine flag `--native-validate`); per-plugin manifest / frontmatter / hooks-schema failures fold into Runtime Parity as `SAC-RUNTIME-NATIVE-VALIDATE`, catching malformed metadata the report's lenient frontmatter parser accepts, and it skips silently when the Claude Code™ CLI is absent.
 
-The lean-audit bundled scripts follow an enforced Python® standard: ruff + `mypy --strict` scoped to `souroldgeezer-audit/skills/lean-audit/references/scripts/**` (config in `pyproject.toml`, gate test `tests/lean_audit_python_standard_test.py`, Python floor 3.11). The five script paths there are stable entry shims over the `leanaudit/` implementation package. For the tooling's architecture and a safe-change guide (shim→package contract, module map, finding codes, config/data files, test matrix), read [souroldgeezer-audit/skills/lean-audit/references/scripts/README.md](souroldgeezer-audit/skills/lean-audit/references/scripts/README.md) before modifying it.
+The lean-audit bundled scripts follow an enforced Python® standard: ruff + `mypy --strict` scoped to `souroldgeezer-audit/skills/lean-audit/references/scripts/**` (config in `pyproject.toml`, gate test `tests/lean_audit_python_standard_test.py`, Python floor 3.11). The six script paths there are stable entry shims over the `leanaudit/` implementation package, including the metadata-only workflow-cost/trace analyzer. For the tooling's architecture and a safe-change guide (shim→package contract, module map, finding codes, config/data files, test matrix), read [souroldgeezer-audit/skills/lean-audit/references/scripts/README.md](souroldgeezer-audit/skills/lean-audit/references/scripts/README.md) before modifying it.
 
 `pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` from the repo root, or via wrappers (such as `scripts/skill-architecture-report.sh`) that `cd` there first. Do not add `UV_CACHE_DIR=/tmp/uv-cache` to plans or normal verification; confirm the repo-local cache with `uv cache dir` and override `UV_CACHE_DIR` only as a one-off fallback when the repo config isn't applied or the reported path isn't writable.
 
-Run repo-scanning gates (the skill-architecture report, the full unittest suite) in a **clean feature worktree** (create one with the native `claude --worktree` / `EnterWorktree`, subagent `isolation: worktree`, or a plain `git worktree` under `.worktrees/`), not the primary checkout that has sibling worktrees nested under it — the scanners walk the filesystem and recurse into nested checkouts (`.worktrees/`, `.claude/worktrees/`), over-counting findings. When forced to read primary-checkout numbers, discount any finding whose path contains `.worktrees/` or `.claude/worktrees/` and verify the changed surface specifically.
+Run repo-scanning gates (the skill-architecture report, the full unittest suite) in the **clean persistent task worktree under `.worktrees/`**, not the primary checkout that contains it — scanners may recurse into nested checkouts and over-count findings. When forced to read primary-checkout numbers, discount findings whose path contains `.worktrees/` and verify the changed surface specifically.
 
 When restructuring files the deterministic engines scan, gate on a **classified** before/after finding-set diff — every difference must be a path rename of a base finding, an in-class declared suppression, or an adjudicated new class; byte/set equality against the pre-refactor baseline is unachievable by design (paths rename, dedupe keying shifts). Residual intentional parallels (identifier-rich test bodies, mandated shim boilerplate) take the whole-file `lean-audit:dup-intentional` line comment on the data/boilerplate file, never on a logic module — a logic module that genuinely needs a declaration scopes it to the clone with a `lean-audit:dup-intentional:begin` … `:end` line-comment pair, which suppresses only the clones fully contained in that span. The marker counts only inside a line comment of the file's own language; in a string literal it declares nothing. A dedupe-to-canonical-core hoist is not done when the shared prose moves: the thinned per-skill citing wrappers it leaves behind predictably become a *new* near-identical **prose** pair, so plan that pair's declaration while designing the hoist — mark it `lean-audit:sync-intentional` (the prose near-duplicate counterpart of the `dup-intentional` code marker above), or carve it out in the registry, with a rationale, and re-run the engine to a clean exit before landing, not as a gate-time surprise.
 
@@ -254,7 +269,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain; cost stance via `config.yaml` |
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces |
-| `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; bundled deterministic engine + judgment layer; plus a surface-gated per-use cost lens (`LA-PUC-*`) for skills/commands/agents with a hookable guard; read-only; plus two explicit-request-only lenses — a propose-only minify lens (`LA-MIN-*`) that emits reduction diffs behind an adversarial fidelity gate, and a platform-redundancy lens (`LA-NAT-*`) that flags hooks/scripts/agents/MCP servers reinventing a native Claude Code™ capability (verified live, never auto-run) |
+| `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; deterministic engines + judgment; surface-gated per-use cost (`LA-PUC-*`) and staged-workflow run viability/orchestrator survivability (`LA-RUN-*`, `LA-ORCH-*`) with metadata-only trace calibration; read-only; plus explicit-request-only propose-only minify (`LA-MIN-*`) and live-verified platform redundancy (`LA-NAT-*`) |
 | `software-design` | `souroldgeezer-design` | Code/module/script design; core `SD-*` + per-language extensions |
 | `app-design` | `souroldgeezer-design` | Frontend app design (React / Next.js / Blazor™ WASM); WCAG 2.2 / i18n / Core Web Vitals baselines |
 | `api-design` | `souroldgeezer-design` | HTTP API design; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |

@@ -212,3 +212,28 @@ condition, so the opt-in `procedures/minify.md` (and `platform-redundancy.md`)
 appear in the SKILL.md closure and fidelity baseline even though they load only
 on explicit request. The `lean-audit-minify` scenario total (12536) is
 therefore a conservative upper bound on the real opt-in per-use read.
+
+# lean-audit run viability and progressive disclosure — 2026-08
+
+The former `lean-audit-default` scenario is now the explicit
+`lean-audit-prose` path. Conditional code bands moved from the core smell
+catalog into their owning procedures, and duplicated execution/maintenance
+prose was removed from always-loaded `SKILL.md`.
+
+| Scenario | Before | After | Delta |
+|---|---:|---:|---:|
+| ordinary prose (`default` → `prose`) | 9632 | 7680 | **-1952 (-20.3%)** |
+| source-code duplication | new | 7680 | n/a |
+| skill-surface/per-use | new | 10140 | n/a |
+| staged-run viability | new | 13327 | n/a |
+| trace-calibrated run viability | new | 13327 | n/a |
+| platform redundancy | new | 11795 | n/a |
+| minify | 15771 | 13867 | **-1904 (-12.1%)** |
+
+The ordinary path is the representative high-frequency win. The less common
+run-viability path deliberately spends another 5647 proxy tokens on the
+per-use and run procedures so it can model phases, coordinator/worker budgets,
+tool and hook exposure, log visibility, low/expected/high lanes, verification
+reserve, and metadata-only trace calibration. Those references are absent from
+ordinary prose/source audits. Fixed-file scenarios are conservative: executable
+scripts are invoked as tools and are not counted as prompt context.

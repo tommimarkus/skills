@@ -30,3 +30,14 @@ schemas, or code are copied into this skill.
   (`scripts/skill_load_cost.py`) and engine (`scripts/lean_engine.py`); no
   third-party prose, diffs, or fixtures are copied into the skill, and every
   eval case is synthetic.
+- Run-viability/orchestrator lens (`LA-RUN-*`, `LA-ORCH-*`): the workflow score,
+  three-lane budget simulator, stage schema, evidence hierarchy, findings, and
+  fixtures are repo-authored from the user's staged-workflow failure case. Trace
+  adapters map field names documented by the
+  [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create),
+  [Anthropic tool-use overview](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview),
+  [Claude Code monitoring guide](https://code.claude.com/docs/en/monitoring-usage),
+  [Codex manual](https://developers.openai.com/codex/codex-manual.md), and
+  [OpenTelemetry GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes-gen-ai/).
+  No vendor prose, schemas, raw traces, or third-party fixtures are bundled;
+  trace fixtures and evals are synthetic and metadata-only.

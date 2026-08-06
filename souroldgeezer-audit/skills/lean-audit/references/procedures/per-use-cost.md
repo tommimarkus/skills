@@ -55,6 +55,9 @@ all three PUC checks.
 
 ## Find LA-PUC-1/2/3
 
+All three codes are warn-severity, inference-sourced findings. The sections
+below are their canonical definitions.
+
 ### LA-PUC-1 — mode loads a file it does not need
 
 Trigger: a closure file is loaded in mode A, but its content is exclusively
@@ -199,3 +202,6 @@ This `baseline` output is the pre-restructure inventory of codes, sections, and
 pointers. The executor uses it with `skill_load_cost.py diff` to confirm no
 fidelity loss after applying the recommended moves. Emit it as a named block
 (`baseline:`) in the finding output so the executor can run the diff gate.
+
+Disclosure footer: entry surfaces and closures · inferred dial, basis, and
+override · harness availability · `references/hook-recipe.md` hookability.

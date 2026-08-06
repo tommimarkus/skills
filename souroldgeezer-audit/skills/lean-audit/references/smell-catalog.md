@@ -1,10 +1,12 @@
 # Lean Audit Smell Catalog
 
-Compact `LA-*` code index for `lean-audit`. The bundled engine
+Compact core-waste code index for `lean-audit`. The bundled engine
 (`scripts/lean_engine.py`) emits the deterministic codes; the
 `procedures/fuzzy-waste.md` layer adds the inference-only codes. Severity rates
 the control weakness; risk tier (`../../../docs/audit-reference/materiality.md`)
-is the orthogonal subject axis. Cite codes in output; do not restate this catalog.
+is the orthogonal subject axis. Conditional lenses define their codes in their
+own procedures so ordinary audits do not load rare-mode taxonomy. Cite codes in
+output; do not restate this catalog.
 
 ## Duplication — Lean: inventory / over-processing
 - `LA-DUP-1` — cross-file near-duplicate prose (shingle containment ≥ high band).
@@ -75,67 +77,12 @@ pair does not close the outer region); an unclosed `:begin` runs to end of file.
   hard-banned from tighten in v1 (`gate-unavailable`), where it stays
   detection-only.
 
-## Platform redundancy — Lean: over-production (reinventing the platform)
-- `LA-NAT-1` — a custom artifact (hook/script, guidance-prose instruction,
-  skill/command/agent, or MCP server) reproduces a capability Claude Code or
-  Codex now provides natively, confirmed by the runtime-specific live verifier:
-  `claude-code-guide` for Claude Code or current official OpenAI docs for Codex.
-  Confidence field: `HIGH` (drop-in native equivalent) or `MEDIUM` (native covers
-  the core with caveats / required config). Severity: info (advisory).
-  Source: inference + runtime-specific live verification (`procedures/platform-redundancy.md`).
-  Opt-in lens only.
-- `LA-NAT-2` — a reinvention candidate the pattern catalog raised that the live
-  check could NOT confirm as native (uncertain, no citation, or the live check was
-  unavailable). Confidence: `LOW`. Surfaced as a review item, never as confirmed
-  redundancy. Severity: info. Source: inference (`procedures/platform-redundancy.md`).
-  Opt-in lens only.
-
-## Per-use cost — Lean: over-processing
-- `LA-PUC-1` — a mode loads a closure file it does not need (mode-exclusive
-  elsewhere, or detection-loaded regardless of mode); fix: Load-Map mode-gating
-  (structural-safe). Severity: warn. Source: inference
-  (`procedures/per-use-cost.md`).
-- `LA-PUC-2` — a multi-mode/always-loaded closure file carries content exclusive
-  to one rarer mode; split it out (structural-safe on a clean header boundary;
-  needs-adversarial-review if prose moves under a shared header). Severity: warn.
-  Source: inference (`procedures/per-use-cost.md`).
-- `LA-PUC-3` — a single-file extension/reference loaded whole when each mode
-  needs only a slice; partition into core + per-mode slices
-  (needs-adversarial-review — cross-references). Severity: warn. Source:
-  inference (`procedures/per-use-cost.md`).
-
-## Minify — Lean: over-processing (propose-only reduction)
-- `LA-MIN-1` — an accepted reduction: a concrete propose-only rewrite (dedupe
-  to canonical home, hoist always-loaded reference, tighten confirmed-verbose
-  prose, delete dead file, or per-use move) that passed the full adversarial
-  fidelity gate; carried in the proposal diff, never applied. Severity: info (a
-  proposal disposition, not a control weakness). Source: inference +
-  deterministic gate (`procedures/minify.md`). Opt-in lens only.
-- `LA-MIN-2` — a rejected reduction: a candidate that failed or could not run
-  a required fidelity gate (pointer-unresolved, semantic-loss,
-  guard-token-dropped, meaning-added, eval-regression, obligation-dropped,
-  escalation-cue-missing, or gate-unavailable); recorded with its reason, never
-  merged into the proposal.
-  Severity: info. Source: inference + deterministic gate
-  (`procedures/minify.md`). Opt-in lens only.
-- `LA-MIN-3` — an out-of-scope reduction referral: reducible source-code waste
-  (e.g. `LA-CODE-DUP-*` clones) minify may not rewrite, referred to the owning
-  skill. Severity: info. Source: inference (`procedures/minify.md`). Opt-in
-  lens only.
-
 Note: always-loaded `SKILL.md`-body bloat is covered by `LA-BLOAT`; not
 duplicated here.
 
-Out of v1 scope: source-level *dead code* (tracked for v1.1); *semantic* code
+Out of v1 scope: source-level *dead code* (tracked for v1.1); semantic code
 duplication / DRY ownership (owned by `software-design`, `SD-S-2`); the rest of
 the Lean waste taxonomy (waiting, transport, motion, over-production beyond the
 above). Mechanical source *duplication* is now in scope via `LA-CODE-DUP-*`.
-Intra-passage over-processing (wordy but unique prose) is now in scope via
+Intra-passage over-processing (wordy but unique prose) is in scope via
 `LA-VERBOSE-*` (deterministic nomination + judgment confirmation).
-
-Platform-redundancy (`LA-NAT-*`) is an opt-in lens: it is silent unless the request
-explicitly asks whether custom artifacts reinvent a native Claude Code or Codex capability.
-
-Minify (`LA-MIN-*`) is an opt-in, propose-only lens: silent unless the request
-explicitly asks for a minification / reduction proposal, and it never applies
-edits — it emits a reviewable diff and fidelity report only.

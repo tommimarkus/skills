@@ -1,0 +1,55 @@
+{
+  "id": "unsafe-software-process",
+  "context_window": 50000,
+  "verification_reserve": 8000,
+  "orchestrator": {"base_tokens": {"low": 8500, "expected": 9000, "high": 10000}},
+  "stages": [
+    {
+      "id": "preflight",
+      "role": "preflight",
+      "prompt_tokens": 1500,
+      "output_tokens": 500,
+      "retained_tokens": 1200
+    },
+    {
+      "id": "discovery",
+      "role": "discovery",
+      "prompt_tokens": {"low": 6000, "expected": 8000, "high": 10000},
+      "tool_result_tokens": {"low": 7000, "expected": 10000, "high": 13000},
+      "output_tokens": 1500,
+      "retained_tokens": {"low": 12000, "expected": 15000, "high": 18000}
+    },
+    {
+      "id": "plan",
+      "role": "plan",
+      "prompt_tokens": 2000,
+      "output_tokens": 1800,
+      "retained_tokens": 3000
+    },
+    {
+      "id": "build-loop",
+      "role": "build",
+      "iterations": {"low": 2, "expected": 3, "high": 4},
+      "prompt_tokens": 2500,
+      "tool_result_tokens": {"low": 3500, "expected": 6000, "high": 9000},
+      "output_tokens": 1500,
+      "retained_tokens": {"low": 4500, "expected": 6500, "high": 9000},
+      "workers": {
+        "count": 2,
+        "shared_prefix_tokens": 5000,
+        "local_tokens": 3000,
+        "tool_result_tokens": 4000,
+        "output_tokens": 1500,
+        "handoff_tokens": 2500
+      }
+    },
+    {
+      "id": "verify",
+      "role": "verify",
+      "prompt_tokens": 2500,
+      "tool_result_tokens": {"low": 4000, "expected": 7000, "high": 10000},
+      "output_tokens": 1200,
+      "retained_tokens": 2500
+    }
+  ]
+}

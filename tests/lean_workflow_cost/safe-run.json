@@ -1,0 +1,57 @@
+{
+  "id": "bounded-software-process",
+  "context_window": 50000,
+  "verification_reserve": 8000,
+  "orchestrator": {"base_tokens": {"low": 7000, "expected": 7500, "high": 8000}},
+  "stages": [
+    {
+      "id": "preflight",
+      "role": "preflight",
+      "prompt_tokens": 1000,
+      "output_tokens": 300,
+      "retained_tokens": 500
+    },
+    {
+      "id": "discovery",
+      "role": "discovery",
+      "prompt_tokens": 3500,
+      "tool_result_tokens": 2500,
+      "output_tokens": 800,
+      "retained_tokens": 1800,
+      "compaction_target": 9500
+    },
+    {
+      "id": "plan",
+      "role": "plan",
+      "prompt_tokens": 1000,
+      "output_tokens": 900,
+      "retained_tokens": 1300
+    },
+    {
+      "id": "build-loop",
+      "role": "build",
+      "iterations": {"low": 1, "expected": 2, "high": 3},
+      "prompt_tokens": 1200,
+      "tool_result_tokens": 1200,
+      "output_tokens": 700,
+      "retained_tokens": 900,
+      "workers": {
+        "count": 2,
+        "shared_prefix_tokens": 1800,
+        "local_tokens": 1800,
+        "tool_result_tokens": 1500,
+        "output_tokens": 700,
+        "handoff_tokens": 350
+      },
+      "compaction_target": {"low": 10500, "expected": 12000, "high": 14000}
+    },
+    {
+      "id": "verify",
+      "role": "verify",
+      "prompt_tokens": 1800,
+      "tool_result_tokens": {"low": 1800, "expected": 2500, "high": 3500},
+      "output_tokens": 900,
+      "retained_tokens": 1000
+    }
+  ]
+}
