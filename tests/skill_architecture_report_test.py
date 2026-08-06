@@ -100,6 +100,86 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertGreater(coverage.manual_prompt_weight, 0)
         self.assertGreaterEqual(coverage.weighted_percentage, 90.0)
 
+    def test_support_advertising_accepts_nearby_command_cues_and_later_exclusions(self) -> None:
+        module = load_engine()
+
+        command = """
+        First, run the objective pre-filter:
+
+        `${CLAUDE_SKILL_DIR}/references/scripts/ip-prefilter.sh --format text`
+        """
+        fixture = (
+            "Inspect `references/fixtures/dediren/mixed/` only when changing "
+            "mixed-package coverage; do not load it for ordinary model work."
+        )
+        following_positive = """
+        Never load the whole detected extension set.
+
+        Before editing evals, load `references/evals`.
+        """
+
+        self.assertTrue(
+            module.support_is_advertised(
+                command, "references/scripts/ip-prefilter.sh"
+            )
+        )
+        self.assertTrue(
+            module.support_is_advertised(
+                fixture, "references/fixtures/dediren/mixed"
+            )
+        )
+        self.assertTrue(
+            module.support_is_advertised(following_positive, "references/evals")
+        )
+        self.assertFalse(
+            module.support_is_advertised(
+                "Do not load references/obsolete.md.", "references/obsolete.md"
+            )
+        )
+
+    def test_named_addon_beside_advertised_core_is_not_hidden_support(self) -> None:
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            skill_dir = "example-plugin/skills/quality-skill"
+            write(
+                repo / skill_dir / "SKILL.md",
+                """
+                ---
+                name: quality-skill
+                description: Use when auditing test quality within explicit boundaries.
+                ---
+
+                # Quality Skill
+
+                Inputs: test files.
+                Evidence: cite inspected files.
+                Output: findings.
+                If input is ambiguous, ask the user.
+                Stop when evidence is insufficient.
+                Rerun validation after edits.
+
+                | Stack | Load |
+                |---|---|
+                | Python | [`references/extensions/python/core.md`](references/extensions/python/core.md) + selected addon |
+
+                For the matched stack, load only `unit.md` for a unit audit.
+                """,
+            )
+            write(
+                repo / skill_dir / "references/extensions/python/core.md",
+                "# Python core\n",
+            )
+            write(
+                repo / skill_dir / "references/extensions/python/unit.md",
+                "# Python unit\n",
+            )
+
+            skill = module.load_skill(repo, f"{skill_dir}/SKILL.md")
+            codes = {finding.code for finding in module.scan_skill(repo, skill)}
+
+        self.assertNotIn("SAC-REF-UNADVERTISED-SUPPORT", codes)
+
     def test_fixture_report_preserves_existing_findings_and_adds_coverage(self) -> None:
         output = self._run_engine_on_fixture(self.make_noisy_fixture)
 
@@ -783,6 +863,23 @@ class GitBackedEnumeration(unittest.TestCase):
             repo.mkdir(parents=True)
             self.assertTrue(module.path_in_repo(repo.resolve(), "a/SKILL.md"))
             self.assertFalse(module.path_in_repo(repo.resolve(), ".venv/x/SKILL.md"))
+
+    def test_support_files_are_visible_inside_persistent_worktree_path(self):
+        module = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / ".worktrees" / "task"
+            skill_dir = "example-plugin/skills/real"
+            support_rel = f"{skill_dir}/references/procedure.md"
+            write(
+                repo / skill_dir / "SKILL.md",
+                "---\nname: real\ndescription: d\n---\n# Real\n",
+            )
+            write(repo / support_rel, "# Procedure\n")
+            self._init(repo)
+
+            support = module.support_files(repo.resolve(), skill_dir)
+
+        self.assertIn(support_rel, support)
 
 
 if __name__ == "__main__":

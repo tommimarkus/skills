@@ -863,9 +863,8 @@ def support_is_advertised(text: str, target: str) -> bool:
     )
     negative = re.compile(r"(do not|never|ignore|obsolete|deprecated|deleted|remove|historical)", re.I)
 
+    recent_nonempty: list[str] = []
     for line in text.splitlines():
-        if negative.search(line):
-            continue
         start = 0
         while True:
             index = line.find(target, start)
@@ -875,16 +874,30 @@ def support_is_advertised(text: str, target: str) -> bool:
             after_index = index + len(target)
             after = line[after_index] if after_index < len(line) else ""
             after2 = line[after_index + 1] if after_index + 1 < len(line) else ""
-            before_ok = not before or not path_char.match(before)
+            documented_prefix = (
+                before == "/"
+                and index >= 2
+                and line[index - 2] in "}>"
+            )
+            before_ok = not before or not path_char.match(before) or documented_prefix
             after_ok = (
                 not after
                 or after in ".,;:)"
                 or not path_char.match(after)
                 or (after == "/" and not path_char.match(after2))
             )
-            if before_ok and after_ok and (cue.search(line) or line.lstrip().startswith("|")):
+            cue_context = "\n".join((*recent_nonempty[-2:], line))
+            negative_prefix = line[:index]
+            if (
+                before_ok
+                and after_ok
+                and not negative.search(negative_prefix)
+                and (cue.search(cue_context) or line.lstrip().startswith("|"))
+            ):
                 return True
             start = index + len(target)
+        if line.strip():
+            recent_nonempty.append(line)
     return False
 
 
@@ -896,7 +909,7 @@ def support_files(repo_root: Path, skill_dir: str) -> list[str]:
         if not support_root.exists():
             continue
         for path in support_root.rglob("*"):
-            if path.is_file() and not path_is_ignored(path):
+            if path.is_file() and not path_is_ignored(Path(relpath(repo_root, path))):
                 results.append(relpath(repo_root, path))
     return sorted(results)
 
@@ -908,7 +921,7 @@ def bucket_files(repo_root: Path, skill_dir: str, bucket: str) -> list[str]:
     return sorted(
         relpath(repo_root, path)
         for path in root.rglob("*")
-        if path.is_file() and not path_is_ignored(path)
+        if path.is_file() and not path_is_ignored(Path(relpath(repo_root, path)))
     )
 
 
@@ -1502,8 +1515,16 @@ def scan_skill(repo_root: Path, skill: SkillFile) -> list[Finding]:
         if re.match(r"^(references|fixtures|examples)/.+/.+$", support_from_skill):
             support_bucket = support_from_skill.rsplit("/", 1)[0]
 
-        if support_is_advertised(full_text, support_from_skill) or support_is_advertised(
-            full_text, support_bucket
+        named_sibling = Path(support_from_skill).name
+        sibling_via_core = (
+            named_sibling != "core.md"
+            and support_is_advertised(full_text, f"{support_bucket}/core.md")
+            and support_is_advertised(full_text, named_sibling)
+        )
+        if (
+            support_is_advertised(full_text, support_from_skill)
+            or support_is_advertised(full_text, support_bucket)
+            or sibling_via_core
         ):
             continue
         unadvertised.setdefault(support_bucket, []).append(support_from_skill)
@@ -2227,7 +2248,9 @@ def scan_bundled_script_vars(repo_root: Path) -> list[Finding]:
             bucket_root = repo_root / skill.skill_dir / bucket
             if bucket_root.exists():
                 for path in sorted(bucket_root.rglob("*.md")):
-                    if path.is_file() and not path_is_ignored(path):
+                    if path.is_file() and not path_is_ignored(
+                        Path(relpath(repo_root, path))
+                    ):
                         targets.append(relpath(repo_root, path))
         if skill.scope == "published":
             expected_name = Path(skill.skill_dir).name
