@@ -53,25 +53,40 @@ Load what applies:
 - [extensions/nodejs.md](extensions/nodejs.md) for Node.js / TypeScript hosted
   or serverless HTTP API signals.
 - [extensions/nextjs.md](extensions/nextjs.md) for hosted Next.js API surfaces;
-  apply it after the Node.js / TypeScript extension.
+  compose it after Node.js as one base runtime surface.
 - [extensions/azure-cosmosdb.md](extensions/azure-cosmosdb.md) for Azure Cosmos
   DB API/data-client/IaC signals.
 - [extensions/azure-blob-storage.md](extensions/azure-blob-storage.md) for Azure
   Blob Storage API/object-store/IaC signals.
 - [extensions/README.md](extensions/README.md) only when editing extensions.
 
-The five stack extensions above load for Build, Extract, and Review — every
-extension whose detection signals match the in-scope stack. In Lookup, do not
-load full stack extensions on detection alone: answer from the core reference
-matched section, and pull a single stack extension only when the question is
-specifically about that stack's runtime mechanics — never the whole
-detected-stack set. If a Lookup genuinely needs more than one stack's mechanics,
-escalate to Review or Build (which load every matching extension) or ask — do
-not under-answer from a single extension. Multiple extensions compose. Unknown stacks use the core
-reference only; do not invent unsupported runtime mechanics. Extensions add
-rules and exact documented carve-outs; they never weaken the core reference.
-Use each extension's `Name and detection signals` section to decide
-applicability.
+| Stack | Build lane | Review lane |
+|---|---|---|
+| Azure Functions .NET | [build](extensions/azure-functions-dotnet/build.md) | [review](extensions/azure-functions-dotnet/review.md) |
+| Node.js | [build](extensions/nodejs/build.md) | [review](extensions/nodejs/review.md) |
+| Next.js | [build](extensions/nextjs/build.md) | [review](extensions/nextjs/review.md) |
+| Azure Cosmos DB | [build](extensions/azure-cosmosdb/build.md) | [review](extensions/azure-cosmosdb/review.md) |
+| Azure Blob Storage | [build](extensions/azure-blob-storage/build.md) | [review](extensions/azure-blob-storage/review.md) |
+
+Each path above is a lightweight stack core. After matching its `Name and
+detection signals`, select mode lanes as follows:
+
+- **Build:** load every matching core plus its linked `<stack>/build.md`; do
+  not load `<stack>/review.md`.
+- **Review:** load every matching core plus its linked `<stack>/review.md`; do
+  not load `<stack>/build.md`.
+- **Extract:** load matching cores only for a factual baseline. Load a matching
+  review lane only when the user explicitly requests a debt or compliance
+  verdict, and disclose that escalation.
+- **Lookup:** start from the matched core-reference heading. For a genuinely
+  stack-specific question, load one stack core and at most its one relevant
+  lane. Node.js followed by Next.js counts as one composed base. If the answer
+  needs another runtime/data stack or both lanes, escalate to Review or Build
+  or ask instead of silently under-answering.
+
+Multiple matching stacks compose in Build, Review, and Extract. Unknown stacks
+use the core reference only; do not invent unsupported runtime mechanics.
+Extensions add rules and exact documented carve-outs; they never weaken the core reference.
 
 ## Ask Vs Continue
 
@@ -102,8 +117,9 @@ synthetic or originally paraphrased.
 
 - Build: OpenAPI/API contract shape, endpoint behavior, error/auth/versioning,
   reliability, observability, extension decisions, validation, delegations.
-- Extract: route surface, contract presence, auth/error/version/runtime/data
-  baseline, legacy debt, next smallest migration move.
+- Extract: route surface, contract presence, and auth/error/version/runtime/data
+  facts. Add coded debt and the next migration move only on the explicit
+  debt/compliance route.
 - Review: findings only; each finding names code, bucket, layer, severity,
   evidence, action, and reference/extension citation.
 - Lookup: direct rule, exception, citation, verification layer, one-line footer.
