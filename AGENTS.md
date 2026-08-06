@@ -40,14 +40,23 @@ variables, and UI presentation in the host adapter.
 
 ## Required conventions
 
+- `git-workflow-policy: feature branches, persistent repo-local worktrees,
+  clean worktree, no direct main`.
+- Create every task worktree under the primary checkout's gitignored,
+  persistent `.worktrees/<task-name>/` directory. Never place a Git worktree or uncommitted
+  task work under `/tmp`, `$TMPDIR`, `/var/tmp`, a tmpfs/ramdisk, or another
+  ephemeral location, even for a short-lived task. Gitignored does not mean
+  disposable. Run worktree creation from the primary checkout; if its
+  `.worktrees/` is unavailable, stop and ask before choosing a different
+  persistent location.
 - Use `jq` for JSON and Mike Farah `yq` for YAML frontmatter, TOML, and XML.
 - Use `rg` or `rg --files` for repository search.
 - Preserve the existing Python 3.11 floor and repo-local `uv` configuration.
 - Do not force-add ignored files. Before a commit, run
   `git ls-files -ci --exclude-standard`; the result must be empty unless the
   user explicitly approved an exact tracked exception.
-- Run repository-wide scanners in a clean worktree. Nested `.worktrees/` and
-  `.claude/worktrees/` checkouts otherwise pollute enumeration.
+- Run repository-wide scanners from the clean task worktree itself, not the
+  primary checkout; nested worktrees otherwise pollute primary enumeration.
 - Shared skill commands must preserve documented Claude substitutions and add a
   Codex source-path form beside them. Never replace `${CLAUDE_SKILL_DIR}` or
   `${CLAUDE_PLUGIN_ROOT}` with a generic placeholder as the only instruction.

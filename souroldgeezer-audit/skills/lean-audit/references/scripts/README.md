@@ -19,7 +19,7 @@ For what the tool *reports* (operator view), stay in
   under an older `python3`.
 - Quality bar: **ruff + `mypy --strict`**, scoped to this tree (see
   [§ The enforced standard](#the-enforced-standard)).
-- Contract: the five top-level scripts are **stable published paths**; the logic
+- Contract: the six top-level scripts are **stable published paths**; the logic
   lives in the sibling [`leanaudit/`](leanaudit/) package.
 
 ## The shim → package contract
@@ -57,7 +57,7 @@ Three facts are load-bearing when you touch a shim:
    not copy it into `leanaudit/`; a logic module that genuinely needs a
    declaration uses the region scope
    ([§ Declaring intentional duplication](#declaring-intentional-duplication)).
-3. **The five paths are a published contract.** Renaming, removing, or changing a
+3. **The six paths are a published contract.** Renaming, removing, or changing a
    shim's re-export surface is a breaking change. The shim↔package parity test
    pins it (see the test matrix).
 
@@ -68,11 +68,12 @@ Three facts are load-bearing when you touch a shim:
 | [`skill_load_cost.py`](skill_load_cost.py) | [`leanaudit/load_cost.py`](leanaudit/load_cost.py) | `raise SystemExit(main())` |
 | [`lean_guard.py`](lean_guard.py) | [`leanaudit/guard_lean.py`](leanaudit/guard_lean.py) | `main()` (returns `None`) |
 | [`load_cost_guard.py`](load_cost_guard.py) | [`leanaudit/guard_load_cost.py`](leanaudit/guard_load_cost.py) | `raise SystemExit(main())` |
+| [`workflow_cost.py`](workflow_cost.py) | [`leanaudit/workflow_cost.py`](leanaudit/workflow_cost.py) (+ `context_trace`) | `raise SystemExit(main(sys.argv[1:]))` |
 
 ## Module map of `leanaudit/`
 
-Ten files (`__init__.py` + nine modules). No import cycles. Five foundational
-**leaves**, two analysis **engines**, two hook **drivers**:
+Twelve files (`__init__.py` + eleven modules). No import cycles. Six foundational
+**leaves**, three analysis **engines**, two hook **drivers**:
 
 ```
 hook_envelope ─┐                              (leaf: envelope parse / decision shaping)
@@ -80,6 +81,9 @@ discovery ─────┼─▶ engine  ─▶ guard_lean       (markdown dup
 registry ──────┘   clones                      (code-clone engine)
 cli ───────────────▲ ▲                         (leaf: the two engines' shared CLI flags)
 load_cost ─────────────────▶ guard_load_cost   (per-use cost engine + its dual-mode guard)
+context_trace ─┬───────────▶ workflow_cost     (metadata-only adapters + run forecast)
+discovery ─────┤
+load_cost ─────┘
 ```
 
 Two leaves back no shim of their own (`hook_envelope`, `cli`) — they exist to
@@ -92,8 +96,10 @@ single-source a contract two siblings share.
 | [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution, inventory extraction/diff, pointer and cost-regression checks, plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
+| [`context_trace.py`](leanaudit/context_trace.py) | leaf | Normalize provider/host usage metadata, split model-visible/out-of-band tool results, and aggregate without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`. | stdlib |
 | [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
 | [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery` |
+| [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema inventory, three-lane stage simulation, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `discovery`, `load_cost` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
 | [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
 | `__init__.py` | — | Package docstring: states the stdlib-only / Py3.11+ runtime and that the entry paths are the published contract. | — |
@@ -103,9 +109,9 @@ re-exports it fully, so add new public names to `__all__` when you extend a
 module (ruff `F822` only catches the reverse — names in `__all__` that don't
 exist).
 
-## The two analysis engines (CLIs)
+## The three analysis engines (CLIs)
 
-Both are pure, deterministic, and scan a **directory** (never a single file — the
+All three are pure, deterministic, and scan a **directory** (never a single file — the
 skill filters findings to its in-scope path set after the run). Output is text or
 `--format json`. Cite the codes from [`../smell-catalog.md`](../smell-catalog.md);
 this guide does not redefine them.
@@ -118,8 +124,13 @@ this guide does not redefine them.
 - **`code_lens.py <dir>`** — source-code copy-paste clones. Emits
   `LA-CODE-DUP-1/2`. Flags: `--min-tokens` (default 20), `--registry`,
   `--format {text,json}`. Same exit-code convention (2 also on `--min-tokens < 1`).
+- **`workflow_cost.py <dir>`** — orchestrator/run viability. Emits source
+  nominations plus optional scenario-forecast `LA-RUN-*` / `LA-ORCH-*` findings.
+  Flags: `--scenario`, repeatable `--trace`, `--context-window`,
+  `--verification-reserve`, `--format {text,json}`. Exit 1 only when a block
+  forecast exists; exit 2 on invalid input. Traces are metadata-only.
 
-Both read the repo registry `.lean-audit.toml` when present
+The markdown and clone engines read `.lean-audit.toml` when present
 ([§ Config & data](#config-and-data-files)); absent it, they run heuristic-only.
 
 ## Declaring intentional duplication
@@ -278,6 +289,7 @@ All tests live at the marketplace source-repo root under `tests/`. Run one with
 | `tests/lean_engine_test.py` | Markdown engine + ledger calibration (`tests/lean_engine_ledger.jsonl`) at **≥0.90 precision AND recall**. |
 | `tests/lean_verbosity_test.py` | Verbosity nominator (`LA-VERBOSE-1`) helpers + ledger calibration (`tests/lean_verbosity_ledger.jsonl`) at **≥0.90 precision AND recall**, plus a bounded live-repo residual. |
 | `tests/lean_code_lens_test.py` | Clone lens + ledger calibration (`tests/lean_code_ledger.jsonl`) at the shipped `DEFAULT_MIN_CLONE_TOKENS`, **≥0.90 precision/recall**. |
+| `tests/lean_workflow_cost_test.py` | Static orchestrator/run findings (`tests/lean_workflow_ledger.jsonl`) at **≥0.90 precision/recall**, three-lane forecast, verification reserve, trace adapters, and metadata-only output. |
 | `tests/skill_load_cost_test.py` | Per-use harness; plus every committed baseline must be satisfiable by the guard's own closure. |
 | `tests/lean_guard_test.py` | PreToolUse dup guard, incl. subprocess `main()` smoke. |
 | `tests/load_cost_guard_test.py` | Per-use guard (PreToolUse + Stop); plus the guard stays silent on a clean tree for every committed baseline. |
@@ -289,7 +301,8 @@ imported, not run. Run the whole set at once:
 ```bash
 uv run python -m unittest \
   tests.lean_audit_python_standard_test tests.lean_audit_shims_test \
-  tests.lean_engine_test tests.lean_code_lens_test tests.skill_load_cost_test \
+  tests.lean_engine_test tests.lean_code_lens_test tests.lean_workflow_cost_test \
+  tests.skill_load_cost_test \
   tests.lean_guard_test tests.load_cost_guard_test
 ```
 
@@ -311,13 +324,17 @@ tests, then [§ Before you finish](#before-you-finish).
 - **Add a harness subcommand** → add the handler + a new `argparse` subparser in
   `leanaudit/load_cost.py`, extend `__all__`, and add cases to
   `skill_load_cost_test.py`.
+- **Change workflow forecast or trace normalization** → edit `workflow_cost.py`
+  and/or `context_trace.py`; add a planted positive and paired negative to
+  `tests/lean_workflow_ledger.jsonl` or an exact adapter/forecast case to
+  `tests/lean_workflow_cost_test.py`; preserve metadata-only output.
 - **Change guard behavior** → edit the driver in `leanaudit/`; add an integration
   test that drives its `main()` over a real payload for each event; update
   [`../hook-recipe.md`](../hook-recipe.md) if enablement or override changes.
 - **Onboard a new guarded skill's fidelity floor** → regenerate its baseline the
   sanctioned way ([§ Config & data](#config-and-data-files)) and confirm the two
   committed-baseline closure-parity tests pass.
-- **Touch a shim's boilerplate** → usually don't. The five paths are a published
+- **Touch a shim's boilerplate** → usually don't. The six paths are a published
   contract; keep the `dup-intentional` marker and re-export surface intact, and
   rerun `lean_audit_shims_test.py`. Restructuring the scanned engines requires a
   **classified** before/after finding-set diff (every delta must be a path rename

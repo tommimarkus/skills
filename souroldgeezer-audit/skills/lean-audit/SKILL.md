@@ -1,7 +1,7 @@
 ---
 name: lean-audit
 description: >-
-  Use when auditing prose and skill surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: near-duplicate or restated prose, broken or stale references, dead or unreferenced reference/extension files, oversized always-loaded context, verbose passages, and — when skills, commands, or agents are in scope — per-use/per-mode load cost. Markdown/prose plus mechanical source-code copy-paste **duplication** (bundled token-clone engine, `LA-CODE-DUP-*`); *semantic* duplication/DRY stays with software-design; mechanical source-level dead code is out of scope. Read-only; defer security, test-quality, and IP/licence work to sibling skills. On explicit request only, two opt-in lenses: platform-redundancy flags custom hooks/scripts, guidance prose, skills/commands/agents, or MCP servers that reinvent a native Claude Code™ or Codex capability (verified live, never auto-run); and minify produces a propose-only reduction diff plus fidelity report — never applied.
+  Use when auditing prose and skill/plugin workflow surfaces — a repo, file, or diff of docs, SKILL.md, agents, references, or extensions — for duplication and waste: restated prose, stale/dead references, oversized or verbose context, per-use/per-mode load cost, and pre-run finishability of staged, iterative, or delegated workflows (orchestrator context growth, tool/hook/log/handoff cost, verification reserve, and trace calibration). Includes mechanical source copy-paste duplication (`LA-CODE-DUP-*`); semantic DRY stays with software-design and source dead code is out of scope. Read-only; defer security, test quality, and IP/licence. Explicit-request-only lenses: platform redundancy (live verified) and propose-only minify (never applied).
 ---
 
 # Lean Audit
@@ -9,7 +9,7 @@ description: >-
 Audit prose and skill surfaces for duplication and waste (Lean *muda*). A bundled
 deterministic engine computes the findings; this workflow runs it, ranks by
 materiality, and adds the judgment-only waste checks the engine cannot decide.
-Cite [`references/smell-catalog.md`](references/smell-catalog.md) codes (`LA-*`). Conform to
+Cite the owning catalog/procedure code (`LA-*`). Conform to
 [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2/§3/§4/§5.
 
 ## Contract
@@ -27,25 +27,20 @@ mechanical copy-paste **duplication** is owned via the bundled `code_lens.py`
 remains out of scope and unowned today (tracked for v1.1) — do not reroute it to a
 design skill, which reviews structure, not mechanical dead code.
 
-A second lens — per-use load cost — is surface-gated and composes with the waste
-lens: it fires only when the scope contains at least one entry artifact (`SKILL.md`,
-`agents/*.md`, or `commands/**/*.md`). When no entry artifact is in scope the per-use lens is silent
-and the waste lens runs unchanged. Both lenses are read-only and advisory.
+Compose four additional lenses with the waste path:
 
-A third lens — platform redundancy (`LA-NAT-*`) — is OPT-IN, not surface-gated: it
-runs ONLY when the request explicitly asks whether custom artifacts reinvent a
-native Claude Code or Codex capability named by the request. A normal duplication/waste run never
-activates it and makes zero agent/network calls. It is read-only and advisory,
-and its native verdicts come from a live check of that host's official docs
-(never a bundled capability list). See `## Platform-redundancy lens (opt-in)`.
+- **Per-use cost (`LA-PUC-*`, surface-gated):** run when scope contains a
+  `SKILL.md`, `agents/*.md`, or `commands/**/*.md`; otherwise remain silent.
+- **Run viability (`LA-RUN-*` / `LA-ORCH-*`, surface-gated):** run on an entry
+  surface that declares staged, iterative, delegated, retrying, or token-budget
+  work, or on an explicit finishability/orchestrator-cost request. It is an
+  offline pre-run forecast; traces only calibrate it when supplied.
+- **Platform redundancy (`LA-NAT-*`, opt-in):** run only on an explicit native-
+  capability request and verify candidates against current host documentation.
+- **Minify (`LA-MIN-*`, opt-in, propose-only):** run only on an explicit
+  reduction request; emit a gated diff but never write targets.
 
-A fourth lens — minify (`LA-MIN-*`) — is OPT-IN and PROPOSE-ONLY: it runs ONLY
-when the request explicitly asks for a minification / reduction proposal. It
-consumes the waste and per-use lenses' findings to produce a reviewable diff
-plus a fidelity report; it NEVER writes target files — applying the diff is a
-separate, explicit user step outside this skill. A normal duplication/waste
-run never activates it and it makes zero agent/network calls. See
-`## Minify lens (opt-in, propose-only)`.
+All lenses are read-only. The default path makes zero agent/network calls.
 
 Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an optional `.lean-audit.toml` canonical-home / carve-out registry. Ask or stop when the scope, the intended
 surface, or requested edits lack a safe default. For false-positive discipline,
@@ -59,9 +54,8 @@ one path and DERIVES the assurance level from coverage: a file or diff scope →
 `limited`; a full-repo enumeration → `reasonable`. State the assurance on one
 line (audit-craft §4, by named principle — as `ip-hygiene` does).
 
-The opt-in platform-redundancy and minify lenses are layered on top of this
-path and do not change it: the default run (waste + surface-gated per-use
-cost) is unchanged, and the opt-in lenses run only on explicit request.
+The surface-gated cost lenses and explicit opt-in lenses do not introduce a
+second mode; coverage still derives assurance.
 
 ## Load Map
 
@@ -74,30 +68,52 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
 - Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1` / `LA-VERBOSE-1`) per Workflow step 2.
 - Run the bundled code lens [`references/scripts/code_lens.py`](references/scripts/code_lens.py) (the deterministic source of `LA-CODE-DUP-*`) when the scope contains source files — see Workflow step 2b.
 - For the opt-in prevention hooks, see [`references/hook-recipe.md`](references/hook-recipe.md) (enablement) and the guard entrypoints [`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and [`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py) (not part of an audit run).
-- All five scripts above are stable entry shims; the implementation lives in the sibling package [`references/scripts/leanaudit/`](references/scripts/leanaudit/) (verify: `uv run python -m unittest tests.lean_audit_shims_test` in this marketplace repo, or run any shim `--help`).
+- All six entry scripts are stable shims; implementation lives in [`references/scripts/leanaudit/`](references/scripts/leanaudit/) (verify with `uv run python -m unittest tests.lean_audit_shims_test`).
 - **Per-use cost lens (surface-gated):** load [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md)
   only when an entry artifact (the families listed in `## Contract`) is in scope.
   Run the bundled harness
   [`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) (`resolve_closure` / `measure` /
-  `baseline`) to size closures and project deltas. Cite the `LA-PUC-*` band from
-  [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
+  `baseline`) to size closures and project deltas. The procedure owns the
+  `LA-PUC-*` band; do not restate it.
+- **Run-viability lens (surface-gated):** load [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
+  only for the workflow signals in `## Contract`. Run
+  [`references/scripts/workflow_cost.py`](references/scripts/workflow_cost.py)
+  offline to discover orchestrators and source-readable risks; add a declared
+  scenario for a finishability verdict and supplied traces only for calibration.
+  The procedure owns `LA-RUN-*` / `LA-ORCH-*`; do not infer a model capacity.
 - **Platform-redundancy lens (opt-in):** load [`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md)
   ONLY when the request explicitly asks for a native/platform-redundancy check. It
   carries the reinvention-pattern catalog, the runtime-specific live consultation
   protocol, the confidence tiering, the degraded-mode rule, and the emit fields.
-  Cite `LA-NAT-*` from [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
+  The procedure owns `LA-NAT-*`; do not restate it.
 - **Minify lens (opt-in, propose-only):** load [`references/procedures/minify.md`](references/procedures/minify.md)
   ONLY when the request explicitly asks for a minification / reduction
   proposal. It carries the Locate → Propose → Fidelity-verify → Emit protocol,
   the shadow-workspace mechanics, the rejection taxonomy, and the emit fields.
-  Cite `LA-MIN-*` from [`references/smell-catalog.md`](references/smell-catalog.md); do not restate procedure prose.
-- Cite codes from [`references/smell-catalog.md`](references/smell-catalog.md); never restate catalog prose.
+  The procedure owns `LA-MIN-*`; do not restate it.
+- Cite core waste codes from [`references/smell-catalog.md`](references/smell-catalog.md)
+  and conditional-lens codes from their owning procedure; never restate either.
 
 ## Workflow
 
-1. Establish the scope: the whole repo, a single file, a set of named files, or a diff (its changed files). The bundled engine has no single-file or diff mode — it always scans the markdown tree rooted at a DIRECTORY — so pick the directory to run it in and the in-scope path set to keep. If a `.lean-audit.toml` exists at the scanned root the engine reads it; otherwise it runs heuristic-only — disclose which.
-2. Run the bundled engine and parse its JSON. **Interpreter — `uv` is primary:** the engine needs Python ≥3.11 (it uses `tomllib`), so run it with `uv`, which provisions or selects a conforming interpreter even when the system `python3` is older. On Claude Code run `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json` (Claude Code expands `${CLAUDE_PLUGIN_ROOT}` inline when this skill loads; reference procedures reuse that same resolved value, as they are read raw without substitution). On Codex run `uv run "<skill-dir>/references/scripts/lean_engine.py" <dir> --format json` with the resolved source path. The corresponding `python3` form is a fallback, valid only where `python3` is already ≥3.11. `<dir>` is the repo root for a repo scope, or the nearest common directory of the in-scope files for a file / named-files / diff scope. The engine scans the whole markdown tree under `<dir>` and emits `LA-DUP-1`/`LA-DUP-2` (block or advisory), `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1` (info verbosity nominations); exit 1 = a block-severity duplication is present, exit 2 = engine error on input (report the limit, continue with the judgment-only checks), exit 3 = interpreter floor unmet — **STOP**, do not substitute a judgment-only pass (see `## Rules and Stop Conditions`). For a file / named-files / diff scope, KEEP ONLY findings whose `path` is in scope — the engine reports the whole tree, so this filter is what makes the scope real. Treat the output as evidence, not verdict: do not invent findings it did not produce, and do not suppress one without a cited reason.
-2b. **Code-duplication lens (surface-gated).** If the scope contains source files (non-markdown code by extension), run `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/code_lens.py" <dir> --format json` on Claude Code, or `uv run "<skill-dir>/references/scripts/code_lens.py" <dir> --format json` on Codex (uv primary as in step 2; the corresponding `python3` form is a fallback only where `python3` is ≥3.11; `<dir>` = repo root, or the nearest common directory of the in-scope files) and parse its JSON. It emits `LA-CODE-DUP-1` (block, clone ≥ 2× min-tokens) and `LA-CODE-DUP-2` (advisory) clone pairs; exit 1 = a block clone present, exit 2 = engine error on input (disclose reduced coverage, continue with the other lenses), exit 3 = interpreter floor unmet — STOP as in step 2. For a file / named-files / diff scope, KEEP ONLY clones whose `path` or `matched_path` is in scope. If no source files are in scope, record "no source surfaces in scope — code lens silent" and skip this step.
+1. Establish the whole-repo, directory, named-file, or diff scope. Engines scan a
+   directory, so use the repo root or nearest common directory and retain only
+   findings touching the in-scope path set. Disclose `.lean-audit.toml` or
+   `heuristic-only`.
+2. Run the markdown engine as JSON (use `uv`; `python3` is fallback only at
+   ≥3.11):
+
+   ```text
+   uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts/lean_engine.py" <dir> --format json
+   uv run "<skill-dir>/references/scripts/lean_engine.py" <dir> --format json
+   ```
+
+   Exit 1 means block findings, 2 input/tool error (disclose and continue
+   judgment checks), and 3 an unmet interpreter floor (stop). Keep only
+   in-scope paths; never invent or silently suppress engine findings.
+2b. If source files are in scope, run the same host-specific forms with
+   `code_lens.py`; keep clone pairs where either path is in scope. Exit handling
+   matches step 2. Otherwise record `no source surfaces — code lens silent`.
 3. Add the judgment-only checks from [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) —
    `LA-STALE-2` (prose describing a removed/renamed structure), `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context), and `LA-VERBOSE-2`
@@ -112,34 +128,33 @@ cost) is unchanged, and the opt-in lenses run only on explicit request.
    artifact is in scope, record "no per-use surfaces in scope — per-use lens
    silent" and skip this step; the waste-lens findings from steps 2–3 are
    unchanged.
-5. Assign each waste-lens finding a risk tier per `materiality.md` (a smell on a
+5. **Run-viability lens (surface-gated).** If entry surfaces declare phases,
+   delegation, loops, retries, token budgets, or orchestrator/coordinator work,
+   run [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
+   end-to-end. Static discovery runs without network access; an exact verdict
+   requires declared context capacity and stage ranges. Supplied traces are
+   metadata-only calibration evidence, never a prerequisite. Otherwise record
+   "no long-running workflow signals — run-viability lens silent".
+6. Assign each waste-lens finding a risk tier per `materiality.md` (a smell on a
    high-fan-in surface such as CLAUDE.md outranks the same smell on a leaf file).
    Combine severity × risk into the P0–P3 worklist (audit-craft §3 grid). Per-use
    findings carry their own dial-adjusted priority (see procedure); merge them into
    the worklist under the `LA-PUC-*` band with their separate priority rationale.
-6. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
+7. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
 
 ## Platform-redundancy lens (opt-in)
 
-Runs ONLY on an explicit native/platform-redundancy request — never as part of a
-default waste run, and never auto-fired by surface detection. When requested, load
-[`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md) and run it end-to-end (candidate
-detection → runtime-specific live verification → synthesis → worklist merge).
-Read-only; never auto-migrate. If the live check is unavailable, degrade to
-unverified `LA-NAT-2` review items and disclose.
+Only on an explicit native/platform-redundancy request: run
+[`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md)
+end-to-end. Never auto-migrate; an unavailable live verifier yields disclosed,
+unverified `LA-NAT-2` review items.
 
 ## Minify lens (opt-in, propose-only)
 
-Runs ONLY on an explicit minification / reduction-proposal request — never as
-part of a default waste run, and never auto-fired by surface detection. When
-requested, run Workflow steps 1–5 first (they produce the ranked worklist the
-lens consumes), then load [`references/procedures/minify.md`](references/procedures/minify.md)
-and run it end-to-end (Locate → Propose → Fidelity-verify → Emit). Output is a
-reviewable diff per target plus a fidelity report — never an applied edit.
-Reductions that fail the adversarial fidelity gate are rejected with a reason
-(`LA-MIN-2`), never merged; source-code clones are referred, not rewritten
-(`LA-MIN-3`). All gates use only the bundled engine and harness — zero
-agent/network calls.
+Only on an explicit reduction-proposal request: run Workflow steps 1–6, then
+[`references/procedures/minify.md`](references/procedures/minify.md) end-to-end.
+It emits reviewable diffs but writes no target; failed gates become `LA-MIN-2`
+and source clones become `LA-MIN-3` referrals.
 
 ## Rules and Stop Conditions
 
@@ -164,6 +179,10 @@ agent/network calls.
 - If the engine is otherwise unavailable or errors on input (exit 2), disclose the
   reduced coverage and continue with the judgment-only checks; do not fabricate the
   deterministic findings.
+- Run viability: never name a run `feasible` without a declared context window,
+  stage ranges, and verification reserve. Treat missing bounds as `indeterminate`;
+  do not substitute a model-name guess. Keep out-of-band telemetry out of model-
+  visible cost and never echo raw trace content.
 - When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
 - Platform-redundancy lens (opt-in): never assert "native" from the pattern catalog
   alone — the catalog only nominates; a cited live `claude-code-guide` answer
@@ -180,58 +199,27 @@ agent/network calls.
 
 ## Output footer (audit-craft §5)
 
-End every output with: extensions loaded (none in v1) · registry used (path or `heuristic-only`) · engine
-availability · reference path(s) · evidence limits · independence
-(independent | self-review | unknown) · assurance level (derived: limited |
-reasonable).
-
-When the per-use lens ran, append: detected entry surfaces + closures analyzed ·
-inferred dial + basis + any maintainer override · harness availability
-([`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) present / unavailable) · hookability
-pointer ([`references/hook-recipe.md`](references/hook-recipe.md)).
+End every output with: extensions loaded (none in v1) · registry path or
+`heuristic-only` · engine availability · references · evidence limits ·
+independence (`independent | self-review | unknown`) · derived assurance.
+Append each activated conditional procedure's disclosure fields.
 
 When the code-duplication lens ran, append: code lens ran (source surfaces
 detected) · languages/extensions scanned · min-tokens threshold · declared
 `dup-intentional` suppressions honoured (whole-file exempted files / region-scoped
 spans) · fail-open skips (unreadable/binary/unknown-extension).
 
-When the opt-in platform-redundancy lens ran, also append: lens ran (opt-in) ·
-artifact families detected · runtime verifier + availability (`claude-code-guide`
-for Claude Code | official OpenAI docs for Codex | unavailable →
-degraded) · citations gathered + capabilities as observed `<date>` · network
-dependency.
-
-When the opt-in minify lens ran, also append: lens ran (opt-in, propose-only —
-no target files written) · targets minified · reductions accepted / rejected
-(with reason codes) · token delta and per-use closure delta
-([`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) `snapshot`/`measure`, before → after) ·
-pointer verification result (`diff` gate + `LA-STALE-1` shadow scan) ·
-guard-token gate result (`guard_tokens`, for any `tighten` reduction) · target
-evals re-run (case counts + result | no eval pack — restricted classes) ·
-shadow-workspace path.
-
 ## Prevention hook (opt-in)
 
-The same deterministic engine backs an opt-in PreToolUse guard
-([`references/scripts/lean_guard.py`](references/scripts/lean_guard.py)) that soft-blocks an edit introducing a NEW
-block-severity duplication into guarded markdown. A sibling guard
-([`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py)) protects a skill's per-use
-inventory of codes and sections against its committed floor
-(`tests/skill_load_cost/baselines/<skill>.json`). Both ship OFF; enable, override,
-and fail-open semantics are defined in [`references/hook-recipe.md`](references/hook-recipe.md).
+[`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and
+[`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py)
+protect new block duplication and committed fidelity floors. Both ship OFF;
+[`references/hook-recipe.md`](references/hook-recipe.md) owns enablement,
+override, and fail-open semantics.
 
 ## Skill Maintenance
 
-For trigger / workflow / grounding / eval edits, read `references/evals/` and
-[`references/source-grounding.md`](references/source-grounding.md); keep evals synthetic. The engines' tests
-live at repo root: `tests/lean_engine_test.py` / `tests/lean_engine_ledger.jsonl`
-(markdown engine), `tests/lean_code_lens_test.py` / `tests/lean_code_ledger.jsonl`
-(code lens), and `tests/lean_guard_test.py` / `tests/load_cost_guard_test.py` /
-`tests/skill_load_cost_test.py` (guards + per-use harness).
-For the bundled Python tooling's architecture and a safe-change guide — the
-shim→`leanaudit/` package contract, module map, finding codes, the ruff/mypy
-standard, config/data files, and this test matrix — read the maintainer guide
-`references/scripts/README.md` (referenced as an inline path, not a link, so this
-dev doc stays out of the runtime load closure; CLAUDE.md link-checks the path).
-Rerun obligations after craft or skill-surface changes:
-[`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.
+For edits, read `references/evals/`, `references/source-grounding.md`, and the
+non-runtime maintainer guide `references/scripts/README.md`; keep evals
+synthetic. Repo-root ledgers/tests cover both engines, guards, load cost,
+run viability, traces, and shims. Rerun audit-craft §8 obligations.

@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-audit",
-  "version": "2026.08.3",
+  "version": "2026.08.4",
   "description": "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and duplication/waste (Lean), with per-stack extensions and evidence-focused findings.",
   "author": {
     "name": "Sour Old Geezer",

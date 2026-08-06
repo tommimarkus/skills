@@ -211,6 +211,9 @@ detection degrades with disclosure, an unverified edit is never proposed.
 
 ## Stage 4 — Emit
 
+All three codes are info-severity proposal dispositions. `LA-MIN-1/2` combine
+inference with deterministic gates; `LA-MIN-3` is an ownership referral.
+
 Per accepted reduction (`LA-MIN-1`):
 
 - **code** — `LA-MIN-1`
@@ -242,10 +245,9 @@ classes") · shadow-workspace path. Proposed
 diffs live in the report output (or a user-requested scratch file); never in
 the target tree.
 
-## Disclosure (feeds the SKILL.md footer)
+## Disclosure
 
-Report the run's minify footer fields exactly as specified in
-[`../../SKILL.md`](../../SKILL.md) §"Output footer (audit-craft §5)" (the
-minify block) — do not improvise or drop fields. The propose-only attestation
-("no target files written") is how the lens's read-only conformance stays
+Append: opt-in/propose-only and no targets written · targets · accepted/rejected
+counts and reasons · token and closure deltas · pointer/guard-token gates · eval
+cases/results · shadow path. The no-write attestation makes read-only conformance
 auditable.

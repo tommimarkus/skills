@@ -99,6 +99,9 @@ Map each verified candidate to a code and confidence:
 - Agent is **uncertain / partial overlap**, or the live check was unavailable → `LA-NAT-2`, confidence `LOW` (review).
 - Agent confirms **not native** → non-finding; record the candidate and the reason, emit no code.
 
+Both codes are info-severity, advisory findings. `LA-NAT-1` is inference plus
+live verification; `LA-NAT-2` remains unverified inference.
+
 audit-craft §2 governs: the nomination is inference; the citation is the fact that
 promotes it.
 
@@ -114,10 +117,8 @@ promotes it.
 - **recommended move** — always *review*, framed as "review and decide; do not blind-delete — your custom version may intentionally do more"
 - **risk tier** — per [`../../../../docs/audit-reference/materiality.md`](../../../../docs/audit-reference/materiality.md); a reinvention in a high-fan-in surface (e.g. CLAUDE.md) outranks the same in a leaf file. Combine with severity into the P0–P3 worklist.
 
-## Disclosure (feeds the SKILL.md footer)
+## Disclosure
 
-Report the run's lens footer fields exactly as specified in
-[`../../SKILL.md`](../../SKILL.md) §"Output footer (audit-craft §5)" (the
-platform-redundancy block) — do not improvise or drop fields. The observed-on
-date and the disclosed network dependency are how the lens's non-determinism
-stays honest.
+Append: opt-in lens ran · artifact families · runtime verifier and availability
+· citations and capabilities observed on `<date>` · network dependency. The
+date and dependency keep the non-deterministic result honest.

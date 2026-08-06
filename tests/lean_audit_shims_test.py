@@ -17,6 +17,7 @@ PAIRS = (
     ("skill_load_cost.py", ("leanaudit/load_cost.py",)),
     ("lean_guard.py", ("leanaudit/guard_lean.py",)),
     ("load_cost_guard.py", ("leanaudit/guard_load_cost.py",)),
+    ("workflow_cost.py", ("leanaudit/workflow_cost.py",)),
 )
 # The two guard shims (lean_guard.py, load_cost_guard.py) are stdin-driven hooks with
 # no --help form; their CLI smoke lives in tests/lean_guard_test.py::MainSubprocess
@@ -25,6 +26,7 @@ CLI_SMOKE = (
     ["lean_engine.py", "--help"],
     ["code_lens.py", "--help"],
     ["skill_load_cost.py", "--help"],
+    ["workflow_cost.py", "--help"],
 )
 def _load_shim(shim_name: str) -> ModuleType:
     # Loading a leanaudit/*.py package module directly requires scripts/ on
