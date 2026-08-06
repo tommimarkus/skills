@@ -238,9 +238,7 @@ def _has_workflow_intentional(text: str) -> bool:
     fence_width = 0
     for line in text.splitlines():
         if fence_char is not None:
-            close_re = re.compile(
-                rf"^[ ]{{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*$"
-            )
+            close_re = re.compile(rf"^[ ]{{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*$")
             if close_re.fullmatch(line):
                 fence_char = None
                 fence_width = 0
@@ -1101,7 +1099,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Pre-run workflow budget and orchestrator-survivability audit"
     )
-# lean-audit:dup-intentional:end
+    # lean-audit:dup-intentional:end
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--scenario", help="JSON stage-budget scenario")
     parser.add_argument("--trace", action="append", default=[], help="JSON/JSONL usage trace")

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from leanaudit.json_rows import read_json_rows
 
@@ -27,7 +27,7 @@ _ALLOWED_FIXTURE_FIELDS = frozenset((*_SELECTOR_FIELDS, *_EVIDENCE_FIELDS))
 _VISIBILITIES = frozenset(("model", "out-of-band"))
 
 
-def _is_non_negative_int(value: Any) -> bool:
+def _is_non_negative_int(value: Any) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
@@ -239,7 +239,7 @@ def analyze_hook_registrations(
     """Inventory recognized hook configs and join content-free supplied evidence."""
     registrations: list[dict[str, Any]] = []
     unsupported: list[dict[str, str | int]] = []
-# lean-audit:dup-intentional:end
+    # lean-audit:dup-intentional:end
     config_file_count = 0
     for path, body in sorted(files.items()):
         runtime = _runtime_for_path(path)

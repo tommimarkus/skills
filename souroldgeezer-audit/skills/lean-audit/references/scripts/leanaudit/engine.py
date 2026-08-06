@@ -206,6 +206,8 @@ def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
         if f is not None:
             findings.append(f)
     return findings
+
+
 # lean-audit:dup-intentional:end
 
 
@@ -277,7 +279,7 @@ def find_dead_refs(files: dict[str, str], reg: Registry | None = None) -> list[F
             continue
         if reg is not None and path_exempt(reg, path):
             continue
-# lean-audit:dup-intentional:end
+        # lean-audit:dup-intentional:end
         name = posixpath.basename(path)
         if not any(name in text for other, text in files.items() if other != path):
             findings.append(

@@ -116,6 +116,8 @@ def _adapter(record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any
     if "claude" in event_name:
         return "claude-code"
     return "generic"
+
+
 # lean-audit:dup-intentional:end
 
 
@@ -244,6 +246,8 @@ def read_trace_file(path: Path) -> list[dict[str, Any]]:
         scalar_error="trace must contain JSON objects",
         row_error="every trace record must be an object",
     )
+
+
 # lean-audit:dup-intentional:end
 
 

@@ -22,6 +22,7 @@ from pathlib import Path
 
 from leanaudit.cli import add_shared_flags
 from leanaudit.discovery import repo_paths
+
 # lean-audit:dup-intentional:end
 
 # (line_comment_prefixes, block_comment_pairs, string_quotes, raw_string_quotes)
@@ -512,6 +513,8 @@ def _emit(clones: list[Clone], fmt: str) -> None:
                 f"{c.code} [{c.severity}] {c.path}:{c.lines} == "
                 f"{c.matched_path}:{c.matched_lines} ({c.tokens} tokens) -> {c.action}"
             )
+
+
 # The published engine CLIs intentionally keep parallel local argument/error flows too;
 # one region covers the token run that crosses this emitter-to-main boundary.
 def main(argv: list[str]) -> int:
@@ -539,4 +542,6 @@ def main(argv: list[str]) -> int:
         return 2
     _emit(clones, args.format)
     return 1 if any(c.severity == "block" for c in clones) else 0
+
+
 # lean-audit:dup-intentional:end
