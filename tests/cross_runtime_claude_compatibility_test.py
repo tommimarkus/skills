@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -15,23 +16,56 @@ def cases_by_id(path: Path) -> dict[str, dict]:
 
 
 class CrossRuntimeClaudeCompatibilityTest(unittest.TestCase):
-    def test_claude_marketplace_identity_and_plugin_copy_are_preserved(self) -> None:
-        marketplace = json.loads(
+    def test_claude_marketplace_identity_and_runtime_neutral_plugin_copy_are_preserved(self) -> None:
+        claude_marketplace = json.loads(
             (REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
         )
+        codex_marketplace = json.loads(
+            (REPO_ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8")
+        )
         self.assertEqual(
-            marketplace["description"],
+            claude_marketplace["description"],
             "Claude Code plugins by Sour Old Geezer: skills for code auditing, review, "
             "and development workflows, with matching Claude Code subagents.",
         )
-        entries = {entry["name"]: entry for entry in marketplace["plugins"]}
-        for plugin in ["souroldgeezer-audit", "souroldgeezer-design", "souroldgeezer-architecture"]:
+        claude_entries = {entry["name"]: entry for entry in claude_marketplace["plugins"]}
+        codex_entries = {entry["name"]: entry for entry in codex_marketplace["plugins"]}
+        unsupported_agent_claim = re.compile(
+            r"\bsub-?agents?\b|\bexecution-tier\s+agents?\b|\bmatching\s+Claude Code\s+agents?\b",
+            re.IGNORECASE,
+        )
+
+        plugins = [
+            "souroldgeezer-audit",
+            "souroldgeezer-design",
+            "souroldgeezer-architecture",
+            "souroldgeezer-policy",
+        ]
+        for plugin in plugins:
             with self.subTest(plugin=plugin):
-                manifest = json.loads(
+                claude_manifest = json.loads(
                     (REPO_ROOT / plugin / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
                 )
-                self.assertIn("matching Claude Code subagent", manifest["description"])
-                self.assertEqual(entries[plugin]["description"], manifest["description"])
+                codex_manifest = json.loads(
+                    (REPO_ROOT / plugin / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(claude_manifest["description"], codex_manifest["description"])
+                self.assertEqual(claude_entries[plugin]["description"], claude_manifest["description"])
+
+                descriptions = {
+                    "Claude marketplace": claude_entries[plugin]["description"],
+                    "Claude manifest": claude_manifest["description"],
+                    "Codex manifest": codex_manifest["description"],
+                }
+                codex_entry_description = codex_entries[plugin].get("description")
+                if codex_entry_description is not None:
+                    descriptions["Codex marketplace"] = codex_entry_description
+
+                for surface, description in descriptions.items():
+                    self.assertIsNone(
+                        unsupported_agent_claim.search(description),
+                        f"{surface} for {plugin} promises a host-specific agent surface",
+                    )
 
     def test_claude_runtime_substitutions_remain_documented_beside_codex_resolution(self) -> None:
         surfaces = [
