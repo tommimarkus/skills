@@ -63,6 +63,128 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
         self.assertTrue(report["orchestrators"][0]["signals"]["named_control_plane"])
         self.assertIn("LA-RUN-1", {row["code"] for row in report["findings"]})
 
+    def test_retry_contract_routes_bounds_terminals_and_progress_separately(self) -> None:
+        mod = load_workflow_cost()
+
+        def codes(content: str) -> set[str]:
+            report = mod.analyze_sources({"plugin/agents/lead.md": content})
+            return {row["code"] for row in report["findings"]}
+
+        capped_only = codes(
+            "Preflight, discover, plan, build, and verify. Retry at most 3 times and "
+            "checkpoint after each attempt."
+        )
+        terminal_without_progress = codes(
+            "Preflight, discover, plan, build, and verify. Retry at most 3 times. "
+            "Stop successfully when tests pass; after the final failure, report the "
+            "failure summary and escalate to the owner."
+        )
+        convergence_aware = codes(
+            "Preflight, discover, plan, build, and verify. Retry at most 3 times. "
+            "Stop successfully when tests pass; after the final failure, report the "
+            "failure summary and escalate to the owner. If the failing-check set is "
+            "unchanged after an attempt, stop and escalate with the evidence path."
+        )
+        unbounded = codes("Preflight, discover, plan, build, and verify. Retry until tests pass.")
+
+        self.assertIn("LA-RUN-4", capped_only)
+        self.assertNotIn("LA-RUN-6", capped_only)
+        self.assertNotIn("LA-RUN-4", terminal_without_progress)
+        self.assertIn("LA-RUN-6", terminal_without_progress)
+        self.assertNotIn("LA-RUN-4", convergence_aware)
+        self.assertNotIn("LA-RUN-6", convergence_aware)
+        self.assertIn("LA-RUN-1", unbounded)
+        self.assertIn("LA-RUN-4", unbounded)
+        self.assertNotIn("LA-RUN-6", unbounded)
+
+    def test_checkpoint_requires_a_bounded_structural_state_contract(self) -> None:
+        mod = load_workflow_cost()
+
+        def codes(content: str) -> set[str]:
+            report = mod.analyze_sources({"plugin/agents/lead.md": content})
+            return {row["code"] for row in report["findings"]}
+
+        incomplete = codes(
+            "Preflight, discover, plan, build, and verify. Iterate at most 2 times; "
+            "checkpoint and summarize after each iteration."
+        )
+        complete = codes(
+            "Preflight, discover, plan, build, and verify. Iterate at most 2 times. "
+            "After each iteration checkpoint a bounded summary schema containing objective "
+            "and scope, approved decisions, progress, blockers and open choices, obligation "
+            "IDs and evidence paths, plus the next decision."
+        )
+        unapproved_decisions = codes(
+            "Preflight, discover, plan, build, and verify. Iterate at most 2 times. "
+            "After each iteration checkpoint a bounded summary schema containing objective "
+            "and scope, decisions, progress, blockers and open choices, obligation IDs and "
+            "evidence paths, plus the next decision."
+        )
+
+        self.assertIn("LA-ORCH-5", incomplete)
+        self.assertNotIn("LA-ORCH-5", complete)
+        self.assertIn("LA-ORCH-5", unapproved_decisions)
+
+        report = mod.analyze_sources(
+            {
+                "plugin/agents/lead.md": (
+                    "Preflight, discover, plan, build, and verify. Iterate over an enumerated "
+                    "matrix and note that this is not a repair retry. Checkpoint each pass."
+                )
+            }
+        )
+        signals = report["artifacts"][0]["signals"]
+        self.assertTrue(signals["loop"])
+        self.assertTrue(signals["retry"])
+        self.assertTrue(signals["checkpoint"])
+        self.assertFalse(signals["effective_loop"])
+        self.assertFalse(signals["effective_retry"])
+        self.assertFalse(signals["checkpoint_complete"])
+
+    def test_deferred_scope_requires_explicit_broad_implementation(self) -> None:
+        mod = load_workflow_cost()
+
+        def codes(content: str) -> set[str]:
+            report = mod.analyze_sources({"plugin/agents/lead.md": content})
+            return {row["code"] for row in report["findings"]}
+
+        absent_only = codes(
+            "Preflight, discover, plan, build, and verify the requested narrow change."
+        )
+        broad_tbd = codes(
+            "Preflight, discover, plan, build, and verify. Proceed with broad implementation "
+            "across the repository while the implementation scope and acceptance criteria "
+            "remain TBD."
+        )
+        resolved_packet = codes(
+            "Preflight, discover, and plan. Classify requirements as must, out of scope, or "
+            "unknown. Give every unknown an owner, default, and acceptance check; implement "
+            "only the must items, then verify."
+        )
+        discovery_spike = codes(
+            "Preflight and discover. Scope is TBD, so before implementation run a bounded "
+            "2-pass discovery spike with a named question, owner, and exit criterion; then "
+            "plan, build, and verify only the resolved scope."
+        )
+        broad_resolved_packet = codes(
+            "Preflight, discover, and plan. Proceed with broad implementation only from the "
+            "resolved packet while initial scope and acceptance remain TBD: classify every "
+            "requirement as must, out of scope, or unknown, and give each unknown an owner, "
+            "default, and acceptance check. Then build and verify only must items."
+        )
+        broad_bounded_spike = codes(
+            "Preflight and discover. Proceed with broad implementation only after scope TBD "
+            "is resolved by a bounded 2-pass discovery spike with a named question, owner, "
+            "and exit criterion; then plan, build, and verify the resolved scope."
+        )
+
+        self.assertNotIn("LA-RUN-7", absent_only)
+        self.assertIn("LA-RUN-7", broad_tbd)
+        self.assertNotIn("LA-RUN-7", resolved_packet)
+        self.assertNotIn("LA-RUN-7", discovery_spike)
+        self.assertNotIn("LA-RUN-7", broad_resolved_packet)
+        self.assertNotIn("LA-RUN-7", broad_bounded_spike)
+
     def test_local_tool_schema_inventory_sizes_declared_schema_only(self) -> None:
         mod = load_workflow_cost()
         report = mod.analyze_sources(
@@ -89,8 +211,188 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
         self.assertEqual(inventory["tools"][0]["name"], "search")
         self.assertGreater(inventory["proxy_tokens"], 0)
 
+    def test_hook_inventory_is_additive_and_uses_content_free_fixture_metadata(self) -> None:
+        mod = load_workflow_cost()
+        secret = "DO-NOT-EMIT-WORKFLOW-HOOK-COMMAND"
+        hook_path = ".codex/hooks.json"
+        report = mod.analyze_sources(
+            {
+                hook_path: json.dumps(
+                    {
+                        "hooks": {
+                            "Stop": [
+                                {"hooks": [{"type": "command", "command": f"printf {secret}"}]}
+                            ]
+                        }
+                    }
+                )
+            },
+            hook_fixture_metadata=[
+                {
+                    "path": hook_path,
+                    "event": "Stop",
+                    "registration_index": 0,
+                    "hook_index": 0,
+                    "enabled": True,
+                    "visibility": "out-of-band",
+                    "frequency": 1,
+                    "proxy_tokens": 21,
+                }
+            ],
+        )
+
+        ledger = report["hook_cost"]
+        self.assertEqual(len(ledger["registrations"]), 1)
+        self.assertEqual(ledger["fixture_metadata"][0]["proxy_tokens"], 21)
+        self.assertNotIn(secret, json.dumps(ledger))
+
+    def test_workflow_source_reader_includes_recognized_hook_configs(self) -> None:
+        mod = load_workflow_cost()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".codex").mkdir()
+            (root / ".claude").mkdir()
+            (root / ".codex/hooks.json").write_text('{"hooks": {}}', encoding="utf-8")
+            (root / ".claude/settings.json").write_text('{"hooks": {}}', encoding="utf-8")
+
+            files = mod.read_workflow_sources(root)
+
+        self.assertIn(".codex/hooks.json", files)
+        self.assertIn(".claude/settings.json", files)
+
 
 class ForecastTest(unittest.TestCase):
+    def test_declared_output_cardinality_multiplies_lanes_iterations_and_waterfall(
+        self,
+    ) -> None:
+        mod = load_workflow_cost()
+        scenario = mod.load_scenario_data(
+            {
+                "id": "output-contract",
+                "context_window": 1000,
+                "orchestrator": {"base_tokens": 100},
+                "stages": [
+                    {
+                        "id": "report",
+                        "role": "verify",
+                        "iterations": 2,
+                        "output_tokens": 5,
+                        "fixed_output_tokens": 10,
+                        "per_item_output_tokens": 3,
+                        "item_count": {"low": 1, "expected": 2, "high": 4},
+                        "retained_tokens": 0,
+                    }
+                ],
+            }
+        )
+
+        forecast = mod.forecast_scenario(scenario)
+
+        self.assertEqual(
+            forecast["cost_waterfall"]["output_tokens"],
+            {
+                "low": 36,
+                "expected": 42,
+                "high": 54,
+            },
+        )
+        self.assertEqual(
+            forecast["total_run_tokens"],
+            {
+                "low": 236,
+                "expected": 242,
+                "high": 254,
+            },
+        )
+        model_keys = set(forecast["cost_waterfall"]) - {"out_of_band_result_tokens"}
+        for lane in ("low", "expected", "high"):
+            self.assertEqual(
+                sum(forecast["cost_waterfall"][key][lane] for key in model_keys),
+                forecast["total_run_tokens"][lane],
+            )
+
+    def test_output_components_without_cardinality_preserve_legacy_output_and_disclose_limit(
+        self,
+    ) -> None:
+        mod = load_workflow_cost()
+        scenario = mod.load_scenario_data(
+            {
+                "id": "output-cardinality-unknown",
+                "context_window": 1000,
+                "orchestrator": {"base_tokens": 100},
+                "stages": [
+                    {
+                        "id": "report",
+                        "role": "verify",
+                        "output_tokens": 5,
+                        "fixed_output_tokens": 10,
+                        "per_item_output_tokens": 3,
+                        "retained_tokens": 0,
+                    }
+                ],
+            }
+        )
+
+        forecast = mod.forecast_scenario(scenario)
+
+        self.assertEqual(forecast["cost_waterfall"]["output_tokens"]["expected"], 5)
+        self.assertTrue(
+            any("report" in limit and "item_count" in limit for limit in forecast["limits"])
+        )
+
+    def test_item_count_without_output_components_is_inert(self) -> None:
+        mod = load_workflow_cost()
+        base = {
+            "id": "item-count-inert",
+            "context_window": 1000,
+            "orchestrator": {"base_tokens": 100},
+            "stages": [
+                {
+                    "id": "report",
+                    "role": "verify",
+                    "output_tokens": 5,
+                    "retained_tokens": 0,
+                }
+            ],
+        }
+        with_count = json.loads(json.dumps(base))
+        with_count["stages"][0]["item_count"] = {
+            "low": 1,
+            "expected": 10,
+            "high": 100,
+        }
+
+        plain = mod.forecast_scenario(mod.load_scenario_data(base))
+        counted = mod.forecast_scenario(mod.load_scenario_data(with_count))
+
+        self.assertEqual(counted["total_run_tokens"], plain["total_run_tokens"])
+        self.assertEqual(counted["cost_waterfall"], plain["cost_waterfall"])
+
+    def test_output_cardinality_overflow_reuses_existing_run_codes(self) -> None:
+        mod = load_workflow_cost()
+        scenario = mod.load_scenario_data(
+            {
+                "id": "output-overflow",
+                "context_window": 150,
+                "orchestrator": {"base_tokens": 100},
+                "stages": [
+                    {
+                        "id": "verify",
+                        "role": "verify",
+                        "fixed_output_tokens": 20,
+                        "per_item_output_tokens": 50,
+                        "item_count": 2,
+                    }
+                ],
+            }
+        )
+
+        forecast = mod.forecast_scenario(scenario)
+        codes = {finding["code"] for finding in forecast["findings"]}
+
+        self.assertEqual(forecast["verdict"], "infeasible")
+        self.assertEqual(codes, {"LA-RUN-2", "LA-RUN-3"})
+
     def test_unsafe_run_exhausts_before_verification(self) -> None:
         mod = load_workflow_cost()
         scenario = mod.load_scenario_data(
@@ -311,6 +613,64 @@ class TraceAdapterTest(unittest.TestCase):
 
 
 class CliTest(unittest.TestCase):
+    def test_json_cli_attaches_hook_config_and_fixture_ledgers_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".codex").mkdir()
+            secret = "DO-NOT-EMIT-CLI-HOOK-COMMAND"
+            (root / ".codex/hooks.json").write_text(
+                json.dumps(
+                    {
+                        "hooks": {
+                            "Stop": [
+                                {"hooks": [{"type": "command", "command": f"printf {secret}"}]}
+                            ]
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            fixture = root / "hook-fixture.json"
+            fixture.write_text(
+                json.dumps(
+                    [
+                        {
+                            "path": ".codex/hooks.json",
+                            "event": "Stop",
+                            "registration_index": 0,
+                            "hook_index": 0,
+                            "enabled": True,
+                            "visibility": "model",
+                            "frequency": 1,
+                            "proxy_tokens": 8,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(root),
+                    "--hook-fixture",
+                    str(fixture),
+                    "--format",
+                    "json",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        hook_cost = payload["static"]["hook_cost"]
+        self.assertEqual(len(hook_cost["registrations"]), 1)
+        self.assertEqual(hook_cost["fixture_metadata"][0]["proxy_tokens"], 8)
+        self.assertNotIn(secret, proc.stdout)
+
     def test_json_cli_combines_static_forecast_and_trace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

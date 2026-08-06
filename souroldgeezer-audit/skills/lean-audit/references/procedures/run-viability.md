@@ -13,12 +13,13 @@ accumulates, repeats, fans out, and must remain available until verification.
 2. [Evidence layers](#evidence-layers)
 3. [Run the offline analyzer](#run-the-offline-analyzer)
 4. [Find the orchestrator](#find-the-orchestrator)
-5. [Build a budget scenario](#build-a-budget-scenario)
-6. [Interpret the forecast](#interpret-the-forecast)
-7. [Calibrate with traces](#calibrate-with-traces)
-8. [Finding rules](#finding-rules)
-9. [Remediation and fidelity](#remediation-and-fidelity)
-10. [Output contract](#output-contract)
+5. [Inventory hook injection](#inventory-hook-injection)
+6. [Build a budget scenario](#build-a-budget-scenario)
+7. [Interpret the forecast](#interpret-the-forecast)
+8. [Calibrate with traces](#calibrate-with-traces)
+9. [Finding rules](#finding-rules)
+10. [Remediation and fidelity](#remediation-and-fidelity)
+11. [Output contract](#output-contract)
 
 ## The protected outcome
 
@@ -69,14 +70,16 @@ The corresponding `python3` form is a fallback only when Python is at least
 3.11. Exit `0` means no block finding, `1` means a forecast emitted a block,
 `2` means invalid/unreadable input, and the shim exits `3` below Python 3.11.
 
-The offline pass reads tracked and unignored markdown workflow surfaces plus
-local JSON `inputSchema` / `input_schema` definitions. It makes no network,
-provider, MCP tool, or agent call. It emits:
+The offline pass reads tracked and unignored markdown workflow surfaces, local
+JSON `inputSchema` / `input_schema` definitions, and recognized
+`.codex/hooks.json` / `.claude/settings.json` hook registrations. It makes no
+network, provider, MCP tool, hook-command, or agent call. It emits:
 
 - workflow artifacts with proxy tokens and detected phases;
 - ranked orchestrator candidates and their signals;
 - locally visible tool-schema inventory;
-- source-readable findings;
+- a content-free hook registration ledger;
+- source-readable retry, progress, scope-resolution, and checkpoint findings;
 - limits that prevent an exact finishability verdict.
 
 For a file/diff audit, filter source findings to the in-scope paths as the main
@@ -104,6 +107,37 @@ The orchestrator should retain objective, approved plan, decisions, progress,
 blockers, compact evidence pointers, and the next decision. Source dumps, raw
 logs, complete diffs, repeated discovery inventories, and worker reasoning
 belong in task-local contexts or out-of-band artifacts.
+
+## Inventory hook injection
+
+The default static result inventories command-hook registrations but treats the
+command itself as opaque. Output includes only the runtime, config path, event,
+registration/hook indexes, hook type, and `command_present: true`; it never
+executes or emits the command. Unsupported hook/config shapes are disclosed
+instead of guessed.
+
+To add measured or declared injection evidence, supply repeatable content-free
+JSON or JSONL fixtures:
+
+```text
+workflow_cost.py <repo> --hook-fixture hook-cost.jsonl --format json
+```
+
+Each fixture row selects one registration with exactly `path`, `event`,
+`registration_index`, and `hook_index`. It may add only `enabled`, `visibility`,
+`frequency`, and `proxy_tokens` evidence, for example:
+
+```json
+{"path":".codex/hooks.json","event":"Stop","registration_index":0,"hook_index":0,"enabled":true,"visibility":"model","frequency":3,"proxy_tokens":120}
+```
+
+`visibility` is `model` or `out-of-band`; `frequency` and `proxy_tokens` are
+non-negative integers. The model-injected total includes a row only when it is
+explicitly enabled, model-visible, and has both numeric frequency and proxy
+tokens, then multiplies `frequency * proxy_tokens`. Missing or unsupported
+evidence remains `unknown`, never zero or free. The ledger is evidence for the
+hook row in the cost waterfall or a later scenario; it does not infer how often
+a configured hook fires.
 
 ## Build a budget scenario
 
@@ -165,6 +199,9 @@ Require `0 <= low <= expected <= high`. Iterations require `low >= 1`.
       "prompt_tokens": 2200,
       "tool_result_tokens": {"low": 2500, "expected": 5000, "high": 10000},
       "output_tokens": 1000,
+      "fixed_output_tokens": 250,
+      "per_item_output_tokens": 90,
+      "item_count": {"low": 4, "expected": 8, "high": 15},
       "retained_tokens": 800
     }
   ]
@@ -184,7 +221,15 @@ Field semantics:
 - `out_of_band_result_tokens`: measured external log/artifact payload retained
   for operational visibility but never injected into model context. It appears
   in the waterfall as an observation and is excluded from model token totals.
-- `output_tokens`: generated completion tokens.
+- `output_tokens`: generated completion tokens not represented by the fixed and
+  per-item components below.
+- `fixed_output_tokens`: generated output paid once per stage iteration.
+- `per_item_output_tokens`: generated output multiplied by `item_count` in each
+  stage iteration.
+- `item_count`: number of emitted findings/items/records. When fixed or per-item
+  output is declared without this field, those components are excluded, the
+  legacy `output_tokens` value remains, and the analyzer emits a limit. The
+  missing count is unknown, not a zero-cost output forecast.
 - `retained_tokens`: how much stage payload survives for later stages. When
   omitted, the analyzer conservatively retains prompt, hook, result, handoff,
   and output tokens; tool schemas are repeated per call but not retained as
@@ -259,6 +304,12 @@ capture: same synthetic workload, one exposure changed, repeated enough to show
 a stable delta. Do not execute a paid/live experiment, change host logging, or
 call a plugin tool from this read-only skill without separate authorization.
 
+The current trace lane calibrates usage totals only. It does not reconstruct
+raw lifecycle events, repeated unchanged hypotheses, TDD state transitions, or
+specification churn. Do not claim an observed livelock, retry plateau, or
+retrieval plateau from `--trace`; the corresponding source findings below audit
+declared controls, not historical behavior.
+
 ## Finding rules
 
 - `LA-RUN-1`: emit when an iteration/fan-out path lacks a finite upper bound.
@@ -268,10 +319,20 @@ call a plugin tool from this read-only skill without separate authorization.
 - `LA-RUN-3`: block when expected verification peak exceeds capacity or earlier
   expected overflow prevents reaching verification with a result; warn for
   upper-lane-only starvation. Deterministic scenario forecast.
-- `LA-RUN-4`: emit when retry ownership has no count, terminal state, or
-  escalation outcome. Warn; deterministic nomination plus inference.
+- `LA-RUN-4`: emit when a retry contract lacks any one of a finite bound/count,
+  terminal success, terminal failure/failure summary, or escalation. A count
+  alone does not clear it. Warn; deterministic nomination plus inference.
 - `LA-RUN-5`: emit only against observed trace usage and a declared calibration
   tolerance. Warn; deterministic metadata-only trace calibration.
+- `LA-RUN-6`: emit when an iterative path has a bound and complete terminal
+  contract but no stop/escalation rule for unchanged progress, evidence, or
+  hypotheses. A fixed enumerated sweep is exempt. Warn; deterministic static
+  nomination plus inference, not proof that a loop stalled.
+- `LA-RUN-7`: emit when broad/full/repo-wide implementation starts while scope
+  or acceptance remains unresolved. Clear it only with a resolved scope packet
+  naming musts, out-of-scope work, unknowns, owners, defaults, and acceptance
+  checks, or a bounded discovery spike with a question, owner, and exit
+  criterion. Warn; deterministic nomination plus inference.
 - `LA-ORCH-1`: emit only for model-visible bulk results. Large out-of-band logs
   are a non-finding. Warn; deterministic nomination plus inference.
 - `LA-ORCH-2`: require evidence that unchanged discovery is repeated, not merely
@@ -282,9 +343,12 @@ call a plugin tool from this read-only skill without separate authorization.
 - `LA-ORCH-4`: judgment-only. Emit when a persistent coordinator performs
   task-local source/test work and retains it, not merely because one agent owns
   a small workflow. Warn; inference.
-- `LA-ORCH-5`: require a long/iterative path and absence of a real checkpoint,
-  summary, discard, reset, or compaction boundary. Warn; deterministic
-  nomination plus inference.
+- `LA-ORCH-5`: on an iterative path, require a bounded checkpoint contract that
+  preserves objective/scope, approved decisions, progress, blockers/open
+  choices, compact obligation/evidence pointers, and the next action, with an
+  explicit size cap and summary/return schema. A bare `checkpoint`, `summary`,
+  or `compact` keyword does not clear it. Warn; deterministic nomination plus
+  inference.
 - `LA-ORCH-6`: emit when worker fan-out duplicates a material shared prefix;
   report the measured/projected multiplication and preserve task-local inputs.
   Warn; deterministic scenario forecast plus inference.
@@ -310,7 +374,11 @@ Prefer structural controls over “be concise”:
 - allocate stage-local workers fresh contexts instead of making the orchestrator
   perform detailed work;
 - cap attempts and name terminal success, failure, and escalation outcomes;
-- checkpoint decisions/progress before compacting detail;
+- stop or escalate when failures, evidence, or hypotheses stop changing;
+- resolve musts, exclusions, unknowns/defaults/owners, and acceptance before a
+  broad implementation, or run a bounded discovery spike first;
+- checkpoint objective, decisions, progress, blockers, evidence pointers, and
+  next action under a bounded return schema before compacting detail;
 - reserve verification and final-answer capacity before starting build loops;
 - defer unused tool schemas and expose only the tools required in that phase;
 - keep parallel workers' shared prefix minimal and move stable evidence behind
@@ -333,11 +401,13 @@ Emit:
 5. verdict and low/expected/high peak context plus total run tokens;
 6. earliest expected/upper overflow and verification reserve remaining;
 7. cost waterfall: repeated context, schemas, hooks, model-visible results,
-   handoffs, workers, output, cache observations;
-8. findings with 5 C's, evidence layer, projected saving, fidelity class, and
+   handoffs, workers, fixed/per-item output assumptions, and cache observations;
+8. content-free hook ledger, fixture source, model-visible frequency
+   multiplication, unsupported rows, and every unknown;
+9. findings with 5 C's, evidence layer, projected saving, fidelity class, and
    break-even;
-9. trace adapters/content policy when traces were supplied;
-10. limits and the main skill's disclosure footer, plus candidates/confidence ·
+10. trace adapters/content policy when traces were supplied;
+11. limits and the main skill's disclosure footer, plus candidates/confidence ·
     profile source · verdict · peak/total ranges · earliest overflow · reserve ·
     trace adapters and metadata-only policy.
 

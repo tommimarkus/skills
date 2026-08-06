@@ -30,10 +30,25 @@ schemas, or code are copied into this skill.
   (`scripts/skill_load_cost.py`) and engine (`scripts/lean_engine.py`); no
   third-party prose, diffs, or fixtures are copied into the skill, and every
   eval case is synthetic.
+- Per-use declared profiles: the multi-entry route, predicate, heading-anchor,
+  fallback, cross-entry deduplication, and selection-metadata schema are
+  repo-authored from local skill-loading needs. The pending-edit marginal
+  advisory is likewise a local guard contract. No host/vendor loading schema,
+  selection text, or trace was copied; committed scenarios use repository paths
+  and synthetic selection strings.
+- Hook-cost inventory: the content-free selector/evidence fixture schema and
+  enabled/model-visible frequency multiplication are repo-authored. Hook
+  commands remain opaque and are neither executed nor emitted. Fixtures are
+  synthetic metadata; no command bodies, hook output, provider logs, or vendor
+  hook schema are bundled.
 - Run-viability/orchestrator lens (`LA-RUN-*`, `LA-ORCH-*`): the workflow score,
-  three-lane budget simulator, stage schema, evidence hierarchy, findings, and
-  fixtures are repo-authored from the user's staged-workflow failure case. Trace
-  adapters map field names documented by the
+  three-lane budget simulator, fixed/per-item output forecast, retry/progress/
+  unresolved-scope/checkpoint checks, evidence hierarchy, findings, and
+  fixtures are repo-authored from user-reported staged-workflow and bounded-loop
+  failure modes. The current trace lane measures usage metadata only; raw
+  lifecycle reconstruction, TDD-loop detection, and unchanged-hypothesis
+  history remain deferred and are not claimed. Trace adapters map field names
+  documented by the
   [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create),
   [Anthropic tool-use overview](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview),
   [Claude Code monitoring guide](https://code.claude.com/docs/en/monitoring-usage),

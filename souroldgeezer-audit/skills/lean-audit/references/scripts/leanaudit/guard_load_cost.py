@@ -112,12 +112,19 @@ def _load_snapshot_and_scenarios(
     missing. Shared by the Stop-mode and PreToolUse cost-advisory checks (both
     filter this same pair differently — by skill vs. by target file)."""
     snap_p = repo_root / "tests" / "skill_load_cost" / "cost-snapshot.json"
-    scen_p = repo_root / "tests" / "skill_load_cost" / "scenarios.json"
-    if not (snap_p.exists() and scen_p.exists()):
+    scenarios = _load_scenarios(repo_root)
+    if not snap_p.exists() or scenarios is None:
         return None
     snap = json.loads(snap_p.read_text(encoding="utf-8"))
-    scenarios = json.loads(scen_p.read_text(encoding="utf-8"))
     return snap, scenarios
+
+
+def _load_scenarios(repo_root: Path) -> list[dict[str, Any]] | None:
+    scen_p = repo_root / "tests" / "skill_load_cost" / "scenarios.json"
+    if not scen_p.exists():
+        return None
+    scenarios = json.loads(scen_p.read_text(encoding="utf-8"))
+    return scenarios if isinstance(scenarios, list) else None
 
 
 def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
@@ -269,23 +276,20 @@ def main() -> int:
         decision = decide(target, new_content, skill_md, baseline, patterns)
         if decision is not None:
             print(json.dumps(decision))
-        loaded = _load_snapshot_and_scenarios(repo_root) if decision is None else None
-        if loaded is not None:
-            # Measures current on-disk closure vs the committed cost snapshot.
-            # At PreToolUse time this reflects pre-edit drift; at Stop time the
-            # on-disk state is the post-edit truth (Stop-mode is preferred for
-            # accurate cost measurement — see hook-recipe.md).
-            snap, scenarios = loaded
-            owned = {
-                s["id"]: s
-                for s in scenarios
-                if str(target) in [str(repo_root / f) for f in s["files"]]
-                or any((repo_root / f).resolve() == target.resolve() for f in s["files"])
-            }
-            msgs = slc.cost_regressions(
-                {k: v for k, v in snap.items() if k in owned},
-                list(owned.values()),
+        scenarios = _load_scenarios(repo_root) if decision is None else None
+        if scenarios is not None:
+            # PreToolUse attributes only the proposed edit's marginal increase.
+            # Snapshot drift remains a Stop-mode observation and cannot make a
+            # neutral or reducing pending edit look costly.
+            owned = [
+                scenario
+                for scenario in scenarios
+                if slc.scenario_uses_path(scenario, repo_root, target)
+            ]
+            msgs = slc.marginal_cost_regressions(
+                owned,
                 repo_root,
+                {target.resolve(): new_content},
             )
             warn = cost_warn_decision(msgs)
             if warn is not None:

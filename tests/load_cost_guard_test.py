@@ -187,6 +187,22 @@ class MainIntegrationTest(unittest.TestCase):
             json.dumps({"codes": ["HC-1", "LA-PUC-1"], "sections": ["S", "Sec"]}))
         return skill_dir
 
+    def _write_cost_data(self, root: Path, skill_name: str, snapshot: int | None = 1):
+        tests_dir = root / "tests" / "skill_load_cost"
+        (tests_dir / "scenarios.json").write_text(
+            json.dumps([
+                {
+                    "id": f"{skill_name}-surface",
+                    "skill": skill_name,
+                    "files": [f"{skill_name}/c.md"],
+                }
+            ])
+        )
+        if snapshot is not None:
+            (tests_dir / "cost-snapshot.json").write_text(
+                json.dumps({f"{skill_name}-surface": snapshot})
+            )
+
     def _run_guard_and_parse(self, payload: dict, *, exit_msg: str, lines_msg: str) -> tuple[dict, list]:
         code, lines = _run_guard(payload)
         self.assertEqual(code, 0, exit_msg)
@@ -253,6 +269,54 @@ class MainIntegrationTest(unittest.TestCase):
                 payload,
                 lambda out: out.get("hookSpecificOutput", {}).get("permissionDecision"),
                 "deny", "non-skill path must not produce a deny")
+
+    def test_pretooluse_cost_warn_is_pending_edit_marginal_and_advisory(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_dir = self._mk_skill(root)
+            self._write_cost_data(root, "myskill", snapshot=None)
+            payload = {
+                "tool_name": "Edit",
+                "tool_input": {
+                    "file_path": str(skill_dir / "c.md"),
+                    "old_string": "LA-PUC-1 token",
+                    "new_string": "LA-PUC-1 token\n" + ("extra " * 250),
+                },
+                "cwd": str(root),
+            }
+
+            out, _ = self._run_guard_and_parse(
+                payload,
+                exit_msg="guard must keep marginal cost advisory-only",
+                lines_msg="expected a marginal cost advisory",
+            )
+
+            hook = out["hookSpecificOutput"]
+            self.assertEqual(hook["permissionDecision"], "allow")
+            self.assertIn("pending edit", hook["permissionDecisionReason"])
+            self.assertNotIn("snapshot", hook["permissionDecisionReason"])
+
+    def test_pretooluse_neutral_edit_does_not_report_preexisting_snapshot_drift(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_dir = self._mk_skill(root)
+            target = skill_dir / "c.md"
+            target.write_text("## Sec\nLA-PUC-1 token\n" + ("existing " * 250))
+            self._write_cost_data(root, "myskill", snapshot=1)
+            payload = {
+                "tool_name": "Edit",
+                "tool_input": {
+                    "file_path": str(target),
+                    "old_string": "LA-PUC-1 token",
+                    "new_string": "LA-PUC-1 token",
+                },
+                "cwd": str(root),
+            }
+
+            code, lines = _run_guard(payload)
+
+            self.assertEqual(code, 0)
+            self.assertEqual(lines, [])
 
     # -- Stop-mode: fidelity block when code is removed from disk --
 

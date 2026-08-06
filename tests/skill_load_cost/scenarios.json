@@ -88,6 +88,54 @@
     ]
   },
   {
+    "id": "lean-audit-declared-composed-profile",
+    "skill": "lean-audit",
+    "load_routes": [
+      {
+        "entry": "lean-audit-skill",
+        "target": "souroldgeezer-audit/skills/lean-audit/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "lean-audit-agent",
+        "target": "souroldgeezer-audit/agents/lean-audit.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "lean-audit-skill",
+        "target": "souroldgeezer-audit/skills/lean-audit/references/procedures/per-use-cost.md#model-declared-load-routes",
+        "predicate": "conditional:per-use"
+      },
+      {
+        "entry": "lean-audit-skill",
+        "target": "souroldgeezer-audit/skills/lean-audit/references/procedures/run-viability.md#finding-rules",
+        "predicate": "conditional:run-viability"
+      },
+      {
+        "entry": "lean-audit-agent",
+        "target": "souroldgeezer-audit/skills/lean-audit/references/procedures/run-viability.md#finding-rules",
+        "predicate": "unknown"
+      }
+    ],
+    "selection_metadata": [
+      {
+        "entry": "lean-audit-skill",
+        "kind": "skill-description",
+        "text": "Synthetic captured lean-audit skill selection description."
+      },
+      {
+        "entry": "lean-audit-agent",
+        "kind": "agent-summary",
+        "text": "Synthetic captured lean-audit agent selection summary."
+      },
+      {
+        "entry": "souroldgeezer-audit",
+        "kind": "marketplace-description",
+        "text": "Synthetic captured audit marketplace selection description."
+      }
+    ]
+  },
+  {
     "id": "lean-audit-trace-calibration",
     "skill": "lean-audit",
     "files": [
