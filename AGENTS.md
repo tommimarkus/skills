@@ -106,6 +106,7 @@ python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'
+scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
 ```
 
@@ -113,6 +114,12 @@ Also validate every Codex plugin with the current first-party plugin validator
 when it is available, and run `claude plugin validate --strict` through the
 repository report path when the Claude CLI is installed. A test run that
 collects zero tests is a failed gate.
+
+The host smoke must keep both safety flags. It uses temporary `CODEX_HOME` and
+`CLAUDE_CONFIG_DIR` state without replacing `HOME`, verifies installed plugin,
+skill, agent, and Dediren MCP surfaces, and fingerprints the normal host
+plugin/config control planes before and after. Absence of a standalone Codex
+validator is a reported skip, not a fabricated pass.
 
 ## Documentation and ownership
 

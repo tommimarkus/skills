@@ -80,10 +80,20 @@ uv run python scripts/skill_architecture_report.py .
 uv run python scripts/skill_architecture_report.py --format json --strict .
 uv run python -m unittest tests.skill_architecture_report_test
 uv run python -m unittest discover -s tests -p '*_test.py'  # whole suite — NOT bare discover (default test*.py collects 0 here)
+scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
 ```
 
 Run the whole suite with the repo's actual `*_test.py` pattern; bare `unittest discover` uses `test*.py`, silently collects zero, and reads as a pass — treat a run that collects 0 tests as a failed gate.
+
+The cross-runtime host smoke installs all five plugins into fresh temporary
+`CODEX_HOME` and `CLAUDE_CONFIG_DIR` trees, never substitutes `HOME`, checks
+Codex prompt-input skill discovery and Claude installed component inventory,
+runs Claude strict validation, and handshakes the bundled Dediren server through
+both host adapters. It fingerprints the normal plugin/config profile surfaces
+before and after. Keep both safety flags; the current Codex CLI's lack of a
+standalone plugin validator is an explicit skip. A cold Dediren run may download
+the pinned bundle into temporary runtime data and requires Java™ 21 or newer.
 
 Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####` IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`), and a unique intent; the unittest suite rejects duplicate IDs, intents, and fixture/expectation fingerprints before executing the cases. The report's primary replacement claim is empirical: the `Replacement Calibration` section runs the local gold ledger and reports how many skill-only findings the tool detects automatically — keep ≥500 gold-finding cases and ≥90% automated replacement recall (catalog coverage is secondary metadata, not the success criterion). When cases are bulk-generated, update `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL in the same change.
 

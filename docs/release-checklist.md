@@ -13,6 +13,11 @@ Use this before publishing a release or bumping a plugin version.
   `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex. Neither
   marketplace may carry a `version` key.
 - Validate every Codex plugin with the current first-party plugin validator.
+- Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
+  with both CLIs available; require all five isolated installs, all 15 shared
+  skills, Claude component/strict validation, both Dediren adapter handshakes,
+  and unchanged normal plugin/config profiles. Record an unavailable standalone
+  Codex validator as a skip.
 - Confirm the plugin docs still link every shipped skill.
 - Confirm `README.md` still acts as the product map.
 - Run the validation commands listed in `README.md`.

@@ -121,13 +121,25 @@ Run these from the repo root:
 python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
+scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
-python -m unittest
+uv run python -m unittest discover -s tests -p '*_test.py'
 ```
 
 The parity check validates both marketplaces and both manifest families. The
 fragmentation gate additionally validates native Codex manifest structure; the
 Codex first-party validator is run directly during packaging changes.
+
+The host smoke creates temporary `CODEX_HOME` and `CLAUDE_CONFIG_DIR` state,
+registers this checkout as both marketplaces, installs all five plugins, checks
+the 15 shared skills through Codex prompt discovery and Claude component
+inventory, and drives the bundled Dediren JSON-RPC handshake through both host
+adapters. It fingerprints the normal plugin/config profile surfaces before and
+after and fails if they change. The current Codex CLI has no standalone plugin
+validator, so that capability is reported as an explicit skip; Claude strict
+validation still runs for every plugin. The cold Dediren path may download the
+pinned bundle into the command's temporary runtime-data directory and requires
+Java™ 21 or newer.
 
 `scripts/validate-fragmentation.sh` includes
 `scripts/test-stop-hooks.sh`.
