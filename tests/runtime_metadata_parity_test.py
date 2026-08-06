@@ -12,6 +12,12 @@ from tests.surface_test_lib import REPO_ROOT, write_fixture as write
 CHECKER = REPO_ROOT / "scripts" / "check-runtime-metadata-parity.py"
 EXAMPLE_PLUGIN = "souroldgeezer-example"
 EXAMPLE_LAUNCHER = "skills/example-skill/references/scripts/example-mcp.sh"
+POLICY_EXECUTION_TIER_AGENTS = (
+    "plan-step-analytical",
+    "plan-step-deep",
+    "plan-step-mechanical",
+    "plan-step-standard",
+)
 
 
 def read_manifest(path: Path) -> dict:
@@ -120,6 +126,64 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "souroldgeezer-example/agents/example-skill.md",
             "description",
         )
+
+    def test_public_skill_agent_must_remain_a_router_only_adapter(self) -> None:
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/agents/example-skill.md",
+            """
+            ---
+            name: example-skill
+            description: Use when checking runtime metadata parity for an example skill.
+            ---
+
+            Use the `Skill` tool to load and follow
+            [`../skills/example-skill/SKILL.md`](../skills/example-skill/SKILL.md)
+            as the source of truth.
+
+            1. Reimplement the skill's first workflow step here.
+            2. Present a wrapper-specific output contract.
+            """,
+            "souroldgeezer-example/agents/example-skill.md",
+            "router-body",
+        )
+
+    def test_unpaired_public_plugin_agent_is_detected(self) -> None:
+        self._assert_broken_fixture_flags(
+            "souroldgeezer-example/agents/extra-agent.md",
+            """
+            ---
+            name: extra-agent
+            description: This agent has no matching published skill.
+            ---
+
+            Run an independent workflow.
+            """,
+            "souroldgeezer-example/agents/extra-agent.md",
+            "paired-skill",
+            "unpaired agent",
+        )
+
+    def test_policy_execution_tier_agents_are_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo, plugin_name="souroldgeezer-policy")
+            for agent_name in POLICY_EXECUTION_TIER_AGENTS:
+                write(
+                    repo / "souroldgeezer-policy" / "agents" / f"{agent_name}.md",
+                    f"""
+                    ---
+                    name: {agent_name}
+                    description: Intentional execution-tier test fixture.
+                    ---
+
+                    Execute the approved plan step at this tier.
+                    """,
+                )
+
+            result = run_checker(repo)
+
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("Runtime metadata parity OK", result.stdout)
 
     def test_plugin_manifest_missing_version_is_detected(self) -> None:
         self._assert_broken_fixture_flags(
@@ -475,7 +539,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "renamed",
         )
 
-    def make_clean_fixture(self, repo: Path) -> None:
+    def make_clean_fixture(self, repo: Path, plugin_name: str = EXAMPLE_PLUGIN) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
         skill_description = "Use when checking runtime metadata parity for an example skill."
         internal_description = "Use when reviewing the internal authoring workflow."
@@ -486,8 +550,8 @@ class RuntimeMetadataParityTest(unittest.TestCase):
               "name": "souroldgeezer",
               "plugins": [
                 {{
-                  "name": "souroldgeezer-example",
-                  "source": "./souroldgeezer-example",
+                  "name": "{plugin_name}",
+                  "source": "./{plugin_name}",
                   "description": "{plugin_description}"
                 }}
               ]
@@ -496,25 +560,25 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         )
         write(
             repo / ".agents/plugins/marketplace.json",
-            """
-            {
+            f"""
+            {{
               "name": "souroldgeezer",
               "plugins": [
-                {
-                  "name": "souroldgeezer-example",
-                  "source": {"source": "local", "path": "./souroldgeezer-example"},
-                  "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                {{
+                  "name": "{plugin_name}",
+                  "source": {{"source": "local", "path": "./{plugin_name}"}},
+                  "policy": {{"installation": "AVAILABLE", "authentication": "ON_INSTALL"}},
                   "category": "Productivity"
-                }
+                }}
               ]
-            }
+            }}
             """,
         )
         write(
-            repo / "souroldgeezer-example/.claude-plugin/plugin.json",
+            repo / plugin_name / ".claude-plugin/plugin.json",
             f"""
             {{
-              "name": "souroldgeezer-example",
+              "name": "{plugin_name}",
               "version": "0.1.0",
               "description": "{plugin_description}",
               "author": {{"name": "Sour Old Geezer", "email": "test@example.invalid"}},
@@ -523,10 +587,10 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
-            repo / "souroldgeezer-example/.codex-plugin/plugin.json",
+            repo / plugin_name / ".codex-plugin/plugin.json",
             f"""
             {{
-              "name": "souroldgeezer-example",
+              "name": "{plugin_name}",
               "version": "0.1.0",
               "description": "{plugin_description}",
               "skills": "./skills/"
@@ -534,7 +598,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
-            repo / "souroldgeezer-example/skills/example-skill/SKILL.md",
+            repo / plugin_name / "skills/example-skill/SKILL.md",
             f"""
             ---
             name: example-skill
@@ -545,36 +609,39 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             """,
         )
         write(
-            repo / "souroldgeezer-example/agents/example-skill.md",
+            repo / plugin_name / "agents/example-skill.md",
             f"""
             ---
             name: example-skill
             description: {skill_description}
             ---
 
-            Use the matching skill as source of truth.
+            Use the `Skill` tool to load and follow
+            [`../skills/example-skill/SKILL.md`](../skills/example-skill/SKILL.md)
+            as the source of truth. Present the result in the shape that skill
+            requires.
             """,
         )
         write(
             repo / "README.md",
-            """
+            f"""
             # Example Marketplace
 
-            ## What's in `souroldgeezer-example`
+            ## What's in `{plugin_name}`
 
             | Skill | Summary | Extensions |
             |---|---|---|
-            | [example-skill](souroldgeezer-example/skills/example-skill/SKILL.md) | Example parity checks | none |
+            | [example-skill]({plugin_name}/skills/example-skill/SKILL.md) | Example parity checks | none |
             """,
         )
         write(
             repo / "docs/plugins/example.md",
-            """
-            # `souroldgeezer-example`
+            f"""
+            # `{plugin_name}`
 
             | Skill | Summary |
             |---|---|
-            | [example-skill](../../souroldgeezer-example/skills/example-skill/SKILL.md) | Example parity checks |
+            | [example-skill](../../{plugin_name}/skills/example-skill/SKILL.md) | Example parity checks |
             """,
         )
         write(

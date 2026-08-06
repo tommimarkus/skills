@@ -130,7 +130,7 @@ souroldgeezer-architecture/ ← published architecture plugin (architecture-desi
   .claude-plugin/plugin.json           ← Claude Code plugin manifest
   .codex-plugin/plugin.json            ← native Codex plugin manifest
   docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
-  agents/<skill-name>.md               ← one Claude Code subagent per skill, same name
+  agents/<skill-name>.md               ← one router-only Claude Code subagent per skill, same name
   skills/<skill-name>/SKILL.md         ← skill workflow
                      /extensions/      ← per-stack packs (see below)
                      /references/      ← smell catalog + reusable procedures / scripts / packaged runtime artifacts where needed
@@ -223,9 +223,9 @@ Skills here follow a recurring shape. Understand it before editing any SKILL.md:
 
 Two agent classes live under `<plugin>/agents/`.
 
-**Skill wrappers** (the default). Every skill has a matching Claude Code subagent at `<plugin>/agents/<skill-name>.md` — a thin one-shot wrapper that invokes the skill via the `Skill` tool, follows its instructions, and presents results in the skill's required shape. Frontmatter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
+**Skill wrappers** (the default). Every skill has exactly one matching Claude Code subagent at `<plugin>/agents/<skill-name>.md`. Its body is a canonical router-only adapter: use the `Skill` tool to load and follow `../skills/<skill-name>/SKILL.md` as the source of truth, then present the result in the shape that skill requires. Do not repeat modes, workflow steps, commands, stop conditions, output fields, footers, or host-capability caveats in the wrapper. Frontmatter remains the host adapter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
 
-When editing a skill's invocation contract (output format, required footer fields), update both together: `SKILL.md` and the Claude Code subagent.
+`scripts/check-runtime-metadata-parity.py` derives the canonical router body from the paired skill name and rejects any extra or changed body text, so a wrapper cannot quietly become a second workflow. It also rejects unpaired published agents except the four exact `souroldgeezer-policy/agents/plan-step-*.md` execution-tier names below. When a skill's invocation contract changes, update the shared `SKILL.md`; touch its wrapper only when the mirrored trigger metadata or Claude-specific frontmatter must change.
 
 **Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 

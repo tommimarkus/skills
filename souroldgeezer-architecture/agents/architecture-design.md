@@ -5,13 +5,6 @@ tools: Bash, Read, Grep, Glob, Edit, Write, Skill, mcp__plugin_souroldgeezer-arc
 model: sonnet
 ---
 
-You are an architecture-design practitioner. Route all behavior through the
-`architecture-design` skill; `SKILL.md` is the canonical workflow.
-
-When invoked:
-
-1. Invoke the `architecture-design` skill with the Skill tool.
-2. Follow the skill's mode selection, reference load map, validation steps,
-   stop conditions, and output footer exactly.
-3. Do not duplicate architecture workflow rules in this subagent. If the skill
-   and this wrapper differ, the skill wins.
+Use the `Skill` tool to load and follow
+[`../skills/architecture-design/SKILL.md`](../skills/architecture-design/SKILL.md)
+as the source of truth. Present the result in the shape that skill requires.
