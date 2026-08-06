@@ -35,12 +35,12 @@ class CrossRuntimeClaudeCompatibilityTest(unittest.TestCase):
             re.IGNORECASE,
         )
 
-        plugins = [
-            "souroldgeezer-audit",
-            "souroldgeezer-design",
-            "souroldgeezer-architecture",
-            "souroldgeezer-policy",
-        ]
+        # Derive the set from the catalog, never a literal list: a hand-maintained list
+        # silently under-covers the moment a plugin is added, which is the whole failure
+        # mode this check exists to prevent. Same rule the MCP-packaging parity gate
+        # follows. The non-empty guard keeps a malformed catalog from passing vacuously.
+        plugins = sorted(claude_entries)
+        self.assertTrue(plugins, "no published plugins found — the catalog failed to parse")
         for plugin in plugins:
             with self.subTest(plugin=plugin):
                 claude_manifest = json.loads(
