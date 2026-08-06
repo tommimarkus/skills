@@ -1,84 +1,121 @@
 # Extensions
 
-Per-stack packs loaded on demand by the `api-design` skill. The core workflow in `../SKILL.md` is framework-neutral; extensions add stack-specific primitives, patterns, smells, positive signals, and carve-outs.
-
-## Load order
-
-1. The skill detects stack by globbing the target and inspecting manifests (`.csproj`, `package.json`, `host.json`, `local.settings.json`, IaC under `infra/`, etc.).
-2. In Build, Extract, and Review, every matching extension is loaded (in Lookup the skill pulls at most the single extension a stack-specific question targets — see `../SKILL.md` Load Map). **Multiple extensions compose** on the same target — an API on Azure Functions .NET that stores entities in Cosmos and blobs in Storage loads all three extensions simultaneously; a hosted Next.js API loads `nodejs.md` first and then `nextjs.md`.
-3. Each extension's additions (primitives, patterns, smells, positive signals, carve-outs) are added to the active reference.
-4. On conflict between a carve-out and a core rule, the carve-out wins — but only for the exact pattern described.
-
-Extensions **never override** core rules. They may only **add** or **carve out**.
-
-## Extensions compose
-
-Unlike some earlier skill designs where one extension per target was the norm, `api-design` expects **multi-extension composition** as the common case. A typical production API loads:
-
-- `azure-functions-dotnet.md` for the compute / runtime layer (HTTP trigger shape, DI in `Program.cs`, managed identity, retry attributes, problem+json emission, hosting plan).
-- `nodejs.md` for a hosted or serverless Node.js runtime layer (HTTP listener or handler shape, request context, body limits, OpenTelemetry startup, reverse proxy, graceful shutdown).
-- `nextjs.md` for hosted Next.js API surfaces (Route Handlers, Pages API routes, Server Actions, route segment config, instrumentation, shared cache, deployment consistency). It loads after `nodejs.md`.
-- `azure-cosmosdb.md` for the primary data layer (partition-key strategy, point-read vs query shape, ETag → 412, continuation-token cursors, change-feed processor, data-plane RBAC).
-- `azure-blob-storage.md` for the object-storage layer (direct-to-blob SAS for large payloads, Event-Grid-sourced triggers, range requests, optimistic concurrency, `allowSharedKeyAccess=false`).
-
-**Smell-code namespaces are orthogonal by construction.** Each extension owns its own prefix (`afdotnet.*`, `nodejs.*`, `nextjs.*`, `cosmos.*`, `blob.*`); core gotchas in reference §6 use `SAD-G-*`. Findings from multiple extensions never collide in the review output — each finding is unambiguously attributable to one extension (or to the core).
-
-**Patterns compose, not override.** An idempotent POST that writes to Cosmos and invoices to Blob is:
-
-- `afdotnet.PAT-http-problem-details` + `afdotnet.PAT-idempotent-post` (the Functions-layer shape)
-- `cosmos.PAT-idempotency-container` + `cosmos.PAT-etag-conditional` (the Cosmos-layer shape)
-- `blob.PAT-direct-upload-sas` (the Blob-layer shape for the invoice PDF)
-
-A hosted Next.js API route backed by a database is:
-
-- `nodejs.PAT-hosted-server` + `nodejs.PAT-async-context` (the Node.js hosted-process shape)
-- `nextjs.PAT-route-handler-problem-details` + `nextjs.PAT-instrumentation` (the Next.js framework shape)
-- the matching data extension, when the datastore is one of the bundled data surfaces
-
-Each pattern cites the reference section it implements; there is no ambiguity about which layer is responsible for which concern.
+Per-stack packs loaded on demand by the `api-design` skill. The workflow in
+[`../SKILL.md`](../SKILL.md) owns route selection; every stack pack separates
+an always-loaded core from mutually exclusive Build and Review lanes.
 
 ## File layout per extension
 
-Each extension is a single markdown file in this directory. Required sections:
+Each stack has three files:
 
-- **Name and detection signals** — which files / manifests / content patterns trigger the load. Detection must be unambiguous; false-positive loads pollute findings.
-- **Hosting-model surface** — where the stack has genuinely distinct sub-surfaces that shape the rules (isolated worker vs legacy in-process; Cosmos provisioned vs serverless; Blob SAS-direct vs API-proxy). Rules tagged with the surface they apply to.
-- **Stack-specific primitives** — APIs, attributes, configuration properties, SDK types, and bindings the core reference doesn't cover.
-- **Stack-specific patterns** — templates idiomatic for the stack (namespaced `<ext>.PAT-N`). If the core §5 pattern suffices, cite it instead of duplicating.
-- **Project assimilation** — stack-specific discovery that the core SKILL.md's framework-agnostic discovery delegates here. Covers: (1) stack-level configuration (hosting plan, RBAC assignments, data-plane auth mode), (2) idiomatic infrastructure to reuse vs replace, (3) mapping from reference defaults (§3) to stack idioms, (4) carve-outs for core smells the stack's primitives legitimately satisfy.
-- **Smell codes** — namespaced as `<ext>.HC-N` (high-confidence), `<ext>.LC-N` (low-confidence), `<ext>.POS-N` (positive signals).
-- **Carve-outs** — explicit "do not flag <core rule> when <pattern>" entries.
-- **Applies to reference sections** — which parts of the core reference this extension augments (e.g., §3.5, §3.6, §5.6, §6).
+- `<stack>.md` — detection signals, hosting surface, compact primitive
+  recognition, project assimilation, shared safety invariants, and the
+  applies-to mapping.
+- `<stack>/build.md` — detailed primitives and namespaced `<stack>.PAT-*`
+  implementation patterns.
+- `<stack>/review.md` — namespaced `<stack>.HC-*`, `<stack>.LC-*`, and
+  `<stack>.POS-*` classifications plus exact carve-outs.
+
+The core and its selected lane form one extension contract. Lanes add detail;
+they do not replace or weaken the core API reference.
+
+## Load order
+
+1. Detect stacks from manifests, source, and deployment signals using each
+   core file's `Name and detection signals` section.
+2. Load every matching core for Build, Extract, and Review.
+3. Select lanes by mode:
+   - Build loads each matching `build.md` and excludes `review.md`.
+   - Review loads each matching `review.md` and excludes `build.md`.
+   - Factual Extract loads cores only. Explicit debt/compliance Extract also
+     loads matching review lanes and discloses the escalation.
+   - Lookup starts from one anchored core-reference section. A stack-specific
+     Lookup loads one stack core plus at most one relevant lane.
+4. Apply the selected rules after the framework-neutral reference.
+
+A Lookup that needs more than one stack's mechanics, both lanes, or a data
+extension in addition to the Node.js/Next.js base escalates to Review or Build,
+or asks the user. Node.js followed by Next.js is the one composed-base
+exception and counts as a single runtime stack for this cap.
+
+## Review Or Extract Rules
+
+Review always loads the matching review lanes. Factual Extract stays core-only;
+an explicit debt/compliance Extract adds only matching review lanes and reports
+that choice in its footer.
+
+## Footer Field
+
+The ordinary API-design footer lists the selected mode, every core and lane
+loaded, evidence layers, project assimilation, delegations, and limits. An
+Extract that adds review detail states the user request that triggered it.
+
+## Extensions compose
+
+Build, Review, and Extract compose every detected stack. An Azure Functions
+API that stores entities in Cosmos DB and payloads in Blob Storage loads all
+three cores, then the lane selected by the mode for each core. A hosted Next.js
+API loads the Node.js core first and the Next.js core second, then the same
+selected lane for both.
+
+Smell-code namespaces are orthogonal: `afdotnet.*`, `nodejs.*`,
+`nextjs.*`, `cosmos.*`, and `blob.*`. Pattern namespaces use the same
+prefixes. Findings therefore remain attributable when Review composes multiple
+packs, while Build patterns remain attributable across compute and data layers.
+
+On conflict, an exact review-lane carve-out wins only for its documented stack
+boundary. Extensions never override the core contract, security, reliability,
+observability, or verification-layer baseline.
 
 ## Current extensions
 
-| File | Applies to | Notes |
-|---|---|---|
-| `azure-functions-dotnet.md` | Azure Functions .NET isolated worker | Isolated-worker-only surface (in-process retired 2026-11-10), `[BuiltIn]` vs `[AspNetCore]` HTTP response styles, DI in `Program.cs`, managed identity via `DefaultAzureCredential`, Flex Consumption always-ready instances, OpenTelemetry wiring, Durable Functions, Key Vault references. |
-| `nodejs.md` | Node.js / TypeScript HTTP APIs, hosted or serverless | `[Hosted]` vs `[Serverless]` vs `[Adapter]` surface, `package.json` runtime / lockfile, Node `http` listener timeouts, body-size limits, AsyncLocalStorage request context, OpenTelemetry startup, resilient `fetch`, serverless handler shape, reverse proxy evidence, graceful shutdown. |
-| `nextjs.md` | Hosted Next.js API surfaces | Loads after `nodejs.md`; covers `[HostedNext]`, Route Handlers, Pages API routes, Server Actions, Route Segment Config, instrumentation, shared cache / deployment ID, Server Actions encryption key, and self-hosted reverse proxy expectations. |
-| `azure-cosmosdb.md` | Azure Cosmos DB (NoSQL API) | Provisioned vs Serverless capacity surface, hierarchical partition keys, point-read vs query cost, ETag / `IfMatchEtag` → 412, continuation-token pagination, change-feed processor / trigger, data-plane RBAC, `disableLocalAuth=true`, TTL + unique-key idempotency cache. |
-| `azure-blob-storage.md` | Azure Blob Storage (Block Blobs) | SAS-direct vs API-proxy surface, user-delegation SAS (no account keys), Event-Grid-sourced blob triggers, range requests + 206, ETag optimistic concurrency, archive rehydration as async 202, `allowSharedKeyAccess=false`, versioning + soft delete + immutable storage. |
+| Core | Build lane | Review lane | Applies to |
+|---|---|---|---|
+| `azure-functions-dotnet.md` | `azure-functions-dotnet/build.md` | `azure-functions-dotnet/review.md` | Azure Functions .NET isolated worker |
+| `nodejs.md` | `nodejs/build.md` | `nodejs/review.md` | Node.js / TypeScript hosted or serverless APIs |
+| `nextjs.md` | `nextjs/build.md` | `nextjs/review.md` | Hosted Next.js API surfaces; after Node.js |
+| `azure-cosmosdb.md` | `azure-cosmosdb/build.md` | `azure-cosmosdb/review.md` | Azure Cosmos DB NoSQL API |
+| `azure-blob-storage.md` | `azure-blob-storage/build.md` | `azure-blob-storage/review.md` | Azure Blob Storage block blobs |
 
-## Future hosted API extensions
+## Required core sections
 
-Hosted API guidance belongs in runtime extensions, not in the core workflow. The Node.js and hosted Next.js surfaces are now covered here. Likely future extension families include ASP.NET Core on Azure App Service, ASP.NET Core on Azure Container Apps, Kubernetes-hosted HTTP APIs, and Edge/runtime-platform APIs. Add those only when their runtime primitives, detection signals, and smells are specified.
+- **Name and detection signals**
+- **Hosting-model surface**
+- **Mode lanes**
+- **Stack-specific primitives** — compact recognition only
+- **Shared safety invariants**
+- **Project assimilation**
+- **Applies to reference sections**
+
+Build lanes own detailed primitive subsections and stack-specific patterns.
+Review lanes own smell codes, positive signals, and carve-outs.
 
 ## Adding an extension
 
-1. Copy one of the existing extensions as a template (pick the closest domain — compute, data, object storage).
-2. Pick a short, stable prefix (e.g., `lambda` for AWS Lambda, `gcf` for Google Cloud Functions, `sql` for Azure SQL, `sb` for Service Bus, `eh` for Event Hubs).
-3. Fill in detection signals — both globs and content matches. Detection must be unambiguous; false-positive loads pollute findings.
-4. Add stack-specific primitives that the core reference does not already cover. Do not re-document HTTP or OpenAPI primitives already in reference §4.
-5. Add stack-specific patterns if the stack's idiomatic solution differs structurally from reference §5 — otherwise cite the core pattern.
-6. Add smell codes, namespaced with the prefix.
-7. Add carve-outs for idiomatic patterns the stack enforces.
-8. Add the extension to the list in `../SKILL.md` § "Load Map" with its detection mapping.
-9. Add the extension to the table above.
-10. If the extension composes with an existing one (e.g., a Service Bus extension that commonly pairs with `azure-functions-dotnet`), document the composition in the "Extensions compose" section above.
+1. Pick a stable namespace prefix and define unambiguous detection signals.
+2. Add `<stack>.md`, `<stack>/build.md`, and `<stack>/review.md` with the
+   ownership boundaries above.
+3. Put shared non-negotiable safety rules in the core; do not duplicate them
+   across lanes.
+4. Put only implementation mechanics and `PAT` definitions in Build.
+5. Put only finding classifications, positive signals, and carve-outs in
+   Review. A review action may describe the required fix without loading Build.
+6. Add the core to the `SKILL.md` load map and this table.
+7. Add route tests proving mode inclusion and exclusion, then measure a declared
+   scenario before updating the committed cost snapshot.
+8. Document common composition with existing stacks.
+
+## Future hosted API extensions
+
+Add another hosted runtime only when its detection, hosting surface, safety
+invariants, patterns, review codes, and mode-route tests are concrete. Keep the
+generic API contract in the core reference.
 
 ## Non-goals for extensions
 
-- Extensions are not general framework guides. They address the *contract / security / reliability / observability / performance* surface only.
-- Extensions do not duplicate the core reference. If a point already lives in `../../../docs/api-reference/api-design.md`, cite it; do not restate.
-- Extensions do not override the security / contract / reliability / observability baselines. A stack cannot opt out of problem+json, maintained OAuth/OIDC validation, or managed/workload identity where available — it can only provide its own idiomatic way of honouring them.
+- Extensions are not general framework guides.
+- Extensions do not duplicate the framework-neutral API reference.
+- A mode lane may not smuggle the other lane's concrete code namespace into
+  its closure.
+- Factual Extract does not produce a compliance verdict from core-only
+  evidence.

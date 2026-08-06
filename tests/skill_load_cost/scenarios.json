@@ -164,37 +164,216 @@
   {
     "id": "lookup-functions",
     "skill": "api-design",
-    "files": [
-      "souroldgeezer-design/skills/api-design/SKILL.md",
-      "souroldgeezer-design/docs/api-reference/api-design.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md"
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#315-hosting-and-runtime-selection",
+        "predicate": "conditional:lookup-rule"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+        "predicate": "conditional:azure-functions"
+      }
     ]
   },
   {
     "id": "build-functions-cosmos",
     "skill": "api-design",
-    "files": [
-      "souroldgeezer-design/skills/api-design/SKILL.md",
-      "souroldgeezer-design/docs/api-reference/api-design.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md"
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:build"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:build-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+        "predicate": "conditional:azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet/build.md",
+        "predicate": "conditional:build-azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
+        "predicate": "conditional:cosmos"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb/build.md",
+        "predicate": "conditional:build-cosmos"
+      }
     ]
   },
   {
     "id": "review-functions-cosmos-blob",
     "skill": "api-design",
-    "files": [
-      "souroldgeezer-design/skills/api-design/SKILL.md",
-      "souroldgeezer-design/docs/api-reference/api-design.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
-      "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md"
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+        "predicate": "conditional:azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet/review.md",
+        "predicate": "conditional:review-azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
+        "predicate": "conditional:cosmos"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb/review.md",
+        "predicate": "conditional:review-cosmos"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage.md",
+        "predicate": "conditional:blob"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage/review.md",
+        "predicate": "conditional:review-blob"
+      }
+    ]
+  },
+  {
+    "id": "extract-functions-cosmos-factual",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:extract"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+        "predicate": "conditional:azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
+        "predicate": "conditional:cosmos"
+      }
+    ]
+  },
+  {
+    "id": "extract-functions-cosmos-debt",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:extract"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
+        "predicate": "conditional:azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet/review.md",
+        "predicate": "conditional:debt-azure-functions"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
+        "predicate": "conditional:cosmos"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb/review.md",
+        "predicate": "conditional:debt-cosmos"
+      }
     ]
   },
   {
