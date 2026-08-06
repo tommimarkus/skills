@@ -48,6 +48,196 @@ class MeasureScenarioTest(unittest.TestCase):
             result["rows"][0]["tokens"] + result["rows"][1]["tokens"],
         )
 
+    def test_declared_multi_entry_routes_dedupe_shared_units(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "first.md").write_text("# First\nentry one\n", encoding="utf-8")
+            (root / "shared.md").write_text(
+                "# Shared\nintro\n\n## Detail\nshared detail\n", encoding="utf-8"
+            )
+            scenario = {
+                "id": "composed",
+                "load_routes": [
+                    {"entry": "skill-a", "target": "first.md", "predicate": "always"},
+                    {
+                        "entry": "skill-a",
+                        "target": "shared.md#detail",
+                        "predicate": "conditional:deep",
+                    },
+                    {
+                        "entry": "skill-b",
+                        "target": "shared.md#detail",
+                        "predicate": "unknown",
+                    },
+                ],
+            }
+
+            result = slc.measure_scenario(scenario, root)
+
+            self.assertEqual(len(result["rows"]), 2)
+            shared = next(row for row in result["rows"] if row["file"] == "shared.md")
+            self.assertEqual(shared["anchor"], "detail")
+            self.assertEqual(shared["resolution"], "heading-subtree")
+            self.assertEqual(
+                shared["routes"],
+                [
+                    {"entry": "skill-a", "predicate": "conditional:deep"},
+                    {"entry": "skill-b", "predicate": "unknown"},
+                ],
+            )
+            self.assertEqual(
+                result["load_total"], sum(row["tokens"] for row in result["rows"])
+            )
+
+    def test_anchor_measures_heading_subtree(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            text = (
+                "# Root\nintro\n\n"
+                "## Target section\nkeep\n\n"
+                "### Child\nkeep child\n\n"
+                "## Next section\nexclude\n"
+            )
+            (root / "guide.md").write_text(text, encoding="utf-8")
+            scenario = {
+                "id": "anchor",
+                "load_routes": [
+                    {
+                        "entry": "skill",
+                        "target": "guide.md#target-section",
+                        "predicate": "always",
+                    }
+                ],
+            }
+
+            result = slc.measure_scenario(scenario, root)
+
+            expected = "## Target section\nkeep\n\n### Child\nkeep child\n\n"
+            self.assertEqual(result["rows"][0]["tokens"], slc.estimate_tokens(expected))
+            self.assertEqual(result["rows"][0]["resolution"], "heading-subtree")
+
+    def test_anchor_ignores_heading_syntax_inside_fenced_code(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            text = (
+                "# Guide\n\n```markdown\n## Target\nnot a heading\n```\n\n"
+                "## Target\nreal section\n"
+            )
+            (root / "guide.md").write_text(text, encoding="utf-8")
+            scenario = {
+                "id": "fenced-anchor",
+                "load_routes": [
+                    {
+                        "entry": "skill",
+                        "target": "guide.md#target",
+                        "predicate": "always",
+                    }
+                ],
+            }
+
+            result = slc.measure_scenario(scenario, root)
+
+            expected = "## Target\nreal section\n"
+            self.assertEqual(result["rows"][0]["tokens"], slc.estimate_tokens(expected))
+            self.assertEqual(result["rows"][0]["resolution"], "heading-subtree")
+
+    def test_unresolved_anchor_falls_back_to_whole_file_and_dedupes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            text = "# Guide\nall content\n"
+            (root / "guide.md").write_text(text, encoding="utf-8")
+            scenario = {
+                "id": "fallback",
+                "load_routes": [
+                    {
+                        "entry": "skill-a",
+                        "target": "guide.md#missing",
+                        "predicate": "conditional:deep",
+                    },
+                    {"entry": "skill-b", "target": "guide.md", "predicate": "always"},
+                ],
+            }
+
+            result = slc.measure_scenario(scenario, root)
+
+            self.assertEqual(len(result["rows"]), 1)
+            self.assertEqual(result["rows"][0]["tokens"], slc.estimate_tokens(text))
+            self.assertEqual(result["rows"][0]["resolution"], "whole-file-fallback")
+            self.assertEqual(len(result["rows"][0]["routes"]), 2)
+
+    def test_supported_selection_metadata_is_reported_separately(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "skill.md").write_text("# Skill\nworkflow\n", encoding="utf-8")
+            metadata = [
+                {
+                    "entry": "skill-a",
+                    "kind": "skill-description",
+                    "text": "Use for alpha audits.",
+                },
+                {
+                    "entry": "agent-a",
+                    "kind": "agent-summary",
+                    "text": "Audits alpha workflows.",
+                },
+                {
+                    "entry": "plugin-a",
+                    "kind": "marketplace-description",
+                    "text": "Alpha audit plugin.",
+                },
+            ]
+            scenario = {
+                "id": "metadata",
+                "load_routes": [
+                    {"entry": "skill-a", "target": "skill.md", "predicate": "always"}
+                ],
+                "selection_metadata": metadata,
+            }
+
+            result = slc.measure_scenario(scenario, root)
+
+            self.assertEqual(len(result["selection_metadata_rows"]), 3)
+            self.assertEqual(
+                {row["kind"] for row in result["selection_metadata_rows"]},
+                {"skill-description", "agent-summary", "marketplace-description"},
+            )
+            self.assertTrue(
+                all("text" not in row for row in result["selection_metadata_rows"])
+            )
+            self.assertEqual(
+                result["total"], result["load_total"] + result["selection_metadata_total"]
+            )
+
+    def test_route_predicate_and_metadata_kind_are_closed_values(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "skill.md").write_text("# Skill\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "predicate"):
+                slc.measure_scenario(
+                    {
+                        "id": "bad-predicate",
+                        "load_routes": [
+                            {
+                                "entry": "skill",
+                                "target": "skill.md",
+                                "predicate": "only in deep",
+                            }
+                        ],
+                    },
+                    root,
+                )
+            with self.assertRaisesRegex(ValueError, "selection_metadata"):
+                slc.measure_scenario(
+                    {
+                        "id": "bad-metadata",
+                        "load_routes": [],
+                        "selection_metadata": [
+                            {"entry": "skill", "kind": "host-secret", "text": "hidden"}
+                        ],
+                    },
+                    root,
+                )
+
 
 CODE_PATTERNS = [r"nodejs\.(?:HC|LC|POS)-\d+", r"\bHC-\d+"]
 
@@ -133,6 +323,53 @@ class CliTest(unittest.TestCase):
                 ]),
                 0,
             )
+
+    def test_measure_text_lists_selection_metadata_separately(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "skill.md").write_text("# Skill\n", encoding="utf-8")
+            scenarios = root / "scenarios.json"
+            scenarios.write_text(
+                json.dumps(
+                    [
+                        {
+                            "id": "metadata",
+                            "load_routes": [
+                                {
+                                    "entry": "skill",
+                                    "target": "skill.md",
+                                    "predicate": "always",
+                                }
+                            ],
+                            "selection_metadata": [
+                                {
+                                    "entry": "skill",
+                                    "kind": "skill-description",
+                                    "text": "Use for skill audits.",
+                                }
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = slc.main(
+                    [
+                        "measure",
+                        "--scenarios",
+                        str(scenarios),
+                        "--id",
+                        "metadata",
+                        "--root",
+                        str(root),
+                    ]
+                )
+
+            self.assertEqual(rc, 0)
+            self.assertIn("skill-description", out.getvalue())
+            self.assertIn("SELECTION METADATA", out.getvalue())
 
 
 def baseline_skill_md(repo: Path, baseline_name: str) -> Path:
@@ -302,6 +539,55 @@ class CostRegressionTest(unittest.TestCase):
             probs = slc.cost_regressions(snap, scenarios, root, tolerance=25)
             self.assertEqual(len(probs), 1)
             self.assertIn("a:", probs[0])
+
+
+class PendingEditCostTest(unittest.TestCase):
+    def test_warns_only_for_positive_marginal_increase_past_tolerance(self):
+        scenario = {"id": "affected", "files": ["a.md"]}
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            target = root / "a.md"
+            target.write_text("word " * 100, encoding="utf-8")
+
+            growth = slc.marginal_cost_regressions(
+                [scenario], root, {target.resolve(): "word " * 130}, tolerance=25
+            )
+            neutral = slc.marginal_cost_regressions(
+                [scenario], root, {target.resolve(): "word " * 100}, tolerance=25
+            )
+            reduction = slc.marginal_cost_regressions(
+                [scenario], root, {target.resolve(): "word " * 50}, tolerance=25
+            )
+
+            self.assertEqual(len(growth), 1)
+            self.assertIn("pending edit adds 30", growth[0])
+            self.assertEqual(neutral, [])
+            self.assertEqual(reduction, [])
+
+    def test_override_remeasures_anchored_route_and_path_membership(self):
+        scenario = {
+            "id": "route",
+            "load_routes": [
+                {
+                    "entry": "skill",
+                    "target": "guide.md#detail",
+                    "predicate": "always",
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            target = root / "guide.md"
+            target.write_text("# Guide\n\n## Detail\nshort\n", encoding="utf-8")
+            proposed = "# Guide\n\n## Detail\n" + ("extra " * 20)
+
+            self.assertTrue(slc.scenario_uses_path(scenario, root, target))
+            warnings = slc.marginal_cost_regressions(
+                [scenario], root, {target.resolve(): proposed}, tolerance=10
+            )
+
+            self.assertEqual(len(warnings), 1)
+            self.assertIn("route", warnings[0])
 
 
 class CliExitContractTest(unittest.TestCase):

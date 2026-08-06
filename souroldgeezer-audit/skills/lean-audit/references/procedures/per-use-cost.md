@@ -42,16 +42,66 @@ what gets measured and where per-use findings are raised.
 When multiple entry artifacts share the same SKILL.md root, merge their
 closures — duplicate paths count once.
 
+## Model declared load routes
+
+Closure resolution proves reachability, not which entry, runtime, lens, scope,
+or escalation path selects a file. For measured per-use evidence, build a JSON
+scenario from the target's own Load Map and selection surfaces, then run:
+
+```text
+skill_load_cost.py measure --scenarios <scenarios.json> --id <scenario-id> --root <repo> --json
+```
+
+Use either the legacy `files` list or `load_routes`, never both. `load_routes`
+contains one object per declared edge:
+
+```json
+{
+  "id": "composed-audit",
+  "load_routes": [
+    {"entry": "skill-a", "target": "skill-a/SKILL.md", "predicate": "always"},
+    {"entry": "agent-a", "target": "shared.md#lookup", "predicate": "conditional:lookup"},
+    {"entry": "skill-b", "target": "shared.md#lookup", "predicate": "unknown"}
+  ],
+  "selection_metadata": [
+    {"entry": "skill-a", "kind": "skill-description", "text": "captured description"}
+  ]
+}
+```
+
+- `entry` and `target` are caller-declared evidence. The harness does not infer
+  host activation or turn natural-language conditions into predicates.
+- `predicate` is exactly `always`, `conditional:<label>`, or `unknown`.
+  `unknown` is still charged; it is not zero and does not support a claim that
+  the route always or never loads.
+- A target may name `file.md#heading`. A resolved heading charges that heading
+  and its child subtree up to the next heading of equal or higher level. Fenced
+  heading-like text is ignored. Missing or ambiguous anchors fall back to the
+  whole file and report `resolution: whole-file-fallback`; never guess a
+  smaller slice.
+- Identical resolved file/anchor units count once across entries while every
+  contributing entry and predicate remains in the unit's `routes` evidence.
+- `selection_metadata` is optional and accepts only `skill-description`,
+  `agent-summary`, and `marketplace-description`. Output retains entry, kind,
+  and proxy tokens, not the supplied text. Absent metadata means not supplied,
+  not confirmed zero exposure.
+
+Report `load_total`, `selection_metadata_total`, and `total` separately. The
+counter remains the offline proxy; do not label it an exact provider token
+count.
+
 ## Model per-mode load sets
 
 Read the SKILL.md `## Load Map` section and the skill's mode list (e.g. Quick /
-Deep, or Build / Extract / Review / Lookup). For each mode, trace which Load-Map
-lines are conditional on that mode (explicit "only in Deep", "only for Lookup",
-or equivalent guard) versus unconditional (loaded on every invocation).
+Deep, or Build / Extract / Review / Lookup). Derive the declared scenario from
+those sources, then use each measured unit's `routes` array rather than silently
+reclassifying the predicates. For each mode, distinguish unconditional,
+conditional, and unknown routes.
 
-Output: a table — `mode × file` — marking each closure file as `always`,
-`conditional:<mode>`, or `not loaded`. This table is the evidence substrate for
-all three PUC checks.
+Output: a table — `entry × mode × file[#anchor]` — marking each unit as
+`always`, `conditional:<mode>`, `unknown`, or `not loaded`. Keep anchor
+resolution and selection-metadata cost beside the table. This is the evidence
+substrate for all three PUC checks.
 
 ## Find LA-PUC-1/2/3
 
@@ -64,7 +114,7 @@ Trigger: a closure file is loaded in mode A, but its content is exclusively
 relevant to mode B (or the file is detection-loaded regardless of mode when it
 is only needed in a subset).
 
-Evidence shape: the `mode × file` table shows the file as `always` or
+Evidence shape: the `entry × mode × file[#anchor]` table shows the file as `always` or
 `conditional:A`, yet every section inside it is labelled for or logically
 scoped to mode B.
 
@@ -81,7 +131,7 @@ Trigger: a file is always loaded (or loaded across many modes), but a
 substantial block inside it is exclusive to a single, less frequent mode.
 
 Evidence shape: a section heading or block marker inside the file maps to one
-mode in the `mode × file` table, while the rest of the file is multi-mode.
+mode in the `entry × mode × file[#anchor]` table, while the rest of the file is multi-mode.
 Measure the rarer-mode block with `skill_load_cost.py measure` and compare to
 the file's total to size the waste.
 
@@ -175,8 +225,9 @@ For each LA-PUC finding, emit the following fields:
 - **code** — `LA-PUC-1`, `LA-PUC-2`, or `LA-PUC-3`
 - **modes** — which modes are affected (over-loaded, splitting target, or
   partition scope)
-- **evidence** — the specific file(s) and section(s) from the `mode × file`
-  table; cite the Load-Map line and the closure path
+- **evidence** — the specific entry, predicate, file, anchor, and resolution
+  from the `entry × mode × file[#anchor]` table; cite the Load-Map line and the
+  closure path
 - **projected delta** — token reduction estimate from `skill_load_cost.py
   measure` run on the before and after scenario, or a slice-sizing estimate
   when the restructure is not yet applied
@@ -203,5 +254,17 @@ pointers. The executor uses it with `skill_load_cost.py diff` to confirm no
 fidelity loss after applying the recommended moves. Emit it as a named block
 (`baseline:`) in the finding output so the executor can run the diff gate.
 
-Disclosure footer: entry surfaces and closures · inferred dial, basis, and
-override · harness availability · `references/hook-recipe.md` hookability.
+## Pending-edit advisory boundary
+
+The opt-in PreToolUse cost guard remeasures affected declared scenarios with the
+proposed Markdown content before it is written. It warns only when the proposed
+edit's positive marginal increase exceeds the configured tolerance (200 proxy
+tokens by default). Neutral or reducing edits stay silent even when the current
+tree already exceeds a committed snapshot. This lane is advisory `allow`; only
+the separate fidelity-floor check may deny. Stop mode still compares final
+on-disk scenarios with the committed snapshot.
+
+Disclosure footer: entry surfaces and closures · declared-profile source ·
+unknown predicates / unresolved anchors / unsupplied selection metadata ·
+inferred dial, basis, and override · proxy-counter evidence layer · harness
+availability · `references/hook-recipe.md` hookability.

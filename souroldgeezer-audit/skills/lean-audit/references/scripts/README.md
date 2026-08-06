@@ -72,8 +72,8 @@ Three facts are load-bearing when you touch a shim:
 
 ## Module map of `leanaudit/`
 
-Twelve files (`__init__.py` + eleven modules). No import cycles. Six foundational
-**leaves**, three analysis **engines**, two hook **drivers**:
+Thirteen files (`__init__.py` + twelve modules). No import cycles. Seven
+foundational **leaves**, three analysis **engines**, two hook **drivers**:
 
 ```
 hook_envelope ─┐                              (leaf: envelope parse / decision shaping)
@@ -82,6 +82,7 @@ registry ──────┘   clones                      (code-clone engine)
 cli ───────────────▲ ▲                         (leaf: the two engines' shared CLI flags)
 load_cost ─────────────────▶ guard_load_cost   (per-use cost engine + its dual-mode guard)
 context_trace ─┬───────────▶ workflow_cost     (metadata-only adapters + run forecast)
+hook_cost ─────┤                                (content-free hook registration ledger)
 discovery ─────┤
 load_cost ─────┘
 ```
@@ -95,11 +96,12 @@ single-source a contract two siblings share.
 | [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | stdlib |
 | [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
-| [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution, inventory extraction/diff, pointer and cost-regression checks, plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
+| [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
 | [`context_trace.py`](leanaudit/context_trace.py) | leaf | Normalize provider/host usage metadata, split model-visible/out-of-band tool results, and aggregate without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`. | stdlib |
+| [`hook_cost.py`](leanaudit/hook_cost.py) | leaf | Inventory recognized Claude/Codex hook registrations without returning or executing opaque commands; join optional content-free fixture metadata; multiply only evidenced enabled, model-visible frequency × proxy-token rows. Unknown and unsupported values remain explicit. Public: `analyze_hook_registrations`, `is_hook_config_path`, `read_hook_fixture_file`. | stdlib |
 | [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
 | [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery` |
-| [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema inventory, three-lane stage simulation, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `discovery`, `load_cost` |
+| [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema and hook-registration inventory, static retry/progress/scope/checkpoint controls, three-lane stage simulation, fixed + per-item output forecast, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `hook_cost`, `discovery`, `load_cost` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
 | [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
 | `__init__.py` | — | Package docstring: states the stdlib-only / Py3.11+ runtime and that the entry paths are the published contract. | — |
@@ -126,9 +128,10 @@ this guide does not redefine them.
   `--format {text,json}`. Same exit-code convention (2 also on `--min-tokens < 1`).
 - **`workflow_cost.py <dir>`** — orchestrator/run viability. Emits source
   nominations plus optional scenario-forecast `LA-RUN-*` / `LA-ORCH-*` findings.
-  Flags: `--scenario`, repeatable `--trace`, `--context-window`,
+  Flags: `--scenario`, repeatable `--trace` and `--hook-fixture`, `--context-window`,
   `--verification-reserve`, `--format {text,json}`. Exit 1 only when a block
-  forecast exists; exit 2 on invalid input. Traces are metadata-only.
+  forecast exists; exit 2 on invalid input. Traces and hook fixtures are
+  metadata-only; hook commands are never executed or emitted.
 
 The markdown and clone engines read `.lean-audit.toml` when present
 ([§ Config & data](#config-and-data-files)); absent it, they run heuristic-only.
@@ -196,8 +199,12 @@ duplicate that here. What a maintainer needs to know about the code:
   fails open (exit 0) when neither is available. Stdlib-only is not enough on
   its own — `tomllib` is stdlib only from 3.11 — so the floor, not the dependency
   set, is what makes the interpreter choice matter.
-- Fidelity regression **blocks**; cost growth is **advisory** (tolerance 200
-  tokens) and never blocks.
+- Fidelity regression **blocks**. PreToolUse cost growth compares the current
+  scenario with the pending edit for affected scenarios only; a positive
+  marginal increase beyond the 200-token tolerance is advisory and never
+  blocks. Neutral/reducing pending edits stay silent even when a committed
+  snapshot has pre-existing drift. Stop mode retains the committed-snapshot
+  on-disk comparison, also advisory-only.
 
 If you add or change a hook event a guard handles, add an integration test that
 drives its `main()` over a real payload for that event — helper-function unit
@@ -212,7 +219,7 @@ lens; the operator procedure is [`../procedures/per-use-cost.md`](../procedures/
 | Subcommand | Does | Exit |
 |---|---|---|
 | `resolve_closure <SKILL.md>` | Print the transitive Load-Map markdown-link closure of a skill. | 0 |
-| `measure --scenarios … --id …` | Token-size one scenario's file set. | 0 |
+| `measure --scenarios … --id …` | Token-size one legacy file set or declared entry/predicate/anchor route profile, with optional separate selection metadata. | 0 |
 | `baseline --files … --code-patterns … --out …` | Build a `{codes, sections}` fidelity baseline from a closure. | 0 |
 | `diff --baseline … --files … --code-patterns …` | Report fidelity loss vs a baseline. | 1 if regressions, else 0 |
 | `guard_tokens --before … --after … --code-patterns …` | G2v closed-token gate for a minify `tighten` rewrite: after must preserve every code/link/inline-code/number/ALL-CAPS-normative token and not drop a negation's count. | 1 if any dropped, else 0 |
@@ -220,7 +227,11 @@ lens; the operator procedure is [`../procedures/per-use-cost.md`](../procedures/
 
 Errors (`OSError` / bad JSON / bad regex / unknown `--id`) exit **2**. The token
 count is a deterministic word/punctuation proxy, not a model tokenizer — only the
-before/after delta is meaningful, so a stable proxy is sufficient.
+before/after delta is meaningful, so a stable proxy is sufficient. A route may
+target `path.md#heading-anchor`; missing or ambiguous anchors fall back to the
+whole file and disclose that resolution. Units shared by several entries are
+charged once, while the route provenance remains visible. Predicate `unknown`
+is still charged and is never treated as zero.
 
 ## Config and data files
 
@@ -240,7 +251,7 @@ before/after delta is meaningful, so a stable proxy is sufficient.
 | File | Shape | Meaning of a regression |
 |---|---|---|
 | `baselines/<skill>.json` | `{codes[], sections[]}` fidelity floor per guarded skill | An edit that drops a listed code/section below the floor → fidelity block. |
-| `scenarios.json` | `[{id, skill, files[]}]` per-use scenarios | Defines the file sets the cost lens measures. |
+| `scenarios.json` | `[{id, skill, files[]}]` or `[{id, skill, load_routes[], selection_metadata?}]` | Defines legacy file sets or declared entry/predicate/anchor load profiles; the two route forms are mutually exclusive. |
 | `cost-snapshot.json` | `{scenario-id: token-total}` cost floor | Growth beyond tolerance → advisory only (never blocks). |
 | `code_patterns.json` | `[regex]` for smell/reference codes | Defines what `extract_inventory` counts as a "code". |
 
@@ -289,8 +300,8 @@ All tests live at the marketplace source-repo root under `tests/`. Run one with
 | `tests/lean_engine_test.py` | Markdown engine + ledger calibration (`tests/lean_engine_ledger.jsonl`) at **≥0.90 precision AND recall**. |
 | `tests/lean_verbosity_test.py` | Verbosity nominator (`LA-VERBOSE-1`) helpers + ledger calibration (`tests/lean_verbosity_ledger.jsonl`) at **≥0.90 precision AND recall**, plus a bounded live-repo residual. |
 | `tests/lean_code_lens_test.py` | Clone lens + ledger calibration (`tests/lean_code_ledger.jsonl`) at the shipped `DEFAULT_MIN_CLONE_TOKENS`, **≥0.90 precision/recall**. |
-| `tests/lean_workflow_cost_test.py` | Static orchestrator/run findings (`tests/lean_workflow_ledger.jsonl`) at **≥0.90 precision/recall**, three-lane forecast, verification reserve, trace adapters, and metadata-only output. |
-| `tests/skill_load_cost_test.py` | Per-use harness; plus every committed baseline must be satisfiable by the guard's own closure. |
+| `tests/lean_workflow_cost_test.py` | Static orchestrator/run findings (`tests/lean_workflow_ledger.jsonl`) at **≥0.90 precision/recall**, three-lane and fixed/per-item forecast, verification reserve, hook ledger, trace adapters, and metadata-only output. |
+| `tests/skill_load_cost_test.py` | Per-use harness, declared routes/anchors/selection metadata and pending marginal calculations; plus every committed baseline must be satisfiable by the guard's own closure. |
 | `tests/lean_guard_test.py` | PreToolUse dup guard, incl. subprocess `main()` smoke. |
 | `tests/load_cost_guard_test.py` | Per-use guard (PreToolUse + Stop); plus the guard stays silent on a clean tree for every committed baseline. |
 
@@ -324,8 +335,9 @@ tests, then [§ Before you finish](#before-you-finish).
 - **Add a harness subcommand** → add the handler + a new `argparse` subparser in
   `leanaudit/load_cost.py`, extend `__all__`, and add cases to
   `skill_load_cost_test.py`.
-- **Change workflow forecast or trace normalization** → edit `workflow_cost.py`
-  and/or `context_trace.py`; add a planted positive and paired negative to
+- **Change workflow forecast, hook ledger, or trace normalization** → edit
+  `workflow_cost.py`, `hook_cost.py`, and/or `context_trace.py`; add a planted
+  positive and paired negative to
   `tests/lean_workflow_ledger.jsonl` or an exact adapter/forecast case to
   `tests/lean_workflow_cost_test.py`; preserve metadata-only output.
 - **Change guard behavior** → edit the driver in `leanaudit/`; add an integration

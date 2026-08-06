@@ -73,14 +73,17 @@ second mode; coverage still derives assurance.
   only when an entry artifact (the families listed in `## Contract`) is in scope.
   Run the bundled harness
   [`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) (`resolve_closure` / `measure` /
-  `baseline`) to size closures and project deltas. The procedure owns the
-  `LA-PUC-*` band; do not restate it.
+  `baseline`) to size closures and project deltas; declared multi-entry routes,
+  predicates, anchors, and selection metadata are detailed in the procedure.
+  The procedure owns the `LA-PUC-*` band; do not restate it.
 - **Run-viability lens (surface-gated):** load [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
   only for the workflow signals in `## Contract`. Run
   [`references/scripts/workflow_cost.py`](references/scripts/workflow_cost.py)
-  offline to discover orchestrators and source-readable risks; add a declared
-  scenario for a finishability verdict and supplied traces only for calibration.
-  The procedure owns `LA-RUN-*` / `LA-ORCH-*`; do not infer a model capacity.
+  offline to discover orchestrators, inventory hook registrations without
+  executing them, and inspect declared convergence/checkpoint risks; add a
+  declared scenario for a finishability verdict and supplied traces only for
+  usage calibration. The procedure owns `LA-RUN-*` / `LA-ORCH-*`; do not infer
+  a model capacity or observed lifecycle behavior.
 - **Platform-redundancy lens (opt-in):** load [`references/procedures/platform-redundancy.md`](references/procedures/platform-redundancy.md)
   ONLY when the request explicitly asks for a native/platform-redundancy check. It
   carries the reinvention-pattern catalog, the runtime-specific live consultation
@@ -182,7 +185,8 @@ and source clones become `LA-MIN-3` referrals.
 - Run viability: never name a run `feasible` without a declared context window,
   stage ranges, and verification reserve. Treat missing bounds as `indeterminate`;
   do not substitute a model-name guess. Keep out-of-band telemetry out of model-
-  visible cost and never echo raw trace content.
+  visible cost, never coerce unknown values to zero, and never echo raw trace
+  content.
 - When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
 - Platform-redundancy lens (opt-in): never assert "native" from the pattern catalog
   alone — the catalog only nominates; a cited live `claude-code-guide` answer

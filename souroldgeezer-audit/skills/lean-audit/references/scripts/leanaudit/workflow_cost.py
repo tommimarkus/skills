@@ -17,6 +17,11 @@ from leanaudit.context_trace import (
     summarize_trace,
 )
 from leanaudit.discovery import repo_paths
+from leanaudit.hook_cost import (
+    analyze_hook_registrations,
+    is_hook_config_path,
+    read_hook_fixture_file,
+)
 from leanaudit.load_cost import estimate_tokens
 
 __all__ = [
@@ -24,11 +29,14 @@ __all__ = [
     "TokenRange",
     "UsageEvent",
     "analyze_sources",
+    "analyze_hook_registrations",
     "forecast_scenario",
+    "is_hook_config_path",
     "load_scenario_data",
     "main",
     "normalize_trace_records",
     "read_trace_file",
+    "read_hook_fixture_file",
     "read_workflow_sources",
     "summarize_trace",
 ]
@@ -81,6 +89,81 @@ _BOUNDED_RE = re.compile(
 _CHECKPOINT_RE = re.compile(
     r"\b(?:checkpoint|compact|summari[sz]e|fresh context|reset context|discard raw)\b",
     re.I,
+)
+_TERMINAL_SUCCESS_RE = re.compile(
+    r"\b(?:stop successfully (?:when|on)|terminal success|success (?:state|outcome)|"
+    r"stop when (?:tests?|verification|checks?) pass|stop on pass)\b",
+    re.I,
+)
+_TERMINAL_FAILURE_RE = re.compile(
+    r"\b(?:terminal failure|failure (?:state|outcome|summary)|final failure|"
+    r"attempts? (?:are )?exhausted|failed attempts?)\b",
+    re.I,
+)
+_ESCALATION_RE = re.compile(
+    r"\b(?:escalat(?:e|es|ed|ion)|human review|report (?:the )?blocker|"
+    r"ask (?:the )?user|hand (?:off|back) to)\b",
+    re.I,
+)
+_NO_PROGRESS_RE = re.compile(
+    r"\b(?:no (?:(?:new|meaningful) )?(?:progress|evidence|hypothesis|diagnostic|change)|"
+    r"unchanged (?:failure|error|evidence|hypothesis|result|signature|(?:failing-check )?set)|"
+    r"same (?:failure|failing-check|error|evidence|hypothesis|result|signature|set)|"
+    r"failure signature (?:is|remains) unchanged|"
+    r"(?:failing-check )?set (?:is|remains) unchanged|"
+    r"fail(?:ure|ing-check)s? (?:stop|stops|fail|fails) (?:shrinking|decreasing|changing)|"
+    r"state (?:cycle|repeats)|oscillat(?:e|es|ion))\b",
+    re.I,
+)
+_STOP_RE = re.compile(r"\b(?:stop|halt|exit|escalat(?:e|es|ed|ion)|replan)\b", re.I)
+_CHECKPOINT_FIELDS = (
+    ("objective-or-scope", re.compile(r"\b(?:objective|scope)\b", re.I)),
+    ("approved-decisions", re.compile(r"\bapproved (?:plan|decisions?)\b", re.I)),
+    ("progress", re.compile(r"\bprogress\b", re.I)),
+    (
+        "blockers-or-open-choices",
+        re.compile(r"\b(?:blockers?|open (?:choices?|questions?))\b", re.I),
+    ),
+    (
+        "obligation-or-evidence-pointers",
+        re.compile(
+            r"\b(?:obligation|evidence|artifact)s? (?:IDs?|paths?|pointers?|references?)\b",
+            re.I,
+        ),
+    ),
+    ("next-decision", re.compile(r"\bnext (?:decision|action)\b", re.I)),
+    ("bounded", re.compile(r"\b(?:bounded|size cap|token cap|line cap)\b", re.I)),
+    ("summary-contract", re.compile(r"\b(?:summary|schema|return contract)\b", re.I)),
+)
+_ENUMERATED_SWEEP_RE = re.compile(
+    r"\b(?:enumerated|fixed) (?:matrix|sweep|list|set)\b|"
+    r"\b(?:matrix|sweep) of \d+ (?:cases?|options?|configurations?|parameters?)\b",
+    re.I,
+)
+_BROAD_BUILD_RE = re.compile(
+    r"\b(?:proceed with|begin|start|launch) (?:a )?(?:broad|full|whole|repository-wide) "
+    r"(?:implementation|build)\b|"
+    r"\bimplement (?:the )?(?:entire|whole|full) (?:repository|project|system|scope)\b",
+    re.I,
+)
+_TBD_SHAPING_RE = re.compile(
+    r"\b(?:implementation )?(?:scope|acceptance(?: criteria| checks)?)\b.{0,100}"
+    r"\b(?:TBD|to be determined|unknown|unresolved|open)\b",
+    re.I | re.S,
+)
+_RESOLVED_PACKET_FIELDS = (
+    re.compile(r"\bmust\b", re.I),
+    re.compile(r"\bout of scope\b", re.I),
+    re.compile(r"\bunknowns?\b", re.I),
+    re.compile(r"\bowner\b", re.I),
+    re.compile(r"\bdefault\b", re.I),
+    re.compile(r"\bacceptance (?:check|criterion|criteria)\b", re.I),
+)
+_DISCOVERY_SPIKE_FIELDS = (
+    re.compile(r"\b(?:bounded(?: \d+[- ]pass)?|\d+[- ]pass) discovery spike\b", re.I),
+    re.compile(r"\bquestion\b", re.I),
+    re.compile(r"\bowner\b", re.I),
+    re.compile(r"\bexit (?:criterion|condition)\b", re.I),
 )
 _HANDOFF_RE = re.compile(
     r"\b(?:bounded|compact|summary|schema|return shape|evidence path|artifact path|pointer)\b",
@@ -220,6 +303,29 @@ def _region_search(
     return pattern.search(text, region[0], region[1])
 
 
+def _window(text: str, anchor: re.Match[str] | None) -> str:
+    if anchor is None:
+        return ""
+    start = max(0, anchor.start() - 300)
+    end = min(len(text), anchor.end() + 700)
+    return text[start:end]
+
+
+def _has_all(text: str, patterns: tuple[re.Pattern[str], ...]) -> bool:
+    return all(pattern.search(text) is not None for pattern in patterns)
+
+
+def _checkpoint_missing_fields(text: str, checkpoint: re.Match[str] | None) -> list[str]:
+    region = _window(text, checkpoint)
+    return [name for name, pattern in _CHECKPOINT_FIELDS if pattern.search(region) is None]
+
+
+def _has_no_progress_exit(text: str, anchor: re.Match[str] | None) -> bool:
+    region = _window(text, anchor)
+    no_progress = _NO_PROGRESS_RE.search(region)
+    return no_progress is not None and _nearby(_STOP_RE, region, no_progress) is not None
+
+
 def _schema_inventory(files: dict[str, str]) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
 
@@ -261,7 +367,11 @@ def _schema_inventory(files: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
+def analyze_sources(
+    files: dict[str, str],
+    *,
+    hook_fixture_metadata: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Find likely persistent orchestrators and source-readable token risks."""
     artifacts: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
@@ -275,6 +385,22 @@ def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
         control_plane = _region_search(_CONTROL_PLANE_RE, text, workflow_region)
         bounded = _nearby(_BOUNDED_RE, text, loop or retry)
         checkpoint = _nearby(_CHECKPOINT_RE, text, loop or retry)
+        checkpoint_missing = _checkpoint_missing_fields(text, checkpoint)
+        terminal_success = _nearby(_TERMINAL_SUCCESS_RE, text, retry or loop)
+        terminal_failure = _nearby(_TERMINAL_FAILURE_RE, text, retry or loop)
+        escalation = _nearby(_ESCALATION_RE, text, retry or loop)
+        terminal_contract = all(
+            match is not None for match in (bounded, terminal_success, terminal_failure, escalation)
+        )
+        no_progress_exit = _has_no_progress_exit(text, retry or loop)
+        workflow_text = "" if workflow_region is None else text[slice(*workflow_region)]
+        enumerated_sweep = _ENUMERATED_SWEEP_RE.search(workflow_text)
+        effective_loop = None if enumerated_sweep is not None else loop
+        effective_retry = None if enumerated_sweep is not None else retry
+        broad_build = _BROAD_BUILD_RE.search(workflow_text)
+        deferred_shaping = _TBD_SHAPING_RE.search(workflow_text)
+        resolved_packet = _has_all(workflow_text, _RESOLVED_PACKET_FIELDS)
+        discovery_spike = _has_all(workflow_text, _DISCOVERY_SPIKE_FIELDS)
         handoff = _nearby(_HANDOFF_RE, text, delegate)
         raw_result = _nearby(_RAW_RESULT_RE, text, delegate)
         out_of_band = _nearby(_OUT_OF_BAND_RE, text, raw_result)
@@ -284,9 +410,10 @@ def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
             100,
             len(phases) * 8
             + (15 if delegate else 0)
-            + (10 if loop else 0)
-            + (5 if retry else 0)
+            + (10 if effective_loop else 0)
+            + (5 if effective_retry else 0)
             + (15 if control_plane else 0)
+            + (15 if broad_build is not None and deferred_shaping is not None else 0)
             + entry_bonus,
         )
         artifact = {
@@ -299,16 +426,26 @@ def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
                 "delegation": delegate is not None,
                 "loop": loop is not None,
                 "retry": retry is not None,
+                "effective_loop": effective_loop is not None,
+                "effective_retry": effective_retry is not None,
                 "named_control_plane": control_plane is not None,
                 "bounded": bounded is not None,
                 "checkpoint": checkpoint is not None,
+                "checkpoint_declared": checkpoint is not None,
+                "checkpoint_complete": checkpoint is not None and not checkpoint_missing,
+                "checkpoint_missing_fields": checkpoint_missing,
+                "terminal_success": terminal_success is not None,
+                "terminal_failure": terminal_failure is not None,
+                "escalation": escalation is not None,
+                "no_progress_exit": no_progress_exit,
+                "deferred_implementation_scope": deferred_shaping is not None,
                 "bounded_handoff": handoff is not None,
                 "raw_model_result": raw_result is not None and out_of_band is None,
                 "out_of_band_logging": out_of_band is not None,
                 "rediscovery": rediscovery is not None,
             },
         }
-        if len(phases) < 2 and not (control_plane is not None and loop is not None):
+        if len(phases) < 2 and not (control_plane is not None and effective_loop is not None):
             continue
         artifacts.append(artifact)
         if score < _ORCHESTRATOR_THRESHOLD:
@@ -351,42 +488,86 @@ def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
                     "require result, evidence paths, blocker, and next decision under a size cap",
                 )
             )
-        if loop is not None and bounded is None:
+        if effective_loop is not None and bounded is None:
             findings.append(
                 _source_finding(
                     "LA-RUN-1",
                     path,
                     text,
-                    loop,
+                    effective_loop,
                     "the iterative path has no finite attempt bound",
                     "pre-run total and peak context cannot be bounded",
                     "declare best/expected/upper iterations and a terminal outcome",
                     confidence="high",
                 )
             )
-        if retry is not None and bounded is None:
+        if effective_retry is not None and not terminal_contract:
             findings.append(
                 _source_finding(
                     "LA-RUN-4",
                     path,
                     text,
-                    retry,
-                    "retry ownership has no terminal budget",
+                    effective_retry,
+                    "retry ownership lacks a complete count, success, failure, "
+                    "and escalation contract",
                     "repeated failures consume context without producing verification evidence",
-                    "set retry count, failure summary, and stop/escalation condition",
+                    "set a retry count plus terminal success, failure-summary, "
+                    "and escalation outcomes",
                     confidence="high",
                 )
             )
-        if loop is not None and checkpoint is None:
+        if (
+            effective_loop is not None
+            and bounded is not None
+            and terminal_contract
+            and not no_progress_exit
+            and enumerated_sweep is None
+        ):
+            findings.append(
+                _source_finding(
+                    "LA-RUN-6",
+                    path,
+                    text,
+                    effective_loop,
+                    "the bounded repair/verification loop has no unchanged-delta exit",
+                    "an attempt fence can still spend every retry without objective progress",
+                    "stop or escalate when failures, evidence, and hypothesis stop changing",
+                    confidence="high",
+                )
+            )
+        if (
+            broad_build is not None
+            and deferred_shaping is not None
+            and not (resolved_packet or discovery_spike)
+        ):
+            findings.append(
+                _source_finding(
+                    "LA-RUN-7",
+                    path,
+                    text,
+                    broad_build,
+                    "broad implementation starts while scope or acceptance remains "
+                    "explicitly unresolved",
+                    "the implementer must repeatedly reinterpret obligations during "
+                    "expensive build work",
+                    "resolve a must/out/unknown packet or run a bounded question-owned "
+                    "discovery spike",
+                    confidence="high",
+                )
+            )
+        if effective_loop is not None and checkpoint_missing:
+            evidence_match = checkpoint or effective_loop
+            missing = ", ".join(checkpoint_missing)
             findings.append(
                 _source_finding(
                     "LA-ORCH-5",
                     path,
                     text,
-                    loop,
-                    "the long-running loop has no checkpoint or compaction boundary",
+                    evidence_match,
+                    f"the loop checkpoint is absent or incomplete; missing: {missing}",
                     "the orchestrator accumulates history until coherence and speed degrade",
-                    "checkpoint decisions and evidence pointers, then compact or reset detail",
+                    "checkpoint a bounded state contract with decisions, progress, "
+                    "obligations, and next action",
                 )
             )
     orchestrators = sorted(
@@ -397,6 +578,7 @@ def analyze_sources(files: dict[str, str]) -> dict[str, Any]:
         "artifacts": artifacts,
         "orchestrators": orchestrators,
         "tool_schema_inventory": _schema_inventory(files),
+        "hook_cost": analyze_hook_registrations(files, hook_fixture_metadata),
         "findings": findings,
         "limits": [
             "static workflow prose proves declared structure, not actual host retention",
@@ -427,6 +609,7 @@ def read_workflow_sources(root: Path) -> dict[str, str]:
         rel = path.relative_to(root).as_posix()
         if (
             (path.suffix == ".md" and _workflow_surface(rel))
+            or is_hook_config_path(rel)
             or "inputSchema" in text
             or "input_schema" in text
         ):
@@ -494,6 +677,9 @@ def load_scenario_data(data: dict[str, Any]) -> Scenario:
             "tool_result_tokens",
             "out_of_band_result_tokens",
             "output_tokens",
+            "fixed_output_tokens",
+            "per_item_output_tokens",
+            "item_count",
             "retained_tokens",
             "compaction_target",
         ):
@@ -543,6 +729,11 @@ def _stage_lane(stage: dict[str, Any], lane: str) -> dict[str, int]:
         "output_tokens",
     )
     values = {field: _optional_range(stage, field).lane(lane) for field in fields}
+    if "item_count" in stage:
+        item_count = _range(stage["item_count"], "item_count").lane(lane)
+        fixed_output = _optional_range(stage, "fixed_output_tokens").lane(lane)
+        per_item_output = _optional_range(stage, "per_item_output_tokens").lane(lane)
+        values["output_tokens"] += fixed_output + per_item_output * item_count
     values["iterations"] = _range(stage.get("iterations", 1), "iterations", minimum=1).lane(lane)
     workers = stage.get("workers")
     if isinstance(workers, dict):
@@ -691,6 +882,15 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
         verdict = "at-risk"
     else:
         verdict = "feasible"
+    for stage in scenario.stages:
+        output_components_declared = any(
+            field in stage for field in ("fixed_output_tokens", "per_item_output_tokens")
+        )
+        if output_components_declared and "item_count" not in stage:
+            limits.append(
+                f"{stage['id']}: item_count is unknown; fixed/per-item output is excluded "
+                "and legacy output_tokens is retained"
+            )
 
     findings: list[dict[str, Any]] = []
     expected_overflow = lanes["expected"]["earliest_overflow"]
@@ -821,6 +1021,7 @@ def _text_report(report: dict[str, Any]) -> str:
     lines = ["Lean workflow-cost audit"]
     static = report["static"]
     lines.append(f"orchestrators: {len(static['orchestrators'])}")
+    lines.append(f"hook registrations: {len(static['hook_cost']['registrations'])}")
     forecast = report.get("forecast")
     if isinstance(forecast, dict):
         lines.append(f"run verdict: {forecast['verdict']}")
@@ -848,6 +1049,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--scenario", help="JSON stage-budget scenario")
     parser.add_argument("--trace", action="append", default=[], help="JSON/JSONL usage trace")
+    parser.add_argument(
+        "--hook-fixture",
+        action="append",
+        default=[],
+        help="JSON/JSONL content-free hook fixture metadata",
+    )
     parser.add_argument("--context-window", type=int, help="override declared context capacity")
     parser.add_argument(
         "--verification-reserve", type=int, help="override tokens reserved for verification"
@@ -858,7 +1065,13 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(args.root).resolve()
         if not root.is_dir():
             raise ValueError(f"{root}: root must be a directory")
-        static = analyze_sources(read_workflow_sources(root))
+        hook_fixture_metadata: list[dict[str, Any]] = []
+        for fixture_path in args.hook_fixture:
+            hook_fixture_metadata.extend(read_hook_fixture_file(Path(fixture_path)))
+        static = analyze_sources(
+            read_workflow_sources(root),
+            hook_fixture_metadata=hook_fixture_metadata,
+        )
         forecast: dict[str, Any] | None = None
         scenario: Scenario | None = None
         if args.scenario:
