@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — one-factor hook-fixture cases intentionally repeat selector and registration scaffolding while varying one evidence or rejection condition
 """Content-free hook-registration ledger tests for lean-audit."""
 
 from __future__ import annotations
@@ -263,6 +264,14 @@ class HookFixtureReaderTest(unittest.TestCase):
 
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["enabled"], False)
+
+    def test_fixture_reader_preserves_object_only_error_contract(self) -> None:
+        mod = load_hook_cost()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "hook-fixture.json"
+            path.write_text("1", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "every hook fixture row must be an object"):
+                mod.read_hook_fixture_file(path)
 
 
 if __name__ == "__main__":

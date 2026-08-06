@@ -117,12 +117,15 @@ def _glob_to_regex(pattern: str) -> str:
             else:
                 out.append(f"(?P<{pattern[i + 1 : j]}>[^/]+)")
                 i = j + 1
+        # Adjacent glob-token branches intentionally share consume-and-advance mechanics.
+        # lean-audit:dup-intentional:begin
         elif pattern[i : i + 3] == "**/":
             out.append("(?:.*/)?")
             i += 3
         elif pattern[i : i + 2] == "**":
             out.append(".*")
             i += 2
+        # lean-audit:dup-intentional:end
         elif c == "*":
             out.append("[^/]*")
             i += 1

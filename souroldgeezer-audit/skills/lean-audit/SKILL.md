@@ -165,7 +165,7 @@ and source clones become `LA-MIN-3` referrals.
   explicitly requested. Separate audit from repair (audit-craft §2). The
   minify lens is that explicit-request path — and even then it only PRODUCES
   the edit (see the minify bullet below); it never applies one.
-- Intentional structural duplication — declared via `[[carve_out]]` / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding.
+- Intentional structural duplication — declared via `[[carve_out]]` / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding. Run-viability catalog/example files may instead use the exact file-wide `<!-- lean-audit:workflow-intentional — rationale -->` HTML comment defined by `run-viability.md`; it counts only outside fenced code and does not belong on runnable entry workflows.
 - Suppress false positives: before asserting a finding, confirm the matched
   passage is independent duplication, not a quote, cross-reference, or code
   example; if the duplication claim is not supported by evidence, note it as a non-finding with the reason.

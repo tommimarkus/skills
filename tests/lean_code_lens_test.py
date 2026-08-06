@@ -493,6 +493,32 @@ class MarkerSuppressionScopeTest(unittest.TestCase):
         self.assertEqual(found, [])
 
 
+class RepositoryMarkerPolicyTest(unittest.TestCase):
+    def test_production_markers_are_region_scoped_and_balanced(self) -> None:
+        package = (
+            REPO_ROOT
+            / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit"
+        )
+        for path in sorted(package.glob("*.py")):
+            depth = 0
+            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                stripped = line.strip()
+                if not stripped.startswith("# lean-audit:dup-intentional"):
+                    continue
+                if stripped == "# lean-audit:dup-intentional:begin":
+                    depth += 1
+                elif stripped == "# lean-audit:dup-intentional:end":
+                    depth -= 1
+                    self.assertGreaterEqual(
+                        depth,
+                        0,
+                        f"{path}:{line_number}: stray dup-intentional region end",
+                    )
+                else:
+                    self.fail(f"{path}:{line_number}: production whole-file marker is forbidden")
+            self.assertEqual(depth, 0, f"{path}: unbalanced dup-intentional regions")
+
+
 class LiteralListFalsePositiveTest(unittest.TestCase):
     """Declarative literal lists must not clone-match: __all__ blocks, path lists."""
 

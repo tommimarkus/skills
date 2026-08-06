@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from leanaudit.json_rows import read_json_rows
+
 __all__ = [
     "analyze_hook_registrations",
     "is_hook_config_path",
@@ -23,6 +25,10 @@ _SELECTOR_FIELDS = ("path", "event", "registration_index", "hook_index")
 _EVIDENCE_FIELDS = ("enabled", "visibility", "frequency", "proxy_tokens")
 _ALLOWED_FIXTURE_FIELDS = frozenset((*_SELECTOR_FIELDS, *_EVIDENCE_FIELDS))
 _VISIBILITIES = frozenset(("model", "out-of-band"))
+
+
+def _is_non_negative_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def _runtime_for_path(path: str) -> str | None:
@@ -76,9 +82,12 @@ def _parse_config(
             )
         )
         return registrations, unsupported
+    # Config shape failures intentionally share one append-and-return contract.
+    # lean-audit:dup-intentional:begin
     if not isinstance(payload, dict):
         unsupported.append(_unsupported("config-format", path, "root must be an object"))
         return registrations, unsupported
+    # lean-audit:dup-intentional:end
     hooks = payload.get("hooks")
     if hooks is None:
         return registrations, unsupported
@@ -87,6 +96,8 @@ def _parse_config(
         return registrations, unsupported
 
     for event, event_rows in sorted(hooks.items()):
+        # Nested config-shape rejections deliberately preserve explicit location fields.
+        # lean-audit:dup-intentional:begin
         if not isinstance(event_rows, list):
             unsupported.append(
                 _unsupported(
@@ -97,6 +108,7 @@ def _parse_config(
                 )
             )
             continue
+        # lean-audit:dup-intentional:end
         for registration_index, registration in enumerate(event_rows):
             if not isinstance(registration, dict):
                 unsupported.append(
@@ -127,6 +139,8 @@ def _parse_config(
                     "registration_index": registration_index,
                     "hook_index": hook_index,
                 }
+                # Hook-shape/type rejections intentionally share the same safe ledger form.
+                # lean-audit:dup-intentional:begin
                 if not isinstance(hook, dict):
                     unsupported.append(
                         _unsupported(
@@ -137,6 +151,7 @@ def _parse_config(
                         )
                     )
                     continue
+                # lean-audit:dup-intentional:end
                 if hook.get("type") != "command":
                     unsupported.append(
                         _unsupported(
@@ -177,14 +192,7 @@ def _selector(row: dict[str, Any]) -> tuple[str, str, int, int] | None:
     hook_index = row.get("hook_index")
     if not isinstance(path, str) or not isinstance(event, str):
         return None
-    if (
-        not isinstance(registration_index, int)
-        or isinstance(registration_index, bool)
-        or registration_index < 0
-        or not isinstance(hook_index, int)
-        or isinstance(hook_index, bool)
-        or hook_index < 0
-    ):
+    if not _is_non_negative_int(registration_index) or not _is_non_negative_int(hook_index):
         return None
     return path, event, registration_index, hook_index
 
@@ -202,13 +210,28 @@ def _validate_fixture_row(row: dict[str, Any]) -> str | None:
     if "visibility" in row and row["visibility"] not in _VISIBILITIES:
         return "visibility must be model or out-of-band when supplied"
     for field in ("frequency", "proxy_tokens"):
-        if field in row and (
-            not isinstance(row[field], int) or isinstance(row[field], bool) or row[field] < 0
-        ):
+        if field in row and not _is_non_negative_int(row[field]):
             return f"{field} must be a non-negative integer when supplied"
     return None
 
 
+def _selector_problem(
+    kind: str,
+    selector: tuple[str, str, int, int],
+    reason: str,
+) -> dict[str, str | int]:
+    return _unsupported(
+        kind,
+        selector[0],
+        reason,
+        event=selector[1],
+        registration_index=selector[2],
+        hook_index=selector[3],
+    )
+
+
+# Analyzer signatures and local result ledgers intentionally mirror sibling analyzers.
+# lean-audit:dup-intentional:begin
 def analyze_hook_registrations(
     files: dict[str, str],
     fixture_metadata: list[dict[str, Any]] | None = None,
@@ -216,6 +239,7 @@ def analyze_hook_registrations(
     """Inventory recognized hook configs and join content-free supplied evidence."""
     registrations: list[dict[str, Any]] = []
     unsupported: list[dict[str, str | int]] = []
+# lean-audit:dup-intentional:end
     config_file_count = 0
     for path, body in sorted(files.items()):
         runtime = _runtime_for_path(path)
@@ -261,25 +285,19 @@ def analyze_hook_registrations(
             continue
         if selector not in known:
             unsupported.append(
-                _unsupported(
+                _selector_problem(
                     "fixture-unmatched",
-                    selector[0],
+                    selector,
                     "fixture selector matches no recognized registration",
-                    event=selector[1],
-                    registration_index=selector[2],
-                    hook_index=selector[3],
                 )
             )
             continue
         if selector in supplied:
             unsupported.append(
-                _unsupported(
+                _selector_problem(
                     "fixture-duplicate",
-                    selector[0],
+                    selector,
                     "duplicate fixture selector",
-                    event=selector[1],
-                    registration_index=selector[2],
-                    hook_index=selector[3],
                 )
             )
             continue
@@ -310,17 +328,15 @@ def analyze_hook_registrations(
     token_values = [
         int(row["proxy_tokens"])
         for row in effective_metadata
-        if isinstance(row["proxy_tokens"], int) and not isinstance(row["proxy_tokens"], bool)
+        if _is_non_negative_int(row["proxy_tokens"])
     ]
     model_injected_rows = [
         row
         for row in effective_metadata
         if row["enabled"] is True
         and row["visibility"] == "model"
-        and isinstance(row["frequency"], int)
-        and not isinstance(row["frequency"], bool)
-        and isinstance(row["proxy_tokens"], int)
-        and not isinstance(row["proxy_tokens"], bool)
+        and _is_non_negative_int(row["frequency"])
+        and _is_non_negative_int(row["proxy_tokens"])
     ]
     model_injected_values = [
         int(row["frequency"]) * int(row["proxy_tokens"]) for row in model_injected_rows
@@ -348,13 +364,8 @@ def analyze_hook_registrations(
 
 def read_hook_fixture_file(path: Path) -> list[dict[str, Any]]:
     """Read content-free fixture rows from a JSON object/list or JSONL file."""
-    text = path.read_text(encoding="utf-8")
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        rows = [json.loads(line) for line in text.splitlines() if line.strip()]
-    else:
-        rows = payload if isinstance(payload, list) else [payload]
-    if not all(isinstance(row, dict) for row in rows):
-        raise ValueError(f"{path}: every hook fixture row must be an object")
-    return rows
+    return read_json_rows(
+        path,
+        scalar_error="every hook fixture row must be an object",
+        row_error="every hook fixture row must be an object",
+    )

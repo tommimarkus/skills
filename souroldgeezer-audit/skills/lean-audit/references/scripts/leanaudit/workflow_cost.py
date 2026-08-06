@@ -69,6 +69,8 @@ class Scenario:
     calibration_tolerance: float | None
 
 
+# Detector regex catalogs intentionally repeat declarative name/pattern records.
+# lean-audit:dup-intentional:begin
 _PHASE_PATTERNS = (
     ("preflight", re.compile(r"\bpre[ -]?flight\b", re.I)),
     ("discovery", re.compile(r"\bdiscover(?:y|ing|ed)?\b", re.I)),
@@ -76,6 +78,7 @@ _PHASE_PATTERNS = (
     ("build", re.compile(r"\b(?:build|implement)(?:ing|ed|ation)?\b", re.I)),
     ("verify", re.compile(r"\b(?:verify|verification|test(?:ing|s|ed)?)\b", re.I)),
 )
+# lean-audit:dup-intentional:end
 _DELEGATE_RE = re.compile(
     r"\b(?:delegate|dispatch|subagent|worker|agent tool|parallel agents?)\b", re.I
 )
@@ -151,6 +154,8 @@ _TBD_SHAPING_RE = re.compile(
     r"\b(?:TBD|to be determined|unknown|unresolved|open)\b",
     re.I | re.S,
 )
+# Completeness catalogs intentionally share one compiled-field tuple shape.
+# lean-audit:dup-intentional:begin
 _RESOLVED_PACKET_FIELDS = (
     re.compile(r"\bmust\b", re.I),
     re.compile(r"\bout of scope\b", re.I),
@@ -159,6 +164,7 @@ _RESOLVED_PACKET_FIELDS = (
     re.compile(r"\bdefault\b", re.I),
     re.compile(r"\bacceptance (?:check|criterion|criteria)\b", re.I),
 )
+# lean-audit:dup-intentional:end
 _DISCOVERY_SPIKE_FIELDS = (
     re.compile(r"\b(?:bounded(?: \d+[- ]pass)?|\d+[- ]pass) discovery spike\b", re.I),
     re.compile(r"\bquestion\b", re.I),
@@ -194,25 +200,59 @@ _WORKFLOW_PROCEDURE_RE = re.compile(
 )
 _ORCHESTRATOR_THRESHOLD = 55
 _LANES = ("low", "expected", "high")
+_WORKFLOW_INTENTIONAL_RE = re.compile(
+    r"^[ ]{0,3}<!-- lean-audit:workflow-intentional — [^<>\r\n]*\S -->[ \t]*$"
+)
+_FENCE_OPEN_RE = re.compile(r"^[ ]{0,3}(`{3,}|~{3,})")
 
 
 def _line(text: str, match: re.Match[str] | None) -> int:
     return 1 if match is None else text.count("\n", 0, match.start()) + 1
 
 
+def _local_bounds(
+    text: str, anchor: re.Match[str] | None, before: int, after: int
+) -> tuple[int, int] | None:
+    if anchor is None:
+        return None
+    return max(0, anchor.start() - before), min(len(text), anchor.end() + after)
+
+
 def _nearby(
     pattern: re.Pattern[str], text: str, anchor: re.Match[str] | None
 ) -> re.Match[str] | None:
     """Return a match within the anchor's local workflow paragraph/window."""
-    if anchor is None:
+    bounds = _local_bounds(text, anchor, 300, 500)
+    if bounds is None:
         return None
-    start = max(0, anchor.start() - 300)
-    end = min(len(text), anchor.end() + 500)
-    return pattern.search(text, start, end)
+    return pattern.search(text, *bounds)
 
 
 def _workflow_surface(path: str) -> bool:
     return _ENTRY_RE.search(path) is not None or _WORKFLOW_PROCEDURE_RE.search(path) is not None
+
+
+def _has_workflow_intentional(text: str) -> bool:
+    """Recognize the exact HTML marker only outside Markdown fenced code."""
+    fence_char: str | None = None
+    fence_width = 0
+    for line in text.splitlines():
+        if fence_char is not None:
+            close_re = re.compile(
+                rf"^[ ]{{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*$"
+            )
+            if close_re.fullmatch(line):
+                fence_char = None
+                fence_width = 0
+            continue
+        fence = _FENCE_OPEN_RE.match(line)
+        if fence is not None:
+            fence_char = fence.group(1)[0]
+            fence_width = len(fence.group(1))
+            continue
+        if _WORKFLOW_INTENTIONAL_RE.fullmatch(line):
+            return True
+    return False
 
 
 def _finding(
@@ -269,10 +309,13 @@ def _source_finding(
 
 def _phases(text: str) -> tuple[list[str], dict[str, int], tuple[int, int] | None]:
     """Return the densest local phase cluster, not whole-file vocabulary."""
+    # Phase discovery intentionally performs a collect pass before window ranking.
+    # lean-audit:dup-intentional:begin
     hits: list[tuple[int, str, re.Match[str]]] = []
     for name, pattern in _PHASE_PATTERNS:
         hits.extend((match.start(), name, match) for match in pattern.finditer(text))
     hits.sort()
+    # lean-audit:dup-intentional:end
     if not hits:
         return [], {}, None
 
@@ -304,11 +347,10 @@ def _region_search(
 
 
 def _window(text: str, anchor: re.Match[str] | None) -> str:
-    if anchor is None:
+    bounds = _local_bounds(text, anchor, 300, 700)
+    if bounds is None:
         return ""
-    start = max(0, anchor.start() - 300)
-    end = min(len(text), anchor.end() + 700)
-    return text[start:end]
+    return text[slice(*bounds)]
 
 
 def _has_all(text: str, patterns: tuple[re.Pattern[str], ...]) -> bool:
@@ -375,8 +417,12 @@ def analyze_sources(
     """Find likely persistent orchestrators and source-readable token risks."""
     artifacts: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
+    intentional_workflow_paths: list[str] = []
     for path, text in sorted(files.items()):
         if not path.endswith(".md") or not _workflow_surface(path):
+            continue
+        if _has_workflow_intentional(text):
+            intentional_workflow_paths.append(path)
             continue
         phases, phase_lines, workflow_region = _phases(text)
         delegate = _region_search(_DELEGATE_RE, text, workflow_region)
@@ -488,6 +534,8 @@ def analyze_sources(
                     "require result, evidence paths, blocker, and next decision under a size cap",
                 )
             )
+        # Static finding emitters intentionally preserve code-specific local branches.
+        # lean-audit:dup-intentional:begin
         if effective_loop is not None and bounded is None:
             findings.append(
                 _source_finding(
@@ -516,6 +564,7 @@ def analyze_sources(
                     confidence="high",
                 )
             )
+        # lean-audit:dup-intentional:end
         if (
             effective_loop is not None
             and bounded is not None
@@ -580,6 +629,7 @@ def analyze_sources(
         "tool_schema_inventory": _schema_inventory(files),
         "hook_cost": analyze_hook_registrations(files, hook_fixture_metadata),
         "findings": findings,
+        "intentional_workflow_paths": intentional_workflow_paths,
         "limits": [
             "static workflow prose proves declared structure, not actual host retention",
             "exact finishability requires a scenario with context capacity and stage ranges",
@@ -913,6 +963,8 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
             )
         )
     verify_remaining = lanes["expected"]["verification_reserve_remaining"]
+    # Forecast finding emitters deliberately retain explicit code-specific evidence.
+    # lean-audit:dup-intentional:begin
     if verify_remaining is not None and verify_remaining < 0:
         findings.append(
             _finding(
@@ -928,6 +980,7 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
                 confidence="high",
             )
         )
+    # lean-audit:dup-intentional:end
     duplicated_prefix = sum(
         _stage_lane(stage, "expected")["worker_shared_prefix"]
         * max(0, _stage_lane(stage, "expected")["worker_count"] - 1)
@@ -1042,10 +1095,13 @@ def _text_report(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# Stable analyzer CLIs intentionally keep their domain-specific parser descriptions local.
+# lean-audit:dup-intentional:begin
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Pre-run workflow budget and orchestrator-survivability audit"
     )
+# lean-audit:dup-intentional:end
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--scenario", help="JSON stage-budget scenario")
     parser.add_argument("--trace", action="append", default=[], help="JSON/JSONL usage trace")

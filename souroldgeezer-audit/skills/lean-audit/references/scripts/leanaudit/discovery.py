@@ -47,6 +47,8 @@ def repo_paths(root: Path) -> frozenset[str] | None:
     or git is unavailable. Nested worktrees live in a separate work tree, so git
     never lists them here; when None, callers fall back to the static _EXCLUDE
     walk so non-git target repos still work."""
+    # Git subprocess shapes are deliberate twins required by the parity contract.
+    # lean-audit:dup-intentional:begin
     # fmt: off
     # Kept byte-identical (modulo the naming/typing differences the parity test
     # already tolerates) to scripts/skill_architecture_report.py's copy, which
@@ -71,9 +73,12 @@ def repo_paths(root: Path) -> frozenset[str] | None:
         return None
     return frozenset(entry for entry in listing.split("\0") if entry)
     # fmt: on
+    # lean-audit:dup-intentional:end
 
 
 def read_repo(root: Path, scope: Path) -> dict[str, str]:
+    # Source readers deliberately share the git-membership/read loop shape.
+    # lean-audit:dup-intentional:begin
     files: dict[str, str] = {}
     base = scope if scope.is_dir() else scope.parent
     in_repo = repo_paths(root)
@@ -84,3 +89,4 @@ def read_repo(root: Path, scope: Path) -> dict[str, str]:
         if is_guarded(rel):
             files[rel] = path.read_text(encoding="utf-8", errors="replace")
     return files
+    # lean-audit:dup-intentional:end
