@@ -1,3 +1,5 @@
+# lean-audit:dup-intentional — host-profile fixtures intentionally mirror the
+# two runtime command surfaces; each literal command and payload is test evidence.
 import json
 import os
 import shutil
@@ -158,6 +160,37 @@ class FakeCliRunner:
 
 
 class RuntimeHostSmokeTest(unittest.TestCase):
+    def test_plugin_validator_preserves_host_specific_commands(self) -> None:
+        calls = []
+
+        def fake_runner(argv, **kwargs):
+            calls.append((tuple(argv), kwargs))
+            return subprocess.CompletedProcess(list(argv), 0, "", "")
+
+        plugin_dir = REPO_ROOT / "souroldgeezer-audit"
+        smoke.validate_plugin(
+            fake_runner,
+            plugin_dir,
+            host="Codex",
+            cwd=REPO_ROOT,
+            env=os.environ,
+        )
+        smoke.validate_plugin(
+            fake_runner,
+            plugin_dir,
+            host="Claude",
+            cwd=REPO_ROOT,
+            env=os.environ,
+        )
+
+        self.assertEqual(
+            [argv for argv, _ in calls],
+            [
+                ("codex", "plugin", "validate", str(plugin_dir)),
+                ("claude", "plugin", "validate", "--strict", str(plugin_dir)),
+            ],
+        )
+
     def test_fresh_host_orchestration_uses_only_isolated_cli_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

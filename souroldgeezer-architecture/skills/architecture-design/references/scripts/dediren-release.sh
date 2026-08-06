@@ -243,6 +243,12 @@ verify_archive() {
   fi
 }
 
+download_bounded() {
+  local max_time="$1" output="$2" url="$3"
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 \
+    --max-time "$max_time" -o "$output" "$url"
+}
+
 download_release() {
   local base archive archive_path checksum_path tmp_archive tmp_checksums tmp_extract final_dir extracted_dir
   need_cmd curl
@@ -265,7 +271,7 @@ download_release() {
   # or wedged peer must never hang. --connect-timeout fails a dead host fast;
   # --max-time caps each attempt so --retry cannot compound into an unbounded wait.
   # Checksums come first: they name the archive to fetch, so no format is assumed.
-  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 -o "$tmp_checksums" "$base/SHA256SUMS"
+  download_bounded 30 "$tmp_checksums" "$base/SHA256SUMS"
   archive="$(archive_name_from_checksums "$tmp_checksums")"
   case "$archive" in
   *.tar.xz) need_cmd xz ;;
@@ -274,7 +280,7 @@ download_release() {
   tmp_archive="$archive_path.tmp.$$"
   DEDIREN_TMP_ARCHIVE="$tmp_archive"
 
-  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 60 -o "$tmp_archive" "$base/$archive"
+  download_bounded 60 "$tmp_archive" "$base/$archive"
   mv "$tmp_archive" "$archive_path"
   mv "$tmp_checksums" "$checksum_path"
 

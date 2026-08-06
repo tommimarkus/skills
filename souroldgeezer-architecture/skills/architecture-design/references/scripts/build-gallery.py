@@ -78,6 +78,12 @@ class SourceMissing(Exception):
     """A required rendered source (svg or render-metadata) is absent."""
 
 
+def _read_json(path):
+    """Read one UTF-8 JSON input through the gallery's single parsing seam."""
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def classify(profile, diagram_kind):
     """(section_key, section_title, section_note, code_letter) for a view.
 
@@ -106,8 +112,7 @@ def _semantic_profile(pkg_dir, source):
     if not source:
         return "archimate"
     try:
-        with open(os.path.join(pkg_dir, source), encoding="utf-8") as fh:
-            model = json.load(fh)
+        model = _read_json(os.path.join(pkg_dir, source))
     except (OSError, ValueError):
         return "archimate"
     if not isinstance(model, dict):
@@ -137,8 +142,7 @@ def profile_resolver(pkg, pkg_dir):
 
 
 def _count(path):
-    with open(path, encoding="utf-8") as fh:
-        d = json.load(fh)
+    d = _read_json(path)
     return len(d.get("nodes", {})), len(d.get("edges", {}))
 
 
@@ -150,8 +154,7 @@ def _favicon():
 
 def _load_package(pkg_dir):
     """Parsed package.json — the dediren-native build manifest, required."""
-    with open(os.path.join(pkg_dir, "package.json"), encoding="utf-8") as fh:
-        return json.load(fh)
+    return _read_json(os.path.join(pkg_dir, "package.json"))
 
 
 def _feature_name(pkg_dir):
@@ -169,8 +172,7 @@ def _reject_retired_sidecar(pkg_dir):
     said. Fail on the *live* keys only: a leftover file holding just `feature`
     (or schema alone) is harmless, since the directory name supplies it."""
     try:
-        with open(os.path.join(pkg_dir, "project.json"), encoding="utf-8") as fh:
-            loaded = json.load(fh)
+        loaded = _read_json(os.path.join(pkg_dir, "project.json"))
     except (OSError, ValueError):
         return
     if not isinstance(loaded, dict):
