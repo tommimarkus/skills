@@ -44,8 +44,8 @@ need_supported_version() {
 # per-user cache; fall back to a sandbox-writable temp dir when that is not writable
 # (the default Bash sandbox makes $HOME read-only) so the resolve still works. The MCP
 # Claude MCP lane overrides this via
-# DEDIREN_CACHE_DIR=${CLAUDE_PLUGIN_DATA}/... from plugin.json; the additive
-# Codex manifest sets the same variable from its plugin-data directory.
+# DEDIREN_CACHE_DIR=${CLAUDE_PLUGIN_DATA}/... from plugin.json. Codex MCP fields
+# do not interpolate a plugin-data token, so its launcher uses this safe default.
 _dediren_cache_default() {
   local base="${XDG_CACHE_HOME:-$HOME/.cache}/dediren/releases"
   # mkdir -p is a no-op success on a pre-existing read-only dir, so test an actual

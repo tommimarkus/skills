@@ -89,8 +89,9 @@ codex plugin add souroldgeezer-audit@souroldgeezer
   `souroldgeezer-architecture/.mcp.json` from the Codex manifest); its
   launcher resolves the pinned Dediren runtime from GitHub™ Releases on first use —
   into `${CLAUDE_PLUGIN_DATA}` for installed Claude users, or a writable
-  per-user/temp fallback for the internal CLI lane — and needs Java™ 21 or newer.
-  The Codex MCP config uses its documented plugin-root and plugin-data variables.
+  per-user/temp fallback for Codex and the internal CLI lane — and needs Java™ 21
+  or newer. The Codex MCP config discovers the installed launcher without changing
+  directory, preserving the caller's workspace as Dediren's path boundary.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 

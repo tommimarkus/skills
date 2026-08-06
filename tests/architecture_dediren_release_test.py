@@ -880,6 +880,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         binary.write_text(
             "#!/usr/bin/env bash\n"
             f"printf '{marker} %s\\n' \"$*\"\n"
+            "printf 'SCHEMA-CACHE %s\\n' \"${DEDIREN_SCHEMA_CACHE_DIR:-unset}\"\n"
             "exit 0\n",
             encoding="utf-8",
         )
@@ -958,6 +959,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("STUB-STARTED", result.stdout)
         self.assertIn("mcp --root", result.stdout)
+        self.assertIn(f"SCHEMA-CACHE {temp_path / 'schema-cache'}", result.stdout)
         self.assertNotIn("curl must not run", result.stderr)
 
     def test_mcp_launcher_resolves_on_demand_then_fails_bounded_when_download_fails(self) -> None:

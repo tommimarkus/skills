@@ -609,8 +609,10 @@ fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, and Repair Rules. The launcher resolves the pinned Java™-backed runtime on
 demand at session start, bounded so a cold cache or a slow network can never hang
 startup, and caches it per-user under `${CLAUDE_PLUGIN_DATA}` in Claude Code or
-the Codex manifest's plugin-data directory (at most one download
-per pinned version per user, not per repo); the fast path does no network I/O. It
+the resolver's writable per-user/temp cache in Codex (at most one download per
+pinned version per user, not per repo); the fast path does no network I/O. The
+Codex adapter discovers the installed launcher without changing directory, so
+the server inherits the caller's workspace as its `--root`. It
 requires Java™ 21 or newer on the host. When the `dediren_*` MCP tools are absent
 that session (the host was offline at resolve, or the server has not yet reconnected
 after a pinned-version change), the skill's internal CLI fallback resolves the

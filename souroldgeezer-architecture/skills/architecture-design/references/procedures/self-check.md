@@ -18,9 +18,11 @@ installed. The launcher **resolves the pinned bundle on demand** at session star
 when the cache is cold, then starts the server. The resolve is bounded (the resolver
 caps curl with `--connect-timeout`/`--max-time` and the install lock with `flock -w`)
 so it can never hang session start, and it caches per-user under
-`${CLAUDE_PLUGIN_DATA}` in Claude Code, or the Codex manifest's plugin-data
-directory — at most one download per pinned version per user, not per
-repo. The fast path, when the bundle is already resolved, does no network I/O. The
+`${CLAUDE_PLUGIN_DATA}` in Claude Code, or the resolver's writable per-user/temp
+cache in Codex — at most one download per pinned version per user, not per repo.
+The Codex adapter discovers the installed launcher without changing directory,
+so Dediren keeps the caller's workspace as its `--root`. The fast path, when the
+bundle is already resolved, does no network I/O. The
 `dediren_*` tools are absent only when the resolve cannot complete (host offline) or
 Java™ 21+ is missing.
 
@@ -36,12 +38,12 @@ server not yet reconnected this session — fall back to the **internal CLI lane
 the release resolver (below) provides the binary, and the same `build --package`
 and validate commands run through the CLI. This is internal machinery; the user never types a dediren command. Each lane
 caches outside the target repo tree: the launcher/MCP lane under `${CLAUDE_PLUGIN_DATA}`
-in Claude Code (or the plugin-data directory set by the Codex runtime manifest),
-and the CLI lane under the per-user `${XDG_CACHE_HOME:-$HOME/.cache}`
+in Claude Code, and the Codex MCP plus CLI lanes under the per-user
+`${XDG_CACHE_HOME:-$HOME/.cache}`
 when writable, else a sandbox-writable temp dir (`${TMPDIR:-/tmp}`) — because
 `plugin.json` env vars do not reach Bash/shell-tool subprocesses, so the CLI resolver cannot
-read `${CLAUDE_PLUGIN_DATA}` or the Codex manifest's plugin-data value and resolves
-its own default. A pin bump no longer strands
+read `${CLAUDE_PLUGIN_DATA}` and resolves its own default; Codex MCP fields likewise
+have no interpolated plugin-data value. A pin bump no longer strands
 the server: the launcher resolves the newly-pinned bundle itself at the next session start. Only when the
 fallback itself cannot resolve a Java™ 21+ runtime do you disclose `not run (dediren
 runtime unavailable)` and cap at `source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
@@ -105,8 +107,8 @@ Handoff, Repair Rules) is stated in `architecture.md` §9. When running OEF or
 XMI export, follow the guide's schema-cache instructions. The export engines run
 in-process and inherit the server's environment; the plugin points
 `DEDIREN_SCHEMA_CACHE_DIR` at a writable `${CLAUDE_PLUGIN_DATA}` directory for
-Claude Code, or the corresponding Codex plugin-data directory, so the
-XSD download succeeds. If export still fails with
+Claude Code. In Codex the launcher derives a writable sibling of the resolver's
+effective releases cache, so the XSD download succeeds. If export still fails with
 `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
 `message`: it names whether to make that cache writable or to pre-fetch the XSDs and
 pass absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.

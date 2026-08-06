@@ -1,12 +1,13 @@
 {
-  "mcpServers": {
-    "dediren": {
-      "command": "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
-      "env": {
-        "DEDIREN_CACHE_DIR": "${PLUGIN_DATA}/dediren/releases",
-        "DEDIREN_SCHEMA_CACHE_DIR": "${PLUGIN_DATA}/dediren/schema-cache"
-      },
-      "startup_timeout_sec": 180
-    }
+  "dediren": {
+    "command": "bash",
+    "args": [
+      "-c",
+      "set -uo pipefail\nplugin_json=\"$(codex plugin list --json)\" || {\n  printf 'dediren-mcp: could not inspect installed Codex plugins.\\n' >&2\n  exit 127\n}\nplugin_root=\"$(\n  printf '%s\\n' \"$plugin_json\" |\n  awk -v target=\"\\\"pluginId\\\": \\\"$1\\\"\" '\n    index($0, target) { matched = 1; next }\n    matched && match($0, /\"path\": \"[^\"]+\"/) {\n      print substr($0, RSTART + 9, RLENGTH - 10)\n      exit\n    }\n  '\n)\"\nif [ -z \"$plugin_root\" ]; then\n  printf 'dediren-mcp: installed plugin root not found for %s.\\n' \"$1\" >&2\n  exit 127\nfi\nexec \"$plugin_root/${2#./}\"",
+      "dediren-launch",
+      "souroldgeezer-architecture@souroldgeezer",
+      "./skills/architecture-design/references/scripts/dediren-mcp.sh"
+    ],
+    "startup_timeout_sec": 180
   }
 }

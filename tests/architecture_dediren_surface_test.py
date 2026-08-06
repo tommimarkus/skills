@@ -1,5 +1,9 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
+import os
+import shlex
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -127,19 +131,72 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertEqual(codex_manifest["mcpServers"], "./.mcp.json")
 
         mcp_config = json.loads((ARCH_PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
-        dediren = mcp_config["mcpServers"]["dediren"]
+        dediren = mcp_config["dediren"]
+        self.assertEqual(dediren["command"], "bash")
+        self.assertEqual(dediren["args"][0], "-c")
+        self.assertIn("codex plugin list --json", dediren["args"][1])
+        self.assertEqual(dediren["args"][3], "souroldgeezer-architecture@souroldgeezer")
         self.assertEqual(
-            dediren["command"],
-            "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+            dediren["args"][4],
+            "./skills/architecture-design/references/scripts/dediren-mcp.sh",
         )
-        self.assertEqual(
-            dediren["env"],
-            {
-                "DEDIREN_CACHE_DIR": "${PLUGIN_DATA}/dediren/releases",
-                "DEDIREN_SCHEMA_CACHE_DIR": "${PLUGIN_DATA}/dediren/schema-cache",
-            },
-        )
+        self.assertNotIn("cwd", dediren)
+        self.assertNotIn("env", dediren)
+        self.assertNotIn("${PLUGIN_", json.dumps(dediren))
         self.assertGreaterEqual(dediren["startup_timeout_sec"], 120)
+
+    def test_codex_mcp_bootstrap_finds_installed_launcher_without_changing_workspace(self) -> None:
+        """The Codex adapter must solve both halves of the host mismatch.
+
+        It discovers the installed plugin root without an interpolated token and
+        leaves cwd untouched so Dediren's ``--root`` remains the user's project.
+        """
+        mcp_config = json.loads((ARCH_PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
+        dediren = mcp_config["dediren"]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_bin = temp_path / "fake bin"
+            fake_bin.mkdir()
+            plugin_root = temp_path / "installed plugin with spaces"
+            launcher = plugin_root / dediren["args"][4].removeprefix("./")
+            launcher.parent.mkdir(parents=True)
+            launcher.write_text("#!/usr/bin/env bash\nprintf '%s\\n' \"$PWD\"\n", encoding="utf-8")
+            launcher.chmod(0o755)
+
+            payload = json.dumps(
+                {
+                    "installed": [
+                        {
+                            "pluginId": dediren["args"][3],
+                            "source": {"source": "local", "path": str(plugin_root)},
+                        }
+                    ]
+                },
+                indent=2,
+            )
+            fake_codex = fake_bin / "codex"
+            fake_codex.write_text(
+                "#!/usr/bin/env bash\nprintf '%s\\n' " + shlex.quote(payload) + "\n",
+                encoding="utf-8",
+            )
+            fake_codex.chmod(0o755)
+
+            workspace = temp_path / "caller workspace"
+            workspace.mkdir()
+            result = subprocess.run(
+                [dediren["command"], *dediren["args"]],
+                cwd=workspace,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=10,
+                env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(workspace))
 
     def test_active_surfaces_do_not_reference_retired_arch_layout_contracts(self) -> None:
         retired_terms = [

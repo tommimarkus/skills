@@ -260,7 +260,7 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
     return plugin_dirs
 
 
-def check_mcp_server_block(
+def check_claude_mcp_server_block(
     repo: Path,
     path: Path,
     plugin_dir: Path,
@@ -269,8 +269,7 @@ def check_mcp_server_block(
     foreign_tokens: tuple[str, ...],
     findings: list[Finding],
 ) -> None:
-    """Check one host's server block: every command resolves to a bundled
-    executable through that host's own substitution token."""
+    """Check Claude's server block and its documented host substitutions."""
     for name, server in sorted(servers.items()):
         field = f"mcpServers.{name}"
         if not isinstance(server, dict):
@@ -316,6 +315,112 @@ def check_mcp_server_block(
                         )
 
 
+CODEX_MCP_LITERAL_TOKENS = (
+    "${PLUGIN_ROOT}",
+    "${PLUGIN_DATA}",
+    "${CLAUDE_PLUGIN_ROOT}",
+    "${CLAUDE_PLUGIN_DATA}",
+)
+
+
+def check_codex_mcp_server_block(
+    repo: Path,
+    path: Path,
+    plugin_dir: Path,
+    servers: dict[str, Any],
+    findings: list[Finding],
+) -> None:
+    """Check Codex's file-backed MCP config.
+
+    Codex resolves a relative ``cwd`` against the installed plugin root, but it
+    passes ``command``, ``args``, and ``env`` strings literally. In particular,
+    the plugin substitutions supported by Codex hooks are not MCP substitutions.
+    """
+    for name, server in sorted(servers.items()):
+        field = f"mcpServers.{name}"
+        if not isinstance(server, dict):
+            findings.append(Finding(repo_relative(repo, path), field, "server object", normalize_text(server)))
+            continue
+
+        string_fields: list[tuple[str, Any]] = [
+            (f"{field}.command", server.get("command")),
+            (f"{field}.cwd", server.get("cwd")),
+        ]
+        args = server.get("args", [])
+        if isinstance(args, list):
+            string_fields.extend((f"{field}.args[{index}]", value) for index, value in enumerate(args))
+        env = server.get("env", {})
+        if isinstance(env, dict):
+            string_fields.extend((f"{field}.env.{key}", value) for key, value in sorted(env.items()))
+
+        for value_field, value in string_fields:
+            text = normalize_text(value)
+            for token in CODEX_MCP_LITERAL_TOKENS:
+                if token in text:
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            value_field,
+                            "no plugin substitution token (Codex passes MCP fields literally)",
+                            token,
+                        )
+                    )
+
+        command = normalize_text(server.get("command"))
+        if not command:
+            findings.append(Finding(repo_relative(repo, path), f"{field}.command", "command", "missing"))
+
+        cwd = normalize_text(server.get("cwd"))
+        resolution_base = plugin_dir
+        if cwd:
+            if Path(cwd).is_absolute():
+                findings.append(
+                    Finding(repo_relative(repo, path), f"{field}.cwd", "portable plugin-relative directory", cwd)
+                )
+            else:
+                resolution_base = plugin_dir / cwd.removeprefix("./")
+                if not resolution_base.is_dir():
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            f"{field}.cwd",
+                            f"bundled directory at {repo_relative(repo, resolution_base)}",
+                            "missing",
+                        )
+                    )
+
+        bundled_paths: list[tuple[str, str]] = []
+        if command.startswith("./"):
+            bundled_paths.append((f"{field}.command", command))
+        if isinstance(args, list):
+            bundled_paths.extend(
+                (f"{field}.args[{index}]", value)
+                for index, value in enumerate(args)
+                if isinstance(value, str) and value.startswith("./")
+            )
+
+        if not bundled_paths:
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    field,
+                    "at least one plugin-relative bundled path in command or args",
+                    "missing",
+                )
+            )
+        for value_field, value in bundled_paths:
+            bundled = resolution_base / value.removeprefix("./")
+            if not bundled.is_file():
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        value_field,
+                        f"bundled file at {repo_relative(repo, bundled)}",
+                        "missing",
+                    )
+                )
+
+
 def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
     """Check cross-runtime packaging for plugins that BUNDLE an MCP server.
 
@@ -351,7 +456,7 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
         if claude_declared is not None:
             if isinstance(claude_declared, dict):
                 claude_servers = claude_declared
-                check_mcp_server_block(
+                check_claude_mcp_server_block(
                     repo,
                     claude_path,
                     plugin_dir,
@@ -379,16 +484,23 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
                         )
                     )
                 else:
-                    declared_block = read_json(config_path).get("mcpServers")
+                    config = read_json(config_path)
+                    if "mcpServers" in config:
+                        declared_block = config.get("mcpServers")
+                    elif "mcp_servers" in config:
+                        declared_block = config.get("mcp_servers")
+                    else:
+                        # The current Codex format is a direct server map. Keep
+                        # accepting the two historical wrappers so the checker
+                        # can explain their contents instead of misreading them.
+                        declared_block = config
                     if isinstance(declared_block, dict):
                         codex_servers = declared_block
-                        check_mcp_server_block(
+                        check_codex_mcp_server_block(
                             repo,
                             config_path,
                             plugin_dir,
                             codex_servers,
-                            "${PLUGIN_ROOT}",
-                            ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}"),
                             findings,
                         )
                     else:

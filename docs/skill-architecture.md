@@ -297,9 +297,11 @@ bare variable.
 Codex support is additive to that Claude contract. In Codex, resolve an absolute
 `<skill-dir>` from the source path reported for the loaded `SKILL.md`, carry it
 into raw procedures, and use documented `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`
-variables only in Codex manifest, hook, or MCP contexts that support them. Shared
-skill prose may show both runtime forms; it must not delete or generalize away the
-Claude substitutions above.
+variables only in Codex hook contexts that support them. Codex bundled MCP fields
+are literal; use a plugin-relative `cwd` / path when changing directory is safe,
+or a tested source-discovery bootstrap when the server must preserve the caller's
+workspace. Shared skill prose may show both runtime forms; it must not delete or
+generalize away the Claude substitutions above.
 
 A skill that ships a hook entrypoint (a guard or gate script) must include an
 integration test that drives the entrypoint's `main()` over the actual hook

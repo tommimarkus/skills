@@ -23,7 +23,7 @@ def write_manifest(path: Path, manifest: dict) -> None:
 
 
 def write_mcp_config(plugin: Path, servers: dict) -> None:
-    (plugin / ".mcp.json").write_text(json.dumps({"mcpServers": servers}, indent=2), encoding="utf-8")
+    (plugin / ".mcp.json").write_text(json.dumps(servers, indent=2), encoding="utf-8")
 
 
 def add_mcp_packaging(repo: Path) -> None:
@@ -54,8 +54,9 @@ def add_mcp_packaging(repo: Path) -> None:
         plugin,
         {
             "example": {
-                "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
-                "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                "command": "bash",
+                "args": [f"./{EXAMPLE_LAUNCHER}"],
+                "cwd": ".",
                 "startup_timeout_sec": 180,
             }
         },
@@ -400,7 +401,23 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             use_claude_token_in_codex_config,
             f"{EXAMPLE_PLUGIN}/.mcp.json",
             "mcpServers.example.command",
+            "${CLAUDE_PLUGIN_ROOT}",
+        )
+
+    def test_codex_hook_root_token_in_mcp_config_is_detected(self) -> None:
+        """Codex documents ``PLUGIN_ROOT`` for hooks, not for MCP fields."""
+
+        def use_unexpanded_codex_token(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {"example": {"command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"}},
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_unexpanded_codex_token,
+            "mcpServers.example.command",
             "${PLUGIN_ROOT}",
+            "passes MCP fields literally",
         )
 
     def test_mcp_env_using_the_other_hosts_data_token_is_detected(self) -> None:
@@ -409,7 +426,9 @@ class RuntimeMetadataParityTest(unittest.TestCase):
                 repo / EXAMPLE_PLUGIN,
                 {
                     "example": {
-                        "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                        "command": "bash",
+                        "args": [f"./{EXAMPLE_LAUNCHER}"],
+                        "cwd": ".",
                         "env": {"EXAMPLE_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/example"},
                     }
                 },
@@ -421,11 +440,32 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "${CLAUDE_PLUGIN_DATA}",
         )
 
+    def test_codex_hook_data_token_in_mcp_env_is_detected(self) -> None:
+        def use_unexpanded_codex_data_token(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "example": {
+                        "command": "bash",
+                        "args": [f"./{EXAMPLE_LAUNCHER}"],
+                        "cwd": ".",
+                        "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                    }
+                },
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_unexpanded_codex_data_token,
+            "mcpServers.example.env.EXAMPLE_CACHE_DIR",
+            "${PLUGIN_DATA}",
+            "passes MCP fields literally",
+        )
+
     def test_mcp_server_names_must_match_across_hosts(self) -> None:
         def rename_codex_server(repo: Path) -> None:
             write_mcp_config(
                 repo / EXAMPLE_PLUGIN,
-                {"renamed": {"command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"}},
+                {"renamed": {"command": "bash", "args": [f"./{EXAMPLE_LAUNCHER}"], "cwd": "."}},
             )
 
         self._assert_mcp_fixture_flags(

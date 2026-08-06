@@ -51,8 +51,11 @@ variables, and UI presentation in the host adapter.
 - Shared skill commands must preserve documented Claude substitutions and add a
   Codex source-path form beside them. Never replace `${CLAUDE_SKILL_DIR}` or
   `${CLAUDE_PLUGIN_ROOT}` with a generic placeholder as the only instruction.
-- Runtime-specific MCP and hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`
-  for Codex and `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}` for Claude.
+- Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex bundled MCP
+  fields are literal: use plugin-relative `cwd` / paths where changing directory
+  is correct, or a tested source-discovery bootstrap when the server must preserve
+  the caller's workspace. Claude MCP and hook commands use
+  `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}`.
 
 ## Runtime parity
 
