@@ -278,6 +278,35 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             ["initialize", "notifications/initialized", "tools/list"],
         )
 
+    def test_json_rpc_session_rejects_tool_surface_drift(self) -> None:
+        def fake_runner(argv, *, cwd, env, input_text=None, timeout=120):
+            del cwd, env, input_text, timeout
+            responses = [
+                {"jsonrpc": "2.0", "id": 1, "result": {"protocolVersion": "2024-11-05"}},
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "result": {
+                        "tools": [
+                            {"name": name}
+                            for name in sorted(smoke.EXPECTED_DEDIREN_TOOLS | {"unexpected_tool"})
+                        ]
+                    },
+                },
+            ]
+            return subprocess.CompletedProcess(
+                list(argv), 0, "\n".join(json.dumps(item) for item in responses), ""
+            )
+
+        with self.assertRaisesRegex(smoke.SmokeFailure, "Dediren tools differ"):
+            smoke.run_mcp_session(
+                ["fake-dediren"],
+                cwd=REPO_ROOT,
+                env=os.environ,
+                runner=fake_runner,
+                label="fake",
+            )
+
     def test_command_requires_both_safety_flags(self) -> None:
         with redirect_stderr(StringIO()):
             with self.assertRaises(SystemExit):
