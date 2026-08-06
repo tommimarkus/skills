@@ -256,9 +256,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     "jsonrpc": "2.0",
                     "id": 2,
                     "result": {
-                        "tools": [
-                            {"name": name} for name in sorted(smoke.EXPECTED_DEDIREN_TOOLS)
-                        ]
+                        "tools": [{"name": name} for name in sorted(smoke.EXPECTED_DEDIREN_TOOLS)]
                     },
                 },
             ]
@@ -275,9 +273,10 @@ class RuntimeHostSmokeTest(unittest.TestCase):
         )
 
         self.assertEqual(actual, smoke.EXPECTED_DEDIREN_TOOLS)
-        self.assertEqual([request.get("method") for request in requests], [
-            "initialize", "notifications/initialized", "tools/list"
-        ])
+        self.assertEqual(
+            [request.get("method") for request in requests],
+            ["initialize", "notifications/initialized", "tools/list"],
+        )
 
     def test_command_requires_both_safety_flags(self) -> None:
         with redirect_stderr(StringIO()):

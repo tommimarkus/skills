@@ -177,9 +177,7 @@ def load_expectations(repo: Path) -> list[PluginExpectation]:
             sorted(path.parent.name for path in skills_dir.glob("*/SKILL.md") if path.is_file())
         )
         agents = tuple(sorted(path.stem for path in agents_dir.glob("*.md") if path.is_file()))
-        expectations.append(
-            PluginExpectation(name, claude_version, codex_version, skills, agents)
-        )
+        expectations.append(PluginExpectation(name, claude_version, codex_version, skills, agents))
 
     skill_count = sum(len(expectation.skills) for expectation in expectations)
     if skill_count != 15:
@@ -226,9 +224,7 @@ def default_profile_control_paths(env: Mapping[str, str]) -> tuple[Path, ...]:
     codex_root = Path(env.get("CODEX_HOME", home / ".codex")).expanduser()
     claude_root = Path(env.get("CLAUDE_CONFIG_DIR", home / ".claude")).expanduser()
     claude_config = (
-        claude_root / ".claude.json"
-        if "CLAUDE_CONFIG_DIR" in env
-        else home / ".claude.json"
+        claude_root / ".claude.json" if "CLAUDE_CONFIG_DIR" in env else home / ".claude.json"
     )
     return (
         codex_root / "config.toml",
@@ -342,11 +338,13 @@ def run_mcp_session(
     tools = responses[2].get("result", {}).get("tools")
     if not isinstance(tools, list):
         raise SmokeFailure(f"{label} Dediren tools/list response has no tools[]")
-    names = {
-        tool.get("name")
-        for tool in tools
-        if isinstance(tool, dict) and isinstance(tool.get("name"), str)
-    }
+    names: set[str] = set()
+    for tool in tools:
+        if not isinstance(tool, dict):
+            continue
+        name = tool.get("name")
+        if isinstance(name, str):
+            names.add(name)
     if names != EXPECTED_DEDIREN_TOOLS:
         raise SmokeFailure(
             f"{label} Dediren tools differ: "
@@ -411,9 +409,7 @@ def run_host_smoke(
 
     env = dict(os.environ if base_env is None else base_env)
     profiles = tuple(
-        default_profile_control_paths(env)
-        if normal_profile_paths is None
-        else normal_profile_paths
+        default_profile_control_paths(env) if normal_profile_paths is None else normal_profile_paths
     )
     for profile in profiles:
         if profile.resolve() == state_root or state_root.is_relative_to(profile.resolve()):
@@ -605,18 +601,16 @@ def run_host_smoke(
         )
         codex_arch_root = codex_installs[architecture.name]
         codex_manifest = read_json(codex_arch_root / ".codex-plugin" / "plugin.json")
-        codex_mcp_path = codex_arch_root / str(
-            codex_manifest.get("mcpServers", "")
-        ).removeprefix("./")
+        codex_mcp_path = codex_arch_root / str(codex_manifest.get("mcpServers", "")).removeprefix(
+            "./"
+        )
         codex_servers = read_json(codex_mcp_path)
         codex_server = codex_servers.get("dediren")
         if not isinstance(codex_server, dict):
             raise SmokeFailure("installed Codex plugin omitted the Dediren adapter")
         codex_mcp_env = codex_env.copy()
         codex_mcp_env["DEDIREN_CACHE_DIR"] = str(runtime_data / "dediren" / "releases")
-        codex_mcp_env["DEDIREN_SCHEMA_CACHE_DIR"] = str(
-            runtime_data / "dediren" / "schema-cache"
-        )
+        codex_mcp_env["DEDIREN_SCHEMA_CACHE_DIR"] = str(runtime_data / "dediren" / "schema-cache")
         codex_tools = mcp_runner(
             [codex_server["command"], *codex_server.get("args", [])],
             cwd=repo,
