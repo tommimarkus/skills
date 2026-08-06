@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — per-contract phrase and code literals are the assertion payload; shared behavior-eval extraction is already centralized in _behavior_checks_and_forbidden.
 import re
 import unittest
 

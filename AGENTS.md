@@ -27,6 +27,9 @@ making either runtime load the other's file first.
   manifest declares `mcpServers`.
 - `<plugin>/.claude-plugin/plugin.json`: Claude manifest.
 - `<plugin>/skills/<skill>/SKILL.md`: shared runtime-neutral workflow.
+- `<plugin>/skills/<skill>/extensions/`: on-demand supporting packs; a stack
+  core may own nested mode lanes such as `build.md` and `review.md` when the
+  skill's load map declares them.
 - `<plugin>/agents/<skill>.md`: Claude-only subagent wrapper.
 - `.agents/skills/<name>/SKILL.md`: Codex wrapper for a repo-internal skill.
 - `.claude/skills/<name>/SKILL.md`: Claude wrapper for a repo-internal skill.

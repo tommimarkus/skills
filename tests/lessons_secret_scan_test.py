@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — explicit secret-shape and diff fixtures are independent calibration cases; their repeated assertion shell is test boilerplate, not shared production logic.
 import unittest
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module

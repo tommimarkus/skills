@@ -1,3 +1,4 @@
+# lean-audit:dup-intentional — identifier-rich Claude/Codex parity assertions are the test payload; keeping both host surfaces literal proves neither runtime is inferred from the other.
 import json
 import re
 import unittest
