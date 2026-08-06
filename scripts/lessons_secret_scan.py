@@ -41,6 +41,8 @@ def scan_diff(diff: str) -> list[str]:
     return scan_text(added)
 
 
+# lean-audit:dup-intentional:begin -- sibling lesson CLIs keep local parsers
+# because their argument sets and exit meanings are independent contracts.
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="lessons_secret_scan")
     parser.add_argument("--diff", action="store_true",
@@ -52,6 +54,7 @@ def main(argv=None) -> int:
     for label in labels:
         print(label)
     return 1 if labels else 0
+# lean-audit:dup-intentional:end
 
 
 if __name__ == "__main__":

@@ -63,6 +63,8 @@ class SmokeSummary:
     dediren_tools: int
 
 
+# lean-audit:dup-intentional:begin -- the injected runner deliberately mirrors
+# checked() so test doubles and the subprocess adapter share one call contract.
 def run_command(
     argv: Sequence[str],
     *,
@@ -81,6 +83,7 @@ def run_command(
         check=False,
         timeout=timeout,
     )
+# lean-audit:dup-intentional:end
 
 
 def checked(
@@ -123,6 +126,37 @@ def command_json(result: subprocess.CompletedProcess[str], label: str) -> Any:
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         raise SmokeFailure(f"{label} did not emit JSON: {result.stdout[-2000:]}") from exc
+
+
+# lean-audit:dup-intentional:begin -- this typed convenience wrapper mirrors
+# checked()'s required runner/cwd/env seam and adds only JSON decoding.
+def checked_json(
+    runner: Runner,
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: Mapping[str, str],
+    label: str,
+) -> Any:
+    """Run one required command and decode its machine-readable result."""
+    return command_json(checked(runner, argv, cwd=cwd, env=env), label)
+# lean-audit:dup-intentional:end
+
+
+def validate_plugin(
+    runner: Runner,
+    plugin_dir: Path,
+    *,
+    host: str,
+    cwd: Path,
+    env: Mapping[str, str],
+) -> None:
+    """Run a host's first-party validator without duplicating command checks."""
+    argv = [host.lower(), "plugin", "validate"]
+    if host == "Claude":
+        argv.append("--strict")
+    argv.append(str(plugin_dir))
+    checked(runner, argv, cwd=cwd, env=env)
 
 
 def semantic_version(value: str) -> tuple[int, int, int]:
@@ -438,61 +472,56 @@ def run_host_smoke(
         checked(runner, ["codex", "--version"], cwd=repo, env=codex_env)
         checked(runner, ["claude", "--version"], cwd=repo, env=claude_env)
 
-        codex_add_marketplace = command_json(
-            checked(
-                runner,
-                ["codex", "plugin", "marketplace", "add", str(repo), "--json"],
-                cwd=repo,
-                env=codex_env,
-            ),
-            "codex plugin marketplace add",
+        codex_add_marketplace = checked_json(
+            runner,
+            ["codex", "plugin", "marketplace", "add", str(repo), "--json"],
+            cwd=repo,
+            env=codex_env,
+            label="codex plugin marketplace add",
         )
         if codex_add_marketplace.get("marketplaceName") != MARKETPLACE:
             raise SmokeFailure("Codex registered the repository under the wrong marketplace name")
 
         codex_installs: dict[str, Path] = {}
         for expectation in expectations:
-            payload = command_json(
-                checked(
-                    runner,
-                    [
-                        "codex",
-                        "plugin",
-                        "add",
-                        f"{expectation.name}@{MARKETPLACE}",
-                        "--json",
-                    ],
-                    cwd=repo,
-                    env=codex_env,
-                ),
-                f"codex plugin add {expectation.name}",
+            payload = checked_json(
+                runner,
+                [
+                    "codex",
+                    "plugin",
+                    "add",
+                    f"{expectation.name}@{MARKETPLACE}",
+                    "--json",
+                ],
+                cwd=repo,
+                env=codex_env,
+                label=f"codex plugin add {expectation.name}",
             )
             installed_path = Path(payload.get("installedPath", ""))
             assert_installed_skills(installed_path, expectation, state_root, "Codex")
             codex_installs[expectation.name] = installed_path
 
-        codex_list = command_json(
-            checked(
-                runner,
-                ["codex", "plugin", "list", "--json"],
-                cwd=repo,
-                env=codex_env,
-            ),
-            "codex plugin list",
+        # lean-audit:dup-intentional:begin -- adjacent discovery probes use the
+        # same checked-JSON seam but validate different host surfaces.
+        codex_list = checked_json(
+            runner,
+            ["codex", "plugin", "list", "--json"],
+            cwd=repo,
+            env=codex_env,
+            label="codex plugin list",
         )
+        # lean-audit:dup-intentional:end
         codex_records = codex_list.get("installed")
         if not isinstance(codex_records, list):
             raise SmokeFailure("Codex plugin list JSON omitted installed[]")
         _verify_plugin_records(codex_records, expectations, host="Codex")
 
-        prompt_input = command_json(
-            checked(
-                runner,
-                ["codex", "debug", "prompt-input", "Use an installed Sour Old Geezer skill."],
-                cwd=repo,
-                env=codex_env,
-            ),
-            "codex debug prompt-input",
+        prompt_input = checked_json(
+            runner,
+            ["codex", "debug", "prompt-input", "Use an installed Sour Old Geezer skill."],
+            cwd=repo,
+            env=codex_env,
+            label="codex debug prompt-input",
         )
         prompt_text = "\n".join(strings_in(prompt_input))
         for expectation in expectations:
@@ -513,12 +542,16 @@ def run_host_smoke(
         has_codex_validator = re.search(r"^\s+validate\s", plugin_help, re.MULTILINE) is not None
         if has_codex_validator:
             for expectation in expectations:
-                checked(
+                # lean-audit:dup-intentional:begin -- both hosts deliberately
+                # validate the same plugin set through the shared adapter.
+                validate_plugin(
                     runner,
-                    ["codex", "plugin", "validate", str(repo / expectation.name)],
+                    repo / expectation.name,
+                    host="Codex",
                     cwd=repo,
                     env=codex_env,
                 )
+                # lean-audit:dup-intentional:end
             codex_validator = "passed"
         else:
             codex_validator = "skipped: current Codex CLI has no plugin validate command"
@@ -552,14 +585,12 @@ def run_host_smoke(
                 env=claude_env,
             )
 
-        claude_list = command_json(
-            checked(
-                runner,
-                ["claude", "plugin", "list", "--json"],
-                cwd=repo,
-                env=claude_env,
-            ),
-            "claude plugin list",
+        claude_list = checked_json(
+            runner,
+            ["claude", "plugin", "list", "--json"],
+            cwd=repo,
+            env=claude_env,
+            label="claude plugin list",
         )
         if not isinstance(claude_list, list):
             raise SmokeFailure("Claude plugin list must emit a JSON array")
@@ -572,9 +603,10 @@ def run_host_smoke(
         for expectation in expectations:
             install_path = Path(claude_by_name[expectation.name].get("installPath", ""))
             assert_installed_skills(install_path, expectation, state_root, "Claude")
-            checked(
+            validate_plugin(
                 runner,
-                ["claude", "plugin", "validate", "--strict", str(repo / expectation.name)],
+                repo / expectation.name,
+                host="Claude",
                 cwd=repo,
                 env=claude_env,
             )
@@ -688,6 +720,8 @@ def run_host_smoke(
     return summary
 
 
+# lean-audit:dup-intentional:begin -- independent CLI entrypoints retain local
+# safety flags, dependency checks, diagnostics, and exit-code wording.
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -732,6 +766,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("PASS: normal Codex and Claude plugin/config profiles unchanged")
     print("Runtime host smoke OK")
     return 0
+# lean-audit:dup-intentional:end
 
 
 if __name__ == "__main__":

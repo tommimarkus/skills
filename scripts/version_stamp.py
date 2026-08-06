@@ -110,12 +110,15 @@ def read_version(repo_root: Path, plugin: str, ref: str = "main") -> str:
     return json.loads(text)["version"]
 
 
+# lean-audit:dup-intentional:begin -- subcommands independently resolve the
+# explicit repository root before applying their distinct read-only checks.
 def cmd_compute(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     month = args.month or current_month()
     current = read_version(repo_root, args.plugin, args.ref)
     print(compute_next(current, month))
     return 0
+# lean-audit:dup-intentional:end
 
 
 def _git_show(repo_root: Path, ref: str, path: str) -> str | None:
@@ -249,6 +252,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     guard.add_argument("--base", default="main")
     guard.add_argument("--head", default="HEAD")
+    # lean-audit:dup-intentional:begin -- conventional argparse dispatch stays
+    # local to this tool; other release tools own different command contracts.
     guard.set_defaults(func=cmd_guard)
 
     return parser
@@ -258,6 +263,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
+# lean-audit:dup-intentional:end
 
 
 if __name__ == "__main__":

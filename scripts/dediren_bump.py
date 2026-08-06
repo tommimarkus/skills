@@ -549,13 +549,10 @@ def _dirty_pin_paths(repo_root: Path) -> list[str]:
     target — the check degrades gracefully rather than blocking (derive from the authority,
     keep a fallback: skill-architecture.md § Degradation Checks)."""
     rels = [str(path.relative_to(repo_root)) for path in target_files(repo_root)]
-    proc = subprocess.run(
-        ["git", "-C", str(repo_root), "status", "--porcelain", "--", *rels],
-        text=True, capture_output=True,
-    )
-    if proc.returncode != 0:
+    stdout = _git_stdout(repo_root, "status", "--porcelain", "--", *rels)
+    if stdout is None:
         return []
-    return [line[3:].strip() for line in proc.stdout.splitlines() if line.strip()]
+    return [line[3:].strip() for line in stdout.splitlines() if line.strip()]
 
 
 def _emit_verdict(verdict: AdoptVerdict, *, out=sys.stdout, json_out: bool = False) -> None:
@@ -599,6 +596,12 @@ def _emit_verdict(verdict: AdoptVerdict, *, out=sys.stdout, json_out: bool = Fal
         for line in verdict.integration:
             print(f"  {line}", file=out)
     print(f"\nresult: {'READY' if verdict.ok else 'BLOCKED'}", file=out)
+
+
+def _cli_error(exc: object) -> int:
+    """Preserve the command's stable diagnostic prefix and usage exit code."""
+    print(f"error: {exc}", file=sys.stderr)
+    return 2
 
 
 def _verify_summary(repo_root: Path) -> tuple[bool, list[tuple[str, bool]], list[str]]:
@@ -700,19 +703,24 @@ def run_adopt(
 # ---------------------------------------------------------------------------
 
 
+def _git_stdout(path: Path, *args: str) -> str | None:
+    """Return stdout for one successful git query, otherwise ``None``."""
+    proc = subprocess.run(
+        ["git", "-C", str(path), *args],
+        text=True,
+        capture_output=True,
+    )
+    return proc.stdout if proc.returncode == 0 else None
+
+
 def _git_toplevel(path: Path) -> str | None:
     """The git worktree toplevel containing ``path``, or ``None`` when ``path`` is
     not inside a git worktree (or git is unavailable). Each linked worktree has its
     own toplevel, so this distinguishes the primary checkout from a worktree nested
     under it (``.worktrees/**``, ``.claude/worktrees/**``) — a plain path-ancestor
     test cannot: the primary root *is* an ancestor of a nested worktree's dir."""
-    proc = subprocess.run(
-        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
-        text=True, capture_output=True,
-    )
-    if proc.returncode != 0:
-        return None
-    return proc.stdout.strip() or None
+    stdout = _git_stdout(path, "rev-parse", "--show-toplevel")
+    return stdout.strip() or None if stdout is not None else None
 
 
 def _foreign_checkout(root_toplevel: str | None, cwd_toplevel: str | None) -> bool:
@@ -805,29 +813,30 @@ def main(argv: list[str] | None = None) -> int:
         try:
             print(resolve_latest(repo_root))
         except RuntimeError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+            return _cli_error(exc)
         return 0
 
     if getattr(args, "to", None) == "latest":
         try:
             args.to = resolve_latest(repo_root)
         except RuntimeError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+            return _cli_error(exc)
         print(f"resolved latest release -> {args.to}", file=sys.stderr)
 
+    mutation_requested = (
+        (args.command == "bump" and not args.check)
+        or (args.command == "adopt" and not args.plan)
+    )
+    if mutation_requested:
+        blocked = guard_local_checkout(repo_root, explicit_root=root_was_explicit)
+        if blocked:
+            return _cli_error(blocked)
+
     if args.command == "bump":
-        if not args.check:
-            blocked = guard_local_checkout(repo_root, explicit_root=root_was_explicit)
-            if blocked:
-                print(f"error: {blocked}", file=sys.stderr)
-                return 2
         try:
             report = bump(repo_root, args.to, check=args.check)
         except (ValueError, PinDriftError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+            return _cli_error(exc)
         if not report.changed_files:
             print(f"already pinned to {report.new}; nothing to do")
             return 0
@@ -846,15 +855,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             return run_parity(repo_root, args.to)
         except ValueError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+            return _cli_error(exc)
 
     if args.command == "adopt":
-        if not args.plan:
-            blocked = guard_local_checkout(repo_root, explicit_root=root_was_explicit)
-            if blocked:
-                print(f"error: {blocked}", file=sys.stderr)
-                return 2
         return run_adopt(repo_root, args.to, plan_only=args.plan, json_out=args.json)
 
     return 1

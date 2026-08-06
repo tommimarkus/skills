@@ -28,41 +28,43 @@ PY
 }
 
 validate_marketplace_paths() {
-  jq -c '.plugins[]' .claude-plugin/marketplace.json | while IFS= read -r plugin; do
-    source="$(jq -r '.source' <<<"$plugin")"
+  validate_marketplace_entry() {
+    local runtime="$1" plugin="$2" source source_kind plugin_dir manifest invalid_label
+    if [ "$runtime" = "claude" ]; then
+      source="$(jq -r '.source' <<<"$plugin")"
+      manifest=".claude-plugin/plugin.json"
+      invalid_label="Invalid marketplace source"
+    else
+      source_kind="$(jq -r '.source.source' <<<"$plugin")"
+      source="$(jq -r '.source.path' <<<"$plugin")"
+      test "$source_kind" = "local"
+      manifest=".codex-plugin/plugin.json"
+      invalid_label="Invalid Codex marketplace source"
+    fi
 
     case "$source" in
       ./*) ;;
       *)
-        printf 'Invalid marketplace source: %s\n' "$source" >&2
+        printf '%s: %s\n' "$invalid_label" "$source" >&2
         return 1
         ;;
     esac
 
     plugin_dir="${source#./}"
-
     test -d "$plugin_dir"
-    test -f "$plugin_dir/.claude-plugin/plugin.json"
+    test -f "$plugin_dir/$manifest"
     test -d "$plugin_dir/skills"
+  }
+
+  # lean-audit:dup-intentional:begin -- each marketplace is enumerated locally;
+  # the shared entry helper owns all validation mechanics and runtime differences.
+  jq -c '.plugins[]' .claude-plugin/marketplace.json | while IFS= read -r plugin; do
+    validate_marketplace_entry claude "$plugin"
   done
+  # lean-audit:dup-intentional:end
 
   jq -c '.plugins[]' .agents/plugins/marketplace.json | while IFS= read -r plugin; do
-    source_kind="$(jq -r '.source.source' <<<"$plugin")"
-    source="$(jq -r '.source.path' <<<"$plugin")"
-
-    test "$source_kind" = "local"
-    case "$source" in
-      ./*) ;;
-      *)
-        printf 'Invalid Codex marketplace source: %s\n' "$source" >&2
-        return 1
-        ;;
-    esac
-
-    plugin_dir="${source#./}"
-    test -d "$plugin_dir"
-    test -f "$plugin_dir/.codex-plugin/plugin.json"
-    test -d "$plugin_dir/skills"
+    validate_marketplace_entry codex "$plugin"
   done
 
   echo "Marketplace paths OK"
@@ -105,8 +107,6 @@ validate_plugin_manifests() {
       ($marketplace | has("version") | not)
       ' >/dev/null
   done
-
-
   jq -e 'all(.plugins[]; has("version") | not)' \
     .agents/plugins/marketplace.json >/dev/null
 

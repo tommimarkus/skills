@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# lean-audit:dup-intentional — irreducible pure report wrapper; the repository
+# root bootstrap is intentionally identical to the sibling validation shim.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

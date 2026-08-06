@@ -128,25 +128,25 @@ def parse_yaml_mapping(text: str, source: Path) -> dict[str, Any]:
     return root
 
 
-def read_frontmatter(path: Path) -> dict[str, Any]:
+def split_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
+    """Return parsed frontmatter and Markdown body from one validated read."""
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         raise ValueError(f"{path} has no YAML frontmatter")
     for index, line in enumerate(lines[1:], start=1):
         if line.strip() == "---":
-            return parse_yaml_mapping("\n".join(lines[1:index]), path)
+            metadata = parse_yaml_mapping("\n".join(lines[1:index]), path)
+            return metadata, "\n".join(lines[index + 1 :]).strip()
     raise ValueError(f"{path} has unterminated YAML frontmatter")
+
+
+def read_frontmatter(path: Path) -> dict[str, Any]:
+    return split_frontmatter(path)[0]
 
 
 def read_markdown_body(path: Path) -> str:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if not lines or lines[0].strip() != "---":
-        raise ValueError(f"{path} has no YAML frontmatter")
-    for index, line in enumerate(lines[1:], start=1):
-        if line.strip() == "---":
-            return "\n".join(lines[index + 1 :]).strip()
-    raise ValueError(f"{path} has unterminated YAML frontmatter")
+    return split_frontmatter(path)[1]
 
 
 def public_skill_agent_body(skill_name: str) -> str:
@@ -183,6 +183,8 @@ def compare(
         )
 
 
+# lean-audit:dup-intentional:begin -- validation helpers intentionally share
+# one evidence signature while applying different equality/containment rules.
 def require_text_contains(
     findings: list[Finding],
     repo: Path,
@@ -193,6 +195,7 @@ def require_text_contains(
 ) -> None:
     if expected not in actual_text:
         findings.append(Finding(repo_relative(repo, path), field, expected, "missing"))
+# lean-audit:dup-intentional:end
 
 
 def marketplace_plugins(repo: Path, marketplace_path: Path) -> list[dict[str, Any]]:
@@ -264,10 +267,13 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
 
         claude_version = version_core(claude.get("version"), codex=False)
         codex_version = version_core(codex.get("version"), codex=True)
+        # lean-audit:dup-intentional:begin -- the two host formats need distinct
+        # diagnostics even though both reject an unparsable version.
         if claude_version is None:
             findings.append(Finding(repo_relative(repo, claude_path), "version", "numeric X.Y.Z", normalize_text(claude.get("version"))))
         if codex_version is None:
             findings.append(Finding(repo_relative(repo, codex_path), "version", "strict SemVer X.Y.Z without leading zeroes", normalize_text(codex.get("version"))))
+        # lean-audit:dup-intentional:end
         if claude_version is not None and codex_version is not None and claude_version != codex_version:
             findings.append(Finding(repo_relative(repo, codex_path), "version", ".".join(map(str, claude_version)), normalize_text(codex.get("version"))))
 
@@ -290,6 +296,8 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
     return plugin_dirs
 
 
+# lean-audit:dup-intentional:begin -- host adapters intentionally mirror MCP
+# field/path validation while preserving incompatible substitution semantics.
 def check_claude_mcp_server_block(
     repo: Path,
     path: Path,
@@ -300,11 +308,8 @@ def check_claude_mcp_server_block(
     findings: list[Finding],
 ) -> None:
     """Check Claude's server block and its documented host substitutions."""
-    for name, server in sorted(servers.items()):
+    for name, server in valid_mcp_servers(repo, path, servers, findings):
         field = f"mcpServers.{name}"
-        if not isinstance(server, dict):
-            findings.append(Finding(repo_relative(repo, path), field, "server object", normalize_text(server)))
-            continue
 
         command = normalize_text(server.get("command"))
         if not command.startswith(root_token):
@@ -343,6 +348,7 @@ def check_claude_mcp_server_block(
                                 foreign,
                             )
                         )
+# lean-audit:dup-intentional:end
 
 
 CODEX_MCP_LITERAL_TOKENS = (
@@ -351,6 +357,29 @@ CODEX_MCP_LITERAL_TOKENS = (
     "${CLAUDE_PLUGIN_ROOT}",
     "${CLAUDE_PLUGIN_DATA}",
 )
+
+
+def valid_mcp_servers(
+    repo: Path,
+    path: Path,
+    servers: dict[str, Any],
+    findings: list[Finding],
+) -> list[tuple[str, dict[str, Any]]]:
+    """Validate the shared MCP map shape before host-specific checks."""
+    valid: list[tuple[str, dict[str, Any]]] = []
+    for name, server in sorted(servers.items()):
+        if isinstance(server, dict):
+            valid.append((name, server))
+        else:
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    f"mcpServers.{name}",
+                    "server object",
+                    normalize_text(server),
+                )
+            )
+    return valid
 
 
 def check_codex_mcp_server_block(
@@ -366,11 +395,8 @@ def check_codex_mcp_server_block(
     passes ``command``, ``args``, and ``env`` strings literally. In particular,
     the plugin substitutions supported by Codex hooks are not MCP substitutions.
     """
-    for name, server in sorted(servers.items()):
+    for name, server in valid_mcp_servers(repo, path, servers, findings):
         field = f"mcpServers.{name}"
-        if not isinstance(server, dict):
-            findings.append(Finding(repo_relative(repo, path), field, "server object", normalize_text(server)))
-            continue
 
         string_fields: list[tuple[str, Any]] = [
             (f"{field}.command", server.get("command")),
@@ -451,6 +477,8 @@ def check_codex_mcp_server_block(
                 )
 
 
+# lean-audit:dup-intentional:begin -- checker passes share this repository and
+# finding-collector signature but own independent packaging/skill semantics.
 def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
     """Check cross-runtime packaging for plugins that BUNDLE an MCP server.
 
@@ -460,6 +488,7 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
     object, Codex requires a path to a plugin-root config file — so a shared
     launcher sitting on disk proves nothing about either host's registration.
     """
+# lean-audit:dup-intentional:end
     for plugin_dir in plugin_dirs:
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
         codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
@@ -760,6 +789,8 @@ def print_findings(findings: list[Finding]) -> None:
         print(f"  actual:   {finding.actual}")
 
 
+# lean-audit:dup-intentional:begin -- CLI entrypoints keep their local parser,
+# error wording, and exit mapping because these scripts are independent tools.
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="check parity and exit nonzero on drift")
@@ -781,6 +812,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print_findings(findings)
     return 1 if findings else 0
+# lean-audit:dup-intentional:end
 
 
 if __name__ == "__main__":

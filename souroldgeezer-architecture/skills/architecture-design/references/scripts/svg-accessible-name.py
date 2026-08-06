@@ -166,16 +166,18 @@ def find_bg_fill(root, minx, miny, w, h):
 def _is_injected(child) -> bool:
     """A node this step owns: the injected title/desc (id markers) and the band
     rect / visible title text (data-arch-a11y markers)."""
-    tag = child.tag
-    if tag == _q("title") and child.get("id") == "arch-a11y-title":
-        return True
-    if tag == _q("desc") and child.get("id") == "arch-a11y-desc":
-        return True
-    if tag == _q("rect") and child.get("data-arch-a11y") == "band-bg":
-        return True
-    if tag == _q("text") and child.get("data-arch-a11y") == "visible-title":
-        return True
-    return False
+    marker = {
+        _q("title"): ("id", "arch-a11y-title"),
+        _q("desc"): ("id", "arch-a11y-desc"),
+        _q("rect"): ("data-arch-a11y", "band-bg"),
+        _q("text"): ("data-arch-a11y", "visible-title"),
+    }.get(child.tag)
+    return marker is not None and child.get(marker[0]) == marker[1]
+
+
+def _drop_attributes(element, names):
+    for name in names:
+        element.attrib.pop(name, None)
 
 
 def _insert_block(root, anchor, nodes):
@@ -241,11 +243,9 @@ def _strip_prior(root):
         if orig_h is not None and root.get("height") is not None:
             root.set("height", orig_h)
 
-    for key in ("data-arch-a11y", "data-arch-a11y-viewbox", "data-arch-a11y-height"):
-        root.attrib.pop(key, None)
+    _drop_attributes(root, ("data-arch-a11y", "data-arch-a11y-viewbox", "data-arch-a11y-height"))
     if was_injected:
-        for key in ("role", "aria-labelledby", "aria-describedby"):
-            root.attrib.pop(key, None)
+        _drop_attributes(root, ("role", "aria-labelledby", "aria-describedby"))
 
 
 def _native_child(root, tag):
@@ -403,11 +403,14 @@ def main(argv):
             return 0
         elif arg == "--check":
             mode = "check"
+        # lean-audit:dup-intentional:begin -- title and description are separate
+        # public options with option-specific diagnostics and shared value shape.
         elif arg == "--title":
             if not args:
                 sys.stderr.write("--title needs a value\n")
                 return 2
             title = args.pop(0)
+        # lean-audit:dup-intentional:end
         elif arg == "--desc":
             if not args:
                 sys.stderr.write("--desc needs a value\n")
