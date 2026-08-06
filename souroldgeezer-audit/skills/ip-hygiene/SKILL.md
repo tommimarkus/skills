@@ -73,6 +73,10 @@ In Codex, replace it with the absolute `<skill-dir>` reported for this loaded
 `SKILL.md`. A bare relative path would not resolve from the target repo's
 working directory.
 
+Execute the resolved command without loading its source. Inspect
+`references/scripts/` only when maintaining the pre-filter implementation or
+its packaged path wiring; ordinary triage uses the command above as a black box.
+
 It scans only objective filesystem facts (Q3/Q4 candidates). Use its hits as
 evidence when answering Q3 and Q4. It does NOT answer any question: an empty
 result is NOT a clean bill of health — copied prose (Q2), inline code samples
