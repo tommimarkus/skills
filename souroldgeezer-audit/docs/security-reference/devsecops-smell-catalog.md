@@ -251,3 +251,24 @@ See [devsecops-extensions/dotnet-security.md](devsecops-extensions/dotnet-securi
 | `dns.POS-3` | Explicit CSP / security headers middleware |
 | `dns.POS-4` | `[Authorize(Roles=...)]` with specific role checks |
 | `dns.POS-5` | OpenAPI-driven request models validated against schema |
+
+### `pys.*` — Python security extension
+
+See [devsecops-extensions/python-security.md](devsecops-extensions/python-security.md) for evidence requirements and exact carve-outs.
+
+| Code | Intent |
+|---|---|
+| `pys.HC-1` | Unsafe object or YAML deserialization with external input |
+| `pys.HC-2` | Dynamic execution of externally controlled source |
+| `pys.HC-3` | Tainted shell command |
+| `pys.HC-4` | Path traversal or unsafe archive extraction |
+| `pys.HC-5` | Insecure temporary file in a cross-principal workflow |
+| `pys.HC-6` | Predictable randomness for a security value |
+| `pys.HC-7` | TLS verification disabled in shipped outbound client |
+| `pys.HC-8` | SQL interpolation with external input |
+| `pys.HC-9` | Outbound URL trust/SSRF policy uncertain |
+| `pys.POS-1` | Restrictive deserialization with verified producer boundary |
+| `pys.POS-2` | Fixed subprocess vector without shell |
+| `pys.POS-3` | Path/archive containment with resource limits |
+| `pys.POS-4` | CSPRNG for a capability value |
+| `pys.POS-5` | Verified TLS, bound SQL, or controlled outbound destination |

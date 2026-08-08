@@ -37,6 +37,12 @@ tables, diagrams, screenshots, or documentation.
   entry labels are external taxonomy references, not copied prose; all scenario
   descriptions, expected findings, and grading notes are original synthetic
   constructs owned by this repo.
+- Source: Python documentation for security considerations, pickle, subprocess,
+  tarfile, secrets, and tempfile; Requests SSL verification; SQLAlchemy bound
+  parameters; OWASP SSRF Prevention Cheat Sheet.
+  Handling: primary/official anchors for the Python `pys.*` rule pack's risk
+  direction. The pack, catalog, and eval use original paraphrases and synthetic
+  scenarios only; they do not reproduce external examples or prose.
 - Source: `references/procedures/threat-model-planning.md`.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal
