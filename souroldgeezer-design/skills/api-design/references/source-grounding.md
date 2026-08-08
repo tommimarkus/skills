@@ -14,6 +14,10 @@ screenshots.
   Handling: local mode-sliced extension load conditions, implementation
   patterns, and smell-code behavior; eval cases mention stack names only as
   nominative context and do not reproduce external documentation examples.
+- Source: `extensions/python.md` and its `python/{build,review}.md` lanes.
+  Handling: Python's primary ASGI, WSGI, asyncio, and serverless references are
+  linked in the extension; eval cases use original synthetic Python gateway
+  scenarios and do not reproduce those sources' text or examples.
 - Source: `../app-design` public-skill boundary.
   Handling: local sibling-skill boundary; hosted Next.js API guidance keeps
   Route Handlers, Pages API routes, and API-like Server Actions in api-design

@@ -402,6 +402,78 @@
     ]
   },
   {
+    "id": "extract-python-factual",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:extract-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:extract"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"}
+    ]
+  },
+  {
+    "id": "extract-python-debt",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:extract-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:extract"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:debt-python"}
+    ]
+  },
+  {
+    "id": "lookup-python-lifecycle",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md#315-hosting-and-runtime-selection", "predicate": "conditional:lookup-rule"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md", "predicate": "conditional:lookup-python-lifecycle"}
+    ]
+  },
+  {
+    "id": "build-python-asgi",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:build-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:build"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:build-final"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md", "predicate": "conditional:build-python"}
+    ]
+  },
+  {
+    "id": "review-python-wsgi-clean",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:review-python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"}
+    ]
+  },
+  {
+    "id": "review-python-serverless",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:review-python"}
+    ]
+  },
+  {
     "id": "sd-lookup-principle",
     "skill": "software-design",
     "files": [

@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — HTTP endpoints, services, API surfaces, or the API layer of a backend feature. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Azure® Cosmos DB™, and Azure® Blob Storage™. Defer general code/module design to software-design, frontend/UI to app-design, infrastructure/IaC to infra-design, architecture models to architecture-design, and security and test quality to devsecops-audit and test-quality-audit.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs — HTTP endpoints, services, API surfaces, or the API layer of a backend feature. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Python® ASGI/WSGI and serverless APIs, Azure® Cosmos DB™, and Azure® Blob Storage™. Defer general code/module design to software-design, frontend/UI to app-design, infrastructure/IaC to infra-design, architecture models to architecture-design, and security and test quality to devsecops-audit and test-quality-audit.
 ---
 
 # API Design
@@ -58,6 +58,8 @@ Load what applies:
   DB API/data-client/IaC signals.
 - [extensions/azure-blob-storage.md](extensions/azure-blob-storage.md) for Azure
   Blob Storage API/object-store/IaC signals.
+- [extensions/python.md](extensions/python.md) for Python ASGI, WSGI, and
+  serverless HTTP API signals.
 - [extensions/README.md](extensions/README.md) only when editing extensions.
 
 | Stack | Build lane | Review lane |
@@ -67,6 +69,7 @@ Load what applies:
 | Next.js | [build](extensions/nextjs/build.md) | [review](extensions/nextjs/review.md) |
 | Azure Cosmos DB | [build](extensions/azure-cosmosdb/build.md) | [review](extensions/azure-cosmosdb/review.md) |
 | Azure Blob Storage | [build](extensions/azure-blob-storage/build.md) | [review](extensions/azure-blob-storage/review.md) |
+| Python ASGI / WSGI | [build](extensions/python/build.md) | [review](extensions/python/review.md) |
 
 Each path above is a lightweight stack core. After matching its `Name and
 detection signals`, select mode lanes as follows:

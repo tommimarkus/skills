@@ -56,10 +56,11 @@ Build, Review, and Extract compose every detected stack. An Azure Functions
 API that stores entities in Cosmos DB and payloads in Blob Storage loads all
 three cores, then the lane selected by the mode for each core. A hosted Next.js
 API loads the Node.js core first and the Next.js core second, then the same
-selected lane for both.
+selected lane for both. A Python API loads the Python core for ASGI, WSGI, or
+serverless signals, then selects exactly one Python lane for Build or Review.
 
 Smell-code namespaces are orthogonal: `afdotnet.*`, `nodejs.*`,
-`nextjs.*`, `cosmos.*`, and `blob.*`. Pattern namespaces use the same
+`nextjs.*`, `pyapi.*`, `cosmos.*`, and `blob.*`. Pattern namespaces use the same
 prefixes. Findings therefore remain attributable when Review composes multiple
 packs, while Build patterns remain attributable across compute and data layers.
 
@@ -76,6 +77,7 @@ observability, or verification-layer baseline.
 | `nextjs.md` | `nextjs/build.md` | `nextjs/review.md` | Hosted Next.js API surfaces; after Node.js |
 | `azure-cosmosdb.md` | `azure-cosmosdb/build.md` | `azure-cosmosdb/review.md` | Azure Cosmos DB NoSQL API |
 | `azure-blob-storage.md` | `azure-blob-storage/build.md` | `azure-blob-storage/review.md` | Azure Blob Storage block blobs |
+| `python.md` | `python/build.md` | `python/review.md` | Python ASGI, WSGI, and serverless HTTP API surfaces |
 
 ## Required core sections
 

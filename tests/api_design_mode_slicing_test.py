@@ -21,10 +21,13 @@ STACKS = (
     "nextjs",
     "azure-cosmosdb",
     "azure-blob-storage",
+    "python",
 )
-CONCRETE_CODE = re.compile(r"(?:afdotnet|nodejs|nextjs|cosmos|blob)\.(?:PAT|HC|LC|POS)-[a-z0-9-]+")
-PATTERN_CODE = re.compile(r"(?:afdotnet|nodejs|nextjs|cosmos|blob)\.PAT-[a-z0-9-]+")
-REVIEW_CODE = re.compile(r"(?:afdotnet|nodejs|nextjs|cosmos|blob)\.(?:HC|LC|POS)-\d+")
+CONCRETE_CODE = re.compile(
+    r"(?:afdotnet|nodejs|nextjs|cosmos|blob|pyapi)\.(?:PAT|HC|LC|POS)-[a-z0-9-]+"
+)
+PATTERN_CODE = re.compile(r"(?:afdotnet|nodejs|nextjs|cosmos|blob|pyapi)\.PAT-[a-z0-9-]+")
+REVIEW_CODE = re.compile(r"(?:afdotnet|nodejs|nextjs|cosmos|blob|pyapi)\.(?:HC|LC|POS)-\d+")
 
 
 class ApiDesignModeSlicingTest(unittest.TestCase):
