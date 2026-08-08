@@ -34,6 +34,24 @@ or monkeypatched app dependencies are mutated and not restored per test.
 
 Rewrite: scope overrides with fixtures that clean up in `finally` blocks.
 
+### `python.I-HC-A3` — claimed integration coverage bypasses application lifespan or resource teardown
+
+Applies to: integration
+
+Detection: a test claims to exercise an application seam while constructing
+or driving the app without entering its declared startup/lifespan context, or
+while leaving an application-owned client, engine, session, task group, or
+other resource unclosed. Examples include a `TestClient` created without the
+context manager required for startup/shutdown hooks, an ASGI client used
+without the project's lifespan manager, or a fixture that never reaches its
+resource finalizer. Apply this only when the app or resource lifecycle is
+visible; do not infer it from a fixture name alone.
+
+Rewrite: use the project's documented lifespan/context-manager harness and
+scope each owned resource through its normal `finally`/fixture teardown. Keep
+startup and shutdown assertions at the application seam when they are part of
+the contract.
+
 ### `python.I-HC-B1` — contract expected response pasted from live run
 
 Applies to: integration
@@ -98,6 +116,21 @@ Applies to: integration
 Detection: status codes, problem details, response schema, OpenAPI fragment, or
 consumer expectations are cited in the test or fixture.
 
+### `python.I-POS-4` — integration exercises startup and verifies resource shutdown
+
+Applies to: integration
+
+Detection: the test enters the app's documented startup/lifespan context,
+exercises the real integration seam, and observes shutdown through a closed
+resource, teardown marker, cancellation/await result, or other published
+lifecycle signal. A context manager or fixture finalizer alone is not evidence
+of the shutdown contract unless the test also verifies the resulting state or
+signal.
+
+Rewrite: retain the per-test ownership and existing cleanup fixture, then add
+one deterministic startup assertion and one observable shutdown assertion at
+the seam that owns the resource.
+
 ## Auth Matrix Enumeration
 
 For Python web APIs, auth matrix enumeration applies when route handlers or
@@ -136,3 +169,6 @@ count as upgrade-path coverage.
 - Do not flag dependency overrides as mocks when the test's stated seam is app
   routing/model binding/auth pipeline and the override stands outside that
   seam.
+- Do not flag a client or resource as `python.I-HC-A3` when the project's
+  documented fixture demonstrably enters lifespan and owns teardown; that is
+  the positive shape described by `python.I-POS-4`.

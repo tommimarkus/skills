@@ -45,3 +45,12 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: linked for Java runner, test-double, container lifecycle, browser
   fixture, and mutation-tool facts; extension rules are original repo-authored
   quality heuristics and do not copy examples or prose.
+- Source: Python `asyncio` task and structured-concurrency documentation at
+  `https://docs.python.org/3/library/asyncio-task.html`, asynchronous context
+  manager semantics at
+  `https://docs.python.org/3/reference/datamodel.html#asynchronous-context-managers-and-async-with`,
+  pytest-asyncio guidance at `https://pytest-asyncio.readthedocs.io/`, and the
+  ASGI lifespan specification at `https://asgi.readthedocs.io/en/latest/specs/lifespan.html`.
+  Handling: linked for task completion/cancellation, async resource ownership,
+  and application startup/shutdown facts; Python extension rules are original
+  repo-authored quality heuristics and do not copy examples or prose.

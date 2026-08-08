@@ -44,6 +44,22 @@ lets pytest pass because no awaited assertion observes the result.
 Rewrite: use `pytest.mark.asyncio`, `IsolatedAsyncioTestCase`, or the project's
 async test runner and assert the awaited result.
 
+### `python.HC-7` — spawned async work finishes without join, cancellation, or observed outcome
+
+Applies to: unit
+
+Detection: the test starts background work with `asyncio.create_task`,
+`asyncio.ensure_future`, `loop.create_task`, or an equivalent task API, then
+lets the test finish without joining the task, cancelling and awaiting it, or
+observing its result, exception, completion signal, or published side effect.
+An assertion made before the spawned work can complete is the same smell even
+when the main coroutine is awaited.
+
+Rewrite: keep spawned work under the test's structured lifetime; await its
+handle and assert the observable outcome, or cancel it and await cancellation
+when cancellation is the contract. Do not rely on a clock or scheduler
+chance to make detached work finish.
+
 ## Framework-Specific Low-Confidence Smells
 
 ### `python.LC-3` — fixture parameterization hides expected values
@@ -80,6 +96,19 @@ Applies to: unit
 
 Detection: test uses a working fake, temporary path, fake clock, in-memory
 repository, or capture sink instead of interaction assertions on mocks.
+
+### `python.POS-6` — async completion or cancellation is observable
+
+Applies to: unit
+
+Detection: the test joins spawned work and asserts its result, exception,
+completion signal, or published side effect, or explicitly cancels and awaits
+the task while asserting the documented cancellation outcome. The evidence
+must be observable behavior rather than task creation or a sleep duration.
+
+Rewrite: keep the completion/cancellation assertion at the public behavior
+boundary and retain the project's existing fake-clock, fixture, and cleanup
+conventions.
 
 ## Carve-Outs
 
