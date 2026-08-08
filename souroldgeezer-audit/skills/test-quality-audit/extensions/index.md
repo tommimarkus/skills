@@ -19,7 +19,10 @@ Core signals:
   [[`../references/extensions/nextjs/core.md`](../references/extensions/nextjs/core.md)](../references/extensions/nextjs/core.md)
 - Python: `pyproject.toml`, pytest/unittest, Hypothesis, pytest-asyncio,
   Playwright Python, Selenium, Django, Flask, FastAPI, Starlette, SQLAlchemy, or
-  Alembic -> [[`../references/extensions/python/core.md`](../references/extensions/python/core.md)](../references/extensions/python/core.md)
+  Alembic -> [[`../references/extensions/python/core.md`](../references/extensions/python/core.md)](../references/extensions/python/core.md).
+  In Deep mode only, additionally load
+  [[`../references/extensions/python/deep.md`](../references/extensions/python/deep.md)](../references/extensions/python/deep.md);
+  Quick mode never loads it.
 - Robot Framework: `.robot`, `.resource`, `.tsv`, Robot packages, `robot`,
   `rebot`, `pabot`, or Robot XML / xUnit artifacts -> [[`../references/extensions/robotframework/core.md`](../references/extensions/robotframework/core.md)](../references/extensions/robotframework/core.md)
 - Rust: `Cargo.toml`, `Cargo.lock`, `rust-toolchain*`, `.cargo/config.toml`,

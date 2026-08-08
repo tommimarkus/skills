@@ -61,8 +61,9 @@ For each matched stack layer, resolve the selected addon beside that row's
 For Next.js, apply that selection once in the Node.js directory and once in the
 Next.js directory. Do not enumerate or load a whole stack directory.
 
-In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
-determinism, mutation); Quick mode never loads it.
+Quick mode loads only the matched stack's `core.md` and one selected rubric
+addon. In Deep mode only, also load the matched stack's `deep.md` (SUT
+enumeration, determinism, mutation); Quick mode never loads it.
 
 Load [`references/extensions/authoring.md`](references/extensions/authoring.md) only when editing extension structure.
 

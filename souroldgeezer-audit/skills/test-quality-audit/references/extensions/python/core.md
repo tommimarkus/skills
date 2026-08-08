@@ -1,9 +1,10 @@
 # Python Core Extension
 
 Loaded when Python test signals are present. This file owns Python detection,
-rubric routing, Python test-double semantics, shared smells, surface
-enumeration, determinism verification, and mutation-tool declaration. Load the
-matching rubric addon after `SKILL.md` step 0b.
+rubric routing, Python test-double semantics, shared smells, and carve-outs.
+Load the matching rubric addon after `SKILL.md` step 0b. Deep-mode procedures
+(SUT enumeration, determinism verification, and mutation guidance) live in
+[`deep.md`](deep.md).
 
 ## Detection Signals
 
@@ -155,93 +156,3 @@ factory fixture creates per-test owned state and cleans it up.
   public contract is filesystem behavior and the file tree is per-test owned.
 - Do not flag Hypothesis-generated examples as random-value smells when the
   assertion expresses an invariant over generated inputs.
-
-## SUT Surface Enumeration
-
-Python gap detection is approximate and deep-mode only.
-
-- **SUT identification:** inspect imports from the test package and project
-  metadata. Exclude `tests/`, `.venv/`, build artifacts, generated caches, and
-  migrations unless migration enumeration is active.
-- **`Gap-API`:** public functions/classes in non-test modules matching
-  `^def [a-zA-Z_][a-zA-Z0-9_]*\\(`, `^async def ...`, or `^class ...`, excluding
-  names starting `_`.
-- **`Gap-Route`:** decorators such as `@app.route`, `@router.get`,
-  `@router.post`, Django `path(...)`, `re_path(...)`.
-- **`Gap-Migration`:** Alembic revision files under `versions/` or Django
-  migration classes/files under `migrations/`.
-- **`Gap-Throw`:** `raise <ExceptionType>` in public functions or route
-  handlers.
-- **`Gap-Validate`:** Pydantic field constraints, dataclass validation,
-  Marshmallow schema fields, Django form/model validators, and explicit
-  request-schema validators.
-
-Cross-reference by symbol name, route string, migration revision/name, or
-exception type in test names, assertions, and bodies. Classify identifier-only,
-import-only, route-status-only, and valid-payload-only tests as
-`referenced-weak` or `referenced-incidental`; they do not suppress gaps for
-missing invalid, auth, boundary, throw, migration, or state-change behavior.
-Treat all static-only results as probable until mutation or manual review
-confirms them.
-
-## Determinism Verification
-
-Cheap rerun command for non-E2E scopes:
-
-```bash
-pytest -q --maxfail=1
-pytest -q --maxfail=1
-```
-
-Use only when the suite has fewer than 500 tests and the first run finishes
-under 60 seconds, or when the user opts in. Compare failing test node IDs
-between runs.
-
-## Mutation Tool
-
-### Tool name and link
-
-Mutmut: https://mutmut.readthedocs.io/
-
-### Install instructions
-
-```bash
-uv add --dev mutmut
-```
-
-or for non-uv projects:
-
-```bash
-python -m pip install mutmut
-```
-
-### Detection command
-
-```bash
-python -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('mutmut') else 1)"
-```
-
-### Run command
-
-```bash
-mutmut run
-mutmut results
-```
-
-If the project needs explicit source paths, use the project's documented mutmut
-configuration or `mutmut run --paths-to-mutate <package>`.
-
-### Known SUT limitations
-
-- Native extension modules and generated C bindings may not be safely mutated;
-  skip those modules and mutate the Python boundary around them.
-- Framework-heavy import side effects can make mutation runs fail before tests
-  start; extract pure logic into import-safe modules or configure mutmut paths.
-- E2E/browser targets are out of scope for mutation; mutate the application
-  package, not browser tests.
-
-### Output parser notes
-
-Capture the overall killed/survived/timeout summary from `mutmut results`.
-When JSON or JUnit output is configured by the project, prefer that machine
-output; otherwise report text-summary evidence and surviving mutant locations.

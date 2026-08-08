@@ -28,6 +28,31 @@
     ]
   },
   {
+    "id": "quick-python-unit",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/unit.md"
+    ]
+  },
+  {
+    "id": "deep-python-suite",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/audit-reference/materiality.md",
+      "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
+      "souroldgeezer-audit/docs/quality-reference/integration-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/deep.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/integration.md"
+    ]
+  },
+  {
     "id": "lean-audit-prose",
     "skill": "lean-audit",
     "files": [
