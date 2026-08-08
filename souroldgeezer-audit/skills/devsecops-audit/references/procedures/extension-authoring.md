@@ -32,6 +32,7 @@ Each extension file in `../../extensions/` is intentionally short. Required cont
 | `bicep.md` | `infra/**/*.bicep` | Azure IaC routing; Band 1/Band 2 `bicep.*` rules in docs |
 | `dockerfile.md` | `**/Dockerfile`, `**/docker-compose*.yml` | Container routing; full `docker.*` rules in docs |
 | `dotnet-security.md` | C# under `api/` `app/` `shared/` `tests/` | .NET security routing; full `dns.*` rules in docs |
+| `python-security.md` | `*.py`, Python handlers/jobs/CLIs, Python runtime/dependency files | Python security routing; full `pys.*` rules in docs |
 
 ## Cost Banding
 <!-- lean-audit:sync-intentional -->
