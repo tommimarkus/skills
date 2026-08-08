@@ -21,17 +21,62 @@ https://docs.python.org/3/reference/import.html, the Python Packaging User
 Guide https://packaging.python.org/, PEP 8 https://peps.python.org/pep-0008/,
 PEP 420 https://peps.python.org/pep-0420/, PEP 621
 https://peps.python.org/pep-0621/, PEP 723 https://peps.python.org/pep-0723/,
-and uv docs https://docs.astral.sh/uv/.
+PEP 561 https://peps.python.org/pep-0561/, the `asyncio` task and runner
+documentation https://docs.python.org/3/library/asyncio-task.html and
+https://docs.python.org/3/library/asyncio-runner.html, `contextvars`
+https://docs.python.org/3/library/contextvars.html, typing
+https://docs.python.org/3/library/typing.html, profiling
+https://docs.python.org/3/library/profile.html, and uv docs
+https://docs.astral.sh/uv/.
+
+First assimilate the project rather than importing a preferred Python shape:
+record the Python floor (`requires-python`, CI matrices, and runtime images),
+framework and execution model, package layout, existing sync/async and
+resource-lifetime conventions, public entrypoints, generated-code ownership,
+and the checks and tools the repository already documents. Treat `pyproject.toml`,
+lockfiles, task-runner configuration, and neighboring modules as evidence;
+run the project's checks or say which evidence is unavailable. If the project
+does not settle a choice, explain the forces and viable alternatives and make
+the smallest safe move. This is an assimilation step, not a mandate to adopt
+uv, a formatter, a type checker, or a particular framework.
 
 Inspect package layout (`src/` or flat, `__init__.py` re-exports, `__all__`,
 PEP 420 namespace packages), import graph and dependency direction,
 distribution surface (`[project]` metadata, extras, entry points, `py.typed`,
 wheel contents), ORM/schema/DTO/domain splits, entrypoints,
-packaging/lock/version pins, import-time behavior, generated code, async
-event-loop/executor ownership, `sys.path`, globals/caches, env reads,
-stdout/stderr, exit codes, subprocess argv/cwd/env/timeout, `PATH`
-resolution, and validation (`ruff`, mypy/pyright, `python -m py_compile`,
-import smoke, or a distribution build).
+packaging/lock/version pins, import-time behavior, generated code, `sys.path`,
+globals/caches, env reads, stdout/stderr, exit codes, subprocess
+argv/cwd/env/timeout, `PATH` resolution, and validation selected from the
+project's conventions (for example import smoke, `py_compile`, a distribution
+build, or its configured type/lint checks).
+
+For each file, socket, database session, HTTP client, stream, task group,
+executor, or other resource, identify the owner that creates it, bounds its
+lifetime, closes or cancels it, joins any child work, and reports failure.
+Use `SD-C-6` when spawned work is detached or cancellation has no owner; a
+context manager is evidence of ownership, not a required style. At every
+sync/async boundary, name the event-loop owner, any executor or thread/process
+pool owner, the blocking operation being crossed, and how cancellation and
+failure travel back. Do not assume `asyncio.to_thread`, an executor, or a
+background task is harmless merely because it avoids blocking the caller.
+Use `contextvars` for genuinely task/request-local ambient metadata only when
+the project needs that propagation; keep business state explicit when it
+crosses a boundary, and distinguish context-local state from thread-local,
+module-global, and process-global state. Apply the lifetime and cleanup test
+to all of them (`SD-C-4` where mutable state couples flows).
+
+Treat the distribution and typing surface as a contract: `py.typed`, public
+annotations, overloads, protocols, re-exports, and generated stubs all affect
+what consumers can rely on. Check that the package's declared and runtime
+surfaces agree and that type-only claims do not silently stand in for runtime
+validation; route HTTP schemas and API error contracts to `api-design`.
+Before recommending a performance change, establish the user-visible measure,
+capture a representative profile or other runtime evidence, and identify the
+owning boundary for the bottleneck. Optimize the smallest evidenced hot path,
+then re-measure; do not turn a profiler, benchmark, or tool choice into a
+style rule. If retries, timeouts, fallbacks, or exception translation cross
+layers, preserve their contract and name one owner: use core `SD-S-5` for
+collapsed failure meanings and `SD-Q-4` for stacked failure handling.
 
 Defaults: package and module boundaries follow ownership and policy; the
 distribution/import surface (`[project]` metadata, entry points, extras, and
@@ -44,9 +89,14 @@ codes/cwd/tools/paths are public contracts when other tooling depends on
 them; prefer stdlib unless a dependency removes more maintenance than it
 adds; a shipped `py.typed` makes the annotated public surface a contract.
 
-For Build mode, include `devsecops-audit` Quick review when available.
-Otherwise use `ruff check`, `mypy --strict`, `pyright`,
-`python -m py_compile`, import smoke, or a distribution build.
+For Build mode, include `devsecops-audit` Quick review when available. Route
+tests and test-quality claims to `test-quality-audit`; route HTTP/API contract
+work to `api-design`; and leave implementation style to the project's own
+conventions. Otherwise choose the project's available evidence, such as
+`python -m py_compile`, import smoke, a distribution build, or configured
+type/lint checks, and disclose unavailable checks rather than prescribing a
+tool. Async lifetime/error findings use the core `SD-C-6`, `SD-S-5`, and
+`SD-Q-4` codes; this extension adds no Python smell codes.
 
 Smell codes: `python.SD-B-*` for package/module/public-surface, entrypoint,
 top-level execution, cwd, import-time, or path-boundary drift;

@@ -85,3 +85,20 @@ isolation seams as ceremony with no counterweight. Retest: behavior evals
 `software-design-behavior-rust-legitimate-seam`. Merge back (retire `SD-B-5`
 into family prose and drop the guard) if fresh-agent reviews show no lift
 over core `SD-C-4`/`SD-W-1`.
+
+2026-08 Python project-first expansion: the prior Python extension named
+package/import and tooling surfaces but did not consistently make the project
+floor, framework execution model, resource lifetime, sync/async ownership,
+context-local state, public typing contract, or profiling evidence the first
+inspection step. The accepted extension rule adds those assimilation and
+decision prompts while reusing core `SD-C-4`, `SD-C-6`, `SD-S-5`, and `SD-Q-4`;
+it adds no Python smell codes. Retest: trigger cases
+`software-design-trigger-yes-python-async-boundaries` and
+`software-design-trigger-yes-python-public-contract`, plus behavior cases
+`software-design-behavior-python-project-first-assimilation`,
+`software-design-behavior-python-async-resource-ownership`,
+`software-design-behavior-python-context-local-state`, and
+`software-design-behavior-python-failure-and-performance-contracts`.
+Merge back (remove the extension detail) if fresh Python reviews show no lift
+over the core's ownership/error/performance guidance, or if project-first
+assimilation cannot improve decisions beyond generic advice.
