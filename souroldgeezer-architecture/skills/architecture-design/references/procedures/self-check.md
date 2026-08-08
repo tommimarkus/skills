@@ -1,9 +1,11 @@
 # Dediren Self-Check
 
 <!-- lean-audit:sync-intentional -->
-Before runtime claims, drive Dediren through the plugin's **bundled MCP server**:
-call its tools — `dediren_validate`, `dediren_build`, `dediren_guide` — never a
-CLI. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
+Before runtime claims, prefer the plugin's Dediren MCP adapter: call its tools —
+`dediren_validate`, `dediren_build`, `dediren_guide` — with an absolute
+`workspaceRoot` on every operation. The adapter is bundled; Dediren is not. It
+discovers the current host-managed `dediren` executable's live tools from `PATH`
+or `DEDIREN_COMMAND`. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
 own helper scripts (`build-gallery.py`, `svg-accessible-name.py`), not Dediren.
 Claude Code expands that token in the loaded SKILL.md. In Codex, reuse the
@@ -12,45 +14,36 @@ procedure shows `${CLAUDE_SKILL_DIR}`.
 
 ## Server availability
 
-The bundled server needs the pinned Java™-backed runtime on the host (Java™ 21 or
-newer) — exactly as a Node- or Python-based plugin MCP server needs its runtime
-installed. The launcher **resolves the pinned bundle on demand** at session start
-when the cache is cold, then starts the server. The resolve is bounded (the resolver
-caps curl with `--connect-timeout`/`--max-time` and the install lock with `flock -w`)
-so it can never hang session start, and it caches per-user under
-`${CLAUDE_PLUGIN_DATA}` in Claude Code, or the resolver's writable per-user/temp
-cache in Codex — at most one download per pinned version per user, not per repo.
-The Codex adapter discovers the installed launcher without changing directory,
-so Dediren keeps the caller's workspace as its `--root`. The fast path, when the
-bundle is already resolved, does no network I/O. The
-`dediren_*` tools are absent only when the resolve cannot complete (host offline) or
-Java™ 21+ is missing.
+The current Dediren CLI must already be executable in the MCP process sandbox.
+The plugin never downloads, pins, downgrades, or patches it. Claude Code launches
+the adapter from its manifest; Codex uses `mcp/codex.mcp.json`; Copilot uses the
+root `plugin.json` plus `mcp/copilot.mcp.json`. The router handles both the legacy
+`initialize` / `initialized` exchange and MCP 2026-07-28 stateless
+`server/discover`, obtains `tools/list` from the installed Dediren, and keeps one
+upstream process per explicit workspace root. A host sandbox therefore works when
+it permits this local stdio MCP process, the external executable, and the selected
+workspace; the adapter does not bypass host filesystem or network policy.
+Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
+`2026.07.28` or newer before rendering; this is a compatibility floor, not a pin.
 
 `dediren_validate` / `dediren_guide` plus the four read-only tools (`dediren_diff` /
 `dediren_query` / `dediren_verify` / `dediren_status`) are the read-only subset that
 a `dediren mcp --read-only` server keeps — only `dediren_build` is withheld — so
-Extract, Review, and Lookup work against a read-only server. The bundled server
+Extract, Review, and Lookup work against a read-only server. The plugin adapter
 runs full because Build needs `dediren_build`; the launcher never passes
 `--read-only` (architecture §9).
 
-When the tools are absent — resolve failed, Java™ 21+ missing, or the freshly-resolved
-server not yet reconnected this session — fall back to the **internal CLI lane**:
-the release resolver (below) provides the binary, and the same `build --package`
-and validate commands run through the CLI. This is internal machinery; the user never types a dediren command. Each lane
-caches outside the target repo tree: the launcher/MCP lane under `${CLAUDE_PLUGIN_DATA}`
-in Claude Code, and the Codex MCP plus CLI lanes under the per-user
-`${XDG_CACHE_HOME:-$HOME/.cache}`
-when writable, else a sandbox-writable temp dir (`${TMPDIR:-/tmp}`) — because
-`plugin.json` env vars do not reach Bash/shell-tool subprocesses, so the CLI resolver cannot
-read `${CLAUDE_PLUGIN_DATA}` and resolves its own default; Codex MCP fields likewise
-have no interpolated plugin-data value. A pin bump no longer strands
-the server: the launcher resolves the newly-pinned bundle itself at the next session start. Only when the
-fallback itself cannot resolve a Java™ 21+ runtime do you disclose `not run (dediren
-runtime unavailable)` and cap at `source-valid` — a capability cap, not a hard stop. Disclose which lane ran in the
-footer (`Dediren: MCP server | CLI fallback | not run`). Do not ask the user to
-install or launch Dediren; the plugin owns that.
+When the MCP tools are absent, use the **internal CLI lane** only if the same
+host-managed executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
+internal machinery; the user never has to retype the model command. Do not fetch
+or substitute a plugin-owned runtime. If neither MCP nor CLI can execute, disclose
+`not run (host-managed Dediren unavailable)` and cap at `source-valid` — a
+capability cap, not a hard stop. Disclose which lane ran in the footer
+(`Dediren: MCP server | CLI fallback | not run`) and identify the missing external
+prerequisite rather than fabricating a pass.
 
-Every tool path must resolve inside the server's `--root` (the project directory),
+Every tool call passes the same absolute project directory as `workspaceRoot`;
+every other tool path is relative to it and must remain inside that root,
 and so must every `fragments[]` path inside a source you pass. A path that escapes
 it returns a `DEDIREN_MCP_PATH_OUTSIDE_ROOT` error envelope — keep packages and
 their fragments under the project root.
@@ -61,8 +54,8 @@ their fragments under the project root.
 `dediren_validate` with the source path **and** `profile` set to the model's
 notation:
 
-- `dediren_validate {source: "<pkg>/model.json", profile: "archimate"}` for ArchiMate.
-- `dediren_validate {source: "<pkg>/model.json", profile: "uml"}` for UML.
+- `dediren_validate {workspaceRoot: "/abs/project", source: "<pkg>/model.json", profile: "archimate"}` for ArchiMate.
+- `dediren_validate {workspaceRoot: "/abs/project", source: "<pkg>/model.json", profile: "uml"}` for UML.
 
 The tool runs schema validation plus semantic-profile validation and returns the
 validation envelope; `dediren_validate` without a `profile` proves schema only. Use
@@ -71,10 +64,8 @@ to `archimate` or `uml` in the source, and add `archimate-oef` only when OEF exp
 is requested, `uml-xmi` only when XMI export is requested.
 
 When the MCP server is unavailable, run the same validation through the internal CLI
-lane (§ Server availability): resolve the binary with
-`DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"`
-(Codex: replace `${CLAUDE_SKILL_DIR}` with the resolved `<skill-dir>`), then
-`"$DEDIREN" validate --input <pkg>/model.json` for schema and
+lane (§ Server availability): set `DEDIREN="${DEDIREN_COMMAND:-dediren}"`, require
+that command to exist, then run `"$DEDIREN" validate --input <pkg>/model.json` for schema and
 `"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
 semantic gate. This is the same evidence, obtained without the server.
 
@@ -98,17 +89,14 @@ or handing off source JSON is imminent; a resolve-and-validate or review-only ch
 never needs it. When that point is reached, read the guide through the tool:
 
 ```
-dediren_guide {}                       # index of topics
-dediren_guide {topic: "source-json"}   # start here
+dediren_guide {workspaceRoot: "/abs/project"}                       # index
+dediren_guide {workspaceRoot: "/abs/project", topic: "source-json"} # start here
 ```
 
 Its topic scope (Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, Repair Rules) is stated in `architecture.md` §9. When running OEF or
-XMI export, follow the guide's schema-cache instructions. The export engines run
-in-process and inherit the server's environment; the plugin points
-`DEDIREN_SCHEMA_CACHE_DIR` at a writable `${CLAUDE_PLUGIN_DATA}` directory for
-Claude Code. In Codex the launcher derives a writable sibling of the resolver's
-effective releases cache, so the XSD download succeeds. If export still fails with
+XMI export, follow the installed Dediren guide's schema-cache instructions. The
+export engines inherit the host-managed Dediren environment. If export fails with
 `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
 `message`: it names whether to make that cache writable or to pre-fetch the XSDs and
 pass absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.
@@ -124,7 +112,8 @@ own render policy, plus the view- or model-scoped export lanes — and writes ea
 artifact **directly to the path `package.json` declares**. No staging dir, no path
 arithmetic, no per-view fan-out: the runtime owns the build graph.
 
-1. Call `dediren_build` with `package` set to the package's `package.json` path; add
+1. Call `dediren_build` with absolute `workspaceRoot` and `package` set to the
+   package's relative `package.json` path; add
    `no_export: true` to suppress the export lanes. `package` is mutually exclusive
    with the single-model arguments (`source` / `out` / `render_policy` /
    `oef_policy` / `xmi_policy` / `emit`).
@@ -139,8 +128,8 @@ arithmetic, no per-view fan-out: the runtime owns the build graph.
 When the MCP server is unavailable, build through the internal CLI lane:
 
 ```bash
-DEDIREN="$(${CLAUDE_SKILL_DIR}/references/scripts/dediren-release.sh --ensure)"
-# Codex: replace ${CLAUDE_SKILL_DIR} with the resolved absolute <skill-dir>.
+DEDIREN="${DEDIREN_COMMAND:-dediren}"
+command -v "$DEDIREN" >/dev/null 2>&1 || { printf 'Dediren unavailable\n' >&2; exit 127; }
 "$DEDIREN" build --package <pkg>/package.json      # or: "$DEDIREN" build <pkg>
 ```
 
@@ -240,6 +229,6 @@ missing adornment is `ARCH-R-2` plus a `Dediren tool issues` entry per
 `architecture.md` §9 — this content has dropped with every stage reporting
 `status: ok`, so envelope checks never prove it.
 
-The bundled release is an imported upstream Dediren artifact. Do not patch cached
-release files or future packaged bundles; report defects under `Dediren tool issues`
-per `architecture.md` §9.
+The selected Dediren executable is an independently managed upstream runtime.
+Do not patch, download, pin, or downgrade it from the plugin workflow; report
+defects under `Dediren tool issues` per `architecture.md` §9.

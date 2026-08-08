@@ -18,7 +18,7 @@ then recreate the export.
 ## Required fidelity disclosures
 
 An `ok` export envelope proves the command ran, not that the whole model
-survived: the pinned runtime keeps `status: ok` and declares any omission
+survived: the tested compatibility baseline keeps `status: ok` and declares any omission
 through `info` diagnostics. Read `.diagnostics[]`, compare the export content
 against package source, and disclose coverage in the footer's `Export readiness`
 qualifier (see [output-format](../output-format.md)):

@@ -32,7 +32,7 @@ RENDERED_SVG = (
     "</svg>\n"
 )
 # Out-of-support input: a render with no accessible name at all. Only reachable
-# from render output committed before 2026.07.28 — dediren-release.sh refuses to
+# from render output committed before 2026.07.28 — the documented support floor refuses to
 # resolve such a runtime now, but this step takes a file path, not a runtime.
 UNNAMED_SVG = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'

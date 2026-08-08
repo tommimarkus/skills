@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Smoke-test the installed Claude Code and Codex plugin surfaces in fresh state.
+"""Smoke-test installed Claude Code, Codex, and Copilot plugin surfaces.
 
 The command deliberately uses temporary ``CODEX_HOME`` and
-``CLAUDE_CONFIG_DIR`` directories. It never changes ``HOME`` and fingerprints
-the normal plugin/config control planes before and after the run.
+``CLAUDE_CONFIG_DIR``, ``COPILOT_HOME``, and ``COPILOT_CACHE_HOME`` directories.
+It never changes ``HOME`` and fingerprints the normal plugin/config control
+planes before and after the run.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 MARKETPLACE = "souroldgeezer"
-EXPECTED_DEDIREN_TOOLS = {
+REQUIRED_DEDIREN_TOOLS = {
     "dediren_build",
     "dediren_diff",
     "dediren_guide",
@@ -50,6 +51,7 @@ class PluginExpectation:
     name: str
     claude_version: str
     codex_version: str
+    copilot_version: str | None
     skills: tuple[str, ...]
     agents: tuple[str, ...]
 
@@ -61,6 +63,7 @@ class SmokeSummary:
     agents: int
     codex_validator: str
     dediren_tools: int
+    copilot_skills: int
 
 
 # lean-audit:dup-intentional:begin -- the injected runner deliberately mirrors
@@ -211,7 +214,26 @@ def load_expectations(repo: Path) -> list[PluginExpectation]:
             sorted(path.parent.name for path in skills_dir.glob("*/SKILL.md") if path.is_file())
         )
         agents = tuple(sorted(path.stem for path in agents_dir.glob("*.md") if path.is_file()))
-        expectations.append(PluginExpectation(name, claude_version, codex_version, skills, agents))
+        copilot_path = plugin_dir / "plugin.json"
+        copilot_version: str | None = None
+        if copilot_path.is_file():
+            copilot_manifest = read_json(copilot_path)
+            value = copilot_manifest.get("version")
+            if not isinstance(value, str):
+                raise SmokeFailure(f"Copilot manifest must declare a version for {name}")
+            if semantic_version(value) != semantic_version(claude_version):
+                raise SmokeFailure(f"Copilot manifest version differs semantically for {name}")
+            copilot_version = value
+        expectations.append(
+            PluginExpectation(
+                name,
+                claude_version,
+                codex_version,
+                copilot_version,
+                skills,
+                agents,
+            )
+        )
 
     skill_count = sum(len(expectation.skills) for expectation in expectations)
     if skill_count != 15:
@@ -257,6 +279,12 @@ def default_profile_control_paths(env: Mapping[str, str]) -> tuple[Path, ...]:
     home = Path.home()
     codex_root = Path(env.get("CODEX_HOME", home / ".codex")).expanduser()
     claude_root = Path(env.get("CLAUDE_CONFIG_DIR", home / ".claude")).expanduser()
+    copilot_root = Path(env.get("COPILOT_HOME", home / ".copilot")).expanduser()
+    if "COPILOT_CACHE_HOME" in env:
+        copilot_marketplaces = Path(env["COPILOT_CACHE_HOME"]).expanduser() / "marketplaces"
+    else:
+        cache_home = Path(env.get("XDG_CACHE_HOME", home / ".cache")).expanduser()
+        copilot_marketplaces = cache_home / "copilot" / "marketplaces"
     claude_config = (
         claude_root / ".claude.json" if "CLAUDE_CONFIG_DIR" in env else home / ".claude.json"
     )
@@ -269,6 +297,11 @@ def default_profile_control_paths(env: Mapping[str, str]) -> tuple[Path, ...]:
         claude_root / "settings.json",
         claude_root / "settings.local.json",
         claude_root / "plugins",
+        copilot_root / "config.json",
+        copilot_root / "settings.json",
+        copilot_root / "installed-plugins",
+        copilot_root / "plugin-data",
+        copilot_marketplaces,
     )
 
 
@@ -344,6 +377,21 @@ def run_mcp_session(
         },
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "server/discover",
+            "params": {
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientInfo": {
+                        "name": "runtime-host-smoke",
+                        "version": "1",
+                    },
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                }
+            },
+        },
     ]
     input_text = "".join(json.dumps(request) + "\n" for request in requests)
     result = checked(
@@ -364,7 +412,7 @@ def run_mcp_session(
             continue
         if isinstance(message, dict) and isinstance(message.get("id"), int):
             responses[message["id"]] = message
-    if set(responses) != {1, 2}:
+    if set(responses) != {1, 2, 3}:
         raise SmokeFailure(
             f"{label} Dediren adapter omitted JSON-RPC responses; "
             f"ids={sorted(responses)}, stderr={result.stderr[-2000:]}"
@@ -379,11 +427,24 @@ def run_mcp_session(
         name = tool.get("name")
         if isinstance(name, str):
             names.add(name)
-    if names != EXPECTED_DEDIREN_TOOLS:
+        schema = tool.get("inputSchema")
+        if not isinstance(schema, dict):
+            raise SmokeFailure(f"{label} Dediren tool {name} omitted inputSchema")
+        properties = schema.get("properties")
+        required = schema.get("required")
+        if not isinstance(properties, dict) or "workspaceRoot" not in properties:
+            raise SmokeFailure(f"{label} Dediren tool {name} omitted workspaceRoot")
+        if not isinstance(required, list) or "workspaceRoot" not in required:
+            raise SmokeFailure(f"{label} Dediren tool {name} did not require workspaceRoot")
+    missing = REQUIRED_DEDIREN_TOOLS - names
+    if missing:
         raise SmokeFailure(
-            f"{label} Dediren tools differ: "
-            f"expected={sorted(EXPECTED_DEDIREN_TOOLS)}, actual={sorted(names)}"
+            f"{label} Dediren omitted required tools: "
+            f"missing={sorted(missing)}, actual={sorted(names)}"
         )
+    discovery = responses[3].get("result", {})
+    if "2026-07-28" not in discovery.get("supportedVersions", []):
+        raise SmokeFailure(f"{label} Dediren adapter omitted stateless protocol discovery")
     return names
 
 
@@ -392,6 +453,15 @@ def expand_claude(value: str, *, plugin_root: Path, plugin_data: Path, project: 
         value.replace("${CLAUDE_PLUGIN_ROOT}", str(plugin_root))
         .replace("${CLAUDE_PLUGIN_DATA}", str(plugin_data))
         .replace("${CLAUDE_PROJECT_DIR}", str(project))
+    )
+
+
+def expand_copilot(value: str, *, plugin_root: Path, plugin_data: Path) -> str:
+    return (
+        value.replace("${PLUGIN_ROOT}", str(plugin_root))
+        .replace("${COPILOT_PLUGIN_ROOT}", str(plugin_root))
+        .replace("${COPILOT_PLUGIN_DATA}", str(plugin_data))
+        .replace("${CLAUDE_PLUGIN_DATA}", str(plugin_data))
     )
 
 
@@ -452,9 +522,13 @@ def run_host_smoke(
 
     codex_home = state_root / "codex-home"
     claude_config = state_root / "claude-config"
+    copilot_home = state_root / "copilot-home"
+    copilot_cache = state_root / "copilot-cache"
     runtime_data = state_root / "runtime-data"
     codex_home.mkdir()
     claude_config.mkdir()
+    copilot_home.mkdir()
+    copilot_cache.mkdir()
     runtime_data.mkdir()
 
     codex_env = env.copy()
@@ -464,6 +538,16 @@ def run_host_smoke(
     claude_env = env.copy()
     claude_env["CLAUDE_CONFIG_DIR"] = str(claude_config)
     claude_env.pop("CODEX_HOME", None)
+    claude_env.pop("COPILOT_HOME", None)
+    claude_env.pop("COPILOT_CACHE_HOME", None)
+    copilot_env = env.copy()
+    copilot_env["COPILOT_HOME"] = str(copilot_home)
+    copilot_env["COPILOT_CACHE_HOME"] = str(copilot_cache)
+    copilot_env.pop("CODEX_HOME", None)
+    copilot_env.pop("CLAUDE_CONFIG_DIR", None)
+    copilot_env.pop("CLAUDE_PROJECT_DIR", None)
+    codex_env.pop("COPILOT_HOME", None)
+    codex_env.pop("COPILOT_CACHE_HOME", None)
 
     expectations = load_expectations(repo)
     pending: BaseException | None = None
@@ -471,6 +555,7 @@ def run_host_smoke(
     try:
         checked(runner, ["codex", "--version"], cwd=repo, env=codex_env)
         checked(runner, ["claude", "--version"], cwd=repo, env=claude_env)
+        checked(runner, ["copilot", "--version"], cwd=repo, env=copilot_env)
 
         codex_add_marketplace = checked_json(
             runner,
@@ -631,6 +716,63 @@ def run_host_smoke(
             for expectation in expectations
             if expectation.name == "souroldgeezer-architecture"
         )
+        if architecture.copilot_version is None:
+            raise SmokeFailure("architecture plugin omitted its native Copilot manifest")
+        checked(
+            runner,
+            ["copilot", "plugin", "marketplace", "add", str(repo)],
+            cwd=repo,
+            env=copilot_env,
+        )
+        checked(
+            runner,
+            [
+                "copilot",
+                "plugin",
+                "install",
+                f"{architecture.name}@{MARKETPLACE}",
+            ],
+            cwd=repo,
+            env=copilot_env,
+        )
+        copilot_list = checked(
+            runner,
+            ["copilot", "plugin", "list"],
+            cwd=repo,
+            env=copilot_env,
+        ).stdout
+        copilot_marker = (
+            f"{architecture.name}@{MARKETPLACE} (v{architecture.copilot_version})"
+        )
+        if copilot_marker not in copilot_list:
+            raise SmokeFailure(f"Copilot plugin list omitted {copilot_marker}")
+        copilot_arch_root = (
+            copilot_home / "installed-plugins" / MARKETPLACE / architecture.name
+        )
+        assert_installed_skills(copilot_arch_root, architecture, state_root, "Copilot")
+        copilot_manifest = read_json(copilot_arch_root / "plugin.json")
+        if copilot_manifest.get("version") != architecture.copilot_version:
+            raise SmokeFailure("Copilot installed architecture plugin at the wrong version")
+        copilot_mcp_list = checked_json(
+            runner,
+            ["copilot", "mcp", "list", "--json"],
+            cwd=repo,
+            env=copilot_env,
+            label="copilot mcp list",
+        )
+        copilot_servers = copilot_mcp_list.get("mcpServers")
+        if not isinstance(copilot_servers, dict):
+            raise SmokeFailure("Copilot MCP list omitted mcpServers")
+        copilot_server = copilot_servers.get("dediren")
+        if not isinstance(copilot_server, dict):
+            raise SmokeFailure("installed Copilot plugin omitted the Dediren adapter")
+        if copilot_server.get("sourcePlugin") != architecture.name:
+            raise SmokeFailure("Copilot loaded Dediren from the wrong plugin")
+        if copilot_server.get("sourcePluginVersion") != architecture.copilot_version:
+            raise SmokeFailure("Copilot loaded Dediren from the wrong plugin version")
+        if "codex plugin" in json.dumps(copilot_server):
+            raise SmokeFailure("Copilot incorrectly loaded the Codex MCP bootstrap")
+
         codex_arch_root = codex_installs[architecture.name]
         codex_manifest = read_json(codex_arch_root / ".codex-plugin" / "plugin.json")
         codex_mcp_path = codex_arch_root / str(codex_manifest.get("mcpServers", "")).removeprefix(
@@ -641,8 +783,6 @@ def run_host_smoke(
         if not isinstance(codex_server, dict):
             raise SmokeFailure("installed Codex plugin omitted the Dediren adapter")
         codex_mcp_env = codex_env.copy()
-        codex_mcp_env["DEDIREN_CACHE_DIR"] = str(runtime_data / "dediren" / "releases")
-        codex_mcp_env["DEDIREN_SCHEMA_CACHE_DIR"] = str(runtime_data / "dediren" / "schema-cache")
         codex_tools = mcp_runner(
             [codex_server["command"], *codex_server.get("args", [])],
             cwd=repo,
@@ -690,7 +830,41 @@ def run_host_smoke(
             env=claude_mcp_env,
             label="Claude",
         )
-        if codex_tools != claude_tools:
+        copilot_plugin_data = runtime_data / "copilot" / architecture.name
+        copilot_mcp_env = copilot_env.copy()
+        for key, value in copilot_server.get("env", {}).items():
+            copilot_mcp_env[key] = expand_copilot(
+                value,
+                plugin_root=copilot_arch_root,
+                plugin_data=copilot_plugin_data,
+            )
+        copilot_command = expand_copilot(
+            copilot_server["command"],
+            plugin_root=copilot_arch_root,
+            plugin_data=copilot_plugin_data,
+        )
+        copilot_args = [
+            expand_copilot(
+                value,
+                plugin_root=copilot_arch_root,
+                plugin_data=copilot_plugin_data,
+            )
+            for value in copilot_server.get("args", [])
+        ]
+        copilot_cwd = Path(
+            expand_copilot(
+                copilot_server.get("cwd", str(repo)),
+                plugin_root=copilot_arch_root,
+                plugin_data=copilot_plugin_data,
+            )
+        )
+        copilot_tools = mcp_runner(
+            [copilot_command, *copilot_args],
+            cwd=copilot_cwd,
+            env=copilot_mcp_env,
+            label="Copilot",
+        )
+        if not codex_tools == claude_tools == copilot_tools:
             raise SmokeFailure("Dediren tool surfaces differ across host adapters")
 
         summary = SmokeSummary(
@@ -699,6 +873,7 @@ def run_host_smoke(
             agents=sum(len(expectation.agents) for expectation in expectations),
             codex_validator=codex_validator,
             dediren_tools=len(codex_tools),
+            copilot_skills=len(architecture.skills),
         )
     except BaseException as exc:
         pending = exc
@@ -743,7 +918,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    for executable in ("codex", "claude"):
+    for executable in ("codex", "claude", "copilot"):
         if shutil.which(executable) is None:
             print(f"Error: required CLI is not installed: {executable}", file=sys.stderr)
             return 2
@@ -758,12 +933,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print(f"PASS: isolated installs: {summary.plugins} plugins, {summary.skills} shared skills")
     print(f"PASS: Claude installed component discovery: {summary.agents} agent definitions")
+    print(f"PASS: Copilot installed skill discovery: {summary.copilot_skills} shared skill")
     if summary.codex_validator.startswith("skipped:"):
         print(f"SKIP: {summary.codex_validator.removeprefix('skipped: ')}")
     else:
         print("PASS: Codex first-party plugin validation")
     print(f"PASS: Dediren JSON-RPC parity: {summary.dediren_tools} tools per host adapter")
-    print("PASS: normal Codex and Claude plugin/config profiles unchanged")
+    print("PASS: normal Codex, Claude, and Copilot plugin/config profiles unchanged")
     print("Runtime host smoke OK")
     return 0
 # lean-audit:dup-intentional:end

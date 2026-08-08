@@ -87,6 +87,11 @@ def _write_plugin_manifest(root: Path, plugin: str, version: str) -> None:
         json.dumps({"name": plugin, "version": vs.codex_version(version)}, indent=2) + "\n",
         encoding="utf-8",
     )
+    if plugin == "souroldgeezer-architecture":
+        (root / plugin / "plugin.json").write_text(
+            json.dumps({"name": plugin, "version": vs.codex_version(version)}, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
 
 def _seed_committed_manifest(root: Path, version: str = "2026.06.3") -> None:

@@ -28,13 +28,15 @@ def write_manifest(path: Path, manifest: dict) -> None:
     path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
-def write_mcp_config(plugin: Path, servers: dict) -> None:
-    (plugin / ".mcp.json").write_text(json.dumps(servers, indent=2), encoding="utf-8")
+def write_mcp_config(plugin: Path, servers: dict, relative: str = "mcp/codex.mcp.json") -> None:
+    path = plugin / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(servers, indent=2), encoding="utf-8")
 
 
 def add_mcp_packaging(repo: Path) -> None:
     """Give the clean fixture a bundled MCP server in the shape each host documents:
-    Claude an inline `mcpServers` object, Codex a path to a plugin-root config file.
+    Claude an inline object, with distinct file-backed Codex and Copilot adapters.
 
     Both point at the same launcher on purpose — that shared file existing is
     exactly the evidence that must NOT be read as proof either host registered it.
@@ -53,7 +55,7 @@ def add_mcp_packaging(repo: Path) -> None:
 
     codex_path = plugin / ".codex-plugin" / "plugin.json"
     codex = read_manifest(codex_path)
-    codex["mcpServers"] = "./.mcp.json"
+    codex["mcpServers"] = "./mcp/codex.mcp.json"
     write_manifest(codex_path, codex)
 
     write_mcp_config(
@@ -66,6 +68,30 @@ def add_mcp_packaging(repo: Path) -> None:
                 "startup_timeout_sec": 180,
             }
         },
+    )
+
+    codex_version = codex["version"]
+    write_manifest(
+        plugin / "plugin.json",
+        {
+            "name": EXAMPLE_PLUGIN,
+            "version": codex_version,
+            "description": claude["description"],
+            "skills": "./skills/",
+            "mcpServers": "./mcp/copilot.mcp.json",
+        },
+    )
+    write_mcp_config(
+        plugin,
+        {
+            "example": {
+                "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                "args": [],
+                "tools": ["*"],
+                "env": {"EXAMPLE_CACHE_DIR": "${COPILOT_PLUGIN_DATA}/example"},
+            }
+        },
+        "mcp/copilot.mcp.json",
     )
 
     launcher = plugin / EXAMPLE_LAUNCHER
@@ -463,7 +489,7 @@ class RuntimeMetadataParityTest(unittest.TestCase):
 
         self._assert_mcp_fixture_flags(
             use_claude_token_in_codex_config,
-            f"{EXAMPLE_PLUGIN}/.mcp.json",
+            f"{EXAMPLE_PLUGIN}/mcp/codex.mcp.json",
             "mcpServers.example.command",
             "${CLAUDE_PLUGIN_ROOT}",
         )
@@ -537,6 +563,17 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "mcpServers:names",
             "example",
             "renamed",
+        )
+
+    def test_copilot_mcp_registration_is_required_for_an_mcp_plugin(self) -> None:
+        def drop_copilot_manifest(repo: Path) -> None:
+            (repo / EXAMPLE_PLUGIN / "plugin.json").unlink()
+
+        self._assert_mcp_fixture_flags(
+            drop_copilot_manifest,
+            f"{EXAMPLE_PLUGIN}/plugin.json",
+            "Copilot config-file path",
+            "missing",
         )
 
     def make_clean_fixture(self, repo: Path, plugin_name: str = EXAMPLE_PLUGIN) -> None:

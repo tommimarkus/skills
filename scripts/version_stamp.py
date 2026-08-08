@@ -5,9 +5,9 @@ The Claude ``plugin.json#version`` remains the release authority (Claude Code
 always resolves the plugin.json value over a marketplace-entry copy without
 warning, so a stale marketplace copy is a silent drift risk — see CLAUDE.md
 "Plugin versioning (MUST)"). The root README mirrors its zero-padded CalVer;
-the additive Codex manifest mirrors the same semantic version with the month
-normalized for strict SemVer. Marketplace ``plugins[]`` entries never carry a
-``version`` key.
+the additive Codex manifest and any native Copilot manifest mirror the same
+semantic version with the month normalized for strict SemVer. Marketplace
+``plugins[]`` entries never carry a ``version`` key.
 
 Two stdlib-only responsibilities:
 
@@ -16,7 +16,7 @@ Two stdlib-only responsibilities:
   the within-month micro counter is a real main-line sequence number, not a
   value guessed against a stale worktree base.
 - ``guard``: at the end of worktree / feature-branch work, fail if the branch
-  touched either version cell, or if any marketplace entry (re)introduces a
+  touched an existing mirrored version cell, or if any marketplace entry (re)introduces a
   ``version`` key. Under the worktree-deferred rule the stamp belongs to the
   ``main`` integration commit, not the feature branch.
 """
@@ -151,8 +151,8 @@ def read_readme_versions(text: str) -> dict[str, str]:
 
 
 def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
-    """The three mirrored version cells at ``ref``: both runtime manifests and
-    each plugin's README.md version-table cell. Marketplace
+    """The mirrored version cells at ``ref``: runtime manifests and each
+    plugin's README.md version-table cell. Marketplace
     entries are deliberately excluded — see ``marketplace_version_offenders``."""
     versions: dict[str, str] = {}
     for plugin in PLUGINS:
@@ -166,6 +166,13 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
         if codex_text is not None:
             try:
                 versions[codex_rel] = json.loads(codex_text)["version"]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
+        copilot_rel = f"{plugin}/plugin.json"
+        copilot_text = _git_show(repo_root, ref, copilot_rel)
+        if copilot_text is not None:
+            try:
+                versions[copilot_rel] = json.loads(copilot_text)["version"]
             except (json.JSONDecodeError, KeyError, TypeError):
                 pass
     readme_text = _git_show(repo_root, ref, "README.md")

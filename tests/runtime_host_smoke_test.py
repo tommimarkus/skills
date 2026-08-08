@@ -24,18 +24,24 @@ class FakeCliRunner:
         self.calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
         self.codex_installs: dict[str, Path] = {}
         self.claude_installs: dict[str, Path] = {}
+        self.copilot_installs: dict[str, Path] = {}
 
     @staticmethod
     def completed(argv, stdout: str = "", stderr: str = "", returncode: int = 0):
         return subprocess.CompletedProcess(list(argv), returncode, stdout, stderr)
 
     def install(self, host: str, name: str, root: Path) -> tuple[Path, str]:
-        manifest_dir = ".codex-plugin" if host == "codex" else ".claude-plugin"
-        manifest = json.loads(
-            (self.repo / name / manifest_dir / "plugin.json").read_text(encoding="utf-8")
-        )
+        if host == "copilot":
+            manifest_path = self.repo / name / "plugin.json"
+        else:
+            manifest_dir = ".codex-plugin" if host == "codex" else ".claude-plugin"
+            manifest_path = self.repo / name / manifest_dir / "plugin.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         version = manifest["version"]
-        destination = root / "plugins" / "cache" / smoke.MARKETPLACE / name / version
+        if host == "copilot":
+            destination = root / "installed-plugins" / smoke.MARKETPLACE / name
+        else:
+            destination = root / "plugins" / "cache" / smoke.MARKETPLACE / name / version
         shutil.copytree(self.repo / name, destination)
         return destination, version
 
@@ -57,6 +63,8 @@ class FakeCliRunner:
             return self.completed(args, "codex-cli 99.0.0\n")
         if args == ("claude", "--version"):
             return self.completed(args, "99.0.0 (Claude Code)\n")
+        if args == ("copilot", "--version"):
+            return self.completed(args, "GitHub Copilot CLI 99.0.0\n")
 
         if args[:4] == ("codex", "plugin", "marketplace", "add"):
             root = Path(child_env["CODEX_HOME"])
@@ -156,6 +164,39 @@ class FakeCliRunner:
             )
             return self.completed(args, details)
 
+        if args[:4] == ("copilot", "plugin", "marketplace", "add"):
+            root = Path(child_env["COPILOT_HOME"])
+            root.mkdir(parents=True, exist_ok=True)
+            (root / "config.json").write_text("{}\n", encoding="utf-8")
+            return self.completed(args, f'Marketplace "{smoke.MARKETPLACE}" added successfully.\n')
+        if args[:3] == ("copilot", "plugin", "install"):
+            name = args[3].split("@", 1)[0]
+            path, _ = self.install("copilot", name, Path(child_env["COPILOT_HOME"]))
+            self.copilot_installs[name] = path
+            return self.completed(args, f'Plugin "{name}" installed successfully. Installed 1 skill.\n')
+        if args == ("copilot", "plugin", "list"):
+            lines = ["Installed plugins:"]
+            for name, path in self.copilot_installs.items():
+                manifest = json.loads((path / "plugin.json").read_text(encoding="utf-8"))
+                lines.append(f"  • {name}@{smoke.MARKETPLACE} (v{manifest['version']})")
+            return self.completed(args, "\n".join(lines) + "\n")
+        if args == ("copilot", "mcp", "list", "--json"):
+            architecture = self.copilot_installs["souroldgeezer-architecture"]
+            manifest = json.loads((architecture / "plugin.json").read_text(encoding="utf-8"))
+            mcp_path = architecture / manifest["mcpServers"].removeprefix("./")
+            server = json.loads(mcp_path.read_text(encoding="utf-8"))["dediren"]
+            server["env"] = {
+                **server.get("env", {}),
+                "CLAUDE_PLUGIN_ROOT": str(architecture),
+                "COPILOT_PLUGIN_ROOT": str(architecture),
+                "PLUGIN_ROOT": str(architecture),
+            }
+            server["sourcePlugin"] = "souroldgeezer-architecture"
+            server["sourcePluginVersion"] = manifest["version"]
+            server["source"] = "plugin"
+            server["enabled"] = True
+            return self.completed(args, json.dumps({"mcpServers": {"dediren": server}}))
+
         return self.completed(args, stderr=f"unexpected fake CLI call: {args}", returncode=64)
 
 
@@ -198,17 +239,20 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             state.mkdir()
             normal_codex = root / "normal-codex"
             normal_claude = root / "normal-claude"
+            normal_copilot = root / "normal-copilot"
             normal_codex.mkdir()
             normal_claude.mkdir()
+            normal_copilot.mkdir()
             (normal_codex / "config.toml").write_text("model = 'unchanged'\n", encoding="utf-8")
             (normal_claude / ".claude.json").write_text("{}\n", encoding="utf-8")
+            (normal_copilot / "config.json").write_text("{}\n", encoding="utf-8")
 
             fake = FakeCliRunner(REPO_ROOT)
             mcp_calls = []
 
             def fake_mcp(argv, *, cwd, env, label):
                 mcp_calls.append((tuple(argv), cwd, dict(env), label))
-                return set(smoke.EXPECTED_DEDIREN_TOOLS)
+                return set(smoke.REQUIRED_DEDIREN_TOOLS)
 
             base_env = os.environ.copy()
             original_home = base_env.get("HOME")
@@ -223,15 +267,19 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     normal_codex / "plugins",
                     normal_claude / ".claude.json",
                     normal_claude / "plugins",
+                    normal_copilot / "config.json",
+                    normal_copilot / "installed-plugins",
                 ),
             )
 
             self.assertEqual(summary.plugins, 5)
             self.assertEqual(summary.skills, 15)
             self.assertEqual(summary.dediren_tools, 7)
+            self.assertEqual(summary.copilot_skills, 1)
             self.assertIn("no plugin validate command", summary.codex_validator)
             self.assertEqual((normal_codex / "config.toml").read_text(), "model = 'unchanged'\n")
             self.assertEqual((normal_claude / ".claude.json").read_text(), "{}\n")
+            self.assertEqual((normal_copilot / "config.json").read_text(), "{}\n")
 
             for argv, child_env in fake.calls:
                 self.assertEqual(child_env.get("HOME"), original_home, argv)
@@ -243,15 +291,21 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                         child_env["CLAUDE_CONFIG_DIR"], str(state / "claude-config"), argv
                     )
                     self.assertNotIn("CODEX_HOME", child_env, argv)
+                if argv[0] == "copilot":
+                    self.assertEqual(child_env["COPILOT_HOME"], str(state / "copilot-home"), argv)
+                    self.assertEqual(
+                        child_env["COPILOT_CACHE_HOME"], str(state / "copilot-cache"), argv
+                    )
+                    self.assertNotIn("CODEX_HOME", child_env, argv)
+                    self.assertNotIn("CLAUDE_CONFIG_DIR", child_env, argv)
 
-            self.assertEqual([call[3] for call in mcp_calls], ["Codex", "Claude"])
+            self.assertEqual([call[3] for call in mcp_calls], ["Codex", "Claude", "Copilot"])
             self.assertEqual(mcp_calls[0][0][0], "bash")
             self.assertTrue(mcp_calls[1][0][0].endswith("/dediren-mcp.sh"))
-            for _, cwd, child_env, _ in mcp_calls:
-                self.assertEqual(cwd, REPO_ROOT)
-                self.assertTrue(
-                    Path(child_env["DEDIREN_CACHE_DIR"]).is_relative_to(state), child_env
-                )
+            self.assertTrue(mcp_calls[2][0][0].endswith("/dediren-mcp.sh"))
+            self.assertEqual(mcp_calls[0][1], REPO_ROOT)
+            self.assertEqual(mcp_calls[1][1], REPO_ROOT)
+            self.assertEqual(mcp_calls[2][1], REPO_ROOT)
 
     def test_profile_control_plane_mutation_fails_even_when_hosts_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -266,7 +320,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                 del argv, cwd, env
                 if label == "Claude":
                     normal.write_text("changed\n", encoding="utf-8")
-                return set(smoke.EXPECTED_DEDIREN_TOOLS)
+                return set(smoke.REQUIRED_DEDIREN_TOOLS)
 
             with self.assertRaisesRegex(smoke.SmokeFailure, "normal profile control plane changed"):
                 smoke.run_host_smoke(
@@ -277,7 +331,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     normal_profile_paths=(normal,),
                 )
 
-    def test_json_rpc_session_requires_the_exact_seven_tool_surface(self) -> None:
+    def test_json_rpc_session_requires_the_core_tool_surface(self) -> None:
         requests = []
 
         def fake_runner(argv, *, cwd, env, input_text=None, timeout=120):
@@ -289,8 +343,23 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     "jsonrpc": "2.0",
                     "id": 2,
                     "result": {
-                        "tools": [{"name": name} for name in sorted(smoke.EXPECTED_DEDIREN_TOOLS)]
+                        "tools": [
+                            {
+                                "name": name,
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {"workspaceRoot": {"type": "string"}},
+                                    "required": ["workspaceRoot"],
+                                },
+                            }
+                            for name in sorted(smoke.REQUIRED_DEDIREN_TOOLS)
+                        ]
                     },
+                },
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "result": {"supportedVersions": ["2026-07-28"]},
                 },
             ]
             return subprocess.CompletedProcess(
@@ -305,13 +374,13 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             label="fake",
         )
 
-        self.assertEqual(actual, smoke.EXPECTED_DEDIREN_TOOLS)
+        self.assertEqual(actual, smoke.REQUIRED_DEDIREN_TOOLS)
         self.assertEqual(
             [request.get("method") for request in requests],
-            ["initialize", "notifications/initialized", "tools/list"],
+            ["initialize", "notifications/initialized", "tools/list", "server/discover"],
         )
 
-    def test_json_rpc_session_rejects_tool_surface_drift(self) -> None:
+    def test_json_rpc_session_accepts_newer_dediren_tools(self) -> None:
         def fake_runner(argv, *, cwd, env, input_text=None, timeout=120):
             del cwd, env, input_text, timeout
             responses = [
@@ -321,24 +390,36 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     "id": 2,
                     "result": {
                         "tools": [
-                            {"name": name}
-                            for name in sorted(smoke.EXPECTED_DEDIREN_TOOLS | {"unexpected_tool"})
+                            {
+                                "name": name,
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {"workspaceRoot": {"type": "string"}},
+                                    "required": ["workspaceRoot"],
+                                },
+                            }
+                            for name in sorted(smoke.REQUIRED_DEDIREN_TOOLS | {"new_tool"})
                         ]
                     },
+                },
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "result": {"supportedVersions": ["2026-07-28"]},
                 },
             ]
             return subprocess.CompletedProcess(
                 list(argv), 0, "\n".join(json.dumps(item) for item in responses), ""
             )
 
-        with self.assertRaisesRegex(smoke.SmokeFailure, "Dediren tools differ"):
-            smoke.run_mcp_session(
-                ["fake-dediren"],
-                cwd=REPO_ROOT,
-                env=os.environ,
-                runner=fake_runner,
-                label="fake",
-            )
+        actual = smoke.run_mcp_session(
+            ["fake-dediren"],
+            cwd=REPO_ROOT,
+            env=os.environ,
+            runner=fake_runner,
+            label="fake",
+        )
+        self.assertIn("new_tool", actual)
 
     def test_command_requires_both_safety_flags(self) -> None:
         with redirect_stderr(StringIO()):

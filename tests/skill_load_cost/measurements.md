@@ -179,11 +179,11 @@ release bundle) for every non-Lookup mode. After #66:
   needs (per the step-1 map), not the whole file. The token proxy reads whole
   files, so the scenario totals above list `architecture.md` at full size — an
   upper bound; the real per-use read is the section subset.
-- The **bundle agent guide** (`dediren-release.sh --agent-guide`) is deferred to
-  the moment source-JSON authoring, a command handoff, or a repair loop is
-  imminent. It is a release-bundle download, not a repo file, so no scenario can
-  measure it; a notation Lookup or a mechanical edit that reaches no runtime
-  command now never loads those ~564 lines.
+- The **runtime agent guide** (`dediren_guide`) is deferred to the moment
+  source-JSON authoring, a command handoff, or a repair loop is imminent. It is
+  returned by the selected host runtime, not loaded from a repo file, so no
+  scenario measures it; a notation Lookup or a mechanical edit that reaches no
+  runtime command never loads that external guidance.
 
 Fidelity floor: the `architecture-design` baseline (32 codes — 28 `ARCH-*` plus
 `E-1..E-4` — and 104 sections) and `ArchitectureDesignBaselineTest` guard that

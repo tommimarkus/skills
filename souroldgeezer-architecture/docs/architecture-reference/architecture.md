@@ -39,7 +39,7 @@ reported in the footer; they are not added as placeholders.
 - `source-valid`: `model.json` passes schema validation, ids are unique,
   relationships resolve, and the assessed ArchiMate relationships have passed
   schema validation plus ArchiMate semantic validation via
-  `dediren_validate {source, profile: "archimate"}`.
+  `dediren_validate {workspaceRoot, source, profile: "archimate"}`.
 - `view-readable`: source-valid plus every actual view in `package.json`
   projects, lays out, and layout-validates (inside `dediren_build`). This proves
   layout validity, not visual cleanliness.
@@ -118,7 +118,7 @@ fails, fix package source or export policy first, then recreate output.
 
 For ArchiMate SVG policy with generated per-view render metadata, set
 `plugins.generic-graph.semantic_profile` to `archimate` in `model.json`. With
-the bundled Dediren runtime, generated ArchiMate render metadata no
+the supported Dediren runtime, generated ArchiMate render metadata no
 longer depends on the `archimate-oef` export plugin.
 
 ### Package JSON Generation
@@ -138,7 +138,7 @@ it. Keep listing the engines the package uses (a truthful manifest), but a
 `required_plugins` mismatch is not a runtime gate.
 
 For UML packages, set `plugins.generic-graph.semantic_profile` to `uml` and
-start from the selected Dediren release bundle's UML source fixture that
+start from a matching UML source fixture exposed by the selected host runtime that
 matches the kind in play (see the UML notation hub at
 `skills/architecture-design/references/notations/uml.md` for the current kind
 list).
@@ -215,7 +215,7 @@ HTML-wrapper output. Still verify the mode from the emitted artifact, not the
 policy (§9 render-mode check): a `<script>` element is a defect — runtimes
 ≤ 2026.07.0 embedded a click-to-highlight script regardless of policy — reported
 as `ARCH-R-5` plus a `Dediren tool issues` entry, never disclosed as intended
-output. The selected release bundle ships `rich-svg` (richer-styled) and
+output. Current Dediren distributions expose `rich-svg` (richer-styled) and
 `dark-svg` (dark canvas, light labels) render-policy fixtures as starting
 points. A dark policy is still held to the same WCAG 2.2 SC 1.4.11 non-text and
 label-text contrast bars as a light one — verify contrast from the emitted
@@ -306,7 +306,7 @@ example is `references/fixtures/dediren/mixed/` — an ArchiMate Application
 Cooperation model plus a UML class model whose `pkg-fulfilment` package
 elaborates the ArchiMate `svc-orders` component; its per-view pipeline and both
 exports
-resolve on the pinned runtime. Do not invent a single mixed model, a different
+resolve on the compatibility baseline. Do not invent a single mixed model, a different
 `model-<notation>.json` split, or an ad-hoc `exports[]` dialect outside this
 layout.
 
@@ -370,7 +370,7 @@ interface. Name services for the exposed behavior or capability, not for the
 transport surface, unless the source label is quoted as evidence and the
 architecture label resolves the role.
 
-Endpoint legality belongs to `dediren_validate {profile: "archimate"}`, not local
+Endpoint legality belongs to `dediren_validate {workspaceRoot, profile: "archimate"}`, not local
 guesswork. If validation accepts Application Component to
 Application Interface Realization, do not report it as endpoint-illegal. Prefer
 Composition or Aggregation for component-interface ownership when the
@@ -496,7 +496,7 @@ roughly one label height. A `validate-layout` envelope reporting
 `label_space_issue_count: 0` never clears this check — the runtime is known to
 under-report label-edge dissociation — so measure from the rendered SVG. When
 measured dissociation contradicts a zero label-space count, also record the
-silent metric under `Dediren tool issues` (§9); do not patch the bundle.
+silent metric under `Dediren tool issues` (§9); do not patch the host runtime.
 
 First separate a *layout* problem from a *concern* problem. Density, route
 congestion, long spans, extreme aspect ratio, framing, and label displacement
@@ -586,12 +586,14 @@ applies them, with the finding codes, is
 
 ## 9. Runtime Evidence
 
-The skill drives Dediren through the plugin's bundled MCP server. Claude Code
-loads the inline manifest `mcpServers.dediren` entry; the Codex manifest points
-`mcpServers` to the plugin-root `.mcp.json`. Each host auto-starts the same
-launcher when the plugin is enabled.
-Dediren is an internal engine — users are never asked to locate, install, or
-version it. Call its tools, never a CLI. The server exposes seven: three that
+The skill drives Dediren through a shared router with native Claude Code, Codex,
+and Copilot MCP adapters. The plugin bundles the adapters, not Dediren: the
+router executes the current host-managed `dediren` from `PATH` or
+`DEDIREN_COMMAND`, discovers that installation's live tool catalog, and adds a
+required absolute `workspaceRoot` to every tool schema. It handles both legacy
+MCP initialization and the 2026-07-28 stateless discovery flow. Call its tools
+before using the same external executable as a CLI fallback. The skill requires
+seven tools: three that
 author, validate, and build — `dediren_validate`, `dediren_build`,
 `dediren_guide` — and four read-only model-intelligence and verification tools —
 `dediren_diff`, `dediren_query`, `dediren_verify`, `dediren_status` — defined
@@ -603,53 +605,47 @@ procedures reuse that resolved value read raw. In Codex, resolve the equivalent
 absolute `<skill-dir>` from the loaded skill's source path and carry it into the
 raw procedures. It locates this skill's own helper scripts, not Dediren.
 
-Read the format contract through `dediren_guide` (`{}` for the topic index, then
-`{topic: "source-json"}`) before authoring or repairing source JSON. It is the
+Read the format contract through `dediren_guide` (`{workspaceRoot}` for the topic
+index, then `{workspaceRoot, topic: "source-json"}`) before authoring or repairing source JSON. It is the
 fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
-Handoff, and Repair Rules. The launcher resolves the pinned Java™-backed runtime on
-demand at session start, bounded so a cold cache or a slow network can never hang
-startup, and caches it per-user under `${CLAUDE_PLUGIN_DATA}` in Claude Code or
-the resolver's writable per-user/temp cache in Codex (at most one download per
-pinned version per user, not per repo); the fast path does no network I/O. The
-Codex adapter discovers the installed launcher without changing directory, so
-the server inherits the caller's workspace as its `--root`. It
-requires Java™ 21 or newer on the host. When the `dediren_*` MCP tools are absent
-that session (the host was offline at resolve, or the server has not yet reconnected
-after a pinned-version change), the skill's internal CLI fallback resolves the
-runtime on demand and drives the same builds. Only when the fallback itself cannot
-resolve a Java™ 21+ runtime do runtime checks cap at `source-valid` (not a hard
-stop) and disclose `not run (dediren runtime unavailable)`
+Handoff, and Repair Rules. The plugin never downloads, pins, downgrades, or
+patches Dediren. The external CLI must be executable inside the MCP sandbox and
+must report version `2026.07.28` or newer before rendering. When the
+`dediren_*` tools are absent, the skill's internal CLI fallback may drive that
+same host-managed executable. Only when neither lane can execute do runtime
+checks cap at `source-valid` (not a hard stop) and disclose
+`not run (host-managed Dediren unavailable)`
 (see `references/procedures/self-check.md`).
 
-The bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
+The tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
 legality, uses the technology element name `Node`, not `TechnologyNode`, and
 reports close parallel route channels during layout validation. Each
 `dediren_build` call walks its views through projection, layout, layout
 validation, and rendering inside the server.
 
-GitHub™ release bundles and any future checked-in platform bundles are upstream Dediren distribution artifacts. Do not patch bundled schemas, plugin
-manifests, binaries, Java helpers, fixtures, or `bundle.json` in this repository
-to fix tool behavior. When the runtime, schema, layout, render, export, or
+The host-managed Dediren installation is an upstream distribution artifact. Do
+not patch its schemas, plugin manifests, binaries, Java helpers, fixtures, or
+`bundle.json` to fix tool behavior. When the runtime, schema, layout, render, export, or
 helper behavior appears wrong, report it under `Dediren tool issues` with the
 release version, command, input summary, error envelope, expected behavior, and
 minimal repro evidence. Change only repo-owned skill, fixture, or documentation
 guidance unless the task is explicitly to move to a different upstream Dediren
 release.
 
-Evidence gates (all via the bundled MCP tools):
+Evidence gates (all via the MCP adapter and an absolute `workspaceRoot`):
 
-- Source schema: `dediren_validate {source}`
-- Source semantics: `dediren_validate {source, profile: "archimate"}` (or `"uml"`)
+- Source schema: `dediren_validate {workspaceRoot, source}`
+- Source semantics: `dediren_validate {workspaceRoot, source, profile: "archimate"}` (or `"uml"`)
 - View projection, layout, layout validation, and SVG render: `dediren_build` — one
   call walks a view through all of them; the layout-validation verdict is on the
   build-result `.views[].status` / `.views[].diagnostics[]`, the mapped
   `generated/layout/<view>.json` carries the layout geometry, and
   `generated/render-metadata/<view>.json` the render metadata
 - Optional OEF/XMI export: `dediren_build` with an `oef_policy` / `xmi_policy`
-- Artifact freshness (the drift gate): `dediren_verify {source, artifacts}` — the
+- Artifact freshness (the drift gate): `dediren_verify {workspaceRoot, source, artifacts}` — the
   machine check that generated output is still a pure function of source (Read-Only
   Model-Intelligence Tools below)
-- Workspace freshness index (non-gating): `dediren_status {dir}` — a read-only
+- Workspace freshness index (non-gating): `dediren_status {workspaceRoot, dir}` — a read-only
   index of the models and artifacts under a directory (below)
 
 Each tool returns an envelope (`dediren_build`'s is the unwrapped build-result
@@ -666,11 +662,11 @@ four read-only tools that answer model questions and verify build freshness
 without mutating source or regenerating output. They belong to the read-only tool
 subset — launching the server `dediren mcp --read-only` withholds only
 `dediren_build` and keeps these plus `dediren_validate` / `dediren_guide` (six
-tools), so Extract, Review, and Lookup need only the read-only subset. The bundled
-server stays full because Build needs `dediren_build`; the skill never passes
+tools), so Extract, Review, and Lookup need only the read-only subset. The plugin
+adapter stays full because Build needs `dediren_build`; the skill never passes
 `--read-only`.
 
-- **`dediren_diff {old, new}`** compares two revisions of one package's source
+- **`dediren_diff {workspaceRoot, old, new}`** compares two revisions of one package's source
   model — two source paths sharing the same schema id — and returns a
   `diff-result.schema` document: `nodes` and `relationships` each as
   `{added, removed, changed}` (a `changed` entry carries field-level
@@ -681,7 +677,7 @@ server stays full because Build needs `dediren_build`; the skill never passes
   package against current repo code/IaC/API/UI/workflow source (`ARCH-X-*`): diff
   compares two revisions of the package's own source model and raises no finding
   on its own.
-- **`dediren_query {source, kind, id?}`** answers a bounded structural question
+- **`dediren_query {workspaceRoot, source, kind, id?}`** answers a bounded structural question
   over one model and returns a `query-result.schema` document. `kind:
   "dependents"` (requires `id`) returns `{id, inbound, outbound}` with each edge
   `{relationship_id, type, node_id}` — a node's fan-in and fan-out; `kind:
@@ -691,7 +687,7 @@ server stays full because Build needs `dediren_build`; the skill never passes
   `dependents` query with no `id`, returns `DEDIREN_COMMAND_INPUT_INVALID`. These
   are Lookup facts and a Review readiness aid; they feed existing `ARCH-M-*` /
   `ARCH-V-*` judgments and are not a new finding class.
-- **`dediren_verify {source, artifacts}`** verifies that built artifacts under a
+- **`dediren_verify {workspaceRoot, source, artifacts}`** verifies that built artifacts under a
   directory are a pure function of the current source, returning a
   `verify-result.schema` document `{model_sha256, artifacts: [{path, status}]}`
   with each status `current` | `stale` | `unstamped`. All `current` → `ok`; any
@@ -699,7 +695,7 @@ server stays full because Build needs `dediren_build`; the skill never passes
   rendered SVG or package gallery is `ARCH-R-2`, a stale OEF/XMI export is
   `ARCH-E-4`; an `unstamped` artifact → the `DEDIREN_ARTIFACT_UNSTAMPED` warning
   (non-error), a valid disclosable state, not a finding on its own.
-- **`dediren_status {dir?}`** returns a read-only workspace freshness index — a
+- **`dediren_status {workspaceRoot, dir?}`** returns a read-only workspace freshness index — a
   `status-result.schema` document `{models: [{path, sha256}], artifacts:
   [{path, status, model_sha256?}]}` (omit `dir` to index the server `--root`). It
   is an index, not a gate — `dediren_verify` is the gate — and complements the
@@ -801,7 +797,7 @@ with both validation counts.
 ### Visible Title Band Post-Render Step
 
 Rendered output arrives already labelled for assistive technology (WCAG 2.2
-SC 1.1.1 Non-text Content). The bundled Dediren runtime writes `role="img"` on
+SC 1.1.1 Non-text Content). Supported Dediren writes `role="img"` on
 the root together with a `<title>` and `<desc>`, sourcing their text from that
 view's `presentation.title` / `question` (§3) and tagging it with the package's
 `lang` / `dir` where declared. One gap remains repo-owned: the runtime renders no *visible*
@@ -819,7 +815,7 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py \
 
 In Codex, replace `${CLAUDE_SKILL_DIR}` with the resolved absolute `<skill-dir>`.
 
-The band is what the step contributes on the pinned runtime. It sits above the
+The band is what the step contributes after the external runtime. It sits above the
 diagram, added by expanding the `viewBox` upward; the step keeps the root
 `width`/`height` in sync with it (so browsers do not letterbox the diagram) and
 paints the band with the diagram's own background colour with a contrasting
@@ -832,8 +828,8 @@ The step also sets that runtime-written `<title>` to the view label and ensures 
 arriving with none is refused with **exit 4** rather than banded, because a
 banded artifact that still has no accessible name looks processed while failing
 SC 1.1.1 — exactly the `ARCH-R-2` case. The supported input is a render from
-Dediren `2026.07.28` or newer, which the release resolver enforces by refusing to
-resolve an older bundle (`DEDIREN_VERSION_FLOOR`); that floor gates the *render*
+Dediren `2026.07.28` or newer, which self-check verifies against the external
+CLI; that floor gates the *render*
 side only, so render output committed in an older era can still reach the step
 and is what exit 4 is for. Generated output is recreated, not maintained, so the
 remedy is a re-render.
@@ -983,8 +979,8 @@ For each package:
    actual views.
 2. Confirm every view has a clear architecture question.
 3. Validate `model.json`.
-4. Build the package through the bundled MCP server (one `dediren_build` call
-   with the `package` argument), which projects, lays out, layout-validates,
+4. Build the package through the MCP adapter (one `dediren_build` call with
+   absolute `workspaceRoot` and relative `package`), which projects, lays out, layout-validates,
    renders, and — when requested — exports every actual view in that one call,
    writing each artifact to its declared path; verify each
    `generated/render-metadata/<view>.json` `semantic_profile` matches its render

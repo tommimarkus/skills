@@ -70,7 +70,7 @@ source adds `uml:CombinedFragment` / `uml:InteractionConstraint` /
 `uml:OpaqueExpression`. The authored interaction is emitted whole with no
 `DEDIREN_XMI_*_OMITTED` diagnostic; sequence XMI is fully supported even though
 the runtime's per-kind XMI summary enumerates only the classifier kinds. Verified
-on the pinned bundle by `test_release_uml_sequence_fragments_full_pipeline`.
+on Dediren 2026.07.29 by `test_release_uml_sequence_fragments_full_pipeline`.
 
 - SVG inspection (render-ready): confirm each `Lifeline` renders as its own
   column — a distinct head box and vertical stem — and that every `Message`

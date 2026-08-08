@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -11,14 +12,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
-RELEASE_SCRIPT = (
+SCRIPT_DIR = (
     ARCH_PLUGIN
     / "skills"
     / "architecture-design"
     / "references"
     / "scripts"
-    / "dediren-release.sh"
 )
+MCP_LAUNCHER = SCRIPT_DIR / "dediren-mcp.sh"
 FIXTURE = (
     ARCH_PLUGIN
     / "skills"
@@ -55,19 +56,7 @@ DEPLOYMENT_NOTATION_DOC = (
     / "uml"
     / "deployment.md"
 )
-EXPECTED_DEDIREN_VERSION = "2026.07.29"
-EXPECTED_RELEASE_REPO = "tommimarkus/dediren"
-# Launcher-mechanics sentinel: a version guaranteed absent from any real cache, so
-# these tests exercise the warm/cold paths without touching a resolved bundle. It
-# must be CalVer at or above DEDIREN_VERSION_FLOOR in the release script — the
-# resolver refuses anything older, and refuses non-CalVer outright — since these
-# tests are about cache and network behaviour, not version support.
-LAUNCHER_SENTINEL_VERSION = "9999.12.0"
-
-
-def _calver_key(version: str) -> tuple[int, int, int]:
-    year, month, micro = version.split(".")
-    return int(year), int(month), int(micro)
+COMPATIBILITY_BASELINE = "2026.07.29"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
 # ships one launcher and no plugin executables, manifests, or capability probes. The
@@ -84,36 +73,33 @@ STAGE_PLUGIN_RENDER = "render"
 EXPECTED_ARCHITECTURE_EXPORT_LANES = {"archimate-oef", "uml-xmi"}
 
 
-def run_resolver(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
-    return subprocess.run(
-        ["bash", str(RELEASE_SCRIPT), *args],
-        cwd=REPO_ROOT,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=merged_env,
-    )
+@lru_cache(maxsize=1)
+def dediren_executable() -> Path:
+    if os.environ.get("DEDIREN_RUNTIME_SMOKE") != "1":
+        raise unittest.SkipTest(
+            "set DEDIREN_RUNTIME_SMOKE=1 to smoke-test the host-managed Dediren CLI"
+        )
+    configured = os.environ.get("DEDIREN_COMMAND", "dediren")
+    resolved = configured if "/" in configured else shutil.which(configured)
+    if not resolved or not os.access(resolved, os.X_OK):
+        raise AssertionError(
+            "install the current Dediren CLI on PATH or set DEDIREN_COMMAND to an executable"
+        )
+    return Path(resolved).resolve()
 
 
 @lru_cache(maxsize=1)
-def release_bundle() -> Path:
-    if os.environ.get("DEDIREN_RELEASE_SMOKE") != "1":
-        raise unittest.SkipTest("set DEDIREN_RELEASE_SMOKE=1 to download and smoke-test Dediren release bundles")
-
-    result = run_resolver("--ensure-bundle")
-    if result.returncode != 0:
-        raise AssertionError(
-            f"release resolver failed\nstdout={result.stdout}\nstderr={result.stderr}"
+def runtime_bundle() -> Path:
+    bundle = dediren_executable().parent.parent
+    if not (bundle / "bundle.json").is_file():
+        raise unittest.SkipTest(
+            "host Dediren installation does not expose its distribution root beside the executable"
         )
-    return Path(result.stdout.strip())
+    return bundle
 
 
-def mcp_session(bundle: Path, root: Path, calls: list[dict], read_only: bool = False) -> dict[int, dict]:
-    """Drive the bundled `dediren mcp` stdio server through one initialize handshake and
+def mcp_session(root: Path, calls: list[dict], read_only: bool = False) -> dict[int, dict]:
+    """Drive the host-managed `dediren mcp` server through one initialize handshake and
     return the JSON-RPC responses keyed by id. ``calls`` carry ids from 2 up (id 1 is the
     handshake). One server run per session, matching how a client drives it. ``read_only``
     launches with `--read-only`, which withholds the artifact-writing `dediren_build`."""
@@ -129,7 +115,7 @@ def mcp_session(bundle: Path, root: Path, calls: list[dict], read_only: bool = F
         *calls,
     ]
     stdin = "".join(json.dumps(request) + "\n" for request in requests)
-    command = [bundle / "bin" / "dediren", "mcp", "--root", str(root)]
+    command = [dediren_executable(), "mcp", "--root", str(root)]
     if read_only:
         command.append("--read-only")
     proc = subprocess.run(
@@ -161,12 +147,12 @@ def tool_envelope(response: dict) -> dict:
 
 
 def run_dediren(*args: str | Path) -> subprocess.CompletedProcess[str]:
-    bundle = release_bundle()
+    executable = dediren_executable()
     env = os.environ.copy()
     env.setdefault("DEDIREN_SCHEMA_CACHE_DIR", str(REPO_ROOT / ".cache" / "dediren" / "schema-cache"))
     return subprocess.run(
-        [bundle / "bin" / "dediren", *args],
-        cwd=bundle,
+        [executable, *args],
+        cwd=REPO_ROOT,
         check=False,
         text=True,
         stdout=subprocess.PIPE,
@@ -256,162 +242,12 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertFalse((ARCH_PLUGIN / "tools" / "dediren-linux").exists())
         self.assertFalse((ARCH_PLUGIN / "tools" / "dediren-macos").exists())
 
-    def test_release_resolver_script_is_present_and_pinned(self) -> None:
-        script = RELEASE_SCRIPT.read_text(encoding="utf-8")
-
-        self.assertIn(f'DEDIREN_REPO_DEFAULT="{EXPECTED_RELEASE_REPO}"', script)
-        self.assertIn(f'DEDIREN_VERSION_DEFAULT="{EXPECTED_DEDIREN_VERSION}"', script)
-        self.assertIn("SHA256SUMS", script)
-        self.assertIn("https://github.com/%s/releases/download/v%s", script)
-        self.assertNotIn("tools/dediren-linux", script)
-
-    def test_release_resolver_has_valid_bash_syntax(self) -> None:
-        result = subprocess.run(
-            ["bash", "-n", str(RELEASE_SCRIPT)],
-            cwd=REPO_ROOT,
-            check=False,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_release_resolver_prints_current_platform_cache_path_without_network(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            result = run_resolver("--print-path", env={"DEDIREN_CACHE_DIR": temp_dir})
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        expected_suffix = (
-            f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
-            f"/bin/dediren"
-        )
-        self.assertTrue(result.stdout.strip().endswith(expected_suffix), result.stdout)
-
-    def test_release_resolver_requires_java_21_before_returning_runnable_path(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            cache_dir = temp_path / "cache"
-            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
-            bin_dir = bundle_dir / "bin"
-            fake_bin = temp_path / "fake-bin"
-            bin_dir.mkdir(parents=True)
-            fake_bin.mkdir()
-            (bundle_dir / "bundle.json").write_text("{}", encoding="utf-8")
-            fake_dediren = bin_dir / "dediren"
-            fake_dediren.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
-            fake_dediren.chmod(0o755)
-            fake_java = fake_bin / "java"
-            fake_java.write_text(
-                "#!/usr/bin/env sh\n"
-                "printf 'openjdk version \"17.0.12\"\\n' >&2\n",
-                encoding="utf-8",
-            )
-            fake_java.chmod(0o755)
-
-            result = run_resolver(
-                "--ensure",
-                env={
-                    "DEDIREN_CACHE_DIR": str(cache_dir),
-                    "JAVA_HOME": "",
-                    "JAVACMD": "",
-                    # Point sdkman at a nonexistent dir so this stays hermetic:
-                    # a sdkman-managed Java >=21 on the host would otherwise be
-                    # preferred over the fake Java 17 this test injects on PATH.
-                    "SDKMAN_DIR": str(temp_path / "no-sdkman"),
-                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
-                },
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Java 21", result.stderr)
-        self.assertIn("17", result.stderr)
-
-    def test_release_resolver_prefers_sdkman_java_21_over_older_path_java(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            cache_dir = temp_path / "cache"
-            bundle_dir = cache_dir / f"dediren-agent-bundle-{EXPECTED_DEDIREN_VERSION}"
-            bin_dir = bundle_dir / "bin"
-            bin_dir.mkdir(parents=True)
-            (bundle_dir / "bundle.json").write_text("{}", encoding="utf-8")
-            fake_dediren = bin_dir / "dediren"
-            fake_dediren.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
-            fake_dediren.chmod(0o755)
-            # An older Java on PATH that would be rejected on its own.
-            path_bin = temp_path / "path-bin"
-            path_bin.mkdir()
-            path_java = path_bin / "java"
-            path_java.write_text(
-                "#!/usr/bin/env sh\nprintf 'openjdk version \"17.0.12\"\\n' >&2\n",
-                encoding="utf-8",
-            )
-            path_java.chmod(0o755)
-            # A sdkman-managed Java 21 that must be preferred over the PATH java.
-            sdkman_dir = temp_path / "sdkman"
-            sdkman_java = sdkman_dir / "candidates" / "java" / "current" / "bin" / "java"
-            sdkman_java.parent.mkdir(parents=True)
-            sdkman_java.write_text(
-                "#!/usr/bin/env sh\nprintf 'openjdk version \"21.0.2\"\\n' >&2\n",
-                encoding="utf-8",
-            )
-            sdkman_java.chmod(0o755)
-
-            result = run_resolver(
-                "--ensure",
-                env={
-                    "DEDIREN_CACHE_DIR": str(cache_dir),
-                    "JAVA_HOME": "",
-                    "JAVACMD": "",
-                    "SDKMAN_DIR": str(sdkman_dir),
-                    "PATH": f"{path_bin}:{os.environ['PATH']}",
-                },
-            )
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertNotIn("requires Java 21", result.stderr)
-        self.assertTrue(result.stdout.strip().endswith("/bin/dediren"), result.stdout)
-
-    def test_release_resolver_serves_a_platform_independent_bundle(self) -> None:
-        script = RELEASE_SCRIPT.read_text(encoding="utf-8")
-
-        self.assertNotIn("--list-targets", script)
-        self.assertNotIn("apple-darwin", script)
-        self.assertNotIn("unknown-linux-gnu", script)
-        self.assertIn("platform-independent", script)
-
-    def test_release_resolver_preserves_download_failure_without_cleanup_masking(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            fake_bin = temp_path / "bin"
-            fake_bin.mkdir()
-            fake_curl = fake_bin / "curl"
-            fake_curl.write_text(
-                "#!/usr/bin/env bash\n"
-                "printf 'curl: simulated DNS failure\\n' >&2\n"
-                "exit 6\n",
-                encoding="utf-8",
-            )
-            fake_curl.chmod(0o755)
-
-            result = run_resolver(
-                "--ensure-bundle",
-                env={
-                    "DEDIREN_CACHE_DIR": str(temp_path / "cache"),
-                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
-                },
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("curl: simulated DNS failure", result.stderr)
-        self.assertNotIn("unbound variable", result.stderr)
-
     def test_skill_fixture_declares_current_release_plugin_version(self) -> None:
         fixture_model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
         fixture_package = json.loads((FIXTURE / "package.json").read_text(encoding="utf-8"))
 
         fixture_versions = {plugin["id"]: plugin["version"] for plugin in fixture_model["required_plugins"]}
-        self.assertEqual(fixture_versions, {"generic-graph": EXPECTED_DEDIREN_VERSION})
+        self.assertEqual(fixture_versions, {"generic-graph": COMPATIBILITY_BASELINE})
         self.assertEqual(fixture_model["plugins"]["generic-graph"]["semantic_profile"], "archimate")
 
         # The package declares views and export lanes; the per-stage plugin chain is the
@@ -538,11 +374,19 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertTrue(fixture_pin_count, "expected Dediren fixture version pins")
         self.assertTrue(notation_pin_count, "expected UML notation-example version pins")
 
-        mismatched = {location: version for location, version in pins.items() if version != EXPECTED_DEDIREN_VERSION}
-        self.assertEqual(mismatched, {}, f"embedded pins not equal to {EXPECTED_DEDIREN_VERSION}: {mismatched}")
+        mismatched = {
+            location: version
+            for location, version in pins.items()
+            if version != COMPATIBILITY_BASELINE
+        }
+        self.assertEqual(
+            mismatched,
+            {},
+            f"embedded compatibility baselines not equal to {COMPATIBILITY_BASELINE}: {mismatched}",
+        )
 
     def test_current_platform_release_smoke_reports_version(self) -> None:
-        bundle = release_bundle()
+        bundle = runtime_bundle()
 
         self.assertTrue((bundle / "bundle.json").is_file())
         self.assertTrue((bundle / "bin" / "dediren").is_file())
@@ -551,10 +395,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("dediren", result.stdout.lower())
-        self.assertIn(EXPECTED_DEDIREN_VERSION, result.stdout)
-
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
-        self.assertEqual(bundle_manifest["version"], EXPECTED_DEDIREN_VERSION)
+        self.assertIn(bundle_manifest["version"], result.stdout)
         self.assertEqual(bundle_manifest["bundle_schema_version"], EXPECTED_BUNDLE_SCHEMA_VERSION)
 
     def test_release_bundle_ships_a_single_launcher_with_no_plugin_protocol(self) -> None:
@@ -564,7 +406,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         `elk_helper` manifest keys, no `plugins/` manifest directory, and exactly one
         executable in `bin/` (no per-engine child executables to spawn).
         """
-        bundle = release_bundle()
+        bundle = runtime_bundle()
         bundle_manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
 
         self.assertNotIn("plugins", bundle_manifest)
@@ -573,7 +415,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(sorted(path.name for path in (bundle / "bin").iterdir()), ["dediren"])
 
     def test_release_bundle_contains_java_runtime_engines_schemas_and_guide(self) -> None:
-        bundle = release_bundle()
+        bundle = runtime_bundle()
+        runtime_version = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))["version"]
 
         required_paths = [
             # The first-party engines ship as in-process libraries behind the typed
@@ -582,7 +425,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             # engine (a bundle size optimization within schema v2), so the file-level
             # check is the one bundle jar; the pipeline tests below prove each engine id
             # still resolves through the launcher.
-            f"lib/dediren-bundle-{EXPECTED_DEDIREN_VERSION}.jar",
+            f"lib/dediren-bundle-{runtime_version}.jar",
             # One-shot `dediren build` result contract (new in bundle schema v2).
             "schemas/build-result.schema.json",
             "schemas/model.schema.json",
@@ -710,7 +553,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "archimate-oef+xml")
 
     def test_release_uml_source_fixtures_are_schema_and_profile_valid(self) -> None:
-        bundle = release_bundle()
+        bundle = runtime_bundle()
         uml_fixtures = [
             "valid-uml-basic.json",
             "valid-uml-complex.json",
@@ -729,7 +572,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 self._assert_validate_ok("--plugin", "generic-graph", "--profile", "uml", "--input", fixture)
 
     def test_release_uml_sequence_fragments_full_pipeline(self) -> None:
-        bundle = release_bundle()
+        bundle = runtime_bundle()
         source = bundle / "fixtures" / "source" / "valid-uml-sequence-fragments.json"
         source_doc = json.loads(source.read_text(encoding="utf-8"))
         view_id = source_doc["plugins"]["generic-graph"]["views"][0]["id"]
@@ -815,13 +658,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         """`uml/deployment.md`'s `Validation, Render, Export` note claims the `uml-xmi`
         export emits the full deployment abstract syntax with no `DEDIREN_XMI_*_OMITTED`
         diagnostic. Verify it end-to-end by running the doc's own Worked Example through
-        project -> layout -> uml-xmi export on the pinned bundle and asserting the emitted
+        project -> layout -> uml-xmi export on the selected host runtime and asserting the emitted
         element/relationship types. Closes the #106 non-class XMI coverage gap: before this
         only the `uml-class` view was XMI-exercised, so a false per-kind claim like the
         pre-#106 deployment/sequence "XMI-omitted" text could rot undetected. Exports the
         doc's example in place (single-sourced), so the claim and its evidence cannot
         drift apart."""
-        bundle = release_bundle()
+        bundle = runtime_bundle()
         source_doc = _sole_json_block(DEPLOYMENT_NOTATION_DOC)
         view_id = source_doc["plugins"]["generic-graph"]["views"][0]["id"]
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -870,156 +713,66 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertNotIn("DEDIREN_XMI_ELEMENTS_OMITTED", deployment_codes)
             self.assertNotIn("DEDIREN_XMI_RELATIONSHIPS_OMITTED", deployment_codes)
 
-    def _stub_bundle(self, cache_dir: Path, version: str, marker: str) -> None:
-        """Materialize a resolved-looking bundle (executable `dediren` + `bundle.json`)
-        so the launcher's warm path fires without a real download. The stub `dediren`
-        echoes `marker` for `mcp` so the test can prove the launcher exec'd it."""
-        bundle = cache_dir / f"dediren-agent-bundle-{version}"
-        (bundle / "bin").mkdir(parents=True)
-        binary = bundle / "bin" / "dediren"
-        binary.write_text(
-            "#!/usr/bin/env bash\n"
-            f"printf '{marker} %s\\n' \"$*\"\n"
-            "printf 'SCHEMA-CACHE %s\\n' \"${DEDIREN_SCHEMA_CACHE_DIR:-unset}\"\n"
-            "exit 0\n",
-            encoding="utf-8",
-        )
-        binary.chmod(0o755)
-        (bundle / "bundle.json").write_text("{}\n", encoding="utf-8")
-
-    def _release_script(self, version: str, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["bash", str(RELEASE_SCRIPT), *args],
-            cwd=REPO_ROOT, check=False, text=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
-            env={**os.environ, "DEDIREN_VERSION": version},
-        )
-
-    def test_release_floor_refuses_unsupported_and_malformed_versions(self) -> None:
-        """The support floor is the enforcement half of deleting the band step's
-        name-synthesising path: from DEDIREN_VERSION_FLOOR the render supplies each
-        view's accessible name, and the step refuses artifacts without one. Resolving
-        an older bundle would manufacture exactly that refused input, so refuse the
-        resolve instead — where the message can say why."""
-        script = RELEASE_SCRIPT.read_text(encoding="utf-8")
-        floor_match = re.search(r'DEDIREN_VERSION_FLOOR="([^"]+)"', script)
-        assert floor_match, "release script must define DEDIREN_VERSION_FLOOR"
-        floor = floor_match.group(1)
-
-        # The pinned default must satisfy its own floor, or every resolve fails.
-        self.assertGreaterEqual(_calver_key(EXPECTED_DEDIREN_VERSION), _calver_key(floor))
-
-        below = self._release_script("2026.07.27", "--print-path")
-        self.assertNotEqual(below.returncode, 0)
-        self.assertIn(floor, below.stderr)
-
-        # Non-CalVer is refused too, so the floor cannot be sidestepped with a
-        # version string that simply does not compare.
-        malformed = self._release_script("0.0.0-test", "--print-path")
-        self.assertNotEqual(malformed.returncode, 0)
-        self.assertIn("CalVer", malformed.stderr)
-
-        # At the floor, and for --help at any version, the script still works.
-        self.assertEqual(self._release_script(floor, "--print-path").returncode, 0)
-        self.assertEqual(self._release_script("2026.07.27", "--help").returncode, 0)
-
-    def test_mcp_launcher_starts_from_a_warm_cache_without_network(self) -> None:
-        """The overwhelmingly common path: bundle already resolved. The launcher must
-        exec the server without touching the network — a sabotaged `curl` that fails if
-        called proves the warm path does no session-start download."""
-        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
+    def test_mcp_upstream_uses_the_external_dediren_command(self) -> None:
+        """The adapter executes the host-managed Dediren CLI rather than a
+        plugin-owned runtime."""
+        launcher = MCP_LAUNCHER
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            cache = temp_path / "cache"
-            cache.mkdir()
-            self._stub_bundle(cache, LAUNCHER_SENTINEL_VERSION, "STUB-STARTED")
-
-            fake_bin = temp_path / "bin"
-            fake_bin.mkdir()
-            fake_curl = fake_bin / "curl"
-            fake_curl.write_text(
-                "#!/usr/bin/env bash\nprintf 'curl must not run on the warm path\\n' >&2\nexit 6\n",
+            external = temp_path / "external-dediren"
+            external.write_text(
+                "#!/usr/bin/env bash\nprintf 'EXTERNAL %s\\n' \"$*\"\n",
                 encoding="utf-8",
             )
-            fake_curl.chmod(0o755)
+            external.chmod(0o755)
 
             result = subprocess.run(
-                ["bash", str(launcher)],
+                ["bash", str(launcher), "--upstream", str(REPO_ROOT)],
                 cwd=REPO_ROOT, check=False, text=True,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=60,
                 env={
                     **os.environ,
-                    "DEDIREN_CACHE_DIR": str(cache),
-                    "DEDIREN_VERSION": LAUNCHER_SENTINEL_VERSION,
-                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                    "DEDIREN_COMMAND": str(external),
                 },
             )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("STUB-STARTED", result.stdout)
-        self.assertIn("mcp --root", result.stdout)
-        self.assertIn(f"SCHEMA-CACHE {temp_path / 'schema-cache'}", result.stdout)
-        self.assertNotIn("curl must not run", result.stderr)
+        self.assertIn(f"EXTERNAL mcp --root {REPO_ROOT}", result.stdout)
 
-    def test_mcp_launcher_resolves_on_demand_then_fails_bounded_when_download_fails(self) -> None:
-        """A cold cache (fresh install, or a pin bump orphaned the prior bundle) must no
-        longer silently give up: the launcher resolves on demand. When the resolve itself
-        fails it exits non-zero — no worse than before — but the `subprocess` timeout is
-        the regression guard that it stays *bounded* and never hangs session start."""
-        launcher = RELEASE_SCRIPT.parent / "dediren-mcp.sh"
+    def test_mcp_upstream_reports_a_missing_external_dediren_command(self) -> None:
+        launcher = MCP_LAUNCHER
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            cache = temp_path / "cache"
-            fake_bin = temp_path / "bin"
-            fake_bin.mkdir()
-            fake_curl = fake_bin / "curl"
-            fake_curl.write_text(
-                "#!/usr/bin/env bash\nprintf 'curl: simulated DNS failure\\n' >&2\nexit 6\n",
-                encoding="utf-8",
-            )
-            fake_curl.chmod(0o755)
 
             result = subprocess.run(
-                ["bash", str(launcher)],
+                ["bash", str(launcher), "--upstream", str(REPO_ROOT)],
                 cwd=REPO_ROOT, check=False, text=True,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=90,
                 env={
                     **os.environ,
-                    "DEDIREN_CACHE_DIR": str(cache),
-                    "DEDIREN_VERSION": LAUNCHER_SENTINEL_VERSION,
-                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                    "DEDIREN_COMMAND": str(temp_path / "missing-dediren"),
                 },
             )
 
-        self.assertNotEqual(result.returncode, 0)
-        # It attempted the resolve (curl ran) rather than refusing outright,
-        # and the JSON-RPC stdout channel stayed clean on the failure path.
-        self.assertIn("simulated DNS failure", result.stderr)
-        self.assertIn("resolve", result.stderr.lower())
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("not executable", result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_launcher_and_resolver_bound_session_start_network(self) -> None:
-        """Session start must never hang on a dead socket or a wedged peer. The launcher
-        resolves the bundle on demand, so the resolver's network and lock waits carry
-        hard bounds; assert they are present so a later edit cannot quietly drop them."""
-        launcher_script = (RELEASE_SCRIPT.parent / "dediren-mcp.sh").read_text(encoding="utf-8")
-        self.assertIn("--ensure-bundle", launcher_script)
-
-        resolver = RELEASE_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("--connect-timeout", resolver)
-        self.assertIn("--max-time", resolver)
-        self.assertIn("flock -w", resolver)
+    def test_mcp_launcher_does_not_resolve_or_pin_dediren(self) -> None:
+        launcher_script = MCP_LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("DEDIREN_COMMAND", launcher_script)
+        self.assertNotIn("dediren-release.sh", launcher_script)
+        self.assertNotIn("DEDIREN_VERSION", launcher_script)
 
     def test_mcp_server_exposes_the_seven_tools_the_skill_drives(self) -> None:
-        """The shipped surface: the bundled `dediren mcp` stdio server the plugin
-        declares exposes the seven tools the skill drives as of Dediren 2026.07.26 —
+        """The host-managed `dediren mcp` stdio server exposes the core tools the
+        skill drives as of the compatibility floor —
         dediren_validate / dediren_build / dediren_guide plus the four model-intelligence
         tools dediren_diff / dediren_query / dediren_verify / dediren_status — and a
         profile-scoped validate returns an ok envelope."""
-        bundle = release_bundle()
-        by_id = mcp_session(bundle, FIXTURE, [
+        by_id = mcp_session(FIXTURE, [
             {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
             {
                 "jsonrpc": "2.0", "id": 3, "method": "tools/call",
@@ -1030,10 +783,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             },
         ])
         tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
-        self.assertEqual(tools, {
+        self.assertTrue({
             "dediren_validate", "dediren_build", "dediren_guide",
             "dediren_diff", "dediren_query", "dediren_verify", "dediren_status",
-        })
+        } <= tools, tools)
         validation = tool_envelope(by_id[3])
         self.assertEqual(validation["status"], "ok", validation)
 
@@ -1051,7 +804,6 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         answers only one of two batched calls (and non-deterministically which), so
         batching would report the regression this test exists to catch as a missing
         response rather than as the failing envelope."""
-        bundle = release_bundle()
         model = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
         for node in model["nodes"]:
             node["properties"]["identity"] = f"canon-{node['id']}"
@@ -1069,7 +821,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as temp_dir:
                     root = Path(temp_dir)
                     (root / "model.json").write_text(json.dumps(model), encoding="utf-8")
-                    by_id = mcp_session(bundle, root, [{
+                    by_id = mcp_session(root, [{
                         "jsonrpc": "2.0", "id": 2, "method": "tools/call",
                         "params": {"name": "dediren_validate", "arguments": arguments},
                     }])
@@ -1078,7 +830,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
     def test_dediren_query_answers_the_three_fixed_kinds_and_rejects_bad_input(self) -> None:
         """`source-grounding.md` claims `dediren_query` answers the three fixed kinds
-        (`dependents` / `orphans` / `view-coverage`) on the pinned bundle and rejects an
+        (`dependents` / `orphans` / `view-coverage`) on the selected host runtime and rejects an
         unknown `--kind` or a `dependents` call missing `--id`. The query engine is new
         in Dediren 2026.07.26 and the runtime is the only thing that answers it, so
         `scoped_pin_replace` would re-assert the claim against an unprobed runtime; pin it.
@@ -1143,7 +895,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
     def test_dediren_diff_reports_field_level_model_changes_deterministically(self) -> None:
         """`source-grounding.md` claims `dediren_diff` reports node / relationship / view
-        add / remove / change with field-level `{field, from, to}` on the pinned bundle.
+        add / remove / change with field-level `{field, from, to}` on the selected host runtime.
         The diff engine is new in Dediren 2026.07.26; pin the claim to the runtime so a
         bump that regresses it fails here instead of shipping."""
         base = json.loads((FIXTURE / "model.json").read_text(encoding="utf-8"))
@@ -1217,7 +969,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
     def test_dediren_verify_gates_stale_build_artifacts_against_provenance(self) -> None:
         """`source-grounding.md` claims `dediren_verify` classifies built artifacts
-        against the model's recomputed provenance hash on the pinned bundle — `current`
+        against the model's recomputed provenance hash on the selected host runtime — `current`
         (ok, exit 0), `stale` (`DEDIREN_ARTIFACT_STALE`, exit 2, the CI drift gate), and
         `unstamped` (`DEDIREN_ARTIFACT_UNSTAMPED`, warning, exit 0). New in Dediren
         2026.07.27; pin every branch to the runtime."""
@@ -1315,7 +1067,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
     def test_dediren_build_stamps_deterministic_provenance_into_svg(self) -> None:
         """`source-grounding.md` claims every `dediren build` SVG carries a deterministic
         `<metadata id="dediren-provenance">` stamp — compact JSON with `model_sha256` /
-        `view_id` / `dediren_version`, never a timestamp — on the pinned bundle, the basis
+        `view_id` / `dediren_version`, never a timestamp — on the selected host runtime, the basis
         `verify` checks. New in Dediren 2026.07.26; pin the shape and the determinism."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -1336,7 +1088,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             stamp = json.loads(match.group(1))
             self.assertRegex(stamp["model_sha256"], r"^[0-9a-f]{64}$")
             self.assertEqual(stamp["view_id"], "main")
-            self.assertEqual(stamp["dediren_version"], EXPECTED_DEDIREN_VERSION)
+            version = run_dediren("--version").stdout.strip().split()[-1]
+            self.assertEqual(stamp["dediren_version"], version)
             # The lane policy hash is part of the stamp shape source-grounding claims;
             # assert it explicitly, or a field-rename bump would pass the determinism
             # check below (two identical stamps) while silently dropping it.
@@ -1348,7 +1101,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
     def test_dediren_build_writes_whole_model_interchange_for_oef_and_xmi(self) -> None:
         """`source-grounding.md` claims `dediren build --oef-policy` writes a whole-model
         `model.oef.xml` at the out root (listed in build-result `model_artifacts[]`) and,
-        on a UML model, `--xmi-policy` writes `model.uml.xml`, both on the pinned bundle.
+        on a UML model, `--xmi-policy` writes `model.uml.xml`, both on the selected host runtime.
         New in Dediren 2026.07.26; pin both interchange legs."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -1377,28 +1130,27 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
     def test_mcp_read_only_server_withholds_the_build_tool(self) -> None:
         """`source-grounding.md` claims `dediren mcp --read-only` withholds the
         artifact-writing `dediren_build` and keeps exactly the six read-only tools on the
-        pinned bundle. New in Dediren 2026.07.26; assert the exact set, so a read-only
-        tool going missing fails here too, not only `dediren_build` leaking in."""
-        bundle = release_bundle()
-        by_id = mcp_session(bundle, FIXTURE, [
+        selected host runtime. New in Dediren 2026.07.26; assert the core set so a
+        required read-only tool going missing fails here too, not only `dediren_build`
+        leaking in, while future read-only tools remain compatible."""
+        by_id = mcp_session(FIXTURE, [
             {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
         ], read_only=True)
         tools = {tool["name"] for tool in by_id[2]["result"]["tools"]}
-        self.assertEqual(tools, {
+        self.assertTrue({
             "dediren_validate", "dediren_guide", "dediren_diff",
             "dediren_query", "dediren_verify", "dediren_status",
-        })
+        } <= tools, tools)
         self.assertNotIn("dediren_build", tools)
 
     def test_mcp_server_serves_the_four_product_resource_schemes(self) -> None:
         """`source-grounding.md` claims the `dediren mcp` server serves product-owned MCP
         resources under four URI schemes (`dediren://schema/`, `dediren://fixture/`,
-        `dediren://guide/`, and `dediren://diagnostics/catalog`) on the pinned bundle, and
+        `dediren://guide/`, and `dediren://diagnostics/catalog`) on the selected host runtime, and
         that a `resources/read` returns non-empty content. New in Dediren 2026.07.26;
         assert scheme presence as a superset — a benign fixture add would shift a hard
         resource count but never drop a scheme — and read one resource."""
-        bundle = release_bundle()
-        by_id = mcp_session(bundle, FIXTURE, [
+        by_id = mcp_session(FIXTURE, [
             {"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}},
             {"jsonrpc": "2.0", "id": 3, "method": "resources/read",
              "params": {"uri": "dediren://diagnostics/catalog"}},

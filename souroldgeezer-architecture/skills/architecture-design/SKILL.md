@@ -81,19 +81,20 @@ Build.
    before running Build/Extract/Review operational steps; a Lookup that makes no
    runtime claim may skip it.
 2. Before any runtime claim, run
-   [self-check](references/procedures/self-check.md). Dediren runs as the plugin's
-   **bundled MCP server** (Claude manifest `mcpServers.dediren`; Codex manifest
-   `mcpServers` -> plugin-root `.mcp.json`; auto-started when the plugin is
-   enabled); drive it through its tools — `dediren_validate`,
+   [self-check](references/procedures/self-check.md). The plugin supplies
+   Claude Code, Codex, and Copilot MCP adapters, but Dediren itself is the
+   host-managed current `dediren` executable (`PATH` or `DEDIREN_COMMAND`) and
+   is never bundled or pinned by this plugin. The router discovers that
+   executable's live tool catalog and adds a required absolute `workspaceRoot`
+   to every tool call. Drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
    `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
-   mode above) — never a CLI, and never ask the user to locate or install Dediren.
-   Extract, Review, and Lookup need only the read-only tool subset; the bundled
-   server stays full because Build needs `dediren_build` (architecture §9). When the
-   `dediren_*` tools are absent, an internal CLI fallback
-   lane drives the same builds; self-check § Server availability owns the on-demand
-   resolution, the per-lane cache locations, and the exact `source-valid` cap
-   condition. Defer
+   mode above) — prefer MCP over the CLI. Extract, Review, and Lookup need only the
+   read-only tool subset; Build also needs `dediren_build`. When the `dediren_*`
+   tools are absent, an internal CLI fallback may drive the same host-managed
+   executable; self-check § Server availability owns the availability check and
+   exact `source-valid` cap condition. Never auto-install, download, or downgrade
+   Dediren from the plugin. Defer
    the format guide (`dediren_guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
@@ -128,12 +129,14 @@ Build.
    an existing package. Keep a compact rationale for every non-obvious
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
    do not mutate by default.
-6. Validate before quality claims — call the bundled dediren MCP server's
-   `dediren_validate` tool (pass the model's `profile`) so `source-valid` covers
+6. Validate before quality claims — call the Dediren MCP server's
+   `dediren_validate` tool (pass absolute `workspaceRoot` plus the model's
+   relative path and `profile`) so `source-valid` covers
    schema plus semantic-profile validation. When a run (re)generates package
    output, build it through the MCP server following self-check § Building a package
-   (one `dediren_build` call with the `package` argument; the release resolver's
-   `build --package` is the CLI fallback when the server is unavailable). Then complete each rendered SVG's
+   (one `dediren_build` call with `workspaceRoot` and the `package` argument;
+   the host-managed `dediren build --package` command is the CLI fallback when
+   the server is unavailable). Then complete each rendered SVG's
    accessible name. Return
    [output](references/output-format.md).
 7. Whenever this run (re)generates a view's SVG output, rebuild the package
@@ -163,8 +166,8 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | The plugin's bundled `dediren` MCP server (Claude manifest inline `mcpServers`; Codex manifest `mcpServers` -> plugin-root `.mcp.json`) exposes seven tools — `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); launched by [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh) over the release resolver [`references/scripts/dediren-release.sh`](references/scripts/dediren-release.sh). |
-| Package build (native `dediren_build {package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
+| Dediren MCP server (execution) | Claude Code, Codex, and Copilot adapters launch [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh), whose router discovers the live tools of the host-managed current `dediren` executable and adds required `workspaceRoot` routing. The skill requires `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); newer tools remain visible. |
+| Package build (native `dediren_build {workspaceRoot, package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the host-managed `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG visible title band | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; adds the band and sets the runtime-written name, refusing an unnamed artifact (exit 4); `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
@@ -173,6 +176,6 @@ Build.
 | Process extraction | [`references/procedures/lifting-rules-process.md`](references/procedures/lifting-rules-process.md), [`references/procedures/process-view-emission.md`](references/procedures/process-view-emission.md), [`references/procedures/seed-views.md`](references/procedures/seed-views.md) |
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Mixed-package regression fixture (skill maintenance) | Inspect `references/fixtures/dediren/mixed/` only when changing mixed ArchiMate/UML model bindings, per-model render/export policies, or their regression coverage; do not load it for ordinary model work. |
-| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n` on the launcher scripts (`dediren-mcp.sh`, `dediren-release.sh`) after editing them |
+| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n references/scripts/dediren-mcp.sh` and `python -m py_compile references/scripts/dediren-mcp-router.py` after editing the adapter |
 | Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>` (Claude Code) or `<skill-dir>/references/scripts/build-gallery.py <package>` (Codex); drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
 | Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — multi-model package (package-level `presentation` lang/dir) with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

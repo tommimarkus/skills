@@ -7,7 +7,7 @@ handoff. Delegate exact code internals (method bodies, language idioms) to
 ## Source Contract
 
 Use `kind: "uml-class"`. Source reference: `fixtures/source/valid-uml-complex.json`
-in the selected Dediren release bundle.
+exposed by the selected host runtime.
 
 Node types:
 

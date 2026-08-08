@@ -7,7 +7,7 @@ Delegate persistence and storage decisions to `software-design` (and
 ## Source Contract
 
 Use `kind: "uml-data"`. Source reference: `fixtures/source/valid-uml-complex.json`
-in the selected Dediren release bundle (the data types and enumerations live
+exposed by the selected host runtime (the data types and enumerations live
 there alongside the class content).
 
 Node types:

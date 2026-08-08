@@ -1,8 +1,8 @@
 # souroldgeezer
 
-Claude Code™ plugin marketplace by Sour Old Geezer. This repository
-is the marketplace source and published plugin tree. Codex support is additive
-through parallel runtime metadata over the same plugin and skill sources.
+Cross-runtime plugin marketplace by Sour Old Geezer. Claude Code™, Codex, and
+GitHub™ Copilot CLI publish the same shared skill workflows through additive
+host adapters.
 
 ## What this is
 
@@ -71,6 +71,19 @@ codex plugin marketplace add /absolute/path/to/skills
 codex plugin add souroldgeezer-audit@souroldgeezer
 ```
 
+### GitHub™ Copilot CLI
+
+Copilot CLI currently consumes the native root `plugin.json` only for the
+MCP-equipped architecture plugin:
+
+```bash
+copilot plugin marketplace add tommimarkus/skills
+copilot plugin install souroldgeezer-architecture@souroldgeezer
+```
+
+For local development, add the clone path as the marketplace source before
+running the same install command.
+
 ## Local development
 
 - Keep task worktrees in the primary checkout's persistent, gitignored
@@ -87,14 +100,15 @@ codex plugin add souroldgeezer-audit@souroldgeezer
   `.codex-plugin/plugin.json`. Codex requires strict SemVer, so its version is the
   normalized form of the Claude CalVer authority (`YYYY.0M.MICRO` →
   `YYYY.M.MICRO`).
-- `architecture-design` drives Dediren through the plugin's bundled MCP server
-  (inline in the Claude manifest and file-backed by
-  `souroldgeezer-architecture/.mcp.json` from the Codex manifest); its
-  launcher resolves the pinned Dediren runtime from GitHub™ Releases on first use —
-  into `${CLAUDE_PLUGIN_DATA}` for installed Claude users, or a writable
-  per-user/temp fallback for Codex and the internal CLI lane — and needs Java™ 21
-  or newer. The Codex MCP config discovers the installed launcher without changing
-  directory, preserving the caller's workspace as Dediren's path boundary.
+- The MCP-equipped architecture plugin also has a native Copilot `plugin.json`.
+  Keep its identity and strict-SemVer version aligned with Codex; its adapter lives at
+  `mcp/copilot.mcp.json`, beside the Codex adapter.
+- `architecture-design` drives a host-managed current Dediren CLI through three
+  MCP adapters and a shared compatibility router. The plugin does not bundle,
+  download, pin, or downgrade Dediren. Install `dediren` on `PATH`, or set
+  `DEDIREN_COMMAND` to an explicit executable for controlled validation. Each
+  operation carries an absolute `workspaceRoot`, preserving the selected
+  project as Dediren's path boundary.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 
@@ -129,33 +143,33 @@ git diff --check
 uv run python -m unittest discover -s tests -p '*_test.py'
 ```
 
-The parity check validates both marketplaces and both manifest families. The
+The parity check validates both marketplaces, both complete manifest families,
+and the architecture plugin's native Copilot manifest and MCP adapter. The
 fragmentation gate additionally validates native Codex manifest structure; the
 first-party Codex plugin validator is run during packaging changes when the
 installed CLI exposes one.
 
-The host smoke creates temporary `CODEX_HOME` and `CLAUDE_CONFIG_DIR` state,
-registers this checkout as both marketplaces, installs all five plugins, checks
-the 15 shared skills through Codex prompt discovery and Claude component
-inventory, and drives the bundled Dediren JSON-RPC handshake through both host
-adapters. It fingerprints the normal plugin/config profile surfaces before and
-after and fails if they change. The current Codex CLI has no standalone plugin
-validator, so that capability is reported as an explicit skip; Claude strict
-validation still runs for every plugin. The cold Dediren path may download the
-pinned bundle into the command's temporary runtime-data directory and requires
-Java™ 21 or newer.
+The host smoke creates temporary `CODEX_HOME`, `CLAUDE_CONFIG_DIR`,
+`COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without replacing `HOME`. It
+registers this checkout, installs every supported plugin surface, checks the 15
+shared Claude/Codex skills plus the Copilot architecture skill, and drives the
+external Dediren JSON-RPC handshake through all three host adapters. It also
+checks legacy initialization and current stateless discovery, verifies required
+absolute `workspaceRoot` input, and fingerprints the normal host profiles before
+and after. The current Codex CLI has no standalone plugin validator, so that is
+an explicit skip; Claude strict validation still runs for every plugin.
 
 `scripts/validate-fragmentation.sh` includes
 `scripts/test-stop-hooks.sh`.
 
-Optional release-resolved Dediren smoke lane:
+Optional host-managed Dediren smoke lane:
 
 ```text
-DEDIREN_RELEASE_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
+DEDIREN_RUNTIME_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
 ```
 
-The smoke lane downloads the pinned Dediren release bundle and requires Java™ 21
-or newer on `JAVA_HOME`, `JAVACMD`, or `PATH`.
+The smoke lane uses the current `dediren` on `PATH`, or the executable selected
+by `DEDIREN_COMMAND`; it never downloads a runtime.
 
 ## Detailed docs
 

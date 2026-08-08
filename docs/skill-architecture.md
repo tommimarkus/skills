@@ -46,8 +46,9 @@ Write trigger metadata to maximize useful activation, not raw activation:
 - Include clear exclusions when sibling skills own nearby work.
 - Avoid broad phrases such as "best practices", "general help", or "any code"
   unless the skill truly owns that surface.
-- Keep runtime metadata synchronized across both hosts: the Claude and Codex
-  manifests and marketplaces, plus the matching Claude subagent files.
+- Keep runtime metadata synchronized across every supported host: the Claude
+  and Codex manifests and marketplaces, any native Copilot manifest, plus the
+  matching Claude subagent files.
 
 Trigger quality is a precision and recall problem. Low precision wastes context
 and can steer agents into the wrong workflow. Low recall means the skill exists
@@ -75,7 +76,7 @@ Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
 
-A capability the `SKILL.md` advertises must be one the pinned runtime can
+A capability the `SKILL.md` advertises must be one the supported runtime can
 actually express. Verify a composed claim — a specific mode × notation × export
 combination — against the runtime before shipping it; if the runtime cannot
 express the combination, narrow the claim rather than let an agent invent an
@@ -297,7 +298,7 @@ bare variable.
 Codex support is additive to that Claude contract. In Codex, resolve an absolute
 `<skill-dir>` from the source path reported for the loaded `SKILL.md`, carry it
 into raw procedures, and use documented `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`
-variables only in Codex hook contexts that support them. Codex bundled MCP fields
+variables only in Codex hook contexts that support them. Codex plugin MCP fields
 are literal; use a plugin-relative `cwd` / path when changing directory is safe,
 or a tested source-discovery bootstrap when the server must preserve the caller's
 workspace. Shared skill prose may show both runtime forms; it must not delete or

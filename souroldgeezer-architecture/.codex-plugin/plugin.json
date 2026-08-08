@@ -12,7 +12,7 @@
   "license": "MIT",
   "keywords": ["architecture", "archimate", "uml", "dediren"],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./mcp/codex.mcp.json",
   "interface": {
     "displayName": "Sour Old Geezer Architecture",
     "shortDescription": "Maintained architecture models and evidence",

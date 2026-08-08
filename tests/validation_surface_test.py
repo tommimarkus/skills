@@ -15,10 +15,11 @@ class ValidationSurfaceTest(unittest.TestCase):
         self.assertIn("bash scripts/test-stop-hooks.sh", validation_script)
         self.assertIn("scripts/test-stop-hooks.sh", readme)
 
-    def test_readme_documents_optional_dediren_release_smoke_lane(self) -> None:
+    def test_readme_documents_optional_external_dediren_smoke_lane(self) -> None:
         readme = read("README.md")
 
-        self.assertIn("DEDIREN_RELEASE_SMOKE=1", readme)
+        self.assertIn("DEDIREN_RUNTIME_SMOKE=1", readme)
+        self.assertIn("never downloads a runtime", readme)
         self.assertIn(
             "uv run python -m unittest tests.architecture_dediren_release_test",
             readme,

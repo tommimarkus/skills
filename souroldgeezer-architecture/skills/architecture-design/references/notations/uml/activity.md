@@ -7,7 +7,7 @@ this skill, and code-level control flow to `software-design`.
 ## Source Contract
 
 Use `kind: "uml-activity"`. Source reference: `fixtures/source/valid-uml-complex.json`
-in the selected Dediren release bundle (activity nodes and flows live there).
+exposed by the selected host runtime (activity nodes and flows live there).
 
 Node types:
 

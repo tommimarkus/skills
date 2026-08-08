@@ -1,0 +1,12 @@
+{
+  "dediren": {
+    "type": "local",
+    "command": "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+    "args": [],
+    "tools": [
+      "*"
+    ],
+    "timeout": 180000,
+    "deferTools": "never"
+  }
+}

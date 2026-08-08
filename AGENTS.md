@@ -1,9 +1,9 @@
 # AGENTS.md
 
 This repository is a cross-runtime plugin marketplace for Claude Code and
-Codex. It publishes the same skills through runtime-specific packaging; the
-shared skill workflow under each plugin's `skills/` directory is the source of
-truth.
+Codex, with a native GitHub™ Copilot CLI adapter where a plugin declares one.
+It publishes the same skills through runtime-specific packaging; the shared
+skill workflow under each plugin's `skills/` directory is the source of truth.
 
 ## Start here
 
@@ -23,8 +23,10 @@ making either runtime load the other's file first.
 - `.agents/plugins/marketplace.json`: native Codex marketplace.
 - `.claude-plugin/marketplace.json`: Claude Code marketplace.
 - `<plugin>/.codex-plugin/plugin.json`: native Codex manifest.
-- `<plugin>/.mcp.json`: Codex bundled MCP server configuration when the Codex
-  manifest declares `mcpServers`.
+- `<plugin>/mcp/codex.mcp.json`: Codex MCP adapter when the Codex manifest
+  declares `mcpServers`.
+- `<plugin>/plugin.json`: native Copilot manifest when that plugin supports
+  Copilot CLI directly; its MCP adapter lives at `<plugin>/mcp/copilot.mcp.json`.
 - `<plugin>/.claude-plugin/plugin.json`: Claude manifest.
 - `<plugin>/skills/<skill>/SKILL.md`: shared runtime-neutral workflow.
 - `<plugin>/skills/<skill>/extensions/`: on-demand supporting packs; a stack
@@ -63,11 +65,14 @@ variables, and UI presentation in the host adapter.
 - Shared skill commands must preserve documented Claude substitutions and add a
   Codex source-path form beside them. Never replace `${CLAUDE_SKILL_DIR}` or
   `${CLAUDE_PLUGIN_ROOT}` with a generic placeholder as the only instruction.
-- Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex bundled MCP
+- Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex plugin MCP
   fields are literal: use plugin-relative `cwd` / paths where changing directory
   is correct, or a tested source-discovery bootstrap when the server must preserve
   the caller's workspace. Claude MCP and hook commands use
   `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}`.
+- Copilot plugin MCP commands use `${PLUGIN_ROOT}` and writable plugin data uses
+  `${COPILOT_PLUGIN_DATA}`. Keep a separate Copilot MCP file; never let Copilot
+  fall through to the Codex bootstrap.
 
 ## Runtime parity
 
@@ -76,6 +81,9 @@ Keep plugin sets, ordering, names, descriptions, and semantic versions aligned.
 The Claude manifest and README preserve CalVer `YYYY.0M.MICRO`; Codex derives
 strict SemVer `YYYY.M.MICRO` from that authority. Marketplace entries never
 carry a `version` field.
+
+When a plugin has a root Copilot `plugin.json`, keep its name, description,
+skills path, and strict-SemVer version aligned with the Codex manifest.
 
 Each public `SKILL.md` keeps its matching Claude subagent. Codex discovers the
 same skill through the Codex manifest's `skills` path; do not create a parallel
@@ -90,7 +98,8 @@ emits a proposed plan for explicit approval.
 ## Version and release policy
 
 The Claude manifest and README use CalVer `YYYY.0M.MICRO` as the release
-authority. The Codex manifest mirrors it as strict SemVer `YYYY.M.MICRO`.
+authority. Codex and any native Copilot manifest mirror it as strict SemVer
+`YYYY.M.MICRO`.
 
 Feature branches and worktrees carry content only. Do not increment existing
 version cells there. At integration on `main`, run:
@@ -101,8 +110,8 @@ uv run python scripts/version_stamp.py compute --plugin <name>
 ```
 
 Then apply the padded computed stamp to the Claude manifest and matching README
-cell, and its normalized derivative to the Codex manifest, in the integration
-commit. New manifests added by a feature branch may
+cell, and its normalized derivative to the Codex and native Copilot manifests,
+in the integration commit. New manifests added by a feature branch may
 carry the existing release's SemVer-normalized value; that is packaging content,
 not a release increment.
 
@@ -127,10 +136,12 @@ when it is available, and run `claude plugin validate --strict` through the
 repository report path when the Claude CLI is installed. A test run that
 collects zero tests is a failed gate.
 
-The host smoke must keep both safety flags. It uses temporary `CODEX_HOME` and
-`CLAUDE_CONFIG_DIR` state without replacing `HOME`, verifies installed plugin,
-skill, agent, and Dediren MCP surfaces, and fingerprints the normal host
-plugin/config control planes before and after. Absence of a standalone Codex
+The host smoke must keep both safety flags. It uses temporary `CODEX_HOME`,
+`CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without
+replacing `HOME`, verifies installed plugin, skill, agent, and Dediren MCP
+surfaces, and fingerprints the normal host plugin/config control planes before
+and after. Dediren itself is host-managed: the smoke uses `dediren` from `PATH`
+or `DEDIREN_COMMAND`, never a plugin-owned pin. Absence of a standalone Codex
 validator is a reported skip, not a fabricated pass.
 
 ## Documentation and ownership

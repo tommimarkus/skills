@@ -23,16 +23,16 @@ Source implies omitted or reversed relationship: `ARCH-X-4`.
 Three read-only Dediren tools complement the source-drift `ARCH-X-*` checks above
 (all defined in architecture §9):
 
-- **Artifact freshness — the gate (`dediren_verify {source, artifacts}`).** The
+- **Artifact freshness — the gate (`dediren_verify {workspaceRoot, source, artifacts}`).** The
   machine check that a package's generated output is still a pure function of its
   source. A `stale` rendered SVG or gallery is `ARCH-R-2`; a `stale` OEF/XMI export
   is `ARCH-E-4`. An `unstamped` artifact — e.g. committed evidence predating
   provenance stamping — is disclosable, not a finding.
-- **Workspace freshness index (`dediren_status {dir?}`).** A read-only index of the
+- **Workspace freshness index (`dediren_status {workspaceRoot, dir?}`).** A read-only index of the
   models and artifacts under a directory; use it to spot which packages may have
   drifted before running `dediren_verify`. Non-gating — `dediren_verify` is the
   gate, `dediren_status` only points at it.
-- **Model-revision comparison (`dediren_diff {old, new}`).** Compares two revisions
+- **Model-revision comparison (`dediren_diff {workspaceRoot, old, new}`).** Compares two revisions
   of one package's *own* source model (added / removed / changed nodes,
   relationships, and views, with field-level changes). It surfaces what changed
   between revisions and is complementary to — and distinct from — the source-drift

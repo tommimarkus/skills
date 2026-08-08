@@ -6,19 +6,35 @@ the other runtime's contract.
 
 ## What this repo is
 
-A **Claude Code plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Codex support is additive through `.agents/plugins/marketplace.json` and per-plugin `.codex-plugin/plugin.json` mirrors over the same `skills/` tree. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
+A **cross-runtime plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Codex support is additive through `.agents/plugins/marketplace.json` and per-plugin `.codex-plugin/plugin.json` mirrors over the same `skills/` tree. The MCP-equipped architecture plugin additionally has a native GitHub™ Copilot CLI `plugin.json`; all three hosts use the same shared skill source. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
 
 ## Runtime documentation cross-checks
 
-When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check the official Claude Code doc set before relying on memory. When the same change touches Codex packaging, cross-check the official Codex documentation too.
+When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check each affected host's current official documentation before relying on memory.
 
 - Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour. [Create custom subagents](https://code.claude.com/docs/en/sub-agents) is the authority for `agents/*.md` frontmatter — the supported field set, `model` / `effort` values, and which fields are ignored for plugin subagents. Verify a field against it before shipping one: an unsupported key is silently dropped, not rejected.
 - Codex: use the current official Codex plugin and marketplace documentation as
   authority for `.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`,
   `AGENTS.md`, plugin hooks, and `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`.
+- Copilot CLI: use the official [plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference),
+  [command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference),
+  and [configuration-directory reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)
+  as authority for root `plugin.json`,
+  `mcpServers`, `${PLUGIN_ROOT}`, marketplace commands, and isolated
+  `COPILOT_HOME` / `COPILOT_CACHE_HOME` state.
 - Keep `.claude-plugin/marketplace.json` as the single shared Claude Code marketplace. Keep the separate Codex catalog synchronized on plugin set, order, and source paths; shared skills remain one tree.
 - Local refresh: after local plugin source changes, refresh the changed plugin through `/plugin`, restart Claude Code if a session still shows an older materialized copy, and verify the installed cache path and bundled `skills/` directories.
-- **Bundling an MCP server in a plugin** is runtime-adapted: Claude Code accepts inline `mcpServers` in `.claude-plugin/plugin.json`, while Codex requires `.codex-plugin/plugin.json` `mcpServers` to point to a plugin-root `.mcp.json`. The repository-wide `.mcp.json` ignore rule therefore has an explicit tracked exception for `souroldgeezer-architecture/.mcp.json`; other `.mcp.json` files remain local-only. `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}` / `${CLAUDE_PROJECT_DIR}` substitute in Claude server `command`/`args`/`env`. Codex MCP fields do **not** interpolate `${PLUGIN_ROOT}` / `${PLUGIN_DATA}` (those are hook substitutions): Codex resolves only a relative `cwd` against the installed plugin root. Use that when changing directory is correct; when the server must inherit the caller's workspace, use a tested source-discovery bootstrap that resolves the installed launcher without setting `cwd`. Cache downloaded runtimes per-user, never in the ephemeral plugin root or target project. Plugin MCP servers auto-start when the plugin is enabled and a stdio server that exits at spawn gets no auto-retry, so a launcher that **fail-fasts on a cold cache leaves the server dead every time the pinned runtime changes** — an orphaned cache after a version bump, and every fresh install. The launcher should instead **resolve the runtime on demand with bounded I/O**: the fast path (already resolved) does no network I/O, and the cold-cache resolve is capped — connect/transfer timeouts on the download, a bounded lock wait — so it can never hang session start (which is non-blocking anyway; only a turn needing the tools waits). The Codex `.mcp.json` must set a startup timeout that covers this bounded cold resolve. `souroldgeezer-architecture` is the reference: both host adapters run `skills/architecture-design/references/scripts/dediren-mcp.sh` (resolve-on-demand, bounded, per-user cache); the Codex adapter discovers that launcher from `codex plugin list --json` while preserving the workspace `cwd`. The skill drives the server as its primary lane with an internal, user-invisible CLI fallback for the narrow window before a freshly-resolved server reconnects (or when the host runtime is absent). Because that CLI fallback runs via the Bash tool, any bundled script's default write/cache location must be **sandbox-writable**: the default Bash sandbox mounts `$HOME` read-only (so `$HOME/.cache` / `$XDG_CACHE_HOME` fail) while allowing the project dir and `$TMPDIR`, and host plugin-data values reach only MCP-server / hook / LSP processes, not Bash-tool subprocesses. So a bundled script must **not** default its cache dir to `$HOME/.cache` (breaks under sandbox) or the repo tree (`$PWD/.cache`, which pollutes downstream repos): prefer a per-user dir, fall back to `${TMPDIR:-/tmp}` when it is not writable, and probe writability with an actual write test (`[ -w ]` after `mkdir -p` — `mkdir -p` is a no-op success on a pre-existing read-only dir, so it falsely reads as writable). Cross-check MCP-in-plugin mechanics against both hosts' official plugin references.
+- **MCP packaging is host-adapted, while the server contract stays shared.**
+  Claude declares the launcher inline, Codex points at `mcp/codex.mcp.json`, and
+  Copilot points at `mcp/copilot.mcp.json`. The shared router preserves the
+  caller's workspace and requires an absolute `workspaceRoot` per operation.
+  It discovers the live upstream tool catalog and supports both legacy MCP
+  initialization and current stateless discovery. Dediren is host-managed:
+  resolve the current `dediren` from `PATH`, or use `DEDIREN_COMMAND` for an
+  explicit validation executable. The plugin must never download, pin,
+  downgrade, or patch Dediren. Cross-check all three adapters against their
+  official plugin references and MCP against the current
+  [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover).
 
 ## Keeping CLAUDE.md and README.md current (MUST)
 
@@ -58,7 +74,7 @@ Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files (`
 
 Before committing, run `git ls-files -ci --exclude-standard`. The output must be empty unless the same task documents a deliberate, path-specific tracked exception. If it lists a tracked ignored path, uncommit it immediately with `git rm --cached -- <path>` (keeping the working-tree copy); don't defer cleanup.
 
-Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.mcp.json` — are local-only by default. The one tracked exception is `souroldgeezer-architecture/.mcp.json`, which is the Codex plugin's bundled MCP adapter.
+Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.mcp.json` — are local-only. Tracked plugin adapters live under each plugin's `mcp/` directory instead.
 
 ## Git worktree location (MUST)
 
@@ -103,14 +119,14 @@ git diff --check
 
 Run the whole suite with the repo's actual `*_test.py` pattern; bare `unittest discover` uses `test*.py`, silently collects zero, and reads as a pass — treat a run that collects 0 tests as a failed gate.
 
-The cross-runtime host smoke installs all five plugins into fresh temporary
-`CODEX_HOME` and `CLAUDE_CONFIG_DIR` trees, never substitutes `HOME`, checks
-Codex prompt-input skill discovery and Claude installed component inventory,
-runs Claude strict validation, and handshakes the bundled Dediren server through
-both host adapters. It fingerprints the normal plugin/config profile surfaces
-before and after. Keep both safety flags; the current Codex CLI's lack of a
-standalone plugin validator is an explicit skip. A cold Dediren run may download
-the pinned bundle into temporary runtime data and requires Java™ 21 or newer.
+The cross-runtime host smoke installs supported surfaces into fresh temporary
+`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME`
+trees without substituting `HOME`. It checks Codex prompt-input discovery,
+Claude installed components and strict validation, Copilot installation and MCP
+inventory, then handshakes the host-managed Dediren server through all three
+adapters. It fingerprints every normal plugin/config profile before and after.
+Keep both safety flags; the current Codex CLI's lack of a standalone plugin
+validator is an explicit skip.
 
 Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####` IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`), and a unique intent; the unittest suite rejects duplicate IDs, intents, and fixture/expectation fingerprints before executing the cases. The report's primary replacement claim is empirical: the `Replacement Calibration` section runs the local gold ledger and reports how many skill-only findings the tool detects automatically — keep ≥500 gold-finding cases and ≥90% automated replacement recall (catalog coverage is secondary metadata, not the success criterion). When cases are bulk-generated, update `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL in the same change.
 
@@ -194,17 +210,20 @@ Adding a new plugin:
 3. `name` / `description` must stay in sync across the Claude manifest and `marketplace.json#plugins[]`. `version` lives only in the Claude `plugin.json` as the release authority and never appears in the marketplace entry — Claude Code always resolves `plugin.json` over a marketplace-entry copy without warning, so a stray copy is a silent drift risk.
 4. Add the additive Codex mirror at `<plugin-name>/.codex-plugin/plugin.json` and the matching `.agents/plugins/marketplace.json` entry. Keep plugin set, order, and source paths aligned without changing the Claude surfaces above.
 5. Derive the Codex strict-SemVer version from the Claude CalVer authority by normalizing the month (`YYYY.0M.MICRO` → `YYYY.M.MICRO`). Neither marketplace carries a version key.
+6. When the plugin is exposed natively to Copilot CLI, add root `plugin.json` and
+   keep its strict-SemVer version aligned with Codex. MCP configuration belongs under
+   `mcp/`, not in an ignored root `.mcp.json`.
 
 **Removing a runtime's or tool's support**: on any runtime/tool support-removal, follow [docs/maintenance-procedures.md § Removing a runtime's or tool's support](docs/maintenance-procedures.md) — scope the cut to marketplace-owned surfaces, preserve downstream target-repo conventions, optional handoffs to external plugins, and vendor-named detection patterns, and re-diff the report and gold ledger.
 
 ## Plugin versioning (MUST)
 
-Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. This mirrors the Dediren upstream scheme this repo already adopts. The Claude `plugin.json#version` remains the release authority; Claude Code always resolves it over a marketplace-entry copy without warning, so marketplace entries never carry a `version` key. The Codex manifest mirrors the same semantic version in strict-SemVer form (`YYYY.M.MICRO`). A stamp updates the Claude manifest, derived Codex mirror, and README together. **Where that stamp lands depends on where the work happens:**
+Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. The Claude `plugin.json#version` remains the release authority; Claude Code always resolves it over a marketplace-entry copy without warning, so marketplace entries never carry a `version` key. Codex and native Copilot manifests mirror the same semantic version in strict-SemVer form (`YYYY.M.MICRO`). A stamp updates every applicable manifest cell and the README together. **Where that stamp lands depends on where the work happens:**
 
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped a version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply all three cells in the integration commit.
+Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped an existing version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply every applicable cell in the integration commit. A newly added Copilot manifest may start at the existing release's padded value as packaging content.
 
 **Stamp mechanics:**
 - Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current Claude version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version; the Codex cell is its normalized mirror.
@@ -222,7 +241,7 @@ Before integrating a worktree, run `uv run python scripts/version_stamp.py guard
 **No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
 
 **Sibling-file sync** (one commit — the stamp's landing commit; the integration commit on `main` for worktree work):
-- `.claude-plugin/plugin.json#version`, its normalized `.codex-plugin/plugin.json#version` mirror, and the plugin's `README.md` version-table cell — always all three. The README preserves the Claude CalVer spelling; compare the Codex mirror semantically. Marketplace entries never carry a version.
+- `.claude-plugin/plugin.json#version`, its normalized `.codex-plugin/plugin.json#version` mirror, any native Copilot `plugin.json#version`, and the plugin's `README.md` version-table cell. The README preserves the Claude CalVer spelling; Codex and Copilot use its normalized strict-SemVer form. Marketplace entries never carry a version.
 - both manifest descriptions and the Claude marketplace description — when the
   change alters the plugin's surface (new skill, new mode).
 - `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").

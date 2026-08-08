@@ -18,7 +18,7 @@ package.
 
 The input must already name itself. Since Dediren 2026.07.28 the render lane
 takes each view's <title>/<desc> from its own `presentation`, and
-`dediren-release.sh` refuses to resolve an older bundle. So the step keeps the
+the self-check refuses rendering on an older external CLI. So the step keeps the
 native markup, sets that <title> to the view label and ensures a <desc> carrying
 the view's architecture question — normally the same text the runtime already
 wrote — and adds the band.
@@ -340,7 +340,7 @@ def do_apply(root, title, desc):
         return 3
     # The band is added to an artifact that already names itself. Since Dediren
     # 2026.07.28 the render lane writes that name from the view's own
-    # `presentation`, and `dediren-release.sh` refuses to resolve an older
+    # `presentation`, and self-check refuses rendering on an older external
     # bundle, so an unnamed artifact reaching here is out-of-support input —
     # typically render output committed in an older era, which the floor cannot
     # intercept because this step takes a file path, not a runtime. Refuse it

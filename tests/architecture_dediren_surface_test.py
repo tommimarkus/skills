@@ -119,8 +119,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
         )
 
-    def test_codex_manifest_uses_file_backed_dediren_mcp_config(self) -> None:
-        """Codex loads bundled MCP servers through a plugin-root .mcp.json file.
+    def test_host_manifests_use_runtime_specific_dediren_mcp_adapters(self) -> None:
+        """Each host loads the shared router through its native MCP adapter.
 
         An inline ``mcpServers`` object is valid Claude packaging but leaves the
         Codex plugin enabled without registering any Dediren tools.
@@ -128,9 +128,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         codex_manifest = json.loads(
             (ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(codex_manifest["mcpServers"], "./.mcp.json")
+        self.assertEqual(codex_manifest["mcpServers"], "./mcp/codex.mcp.json")
 
-        mcp_config = json.loads((ARCH_PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
+        mcp_config = json.loads(
+            (ARCH_PLUGIN / "mcp" / "codex.mcp.json").read_text(encoding="utf-8")
+        )
         dediren = mcp_config["dediren"]
         self.assertEqual(dediren["command"], "bash")
         self.assertEqual(dediren["args"][0], "-c")
@@ -145,13 +147,45 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("${PLUGIN_", json.dumps(dediren))
         self.assertGreaterEqual(dediren["startup_timeout_sec"], 120)
 
+        copilot_manifest = json.loads((ARCH_PLUGIN / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(copilot_manifest["name"], codex_manifest["name"])
+        self.assertEqual(copilot_manifest["version"], codex_manifest["version"])
+        self.assertEqual(copilot_manifest["description"], codex_manifest["description"])
+        self.assertEqual(copilot_manifest["skills"], "./skills/")
+        self.assertEqual(copilot_manifest["mcpServers"], "./mcp/copilot.mcp.json")
+        copilot_config = json.loads(
+            (ARCH_PLUGIN / "mcp" / "copilot.mcp.json").read_text(encoding="utf-8")
+        )
+        copilot_dediren = copilot_config["dediren"]
+        self.assertEqual(
+            copilot_dediren["command"],
+            "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+        )
+        self.assertEqual(copilot_dediren["args"], [])
+        self.assertEqual(copilot_dediren["tools"], ["*"])
+        self.assertNotIn("cwd", copilot_dediren)
+        self.assertNotIn("env", copilot_dediren)
+        self.assertNotIn("codex plugin", json.dumps(copilot_dediren))
+        launcher = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "scripts"
+            / "dediren-mcp.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("DEDIREN_COMMAND", launcher)
+        self.assertNotIn("--ensure-bundle", launcher)
+
     def test_codex_mcp_bootstrap_finds_installed_launcher_without_changing_workspace(self) -> None:
         """The Codex adapter must solve both halves of the host mismatch.
 
         It discovers the installed plugin root without an interpolated token and
         leaves cwd untouched so Dediren's ``--root`` remains the user's project.
         """
-        mcp_config = json.loads((ARCH_PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
+        mcp_config = json.loads(
+            (ARCH_PLUGIN / "mcp" / "codex.mcp.json").read_text(encoding="utf-8")
+        )
         dediren = mcp_config["dediren"]
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -482,7 +516,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "schema validation plus ArchiMate semantic validation",
             architecture_reference,
         )
-        self.assertIn('dediren_validate {profile: "archimate"}', architecture_reference)
+        self.assertIn(
+            'dediren_validate {workspaceRoot, source, profile: "archimate"}',
+            architecture_reference,
+        )
         # self-check.md drives semantic validation through the MCP tool with a profile.
         self.assertIn("dediren_validate", self_check)
         self.assertIn('profile: "archimate"', self_check)
@@ -493,10 +530,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
         self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
-    def test_dediren_release_runtime_contract_is_documented(self) -> None:
+    def test_dediren_external_runtime_contract_is_documented(self) -> None:
         expectations = {
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
-                "bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint",
+                "tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint",
                 "`Node`, not `TechnologyNode`",
                 "close parallel route channels during layout validation",
                 "`dediren_build` call walks its views through projection",
@@ -509,7 +546,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "references"
             / "procedures"
             / "architecture-operational-workflow.md": [
-                "bundled MCP server",
+                "current host-managed Dediren CLI",
                 "plugins.generic-graph.semantic_profile",
                 "architecture.md` §9",
                 "endpoint legality",
@@ -522,17 +559,15 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "are defined in `architecture.md` §9",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
-                "bundled Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
+                "tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
                 "`Node`, not `TechnologyNode`",
                 "reports close parallel route channels",
                 "plugins.generic-graph.semantic_profile",
                 "runs projection, layout, layout validation, and rendering inside each `dediren_build` call",
             ],
-            # The Dediren upstream release adoption procedure (carrying the
-            # runtime-evidence delegation) was relocated from CLAUDE.md to
-            # docs/maintenance-procedures.md; CLAUDE.md keeps a one-line pointer.
+            # Compatibility evidence is independent from runtime selection.
             REPO_ROOT / "docs" / "maintenance-procedures.md": [
-                "runtime-evidence rules live in the architecture-design `SKILL.md`",
+                "version in repo fixtures is a compatibility evidence baseline",
             ],
         }
 
@@ -575,9 +610,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "self-check.md"
         ).read_text(encoding="utf-8")
         expected_phrases = [
-            'dediren_validate {source: "<pkg>/model.json", profile: "archimate"}',
+            'dediren_validate {workspaceRoot: "/abs/project", source: "<pkg>/model.json", profile: "archimate"}',
             "dediren_build",
-            'dediren_guide {topic: "source-json"}',
+            'dediren_guide {workspaceRoot: "/abs/project", topic: "source-json"}',
             # The native package lane: one call, artifacts at their declared paths.
             "package",
             "package-build-result",
@@ -589,7 +624,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(phrase, self_check)
         # The consumer-side orchestration is retired with the package lane: no staging
         # dir, no plan/map remap, no per-view export fan-out, and no bundled build
-        # helper. The CLI fallback is the release resolver driving `build --package`.
+        # helper. The CLI fallback drives the selected host executable directly.
         for absent in [
             "layout --plugin elk-layout",
             "project --target layout-request",
@@ -653,7 +688,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
                 "ArchiMate and UML are supported `generic-graph` semantic profiles",
-                'dediren_validate {profile: "uml"}',
+                'dediren_validate {workspaceRoot, profile: "uml"}',
                 "uml-xmi",
                 "uml-sequence",
             ],
@@ -677,13 +712,13 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         archimate_phrases = [
             "ArchiMate frames the architectural concern",
-            'dediren_validate {profile: "archimate"}',
+            'dediren_validate {workspaceRoot, profile: "archimate"}',
             "archimate-oef",
             "relationship connectors and junctions unsupported",
         ]
         uml_phrases = [
             "UML elaborates one bounded part",
-            'dediren_validate {profile: "uml"}',
+            'dediren_validate {workspaceRoot, profile: "uml"}',
             'kind: "uml-sequence"',
             "uml-xmi",
             "properties.uml.architecture_context",
@@ -1257,30 +1292,27 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("/home/souroldgeezer/Documents", source_grounding)
         self.assertNotIn("~/Documents", source_grounding)
 
-    def test_repo_guidance_uses_release_resolver_path(self) -> None:
-        # The Dediren adoption procedure moved from CLAUDE.md to
-        # docs/maintenance-procedures.md (CLAUDE.md keeps a one-line pointer).
+    def test_repo_guidance_rejects_plugin_runtime_provisioning(self) -> None:
         maintenance_guidance = (
             REPO_ROOT / "docs" / "maintenance-procedures.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn(
-            "souroldgeezer-architecture/skills/architecture-design/references/scripts/dediren-release.sh",
-            maintenance_guidance,
-        )
+        self.assertIn("does not bundle, download, or select Dediren", maintenance_guidance)
+        self.assertIn("current host-managed `dediren` executable", maintenance_guidance)
+        self.assertNotIn("dediren-release.sh", maintenance_guidance)
         self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
-    def test_dediren_release_bundle_is_marked_upstream_owned(self) -> None:
+    def test_dediren_host_runtime_is_marked_upstream_owned(self) -> None:
         expectations = {
-            # The don't-patch rule lives in the Dediren upstream release adoption
+            # The don't-patch rule lives in the Dediren upstream compatibility
             # procedure, which relocated from CLAUDE.md to
             # docs/maintenance-procedures.md.
             REPO_ROOT / "docs" / "maintenance-procedures.md": [
-                "Never patch the downloaded bundle",
-                "report runtime defects upstream",
+                "Never patch a host installation from this repo",
+                "report Dediren defects upstream",
             ],
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
-                "upstream Dediren distribution artifacts",
+                "upstream distribution artifact",
                 "Do not patch",
                 "Dediren tool issues",
             ],
@@ -1291,7 +1323,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "procedures"
             / "architecture-operational-workflow.md": [
                 "imported upstream evidence",
-                "do not patch cached release files",
+                "do not patch the host installation",
                 "Dediren tool issues",
             ],
             ARCH_PLUGIN
@@ -1300,8 +1332,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "references"
             / "procedures"
             / "self-check.md": [
-                "imported upstream Dediren artifact",
-                "Do not patch",
+                "independently managed upstream runtime",
+                "Do not patch, download, pin, or downgrade",
                 "Dediren tool issues",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [

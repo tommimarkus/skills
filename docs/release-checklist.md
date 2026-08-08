@@ -9,14 +9,16 @@ Use this before publishing a release or bumping a plugin version.
   and the Claude marketplace entry keeps the same `name` and `description`.
 - Confirm the additive Codex marketplace exposes the same plugin set, order, and
   local paths, and each plugin has `.codex-plugin/plugin.json`.
-- Confirm both manifests express the same semantic version: padded
-  `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex. Neither
-  marketplace may carry a `version` key.
+- Confirm the Claude and Codex manifests express the same semantic version:
+  padded `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex.
+  When a native Copilot `plugin.json` exists, keep its normalized version aligned
+  with Codex. Neither marketplace may carry a `version` key.
 - Validate every Codex plugin with the current first-party plugin validator when
   the installed CLI exposes one.
 - Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
-  with both CLIs available; require all five isolated installs, all 15 shared
-  skills, Claude component/strict validation, both Dediren adapter handshakes,
+  with all three CLIs available; require all five Claude/Codex isolated installs,
+  all 15 shared skills, the isolated Copilot architecture install, Claude
+  component/strict validation, all three external-Dediren adapter handshakes,
   and unchanged normal plugin/config profiles. Record an unavailable standalone
   Codex validator as a skip.
 - Confirm the plugin docs still link every shipped skill.
@@ -29,7 +31,8 @@ Use this before publishing a release or bumping a plugin version.
 ## Versioning guidance
 
 Keep the established Claude/README CalVer spelling `YYYY.0M.MICRO` as the
-release authority. Derive Codex's strict-SemVer spelling `YYYY.M.MICRO` from it.
+release authority. Derive Codex and any native Copilot manifest's strict-SemVer
+spelling `YYYY.M.MICRO` from it.
 
 - Patch: documentation-only edits, link fixes, or other changes that do not
   alter shipped skill behavior or installed-plugin update checks.
@@ -41,5 +44,5 @@ release authority. Derive Codex's strict-SemVer spelling `YYYY.M.MICRO` from it.
 
 Feature branches carry no release increment. At integration on `main`, compute
 the next stamp with `scripts/version_stamp.py`, then update the Claude manifest,
-Codex manifest, and matching README cell together. Do not add a version to a
-marketplace entry.
+Codex manifest, any native Copilot manifest, and matching README cell together.
+Do not add a version to a marketplace entry.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Sour Old Geezer Claude Code and Codex runtime metadata parity.
+"""Check Sour Old Geezer runtime metadata parity.
 
 This is intentionally a checker, not a generator: SKILL.md frontmatter remains
 the canonical skill trigger metadata, and the two marketplaces expose one shared
@@ -258,6 +258,7 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
 
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
         codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
+        copilot_path = plugin_dir / "plugin.json"
         claude = read_json(claude_path)
         codex = read_json(codex_path)
 
@@ -278,6 +279,33 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
             findings.append(Finding(repo_relative(repo, codex_path), "version", ".".join(map(str, claude_version)), normalize_text(codex.get("version"))))
 
         compare(findings, repo, codex_path, "skills", "./skills/", codex.get("skills"))
+
+        # Copilot support is additive per plugin. When a native root manifest is
+        # present, it must describe the same shared plugin and use strict SemVer.
+        if copilot_path.is_file():
+            copilot = read_json(copilot_path)
+            for field in ("name", "description"):
+                compare(findings, repo, copilot_path, field, claude.get(field), copilot.get(field))
+            copilot_version = version_core(copilot.get("version"), codex=True)
+            if copilot_version is None:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, copilot_path),
+                        "version",
+                        "strict SemVer X.Y.Z without leading zeroes",
+                        normalize_text(copilot.get("version")),
+                    )
+                )
+            elif claude_version is not None and copilot_version != claude_version:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, copilot_path),
+                        "version",
+                        ".".join(map(str, claude_version)),
+                        normalize_text(copilot.get("version")),
+                    )
+                )
+            compare(findings, repo, copilot_path, "skills", "./skills/", copilot.get("skills"))
 
         for marketplace_path, marketplace_entry in (
             (claude_marketplace_path, plugin),
@@ -477,26 +505,107 @@ def check_codex_mcp_server_block(
                 )
 
 
+def check_copilot_mcp_server_block(
+    repo: Path,
+    path: Path,
+    plugin_dir: Path,
+    servers: dict[str, Any],
+    findings: list[Finding],
+) -> None:
+    """Check Copilot's file-backed MCP config and plugin substitutions."""
+    for name, server in valid_mcp_servers(repo, path, servers, findings):
+        field = f"mcpServers.{name}"
+        command = normalize_text(server.get("command"))
+        root_token = "${PLUGIN_ROOT}"
+        if not command.startswith(root_token):
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    f"{field}.command",
+                    f"path under {root_token}",
+                    command or "missing",
+                )
+            )
+        else:
+            launcher = plugin_dir / command[len(root_token) :].lstrip("/")
+            if not launcher.is_file():
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        f"{field}.command",
+                        f"bundled file at {repo_relative(repo, launcher)}",
+                        "missing",
+                    )
+                )
+            elif not os.access(launcher, os.X_OK):
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        f"{field}.command",
+                        "executable launcher",
+                        "not executable",
+                    )
+                )
+
+        args = server.get("args", [])
+        env = server.get("env", {})
+        string_fields: list[tuple[str, Any]] = [(f"{field}.cwd", server.get("cwd"))]
+        if isinstance(args, list):
+            string_fields.extend(
+                (f"{field}.args[{index}]", item) for index, item in enumerate(args)
+            )
+        if isinstance(env, dict):
+            string_fields.extend(
+                (f"{field}.env.{key}", item) for key, item in sorted(env.items())
+            )
+        for value_field, value in string_fields:
+            text = normalize_text(value)
+            for foreign in ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}", "${PLUGIN_DATA}"):
+                if foreign in text:
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            value_field,
+                            "Copilot plugin substitution tokens only",
+                            foreign,
+                        )
+                    )
+
+        if not isinstance(args, list):
+            findings.append(
+                Finding(repo_relative(repo, path), f"{field}.args", "argument array", "missing")
+            )
+        tools = server.get("tools")
+        if not isinstance(tools, list) or not tools:
+            findings.append(
+                Finding(repo_relative(repo, path), f"{field}.tools", "nonempty tool array", normalize_text(tools))
+            )
+
+
 # lean-audit:dup-intentional:begin -- checker passes share this repository and
 # finding-collector signature but own independent packaging/skill semantics.
 def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
     """Check cross-runtime packaging for plugins that BUNDLE an MCP server.
 
     The checked set is derived from the manifests, never a hardcoded plugin list,
-    so a second MCP-bundling plugin is covered the day it lands. The two hosts
-    take deliberately different shapes — Claude accepts an inline `mcpServers`
-    object, Codex requires a path to a plugin-root config file — so a shared
-    launcher sitting on disk proves nothing about either host's registration.
+    so a second MCP-bundling plugin is covered the day it lands. Claude accepts
+    an inline object; Codex and Copilot use distinct file-backed adapters with
+    incompatible path/substitution semantics. A shared launcher sitting on disk
+    proves nothing about any host's registration.
     """
 # lean-audit:dup-intentional:end
     for plugin_dir in plugin_dirs:
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
         codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
+        copilot_path = plugin_dir / "plugin.json"
         if not claude_path.exists() or not codex_path.exists():
             continue
 
         claude_declared = read_json(claude_path).get("mcpServers")
         codex_declared = read_json(codex_path).get("mcpServers")
+        copilot_declared = (
+            read_json(copilot_path).get("mcpServers") if copilot_path.is_file() else None
+        )
         if claude_declared is None and codex_declared is None:
             continue
 
@@ -509,6 +618,15 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
         if codex_declared is None:
             findings.append(
                 Finding(repo_relative(repo, codex_path), "mcpServers", "config-file path (Claude bundles a server)", "missing")
+            )
+        if copilot_declared is None:
+            findings.append(
+                Finding(
+                    repo_relative(repo, copilot_path),
+                    "mcpServers",
+                    "Copilot config-file path (Claude and Codex bundle a server)",
+                    "missing",
+                )
             )
 
         claude_servers: dict[str, Any] = {}
@@ -576,8 +694,61 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
                     )
                 )
 
+        copilot_servers: dict[str, Any] = {}
+        if copilot_declared is not None:
+            if isinstance(copilot_declared, str):
+                config_path = plugin_dir / copilot_declared.removeprefix("./")
+                if not config_path.is_file():
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, copilot_path),
+                            "mcpServers",
+                            f"resolvable config file at {repo_relative(repo, config_path)}",
+                            "missing",
+                        )
+                    )
+                else:
+                    config = read_json(config_path)
+                    declared_block = config.get("mcpServers", config)
+                    if isinstance(declared_block, dict):
+                        copilot_servers = declared_block
+                        check_copilot_mcp_server_block(
+                            repo,
+                            config_path,
+                            plugin_dir,
+                            copilot_servers,
+                            findings,
+                        )
+                    else:
+                        findings.append(
+                            Finding(
+                                repo_relative(repo, config_path),
+                                "mcpServers",
+                                "server object map",
+                                "missing",
+                            )
+                        )
+            else:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, copilot_path),
+                        "mcpServers",
+                        "config-file path",
+                        normalize_text(copilot_declared),
+                    )
+                )
+
         if claude_servers and codex_servers:
             compare(findings, repo, codex_path, "mcpServers:names", sorted(claude_servers), sorted(codex_servers))
+        if claude_servers and copilot_servers:
+            compare(
+                findings,
+                repo,
+                copilot_path,
+                "mcpServers:names",
+                sorted(claude_servers),
+                sorted(copilot_servers),
+            )
 
 
 def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> set[str]:
