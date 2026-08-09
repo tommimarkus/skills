@@ -474,6 +474,17 @@
     ]
   },
   {
+    "id": "app-review-react-vite",
+    "skill": "app-design",
+    "load_routes": [
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/SKILL.md", "predicate": "always"},
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/docs/app-reference/app-design.md", "predicate": "conditional:review-core"},
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/extensions/vite.md", "predicate": "conditional:vite"},
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/extensions/react.md", "predicate": "conditional:react-after-vite"}
+    ]
+  },
+  {
     "id": "sd-lookup-principle",
     "skill": "software-design",
     "files": [

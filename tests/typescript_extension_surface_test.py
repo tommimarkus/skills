@@ -7,6 +7,11 @@ class TypeScriptExtensionSurfaceTest(unittest.TestCase):
     def test_software_design_loads_typescript_extension_and_metadata_mentions_it(self) -> None:
         assert_software_design_loads_stack_extension(self, "typescript", "TypeScript")
 
+        skill = read("souroldgeezer-design/skills/software-design/SKILL.md")
+        claude_agent = read("souroldgeezer-design/agents/software-design.md")
+        for text in (skill, claude_agent):
+            self.assertIn("JavaScript", text)
+
         typescript = read("souroldgeezer-design/skills/software-design/extensions/typescript.md")
         for marker in (
             "package.json",

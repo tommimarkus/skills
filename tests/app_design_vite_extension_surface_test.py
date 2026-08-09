@@ -22,6 +22,7 @@ class AppDesignViteExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("Vite", readme)
         for text in (skill, claude_agent):
             self.assertIn("Vite", text)
+        self.assertIn("Vite", skill.split("---", 2)[1])
 
     def test_vite_extension_has_grounding_scope_and_codes(self) -> None:
         vite = read(f"{APP_SKILL}/extensions/vite.md")

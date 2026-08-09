@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, TypeScript, shell, Python®. Defer UI, API, infra, architecture, security, tests.
+  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design

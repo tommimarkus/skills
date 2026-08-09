@@ -90,6 +90,12 @@ same skill through the Codex manifest's `skills` path; do not create a parallel
 Codex workflow. Each `internal-skills/<name>` entry has thin wrappers under both
 `.agents/skills/<name>` and `.claude/skills/<name>`.
 
+Keep stack composition explicit in the shared load map: app-design loads Vite
+before React for Vite + React, retains React before Next.js, and permits Vite
+alone. JavaScript/TypeScript software guidance remains the existing
+`typescript.md` lane; security uses its separate evidence-gated `jsts.*` pack,
+and Node/React lifecycle-test rules remain under test-quality-audit.
+
 When a shared workflow needs host behavior, state the capability and give a
 runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise

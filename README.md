@@ -122,7 +122,7 @@ running the same install command.
 
 1. Audit a workflow, Dockerfile, or .NET™ logging path with `devsecops-audit`. All four audit skills (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, `lean-audit`) now disclose auditor independence and assurance level and weight findings by subject materiality via the shared [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md).
 2. Review an API surface, extract an existing contract, or build against a brownfield API baseline with `api-design`; its stack packs load a compact core plus only the requested build or review lane, including Python® ASGI/WSGI and serverless API routing.
-3. Design or review a frontend app route, screen, or component set with `app-design`, including React, Next.js, and Blazor WebAssembly app surfaces; existing app work uses project assimilation to reuse compliant local tokens/components and avoid extending legacy debt.
+3. Design or review a frontend app route, screen, or component set with `app-design`, including standalone Vite, Vite + React, React + Next.js, and Blazor WebAssembly surfaces; Vite owns development/build/deployment mechanics while React owns component lifecycle and state.
 4. Review or extract a dediren ArchiMate® or UML® architecture/design package, including UML® sequence views or Java™ source evidence, with `architecture-design`.
 5. Review infrastructure or IaC topology with `infra-design`; existing IaC work uses project assimilation to classify reused assets, legacy debt, and migration moves.
 6. Check a skill/plugin publication-surface edit with `ip-hygiene`.
