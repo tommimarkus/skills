@@ -31,9 +31,10 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is host-managed:
   resolve the current `dediren` from `PATH`, or use `DEDIREN_COMMAND` for an
-  explicit validation executable. The plugin must never download, pin,
-  downgrade, or patch Dediren. Cross-check all three adapters against their
-  official plugin references and MCP against the current
+  explicit validation executable. During migration, the launcher may reuse the
+  newest executable already present in the former verified release cache; it
+  must never download, pin, downgrade, or patch Dediren. Cross-check all three
+  adapters against their official plugin references and MCP against the current
   [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover).
 
 ## Keeping CLAUDE.md and README.md current (MUST)

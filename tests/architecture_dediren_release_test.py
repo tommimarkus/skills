@@ -760,11 +760,45 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertIn("not executable", result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_mcp_launcher_does_not_resolve_or_pin_dediren(self) -> None:
+    def test_mcp_upstream_migrates_the_newest_pre_triple_harness_cached_runtime(self) -> None:
+        """The multi-harness adapter must not strand bundles installed by its
+        predecessor when neither an explicit command nor PATH owns Dediren yet."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            release_root = temp_path / "cache" / "dediren" / "releases"
+            for version in ("2026.07.9", "2026.07.29"):
+                executable = release_root / f"dediren-agent-bundle-{version}" / "bin" / "dediren"
+                executable.parent.mkdir(parents=True)
+                executable.write_text(
+                    f"#!/usr/bin/env bash\nprintf 'CACHED {version} %s\\n' \"$*\"\n",
+                    encoding="utf-8",
+                )
+                executable.chmod(0o755)
+
+            env = os.environ.copy()
+            env.pop("DEDIREN_COMMAND", None)
+            env["PATH"] = "/usr/bin:/bin"
+            env["XDG_CACHE_HOME"] = str(temp_path / "cache")
+            result = subprocess.run(
+                ["bash", str(MCP_LAUNCHER), "--upstream", str(REPO_ROOT)],
+                cwd=REPO_ROOT,
+                check=False,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=60,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"CACHED 2026.07.29 mcp --root {REPO_ROOT}", result.stdout)
+
+    def test_mcp_launcher_does_not_download_or_pin_dediren(self) -> None:
         launcher_script = MCP_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DEDIREN_COMMAND", launcher_script)
         self.assertNotIn("dediren-release.sh", launcher_script)
         self.assertNotIn("DEDIREN_VERSION", launcher_script)
+        self.assertNotIn("curl", launcher_script)
 
     def test_mcp_server_exposes_the_seven_tools_the_skill_drives(self) -> None:
         """The host-managed `dediren mcp` stdio server exposes the core tools the

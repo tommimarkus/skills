@@ -84,7 +84,9 @@ Build.
    [self-check](references/procedures/self-check.md). The plugin supplies
    Claude Code, Codex, and Copilot MCP adapters, but Dediren itself is the
    host-managed current `dediren` executable (`PATH` or `DEDIREN_COMMAND`) and
-   is never bundled or pinned by this plugin. The router discovers that
+   is never bundled or pinned by this plugin. A migration fallback may reuse the
+   newest executable already present in the former verified release cache, but
+   never downloads one. The router discovers that
    executable's live tool catalog and adds a required absolute `workspaceRoot`
    to every tool call. Drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
@@ -166,7 +168,7 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | Claude Code, Codex, and Copilot adapters launch [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh), whose router discovers the live tools of the host-managed current `dediren` executable and adds required `workspaceRoot` routing. The skill requires `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); newer tools remain visible. |
+| Dediren MCP server (execution) | Claude Code, Codex, and Copilot adapters launch [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh), whose router discovers the live tools of the host-managed current `dediren` executable (or an already-installed legacy-cache migration fallback) and adds required `workspaceRoot` routing. The skill requires `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); newer tools remain visible. |
 | Package build (native `dediren_build {workspaceRoot, package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the host-managed `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG visible title band | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; adds the band and sets the runtime-written name, refusing an unnamed artifact (exit 4); `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |

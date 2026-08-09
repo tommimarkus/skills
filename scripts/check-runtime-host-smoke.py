@@ -783,9 +783,17 @@ def run_host_smoke(
         if not isinstance(codex_server, dict):
             raise SmokeFailure("installed Codex plugin omitted the Dediren adapter")
         codex_mcp_env = codex_env.copy()
+        codex_mcp_cwd = codex_arch_root
+        configured_cwd = codex_server.get("cwd")
+        if isinstance(configured_cwd, str) and configured_cwd:
+            if Path(configured_cwd).is_absolute():
+                raise SmokeFailure("installed Codex Dediren adapter uses an absolute cwd")
+            codex_mcp_cwd = (codex_arch_root / configured_cwd).resolve()
+            if not codex_mcp_cwd.is_relative_to(codex_arch_root.resolve()):
+                raise SmokeFailure("installed Codex Dediren adapter cwd escapes the plugin root")
         codex_tools = mcp_runner(
             [codex_server["command"], *codex_server.get("args", [])],
-            cwd=repo,
+            cwd=codex_mcp_cwd,
             env=codex_mcp_env,
             label="Codex",
         )

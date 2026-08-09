@@ -1,13 +1,14 @@
 import json
 import os
+import signal
 import subprocess
 import tempfile
 import textwrap
+import time
 import unittest
 from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT
-
 
 SCRIPTS = (
     REPO_ROOT
@@ -18,6 +19,8 @@ SCRIPTS = (
     / "scripts"
 )
 LAUNCHER = SCRIPTS / "dediren-mcp.sh"
+
+
 def run_router(messages: list[dict], *, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", str(LAUNCHER)],
@@ -25,8 +28,7 @@ def run_router(messages: list[dict], *, env: dict[str, str]) -> subprocess.Compl
         check=False,
         text=True,
         input="".join(json.dumps(message) + "\n" for message in messages),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         timeout=30,
         env=env,
     )
@@ -35,6 +37,21 @@ def run_router(messages: list[dict], *, env: dict[str, str]) -> subprocess.Compl
 def responses_by_id(result: subprocess.CompletedProcess[str]) -> dict[object, dict]:
     responses = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
     return {response.get("id"): response for response in responses if "id" in response}
+
+
+def close_process(process: subprocess.Popen[str]) -> None:
+    if process.stdin is not None and not process.stdin.closed:
+        process.stdin.close()
+    if process.poll() is None:
+        process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=10)
+    for stream in (process.stdout, process.stderr):
+        if stream is not None and not stream.closed:
+            stream.close()
 
 
 class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
@@ -47,10 +64,28 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 #!/usr/bin/env python3
                 import json
                 import os
+                import signal
                 import sys
+                import time
+                from pathlib import Path
 
                 selected_root = sys.argv[2]
                 modern = os.environ.get("FAKE_MODERN") == "1"
+                lifecycle_log = os.environ.get("FAKE_LIFECYCLE_LOG")
+
+                def log(event):
+                    if lifecycle_log:
+                        with open(lifecycle_log, "a", encoding="utf-8") as stream:
+                            stream.write(f"{event} {selected_root} {os.getpid()}\\n")
+
+                def stop(signum=None, frame=None):
+                    del signum, frame
+                    log("stop")
+                    raise SystemExit(0)
+
+                signal.signal(signal.SIGTERM, stop)
+                signal.signal(signal.SIGINT, stop)
+                log("start")
                 tools = [
                     {
                         "name": "dediren_validate",
@@ -73,78 +108,87 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                         "inputSchema": {"type": "object", "properties": {}},
                     },
                 ]
-                for line in sys.stdin:
-                    request = json.loads(line)
-                    method = request.get("method")
-                    if method == "server/discover":
-                        if modern:
+                try:
+                    for line in sys.stdin:
+                        request = json.loads(line)
+                        method = request.get("method")
+                        if method == os.environ.get("FAKE_HANG_METHOD"):
+                            time.sleep(60)
+                        if method == "server/discover":
+                            if modern:
+                                response = {
+                                    "jsonrpc": "2.0",
+                                    "id": request["id"],
+                                    "result": {
+                                        "resultType": "complete",
+                                        "supportedVersions": ["2026-07-28"],
+                                        "capabilities": {"tools": {}},
+                                    },
+                                }
+                            else:
+                                response = {
+                                    "jsonrpc": "2.0",
+                                    "id": request["id"],
+                                    "error": {"code": -32601, "message": "method not found"},
+                                }
+                        elif method == "initialize":
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": request["id"],
+                                "result": {
+                                    "protocolVersion": "2024-11-05",
+                                    "capabilities": {"tools": {"listChanged": False}},
+                                    "serverInfo": {"name": "fake", "version": "latest"},
+                                },
+                            }
+                        elif method == "tools/list":
+                            if modern:
+                                assert request["params"]["_meta"][
+                                    "io.modelcontextprotocol/protocolVersion"
+                                ] == "2026-07-28"
+                            cursor = request.get("params", {}).get("cursor")
+                            page = tools
+                            next_cursor = None
+                            if modern:
+                                page = tools[1:] if cursor == "next" else tools[:1]
+                                next_cursor = None if cursor == "next" else "next"
                             response = {
                                 "jsonrpc": "2.0",
                                 "id": request["id"],
                                 "result": {
                                     "resultType": "complete",
-                                    "supportedVersions": ["2026-07-28"],
-                                    "capabilities": {"tools": {}},
+                                    "tools": page,
+                                    **({"nextCursor": next_cursor} if next_cursor else {}),
                                 },
                             }
-                        else:
+                        elif method == "tools/call":
+                            crash_marker = os.environ.get("FAKE_CRASH_MARKER")
+                            if crash_marker and not Path(crash_marker).exists():
+                                Path(crash_marker).touch()
+                                os._exit(17)
+                            if modern:
+                                assert request["params"]["_meta"][
+                                    "io.modelcontextprotocol/protocolVersion"
+                                ] == "2026-07-28"
                             response = {
                                 "jsonrpc": "2.0",
                                 "id": request["id"],
-                                "error": {"code": -32601, "message": "method not found"},
+                                "result": {
+                                    "content": [{
+                                        "type": "text",
+                                        "text": json.dumps({
+                                            "root": selected_root,
+                                            "arguments": request["params"]["arguments"],
+                                        }),
+                                    }],
+                                    "isError": False,
+                                },
                             }
-                    elif method == "initialize":
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": {
-                                "protocolVersion": "2024-11-05",
-                                "capabilities": {"tools": {"listChanged": False}},
-                                "serverInfo": {"name": "fake", "version": "latest"},
-                            },
-                        }
-                    elif method == "tools/list":
-                        if modern:
-                            assert request["params"]["_meta"][
-                                "io.modelcontextprotocol/protocolVersion"
-                            ] == "2026-07-28"
-                        cursor = request.get("params", {}).get("cursor")
-                        page = tools
-                        next_cursor = None
-                        if modern:
-                            page = tools[1:] if cursor == "next" else tools[:1]
-                            next_cursor = None if cursor == "next" else "next"
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": {
-                                "resultType": "complete",
-                                "tools": page,
-                                **({"nextCursor": next_cursor} if next_cursor else {}),
-                            },
-                        }
-                    elif method == "tools/call":
-                        if modern:
-                            assert request["params"]["_meta"][
-                                "io.modelcontextprotocol/protocolVersion"
-                            ] == "2026-07-28"
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": {
-                                "content": [{
-                                    "type": "text",
-                                    "text": json.dumps({
-                                        "root": selected_root,
-                                        "arguments": request["params"]["arguments"],
-                                    }),
-                                }],
-                                "isError": False,
-                            },
-                        }
-                    else:
-                        continue
-                    print(json.dumps(response), flush=True)
+                        else:
+                            continue
+                        print(json.dumps(response), flush=True)
+                finally:
+                    log("stop")
                 """
             ),
             encoding="utf-8",
@@ -152,7 +196,9 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         fake_backend.chmod(0o755)
         return fake_backend
 
-    def test_initialization_supports_legacy_and_stateless_clients_without_starting_dediren(self) -> None:
+    def test_initialization_supports_legacy_and_stateless_clients_without_starting_dediren(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             result = run_router(
@@ -296,6 +342,207 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         error = responses_by_id(result)[7]["error"]
         self.assertEqual(error["code"], -32602)
         self.assertIn("workspaceRoot", error["message"])
+
+    def test_timed_out_backend_is_terminated_and_reported_without_hanging_router(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fake_backend = self._write_fake_backend(root)
+            lifecycle_log = root / "lifecycle.log"
+            started = time.monotonic()
+            result = run_router(
+                [{"jsonrpc": "2.0", "id": 8, "method": "tools/list", "params": {}}],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "DEDIREN_MCP_STARTUP_TIMEOUT_SEC": "0.2",
+                    "FAKE_HANG_METHOD": "tools/list",
+                    "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
+                },
+            )
+            elapsed = time.monotonic() - started
+            log = lifecycle_log.read_text(encoding="utf-8")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertLess(elapsed, 5)
+        error = responses_by_id(result)[8]["error"]
+        self.assertEqual(error["code"], -32000)
+        self.assertIn("timed out", error["message"])
+        self.assertIn("stop ", log)
+
+    def test_dead_workspace_backend_is_restarted_only_for_the_next_tool_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            crash_marker = root / "crashed-once"
+            lifecycle_log = root / "lifecycle.log"
+            call = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {
+                    "name": "dediren_validate",
+                    "arguments": {"workspaceRoot": str(workspace), "source": "model.json"},
+                },
+            }
+            result = run_router(
+                [{**call, "id": 9}, {**call, "id": 10}],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_CRASH_MARKER": str(crash_marker),
+                    "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
+                },
+            )
+            log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        self.assertIn("error", responses[9])
+        self.assertIn("result", responses[10])
+        workspace_starts = [
+            line for line in log_lines if line.startswith(f"start {workspace.resolve()} ")
+        ]
+        self.assertEqual(len(workspace_starts), 2, log_lines)
+
+    def test_healthy_workspace_backend_is_reused_across_tool_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            lifecycle_log = root / "lifecycle.log"
+            call = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {
+                    "name": "dediren_validate",
+                    "arguments": {"workspaceRoot": str(workspace), "source": "model.json"},
+                },
+            }
+            result = run_router(
+                [{**call, "id": 12}, {**call, "id": 13}],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
+                },
+            )
+            log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        self.assertIn("result", responses[12])
+        self.assertIn("result", responses[13])
+        workspace_starts = [
+            line for line in log_lines if line.startswith(f"start {workspace.resolve()} ")
+        ]
+        self.assertEqual(len(workspace_starts), 1, log_lines)
+
+    def test_catalog_only_backend_is_reaped_while_router_stays_available(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fake_backend = self._write_fake_backend(root)
+            lifecycle_log = root / "lifecycle.log"
+            process = subprocess.Popen(
+                ["bash", str(LAUNCHER)],
+                cwd=REPO_ROOT,
+                text=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
+                },
+            )
+            assert process.stdin is not None
+            assert process.stdout is not None
+            try:
+                process.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 14, "method": "tools/list", "params": {}})
+                    + "\n"
+                )
+                process.stdin.flush()
+                self.assertIn("result", json.loads(process.stdout.readline()))
+                deadline = time.monotonic() + 3
+                log_lines: list[str] = []
+                while time.monotonic() < deadline:
+                    if lifecycle_log.exists():
+                        log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
+                        if any(
+                            line.startswith(f"stop {REPO_ROOT.resolve()} ") for line in log_lines
+                        ):
+                            break
+                    time.sleep(0.05)
+                self.assertIsNone(process.poll(), "router exited with its catalog backend")
+                process.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 15, "method": "ping", "params": {}}) + "\n"
+                )
+                process.stdin.flush()
+                self.assertEqual(json.loads(process.stdout.readline())["id"], 15)
+                process.stdin.close()
+                process.wait(timeout=10)
+            finally:
+                close_process(process)
+
+        self.assertTrue(
+            any(line.startswith(f"stop {REPO_ROOT.resolve()} ") for line in log_lines),
+            log_lines,
+        )
+
+    @unittest.skipUnless(hasattr(signal, "SIGTERM"), "requires process signals")
+    def test_router_termination_closes_the_live_workspace_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            lifecycle_log = root / "lifecycle.log"
+            env = {
+                **os.environ,
+                "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
+            }
+            process = subprocess.Popen(
+                ["bash", str(LAUNCHER)],
+                cwd=REPO_ROOT,
+                text=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+            )
+            assert process.stdin is not None
+            assert process.stdout is not None
+            try:
+                request = {
+                    "jsonrpc": "2.0",
+                    "id": 11,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "dediren_validate",
+                        "arguments": {
+                            "workspaceRoot": str(workspace),
+                            "source": "model.json",
+                        },
+                    },
+                }
+                process.stdin.write(json.dumps(request) + "\n")
+                process.stdin.flush()
+                response = json.loads(process.stdout.readline())
+                self.assertIn("result", response)
+                process.terminate()
+                process.wait(timeout=10)
+            finally:
+                close_process(process)
+            time.sleep(0.1)
+            log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
+
+        workspace_events = [line for line in log_lines if str(workspace.resolve()) in line]
+        self.assertTrue(any(line.startswith("start ") for line in workspace_events), log_lines)
+        self.assertTrue(any(line.startswith("stop ") for line in workspace_events), log_lines)
 
 
 if __name__ == "__main__":

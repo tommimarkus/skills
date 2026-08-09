@@ -1,7 +1,6 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import os
-import shlex
 import subprocess
 import tempfile
 import unittest
@@ -134,16 +133,14 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             (ARCH_PLUGIN / "mcp" / "codex.mcp.json").read_text(encoding="utf-8")
         )
         dediren = mcp_config["dediren"]
-        self.assertEqual(dediren["command"], "bash")
-        self.assertEqual(dediren["args"][0], "-c")
-        self.assertIn("codex plugin list --json", dediren["args"][1])
-        self.assertEqual(dediren["args"][3], "souroldgeezer-architecture@souroldgeezer")
         self.assertEqual(
-            dediren["args"][4],
+            dediren["command"],
             "./skills/architecture-design/references/scripts/dediren-mcp.sh",
         )
-        self.assertNotIn("cwd", dediren)
+        self.assertEqual(dediren["args"], [])
+        self.assertEqual(dediren["cwd"], ".")
         self.assertNotIn("env", dediren)
+        self.assertNotIn("codex plugin", json.dumps(dediren))
         self.assertNotIn("${PLUGIN_", json.dumps(dediren))
         self.assertGreaterEqual(dediren["startup_timeout_sec"], 120)
 
@@ -177,11 +174,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("DEDIREN_COMMAND", launcher)
         self.assertNotIn("--ensure-bundle", launcher)
 
-    def test_codex_mcp_bootstrap_finds_installed_launcher_without_changing_workspace(self) -> None:
-        """The Codex adapter must solve both halves of the host mismatch.
+    def test_codex_mcp_adapter_resolves_the_installed_launcher_without_nested_codex(self) -> None:
+        """Codex resolves relative MCP cwd from the installed plugin root.
 
-        It discovers the installed plugin root without an interpolated token and
-        leaves cwd untouched so Dediren's ``--root`` remains the user's project.
+        Tool calls carry their own absolute ``workspaceRoot``, so the adapter no
+        longer needs a nested ``codex plugin list`` process merely to preserve the
+        caller's cwd.
         """
         mcp_config = json.loads(
             (ARCH_PLUGIN / "mcp" / "codex.mcp.json").read_text(encoding="utf-8")
@@ -190,47 +188,23 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            fake_bin = temp_path / "fake bin"
-            fake_bin.mkdir()
             plugin_root = temp_path / "installed plugin with spaces"
-            launcher = plugin_root / dediren["args"][4].removeprefix("./")
+            launcher = plugin_root / dediren["command"].removeprefix("./")
             launcher.parent.mkdir(parents=True)
             launcher.write_text("#!/usr/bin/env bash\nprintf '%s\\n' \"$PWD\"\n", encoding="utf-8")
             launcher.chmod(0o755)
-
-            payload = json.dumps(
-                {
-                    "installed": [
-                        {
-                            "pluginId": dediren["args"][3],
-                            "source": {"source": "local", "path": str(plugin_root)},
-                        }
-                    ]
-                },
-                indent=2,
-            )
-            fake_codex = fake_bin / "codex"
-            fake_codex.write_text(
-                "#!/usr/bin/env bash\nprintf '%s\\n' " + shlex.quote(payload) + "\n",
-                encoding="utf-8",
-            )
-            fake_codex.chmod(0o755)
-
-            workspace = temp_path / "caller workspace"
-            workspace.mkdir()
             result = subprocess.run(
                 [dediren["command"], *dediren["args"]],
-                cwd=workspace,
+                cwd=plugin_root / dediren["cwd"],
                 check=False,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 timeout=10,
-                env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+                env=os.environ,
             )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), str(workspace))
+        self.assertEqual(result.stdout.strip(), str(plugin_root))
 
     def test_active_surfaces_do_not_reference_retired_arch_layout_contracts(self) -> None:
         retired_terms = [
@@ -1297,8 +1271,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             REPO_ROOT / "docs" / "maintenance-procedures.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("does not bundle, download, or select Dediren", maintenance_guidance)
-        self.assertIn("current host-managed `dediren` executable", maintenance_guidance)
+        self.assertIn("does not bundle or download Dediren", maintenance_guidance)
+        self.assertIn("current host-managed `dediren`", maintenance_guidance)
+        self.assertIn("migration fallback only", maintenance_guidance)
+        self.assertRegex(maintenance_guidance, r"never\s+downloads or pins one there")
         self.assertNotIn("dediren-release.sh", maintenance_guidance)
         self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 

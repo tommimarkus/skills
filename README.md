@@ -106,7 +106,10 @@ running the same install command.
 - `architecture-design` drives a host-managed current Dediren CLI through three
   MCP adapters and a shared compatibility router. The plugin does not bundle,
   download, pin, or downgrade Dediren. Install `dediren` on `PATH`, or set
-  `DEDIREN_COMMAND` to an explicit executable for controlled validation. Each
+  `DEDIREN_COMMAND` to an explicit executable for controlled validation. To
+  avoid stranding pre-multi-harness installs, the MCP launcher otherwise reuses
+  the newest executable already present in the former verified release cache;
+  it never populates that cache. Each
   operation carries an absolute `workspaceRoot`, preserving the selected
   project as Dediren's path boundary.
 - Use the repo-local `uv` tooling for the skill architecture report.

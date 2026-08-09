@@ -588,12 +588,15 @@ applies them, with the finding codes, is
 
 The skill drives Dediren through a shared router with native Claude Code, Codex,
 and Copilot MCP adapters. The plugin bundles the adapters, not Dediren: the
-router executes the current host-managed `dediren` from `PATH` or
-`DEDIREN_COMMAND`, discovers that installation's live tool catalog, and adds a
-required absolute `workspaceRoot` to every tool schema. It handles both legacy
-MCP initialization and the 2026-07-28 stateless discovery flow. Call its tools
-before using the same external executable as a CLI fallback. The skill requires
-seven tools: three that
+router executes the current host-managed `dediren` from `DEDIREN_COMMAND` or
+`PATH`, with a migration-only fallback to the newest executable already present
+in the former verified release cache. It discovers that installation's live
+tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
+It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
+flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead
+workspace process only for the next call, never auto-retries an uncertain call,
+and closes children on EOF or termination. Call its tools before using the same
+external executable as a CLI fallback. The skill requires seven tools: three that
 author, validate, and build — `dediren_validate`, `dediren_build`,
 `dediren_guide` — and four read-only model-intelligence and verification tools —
 `dediren_diff`, `dediren_query`, `dediren_verify`, `dediren_status` — defined

@@ -5,7 +5,9 @@ Before runtime claims, prefer the plugin's Dediren MCP adapter: call its tools �
 `dediren_validate`, `dediren_build`, `dediren_guide` — with an absolute
 `workspaceRoot` on every operation. The adapter is bundled; Dediren is not. It
 discovers the current host-managed `dediren` executable's live tools from `PATH`
-or `DEDIREN_COMMAND`. The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
+or `DEDIREN_COMMAND`; a migration fallback may reuse the newest executable
+already present in the former verified release cache, but never downloads one.
+The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
 own helper scripts (`build-gallery.py`, `svg-accessible-name.py`), not Dediren.
 Claude Code expands that token in the loaded SKILL.md. In Codex, reuse the
@@ -20,9 +22,14 @@ the adapter from its manifest; Codex uses `mcp/codex.mcp.json`; Copilot uses the
 root `plugin.json` plus `mcp/copilot.mcp.json`. The router handles both the legacy
 `initialize` / `initialized` exchange and MCP 2026-07-28 stateless
 `server/discover`, obtains `tools/list` from the installed Dediren, and keeps one
-upstream process per explicit workspace root. A host sandbox therefore works when
-it permits this local stdio MCP process, the external executable, and the selected
-workspace; the adapter does not bypass host filesystem or network policy.
+upstream process per explicit workspace root. Startup and catalog waits default
+to 120 seconds (`DEDIREN_MCP_STARTUP_TIMEOUT_SEC`); tool-call waits default to
+360 seconds (`DEDIREN_MCP_REQUEST_TIMEOUT_SEC`). Each override must be a positive
+number of seconds. A known-dead process is replaced for the next call, an
+uncertain tool call is never auto-retried, and EOF or router termination closes
+every child. A host sandbox therefore works when it permits this local stdio MCP
+process, the external executable, and the selected workspace; the adapter does
+not bypass host filesystem or network policy.
 Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
 `2026.07.28` or newer before rendering; this is a compatibility floor, not a pin.
 

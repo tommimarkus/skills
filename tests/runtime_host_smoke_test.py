@@ -300,10 +300,10 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     self.assertNotIn("CLAUDE_CONFIG_DIR", child_env, argv)
 
             self.assertEqual([call[3] for call in mcp_calls], ["Codex", "Claude", "Copilot"])
-            self.assertEqual(mcp_calls[0][0][0], "bash")
+            self.assertTrue(mcp_calls[0][0][0].endswith("/dediren-mcp.sh"))
             self.assertTrue(mcp_calls[1][0][0].endswith("/dediren-mcp.sh"))
             self.assertTrue(mcp_calls[2][0][0].endswith("/dediren-mcp.sh"))
-            self.assertEqual(mcp_calls[0][1], REPO_ROOT)
+            self.assertEqual(mcp_calls[0][1], fake.codex_installs["souroldgeezer-architecture"])
             self.assertEqual(mcp_calls[1][1], REPO_ROOT)
             self.assertEqual(mcp_calls[2][1], REPO_ROOT)
 

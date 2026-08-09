@@ -4,10 +4,12 @@ Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
 
 ## Dediren upstream compatibility
 
-The architecture plugin does not bundle, download, or select Dediren. Each host
-adapter resolves the current host-managed `dediren` executable from `PATH`; a
-controlled environment may set `DEDIREN_COMMAND` to an explicit executable.
-Updating Dediren is therefore a host operation, not a plugin release procedure.
+The architecture plugin does not bundle or download Dediren. Each host adapter
+prefers an explicit `DEDIREN_COMMAND`, then the current host-managed `dediren`
+from `PATH`. As a migration fallback only, the launcher selects the newest
+executable already present under the former verified release cache; it never
+downloads or pins one there. Updating Dediren remains a host operation, not a
+plugin release procedure.
 
 After a host upgrade, run the live runtime suite and the three-harness smoke with
 that executable:
@@ -20,6 +22,9 @@ DEDIREN_COMMAND=/absolute/path/to/dediren \
 
 The version in repo fixtures is a compatibility evidence baseline, not a
 runtime selector. Update it only when the fixture contract itself must move.
+The router bounds startup and catalog waits at 120 seconds and tool-call waits
+at 360 seconds by default; controlled hosts may set positive
+`DEDIREN_MCP_STARTUP_TIMEOUT_SEC` and `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` values.
 The minimum supported rendering behavior remains Dediren 2026.07.28; lowering
 that floor is a support decision because older SVG output may lack accessible
 names. The adapter discovers the live tool catalog, so additive upstream tools
