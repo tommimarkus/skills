@@ -39,11 +39,21 @@ class AppDesignReactNextExtensionSurfaceTest(unittest.TestCase):
             "react.APP-STATE-1",
             "react.APP-RENDER-1",
             "react.APP-BROWSER-1",
+            "react.APP-EFFECT-1",
             "react.POS-APP-1",
+            "react.POS-APP-6",
         ):
             self.assertIn(code, react)
 
         self.assertIn("React facts", grounding)
+        for guidance in (
+            "Strict Mode",
+            "derived state",
+            "AbortSignal",
+            "useSyncExternalStore",
+            "compiler availability",
+        ):
+            self.assertIn(guidance, react)
 
     def test_nextjs_app_design_extension_composes_with_react_and_api_design(self) -> None:
         nextjs = read(f"{APP_SKILL}/extensions/nextjs.md")

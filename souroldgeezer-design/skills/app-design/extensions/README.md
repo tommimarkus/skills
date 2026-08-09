@@ -37,6 +37,7 @@ or framework sample code into an extension.
 
 | File | Applies to | Notes |
 |---|---|---|
+| `vite.md` | Vite browser, SSR, and worker application surfaces | Loads before `react.md` when both match; covers dev/build/preview distinctions, entry/root topology, mode/env exposure, base/assets/chunks, environment boundaries, SSR, and stale-deployment recovery |
 | `react.md` | React browser applications and component trees | Component architecture, Hooks, state/data ownership, rendering purity, hydration, Suspense/loading/error boundaries, browser effects, forms, storage, responsive/accessibility/i18n/performance posture, and React app-design finding codes |
 | `nextjs.md` | Next.js App Router and Pages Router frontend app surfaces | Loads after `react.md`; covers route/layout ownership, Server/Client Component boundaries, navigation, cache/freshness posture, forms, metadata/assets, and app-design delegation to `api-design` for Route Handlers / Server Actions used as public API contracts |
 | `blazor-wasm.md` | Blazor WebAssembly applications and components, including standalone WASM and Blazor Web App `.Client` projects | Route/layout ownership, render modes, component contracts, state containers, event callbacks, JS interop, API-client delegation, focus/navigation/forms/storage, and responsive/accessibility/i18n/performance posture |
@@ -46,7 +47,7 @@ or framework sample code into an extension.
 1. Start from a real stack pressure case that the generic core cannot cover
    precisely.
 2. Pick a short stable prefix such as `react`, `nextjs`, `vue`, or `tailwind`.
-3. Write unambiguous detection signals.
+3. Write unambiguous detection signals and a composition order when it combines with another extension.
 4. Add only stack-specific app-design guidance; cite the core reference for
    generic responsive, accessibility, i18n, and performance rules.
 5. Add extension finding codes under `<prefix>.APP-*`.

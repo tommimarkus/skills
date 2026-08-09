@@ -22,6 +22,8 @@ documentation.
   adapter boundaries, and coupling risks without owning frontend app decisions.
 - Source: React official docs, including `react.dev/reference/react`,
   `react.dev/reference/react/hooks`,
+  `react.dev/reference/react/useEffect`,
+  `react.dev/reference/react/useSyncExternalStore`,
   `react.dev/reference/rules/components-and-hooks-must-be-pure`,
   `react.dev/reference/rules/rules-of-hooks`,
   `react.dev/reference/react-dom/client/hydrateRoot`, and
@@ -30,6 +32,13 @@ documentation.
   original and limited to app-design implications for components, Hooks,
   state/data ownership, rendering, hydration, browser effects, forms, and
   responsive/accessibility/performance posture.
+- Source: Vite official docs, including `vite.dev/guide`,
+  `vite.dev/guide/build`, `vite.dev/guide/assets`,
+  `vite.dev/guide/env-and-mode`, and `vite.dev/guide/ssr`.
+  Handling: Vite facts are linked as source anchors; extension wording is
+  original and limited to app-design implications for dev/build/preview
+  distinctions, entry topology, client-exposed environment values, assets and
+  chunks, runtime boundaries, SSR, and stale-deployment recovery.
 - Source: Next.js official docs, including `nextjs.org/docs`,
   `nextjs.org/docs/app`,
   `nextjs.org/docs/app/getting-started/server-and-client-components`,

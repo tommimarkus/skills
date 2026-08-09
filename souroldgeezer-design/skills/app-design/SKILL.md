@@ -40,6 +40,8 @@ Load what applies: core reference principles/defaults/checklist;
 when existing routes, screens, layouts, components, design tokens, state/data
 patterns, forms, browser storage, rendering boundaries, navigation shell,
 runtime evidence, or diffs are in scope;
+[extensions/vite.md](extensions/vite.md) for `vite.config.*`, `vite` scripts,
+`import.meta.env`, Vite entry/build/SSR/worker signals, and load it before the React extension;
 [extensions/react.md](extensions/react.md) for React component, hook, state,
 rendering, hydration, or browser-runtime signals; [extensions/nextjs.md](extensions/nextjs.md)
 for Next.js App Router or Pages Router app surfaces, and load it after the React extension;
@@ -49,13 +51,13 @@ work; [extensions/README.md](extensions/README.md) only when editing extensions.
 Unknown stacks use core only.
 
 <!-- lean-audit:sync-intentional -->
-The three stack extensions above load for Build, Extract, and Review — every
+The four stack extensions above load for Build, Extract, and Review — every
 extension whose detection signals match the in-scope stack. In Lookup, do not
 load full stack extensions on detection alone: answer from the core reference
 matched section, and pull a single stack extension only when the question is
-specifically about that stack's runtime mechanics (when that extension is
-nextjs.md, load react.md first — the composition order still applies) — never
-the whole detected-stack set. If a Lookup genuinely needs more than one stack's
+specifically about that stack's runtime mechanics. Vite + React loads Vite then React; React + Next.js stays React then Next.js. Vite works alone. In Lookup,
+if an answer needs a composed stack pair, load in that order; never load the
+whole detected-stack set. If it genuinely needs more than the matching pair's
 mechanics, escalate to Review or Build (which load every matching extension) or
 ask — do not under-answer from a single extension.
 

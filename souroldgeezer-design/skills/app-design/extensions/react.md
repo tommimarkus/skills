@@ -9,6 +9,8 @@ Source anchors used for this extension:
 
 - React reference overview: <https://react.dev/reference/react>.
 - React Hooks reference: <https://react.dev/reference/react/hooks>.
+- React Effect reference: <https://react.dev/reference/react/useEffect>.
+- React external-store reference: <https://react.dev/reference/react/useSyncExternalStore>.
 - React purity rules:
   <https://react.dev/reference/rules/components-and-hooks-must-be-pure>.
 - React Rules of Hooks: <https://react.dev/reference/rules/rules-of-hooks>.
@@ -68,7 +70,7 @@ Inspect these React-specific signals after core app-design assimilation:
   many concerns.
 - Hooks and state: custom Hook boundaries, reducer ownership, context scope,
   external store subscription semantics, query cache invalidation, optimistic
-  update rollback, and cleanup.
+  update rollback, state identity/keys, derived values, and cleanup.
 - Browser/runtime code: `useEffect`, `useLayoutEffect`, portals, focus helpers,
   storage, media queries, resize/scroll listeners, timers, and observer cleanup.
 - CSS and assets: logical properties, container-aware sizing, focus states,
@@ -89,6 +91,9 @@ not compliant merely because it exists.
   form context; do not turn it into an implicit event bus.
 - Keep render pure. Side effects belong in event handlers or effects, with
   cleanup and capability checks where browser APIs are used.
+- Development-only Strict Mode may re-run render and Effect setup/cleanup to
+  expose unsafe lifecycle assumptions. Calibrate diagnostics against that
+  behavior; do not suppress it or mistake it for a production interaction.
 - Hooks live at the top level of React function components or custom Hooks.
   Conditional behavior belongs inside Hook bodies, reducers, or state machines.
 - Suspense, loading skeletons, and error boundaries are app-design choices
@@ -105,9 +110,17 @@ not compliant merely because it exists.
 - Server/cache data and local draft state need separate ownership. Query/cache
   libraries should own fetched server state; forms should own draft state until
   submit/commit.
+- Derive values from current props/state during render when possible. Introduce
+  state only for user-editable, asynchronous, historical, or externally owned
+  values; an Effect that merely copies render-derived state obscures ownership.
+- State identity follows its position in the rendered tree. Use stable keys for
+  intentional preservation or reset across data items, routes, and workflow
+  steps; do not use incidental array position when identity can change.
 - External stores need selectors, reset rules, subscription cleanup, and testable
-  mutations. Do not store per-route ephemeral state globally without a retention
-  and invalidation rule.
+  mutations. A concurrent-safe subscription should use a
+  `useSyncExternalStore`-style subscribe/snapshot contract so React can detect
+  consistent snapshots; do not store per-route ephemeral state globally without
+  a retention and invalidation rule.
 - Optimistic UI needs pending, success, failure, retry, and rollback behavior
   visible in the component contract.
 
@@ -123,7 +136,9 @@ not compliant merely because it exists.
   across breakpoints.
 - Effects that subscribe to events, timers, observers, sockets, or external
   stores need cleanup. Effects should synchronize with external systems, not
-  duplicate render-derived state.
+  duplicate render-derived state. Async work needs a cleanup-owned cancellation
+  or stale-result guard such as `AbortSignal`; an old request must not overwrite
+  the current screen after dependencies change or the component unmounts.
 - Lazy-loaded components and Suspense fallbacks should preserve layout geometry
   and reachable names so loading states do not cause layout shift or a11y drift.
 
@@ -152,6 +167,10 @@ contract review.
 - Client bundle cost, hydration, lazy loading, image/font loading, and
   third-party scripts affect Core Web Vitals. Static review can flag posture
   only; runtime metrics require browser tooling or RUM.
+- Memoization is a measured optimization, not a correctness mechanism. Preserve
+  pure rendering and stable contracts first; never assume a React compiler is
+  available or will remove a measured bottleneck. The compiler availability and
+  profiling evidence decide whether to keep, add, or remove memoization.
 
 ## Positive Signals
 
@@ -165,6 +184,9 @@ contract review.
   systems and clean up every listener/timer/observer.
 - `react.POS-APP-5`: Suspense/loading/error boundaries preserve layout,
   accessible names, and recovery paths.
+- `react.POS-APP-6`: Effects synchronize a named external system with cleanup,
+  stale-work cancellation, and a Strict Mode-calibrated lifecycle test; derived
+  values remain in render and state identity is intentional.
 
 ## Smell Codes
 
@@ -180,6 +202,9 @@ contract review.
   timing, server-error mapping, duplicate-submit guard, or focus recovery.
 - `react.APP-BROWSER-1`: effect, portal, storage, observer, or global event
   listener has no cleanup, capability fallback, or ownership boundary.
+- `react.APP-EFFECT-1`: Effect copies render-derived state, lacks cleanup or an
+  `AbortSignal`/stale-result guard for async work, or relies on a lifecycle that
+  development-only Strict Mode intentionally replays.
 - `react.APP-RSP-1`: component styling relies on fixed viewport/device
   breakpoints, physical properties, hover-only affordances, or brittle heights.
 - `react.APP-PERF-1`: bundle, hydration, Suspense, image/font, or script cost
