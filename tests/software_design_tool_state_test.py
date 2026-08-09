@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 
@@ -102,6 +102,46 @@ class SoftwareDesignToolStateTest(unittest.TestCase):
     def test_capability_is_not_a_path(self) -> None:
         result = subprocess.run(["python3", str(SCRIPT.resolve()), "put", "../bad", "--tool", "x", "--reported-version", "x", "--source", "x"], text=True, capture_output=True)
         self.assertNotEqual(0, result.returncode)
+
+    def test_utc_clock_and_collection_results_are_bounded(self) -> None:
+        spec = importlib.util.spec_from_file_location("tool_state", SCRIPT)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        class FixedDateTime:
+            @staticmethod
+            def now(tz):
+                self.assertIs(timezone.utc, tz)
+                return datetime(2026, 8, 9, 0, 30, tzinfo=timezone.utc)
+
+        original_datetime = module.datetime
+        module.datetime = FixedDateTime
+        try:
+            self.assertEqual(date(2026, 8, 9), module.utc_today())
+        finally:
+            module.datetime = original_datetime
+
+        for index in range(101):
+            git(
+                self.root,
+                "config",
+                "--local",
+                f"softwaredesign.tool-cache-item-{index:03}.schema-version",
+                "2",
+            )
+        listed = run(self.root, "list")
+        self.assertEqual(100, len(listed["records"]))
+        self.assertEqual(1, listed["omitted_count"])
+        self.assertTrue(listed["truncated"])
+        cleared = run(self.root, "clear-all", "--kind", "cache")
+        self.assertEqual(100, len(cleared["reported"]))
+        self.assertEqual(1, cleared["reported_omitted_count"])
+        self.assertTrue(cleared["truncated"])
+        collected = run(self.root, "gc", "--dry-run")
+        self.assertEqual(100, len(collected["reported"]))
+        self.assertEqual(1, collected["reported_omitted_count"])
+        self.assertTrue(collected["truncated"])
 
 
 if __name__ == "__main__":

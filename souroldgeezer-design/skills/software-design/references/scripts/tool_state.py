@@ -13,7 +13,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -33,11 +33,12 @@ REQUIRED_FIELDS = (
     "purge-after",
     "state",
 )
+MAX_OUTPUT_ITEMS = 100
 
 
 def utc_today() -> date:
     """Return the current UTC calendar date (separate for deterministic tests)."""
-    return date.today()
+    return datetime.now(timezone.utc).date()
 
 
 def date_text(value: date) -> str:
@@ -132,6 +133,15 @@ def response(command: str, status: str, **data: Any) -> int:
     return 0
 
 
+def bounded(items: list[Any]) -> tuple[list[Any], int]:
+    """Keep a JSON array bounded while disclosing exactly what was omitted."""
+    return items[:MAX_OUTPUT_ITEMS], max(0, len(items) - MAX_OUTPUT_ITEMS)
+
+
+def sort_reports(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(reports, key=lambda report: json.dumps(report, sort_keys=True, separators=(",", ":")))
+
+
 def put(args: argparse.Namespace, repo: Path) -> int:
     existing = cache_records(repo).get(args.capability)
     if existing is not None:
@@ -200,14 +210,15 @@ def list_records(args: argparse.Namespace, repo: Path) -> int:
     for name, values in sorted(cache_records(repo).items()):
         state, record, problems = assess(name, values, today)
         records.append({"capability": name, "problems": problems, "record": record, "status": state})
-    return response("list", "ok", records=records)
+    records, omitted_count = bounded(records)
+    return response("list", "ok", records=records, omitted_count=omitted_count, truncated=bool(omitted_count))
 
 
 def clear_all(args: argparse.Namespace, repo: Path) -> int:
     cleared: list[str] = []
     reported: list[dict[str, Any]] = []
     if args.kind in {"cache", "all"}:
-        for name, values in cache_records(repo).items():
+        for name, values in sorted(cache_records(repo).items()):
             state, record, problems = assess(name, values, utc_today())
             if state in {"malformed", "unknown_schema"}:
                 reported.append({"capability": name, "problems": problems, "status": state})
@@ -215,14 +226,24 @@ def clear_all(args: argparse.Namespace, repo: Path) -> int:
                 git_config(repo, "--remove-section", cache_section(name))
                 cleared.append(f"cache:{name}")
     if args.kind in {"decisions", "all"}:
-        for key, values in decision_records(repo).items():
+        for key, values in sorted(decision_records(repo).items()):
             name = key.removeprefix(DECISION_PREFIX)
             if name and len(values) == 1 and values[0].startswith("defer-until:"):
                 git_config(repo, "--unset-all", key)
                 cleared.append(f"decision:{name}")
             else:
                 reported.append({"key": key, "status": "malformed"})
-    return response("clear-all", "ok", cleared=sorted(cleared), reported=reported)
+    cleared, cleared_omitted_count = bounded(sorted(cleared))
+    reported, reported_omitted_count = bounded(sort_reports(reported))
+    return response(
+        "clear-all",
+        "ok",
+        cleared=cleared,
+        cleared_omitted_count=cleared_omitted_count,
+        reported=reported,
+        reported_omitted_count=reported_omitted_count,
+        truncated=bool(cleared_omitted_count or reported_omitted_count),
+    )
 
 
 def gc(args: argparse.Namespace, repo: Path) -> int:
@@ -230,7 +251,7 @@ def gc(args: argparse.Namespace, repo: Path) -> int:
     removed: list[str] = []
     retained: list[str] = []
     reported: list[dict[str, Any]] = []
-    for name, values in cache_records(repo).items():
+    for name, values in sorted(cache_records(repo).items()):
         state, record, problems = assess(name, values, today)
         if state in {"malformed", "unknown_schema"}:
             reported.append({"capability": name, "problems": problems, "status": state})
@@ -240,7 +261,7 @@ def gc(args: argparse.Namespace, repo: Path) -> int:
                 git_config(repo, "--remove-section", cache_section(name))
         else:
             retained.append(f"cache:{name}")
-    for key, values in decision_records(repo).items():
+    for key, values in sorted(decision_records(repo).items()):
         name = key.removeprefix(DECISION_PREFIX)
         if not name or len(values) != 1 or not values[0].startswith("defer-until:"):
             reported.append({"key": key, "status": "malformed"})
@@ -256,7 +277,21 @@ def gc(args: argparse.Namespace, repo: Path) -> int:
                 git_config(repo, "--unset-all", key)
         else:
             retained.append(f"decision:{name}")
-    return response("gc", "ok", dry_run=args.dry_run, removed=sorted(removed), retained=sorted(retained), reported=reported)
+    removed, removed_omitted_count = bounded(sorted(removed))
+    retained, retained_omitted_count = bounded(sorted(retained))
+    reported, reported_omitted_count = bounded(sort_reports(reported))
+    return response(
+        "gc",
+        "ok",
+        dry_run=args.dry_run,
+        removed=removed,
+        removed_omitted_count=removed_omitted_count,
+        retained=retained,
+        retained_omitted_count=retained_omitted_count,
+        reported=reported,
+        reported_omitted_count=reported_omitted_count,
+        truncated=bool(removed_omitted_count or retained_omitted_count or reported_omitted_count),
+    )
 
 
 def decision_records(repo: Path) -> dict[str, list[str]]:
