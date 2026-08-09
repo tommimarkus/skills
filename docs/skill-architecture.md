@@ -105,6 +105,14 @@ as `severity × risk tier`;
 [planning-policy](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
 derives a delegated step's size band from its read-set and acceptance check, then
 hands the band to the subagent as the referent it checks its real scope against.
+For a declared multi-leaf plan, the same loop continues through a stable
+top-level work unit: weight that unit once from its original size, calculate the
+readiness gate from those declared units rather than leaf count, and require an
+explicit user-approved exception when analytical work legitimately dominates.
+The portable contract owns those fields and stop markers; a host overlay may add
+dispatch syntax but cannot rewrite them. Once an approved multi-step delegation
+needs persistence, the parent-owned checkpoint ledger stores bounded lifecycle
+returns under the Git common directory rather than raw agent logs.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

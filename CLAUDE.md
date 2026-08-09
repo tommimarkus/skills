@@ -279,6 +279,31 @@ Two agent classes live under `<plugin>/agents/`.
 
 **Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 
+### Planning-policy execution contract (Claude Code)
+
+The shared plan contract is runtime-neutral: each leaf has stable IDs and
+dependencies, task/boundary, named read/write sets, settled decisions, size,
+portable tier, worktree owner, one acceptance command, bounded return, stop
+conditions, and a stable work unit. Missing load-bearing information stops as
+`blocked:missing_input`; no agent fills it by searching or invention. Original
+work units carry one weight (`small=1`, `medium=2`, `large=3`) and the plan needs
+`standard_ready_ratio >= 0.60`, except for an analytical-heavy exception that
+the user explicitly approves and the plan records. Selective audit routing is
+exceptional: it needs one owner, a bounded question/evidence surface, and proof
+that targeted inspection or focused tests cannot resolve it. The parent owns
+integration and end-to-end verification.
+
+For approved plans with at least two delegated steps, the parent alone may
+activate the durable ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
+Use its bounded lifecycle, checkpoint, and retry returns; do not retain raw
+agent logs. Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
+`opus`/`high`, `opus`/`xhigh` — for mechanical, standard, analytical, and deep
+work respectively. These are aliases, not claims about a resolved version. If
+an alias or effort is unavailable, return `blocked:model_unavailable` with the
+requested tier, alias, and effort; never silently downgrade. The fresh-context
+comparison is opt-in (`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`)
+and records bounded summaries only.
+
 ## Published skills index
 
 One row per published skill. **Each skill's own `SKILL.md` is its binding contract** — modes, owns/delegates, finding namespaces, extension set — so read it before creating, editing, reviewing, or planning that skill; this table and the delegation map below are orientation only, deliberately not a second copy of those contracts. Internal skills are in § "Repo-internal skills".

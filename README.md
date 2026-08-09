@@ -135,6 +135,27 @@ running the same install command.
    policy before changing state. Adopt mode consolidates existing related
    guidance into the initialization/options and removes competing policy prose.
 9. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
+10. Use `planning-policy` to turn an approved implementation approach into a
+    delegation-ready plan. Its shared, runtime-neutral contract gives every leaf
+    stable IDs, dependencies, task/boundary, named reads and writes, settled
+    decisions, size, portable tier, owner, one acceptance command, return shape,
+    stop conditions, and a stable work unit. Work units are weighted once
+    (`small=1`, `medium=2`, `large=3`); at least 0.60 of that weight must be
+    mechanical or standard ready unless the user explicitly approves and the
+    plan records an analytical-heavy exception. Missing load-bearing input stops
+    the leaf rather than inviting discovery or invention. The parent owns
+    integration and end-to-end verification; selective audit routing remains an
+    exceptional, bounded-evidence decision after targeted inspection or focused
+    tests cannot answer the question.
+
+    For an approved plan with two or more delegated steps, the parent may create
+    the checkpoint ledger under the Git common directory at
+    `planning-policy/ledgers/<plan-id>/`; it records bounded lifecycle returns
+    and retries, not raw agent logs. The optional fresh-context comparison is
+    `uv run python scripts/planning_policy_forward_eval.py --harness both
+    --output-dir /secure/path --execute`; it stores bounded summaries and reports
+    an unavailable mapped model as `blocked:model_unavailable`, never as a
+    silent downgrade.
 
 ## Validation
 

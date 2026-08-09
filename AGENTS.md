@@ -95,6 +95,34 @@ runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise
 emits a proposed plan for explicit approval.
 
+### Planning-policy execution contract (Codex)
+
+The shared `planning-policy` contract is runtime-neutral. Every executable leaf
+has decision-complete, stable fields: IDs/dependencies, task/boundary, named
+read/write sets, settled decisions, size, portable tier, worktree owner, one
+acceptance command, bounded return contract, stop conditions, and stable work
+unit ID. A missing load-bearing field stops as `blocked:missing_input`; do not
+search for or invent it. Work units are weighted once from their original size
+(`small=1`, `medium=2`, `large=3`) and require `standard_ready_ratio >= 0.60`;
+only an explicitly user-approved, recorded analytical-heavy exception waives
+that gate. Route an initial inspection to at most one owning audit only when
+its bounded question and evidence surface remain unresolved by targeted
+inspection or focused tests; ordinary design is not an audit route.
+
+For an approved plan with at least two delegated steps, only the parent may
+activate the durable ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
+Use its bounded checkpoint and lifecycle/retry returns, never raw logs. The
+parent owns integration and end-to-end verification; a delegated return covers
+only its assigned drafting and acceptance check.
+
+Codex maps the portable tiers exactly: `mechanical` → `gpt-5.6-luna`/`low`,
+`standard` → `gpt-5.6-terra`/`medium`, `analytical` → `gpt-5.6-sol`/`high`, and
+`deep` → `gpt-5.6-sol`/`xhigh`. If the selected mapping is unavailable, return
+`blocked:model_unavailable` with the requested tier/model/effort and availability
+evidence; never silently downgrade. The opt-in fresh-context evidence command is
+`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`;
+it writes bounded comparison summaries only.
+
 ## Version and release policy
 
 The Claude manifest and README use CalVer `YYYY.0M.MICRO` as the release
