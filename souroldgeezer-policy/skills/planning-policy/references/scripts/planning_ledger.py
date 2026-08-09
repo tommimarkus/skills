@@ -13,6 +13,7 @@ MAX_TOKENS = 1200
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 V1_STATES = {
     "pending",
     "ready",
@@ -896,12 +897,18 @@ def summary(data):
 def show(args):
     if not args.run_id:
         data = load1(plan_dir(args))
-        return {
+        result = {
             **legacy_fields(),
             "ok": True,
             "plan_id": data["plan_id"],
             "steps": list(data["steps"].values()),
         }
+        result["summary_proxy_tokens"] = len(
+            re.findall(r"\w+|[^\w\s]", json.dumps(result, sort_keys=True, separators=(",", ":")))
+        )
+        if result["summary_proxy_tokens"] > MAX_TOKENS:
+            raise Error("legacy ledger summary exceeds 1200 proxy tokens")
+        return result
     directory, data, plan, leafs = load2(args)
     if args.step_id:
         sid = ident(args.step_id, "step id")
