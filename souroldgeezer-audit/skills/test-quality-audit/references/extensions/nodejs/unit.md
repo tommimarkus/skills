@@ -39,6 +39,18 @@ await user.click(btn);
 
 ---
 
+### `nodejs.HC-U2` — React Effect starts stale-prone work without testing observable cleanup
+
+**Applies to:** `unit` — component-test specific.
+
+**Detection:** a component test exercises an Effect that starts a fetch, subscription, timer, or async callback, then rerenders or unmounts without asserting cancellation, unsubscribe, cleanup, or that stale completion cannot alter the visible result. Do not flag `useEffect` by API name alone; the stale-work or cleanup contract must be visible from the component or test context.
+
+**Smell:** a test that observes only the initial render can pass when an old request updates a new screen, a subscription survives unmount, or an Effect timer remains active. The missing proof is lifecycle behavior a user can observe.
+
+**Rewrite (intent):** drive the dependency change or unmount, resolve the old work after cleanup, and assert the visible state remains current; where the component owns a resource, assert its unsubscribe, abort, or disposal outcome.
+
+---
+
 ## Framework-specific low-confidence smells (unit-only)
 
 ### `nodejs.LC-U1` — `jest.mock('<local-relative>')` / `vi.mock('<local-relative>')` of the SUT's immediate collaborator
@@ -76,3 +88,15 @@ await user.click(btn);
 **Detection:** `import userEvent from '@testing-library/user-event'` plus `const user = await userEvent.setup(...)` or `const user = userEvent.setup(...)` inside a test function, followed by `await user.click(...)` / `await user.type(...)` / `await user.hover(...)` etc.
 
 **Why positive:** `userEvent` simulates the full browser event sequence a real user triggers (pointerdown, focus, click, keyup, etc.) rather than firing one synthetic event like `fireEvent`. `userEvent.setup()` returns a user-session object whose keyboard and pointer state persist across calls in the same test, matching how a real user's inputs accumulate. This is the v14+ documented pattern — prefer it over `fireEvent` for anything above a simple "I just need to trigger a click handler" unit.
+
+---
+
+### `nodejs.POS-U2` — React Effect cleanup and stale-work protection are asserted as observable behavior
+
+**Applies to:** `unit` — component-test specific.
+
+**Detection:** the test rerenders or unmounts a component with Effect-managed work, triggers a prior completion or cleanup path, and asserts that current visible state wins and/or the externally observable resource was released. The assertion must cover the cleanup outcome, not merely that `useEffect` ran.
+
+**Why positive:** it proves an Effect's lifecycle contract across replacement or unmount, catching stale updates and leaked subscriptions that initial-render assertions miss.
+
+**Rewrite (intent):** retain the rerender/unmount and late-completion path when refactoring the component; preserve assertions on the user-visible state or released resource.

@@ -95,6 +95,18 @@ afterAll(async () => {
 
 ---
 
+### `nodejs.I-HC-A4` — Integration test bypasses a server, client, pool, worker, or application lifecycle it claims to cover
+
+**Applies to:** `integration` — refines core lifecycle ownership expectations.
+
+**Detection:** the test creates an application, listening server, HTTP client, database pool, worker, or similar runtime resource but neither drives its documented startup/readiness path nor observes shutdown/close/termination before the test ends. Do not flag construction by API name alone: require evidence that the claimed integration seam owns lifecycle behavior.
+
+**Smell:** a happy-path request can pass while startup never completes, shutdown leaves sockets or workers alive, or a client/pool is never released. The test does not prove the lifecycle contract at its real seam.
+
+**Rewrite (intent):** exercise the owner-controlled start/readiness path, perform the seam interaction, close the resource through its public lifecycle, and assert observable readiness, response, released connection, closed server, or terminated worker outcome.
+
+---
+
 ### `nodejs.I-HC-B1` — `supertest` / `fetch` against an auth-protected endpoint with no `Authorization` header and no 401 negative test
 
 **Applies to:** `integration` — refines core `I-HC-B7`.
@@ -174,6 +186,18 @@ test('GET /admin/users returns ok', async () => {
 **Detection:** a test file that constructs `const app = await buildApp({ ...testOverrides })` in `beforeAll` (once per file) where the factory wires up real middleware, real routes, and real adjacent dependencies — but each test uses unique keys / per-test transactions for data.
 
 **Why positive:** amortizes app-construction cost across the file's tests while keeping data ownership per-test. Matches `dotnet.POS-3` (shared immutable setup) with Node-idiomatic construction.
+
+---
+
+### `nodejs.I-POS-4` — Integration lifecycle owner proves startup and shutdown outcomes
+
+**Applies to:** `integration`.
+
+**Detection:** a test starts an app/server/client/pool/worker through its owner, waits for observable readiness where applicable, performs the integration interaction, then closes or terminates it and asserts an observable shutdown/release outcome. Do not award this signal from `.listen()`, `.close()`, or `.end()` calls alone.
+
+**Why positive:** the test proves both sides of the runtime lifecycle through the actual boundary: it demonstrates that the seam becomes usable and that its resources no longer remain usable or allocated after teardown.
+
+**Rewrite (intent):** retain explicit owner-driven lifecycle setup and observable close assertions; adapt the signals to the project's public readiness and release contract rather than a framework-specific API.
 
 ---
 

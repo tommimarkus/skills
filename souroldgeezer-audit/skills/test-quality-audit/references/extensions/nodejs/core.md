@@ -274,6 +274,18 @@ test('resolves to user', () => {
 
 ---
 
+### `nodejs.HC-8` — Detached promise, timer, worker, or subtest with no observable completion or failure outcome
+
+**Applies to:** `unit, integration`.
+
+**Detection:** a test starts asynchronous work (`void promise`, an unawaited `.then(...)`, `setTimeout` / `setInterval`, `new Worker(...)`, or `t.test(...)`) but does not await, return, join, clear, terminate, or otherwise observe its completion, failure, cancellation, or resulting public state. The API name alone is not evidence: inspect the test's asserted outcome and its teardown.
+
+**Smell:** detached work can settle after the test runner reports success, hide a rejection, keep the event loop alive, or leak into a later test. A call-count assertion is insufficient when the contract concerns the work's outcome.
+
+**Rewrite (intent):** retain the promise or worker handle, await its result or rejection, use runner-aware subtest completion, and clear or terminate scheduled/background work in teardown. Assert the contract-visible result, failure, cancellation, or cleanup state rather than merely that an API was called.
+
+---
+
 ## Framework-specific low-confidence smells (`nodejs.LC-*`)
 
 These smells apply under both the unit and integration rubrics. Unit-only low-confidence smells live in [`unit.md`](unit.md).
@@ -451,6 +463,18 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ---
 
+### `nodejs.POS-8` — Detached-work completion, failure, or cleanup is observed through the test contract
+
+**Applies to:** `unit, integration`.
+
+**Detection:** a test keeps a promise, timer, worker, or `node:test` subtest handle and awaits/returns/joins it, clears or terminates it when applicable, then asserts an observable result, propagated failure, cancellation, or released resource. Do not award this signal for awaiting an API name without an observable outcome.
+
+**Why positive:** the test owns asynchronous work for its full lifetime, so completion and failure cannot silently escape its result. It proves the behavior callers depend on rather than incidental scheduling.
+
+**Rewrite (intent):** keep this shape when background work is part of the contract; retain the explicit observable outcome if implementation details change.
+
+---
+
 ## Carve-outs
 
 Patterns that look like core smells but are idiomatic in Node.js / TypeScript and must not be flagged:
@@ -471,4 +495,3 @@ Patterns that look like core smells but are idiomatic in Node.js / TypeScript an
 - **Do not flag `nodejs.HC-1`** (module-level mock of same-layer code) when the mocked module's path resolves to `node_modules/` (external package — by definition a process / library boundary).
 
 ---
-

@@ -54,3 +54,9 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: linked for task completion/cancellation, async resource ownership,
   and application startup/shutdown facts; Python extension rules are original
   repo-authored quality heuristics and do not copy examples or prose.
+- Source: Node.js test-runner documentation at `https://nodejs.org/api/test.html`
+  and React Effect documentation at `https://react.dev/reference/react/useEffect`.
+  Handling: linked for Node detached-work/subtest lifecycle and React Effect
+  cleanup facts; rules require observable outcomes for detached work, Effect
+  cleanup, and application lifecycle ownership, and use original repo-authored
+  examples rather than copied source material.
