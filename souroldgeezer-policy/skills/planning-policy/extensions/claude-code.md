@@ -58,7 +58,10 @@ work with changed paths needs a commit hash. `blocked`, `failed`, and `oversized
 each require a blocker; `oversized` also requires an unstarted remainder. Stop
 with the applicable blocker code, preserve unstarted work, and do not make a new
 decision. The parent interprets the bounded return and owns integration and
-final verification.
+final verification. For every successful leaf it ingests the Git-policy
+helper's bounded result through `completed` → `integrated` → `cleaned`, and
+only then dispatches dependents from a worktree based on the current parent tip.
+It uses rebase plus fast-forward integration, never a routine cherry-pick.
 
 Run `claude plugin validate --strict` through the repository validation path to
 validate configured aliases and efforts. It does not establish the underlying

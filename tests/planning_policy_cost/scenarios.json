@@ -50,7 +50,8 @@
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#approval-and-output", "predicate": "conditional:approved-multi-agent"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md#parent-ledger-helper", "predicate": "conditional:approved-multi-agent"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md", "predicate": "conditional:approved-multi-agent"}
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md", "predicate": "conditional:approved-multi-agent"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/git-workflow-policy/references/planning-worktree-closeout.md", "predicate": "conditional:successful-leaf-closeout"}
     ]
   },
   {

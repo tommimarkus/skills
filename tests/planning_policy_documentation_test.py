@@ -37,6 +37,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "terminal `oversized`",
             "blocked:model_unavailable",
             "silent downgrade.",
+            "`completed` → `integrated` → `cleaned`",
+            "planning-worktree-result-v1", "validate --closeout",
+            "terminal `integrated` state remains unchanged",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, readme)
@@ -51,6 +54,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1 ledgers remain readable and mutable",
             "retry_policy: legacy_unbounded",
+            "`completed` → `integrated` → `cleaned`",
+            "planning-worktree-result-v1", "validate --closeout",
+            "Routine integration never cherry-picks",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, claude)
@@ -66,6 +72,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1 ledgers remain readable and mutable",
             "retry_policy: legacy_unbounded",
+            "`completed` → `integrated` → `cleaned`",
+            "planning-worktree-result-v1", "validate --closeout",
+            "Routine integration never cherry-picks",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, agents)
@@ -82,6 +91,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "Version-1\nledgers remain readable and mutable",
             "retry_policy: legacy_unbounded", "blocked:retry_exhausted",
             "blocked:no_progress", "terminal\n`oversized`",
+            "`completed` → `integrated` → `cleaned`",
+            "planning-worktree-result-v1", "validate --closeout",
+            "terminal `integrated` state remains unchanged",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, standard)

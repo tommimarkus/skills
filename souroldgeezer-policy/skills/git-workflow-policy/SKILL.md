@@ -22,6 +22,14 @@ Read [references/core-workflow.md](references/core-workflow.md) before real
 workflow decisions, guidance edits, or enforcement. When editing triggers,
 behavior, source grounding, or evals, also read `references/evals` and
 [references/source-grounding.md](references/source-grounding.md).
+For a planning-policy delegated integration/cleanup or approved historical
+equivalence retirement, also read
+[planning-worktree closeout](references/planning-worktree-closeout.md), then
+drive its deterministic
+[`planning_worktree.py`](references/scripts/planning_worktree.py) helper. Verify
+the packaged command with `uv run python
+"${CLAUDE_SKILL_DIR}/references/scripts/planning_worktree.py" --help` (Codex:
+replace `${CLAUDE_SKILL_DIR}` with the loaded absolute `<skill-dir>`).
 
 Modes: default `enforce-initialized` when loaded repo guidance initializes this
 policy and the requested action touches developer git workflow; otherwise

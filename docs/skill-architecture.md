@@ -122,9 +122,15 @@ unchanged progress is `blocked:no_progress`, exhaustion is terminal
 `blocked:retry_exhausted`, and an exceeded bounded assignment is terminal
 `oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
 `blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
-and its bounded `show` rehydrates one step or a truncated summary. Version-1
+and its bounded `show` rehydrates one step or a truncated summary. Successful
+v2 leaves continue `completed` → `integrated` → `cleaned`; bounded
+`planning-worktree-result-v1` evidence ties returned and rebased commits to
+rebase/fast-forward integration and non-force cleanup. Dependencies wait for
+`cleaned`, start from the current parent tip, and `validate --closeout` requires
+every successful leaf to be cleaned. Version-1
 ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
+Their terminal `integrated` state remains unchanged.
 Current planning-policy cannot approve or dispatch an unversioned version-1
 plan as new work; new documentation uses `init-v2`. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.

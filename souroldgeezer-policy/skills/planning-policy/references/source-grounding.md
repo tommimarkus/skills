@@ -63,6 +63,13 @@ its readiness score by splitting a concern into decorative leaves. Every tier
 stops and returns when a load-bearing decision is missing; analytical/deep work
 records the one irreducible uncertainty rather than silently widening scope.
 
+The successful lifecycle extends through cleanup because a returned commit is
+not yet integration evidence, and a patch-equivalent cherry-pick does not make
+the source branch an ancestor. Rebase plus fast-forward preserves ancestry;
+the separate non-force cleanup proof can then retire the branch deterministically.
+Dependencies wait for that proof so their worktrees start from the parent state
+that actually contains and has closed their prerequisites.
+
 ## IP provenance
 
 The idea — a lightweight brainstorm that opens plan mode and hands the approach

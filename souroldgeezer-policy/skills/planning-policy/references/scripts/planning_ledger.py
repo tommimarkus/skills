@@ -2,12 +2,22 @@
 """Parent-owned checkpoint ledger; ``init`` and no-run-id operations are v1."""
 
 from __future__ import annotations
-import argparse, hashlib, importlib.util, json, os, re, subprocess, sys, tempfile, uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
 
-MAX_CHECKPOINT = 16 * 1024
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+MAX_CHECKPOINT = 24 * 1024
+MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
 MAX_TOKENS = 1200
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -37,6 +47,38 @@ TRANS = {
     "discarded": set(),
 }
 NOTE_TYPES = {"finding", "decision_needed", "residual_risk", "untouched", "verification_limit"}
+V2_STATES = {
+    "pending",
+    "ready",
+    "in_progress",
+    "completed",
+    "integrated",
+    "cleaned",
+    "blocked",
+    "failed",
+    "oversized",
+}
+WORKTREE_RESULT_FIELDS = {
+    "schema",
+    "ok",
+    "action",
+    "repo_root",
+    "target",
+    "branch",
+    "worktree",
+    "source_commit",
+    "rebased_commit",
+    "parent_before",
+    "parent_after",
+}
+CLOSEOUT_FIELDS = {
+    "returned_commit": "",
+    "integrated_commit": "",
+    "integration_result_path": "",
+    "integration_result_sha256": "",
+    "cleanup_result_path": "",
+    "cleanup_result_sha256": "",
+}
 
 
 class Error(Exception):
@@ -44,7 +86,7 @@ class Error(Exception):
 
 
 def now():
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def canon(value):
@@ -133,7 +175,11 @@ def write(path, value, maximum=MAX_CHECKPOINT):
 def event(directory, data, action, **facts):
     data["event_sequence"] += 1
     data["updated_at"] = now()
-    write(directory / "checkpoint.json", data)
+    write(
+        directory / "checkpoint.json",
+        data,
+        MAX_LEGACY_CHECKPOINT if data.get("schema_version") == 1 else MAX_CHECKPOINT,
+    )
     with (directory / "events.jsonl").open("ab") as file:
         file.write(
             canon(
@@ -306,7 +352,7 @@ def load1(directory):
         or len(data["steps"]) < 2
     ):
         raise Error("invalid legacy checkpoint")
-    if len(canon(data) + b"\n") > MAX_CHECKPOINT:
+    if len(canon(data) + b"\n") > MAX_LEGACY_CHECKPOINT:
         raise Error("legacy checkpoint exceeds 16 KiB")
     for sid, step in data["steps"].items():
         if (
@@ -387,7 +433,7 @@ def init1(args):
         "event_sequence": 1,
         "steps": parse_v1(args.steps_json),
     }
-    write(directory / "checkpoint.json", data)
+    write(directory / "checkpoint.json", data, MAX_LEGACY_CHECKPOINT)
     initial_event(directory, timestamp, "init", args.plan_id, step_count=len(data["steps"]))
     return {
         **legacy_fields(),
@@ -524,6 +570,7 @@ def init2(args):
             "return_path": "",
             "return_sha256": "",
             "retry_allowed": True,
+            **CLOSEOUT_FIELDS,
         }
         for sid, leaf in leaves.items()
     }
@@ -574,12 +621,16 @@ def load2(args):
     if set(data.get("steps", {})) != set(leafs):
         raise Error("blocked:plan_tampered")
     for sid, step in data["steps"].items():
+        for field, default in CLOSEOUT_FIELDS.items():
+            step.setdefault(field, default)
         if (
             step.get("dependencies") != leafs[sid]["dependencies"]
             or step.get("max_attempts") != leafs[sid]["max_attempts"]
         ):
             raise Error("blocked:plan_tampered")
         if not 0 <= step.get("attempt_count", -1) <= step["max_attempts"]:
+            raise Error("blocked:plan_tampered")
+        if step.get("status") not in V2_STATES:
             raise Error("blocked:plan_tampered")
     return directory, data, plan, leafs
 
@@ -602,8 +653,8 @@ def ready(args, data, step):
         raise Error("step cannot be readied")
     if step["status"] != "pending" and (not args.retry or not args.summary):
         raise Error("retry requires --retry and bounded --summary")
-    if any(data["steps"][dep]["status"] != "completed" for dep in step["dependencies"]):
-        raise Error("dependencies are not complete")
+    if any(data["steps"][dep]["status"] != "cleaned" for dep in step["dependencies"]):
+        raise Error("dependencies are not cleaned")
     if step["attempt_count"] >= step["max_attempts"]:
         raise Error("blocked:retry_exhausted")
     step["attempt_count"] += 1
@@ -622,10 +673,25 @@ def transition2(args):
         ready(args, data, step)
     elif new == "in_progress":
         advance(step, old, "ready", new, args.summary or "in progress")
-    elif new == "integrated":
-        advance(step, old, "completed", new, args.summary or "integrated")
+    elif new in {"integrated", "cleaned"}:
+        expected = "completed" if new == "integrated" else "integrated"
+        value, result_path, result_sha = worktree_result(
+            args.worktree_result, directory, sid, step, leafs[sid], new
+        )
+        advance(step, old, expected, new, args.summary or new)
+        if new == "integrated":
+            step.update(
+                integrated_commit=value["rebased_commit"],
+                integration_result_path=result_path,
+                integration_result_sha256=result_sha,
+            )
+        else:
+            step.update(
+                cleanup_result_path=result_path,
+                cleanup_result_sha256=result_sha,
+            )
     else:
-        raise Error("v2 transition only permits ready, in_progress, or integrated")
+        raise Error("v2 transition only permits ready, in_progress, integrated, or cleaned")
     event(
         directory,
         data,
@@ -636,6 +702,62 @@ def transition2(args):
         attempt_id=step["attempt_id"],
     )
     return result2("transition", args, sid, step, attempt_id=step["attempt_id"])
+
+
+def worktree_result(path, directory, sid, step, leaf, target):
+    if not path:
+        raise Error(f"{target} transition requires --worktree-result")
+    source = Path(path)
+    try:
+        raw = source.read_bytes()
+        value = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid planning-worktree-result-v1") from exc
+    allowed = WORKTREE_RESULT_FIELDS | ({"parent_commit"} if target == "cleaned" else set())
+    if (
+        len(raw) > 4096
+        or not isinstance(value, dict)
+        or set(value)
+        not in (
+            {frozenset(WORKTREE_RESULT_FIELDS), frozenset(allowed)}
+            if target == "cleaned"
+            else {frozenset(allowed)}
+        )
+        or value.get("schema") != "planning-worktree-result-v1"
+        or value.get("ok") is not True
+        or value.get("action") != ("integrate" if target == "integrated" else "cleanup")
+    ):
+        raise Error("invalid planning-worktree-result-v1")
+    for field in ("source_commit", "rebased_commit", "parent_before", "parent_after"):
+        if not isinstance(value.get(field), str) or not COMMIT.fullmatch(value[field]):
+            raise Error("invalid planning worktree commit identity")
+    if "parent_commit" in value and (
+        not isinstance(value["parent_commit"], str) or not COMMIT.fullmatch(value["parent_commit"])
+    ):
+        raise Error("invalid cleanup parent commit identity")
+    assigned_worktree = Path(step["assignment"]["worktree"])
+    if not assigned_worktree.is_absolute():
+        assigned_worktree = Path(value["repo_root"]) / assigned_worktree
+    if (
+        value["branch"] != leaf["worktree_owner"]
+        or Path(value["worktree"]).resolve() != assigned_worktree.resolve()
+    ):
+        raise Error("planning worktree result does not match assigned owner")
+    if target == "integrated":
+        if step["returned_commit"] and value["source_commit"] != step["returned_commit"]:
+            raise Error("integrated source does not match returned commit")
+        if value["rebased_commit"] != value["parent_after"]:
+            raise Error("integrated commit does not match parent commit")
+    else:
+        prior = read_json(directory / step["integration_result_path"], "missing integration result")
+        for field in WORKTREE_RESULT_FIELDS - {"action"}:
+            if value[field] != prior[field]:
+                raise Error("cleanup result does not match integrated identity")
+        if value["rebased_commit"] != step["integrated_commit"]:
+            raise Error("cleanup result does not match integrated commit")
+    destination = directory / "worktree-results" / sid / f"{target}.json"
+    write(destination, value, 4096)
+    return value, str(destination.relative_to(directory)), digest(value)
 
 
 def valid_return(value, data, step, leaf):
@@ -807,6 +929,7 @@ def record(args):
     write(copy, value, MAX_RETURN)
     step["return_path"] = str(copy.relative_to(directory))
     step["return_sha256"] = digest(value)
+    step["returned_commit"] = value["commit_hash"]
     step["reason"] = (
         value["acceptance"]["summary"]
         or (value["blockers"][0]["summary"] if value["blockers"] else value["status"])
@@ -870,7 +993,7 @@ def summary(data):
         for s in ordered_steps(steps)
         if s["status"] in {"pending", "blocked", "failed"}
         and s["retry_allowed"]
-        and all(steps[d]["status"] == "completed" for d in s["dependencies"])
+        and all(steps[d]["status"] == "cleaned" for d in s["dependencies"])
     ]
     result = {
         "ok": True,
@@ -938,6 +1061,12 @@ def show(args):
                 "return_path": step["return_path"],
                 "return_sha256": step["return_sha256"],
                 "retry_allowed": step["retry_allowed"],
+                "returned_commit": step["returned_commit"],
+                "integrated_commit": step["integrated_commit"],
+                "integration_result_path": step["integration_result_path"],
+                "integration_result_sha256": step["integration_result_sha256"],
+                "cleanup_result_path": step["cleanup_result_path"],
+                "cleanup_result_sha256": step["cleanup_result_sha256"],
             },
             "omitted_blockers": 0,
         }
@@ -960,12 +1089,21 @@ def validate(args):
             "errors": [],
         }
     directory, data, plan, leafs = load2(args)
+    if args.closeout:
+        unfinished = [
+            step["id"]
+            for step in data["steps"].values()
+            if step["status"] in {"completed", "integrated"}
+        ]
+        if unfinished:
+            raise Error("closeout requires every successful step to be cleaned")
     return {
         "ok": True,
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
         "errors": [],
+        "closeout": bool(args.closeout),
     }
 
 
@@ -994,6 +1132,7 @@ def parse():
     trans.add_argument("--retry", action="store_true")
     trans.add_argument("--evidence-path", default="")
     trans.add_argument("--blocker-code", default="")
+    trans.add_argument("--worktree-result", default="")
     rec = commands.add_parser("record-return")
     rec.add_argument("--actor", required=True)
     rec.add_argument("--run-id")
@@ -1003,6 +1142,7 @@ def parse():
     sh.add_argument("--step-id", default="")
     va = commands.add_parser("validate")
     va.add_argument("--run-id")
+    va.add_argument("--closeout", action="store_true")
     return parser
 
 

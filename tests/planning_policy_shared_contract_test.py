@@ -190,6 +190,10 @@ class SharedContractTest(unittest.TestCase):
             "only when `changed_paths` is non-empty", "oversized` also requires",
             "helper-generated bounded opaque `attempt_id`", "attempt count starts at 1",
             "canonical lowercase UUID4",
+            "`completed` → `integrated` → `cleaned`",
+            "planning-worktree-result-v1", "validate --closeout",
+            "planning worktree closeout",
+            "terminal `integrated` state is unchanged",
         )
         for anchor in required:
             with self.subTest(anchor=anchor):

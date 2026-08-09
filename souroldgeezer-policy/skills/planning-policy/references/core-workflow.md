@@ -47,7 +47,12 @@ commit, implementation, or delegation happens before approval.
 For an approved plan with at least two delegated steps, only the parent creates
 the persistent ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
 Keep compact checkpoint state and bounded evidence paths/returns, never raw
-logs; parent-only lifecycle and retry operations preserve rehydration.
+logs; parent-only lifecycle and retry operations preserve rehydration. A
+successful leaf closes `completed` → `integrated` → `cleaned`; only cleaned
+dependencies become ready, from a worktree created at the then-current parent
+tip. The parent uses the Git-policy helper named by the ledger contract, not a
+routine cherry-pick, and validates `--closeout` after every successful leaf is
+cleaned.
 
 Use this standing template for adoption (Codex substitutes its available native
 approval/delegation wording):

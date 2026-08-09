@@ -9,6 +9,12 @@ guidance into initialization options or local exceptions instead of leaving
 parallel workflow authority.
 Keep guidance original; link external manuals only when needed.
 
+The delegated closeout helper exists because cherry-picked equivalent commits
+do not preserve branch ancestry: later non-force deletion correctly refuses
+them. Rebasing the owned branch onto the live parent tip and fast-forwarding
+preserves ancestry, while a separate merged-branch proof keeps cleanup
+recoverable and deterministic.
+
 ## Boundary Decisions
 
 - Developer git movement: `git-workflow-policy`.

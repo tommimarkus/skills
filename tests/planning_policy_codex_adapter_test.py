@@ -19,6 +19,9 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             '`fork_turns: "none"`',
             "separate persistent worktrees",
             "The parent keeps decomposition,\nintegration, and end-to-end verification.",
+            "`completed` → `integrated` → `cleaned`",
+            "current parent tip",
+            "never a routine cherry-pick",
         ):
             self.assertIn(marker, self.text)
 

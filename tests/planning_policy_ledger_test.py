@@ -1,6 +1,11 @@
-import contextlib, importlib.util, io, json, tempfile, unittest
-from unittest.mock import patch
+import contextlib
+import importlib.util
+import io
+import json
+import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = (
     Path(__file__).parents[1]
@@ -99,7 +104,7 @@ class PlanningLedgerTest(unittest.TestCase):
         )
         return path
 
-    def init2(self, count=2, max_attempts=2):
+    def init2(self, count=2, max_attempts=2, plan_path=None):
         code, data = self.call(
             *self.common,
             "init-v2",
@@ -107,7 +112,7 @@ class PlanningLedgerTest(unittest.TestCase):
             "parent",
             "--approved",
             "--plan-file",
-            str(self.plan(count, max_attempts)),
+            str(plan_path or self.plan(count, max_attempts)),
             "--assignments-file",
             str(self.assignments(count)),
         )
@@ -173,6 +178,41 @@ class PlanningLedgerTest(unittest.TestCase):
             "unstarted_remainder": remainder or [],
             "commit_hash": "a" * 40 if status == "completed" and changed else "",
         }
+
+    def worktree_result(self, step, action="integrate", ok=True):
+        source = step.get("returned_commit", "") or "a" * 40
+        integrated = "b" * 40
+        return {
+            "schema": "planning-worktree-result-v1",
+            "ok": ok,
+            "action": action,
+            "repo_root": "/repo",
+            "target": "main",
+            "branch": "owner",
+            "worktree": str(Path("/repo") / step["assignment"]["worktree"]),
+            "source_commit": source,
+            "rebased_commit": integrated,
+            "parent_before": "c" * 40,
+            "parent_after": integrated,
+        }
+
+    def transition_result(self, run, sid, target, value):
+        path = self.root / f"{sid}-{target}.json"
+        path.write_text(json.dumps(value))
+        return self.call(
+            *self.common,
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run,
+            "--step-id",
+            sid,
+            "--to",
+            target,
+            "--worktree-result",
+            str(path),
+        )
 
     def record(self, run, value):
         path = self.root / "return.json"
@@ -399,20 +439,9 @@ class PlanningLedgerTest(unittest.TestCase):
                 / f"{step['attempt_id']}.json"
             ).is_file()
         )
+        step = self.checkpoint(run)["steps"]["step0"]
         self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
-                run,
-                "--step-id",
-                "step0",
-                "--to",
-                "integrated",
-            )[0],
+            0, self.transition_result(run, "step0", "integrated", self.worktree_result(step))[0]
         )
         plan = self.root / "planning-policy/ledgers/plan" / run / "plan.json"
         plan.write_text("{}")
@@ -632,6 +661,120 @@ class PlanningLedgerTest(unittest.TestCase):
         value = self.returned(step, "completed")
         self.assertEqual("", value["commit_hash"])
         self.assertEqual(0, self.record(run, value)[0])
+
+    def test_v2_tracks_returned_integrated_and_cleaned_commits(self):
+        run = self.init2()
+        step = self.start(run)
+        returned = self.returned(step, changed=["src/file.py"])
+        self.assertEqual(0, self.record(run, returned)[0])
+        step = self.checkpoint(run)["steps"]["step0"]
+        integrated = self.worktree_result(step)
+        self.assertEqual(0, self.transition_result(run, "step0", "integrated", integrated)[0])
+        cleaned = {**integrated, "action": "cleanup"}
+        self.assertEqual(0, self.transition_result(run, "step0", "cleaned", cleaned)[0])
+
+        state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(returned["commit_hash"], state["returned_commit"])
+        self.assertEqual(integrated["rebased_commit"], state["integrated_commit"])
+        self.assertEqual("cleaned", state["status"])
+        self.assertTrue(state["integration_result_sha256"])
+        self.assertTrue(state["cleanup_result_sha256"])
+
+    def test_dependency_waits_for_cleanup_and_closeout_requires_cleaned(self):
+        plan = self.plan()
+        data = json.loads(plan.read_text())
+        data["leaves"][1]["dependencies"] = ["step0"]
+        plan.write_text(json.dumps(data))
+        run = self.init2(plan_path=plan)
+        step = self.start(run)
+        self.assertEqual(0, self.record(run, self.returned(step))[0])
+        step = self.checkpoint(run)["steps"]["step0"]
+        integrated = self.worktree_result(step)
+
+        self.assertEqual(3, self.call(*self.common, "validate", "--run-id", run, "--closeout")[0])
+        self.assertEqual(0, self.transition_result(run, "step0", "integrated", integrated)[0])
+        self.assertEqual(
+            3,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--step-id",
+                "step1",
+                "--to",
+                "ready",
+                "--agent-id",
+                "dependent",
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.transition_result(run, "step0", "cleaned", {**integrated, "action": "cleanup"})[0],
+        )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--step-id",
+                "step1",
+                "--to",
+                "ready",
+                "--agent-id",
+                "dependent",
+            )[0],
+        )
+
+    def test_cleanup_failure_is_retryable_without_state_change(self):
+        run = self.init2()
+        step = self.start(run)
+        self.assertEqual(0, self.record(run, self.returned(step))[0])
+        step = self.checkpoint(run)["steps"]["step0"]
+        integrated = self.worktree_result(step)
+        self.assertEqual(0, self.transition_result(run, "step0", "integrated", integrated)[0])
+        failure = {**integrated, "ok": False, "action": "cleanup", "error": "still dirty"}
+        self.assertEqual(3, self.transition_result(run, "step0", "cleaned", failure)[0])
+        self.assertEqual("integrated", self.checkpoint(run)["steps"]["step0"]["status"])
+        success = {**integrated, "action": "cleanup"}
+        self.assertEqual(0, self.transition_result(run, "step0", "cleaned", success)[0])
+
+    def test_older_v2_checkpoint_backfills_closeout_fields_but_v1_is_unchanged(self):
+        run = self.init2()
+        checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text())
+        for step in checkpoint["steps"].values():
+            for field in (
+                "returned_commit",
+                "integrated_commit",
+                "integration_result_path",
+                "integration_result_sha256",
+                "cleanup_result_path",
+                "cleanup_result_sha256",
+            ):
+                step.pop(field, None)
+        checkpoint_path.write_text(json.dumps(checkpoint))
+        code, shown = self.call(*self.common, "show", "--run-id", run, "--step-id", "step0")
+        self.assertEqual(0, code)
+        self.assertEqual("", shown["step"]["returned_commit"])
+        self.assertEqual("", shown["step"]["integrated_commit"])
+
+        legacy_common = ["--ledger-root", str(self.root), "--plan-id", "legacy"]
+        self.assertEqual(
+            0,
+            self.call(
+                *legacy_common, "init", "--actor", "parent", "--approved", "--steps-json", self.v1()
+            )[0],
+        )
+        legacy_path = self.root / "planning-policy/ledgers/legacy/checkpoint.json"
+        legacy = json.loads(legacy_path.read_text())
+        self.assertTrue(all("cleaned" not in step for step in legacy["steps"].values()))
 
     def test_record_return_refuses_omitted_run_and_persists_copy_digest(self):
         run = self.init2()

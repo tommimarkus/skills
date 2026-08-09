@@ -12,7 +12,7 @@ Only one parent writes a run. Its isolated ledger directory is
 is the stable approved-plan identifier and `run-id` is the contractually
 canonical lowercase UUID4. A delegated leaf returns one `bounded-step-return-v1`
 object to the parent and never mutates the ledger. Independent leaves may run concurrently only when their dependencies
-are already complete and they do not share a worktree or write path; each step
+are already `cleaned` and they do not share a worktree or write path; each step
 has exactly one current attempt at a time.
 
 `init-v2` requires `--plan-id`, `--run-id`, the approved version-2 plan, and
@@ -37,10 +37,23 @@ All version-2 lifecycle commands require the same `--run-id`: `init-v2`,
 `transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
 `transition` names a `--step-id`, checks that exactly one attempt is current,
 and records a bounded reason plus an optional safe relative evidence path.
+Successful steps move `completed` → `integrated` → `cleaned`. Both closeout
+transitions require a bounded `planning-worktree-result-v1` from the Git-policy
+helper; the ledger stores the returned commit, rebased/integrated commit, and
+bounded helper-result evidence without changing `bounded-step-return-v1`.
 `show --run-id <uuid4> --step-id <id>` returns only that step; without
 `--step-id`, it returns the bounded run summary. `validate` checks the plan
 copy/hash, assignment join, dependency order, current-attempt uniqueness, and
-attempt limits before handoff or closeout.
+attempt limits before handoff. `validate --closeout` additionally fails while
+any successful step is only `completed` or `integrated`.
+
+## Ancestry-preserving worktree closeout
+
+Load the Git-policy-owned
+[planning worktree closeout](../../git-workflow-policy/references/planning-worktree-closeout.md)
+procedure and ingest each successful helper result. Leave a cleanup failure at
+`integrated` so it can be retried. Create a dependent leaf's worktree only
+after its prerequisites are cleaned, from the then-current parent tip.
 
 The step-wide attempt count starts at 1 and may never exceed the leaf's
 version-2 `max_attempts` (1 through 5). The parent assigns each attempt a
@@ -102,13 +115,18 @@ summary field is at most 480 characters. If records are omitted, it sets
 `truncated: true` and a non-negative `omitted_count`; it never substitutes raw
 event history for the omitted records.
 
+When a pre-closeout version-2 checkpoint lacks returned/integrated commit or
+helper-result fields, reading it supplies empty compatibility defaults; the next
+mutation persists the current shape without changing its approved-plan hash.
+
 ## Version-1 compatibility
 
 An unversioned version-1 plan remains inspection-compatible only. Its validator
 and ledger summary emit `contract_version: 1`, `dispatch_ready: false`, and a
 deprecation warning that migration to version 2 is required before new
 dispatch. Existing version-1 state may be shown or closed with its legacy
-commands and remains mutable under `retry_policy: legacy_unbounded`. Current
+commands and remains mutable under `retry_policy: legacy_unbounded`; its
+terminal `integrated` state is unchanged and it does not gain `cleaned`. Current
 planning-policy does not approve or dispatch an unversioned version-1 plan as
 new work; initialize a separate version-2 `<plan-id>/<run-id>` run after
 approval.

@@ -122,6 +122,14 @@ finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 `blocked:no_progress`; an exhausted step is terminal `blocked:retry_exhausted`;
 and a boundary overrun is terminal `oversized`, never an expanded retry.
 
+Successful v2 steps continue `completed` → `integrated` → `cleaned`.
+The parent ingests bounded `planning-worktree-result-v1` evidence from the
+Git-policy helper: rebase the exact returned branch onto the current parent,
+fast-forward-only merge, then prove merged ancestry and clean up without force.
+Routine integration never cherry-picks. Dependencies become ready only after
+their prerequisites are cleaned, and their worktrees start at the then-current
+parent tip. `validate --closeout` requires every successful step to be cleaned.
+
 Use bounded checkpoint and lifecycle/retry returns, never raw logs. Every
 delegated handoff is one at-most-8-KiB `bounded-step-return-v1` JSON object;
 it carries its step/agent/attempt identity, bounded result facts, and no
@@ -129,7 +137,8 @@ it carries its step/agent/attempt identity, bounded result facts, and no
 `blocked:plan_tampered`. Its bounded `show` rehydrates one step or a truncated
 run summary, not history. Version-1 ledgers remain readable and mutable in
 place with `retry_policy: legacy_unbounded` until every version-1 ledger is
-terminal. Current planning-policy cannot approve or dispatch an unversioned
+terminal. Version-1 keeps its terminal `integrated` state and does not gain
+`cleaned`. Current planning-policy cannot approve or dispatch an unversioned
 version-1 plan as new work; new documentation uses `init-v2`. Remove legacy
 support only in a later explicit breaking release after no version-1 ledger is
 nonterminal. The parent owns integration and

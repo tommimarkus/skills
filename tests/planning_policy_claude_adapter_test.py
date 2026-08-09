@@ -85,6 +85,9 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertIn("return itself does not carry `run_id`", documents[0])
         self.assertIn("helper-generated assignment value", documents[0])
         self.assertNotIn("attempt_id` is a positive integer", documents[0])
+        self.assertIn("`completed` → `integrated` → `cleaned`", documents[0])
+        self.assertIn("current parent tip", documents[0])
+        self.assertIn("never a routine cherry-pick", documents[0])
         for content in documents[1:]:
             self.assertIn("do not return it", content)
             self.assertIn("helper-generated `attempt_id`", content)

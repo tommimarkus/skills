@@ -162,6 +162,14 @@ running the same install command.
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
 
+    Successful leaves continue `completed` → `integrated` → `cleaned`.
+    The parent ingests bounded `planning-worktree-result-v1` evidence from the
+    Git-policy helper, which rebases and fast-forward-only merges rather than
+    routinely cherry-picking, then proves merged ancestry before non-force
+    cleanup. Dependencies become ready only after cleanup and start from the
+    then-current parent tip; `validate --closeout` requires every successful
+    leaf to be cleaned.
+
     The ledger records bounded lifecycle returns. Every handoff is one
     at-most-8-KiB `bounded-step-return-v1` JSON object with
     its step, agent, and attempt identity, bounded changed paths, exact scoped
@@ -171,6 +179,7 @@ running the same install command.
     bounded `show` rehydrates either one step or a truncated run summary, not
     event history. Version-1 ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
+    Their terminal `integrated` state remains unchanged; `cleaned` is v2-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
     plan as new work; new documentation uses `init-v2`. Remove legacy support
     only in a later explicit breaking release after no version-1 ledger is

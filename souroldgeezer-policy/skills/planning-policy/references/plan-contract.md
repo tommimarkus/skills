@@ -99,8 +99,9 @@ uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan
 uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
 ```
 
-The parent calls `init` once, `transition` for lifecycle/retry changes, `show`
-to rehydrate a bounded summary, and `validate` before handoff or closeout.
+The parent calls `init-v2` once, `transition` for lifecycle/retry and
+`completed` → `integrated` → `cleaned` closeout changes, `show` to rehydrate
+a bounded summary, and `validate --closeout` before declaring the run closed.
 Mutations require `--actor parent`; retain bounded evidence paths, not raw logs.
 Read [ledger contract](ledger-contract.md) before initializing or resuming that
 parent-owned ledger.

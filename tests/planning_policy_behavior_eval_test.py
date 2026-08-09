@@ -55,8 +55,14 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-audit-ordinary-design",
             "planning-policy-behavior-audit-vague-risk",
             "planning-policy-behavior-audit-bounded-owner",
+            "planning-policy-behavior-claude-clean-closeout",
+            "planning-policy-behavior-codex-clean-closeout",
         }
         self.assertTrue(required.issubset(self.behavior))
+        for host in ("claude", "codex"):
+            closeout = self.behavior[f"planning-policy-behavior-{host}-clean-closeout"]
+            self.assertIn("routine cherry-pick", closeout["forbidden_behaviors"])
+            self.assertTrue(any("cleaned before" in check for check in closeout["required_checks"]))
         accepted = self.contract.validate({"work_units": [{"id": "ordinary", "original_size": "medium"}, {"id": "unknown", "original_size": "small"}], "leaves": [leaf("ordinary-work", "ordinary"), leaf("unknown-work", "unknown", "analytical")]})
         self.assertTrue(accepted["valid"])
         self.assertGreaterEqual(accepted["standard_ready_ratio"], 0.60)
