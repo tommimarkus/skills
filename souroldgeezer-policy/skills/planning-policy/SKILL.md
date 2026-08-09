@@ -40,27 +40,16 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
 
 ## Enforcement
 
-Use `enforce-initialized` for applicable initialized guidance or an explicit
-request; otherwise use `lookup`. `inspect` reports compliance; `adopt-guidance`
-writes the core template with its invariant. In the host plan lane: orient
-lightly, ask focused questions until goal/constraints/success are clear,
-state a short approach and real tradeoff, groom ready steps, then stop for
-approval. Claude enters plan mode and uses `ExitPlanMode`; Codex uses native
-Plan mode when available, otherwise a read-only explicit-approval fallback.
-Never claim an unavailable mode or approval.
+Select `enforce-initialized` for initialized guidance or an explicit request;
+otherwise use `lookup`. `inspect` reports compliance and `adopt-guidance`
+writes the core template. Enforcement details, host lane behavior, and the
+executable-leaf contract live in the on-demand [core workflow](references/core-workflow.md).
 
-Every executable leaf follows the contract: stable ID/dependencies,
-task/boundary, named reads/writes, settled decisions, size/tier, worktree
-owner, one acceptance command, return, stops, and work-unit ID. Missing
-load-bearing information is `blocked:missing_input`, never discovery or
-invention. The parent owns decomposition, integration, and end-to-end
-verification; delegated drafting is bounded to its assigned acceptance.
-
-Stop for ambiguous/multi-subsystem scope, missing success criteria, an owning
-sibling request, unenterable non-interactive plan mode, or new build work with
-no approved plan and no logged opt-out. Do not write a spec, commit, or start
-implementation in this skill. After guidance edits run the documented checks,
-`git diff --check`, and skill-architecture validation.
+Universal stops: missing load-bearing information is `blocked:missing_input`
+(never discovery or invention); stop for ambiguous or multi-subsystem scope,
+missing success criteria, an owning sibling request, an unenterable
+non-interactive plan mode, or new build work without approval or a logged
+opt-out. This skill does not write specs, commits, or implementation.
 
 Ask vs continue: continue once goal, constraints, and success are clear. If the
 request is ambiguous, input is missing, or scope is uncertain, ask the user

@@ -1,16 +1,33 @@
 [
   {
     "id": "planning-policy-lookup",
-    "provenance": "SKILL.md Load map: lookup names only the entry surface.",
+    "provenance": "SKILL.md Load map: direct lookup reads the anchored entry surface only.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"}
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"}
+    ]
+  },
+  {
+    "id": "planning-policy-direct-lookup",
+    "provenance": "Direct runtime selection uses the exact Load map anchor.",
+    "load_routes": [
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"}
+    ]
+  },
+  {
+    "id": "planning-policy-claude-agent-lookup",
+    "provenance": "Claude agent selection uses the exact Load map anchor and entry metadata.",
+    "load_routes": [
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"}
+    ],
+    "selection_metadata": [
+      {"entry": "planning-policy", "kind": "agent-summary", "text": "planning-policy: plan-first enforcement and lookup"}
     ]
   },
   {
     "id": "planning-policy-active-claude",
     "provenance": "SKILL.md Load map: enforcement, executable plan, and exactly the Claude adapter.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md", "predicate": "conditional:claude"}
@@ -20,17 +37,26 @@
     "id": "planning-policy-active-codex",
     "provenance": "SKILL.md Load map: enforcement, executable plan, and exactly the Codex adapter.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "conditional:codex"}
     ]
   },
   {
+    "id": "planning-policy-approved-multi-agent-ledger",
+    "provenance": "Approved multi-agent execution loads the exact approval, contract, and parent-ledger closure.",
+    "load_routes": [
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#approval-and-output", "predicate": "conditional:approved-multi-agent"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md#parent-ledger-helper", "predicate": "conditional:approved-multi-agent"}
+    ]
+  },
+  {
     "id": "planning-policy-unknown-host",
     "provenance": "Unknown host selection is conservative and still loads the declared adapter.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "unknown"}
     ]
   }

@@ -31,12 +31,20 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_declared_load_budgets_and_routes(self):
         lookup = self.measure("planning-policy-lookup")
+        direct = self.measure("planning-policy-direct-lookup")
+        agent_lookup = self.measure("planning-policy-claude-agent-lookup")
         claude = self.measure("planning-policy-active-claude")
         codex = self.measure("planning-policy-active-codex")
+        ledger = self.measure("planning-policy-approved-multi-agent-ledger")
         self.assertLessEqual(lookup["load_total"], 900)
+        self.assertLessEqual(direct["load_total"], 750)
+        self.assertLessEqual(agent_lookup["total"], 900)
         self.assertLessEqual(claude["load_total"], 3750)
         self.assertLessEqual(codex["load_total"], 3750)
+        self.assertLessEqual(ledger["load_total"], 4500)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
+        self.assertEqual("load-map", direct["rows"][0]["anchor"])
+        self.assertEqual("load-map", agent_lookup["rows"][0]["anchor"])
         for result, adapter in ((claude, "claude-code.md"), (codex, "codex.md")):
             files = [row["file"] for row in result["rows"]]
             self.assertTrue(any(file.endswith("SKILL.md") for file in files))
