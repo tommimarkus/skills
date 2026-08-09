@@ -13,6 +13,9 @@ semantics, coupling, evolution, principle/pattern tradeoffs, and debt. Inputs:
 files, diffs/proposals, intent, evidence. If request is ambiguous,
 scope/evidence is missing, destructive, or sibling-owned with no safe default,
 ask the user; otherwise continue.
+Also own a lightweight File Edit lane for bounded, non-code content changes that
+need no software-design judgment. It is an early-return operation lane, not a
+fifth design mode.
 Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 `api-design`, `infra-design`, `architecture-design`, `devsecops-audit`, and
 `test-quality-audit`; delegate mechanical copy-paste duplication scans
@@ -20,6 +23,15 @@ Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 duplication/DRY ownership stays here (`SD-S-2`).
 
 ## Load Map
+
+Before selecting a design mode, use the File Edit lane when the whole request is
+a bounded edit to non-code Markdown, plain text, JSON/JSONL, YAML, TOML, XML,
+CSV, INI/properties, or a similar data/text format and no code/module design or
+sibling-owned decision is required. Load only
+[references/procedures/file-edit-lane.md](references/procedures/file-edit-lane.md),
+perform its validation, report its narrow result, and return. Do not load the
+core reference, catalogs, architecture pairing, fragility or native-evidence
+procedures, stack extensions, or the normal Outputs contract for this lane.
 
 For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).
@@ -70,6 +82,8 @@ Before changing workflow/selection/grounding/evals/scope, load
 [references/source-grounding.md](references/source-grounding.md).
 
 ## Workflow
+
+The File Edit lane returns before this workflow.
 
 1. Select Build, Extract, Review, or Lookup; name scope/question. Existing
    code with no requested change defaults to Extract; a new
