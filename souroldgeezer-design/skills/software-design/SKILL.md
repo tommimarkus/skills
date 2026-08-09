@@ -25,11 +25,12 @@ For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).
 For findings, load [references/smell-catalog.md](references/smell-catalog.md)
 and [references/smell-cards.jsonl](references/smell-cards.jsonl).
-Load [references/procedures/fragility-review.md](references/procedures/fragility-review.md)
-for changed-code preconditions or adjacent-change risk, starting material
-output with its purpose; load
-[references/procedures/native-tool-evidence.md](references/procedures/native-tool-evidence.md)
-for configured evidence, `detected-not-run`, or a relevant suggestion.
+When changed-code preconditions or adjacent-change risk materially apply, load
+[references/procedures/fragility-review.md](references/procedures/fragility-review.md)
+and start the material output with its purpose. When configured evidence from a
+project-owned tool exists, a relevant tool is `detected-not-run`, or a relevant
+optional suggestion is offered, load
+[references/procedures/native-tool-evidence.md](references/procedures/native-tool-evidence.md).
 For Lookup, do not load the core reference: answer from the matched catalog
 below and cite the core-reference section it names for Lookup (a `Cite` column
 or a cite sentence). If the lookup needs code evidence, cross-section

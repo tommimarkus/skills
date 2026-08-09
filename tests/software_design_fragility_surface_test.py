@@ -16,14 +16,14 @@ class SoftwareDesignFragilitySurfaceTest(unittest.TestCase):
 
         self.assertIn("Fragility review checks", read(PROCEDURE))
         self.assertIn("code that works today", read(PROCEDURE))
-        self.assertIn("starting material", skill)
+        self.assertIn("start the material output with its purpose", skill)
         self.assertIn("output with its purpose", skill)
         self.assertIn("references/procedures/fragility-review.md", skill)
         self.assertIn("references/procedures/native-tool-evidence.md", skill)
         for condition in (
             "configured evidence",
             "`detected-not-run`",
-            "a relevant suggestion",
+            "optional suggestion",
         ):
             self.assertIn(condition, skill)
 
