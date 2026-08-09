@@ -56,6 +56,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("user-approved exception", standard)
         self.assertIn("host overlay may add\ndispatch syntax but cannot rewrite them", standard)
 
+    def test_unresolved_domain_design_routes_before_approval(self) -> None:
+        entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
+        core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
+        self.assertIn("unresolved domain-design", entry)
+        self.assertIn("Before approval, invoke the owning design skill", core)
+
 
 if __name__ == "__main__":
     unittest.main()

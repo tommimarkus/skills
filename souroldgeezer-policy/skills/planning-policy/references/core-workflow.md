@@ -14,6 +14,8 @@ and user approval before implementation.
 3. State the approach in one or two sentences and name a real tradeoff/pick.
    State execution shape: decomposable implementation steps delegate by default;
    the parent retains decomposition, integration, and final verification.
+   Before approval, invoke the owning design skill if an unresolved domain-design
+   choice materially affects implementation; bring its settled choice back here.
 4. Groom after convergence. Name each step’s reads/writes and settled decisions;
    split multiple concerns/checks, merge identical boundaries/checks. A fresh
    agent must finish from the handoff. Load [plan contract](plan-contract.md),

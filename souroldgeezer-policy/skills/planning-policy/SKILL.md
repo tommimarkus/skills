@@ -13,8 +13,9 @@ and obtain user approval before implementation.
 
 Inputs: request, applicable guidance/options, intended work, and only the files
 needed to orient. Evidence: source/options, approved approach or blocker, and
-the bounded footer. Domain design, audits, implementation, Git, issues, and
-PRs belong to their named sibling skills after approval.
+the bounded footer. Invoke the owning design skill before approval when an
+unresolved domain-design choice materially affects implementation. Audits,
+implementation, Git, issues, and PRs remain with their named sibling skills.
 
 ## Load map
 

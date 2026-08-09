@@ -91,7 +91,19 @@ def command_for(harness: str, model: str, effort: str, prompt: str, schema_path:
     if harness == "claude":
         agent = f"plan-step-{next(tier for tier, mapping in MAPPINGS['claude'].items() if mapping == (model, effort))}"
         return ["claude", "-p", "--plugin-dir", str(POLICY_PLUGIN), "--agent", agent, "--no-session-persistence", "--permission-mode", "acceptEdits", "--model", model, "--effort", effort, "--max-budget-usd", str(claude_max_budget_usd), "--output-format", "json", "--json-schema", json.dumps(FINAL_SCHEMA, separators=(",", ":")), prompt]
-    return ["codex", "exec", "--ephemeral", "--approve-for-me", "--sandbox", "workspace-write", "--model", model, "-c", f'model_reasoning_effort="{effort}"', "--output-schema", str(schema_path), "--output-last-message", str(last_message_path), prompt]
+    # --approve-for-me selects the workspace-write sandbox in current Codex.
+    # Passing --sandbox as well is rejected as a conflicting CLI option.
+    return ["codex", "exec", "--ephemeral", "--approve-for-me", "--model", model, "-c", f'model_reasoning_effort="{effort}"', "--output-schema", str(schema_path), "--output-last-message", str(last_message_path), prompt]
+
+
+def classify_host_blocker(stdout: str, stderr: str) -> str | None:
+    """Classify bounded availability stops from either host output channel."""
+    combined = f"{stdout}\n{stderr}".lower()
+    if "weekly limit" in combined or "usage limit" in combined or "quota exceeded" in combined:
+        return "blocked:host_quota"
+    if "model" in combined and ("unavailable" in combined or "not available" in combined):
+        return "blocked:model_unavailable"
+    return None
 
 
 def extract_return(harness: str, stdout: str, last_message_path: Path) -> dict[str, Any] | None:
@@ -155,10 +167,12 @@ def run_case(case: dict[str, Any], harness: str, attempt: int, output_dir: Path,
             result.update(status="failed:timeout", verifier="not_run", summary=f"host exceeded {timeout_seconds}s bound")
             return result
         returned = extract_return(harness, completed.stdout, last_message_path)
-        if completed.returncode != 0 and ("model" in completed.stderr.lower()) and ("unavailable" in completed.stderr.lower() or "not available" in completed.stderr.lower()):
-            result.update(status="blocked:model_unavailable", verifier="not_run", summary="requested mapped model was unavailable; no downgrade attempted")
-            return result
         if completed.returncode != 0:
+            blocker = classify_host_blocker(completed.stdout, completed.stderr)
+            if blocker:
+                summary = "host quota was unavailable; no downgrade attempted" if blocker == "blocked:host_quota" else "requested mapped model was unavailable; no downgrade attempted"
+                result.update(status=blocker, verifier="not_run", summary=summary)
+                return result
             result.update(status="failed:host_error", verifier="not_run", summary="host exited unsuccessfully without a model-unavailable signal")
             return result
         passed, detail = verify(case, workdir, returned)

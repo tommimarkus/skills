@@ -131,11 +131,22 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(claude[-1], "prompt")
         self.assertIn("--ephemeral", codex)
         self.assertIn("--approve-for-me", codex)
-        self.assertEqual(codex[codex.index("--sandbox") + 1], "workspace-write")
+        self.assertNotIn("--sandbox", codex, "--approve-for-me already selects workspace-write")
         self.assertNotIn("--reasoning-effort", codex)
         self.assertEqual(codex[codex.index("-c") + 1], 'model_reasoning_effort="medium"')
         self.assertIn("--output-schema", codex)
         self.assertIn("--output-last-message", codex)
+
+    def test_host_blockers_are_classified_without_downgrade(self):
+        self.assertEqual(
+            self.runner.classify_host_blocker("", "requested model is not available"),
+            "blocked:model_unavailable",
+        )
+        self.assertEqual(
+            self.runner.classify_host_blocker("You've hit your weekly limit", ""),
+            "blocked:host_quota",
+        )
+        self.assertIsNone(self.runner.classify_host_blocker("", "unrelated host error"))
 
     def test_generated_prompts_load_shipped_surface_and_complete_handoff(self):
         case = next(case for case in self.forward if case["id"] == "standard-implementation")
