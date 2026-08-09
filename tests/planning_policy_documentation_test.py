@@ -22,6 +22,17 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "The parent owns\n    integration and end-to-end verification",
             "planning-policy/ledgers/<plan-id>",
             "bounded lifecycle returns",
+            "contract_version: 2",
+            "dispatch_ready: false",
+            "<plan-id>/<run-id>",
+            "lowercase\n    UUID4",
+            "bounded-step-return-v1",
+            "no `run_id` or raw logs",
+            "blocked:plan_tampered",
+            "Version-1 ledgers remain readable and mutable",
+            "failed:retry_exhausted",
+            "blocked:no_progress",
+            "terminal `oversized`",
             "blocked:model_unavailable",
             "silent downgrade.",
         ):
@@ -34,6 +45,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "haiku`/`low", "sonnet`/`medium", "opus`/`high", "opus`/`xhigh",
             "not claims about a resolved version", "blocked:model_unavailable",
             "never silently downgrade", "Missing load-bearing information stops",
+            "contract_version: 2", "<plan-id>/<run-id>",
+            "bounded-step-return-v1", "blocked:plan_tampered",
+            "Version-1 ledgers remain readable and mutable",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, claude)
@@ -45,6 +59,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "gpt-5.6-sol`/`high", "gpt-5.6-sol`/`xhigh",
             "blocked:model_unavailable", "never silently downgrade",
             "only the parent may", "bounded checkpoint and lifecycle/retry returns",
+            "contract_version: 2", "<plan-id>/<run-id>",
+            "bounded-step-return-v1", "blocked:plan_tampered",
+            "Version-1 ledgers remain readable and mutable",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, agents)
@@ -55,6 +72,14 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("stable\ntop-level work unit", standard)
         self.assertIn("user-approved exception", standard)
         self.assertIn("host overlay may add\ndispatch syntax but cannot rewrite them", standard)
+        for phrase in (
+            "contract_version: 2", "<plan-id>/<run-id>", "lowercase UUID4",
+            "bounded-step-return-v1", "blocked:plan_tampered",
+            "Version-1\nledgers remain readable and mutable",
+            "failed:retry_exhausted", "blocked:no_progress", "terminal\n`oversized`",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, standard)
 
     def test_unresolved_domain_design_routes_before_approval(self) -> None:
         entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")

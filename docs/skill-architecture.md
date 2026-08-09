@@ -110,9 +110,22 @@ top-level work unit: weight that unit once from its original size, calculate the
 readiness gate from those declared units rather than leaf count, and require an
 explicit user-approved exception when analytical work legitimately dominates.
 The portable contract owns those fields and stop markers; a host overlay may add
-dispatch syntax but cannot rewrite them. Once an approved multi-step delegation
-needs persistence, the parent-owned checkpoint ledger stores bounded lifecycle
-returns under the Git common directory rather than raw agent logs.
+dispatch syntax but cannot rewrite them. New executable plans use
+`contract_version: 2`; unversioned version-1 plans remain inspection-readable
+but `dispatch_ready: false` with a migration deprecation warning. Once an
+approved multi-step delegation needs persistence, exactly one parent owns the
+checkpoint ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`,
+using a lowercase UUID4 run ID. It assigns each declared step one current,
+opaque attempt identity; concurrent agents require independent ready steps and
+separate worktrees/write paths. Finite `max_attempts` converges retries:
+unchanged progress is `blocked:no_progress`, exhaustion is terminal
+`failed:retry_exhausted`, and an exceeded bounded assignment is terminal
+`oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
+`blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
+and its bounded `show` rehydrates one step or a truncated summary. Version-1
+ledgers remain readable and mutable through legacy commands until every
+version-1 ledger is terminal; they cannot dispatch new attempts or convert in
+place.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

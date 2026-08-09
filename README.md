@@ -136,7 +136,10 @@ running the same install command.
    guidance into the initialization/options and removes competing policy prose.
 9. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
 10. Use `planning-policy` to turn an approved implementation approach into a
-    delegation-ready plan. Its shared, runtime-neutral contract gives every leaf
+    delegation-ready plan. New executable plans use `contract_version: 2`; an
+    unversioned version-1 plan remains readable for inspection but is
+    `dispatch_ready: false` with a migration deprecation warning. Its shared,
+    runtime-neutral contract gives every leaf
     stable IDs, dependencies, task/boundary, named reads and writes, settled
     decisions, size, portable tier, owner, one acceptance command, return shape,
     stop conditions, and a stable work unit. Work units are weighted once
@@ -148,10 +151,27 @@ running the same install command.
     exceptional, bounded-evidence decision after targeted inspection or focused
     tests cannot answer the question.
 
-    For an approved plan with two or more delegated steps, the parent may create
-    the checkpoint ledger under the Git common directory at
-    `planning-policy/ledgers/<plan-id>/`; it records bounded lifecycle returns
-    and retries, not raw agent logs. The optional fresh-context comparison is
+    For an approved plan with two or more delegated steps, exactly one parent
+    creates and writes the checkpoint ledger under the Git common directory at
+    `planning-policy/ledgers/<plan-id>/<run-id>/`, where `run-id` is a lowercase
+    UUID4. Each declared leaf has one assignment and one current, helper-issued
+    attempt identity. Ready agents may work concurrently only on independent
+    steps with separate worktrees and write paths. A leaf has a finite
+    `max_attempts` (1 through 5): unchanged return facts stop retries as
+    `blocked:no_progress`, exhaustion is terminal `failed:retry_exhausted`, and
+    an exceeded task/boundary/read/write set is terminal `oversized` rather than
+    a silently broadened retry.
+
+    The ledger records bounded lifecycle returns. Every handoff is one
+    at-most-8-KiB `bounded-step-return-v1` JSON object with
+    its step, agent, and attempt identity, bounded changed paths, exact scoped
+    acceptance result, blockers, typed notes, commit hash, and unstarted
+    remainder. It includes no `run_id` or raw logs. The ledger preserves an approved
+    plan copy and SHA-256 hash; a mismatch is `blocked:plan_tampered`. Its
+    bounded `show` rehydrates either one step or a truncated run summary, not
+    event history. Version-1 ledgers remain readable and mutable through their
+    legacy commands until every version-1 ledger is terminal; they cannot start
+    a new delegated attempt or be converted in place. The optional fresh-context comparison is
     `uv run python scripts/planning_policy_forward_eval.py --harness both
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a

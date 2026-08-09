@@ -97,7 +97,10 @@ emits a proposed plan for explicit approval.
 
 ### Planning-policy execution contract (Codex)
 
-The shared `planning-policy` contract is runtime-neutral. Every executable leaf
+The shared `planning-policy` contract is runtime-neutral. New executable plans
+use `contract_version: 2`; an unversioned version-1 plan is readable for
+inspection but `dispatch_ready: false` with a migration deprecation warning.
+Every executable leaf
 has decision-complete, stable fields: IDs/dependencies, task/boundary, named
 read/write sets, settled decisions, size, portable tier, worktree owner, one
 acceptance command, bounded return contract, stop conditions, and stable work
@@ -110,10 +113,25 @@ its bounded question and evidence surface remain unresolved by targeted
 inspection or focused tests; ordinary design is not an audit route.
 
 For an approved plan with at least two delegated steps, only the parent may
-activate the durable ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
-Use its bounded checkpoint and lifecycle/retry returns, never raw logs. The
-parent owns integration and end-to-end verification; a delegated return covers
-only its assigned drafting and acceptance check.
+activate and write a run at
+`<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`; `run-id` is a
+lowercase UUID4. The parent assigns every declared step exactly once and issues
+one current opaque attempt ID for it. Agents may concurrently execute only
+independent ready steps with separate worktrees and write paths. A step has a
+finite `max_attempts` (1–5): identical progress fingerprints block a retry as
+`blocked:no_progress`; an exhausted step is terminal `failed:retry_exhausted`;
+and a boundary overrun is terminal `oversized`, never an expanded retry.
+
+Use bounded checkpoint and lifecycle/retry returns, never raw logs. Every
+delegated handoff is one at-most-8-KiB `bounded-step-return-v1` JSON object;
+it carries its step/agent/attempt identity, bounded result facts, and no
+`run_id`. The ledger hashes its canonical approved plan; a mismatch is
+`blocked:plan_tampered`. Its bounded `show` rehydrates one step or a truncated
+run summary, not history. Version-1 ledgers remain readable and mutable via
+legacy commands until every version-1 ledger is terminal, but cannot dispatch
+new attempts or be converted in place. The parent owns integration and
+end-to-end verification; a delegated return covers only its assigned drafting
+and acceptance check.
 
 Codex maps the portable tiers exactly: `mechanical` → `gpt-5.6-luna`/`low`,
 `standard` → `gpt-5.6-terra`/`medium`, `analytical` → `gpt-5.6-sol`/`high`, and

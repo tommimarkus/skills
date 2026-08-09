@@ -281,7 +281,10 @@ Two agent classes live under `<plugin>/agents/`.
 
 ### Planning-policy execution contract (Claude Code)
 
-The shared plan contract is runtime-neutral: each leaf has stable IDs and
+The shared plan contract is runtime-neutral: new executable plans use
+`contract_version: 2`; an unversioned version-1 plan stays readable for
+inspection but is `dispatch_ready: false` with a migration deprecation warning.
+Each leaf has stable IDs and
 dependencies, task/boundary, named read/write sets, settled decisions, size,
 portable tier, worktree owner, one acceptance command, bounded return, stop
 conditions, and a stable work unit. Missing load-bearing information stops as
@@ -293,10 +296,24 @@ exceptional: it needs one owner, a bounded question/evidence surface, and proof
 that targeted inspection or focused tests cannot resolve it. The parent owns
 integration and end-to-end verification.
 
-For approved plans with at least two delegated steps, the parent alone may
-activate the durable ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
-Use its bounded lifecycle, checkpoint, and retry returns; do not retain raw
-agent logs. Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
+For approved plans with at least two delegated steps, exactly one parent writes
+the durable ledger at
+`<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`, with lowercase
+UUID4 `run-id`. It assigns every declared step once and issues one current
+opaque attempt ID. Concurrent agents require independent ready steps and
+separate worktrees/write paths. Finite `max_attempts` (1–5) stops unchanged
+progress as `blocked:no_progress`, exhaustion as terminal
+`failed:retry_exhausted`, and boundary expansion as terminal `oversized`.
+
+Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
+logs. Every delegated handoff is one at-most-8-KiB
+`bounded-step-return-v1` JSON object with its step/agent/attempt identity and
+no `run_id`. The ledger stores a canonical approved-plan SHA-256 hash;
+`blocked:plan_tampered` prevents dispatch or retry on a mismatch. Bounded
+`show` rehydrates one step or a truncated run summary, never raw history.
+Version-1 ledgers remain readable and mutable through legacy commands until
+every version-1 ledger is terminal, but cannot start attempts or convert in
+place. Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
 `opus`/`high`, `opus`/`xhigh` — for mechanical, standard, analytical, and deep
 work respectively. These are aliases, not claims about a resolved version. If
 an alias or effort is unavailable, return `blocked:model_unavailable` with the
