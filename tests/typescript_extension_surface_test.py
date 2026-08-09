@@ -32,6 +32,24 @@ class TypeScriptExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("project references", compact(typescript))
         self.assertIn("Node.js package metadata", grounding)
 
+    def test_typescript_lane_covers_project_first_runtime_contracts_and_js_migration(self) -> None:
+        typescript = read("souroldgeezer-design/skills/software-design/extensions/typescript.md")
+        grounding = read("souroldgeezer-design/skills/software-design/references/source-grounding.md")
+
+        for marker in (
+            "project-first",
+            "checkJs",
+            "allowJs",
+            "conditional exports",
+            "dependencies",
+            "peerDependencies",
+            "AbortSignal",
+            "error contract",
+            "performance evidence",
+        ):
+            self.assertIn(marker, typescript)
+        self.assertIn("Node.js abort-controller", grounding)
+
     def test_typescript_support_has_synthetic_eval_coverage(self) -> None:
         software_trigger_ids = {
             record["id"]
@@ -44,6 +62,8 @@ class TypeScriptExtensionSurfaceTest(unittest.TestCase):
 
         self.assertIn("software-design-trigger-yes-typescript-review", software_trigger_ids)
         self.assertIn("software-design-behavior-typescript-review", software_behavior_ids)
+        self.assertIn("software-design-trigger-yes-js-ts-assimilation", software_trigger_ids)
+        self.assertIn("software-design-behavior-js-ts-runtime-contracts", software_behavior_ids)
 
 
 if __name__ == "__main__":
