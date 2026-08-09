@@ -76,38 +76,6 @@ Prefer a design that can evolve through small behavior-preserving steps. Refacto
 
 Default: make the next safe move, then reassess.
 
-### 3.5.1 Fragility Review
-
-Fragility review checks whether code that works today introduces hidden
-assumptions or scatters one design decision across places that a nearby future
-change could miss, causing regressions or repeated refactoring. It is not style
-review, speculative abstraction, analyzer enforcement, or development-method
-enforcement.
-
-Review changed code for partial operations such as indexed access, first/last,
-lookups, casts, and comparable operations. `SD-E-6` applies when their safety
-relies on an invariant that is not proven by a fixed-shape or non-empty type, a
-validated boundary, a dominating guard, or a deliberate fail-fast contract.
-Tests, comments, and sample data alone do not prove that invariant. A deliberate
-fail-fast contract is not a finding when its caller-visible precondition and
-failure are intentional and local to the boundary.
-
-For structural fragility, run an adjacent-change probe: name the volatile
-decision, its intended owner, and every coordinated change site. Multiple files
-alone are not a finding; accidental duplication, divergent ownership, or
-unrelated coordinated edits are. Reuse the applicable coupling, ownership,
-boundary, or semantic `SD-*` code rather than adding a fragility code for every
-structural shape.
-
-Complete this review as `pass`, `warn`, `block`, or `not-assessed`. Block only
-high-confidence fragility introduced in changed code with credible crash,
-corruption, partial-application, or silent-divergence consequences. Warn for a
-plausible adjacent-change or maintainability risk. `not-assessed` means the
-necessary source or evidence scope was unavailable; optional tooling absence
-never blocks and never causes `not-assessed`. Tool findings are evidence
-candidates, not conclusions, and an imaginable future change alone does not
-justify prescribing an abstraction.
-
 ### 3.6 Lightweight Quality-Attribute Tradeoffs
 
 Software design choices balance modifiability, performance, reliability, security, operability, cost, and cognitive load. The skill borrows ATAM's discipline of making forces explicit, but it does not run an architecture-board analysis.
@@ -291,8 +259,6 @@ Checklist:
 18. `[static]` Deprecations name a replacement, an owner, and a removal trigger.
 19. `[history]` Dependency currency is treated as debt with an upgrade cadence; security risk is delegated to `devsecops-audit`.
 20. `[graph]`/`[human]` Divergent versions or forks of a shared concern have a named convergence owner and bounded internal skew.
-21. `[static]` Partial operations in changed code have a type, validated boundary, dominating guard, or deliberate fail-fast contract; tests, comments, and sample data alone are not proof (`SD-E-6`).
-22. `[static]`/`[human]` When fragility materially applies, the adjacent-change probe names the volatile decision, intended owner, and coordinated sites; multi-file edits alone are not a finding.
 
 ## 9. Delegation Map
 

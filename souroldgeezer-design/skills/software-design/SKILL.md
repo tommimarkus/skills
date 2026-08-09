@@ -18,11 +18,6 @@ Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
 `test-quality-audit`; delegate mechanical copy-paste duplication scans
 (token-window clones, `LA-CODE-DUP-*`) to `lean-audit` — semantic
 duplication/DRY ownership stays here (`SD-S-2`).
-When fragility materially applies: Fragility review checks whether code that
-works today introduces hidden assumptions or scatters one design decision across
-places that a nearby future change could miss, causing regressions or repeated
-refactoring. It is not style review, speculative abstraction, analyzer
-enforcement, or development-method enforcement.
 
 ## Load Map
 
@@ -31,12 +26,10 @@ For Build/Extract/Review, load the whole core reference
 For findings, load [references/smell-catalog.md](references/smell-catalog.md)
 and [references/smell-cards.jsonl](references/smell-cards.jsonl).
 Load [references/procedures/fragility-review.md](references/procedures/fragility-review.md)
-when Review assesses changed code for hidden preconditions or whether a nearby
-change could miss a volatile design decision. Load
+for changed-code preconditions or adjacent-change risk, starting material
+output with its purpose; load
 [references/procedures/native-tool-evidence.md](references/procedures/native-tool-evidence.md)
-only when a repository-configured native tool supplied evidence, a relevant
-tool was detected without a repository-owned invocation, or a demonstrated
-evidence gap makes one optional suggestion relevant.
+for configured evidence, `detected-not-run`, or a relevant suggestion.
 For Lookup, do not load the core reference: answer from the matched catalog
 below and cite the core-reference section it names for Lookup (a `Cite` column
 or a cite sentence). If the lookup needs code evidence, cross-section
@@ -107,10 +100,7 @@ Before changing workflow/selection/grounding/evals/scope, load
    architecture view.
 8. Separate fact from inference, choose the smallest coherent move, validate,
    then emit contract/footer.
-9. In Review, when fragility materially applies, run the adjacent-change probe
-   and the calibrated completion gate from `fragility-review.md`; treat tool
-   findings as evidence candidates, not conclusions.
-10. For Build implementation, record the design decision, implement
+9. For Build implementation, record the design decision, implement
    the smallest coherent move, review diff against the design decision,
    validate, then classify adjacent audit triggers: use/request devsecops-audit
    Quick for security-sensitive edits and test-quality-audit Quick for
@@ -121,9 +111,7 @@ Before changing workflow/selection/grounding/evals/scope, load
 
 Build outputs forces, principle/pattern decision, responsibilities, deps, state
 owner, validation, and delegations. Extract outputs modules, boundaries, deps,
-hotspots, debt, and next move. Review outputs findings only, with a fragility
-completion of `pass`, `warn`, `block`, or `not-assessed` when that review
-materially applies: block the
+hotspots, debt, and next move. Review outputs findings only: block the
 `Default blocks:` classes in
 [references/smell-catalog.md](references/smell-catalog.md); warn risks; info
 notes. Lookup gives rule, exception, citation, delegation, and footer.
@@ -131,9 +119,9 @@ notes. Lookup gives rule, exception, citation, delegation, and footer.
 Answers report mode, extensions, reference path, layers (`static`,
 `graph`, `history`, `runtime`, `human`), assimilation, architecture pairing,
 delegations, and limits.
-Findings use a plain-language title and `[SD-<family>-<n>] <file>:<line>` with
-bucket, layer, severity, evidence, action, and citation; extension findings
-cite only that extension's defined key codes, never its family globs. Principle/pattern decisions name
+Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer, severity,
+evidence, action, and citation; extension findings cite only that extension's
+defined key codes, never its family globs. Principle/pattern decisions name
 force, fit/rule, avoid case, smell reduced/introduced, cheapest validation
 layer.
 

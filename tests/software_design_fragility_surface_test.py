@@ -1,6 +1,6 @@
 import unittest
 
-from tests.surface_test_lib import read, read_jsonl
+from tests.surface_test_lib import compact, read, read_jsonl
 
 
 SKILL = "souroldgeezer-design/skills/software-design/SKILL.md"
@@ -14,14 +14,16 @@ class SoftwareDesignFragilitySurfaceTest(unittest.TestCase):
     def test_public_contract_and_load_conditions_are_explicit(self) -> None:
         skill = read(SKILL)
 
-        self.assertIn("Fragility review checks whether code that", skill)
-        self.assertIn("not style review, speculative abstraction, analyzer", skill)
+        self.assertIn("Fragility review checks", read(PROCEDURE))
+        self.assertIn("code that works today", read(PROCEDURE))
+        self.assertIn("starting material", skill)
+        self.assertIn("output with its purpose", skill)
         self.assertIn("references/procedures/fragility-review.md", skill)
         self.assertIn("references/procedures/native-tool-evidence.md", skill)
         for condition in (
-            "repository-configured native tool supplied evidence",
-            "detected without a repository-owned invocation",
-            "evidence gap makes one optional suggestion relevant",
+            "configured evidence",
+            "`detected-not-run`",
+            "a relevant suggestion",
         ):
             self.assertIn(condition, skill)
 
@@ -32,19 +34,20 @@ class SoftwareDesignFragilitySurfaceTest(unittest.TestCase):
 
         self.assertIn("`SD-E-6`", catalog)
         self.assertEqual("Latent precondition", card["title"])
+        evidence = " ".join(str(value) for value in card.values()) + compact(read(PROCEDURE))
         for phrase in (
             "indexed access",
             "first/last",
             "lookup",
-            "cast",
+            "casts",
             "fixed-shape or non-empty type",
             "validated boundary",
             "dominating guard",
             "deliberate fail-fast contract",
-            "tests, comments, and sample data alone are not proof",
+            "Tests, comments, and sample data alone do not prove safety",
         ):
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, " ".join(str(value) for value in card.values()))
+                self.assertIn(phrase, evidence)
 
     def test_adjacent_change_probe_calibrates_structural_findings(self) -> None:
         procedure = read(PROCEDURE)
@@ -70,8 +73,8 @@ class SoftwareDesignFragilitySurfaceTest(unittest.TestCase):
         self.assertIn("high-confidence fragility", procedure)
         self.assertIn("crash, corruption, partial-application, or silent-divergence", procedure)
         self.assertIn("optional tooling", procedure)
-        self.assertIn("not a finding", reference)
-        self.assertIn("Tool findings are evidence\ncandidates, not conclusions", reference)
+        self.assertIn("make the next safe move", reference)
+        self.assertIn("evidence\ncandidates, not conclusions", procedure)
         self.assertIn("plain-language title beside its internal `SD-*` code", procedure)
 
 
