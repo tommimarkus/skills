@@ -92,6 +92,7 @@ class SoftwareDesignToolStateTest(unittest.TestCase):
         git(self.root, "config", "--local", "softwaredesign.tool-decision-formatter", "defer-until:2099-01-01")
         listed = run(self.root, "list")
         self.assertEqual(["formatter"], [record["capability"] for record in listed["records"]])
+        self.assertEqual([{"capability": "formatter", "status": "deferred"}], listed["decisions"])
         decisions = run(self.root, "clear-all", "--kind", "decisions")
         self.assertEqual(["decision:formatter"], decisions["cleared"])
         self.assertEqual("valid", run(self.root, "get", "formatter")["status"])
@@ -142,6 +143,23 @@ class SoftwareDesignToolStateTest(unittest.TestCase):
         self.assertEqual(100, len(collected["reported"]))
         self.assertEqual(1, collected["reported_omitted_count"])
         self.assertTrue(collected["truncated"])
+
+    def test_oversized_write_or_stored_value_is_not_echoed(self) -> None:
+        oversized = "x" * 513
+        rejected = subprocess.run(
+            ["python3", str(SCRIPT.resolve()), "put", "format", "--tool", oversized, "--reported-version", "1", "--source", "x"],
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(0, rejected.returncode)
+        self.assertNotIn(oversized, rejected.stderr)
+        git(self.root, "config", "--local", "softwaredesign.tool-cache-oversized.schema-version", "1")
+        git(self.root, "config", "--local", "softwaredesign.tool-cache-oversized.tool", oversized)
+        listing = run(self.root, "list")
+        record = listing["records"][0]
+        self.assertEqual("malformed", record["status"])
+        self.assertEqual("<omitted:oversized-value>", record["record"]["tool"])
+        self.assertNotIn(oversized, json.dumps(listing))
 
 
 if __name__ == "__main__":

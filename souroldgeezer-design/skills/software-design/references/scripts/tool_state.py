@@ -34,6 +34,9 @@ REQUIRED_FIELDS = (
     "state",
 )
 MAX_OUTPUT_ITEMS = 100
+MAX_FIELD_LENGTH = 512
+OVERSIZED_VALUE = "<omitted:oversized-value>"
+SAFE_RECORD_FIELDS = frozenset(REQUIRED_FIELDS + ("stale-on",))
 
 
 def utc_today() -> date:
@@ -55,6 +58,18 @@ def capability(value: str) -> str:
             "capability must use lowercase letters, digits, and hyphens; it is not a path"
         )
     return value
+
+
+def bounded_text(value: str) -> str:
+    if not value:
+        raise argparse.ArgumentTypeError("text fields must not be empty")
+    if len(value) > MAX_FIELD_LENGTH:
+        raise argparse.ArgumentTypeError(f"text fields must be at most {MAX_FIELD_LENGTH} characters")
+    return value
+
+
+def safe_identifier(value: str) -> str:
+    return value if len(value) <= 80 else "<omitted:oversized-identifier>"
 
 
 def git_config(repo: Path, *args: str, allow_missing: bool = False) -> str:
@@ -98,15 +113,23 @@ def assess(name: str, values: dict[str, list[str]], today: date) -> tuple[str, d
     record: dict[str, str] = {}
     if not CAPABILITY_RE.fullmatch(name):
         problems.append("invalid:capability")
-    for field, options in values.items():
+    for field in SAFE_RECORD_FIELDS:
+        options = values.get(field, [])
+        if not options:
+            continue
         if len(options) != 1:
             problems.append(f"duplicate:{field}")
+        elif len(options[0]) > MAX_FIELD_LENGTH:
+            problems.append(f"oversized:{field}")
+            record[field] = OVERSIZED_VALUE
         else:
             record[field] = options[0]
+    if any(field not in SAFE_RECORD_FIELDS for field in values):
+        problems.append("unexpected:field")
     missing = [field for field in REQUIRED_FIELDS if field not in record]
     problems.extend(f"missing:{field}" for field in missing)
     if record.get("schema-version") not in (None, SCHEMA_VERSION):
-        return "unknown_schema", record, problems
+        return "unknown_schema", record, sorted(problems)
     if record.get("state") not in (None, "valid", "stale"):
         problems.append("invalid:state")
     for field in DATE_FIELDS + (("stale-on",) if "stale-on" in record else ()):
@@ -140,6 +163,21 @@ def bounded(items: list[Any]) -> tuple[list[Any], int]:
 
 def sort_reports(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(reports, key=lambda report: json.dumps(report, sort_keys=True, separators=(",", ":")))
+
+
+def decision_summary(key: str, values: list[str], today: date) -> dict[str, str]:
+    name = key.removeprefix(DECISION_PREFIX)
+    summary = {"capability": safe_identifier(name), "status": "malformed"}
+    if not name or len(values) != 1 or len(values[0]) > MAX_FIELD_LENGTH:
+        return summary
+    value = values[0]
+    if not value.startswith("defer-until:"):
+        return summary
+    try:
+        summary["status"] = "expired" if today >= parse_date(value.removeprefix("defer-until:")) else "deferred"
+    except ValueError:
+        pass
+    return summary
 
 
 def put(args: argparse.Namespace, repo: Path) -> int:
@@ -209,9 +247,19 @@ def list_records(args: argparse.Namespace, repo: Path) -> int:
     records = []
     for name, values in sorted(cache_records(repo).items()):
         state, record, problems = assess(name, values, today)
-        records.append({"capability": name, "problems": problems, "record": record, "status": state})
+        records.append({"capability": safe_identifier(name), "problems": problems, "record": record, "status": state})
     records, omitted_count = bounded(records)
-    return response("list", "ok", records=records, omitted_count=omitted_count, truncated=bool(omitted_count))
+    decisions = [decision_summary(key, values, today) for key, values in sorted(decision_records(repo).items())]
+    decisions, decisions_omitted_count = bounded(decisions)
+    return response(
+        "list",
+        "ok",
+        records=records,
+        omitted_count=omitted_count,
+        decisions=decisions,
+        decisions_omitted_count=decisions_omitted_count,
+        truncated=bool(omitted_count or decisions_omitted_count),
+    )
 
 
 def clear_all(args: argparse.Namespace, repo: Path) -> int:
@@ -221,7 +269,7 @@ def clear_all(args: argparse.Namespace, repo: Path) -> int:
         for name, values in sorted(cache_records(repo).items()):
             state, record, problems = assess(name, values, utc_today())
             if state in {"malformed", "unknown_schema"}:
-                reported.append({"capability": name, "problems": problems, "status": state})
+                reported.append({"capability": safe_identifier(name), "problems": problems, "status": state})
             else:
                 git_config(repo, "--remove-section", cache_section(name))
                 cleared.append(f"cache:{name}")
@@ -232,7 +280,7 @@ def clear_all(args: argparse.Namespace, repo: Path) -> int:
                 git_config(repo, "--unset-all", key)
                 cleared.append(f"decision:{name}")
             else:
-                reported.append({"key": key, "status": "malformed"})
+                reported.append(decision_summary(key, values, utc_today()))
     cleared, cleared_omitted_count = bounded(sorted(cleared))
     reported, reported_omitted_count = bounded(sort_reports(reported))
     return response(
@@ -254,7 +302,7 @@ def gc(args: argparse.Namespace, repo: Path) -> int:
     for name, values in sorted(cache_records(repo).items()):
         state, record, problems = assess(name, values, today)
         if state in {"malformed", "unknown_schema"}:
-            reported.append({"capability": name, "problems": problems, "status": state})
+            reported.append({"capability": safe_identifier(name), "problems": problems, "status": state})
         elif state == "expired":
             removed.append(f"cache:{name}")
             if not args.dry_run:
@@ -264,12 +312,12 @@ def gc(args: argparse.Namespace, repo: Path) -> int:
     for key, values in sorted(decision_records(repo).items()):
         name = key.removeprefix(DECISION_PREFIX)
         if not name or len(values) != 1 or not values[0].startswith("defer-until:"):
-            reported.append({"key": key, "status": "malformed"})
+            reported.append(decision_summary(key, values, today))
             continue
         try:
             expired = today >= parse_date(values[0].removeprefix("defer-until:"))
         except ValueError:
-            reported.append({"key": key, "status": "malformed"})
+            reported.append(decision_summary(key, values, today))
             continue
         if expired:
             removed.append(f"decision:{name}")
@@ -313,9 +361,9 @@ def build_parser() -> argparse.ArgumentParser:
         child.set_defaults(handler=handler)
     child = commands.add_parser("put")
     child.add_argument("capability", type=capability)
-    child.add_argument("--tool", required=True)
-    child.add_argument("--reported-version", required=True)
-    child.add_argument("--source", required=True)
+    child.add_argument("--tool", required=True, type=bounded_text)
+    child.add_argument("--reported-version", required=True, type=bounded_text)
+    child.add_argument("--source", required=True, type=bounded_text)
     child.add_argument("--validated-on")
     child.set_defaults(handler=put)
     commands.add_parser("list").set_defaults(handler=list_records)
