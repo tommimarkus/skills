@@ -39,6 +39,21 @@ the investigation or edit scope.
 Run the acceptance check and report its raw output. Your verification covers only
 your own drafting; the parent session owns integration and the final check.
 
-Return (bounded): status, finding and evidence, files changed, acceptance output,
-unverified inferences, and effects on the plan. Verification is local to your
-drafting; the parent owns integration and final verification.
+Return exactly one UTF-8 JSON object using `"schema": "bounded-step-return-v1"`;
+no Markdown, prose outside the object, or raw logs. Echo assigned `step_id`,
+`agent_id`, and helper-generated `attempt_id`; the parent supplies `run_id` at
+ingestion, so do not return it. Include `status`, `changed_paths`, `acceptance`,
+`blockers`, `notes`, `commit_hash`, and `unstarted_remainder`. Status is exactly
+`completed`, `blocked`, `failed`, or `oversized`; blocker codes carry details
+such as `blocked:missing_input`. Keep at most 32 safe repository-relative changed
+paths, eight blockers, eight typed notes, and eight remainder strings. Acceptance
+exactly echoes the command and carries integer/null exit code, a <=480-character
+summary, and optional relative evidence path plus 64-hex digest. Every blocker
+has code, <=240-character summary, relative evidence path, and 64-hex digest.
+Note types are exactly `finding`, `decision_needed`, `residual_risk`, `untouched`,
+or `verification_limit`; remainder items are <=240 characters. `commit_hash` is
+an empty string or 40/64-hex hash. Keep the return <=8 KiB. Use `completed` only
+when acceptance exits `0`; completed changed work needs a commit hash. Blocked,
+failed, and oversized returns require a blocker; oversized also needs remainder.
+Do not invent a decision. Verification is local to your drafting; the parent owns
+integration and final verification.

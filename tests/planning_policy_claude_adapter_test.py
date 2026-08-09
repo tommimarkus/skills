@@ -12,6 +12,22 @@ EXPECTED_TIERS = {
     "plan-step-analytical": ("opus", "high"),
     "plan-step-deep": ("opus", "xhigh"),
 }
+RETURN_PROFILE = (
+    '`"schema": "bounded-step-return-v1"`',
+    "`step_id`",
+    "`agent_id`",
+    "`attempt_id`",
+    "`changed_paths`, `acceptance`, `blockers`, `notes`,",
+    "`commit_hash`",
+    "`unstarted_remainder`",
+    "`completed`, `blocked`, `failed`, or `oversized`",
+    "32 safe repository-relative",
+    "`finding`",
+    "`decision_needed`",
+    "`residual_risk`",
+    "`untouched`",
+    "`verification_limit`",
+)
 
 
 class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
@@ -34,7 +50,7 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertRegex(content, rf"(?m)^effort: {effort}$")
             self.assertIn("`blocked:missing_input`", content)
             self.assertIn("ask the parent to re-cut", content)
-            self.assertIn("Return (bounded):", content)
+            self.assertIn("Return exactly one UTF-8 JSON object", content)
             self.assertRegex(
                 content,
                 re.compile(r"parent owns\s+integration and final verification", re.I),
@@ -44,6 +60,35 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")
 
         self.assertNotIn("ask for it or state the assumption", standard)
+
+    def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
+        documents = [ADAPTER.read_text(encoding="utf-8")]
+        documents.extend((AGENTS / f"{tier}.md").read_text(encoding="utf-8") for tier in EXPECTED_TIERS)
+
+        for content in documents:
+            normalized = re.sub(r"\s+", " ", content)
+            for marker in RETURN_PROFILE:
+                self.assertIn(marker, normalized)
+            self.assertIn("no Markdown, prose outside the object", content)
+            self.assertIn("raw logs", content)
+            self.assertIn("Use `completed` only", content)
+            self.assertNotIn("`commit_hash` is `null`", content)
+            self.assertTrue("return <=8 KiB" in content or "at most 8 KiB" in content)
+            self.assertTrue("oversized also needs remainder" in content or "oversized` also requires an unstarted remainder" in content)
+            self.assertTrue("<=480-character" in content or "at most 480 characters" in content)
+            self.assertTrue("<=240-character summary" in content or "at most 240 characters" in content)
+            self.assertTrue('"exit_code": integer|null' in content or "integer/null exit code" in content)
+            self.assertTrue("eight blockers" in content or "at most eight" in content)
+            self.assertTrue("empty string or 40/64-hex hash" in content or "empty\nstring or a 40- or 64-hex hash" in content)
+            self.assertTrue("completed changed work needs a commit hash" in content or "completed\nwork with changed paths needs a commit hash" in content)
+
+        self.assertIn("return itself does not carry `run_id`", documents[0])
+        self.assertIn("helper-generated assignment value", documents[0])
+        self.assertNotIn("attempt_id` is a positive integer", documents[0])
+        for content in documents[1:]:
+            self.assertIn("do not return it", content)
+            self.assertIn("helper-generated `attempt_id`", content)
+            self.assertNotIn("positive integer `attempt_id`", content)
 
 
 if __name__ == "__main__":
