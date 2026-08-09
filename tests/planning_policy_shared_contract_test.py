@@ -177,7 +177,7 @@ class SharedContractTest(unittest.TestCase):
             "<plan-id>/<run-id>", "UUID4", "init-v2", "assignment set",
             "exactly one current attempt", "--run-id", "max_attempts",
             "bounded-step-return-v1", "changed_paths", "commit_hash",
-            "progress fingerprint", "blocked:no_progress", "failed:retry_exhausted",
+            "progress fingerprint", "blocked:no_progress", "blocked:retry_exhausted",
             "oversized", "SHA-256", "blocked:plan_tampered", "--step-id",
             "truncated: true", "contract_version: 1", "dispatch_ready: false",
             "no active version-1 ledger remains", "at most 8 KiB",

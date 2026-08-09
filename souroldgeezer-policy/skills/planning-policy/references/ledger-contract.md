@@ -52,7 +52,7 @@ progress fingerprint is the SHA-256 of the canonical bounded return facts for
 the attempt, excluding volatile timestamps. If its value is unchanged from the
 previous attempt, reject the retry as `blocked:no_progress`. Once an attempted
 step reaches `max_attempts` without completion, mark it terminal
-`failed:retry_exhausted` and do not create another current attempt.
+`blocked:retry_exhausted` and do not create another current attempt.
 
 If changed paths, a failed acceptance result, or the return show that the
 assigned task/boundary/read/write sets no longer bound the work, mark the step
@@ -108,8 +108,10 @@ An unversioned version-1 plan remains inspection-compatible only. Its validator
 and ledger summary emit `contract_version: 1`, `dispatch_ready: false`, and a
 deprecation warning that migration to version 2 is required before new
 dispatch. Existing version-1 state may be shown or closed with its legacy
-commands, but may not start a new delegated attempt or be converted in place;
-initialize a separate version-2 `<plan-id>/<run-id>` run after approval.
+commands and remains mutable under `retry_policy: legacy_unbounded`. Current
+planning-policy does not approve or dispatch an unversioned version-1 plan as
+new work; initialize a separate version-2 `<plan-id>/<run-id>` run after
+approval.
 
 Remove this compatibility path only in a later published contract-major change,
 after the migration has been documented and no active version-1 ledger remains.
