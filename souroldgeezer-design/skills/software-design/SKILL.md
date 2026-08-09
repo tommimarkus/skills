@@ -8,30 +8,28 @@ description: >-
 
 ## Contract
 
-Own Build/Extract/Review/Lookup for code/module boundaries, deps, ownership,
+Own Build/Extract/Review/Lookup for code boundaries, dependencies, ownership,
 semantics, coupling, evolution, principle/pattern tradeoffs, and debt. Inputs:
-files, diffs/proposals, intent, evidence. If request is ambiguous,
-scope/evidence is missing, destructive, or sibling-owned with no safe default,
-ask the user; otherwise continue.
-Also own a lightweight File Edit lane for bounded, non-code content changes that
-need no software-design judgment. It is an early-return operation lane, not a
-fifth design mode.
-Delegate UI/API/infra/IaC/architecture/security/tests to `app-design`,
-`api-design`, `infra-design`, `architecture-design`, `devsecops-audit`, and
-`test-quality-audit`; delegate mechanical copy-paste duplication scans
-(token-window clones, `LA-CODE-DUP-*`) to `lean-audit` — semantic
-duplication/DRY ownership stays here (`SD-S-2`).
+files or proposals, intent, and evidence. If the request is ambiguous, inputs
+are missing, or scope is uncertain, ask the user; otherwise continue. Also ask
+before destructive work or when a sibling owns it without a safe default.
+Also own an early-return File Edit lane for bounded non-code changes needing no
+software-design judgment; it is not a fifth design mode.
+Delegate UI/API/IaC/architecture/security/tests to `app-design`, `api-design`,
+`infra-design`, `architecture-design`, `devsecops-audit`, and
+`test-quality-audit`. `lean-audit` owns mechanical `LA-CODE-DUP-*` scans;
+semantic duplication/DRY stays here (`SD-S-2`).
 
 ## Load Map
 
-Before selecting a design mode, use the File Edit lane when the whole request is
-a bounded edit to non-code Markdown, plain text, JSON/JSONL, YAML, TOML, XML,
-CSV, INI/properties, or a similar data/text format and no code/module design or
-sibling-owned decision is required. Load only
+Before selecting a design mode, use File Edit for a wholly bounded non-code
+Markdown, text, JSON/JSONL, YAML, TOML, XML, CSV, INI/properties, or similar
+edit needing no code/module design or sibling decision. Load only
 [references/procedures/file-edit-lane.md](references/procedures/file-edit-lane.md),
-perform its validation, report its narrow result, and return. Do not load the
-core reference, catalogs, architecture pairing, fragility or native-evidence
-procedures, stack extensions, or the normal Outputs contract for this lane.
+validate, report its narrow result, and return without normal design references,
+extensions, procedures, or Outputs.
+When cache state is relevant, execute `references/scripts/tool_state.py` without
+loading its source; use its `--help` plus `gc` and the selected bounded command.
 
 For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).
@@ -43,22 +41,19 @@ and start the material output with its purpose. When configured evidence from a
 project-owned tool exists, a relevant tool is `detected-not-run`, or a relevant
 optional suggestion is offered, load
 [references/procedures/native-tool-evidence.md](references/procedures/native-tool-evidence.md).
-For Lookup, do not load the core reference: answer from the matched catalog
-below and cite the core-reference section it names for Lookup (a `Cite` column
-or a cite sentence). If the lookup needs code evidence, cross-section
-tradeoffs, or no catalog row matches, escalate to Review/Build or ask — do not
-under-answer from a catalog row.
-Lookup footers name the catalog as the loaded reference path.
+For Lookup, skip core: answer from the matched catalog below, cite its named
+core section, and name that catalog in the footer. Escalate to Review/Build or
+ask when code evidence, cross-section tradeoffs, or an unmatched question is
+needed.
 Load [references/principles-catalog.md](references/principles-catalog.md) for
 principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md) for
 pattern questions.
-Load [references/nfr-catalog.md](references/nfr-catalog.md) when
-non-functional/quality requirements, SLAs/SLOs, latency/availability/throughput
-targets, or quality attributes are in scope.
+Load [references/nfr-catalog.md](references/nfr-catalog.md) for NFRs, quality
+attributes, SLAs/SLOs, or latency/availability/throughput targets.
 Load
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
-when existing source, diffs, manifests, generated clients, shared libraries,
-adapters, state owners, domain vocabulary, or module boundaries are in scope.
+for existing source, diffs, manifests, generated clients, shared code, adapters,
+state owners, domain vocabulary, or module boundaries.
 Load
 [references/procedures/architecture-pairing.md](references/procedures/architecture-pairing.md)
 (mechanics canonical in
@@ -71,9 +66,8 @@ Before stack claims, load matching extensions:
 [csharp](extensions/csharp.md), [java](extensions/java.md), [rust](extensions/rust.md),
 [typescript](extensions/typescript.md), [shell](extensions/shell-script.md),
 [python](extensions/python.md).
-Unknown stacks use core only; Python module/package/application/library
-design is owned here — only Python web/ASGI HTTP contracts delegate
-`api-design`, and UI delegates `app-design`.
+Unknown stacks use core only. Python module/package design stays here; web/ASGI
+HTTP contracts delegate `api-design`, and UI delegates `app-design`.
 
 When editing extensions, read
 [references/procedures/extension-authoring.md](references/procedures/extension-authoring.md).
@@ -85,11 +79,9 @@ Before changing workflow/selection/grounding/evals/scope, load
 
 The File Edit lane returns before this workflow.
 
-1. Select Build, Extract, Review, or Lookup; name scope/question. Existing
-   code with no requested change defaults to Extract; a new
-   module/feature/component defaults to Build; review/audit/check wording
-   defaults to Review; a narrow principle/pattern/status question defaults
-   to Lookup; if still ambiguous, ask.
+1. Select and scope Build (new), Extract (existing, unchanged), Review
+   (review/audit/check), or Lookup (narrow principle/pattern/status); ask if
+   ambiguous.
 2. Prefer `rg` for repository text; inspect inputs, detect stack, and announce
    extensions. Run bounded discovery of repository-configured commands,
    host-exposed integrations, and plausible task-relevant installed tools;
@@ -107,14 +99,12 @@ The File Edit lane returns before this workflow.
 5. If Context7 MCP is absent or insufficient, continue through project
    documentation, local help, official sources, or the smallest validated
    fallback. Do not install Context7, invoke its CLI, or alter MCP configuration.
-6. Assimilate modules/imports, adapters, shared code, terms, models, state
-   owners, principle claims, pattern ceremony, seams, and debt; apply project
-   assimilation before choosing reuse, migration, or legacy-debt treatment.
-7. Check for a paired `docs/architecture/<feature>.dediren/` package when
-   module, boundary, or dependency-direction changes may affect a code-lifted
-   architecture view.
-8. Separate fact from inference, choose the smallest coherent move, validate,
-   then emit contract/footer.
+6. Assimilate modules, adapters, terms, models, state owners, seams, and debt
+   before choosing reuse, migration, or legacy treatment.
+7. Check paired `docs/architecture/<feature>.dediren/` when boundaries or
+   dependency direction may affect its code-lifted view.
+8. Separate fact from inference; choose the smallest coherent move, validate,
+   and emit the contract/footer.
 9. For Build implementation, record the design decision, implement
    the smallest coherent move, review diff against the design decision,
    validate, then classify adjacent audit triggers: use/request devsecops-audit
@@ -124,16 +114,15 @@ The File Edit lane returns before this workflow.
 
 ## Outputs
 
-Build outputs forces, principle/pattern decision, responsibilities, deps, state
-owner, validation, and delegations. Extract outputs modules, boundaries, deps,
-hotspots, debt, and next move. Review outputs findings only: block the
+Build outputs forces, decisions, responsibilities, deps, state owner,
+validation, and delegations. Extract outputs boundaries, deps, hotspots, debt,
+and next move. Review outputs findings only: block the
 `Default blocks:` classes in
 [references/smell-catalog.md](references/smell-catalog.md); warn risks; info
 notes. Lookup gives rule, exception, citation, delegation, and footer.
 
-Answers report mode, extensions, reference path, layers (`static`,
-`graph`, `history`, `runtime`, `human`), assimilation, architecture pairing,
-delegations, and limits.
+Answers report mode, extensions, reference, layers (`static`, `graph`,
+`history`, `runtime`, `human`), assimilation, pairing, delegations, and limits.
 Findings use `[SD-<family>-<n>] <file>:<line>` with bucket, layer, severity,
 evidence, action, and citation; extension findings cite only that extension's
 defined key codes, never its family globs. Principle/pattern decisions name
