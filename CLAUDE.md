@@ -333,6 +333,14 @@ requested tier, alias, and effort; never silently downgrade. The fresh-context
 comparison is opt-in (`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`)
 and records bounded summaries only.
 
+The parent closes a version-2 run with `completed`, `blocked`, or `abandoned`
+outcome, and reopens only a retained blocked run with retryable work. Use `list`
+for bounded discovery and `gc --dry-run` before retention cleanup: completed
+runs retain 30 days, blocked runs 90 days, abandoned runs 7 days. Active,
+invalid, and ambiguous records remain preserved. `purge --actor parent` removes
+one exact closed target only; before retention expires it also requires
+`--before-retention` and a bounded reason. There is no bulk deletion.
+
 ## Published skills index
 
 One row per published skill. **Each skill's own `SKILL.md` is its binding contract** — modes, owns/delegates, finding namespaces, extension set — so read it before creating, editing, reviewing, or planning that skill; this table and the delegation map below are orientation only, deliberately not a second copy of those contracts. Internal skills are in § "Repo-internal skills".
@@ -349,7 +357,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces |
 | `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; deterministic engines + judgment; surface-gated per-use cost (`LA-PUC-*`) and staged-workflow run viability/orchestrator survivability (`LA-RUN-*`, `LA-ORCH-*`) with metadata-only trace calibration; read-only; plus explicit-request-only propose-only minify (`LA-MIN-*`) and live-verified platform redundancy (`LA-NAT-*`) |
-| `software-design` | `souroldgeezer-design` | Code/module/script design; core `SD-*` + per-language extensions |
+| `software-design` | `souroldgeezer-design` | Code/module/script design plus bounded non-code File Edit lane; core `SD-*` + per-language extensions |
 | `app-design` | `souroldgeezer-design` | Frontend app design (React / Next.js / Blazor™ WASM); WCAG 2.2 / i18n / Core Web Vitals baselines |
 | `api-design` | `souroldgeezer-design` | HTTP API design; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |
 | `infra-design` | `souroldgeezer-design` | Infrastructure / IaC design; core `ID-*` + Azure® / Terraform™ / Bicep™ extensions |

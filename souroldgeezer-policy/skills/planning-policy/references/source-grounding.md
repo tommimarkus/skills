@@ -70,6 +70,16 @@ the separate non-force cleanup proof can then retire the branch deterministicall
 Dependencies wait for that proof so their worktrees start from the parent state
 that actually contains and has closed their prerequisites.
 
+The ledger's lifecycle and retention rules preserve that bounded-parent model
+after execution: terminal closure records one explicit outcome, reopening is
+limited to a retained blocked run with retryable work, and list/garbage
+collection/purge expose bounded discovery without a bulk-delete path. Outcome
+retention (completed 30 days, blocked 90 days, abandoned 7 days) protects
+active or ambiguous state from age-based inference while allowing conservative
+cleanup of validated closed runs. These lifecycle, retention, and helper
+contracts are repository-authored from the same durable-ledger need; they do
+not derive from an external orchestration framework.
+
 ## IP provenance
 
 The idea — a lightweight brainstorm that opens plan mode and hands the approach

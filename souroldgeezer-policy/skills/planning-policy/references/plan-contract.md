@@ -101,7 +101,20 @@ uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <pla
 
 The parent calls `init-v2` once, `transition` for lifecycle/retry and
 `completed` → `integrated` → `cleaned` closeout changes, `show` to rehydrate
-a bounded summary, and `validate --closeout` before declaring the run closed.
-Mutations require `--actor parent`; retain bounded evidence paths, not raw logs.
-Read [ledger contract](ledger-contract.md) before initializing or resuming that
-parent-owned ledger.
+a bounded summary, and `validate --closeout` before terminal closure. It uses
+`close` to record a completed, blocked, or
+abandoned run; `reopen` only for an eligible blocked run; `list` for bounded
+run discovery; `gc --dry-run` before retention cleanup; and `purge` only for
+one explicitly identified closed run. Mutations require `--actor parent`;
+retain bounded evidence paths, not raw logs. Read
+[ledger contract](ledger-contract.md) before initializing, resuming, closing,
+or retaining that parent-owned ledger.
+
+Use the same host-resolved helper form for these lifecycle operations, for
+example:
+
+```text
+uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan-id <plan-id> list
+uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> gc --dry-run
+uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> close --actor parent --run-id <run-id> --outcome completed
+```

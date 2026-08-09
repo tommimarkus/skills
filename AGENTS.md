@@ -95,6 +95,12 @@ runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise
 emits a proposed plan for explicit approval.
 
+`software-design` also owns an early-return File Edit lane for bounded non-code
+content changes with no software-design or sibling-owned decision. It does not
+expand into source-code work: use the shared workflow's format-aware precedence
+and direct validation. Its optional clone-local native-tool state helper emits
+bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
+
 ### Planning-policy execution contract (Codex)
 
 The shared `planning-policy` contract is runtime-neutral. New executable plans
@@ -144,6 +150,14 @@ support only in a later explicit breaking release after no version-1 ledger is
 nonterminal. The parent owns integration and
 end-to-end verification; a delegated return covers only its assigned drafting
 and acceptance check.
+
+The parent closes a version-2 run with explicit `completed`, `blocked`, or
+`abandoned` outcome, reopens only an eligible retained blocked run, and uses
+`list` for bounded discovery. `gc --dry-run` previews conservative retention:
+completed runs 30 days, blocked runs 90 days, abandoned runs 7 days; active,
+invalid, and ambiguous records remain preserved. `purge --actor parent` targets
+one closed run only (and needs `--before-retention` plus reason before expiry);
+there is no bulk deletion.
 
 Codex maps the portable tiers exactly: `mechanical` → `gpt-5.6-luna`/`low`,
 `standard` → `gpt-5.6-terra`/`medium`, `analytical` → `gpt-5.6-sol`/`high`, and

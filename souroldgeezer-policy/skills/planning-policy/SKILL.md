@@ -30,8 +30,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   command before approval or dispatch. For an approved plan with two or more
   delegated steps, read the [ledger contract](references/ledger-contract.md);
   the parent alone uses its `init-v2`, `transition`, `record-return`, `show`,
-  and `validate --closeout` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py).
+  `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
+  [`planning_ledger.py`](references/scripts/planning_ledger.py). Lifecycle and
+  retention commands do not replace approval or dispatch validation.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never

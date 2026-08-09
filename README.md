@@ -177,7 +177,13 @@ running the same install command.
     remainder. It includes no `run_id` or raw logs. The ledger preserves an approved
     plan copy and SHA-256 hash; a mismatch is `blocked:plan_tampered`. Its
     bounded `show` rehydrates either one step or a truncated run summary, not
-    event history. Version-1 ledgers remain readable and mutable in place with
+    event history. A parent closes each run with an explicit completed, blocked,
+    or abandoned outcome; it may reopen only an eligible retained blocked run.
+    `list` emits bounded discovery, `gc --dry-run` previews outcome-specific
+    retention (completed 30 days, blocked 90 days, abandoned 7 days), and
+    `purge` requires one exact closed target and parent authority—there is no
+    bulk deletion. Invalid, ambiguous, and active state is preserved. Version-1
+    ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
     Their terminal `integrated` state remains unchanged; `cleaned` is v2-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
@@ -188,7 +194,16 @@ running the same install command.
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
     silent downgrade.
-11. Use `software-design` for capability-based tool selection during design and
+11. Use `software-design` for bounded non-code content edits that require no
+    design decision through its early-return File Edit lane. It selects the
+    user or repository-required format-aware operation first, uses `jq` for
+    JSON and Mike Farah `yq` for YAML/TOML/XML where repository guidance
+    applies, and otherwise makes the smallest directly validated edit. Its
+    advisory clone-local native-tool state helper emits bounded JSON through
+    `tool_state.py list` and `tool_state.py gc`; it never creates a tracked
+    preference file or grants target-specific authority.
+
+12. Use `software-design` for capability-based tool selection during design and
     implementation: it checks repository-configured commands, host-exposed
     integrations, and task-relevant installed tools without crawling the
     machine, then prefers the best fit and structured authoritative evidence.
@@ -197,7 +212,7 @@ running the same install command.
     continues through project docs, local help, official sources, or a bounded
     fallback. The plugin does not install or configure Context7 and does not use
     its CLI as a fallback.
-12. Use `software-design` Review's additive fragility check when changed code
+13. Use `software-design` Review's additive fragility check when changed code
     may hide a precondition or scatter a nearby volatile decision. It is an
     evidence-based review of regression risk, not a style rule, speculative
     abstraction demand, analyzer requirement, or development-method mandate.
