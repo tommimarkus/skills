@@ -222,6 +222,117 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(set(original), set(current))
         self.assertEqual(1, current["schema_version"])
 
+    def test_v1_full_retry_integration_and_event_validation(self):
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common, "init", "--actor", "parent", "--approved", "--steps-json", self.v1()
+            )[0],
+        )
+        for target in ("ready", "in_progress"):
+            self.assertEqual(
+                0,
+                self.call(
+                    *self.common,
+                    "transition",
+                    "--actor",
+                    "parent",
+                    "--step-id",
+                    "build",
+                    "--to",
+                    target,
+                )[0],
+            )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--step-id",
+                "build",
+                "--to",
+                "blocked",
+                "--blocker-code",
+                "blocked:model_unavailable",
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--step-id",
+                "build",
+                "--to",
+                "ready",
+                "--retry",
+                "--evidence-path",
+                "evidence/retry.json",
+                "--summary",
+                "model restored",
+            )[0],
+        )
+        for target in ("in_progress", "completed", "integrated"):
+            arguments = [
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--step-id",
+                "build",
+                "--to",
+                target,
+            ]
+            if target == "integrated":
+                arguments += ["--summary", "integrated"]
+            self.assertEqual(0, self.call(*arguments)[0])
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--step-id",
+                "verify",
+                "--to",
+                "ready",
+            )[0],
+        )
+        code, validated = self.call(*self.common, "validate")
+        self.assertEqual(0, code)
+        self.assertTrue(validated["ok"])
+        checkpoint = json.loads(
+            (self.root / "planning-policy/ledgers/plan/checkpoint.json").read_text()
+        )
+        self.assertEqual(2, checkpoint["steps"]["build"]["attempt"])
+        self.assertEqual("codex", checkpoint["steps"]["build"]["harness"])
+        events = [
+            json.loads(line)
+            for line in (self.root / "planning-policy/ledgers/plan/events.jsonl")
+            .read_text()
+            .splitlines()
+        ]
+        self.assertEqual(list(range(1, len(events) + 1)), [event["sequence"] for event in events])
+
+    def test_v1_init_rejects_dependency_cycles(self):
+        cyclic = json.dumps(
+            [
+                {"id": "build", "dependencies": ["verify"], **self.assignment},
+                {"id": "verify", "dependencies": ["build"], **self.assignment},
+            ]
+        )
+        self.assertEqual(
+            3,
+            self.call(
+                *self.common, "init", "--actor", "parent", "--approved", "--steps-json", cyclic
+            )[0],
+        )
+
     def test_twenty_isolated_generated_uuid_runs_and_assignment_join(self):
         runs = [self.init2() for _ in range(20)]
         self.assertEqual(20, len(set(runs)))
@@ -553,14 +664,24 @@ class PlanningLedgerTest(unittest.TestCase):
 
     def test_step_detail_is_bounded(self):
         run = self.init2()
+        step = self.start(run)
+        blockers = [
+            {
+                "code": f"blocked:{index}",
+                "summary": "x " * 120,
+                "evidence_path": f"evidence/{index}.json",
+                "sha256": f"{index:x}" * 64,
+            }
+            for index in range(8)
+        ]
+        self.assertEqual(
+            0,
+            self.record(run, self.returned(step, "blocked", code=None, blockers=blockers))[0],
+        )
         code, detail = self.call(*self.common, "show", "--run-id", run, "--step-id", "step0")
         self.assertEqual(0, code)
-        tokens = len(
-            ledger.re.findall(
-                r"\w+|[^\w\s]", json.dumps(detail, sort_keys=True, separators=(",", ":"))
-            )
-        )
-        self.assertLessEqual(tokens, 1200)
+        self.assertLessEqual(detail["summary_proxy_tokens"], 1200)
+        self.assertGreater(detail["omitted_blockers"], 0)
 
     def test_validate_unknown_run_and_cross_run_return(self):
         one, two = self.init2(), self.init2()

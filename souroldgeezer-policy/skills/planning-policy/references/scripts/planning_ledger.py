@@ -191,6 +191,21 @@ def parse_v1(raw):
         }
     if any(d not in steps for s in steps.values() for d in s["dependencies"]):
         raise Error("unknown dependency")
+    visiting, visited = set(), set()
+
+    def visit(step_id):
+        if step_id in visiting:
+            raise Error("legacy dependency cycle")
+        if step_id in visited:
+            return
+        visiting.add(step_id)
+        for dependency in steps[step_id]["dependencies"]:
+            visit(dependency)
+        visiting.remove(step_id)
+        visited.add(step_id)
+
+    for step_id in steps:
+        visit(step_id)
     return steps
 
 
@@ -893,7 +908,7 @@ def show(args):
         if sid not in data["steps"]:
             raise Error("unknown step id")
         step = data["steps"][sid]
-        return {
+        result = {
             "ok": True,
             "contract_version": 2,
             "plan_id": data["plan_id"],
@@ -913,7 +928,16 @@ def show(args):
                 "return_sha256": step["return_sha256"],
                 "retry_allowed": step["retry_allowed"],
             },
+            "omitted_blockers": 0,
         }
+        token_count = lambda value: len(
+            re.findall(r"\w+|[^\w\s]", json.dumps(value, sort_keys=True, separators=(",", ":")))
+        )
+        while token_count(result) > MAX_TOKENS and result["step"]["blockers"]:
+            result["step"]["blockers"].pop()
+            result["omitted_blockers"] += 1
+        result["summary_proxy_tokens"] = token_count(result)
+        return result
     return summary(data)
 
 
