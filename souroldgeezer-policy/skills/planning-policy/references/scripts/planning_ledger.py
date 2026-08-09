@@ -199,9 +199,66 @@ def load1(directory):
     if not path.is_file():
         raise Error("ledger checkpoint does not exist")
     data = json.loads(path.read_text())
-    if data.get("schema_version") != 1 or not isinstance(data.get("steps"), dict):
+    if (
+        data.get("schema_version") != 1
+        or data.get("approved") is not True
+        or not isinstance(data.get("steps"), dict)
+        or len(data["steps"]) < 2
+    ):
         raise Error("invalid legacy checkpoint")
+    if len(canon(data) + b"\n") > MAX_CHECKPOINT:
+        raise Error("legacy checkpoint exceeds 16 KiB")
+    for sid, step in data["steps"].items():
+        if (
+            not isinstance(step, dict)
+            or step.get("id") != sid
+            or step.get("state") not in V1_STATES
+            or not isinstance(step.get("attempt"), int)
+            or step["attempt"] < 1
+        ):
+            raise Error("invalid legacy step")
+        if not isinstance(step.get("dependencies"), list) or any(
+            dep not in data["steps"] for dep in step["dependencies"]
+        ):
+            raise Error("invalid legacy dependencies")
+        if not isinstance(step.get("blocker_code"), str) or (
+            step["blocker_code"]
+            and not re.fullmatch(r"blocked:[a-z][a-z0-9_]{0,63}", step["blocker_code"])
+        ):
+            raise Error("invalid legacy blocker")
     return data
+
+
+def legacy_fields():
+    return {
+        "legacy_schema": 1,
+        "contract_version": 1,
+        "dispatch_ready": False,
+        "warnings": ["migrate to contract version 2 before dispatch"],
+        "rehydration_incomplete": True,
+        "retry_policy": "legacy_unbounded",
+    }
+
+
+def validate_events1(directory, data):
+    path = directory / "events.jsonl"
+    if not path.is_file():
+        raise Error("legacy events.jsonl does not exist")
+    previous = 0
+    for line in path.read_text().splitlines():
+        event = json.loads(line)
+        if (
+            not isinstance(event, dict)
+            or event.get("sequence") != previous + 1
+            or event.get("actor") != "parent"
+            or event.get("plan_id") != data["plan_id"]
+            or event.get("action") not in {"init", "transition"}
+            or not isinstance(event.get("at"), str)
+        ):
+            raise Error("invalid legacy event")
+        previous += 1
+    if previous != data.get("event_sequence"):
+        raise Error("legacy event sequence mismatch")
 
 
 def init1(args):
@@ -236,13 +293,12 @@ def init1(args):
         + b"\n"
     )
     return {
+        **legacy_fields(),
         "ok": True,
         "action": "init",
         "ledger": str(directory),
         "plan_id": args.plan_id,
         "step_count": len(data["steps"]),
-        "legacy_schema": 1,
-        "retry_policy": "legacy_unbounded",
     }
 
 
@@ -290,14 +346,13 @@ def transition1(args):
         attempt=step["attempt"],
     )
     return {
+        **legacy_fields(),
         "ok": True,
         "action": "transition",
         "step_id": sid,
         "from": old,
         "to": new,
         "attempt": step["attempt"],
-        "legacy_schema": 1,
-        "retry_policy": "legacy_unbounded",
     }
 
 
@@ -708,6 +763,20 @@ def record(args):
     else:
         step["status"] = value["status"]
     step["blockers"] = value["blockers"]
+    if step["reason"] == "blocked:no_progress":
+        step["blockers"] = [
+            {
+                "code": "blocked:no_progress",
+                "summary": "repeated non-completed progress fingerprint",
+            }
+        ]
+    if step["reason"] == "blocked:retry_exhausted":
+        step["blockers"] = [
+            {
+                "code": "blocked:retry_exhausted",
+                "summary": "attempt limit reached with differing progress fingerprint",
+            }
+        ]
     event(
         directory,
         data,
@@ -789,28 +858,37 @@ def show(args):
     if not args.run_id:
         data = load1(plan_dir(args))
         return {
+            **legacy_fields(),
             "ok": True,
             "plan_id": data["plan_id"],
             "steps": list(data["steps"].values()),
-            "legacy_schema": 1,
-            "contract_version": 1,
-            "dispatch_ready": False,
-            "warnings": ["migrate to contract version 2 before dispatch"],
-            "rehydration_incomplete": True,
-            "retry_policy": "legacy_unbounded",
         }
     directory, data, plan, leafs = load2(args)
     if args.step_id:
         sid = ident(args.step_id, "step id")
         if sid not in data["steps"]:
             raise Error("unknown step id")
+        step = data["steps"][sid]
         return {
             "ok": True,
             "contract_version": 2,
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
             "plan_hash": data["plan_hash"],
-            "step": data["steps"][sid],
+            "step": {
+                "id": step["id"],
+                "status": step["status"],
+                "attempt_count": step["attempt_count"],
+                "max_attempts": step["max_attempts"],
+                "agent_id": step["agent_id"],
+                "attempt_id": step["attempt_id"],
+                "progress_fingerprint": step["fingerprints"][-1] if step["fingerprints"] else "",
+                "reason": step["reason"][:480],
+                "blockers": step["blockers"],
+                "return_path": step["return_path"],
+                "return_sha256": step["return_sha256"],
+                "retry_allowed": step["retry_allowed"],
+            },
         }
     return summary(data)
 
@@ -818,16 +896,12 @@ def show(args):
 def validate(args):
     if not args.run_id:
         data = load1(plan_dir(args))
+        validate_events1(plan_dir(args), data)
         return {
+            **legacy_fields(),
             "ok": True,
             "plan_id": data["plan_id"],
             "errors": [],
-            "legacy_schema": 1,
-            "contract_version": 1,
-            "dispatch_ready": False,
-            "warnings": ["migrate to contract version 2 before dispatch"],
-            "rehydration_incomplete": True,
-            "retry_policy": "legacy_unbounded",
         }
     directory, data, plan, leafs = load2(args)
     return {
@@ -866,7 +940,7 @@ def parse():
     trans.add_argument("--blocker-code", default="")
     rec = commands.add_parser("record-return")
     rec.add_argument("--actor", required=True)
-    rec.add_argument("--run-id", required=True)
+    rec.add_argument("--run-id")
     rec.add_argument("--return-file", required=True)
     sh = commands.add_parser("show")
     sh.add_argument("--run-id")

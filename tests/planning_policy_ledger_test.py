@@ -521,6 +521,46 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("", value["commit_hash"])
         self.assertEqual(0, self.record(run, value)[0])
 
+    def test_record_return_refuses_omitted_run_and_persists_copy_digest(self):
+        run = self.init2()
+        step = self.start(run)
+        value = self.returned(step)
+        path = self.root / "return.json"
+        path.write_text(json.dumps(value))
+        self.assertEqual(
+            3,
+            self.call(
+                *self.common, "record-return", "--actor", "parent", "--return-file", str(path)
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "record-return",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--return-file",
+                str(path),
+            )[0],
+        )
+        self.assertEqual(
+            ledger.digest(value), self.checkpoint(run)["steps"]["step0"]["return_sha256"]
+        )
+
+    def test_step_detail_is_bounded(self):
+        run = self.init2()
+        code, detail = self.call(*self.common, "show", "--run-id", run, "--step-id", "step0")
+        self.assertEqual(0, code)
+        tokens = len(
+            ledger.re.findall(
+                r"\w+|[^\w\s]", json.dumps(detail, sort_keys=True, separators=(",", ":"))
+            )
+        )
+        self.assertLessEqual(tokens, 1200)
+
     def test_validate_unknown_run_and_cross_run_return(self):
         one, two = self.init2(), self.init2()
         step = self.start(one)
