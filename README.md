@@ -165,6 +165,17 @@ running the same install command.
     continues through project docs, local help, official sources, or a bounded
     fallback. The plugin does not install or configure Context7 and does not use
     its CLI as a fallback.
+12. Use `software-design` Review's additive fragility check when changed code
+    may hide a precondition or scatter a nearby volatile decision. It is an
+    evidence-based review of regression risk, not a style rule, speculative
+    abstraction demand, analyzer requirement, or development-method mandate.
+    Findings pair an `SD-*` code with plain language and finish as pass, warn,
+    block, or not-assessed. Project-owned native tool results can support that
+    review but remain candidates, never a tool-adoption prerequisite. An explicit
+    “no”, “not now”, or “defer” to one optional suggestion is kept clone-local
+    for 30 UTC calendar days; it stays silent until the stored date, does not
+    suppress fragility findings, and falls back only to one conversation-local
+    disclosure if the local write is denied.
 
 ## Validation
 

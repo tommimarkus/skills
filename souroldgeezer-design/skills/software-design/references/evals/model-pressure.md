@@ -118,3 +118,20 @@ that never installs or reconfigures the service. Retest behavior cases
 control. Merge back (shorten the rule) if fresh-context runs consistently select
 the authoritative project-fit tool, degrade safely when Context7 is absent, and
 preserve repository-required contracts without these explicit rails.
+
+2026-08 fragility and native-evidence expansion: the prior Review wording let
+fresh agents treat hidden preconditions as style, accept comments/tests/sample
+data as proof, over-flag multi-file edits, or turn optional tooling into an
+adoption prerequisite. Accepted rules: `SD-E-6` requires a real invariant
+proof (fixed/non-empty type, validated boundary, dominating guard, or deliberate
+local fail-fast); the adjacent-change probe names decision, owner, and
+coordinated sites; completion uses pass/warn/block/not-assessed; and native tool
+evidence stays project-owned, candidate-only, optional, and quietly deferrable.
+Behavior evals: `software-design-behavior-fragility-review-calibration`,
+`software-design-behavior-fragility-supported-and-blocked`,
+`software-design-behavior-native-evidence-comprehension`, and
+`software-design-behavior-native-evidence-quieting`. Retest: run those cases
+plus `sd-acc-112` through `sd-acc-115` with a fresh Review agent. Merge back:
+shorten or merge the added procedure detail only when the core alone preserves
+latent-precondition recall, false-positive resistance, calibrated completion,
+and non-repeating optional-tool behavior in that retest.

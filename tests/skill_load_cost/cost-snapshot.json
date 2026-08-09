@@ -22,11 +22,14 @@
   "build-python-asgi": 16503,
   "review-python-wsgi-clean": 16345,
   "review-python-serverless": 16345,
-  "sd-lookup-principle": 1871,
-  "sd-build-csharp": 7726,
-  "sd-review-typescript": 11028,
-  "arch-lookup-notation": 3684,
-  "arch-build-archimate": 23483,
-  "arch-extract-dotnet": 24625,
-  "arch-review-package": 25048
+  "sd-lookup-principle": 2151,
+  "sd-build-csharp": 8006,
+  "sd-review-typescript": 11421,
+  "sd-review-fragility": 10371,
+  "sd-native-evidence-procedure": 719,
+  "sd-fragility-final-reporting": 519,
+  "arch-lookup-notation": 3718,
+  "arch-build-archimate": 23680,
+  "arch-extract-dotnet": 24822,
+  "arch-review-package": 25245
 }

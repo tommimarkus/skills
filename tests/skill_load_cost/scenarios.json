@@ -504,6 +504,27 @@
     ]
   },
   {
+    "id": "sd-review-fragility",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+      "souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md"
+    ]
+  },
+  {
+    "id": "sd-native-evidence-procedure",
+    "skill": "software-design",
+    "files": ["souroldgeezer-design/skills/software-design/references/procedures/native-tool-evidence.md"]
+  },
+  {
+    "id": "sd-fragility-final-reporting",
+    "skill": "software-design",
+    "files": ["souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md"]
+  },
+  {
     "id": "arch-lookup-notation",
     "skill": "architecture-design",
     "files": [

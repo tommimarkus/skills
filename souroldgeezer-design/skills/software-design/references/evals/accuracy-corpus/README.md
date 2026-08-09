@@ -30,9 +30,9 @@ operates on described or inline code, so each case's scenario lives inline in
 
 ## Coverage
 
-111 cases over every core smell family: **62 positive** (≥2 per core code),
-**39 fp-bait** (one per code, each grounded in that code's `false_positive_guard`
-in `smell-cards.jsonl`), **10 clean**. Extension codes are out of scope (core
+115 cases over every core smell family: **64 positive** (≥2 per core code),
+**40 fp-bait** (one per code, each grounded in that code's `false_positive_guard`
+in `smell-cards.jsonl`), **11 clean**. Extension codes are out of scope (core
 `SD-*` only). The `clean` cases are the false-positive control and MUST stay
 finding-free.
 
