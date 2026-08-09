@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).parents[1] / "souroldgeezer-policy/skills/planning-policy/references/scripts/validate_plan_contract.py"
+LEDGER_CONTRACT = Path(__file__).parents[1] / "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
 SPEC = importlib.util.spec_from_file_location("plan_contract", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -169,6 +170,23 @@ class SharedContractTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertIsNone(result["contract_version"])
         self.assertFalse(result["dispatch_ready"])
+
+    def test_ledger_contract_has_required_v2_lifecycle_and_return_anchors(self):
+        contract = LEDGER_CONTRACT.read_text(encoding="utf-8")
+        required = (
+            "<plan-id>/<run-id>", "UUID4", "init-v2", "assignment set",
+            "exactly one current attempt", "--run-id", "max_attempts",
+            "bounded-step-return-v1", "changed_paths", "commit_hash",
+            "progress fingerprint", "blocked:no_progress", "failed:retry_exhausted",
+            "oversized", "SHA-256", "blocked:plan_tampered", "--step-id",
+            "truncated: true", "contract_version: 1", "dispatch_ready: false",
+            "no active version-1 ledger remains", "at most 8 KiB",
+            "1 through 128 characters", "0 through 255", "at most 32 unique",
+            "at most 8 non-empty typed blocker codes", "40 or 64 lowercase",
+        )
+        for anchor in required:
+            with self.subTest(anchor=anchor):
+                self.assertIn(anchor, contract)
 
 
 if __name__ == "__main__":
