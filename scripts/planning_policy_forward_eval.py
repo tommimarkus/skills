@@ -18,6 +18,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVALS = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/evals"
 FIXTURES = REPO_ROOT / "tests/planning_policy_forward"
+CODEX_ADAPTER = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/extensions/codex.md"
+POLICY_PLUGIN = REPO_ROOT / "souroldgeezer-policy"
 MAPPINGS = {
     "claude": {
         "mechanical": ("haiku", "low"), "standard": ("sonnet", "medium"),
@@ -59,6 +61,21 @@ def load_cases() -> list[dict[str, Any]]:
     return [json.loads(line) for line in (EVALS / "forward-cases.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def handoff_for(case: dict[str, Any]) -> dict[str, Any]:
+    """Render the portable contract passed to each fresh host invocation."""
+    fields = ("id", "dependencies", "task", "boundary", "read_set", "write_set", "settled_decisions", "intentionally_missing_input", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions", "irreducible_unknown_or_risk")
+    handoff = {field: case[field] for field in fields if field in case}
+    handoff.setdefault("dependencies", [])
+    return handoff
+
+
+def build_prompt(case: dict[str, Any], harness: str, workdir: Path) -> str:
+    adapter = CODEX_ADAPTER.read_text(encoding="utf-8") if harness == "codex" else ""
+    contract = json.dumps(handoff_for(case), sort_keys=True, separators=(",", ":"))
+    prefix = f"Shipped Codex planning-policy adapter follows:\n{adapter}\n\n" if adapter else ""
+    return f"{prefix}Execute this complete approved planning-policy handoff in the isolated synthetic repository {workdir}:\n{contract}\n\n{case['prompt']} Work only in that repository. Do not use network or alter files outside it. Return only the required bounded JSON object."
+
+
 def bounded_return(value: Any) -> dict[str, Any] | None:
     """Keep only the schema fields; callers discard raw host output immediately."""
     if isinstance(value, dict):
@@ -72,7 +89,8 @@ def bounded_return(value: Any) -> dict[str, Any] | None:
 
 def command_for(harness: str, model: str, effort: str, prompt: str, schema_path: Path, last_message_path: Path, claude_max_budget_usd: float) -> list[str]:
     if harness == "claude":
-        return ["claude", "-p", "--no-session-persistence", "--permission-mode", "acceptEdits", "--model", model, "--effort", effort, "--max-budget-usd", str(claude_max_budget_usd), "--output-format", "json", "--json-schema", json.dumps(FINAL_SCHEMA, separators=(",", ":")), prompt]
+        agent = f"plan-step-{next(tier for tier, mapping in MAPPINGS['claude'].items() if mapping == (model, effort))}"
+        return ["claude", "-p", "--plugin-dir", str(POLICY_PLUGIN), "--agent", agent, "--no-session-persistence", "--permission-mode", "acceptEdits", "--model", model, "--effort", effort, "--max-budget-usd", str(claude_max_budget_usd), "--output-format", "json", "--json-schema", json.dumps(FINAL_SCHEMA, separators=(",", ":")), prompt]
     return ["codex", "exec", "--ephemeral", "--approve-for-me", "--sandbox", "workspace-write", "--model", model, "-c", f'model_reasoning_effort="{effort}"', "--output-schema", str(schema_path), "--output-last-message", str(last_message_path), prompt]
 
 
@@ -130,7 +148,7 @@ def run_case(case: dict[str, Any], harness: str, attempt: int, output_dir: Path,
         schema_path = Path(temporary) / "output-schema.json"
         last_message_path = Path(temporary) / "last-message.json"
         schema_path.write_text(json.dumps(FINAL_SCHEMA, separators=(",", ":")), encoding="utf-8")
-        prompt = f"Work only in {workdir}. {case['prompt']} Do not use network or alter files outside this synthetic repository. Return only the required bounded JSON object."
+        prompt = build_prompt(case, harness, workdir)
         try:
             completed = subprocess.run(command_for(harness, model, effort, prompt, schema_path, last_message_path, claude_max_budget_usd), cwd=workdir, text=True, capture_output=True, timeout=timeout_seconds)
         except subprocess.TimeoutExpired:

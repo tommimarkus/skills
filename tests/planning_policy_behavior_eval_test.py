@@ -86,6 +86,15 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(self.runner.MAPPINGS["codex"]["mechanical"], ("gpt-5.6-luna", "low"))
         self.assertEqual(self.runner.MAPPINGS["claude"]["analytical"], ("opus", "high"))
         self.assertEqual(self.runner.MAPPINGS["codex"]["analytical"], ("gpt-5.6-sol", "high"))
+        required = {"id", "dependencies", "task", "boundary", "read_set", "write_set", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions"}
+        for case in self.forward:
+            self.assertTrue(required.issubset(case), case["id"])
+            self.assertTrue("settled_decisions" in case or "intentionally_missing_input" in case, case["id"])
+            self.assertEqual(len(case["acceptance_command"].splitlines()), 1)
+        missing = by_id["missing-load-bearing-input"]
+        self.assertIn("intentionally_missing_input", missing)
+        self.assertNotIn("settled_decisions", missing)
+        self.assertEqual(by_id["oversized-standard"]["size"], "small")
 
     def test_offline_runner_matrix_never_calls_hosts_without_execute(self):
         import tempfile
@@ -113,6 +122,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             claude = self.runner.command_for("claude", "sonnet", "medium", "prompt", root / "schema.json", root / "last.json", 0.5)
             codex = self.runner.command_for("codex", "gpt-5.6-terra", "medium", "prompt", root / "schema.json", root / "last.json", 0.5)
         self.assertIn("--no-session-persistence", claude)
+        self.assertEqual(claude[claude.index("--plugin-dir") + 1], str(self.runner.POLICY_PLUGIN))
+        self.assertEqual(claude[claude.index("--agent") + 1], "plan-step-standard")
         self.assertEqual(claude[claude.index("--permission-mode") + 1], "acceptEdits")
         self.assertEqual(claude[claude.index("--output-format") + 1], "json")
         self.assertIn("--json-schema", claude)
@@ -125,6 +136,18 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(codex[codex.index("-c") + 1], 'model_reasoning_effort="medium"')
         self.assertIn("--output-schema", codex)
         self.assertIn("--output-last-message", codex)
+
+    def test_generated_prompts_load_shipped_surface_and_complete_handoff(self):
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        with tempfile.TemporaryDirectory() as temporary:
+            workdir = Path(temporary) / "repo"
+            claude_prompt = self.runner.build_prompt(case, "claude", workdir)
+            codex_prompt = self.runner.build_prompt(case, "codex", workdir)
+        for prompt in (claude_prompt, codex_prompt):
+            for field in ("standard-implementation", "dependencies", "boundary", "read_set", "write_set", "settled_decisions", "acceptance_command", "return_contract", "stop_conditions"):
+                self.assertIn(field, prompt)
+        self.assertIn("# Codex execution adapter", codex_prompt)
+        self.assertIn("additive adapter", codex_prompt)
 
     def test_schema_extraction_uses_claude_structured_output_and_codex_last_message(self):
         returned = {"status": "completed", "changed_paths": ["slug.py"], "acceptance_command": "python -m unittest", "acceptance_result": "passed"}
