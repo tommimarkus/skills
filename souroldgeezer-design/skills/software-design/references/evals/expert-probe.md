@@ -105,6 +105,19 @@ Run log:
   assimilation, async/resource ownership, context-local state, API contract
   routing, and security/test/release policy boundaries. No Python smell code
   was added.
+- 2026-08-09 `typescript.md` lenses A+B (GPT-5.6 Sol/high): all four divergence
+  classes occurred. Covered by the extension or verified core: public and
+  declaration surfaces, project/package graph alignment, runtime validation,
+  semantic unions, source-path bypasses, generated-model translation, module
+  state/ambient ownership (`SD-C-4`), cycles (`SD-C-1`), concurrency
+  (`SD-C-6`), and error contracts (`SD-S-5`). UI/browser behavior routed to
+  `app-design`, security/dependency posture to `devsecops-audit`, and test
+  adequacy to `test-quality-audit`; strictness/style and exhaustive-switch
+  enforcement stayed linter territory. Surfaced, not added: conditional-export
+  branch plus compiler/bundler/runtime resolution parity, and package
+  dependency-role identity (`dependencies`/`peerDependencies`/optional roles),
+  are not explicit inspect/default guidance. The implementation lane should
+  adjudicate narrow wording under existing families/codes; no new finding code.
 - 2026-07-22 `shell-script.md` lenses A+B (Fable 5): one gap fixed — env
   added to the inspected contracts (the inbound env-var config surface;
   parity with python's env reads). Otherwise the tightest mapping of the
