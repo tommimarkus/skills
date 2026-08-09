@@ -50,6 +50,7 @@ class SoftwareDesignSmellCatalogTest(unittest.TestCase):
             "SD-E-1": "Shotgun change",
             "SD-E-2": "Migration without exit",
             "SD-E-3": "Flag pile-up",
+            "SD-E-6": "Latent precondition",
             "SD-Q-1": "Unstated quality tradeoff",
             "SD-Q-2": "Unmeasured quality tactic",
             "SD-Q-4": "Stacked failure handling",

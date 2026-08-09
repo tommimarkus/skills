@@ -8,7 +8,7 @@ Use with [software-design.md](../../../docs/software-reference/software-design.m
 | Boundary | `SD-B-1`, `SD-B-2`, `SD-B-3`, `SD-B-4`, `SD-B-5` | drift, state owner, leakage, adapter policy, missing seam |
 | Coupling | `SD-C-1`, `SD-C-2`, `SD-C-3`, `SD-C-4`, `SD-C-5`, `SD-C-6` | cycle, inversion, shared core, hidden state, version divergence, unowned concurrency |
 | Semantics | `SD-S-1`, `SD-S-2`, `SD-S-4`, `SD-S-5` | vocabulary, duplicate concepts, external model collapse, error-contract collapse |
-| Evolution | `SD-E-1`, `SD-E-2`, `SD-E-3`, `SD-E-4`, `SD-E-5` | shotgun, migration exit, flag lifecycle, deprecation lifecycle, dependency currency |
+| Evolution | `SD-E-1`, `SD-E-2`, `SD-E-3`, `SD-E-4`, `SD-E-5`, `SD-E-6` | shotgun, migration exit, flag lifecycle, deprecation lifecycle, dependency currency, latent precondition |
 | Tradeoff | `SD-Q-1`, `SD-Q-2`, `SD-Q-3`, `SD-Q-4` | unsupported claim/NFR, unmeasured tactic, unallocated NFR, stacked failure handling |
 | Socio-technical | `SD-T-1` | owner/cognition mismatch |
 
