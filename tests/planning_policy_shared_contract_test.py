@@ -188,6 +188,8 @@ class SharedContractTest(unittest.TestCase):
             "`verification_limit`",
             "The return does not list `run_id`", "40 or 64 lowercase",
             "only when `changed_paths` is non-empty", "oversized` also requires",
+            "helper-generated bounded opaque `attempt_id`", "attempt count starts at 1",
+            "canonical lowercase UUID4",
         )
         for anchor in required:
             with self.subTest(anchor=anchor):

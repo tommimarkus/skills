@@ -9,9 +9,9 @@ replace the executable-plan validator.
 
 Only one parent writes a run. Its isolated ledger directory is
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`, where `plan-id`
-is the stable approved-plan identifier and `run-id` is a UUID4. A delegated leaf
-returns one `bounded-step-return-v1` object to the parent and never mutates the
-ledger. Independent leaves may run concurrently only when their dependencies
+is the stable approved-plan identifier and `run-id` is the contractually
+canonical lowercase UUID4. A delegated leaf returns one `bounded-step-return-v1`
+object to the parent and never mutates the ledger. Independent leaves may run concurrently only when their dependencies
 are already complete and they do not share a worktree or write path; each step
 has exactly one current attempt at a time.
 
@@ -21,8 +21,9 @@ the complete assignment set. It rejects a non-UUID4 run ID, a plan that is not
 assignment to exactly one declared leaf by `step_id`: every leaf has exactly one
 assignment, no assignment names an unknown leaf, and duplicate `step_id` or
 `agent_id`/attempt collisions are rejected. An assignment records the stable
-`agent_id`, its first `attempt_id` (`1`), tier, and worktree; it cannot replace
-the plan's portable tier or worktree owner.
+`agent_id`, a helper-generated bounded opaque `attempt_id`, its first attempt
+count (`1`), tier, and worktree; it cannot replace the plan's portable tier or
+worktree owner.
 
 At initialization the parent stores a canonical approved-plan copy and its
 lowercase 64-hex-character SHA-256 hash. Every version-2 lifecycle command
@@ -41,11 +42,12 @@ and records a bounded reason plus an optional safe relative evidence path.
 copy/hash, assignment join, dependency order, current-attempt uniqueness, and
 attempt limits before handoff or closeout.
 
-An attempt starts at 1 and may never exceed the leaf's version-2
-`max_attempts` (1 through 5). The parent and the returned handoff identify the
-same `step_id`, `agent_id`, and `attempt_id`; an agent cannot borrow another
-step's remaining attempts. A retry needs a bounded reason, safe relative
-evidence path when evidence exists, and a new progress fingerprint. The
+The step-wide attempt count starts at 1 and may never exceed the leaf's
+version-2 `max_attempts` (1 through 5). The parent assigns each attempt a
+helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
+which the returned handoff echoes with the same `step_id` and `agent_id`; an
+agent cannot borrow another step's remaining attempts. A retry needs a bounded
+reason, safe relative evidence path when evidence exists, and a new progress fingerprint. The
 progress fingerprint is the SHA-256 of the canonical bounded return facts for
 the attempt, excluding volatile timestamps. If its value is unchanged from the
 previous attempt, reject the retry as `blocked:no_progress`. Once an attempted
@@ -62,9 +64,10 @@ or invent the missing decision.
 ## Bounded step return
 
 Each return is exactly one JSON object of at most 8 KiB with `schema` exactly
-`bounded-step-return-v1`, a stable `step_id`, positive integer `attempt_id`,
-and an `agent_id` string of 1 through 128 characters. Its `status` is exactly
-one of `completed`, `blocked`, `failed`, or `oversized`. It contains:
+`bounded-step-return-v1`, a stable `step_id`, the helper-generated bounded
+opaque `attempt_id`, and an `agent_id` string of 1 through 128 characters. Its
+`status` is exactly one of `completed`, `blocked`, `failed`, or `oversized`. It
+contains:
 
 - `changed_paths`: at most 32 unique, safe repository-relative paths of at
   most 240 characters (no absolute path or `..` segment), each inside the
