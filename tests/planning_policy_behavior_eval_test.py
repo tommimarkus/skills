@@ -126,6 +126,21 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(chained["attempt_sequence"][0]["expected_status"], "blocked:needs_higher_tier")
         retry = chained["attempt_sequence"][1]["retry_remediation"]
         self.assertEqual(retry["schema"], "retry-remediation-v1")
+        self.assertEqual(
+            set(retry),
+            {
+                "schema",
+                "step_id",
+                "prior_attempt_id",
+                "prior_return_sha256",
+                "diagnosis",
+                "remediation_action",
+                "executor_mode",
+                "next_agent_id",
+                "next_harness",
+                "target_portable_tier",
+            },
+        )
         self.assertEqual(retry["target_portable_tier"], "analytical")
         self.assertEqual(retry["executor_mode"], "fresh")
 
@@ -201,6 +216,11 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertIn('"schema":"retry-remediation-v1"', prompt)
         self.assertIn('"target_portable_tier":"analytical"', prompt)
         self.assertIn('"executor_mode":"fresh"', prompt)
+        self.assertIn('"prior_attempt_id":"11111111-1111-4111-8111-111111111111"', prompt)
+        self.assertIn('"prior_return_sha256":', prompt)
+        self.assertIn('"remediation_action":', prompt)
+        self.assertIn('"next_agent_id":"synthetic-retry-agent"', prompt)
+        self.assertIn('"next_harness":"synthetic-host"', prompt)
         self.assertNotIn('"prior_return":', prompt)
         self.assertEqual(self.runner.MAPPINGS["codex"][second["tier"]], ("gpt-5.6-sol", "high"))
 

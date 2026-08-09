@@ -113,7 +113,20 @@ def remediation_summary(remediation: Any) -> dict[str, Any] | None:
     """Keep only the bounded ledger artifact fields needed for comparison."""
     if not isinstance(remediation, dict):
         return None
-    fields = ("schema", "prior_return_digest", "diagnosis", "action", "executor_mode", "next_agent_or_host", "target_portable_tier", "evidence_path", "sha256")
+    fields = (
+        "schema",
+        "step_id",
+        "prior_attempt_id",
+        "prior_return_sha256",
+        "diagnosis",
+        "remediation_action",
+        "executor_mode",
+        "next_agent_id",
+        "next_harness",
+        "target_portable_tier",
+        "evidence_path",
+        "sha256",
+    )
     return bound_value({field: remediation[field] for field in fields if field in remediation})
 
 
