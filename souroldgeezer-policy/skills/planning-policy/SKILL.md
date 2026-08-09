@@ -1,126 +1,59 @@
 ---
 name: planning-policy
-description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline — brainstorm an approach in plan mode and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer those to the design, audit, and ops skills."
+description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline — brainstorm an approach in plan mode and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer to the owning design, audit, or ops skill."
 ---
 
 # Planning Policy
 
-Own standing plan-first discipline for repositories — or a user's global guidance
-file — that explicitly initialize this policy, and answer explicit "plan this
-first" requests. The shared enforcement posture — passive install, opt-in
-through the consumer's own guidance, the standing line as enforcement authority,
-low-friction opt-out — is canonical in
-[`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md).
-Once initialized, the standing line is authority before new feature or build
-work — brainstorm an approach in plan mode and get it approved before
-implementing; this skill supplies the cycle, config, adoption, and opt-out
-handling on demand.
+Own plan-first enforcement only when repo/user guidance initializes this policy,
+or on an explicit “plan this first” request. The standing line is authority;
+installation alone is not. It protects this invariant: before new feature or
+build work, briefly brainstorm in the host plan lane, converge on an approach,
+and obtain user approval before implementation.
 
-Inputs: request, repo/user guidance, initialized options/exceptions, the work
-about to start, relevant files and recent history.
-Evidence: cite the initialization source or explicit request, the scope/options
-in force, exceptions/opt-outs applied, and the brainstorm → approved-plan cycle
-(or the blocker).
+Inputs: request, applicable guidance/options, intended work, and only the files
+needed to orient. Evidence: source/options, approved approach or blocker, and
+the bounded footer. Domain design, audits, implementation, Git, issues, and
+PRs belong to their named sibling skills after approval.
 
-Read [references/core-workflow.md](references/core-workflow.md) before real
-enforcement, guidance edits, or adoption. When grooming executable leaves,
-delegating, or checking a returned handoff, read
-[references/plan-contract.md](references/plan-contract.md) and run its
-validator before approval or dispatch. When editing triggers, behavior, or
-evals, also read the eval packs under `references/evals/` and
-`references/source-grounding.md`. Host-specific behavior is additive only:
-read `extensions/claude-code.md` or `extensions/codex.md` when present and the
-matching host needs its dispatch mapping; neither replaces the shared contract.
+## Load map
 
-Modes: default `enforce-initialized` when loaded repo/user guidance initializes
-this policy and the model is about to start new feature or build work, or on an
-explicit plan-first request; otherwise default `lookup`. Narrower modes:
-`inspect` (report initialization, scope, and whether the current approach
-complied), `adopt-guidance` (write the standing line — MUST embed the invariant
-per the reference template). Modes scope work; the standing line and repo/user
-guidance remain authoritative.
+- **Lookup / inspect:** this entry surface only. Report whether the line applies;
+  do not invent an enforcement result.
+- **Enforce or adopt guidance:** read
+  [core workflow §enforcement](references/core-workflow.md#enforcement) and
+  [§approval-and-output](references/core-workflow.md#approval-and-output).
+- **Executable plan, delegation, or returned handoff:** also read
+  [plan contract](references/plan-contract.md) and run its validator before
+  approval or dispatch. For an approved plan with two or more delegated steps,
+  the parent alone uses the bounded checkpoint ledger described there.
+- **Host dispatch:** read exactly one additive adapter:
+  [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
+  If the host/mapping is unavailable, return its documented blocker; never
+  silently downgrade. Re-load the other adapter only after the host changes.
+- **Trigger/behavior/eval edits only:** load `references/evals/` and
+  `references/source-grounding.md`.
 
-Enforcement cycle (see the reference for the full form):
+## Enforcement
 
-- **Claude Code:** if the session is not already in plan mode, call
-  `EnterPlanMode` before asking anything; orient briefly; ask clarifying
-  questions, one focused question per message, covering the goal, its
-  constraints, and what a good result looks like; converge on an approach in
-  one or two sentences, naming a tradeoff and your pick when real alternatives
-  exist, plus the execution shape below; groom the steps into a ready, sized
-  set; present it with `ExitPlanMode` for approval.
-- **Codex:** use native Plan mode when active or exposed. Otherwise conduct the
-  same read-only brainstorm, groom the steps into a ready, sized set, present
-  the proposed plan, and stop for explicit user approval; never claim a mode
-  change the host did not expose.
+Use `enforce-initialized` for applicable initialized guidance or an explicit
+request; otherwise use `lookup`. `inspect` reports compliance; `adopt-guidance`
+writes the core template with its invariant. In the host plan lane: orient
+lightly, ask focused questions until goal/constraints/success are clear,
+state a short approach and real tradeoff, groom ready steps, then stop for
+approval. Claude enters plan mode and uses `ExitPlanMode`; Codex uses native
+Plan mode when available, otherwise a read-only explicit-approval fallback.
+Never claim an unavailable mode or approval.
 
-The selected plan lane owns the plan — write no spec file, commit nothing, and
-do not hand to a separate planning skill. Implementation is a fresh action after
-approval.
+Every executable leaf follows the contract: stable ID/dependencies,
+task/boundary, named reads/writes, settled decisions, size/tier, worktree
+owner, one acceptance command, return, stops, and work-unit ID. Missing
+load-bearing information is `blocked:missing_input`, never discovery or
+invention. The parent owns decomposition, integration, and end-to-end
+verification; delegated drafting is bounded to its assigned acceptance.
 
-Execution shape: the approved plan names who runs each step. Delegate
-decomposable implementation steps to subagents by default, dispatching
-independent steps together; depart only on a case stated in the plan — the work
-is indivisible or trivial, the step needs the user mid-flight, context cannot
-travel to a subagent, or each step redefines the next. Convenience, familiarity,
-and overlapping file writes do not qualify. The parent session keeps
-decomposition, integration, and verification; a subagent's "verified" covers
-only its own drafting. In Codex use the host's delegation mechanism when exposed,
-otherwise keep the decomposition in the plan and say delegation was unavailable.
-
-Every executable leaf uses the shared contract: stable ID and dependencies;
-task/boundary; named read/write sets; settled decisions; size and portable tier;
-worktree owner; exactly one acceptance command; return contract; stop
-conditions; and stable top-level work-unit ID. The parent enumerates the sets
-once while grooming. Missing load-bearing information is stop-and-return in
-every tier, never an invitation to invent it; every leaf records the exact stop
-marker `missing_load_bearing_information`. Analytical/deep leaves name their
-irreducible unknown or risk. Select the portable tier the leaf needs; the
-matching host adapter maps it to supported execution settings. Do not hand-tune
-model or reasoning effort per leaf outside that mapping. If the adapter cannot
-map the selected tier or delegation capability is unavailable, stop and return
-that blocker to the parent.
-
-Use selective audit routing only when a named owning audit has a bounded
-question and evidence surface, the domain matches, the answer can materially
-change approach or acceptance, and targeted inspection/focused tests cannot
-resolve it. Otherwise ordinary domain design goes to its owning design skill;
-“review risks” is not an audit route.
-
-Rules: do not enforce just because the plugin is installed. Enforce when loaded
-repo/user guidance initializes `planning-policy`, or the user explicitly asks to
-plan first. Treat an initialization line as current-task authority before new
-build work; the invariant is "new feature or build work is preceded by a brief
-brainstorm in plan mode that converges on an approach the user approves before
-implementation." Apply initialized options; bare initialization uses the default
-profile in [references/core-workflow.md](references/core-workflow.md). Keep
-opt-out low-friction (disable line, one-phrase per-task override logged,
-scope/exception globs) — opt-out is where user choice lives. Delegate domain
-design and implementation once the plan is approved: code/module →
-`software-design`; frontend → `app-design`; HTTP API → `api-design`; IaC →
-`infra-design`; ArchiMate®/UML® → `architecture-design`; security →
-`devsecops-audit`; test quality → `test-quality-audit`; test-first ordering while
-implementing → `tdd-policy`; commit/branch preflight → `git-workflow-policy`;
-PR/MR → `pr-ops`; issues → `issue-ops`.
-
-Ask vs continue: continue when the goal, its constraints, and what a good result
-looks like are clear enough to state an approach. Stop and ask on ambiguous or multi-subsystem
-scope (flag decomposition first), a missing success criterion, or a request that
-is really domain work a sibling owns. Never start implementing inside this skill;
-approval via `ExitPlanMode` is the terminal step in Claude Code; Codex native
-approval or an explicit user response is the terminal step in Codex.
-
-Enforcement honesty follows the posture core's limits rule (enforced-by-default
-posture, no mechanical guarantee; the PreToolUse backstop is deferred phase-2).
-
-Stop before letting new build work proceed with no approved plan unless an
-explicit, logged opt-out applies. Stop if Claude Code plan mode cannot be entered
-in the current surface (for example a non-interactive one-shot run): produce the
-proposed approach and open questions instead, and say plan mode was not entered.
-For Codex without native Plan mode, the interactive explicit-approval fallback
-is valid; a non-interactive one-shot run can only hand the proposal back and
-cannot claim approval.
-
-After guidance edits, rerun structured-file checks, `git diff --check`, and the
-repo's documented skill-architecture validation. End with the output footer from
-[references/core-workflow.md](references/core-workflow.md).
+Stop for ambiguous/multi-subsystem scope, missing success criteria, an owning
+sibling request, unenterable non-interactive plan mode, or new build work with
+no approved plan and no logged opt-out. Do not write a spec, commit, or start
+implementation in this skill. After guidance edits run the documented checks,
+`git diff --check`, and skill-architecture validation.

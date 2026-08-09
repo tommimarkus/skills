@@ -26,6 +26,7 @@ PARENT_ACTOR = "parent"
 PLAN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 STEP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 BLOCKER_CODE = re.compile(r"^blocked:[a-z][a-z0-9_]{0,63}$")
+PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 STATES = {"pending", "ready", "in_progress", "completed", "integrated", "blocked", "failed", "superseded", "discarded"}
 TRANSITIONS = {
     "pending": {"ready", "superseded", "discarded"},
@@ -255,7 +256,11 @@ def show(args: argparse.Namespace) -> dict[str, Any]:
                          "harness": step["harness"], "tier": step["tier"], "model_or_alias": step["model_or_alias"],
                          "effort": step["effort"], "worktree": step["worktree"], "blocker_code": step["blocker_code"],
                          "summary": step["summary"], "evidence_paths": step["evidence_paths"]} for step in data["steps"].values()]}
-    if len(json.dumps(result, sort_keys=True, separators=(",", ":"))) > SHOW_MAX_CHARS: raise LedgerError("ledger summary exceeds 1200 proxy tokens")
+    encoded = json.dumps(result, sort_keys=True, separators=(",", ":"))
+    proxy_tokens = len(PROXY_TOKEN_RE.findall(encoded))
+    if proxy_tokens > SHOW_MAX_PROXY_TOKENS:
+        raise LedgerError("ledger summary exceeds 1200 proxy tokens")
+    result["summary_proxy_tokens"] = proxy_tokens
     return result
 
 
