@@ -37,7 +37,7 @@ FINAL_SCHEMA = {
     "additionalProperties": False,
     "required": ["status", "changed_paths", "acceptance_command", "acceptance_result"],
     "properties": {
-        "status": {"type": "string", "enum": ["completed", "blocked:missing_input", "blocked:oversized"]},
+        "status": {"type": "string", "enum": ["completed", "blocked:missing_input", "blocked:oversized", "blocked:needs_higher_tier"]},
         "changed_paths": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 160}},
         "acceptance_command": {"type": "string", "maxLength": 256},
         "acceptance_result": {"type": "string", "maxLength": 256},
@@ -63,10 +63,21 @@ def load_cases() -> list[dict[str, Any]]:
 
 def handoff_for(case: dict[str, Any]) -> dict[str, Any]:
     """Render the portable contract passed to each fresh host invocation."""
-    fields = ("id", "dependencies", "task", "boundary", "read_set", "write_set", "settled_decisions", "intentionally_missing_input", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions", "irreducible_unknown_or_risk")
+    fields = ("id", "dependencies", "task", "boundary", "read_set", "write_set", "settled_decisions", "intentionally_missing_input", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions", "irreducible_unknown_or_risk", "retry_remediation")
     handoff = {field: case[field] for field in fields if field in case}
     handoff.setdefault("dependencies", [])
     return handoff
+
+
+def case_for_attempt(case: dict[str, Any], attempt: int) -> dict[str, Any]:
+    """Apply a ledger-selected chained-attempt target without retaining history."""
+    sequence = case.get("attempt_sequence")
+    if sequence is None:
+        return case
+    selected = sequence[attempt - 1]
+    derived = {key: value for key, value in case.items() if key != "attempt_sequence"}
+    derived.update(selected)
+    return derived
 
 
 def build_prompt(case: dict[str, Any], harness: str, workdir: Path) -> str:
@@ -85,6 +96,34 @@ def bounded_return(value: Any) -> dict[str, Any] | None:
             return bounded
         return {"status": str(bounded.get("status", ""))[:80], "return_truncated": True}
     return None
+
+
+def return_summary(returned: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Persist comparison facts, never a host transcript or prior-return body."""
+    if returned is None:
+        return None
+    return {
+        "status": returned.get("status", "")[:80],
+        "changed_path_count": len(returned.get("changed_paths", [])),
+        "acceptance_result": returned.get("acceptance_result", "")[:256],
+    }
+
+
+def remediation_summary(remediation: Any) -> dict[str, Any] | None:
+    """Keep only the bounded ledger artifact fields needed for comparison."""
+    if not isinstance(remediation, dict):
+        return None
+    fields = ("schema", "prior_return_digest", "diagnosis", "action", "executor_mode", "next_agent_or_host", "target_portable_tier", "evidence_path", "sha256")
+    return bound_value({field: remediation[field] for field in fields if field in remediation})
+
+
+def is_secure_output_dir(path: Path) -> bool:
+    """Live evidence must go to an existing private, non-world-writable path."""
+    try:
+        mode = path.stat().st_mode
+    except OSError:
+        return False
+    return path.is_absolute() and path.is_dir() and not (mode & 0o077)
 
 
 def command_for(harness: str, model: str, effort: str, prompt: str, schema_path: Path, last_message_path: Path, claude_max_budget_usd: float) -> list[str]:
@@ -145,6 +184,9 @@ def tree_digest(root: Path) -> str:
 def run_case(case: dict[str, Any], harness: str, attempt: int, output_dir: Path, execute: bool, timeout_seconds: int, claude_max_budget_usd: float) -> dict[str, Any]:
     model, effort = MAPPINGS[harness][case["tier"]]
     result: dict[str, Any] = {"case_id": case["id"], "harness": harness, "attempt": attempt, "tier": case["tier"], "model": model, "effort": effort, "fixture": case["fixture"], "evidence_paths": [str(FIXTURES / case["fixture"])]}
+    remediation = remediation_summary(case.get("retry_remediation"))
+    if remediation is not None:
+        result["remediation"] = remediation
     if not execute:
         result.update(status="not_run:execute_required", verifier="not_run", summary="Pass --execute to make a paid host call.")
         return result
@@ -178,7 +220,7 @@ def run_case(case: dict[str, Any], harness: str, attempt: int, output_dir: Path,
         passed, detail = verify(case, workdir, returned)
         if passed and case["verifier"] == "unchanged-and-return" and tree_digest(workdir) != before:
             passed, detail = False, "stop case modified its synthetic repository"
-        result.update(status="passed" if passed else "failed:verification", verifier=case["verifier"], summary=detail, returned=returned)
+        result.update(status="passed" if passed else "failed:verification", verifier=case["verifier"], summary=detail, return_summary=return_summary(returned))
         return result
 
 
@@ -194,9 +236,33 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--timeout-seconds must be between 1 and 180")
     if args.claude_max_budget_usd <= 0:
         parser.error("--claude-max-budget-usd must be positive")
+    if args.execute and not is_secure_output_dir(args.output_dir):
+        parser.error("--execute requires an existing absolute output directory with mode 0700 or stricter")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     harnesses = ("claude", "codex") if args.harness == "both" else (args.harness,)
-    runs = [run_case(case, harness, attempt, args.output_dir, args.execute, args.timeout_seconds, args.claude_max_budget_usd) for case in load_cases() for harness in harnesses for attempt in range(1, case["attempts"] + 1)]
+    runs = []
+    for case in load_cases():
+        for harness in harnesses:
+            prior_verified = True
+            for attempt in range(1, case["attempts"] + 1):
+                attempt_case = case_for_attempt(case, attempt)
+                if args.execute and attempt > 1 and "attempt_sequence" in case and not prior_verified:
+                    model, effort = MAPPINGS[harness][attempt_case["tier"]]
+                    skipped = {
+                        "case_id": case["id"], "harness": harness, "attempt": attempt,
+                        "tier": attempt_case["tier"], "model": model, "effort": effort,
+                        "fixture": case["fixture"], "evidence_paths": [str(FIXTURES / case["fixture"])],
+                        "status": "not_run:prior_attempt_unverified", "verifier": "not_run",
+                        "summary": "prior chained attempt did not verify; no retry host call was made",
+                    }
+                    remediation = remediation_summary(attempt_case.get("retry_remediation"))
+                    if remediation is not None:
+                        skipped["remediation"] = remediation
+                    runs.append(skipped)
+                    continue
+                result = run_case(attempt_case, harness, attempt, args.output_dir, args.execute, args.timeout_seconds, args.claude_max_budget_usd)
+                runs.append(result)
+                prior_verified = result["status"] == "passed"
     payload = {"schema": "planning-policy-forward-eval/v1", "created_at": datetime.now(timezone.utc).isoformat(), "execute": args.execute, "runs": runs, "summary": {"total": len(runs), "passed": sum(run["status"] == "passed" for run in runs), "blocked": sum(run["status"].startswith("blocked:") for run in runs)}}
     destination = args.output_dir / "planning-policy-forward-eval.json"
     destination.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")

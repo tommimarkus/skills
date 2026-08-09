@@ -28,6 +28,22 @@ asks the parent to re-cut it rather than expanding scope. If an assignment is
 missing a load-bearing field, return `blocked:missing_input` with the missing
 fields.
 
+## Ledger-owned retry remediation
+
+The ledger alone decides whether a returned attempt is eligible for retry and,
+when it is, the target portable tier. A retry handoff carries its bounded
+`retry-remediation-v1` material: the prior-return digest, diagnosis and action,
+reuse or fresh executor mode, next agent/host, target portable tier, and any
+paired evidence. It never carries raw history or a host transcript.
+
+Map that target portable tier to the table above exactly. Do not let the parent,
+an Agent, or this adapter select a different tier. Honor the ledger's reuse or
+fresh executor assignment when invoking the Agent. If the exact alias/effort
+mapping is unavailable, return `blocked:model_unavailable` with the target tier,
+alias, effort, and availability evidence; never silently downgrade. An executor
+that cannot proceed because a genuinely higher tier is required returns
+`blocked:needs_higher_tier` with bounded evidence; it does not choose its retry.
+
 ## Bounded step return
 
 Every assigned agent returns exactly one UTF-8 JSON object with

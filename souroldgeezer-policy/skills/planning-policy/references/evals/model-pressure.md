@@ -13,6 +13,13 @@ or expand. The mechanical exact-edit case uses Claude `haiku` / `low` and Codex
 Codex `gpt-5.6-sol` / `high`. Deep has structural mapping coverage only because
 its pressure task would need a separate adversarial oracle.
 
+The original `synthetic-chained-escalation` case exercises ledger-owned
+escalation without preserving an executor transcript: its first mechanical
+attempt must stop as `blocked:needs_higher_tier`; its fresh second executor gets
+only bounded `retry-remediation-v1` material and runs at the ledger-selected
+analytical mapping. The adapters map that target exactly; neither the runner nor
+the executor chooses a substitute tier.
+
 Run after an intentional workflow or adapter change:
 
 ```text
@@ -20,8 +27,10 @@ uv run python scripts/planning_policy_forward_eval.py --harness both --output-di
 ```
 
 An unavailable mapped model is recorded as `blocked:model_unavailable`; the
-runner never downgrades. Results are comparison evidence, not a claim that a
-single provider run establishes universal model quality.
+runner never downgrades. Live execution requires an existing absolute private
+output directory (mode 0700 or stricter); otherwise the runner rejects
+`--execute` before any host call. Results are comparison evidence, not a claim
+that a single provider run establishes universal model quality.
 
 Every host run is fresh and non-resuming: Claude uses `--no-session-persistence`
 with `--permission-mode acceptEdits`, JSON output, a bounded `--json-schema`,

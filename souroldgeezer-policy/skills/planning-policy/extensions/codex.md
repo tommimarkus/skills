@@ -26,6 +26,22 @@ If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
 availability evidence; the parent reassigns the step or executes it locally.
 
+## Ledger-owned retry remediation
+
+The ledger alone decides retry eligibility and the target portable tier. A retry
+handoff contains only bounded `retry-remediation-v1` material: prior-return
+digest, diagnosis and action, reuse or fresh executor mode, next agent/host,
+target portable tier, and optional paired evidence. It does not expose raw
+history or a host transcript.
+
+Map the ledger-selected target portable tier to this table exactly. Neither the
+parent, this adapter, nor the spawned agent selects or changes it. Honor the
+ledger's reuse or fresh executor assignment when dispatching. If the exact
+mapping is unavailable, return `blocked:model_unavailable` with target
+tier/model/effort and availability evidence; never silently downgrade. An agent
+that discovers a real need for more reasoning returns
+`blocked:needs_higher_tier` with bounded evidence; it does not select its retry.
+
 ## Required handoff
 
 Call the host mechanism with a prompt containing all of the following:
@@ -39,6 +55,8 @@ Call the host mechanism with a prompt containing all of the following:
 - worktree owner and its persistent worktree path;
 - one acceptance command;
 - the `bounded-step-return-v1` profile below; and
+- any ledger-supplied bounded `retry-remediation-v1` material, without raw
+  history; and
 - stop conditions: missing load-bearing data, scope exceeding the stated size,
   unavailable mapped model, or a required decision outside the handoff.
 

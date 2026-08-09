@@ -52,6 +52,19 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
         ):
             self.assertIn(marker, self.text)
 
+    def test_maps_only_the_ledger_selected_retry_target(self):
+        normalized = " ".join(self.text.split())
+        for marker in (
+            "`retry-remediation-v1`",
+            "ledger alone",
+            "target portable tier",
+            "reuse or fresh",
+            "raw history",
+            "`blocked:needs_higher_tier`",
+            "`blocked:model_unavailable`",
+        ):
+            self.assertIn(marker, normalized)
+
     def test_uses_the_shared_bounded_step_return_profile(self):
         for marker in (
             '`"schema": "bounded-step-return-v1"`',

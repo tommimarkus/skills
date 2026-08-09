@@ -15,6 +15,13 @@ prior decisions, acceptance check, and return shape. If any load-bearing input
 is missing, stop and return `blocked:missing_input` with the missing fields;
 do not guess.
 
+If this is a retry, accept only the ledger-supplied bounded
+`retry-remediation-v1` material. The ledger alone chose this target tier and
+whether this is a reuse or fresh executor; honor both without reading raw
+history or selecting another tier. If the settled task genuinely needs more
+reasoning, return `blocked:needs_higher_tier` with bounded evidence so the
+ledger, not you, can decide whether to retry.
+
 Resolve the unknown before you change anything. Read the actual code paths,
 reproduce the behaviour, or trace the dependency — do not reason from file names
 and plausible structure. State what the evidence shows and where it runs out.

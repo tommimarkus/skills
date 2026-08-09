@@ -42,6 +42,20 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         for tier, (model, effort) in EXPECTED_TIERS.items():
             self.assertIn(f"| `{tier}` | `{model}` | `{effort}` |", adapter)
 
+    def test_adapter_leaves_retry_targeting_to_the_ledger(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+
+        for marker in (
+            "`retry-remediation-v1`",
+            "ledger alone",
+            "target portable tier",
+            "reuse or fresh",
+            "raw history",
+            "`blocked:model_unavailable`",
+            "never silently downgrade",
+        ):
+            self.assertIn(marker, adapter)
+
     def test_agents_match_mapping_and_stop_on_load_bearing_gaps(self):
         for tier, (model, effort) in EXPECTED_TIERS.items():
             content = (AGENTS / f"{tier}.md").read_text(encoding="utf-8")
@@ -55,6 +69,9 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
                 content,
                 re.compile(r"parent owns\s+integration and final verification", re.I),
             )
+            self.assertIn("`retry-remediation-v1`", content)
+            self.assertIn("`blocked:needs_higher_tier`", content)
+            self.assertIn("ledger", content)
 
     def test_standard_agent_does_not_allow_load_bearing_assumptions(self):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")

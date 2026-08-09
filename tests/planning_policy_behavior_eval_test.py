@@ -120,6 +120,14 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertIn("intentionally_missing_input", missing)
         self.assertNotIn("settled_decisions", missing)
         self.assertEqual(by_id["oversized-standard"]["size"], "small")
+        chained = by_id["synthetic-chained-escalation"]
+        self.assertEqual(chained["attempts"], 2)
+        self.assertEqual(chained["attempt_sequence"][0]["tier"], "mechanical")
+        self.assertEqual(chained["attempt_sequence"][0]["expected_status"], "blocked:needs_higher_tier")
+        retry = chained["attempt_sequence"][1]["retry_remediation"]
+        self.assertEqual(retry["schema"], "retry-remediation-v1")
+        self.assertEqual(retry["target_portable_tier"], "analytical")
+        self.assertEqual(retry["executor_mode"], "fresh")
 
     def test_offline_runner_matrix_never_calls_hosts_without_execute(self):
         import tempfile
@@ -129,8 +137,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             payload = json.loads((output / "planning-policy-forward-eval.json").read_text(encoding="utf-8"))
         self.assertEqual(payload["schema"], "planning-policy-forward-eval/v1")
-        self.assertEqual(len(payload["runs"]), 12)
-        self.assertEqual(Counter(run["status"] for run in payload["runs"]), {"not_run:execute_required": 12})
+        self.assertEqual(len(payload["runs"]), 16)
+        self.assertEqual(Counter(run["status"] for run in payload["runs"]), {"not_run:execute_required": 16})
         self.assertTrue(all("evidence_paths" in run and "raw_log" not in run for run in payload["runs"]))
         self.assertFalse((output / ".forward-workdirs").exists())
 
@@ -185,6 +193,17 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertIn("# Codex execution adapter", codex_prompt)
         self.assertIn("additive adapter", codex_prompt)
 
+    def test_chained_retry_prompt_carries_only_bounded_ledger_remediation(self):
+        case = next(case for case in self.forward if case["id"] == "synthetic-chained-escalation")
+        second = self.runner.case_for_attempt(case, 2)
+        with tempfile.TemporaryDirectory() as temporary:
+            prompt = self.runner.build_prompt(second, "codex", Path(temporary) / "repo")
+        self.assertIn('"schema":"retry-remediation-v1"', prompt)
+        self.assertIn('"target_portable_tier":"analytical"', prompt)
+        self.assertIn('"executor_mode":"fresh"', prompt)
+        self.assertNotIn('"prior_return":', prompt)
+        self.assertEqual(self.runner.MAPPINGS["codex"][second["tier"]], ("gpt-5.6-sol", "high"))
+
     def test_schema_extraction_uses_claude_structured_output_and_codex_last_message(self):
         returned = {"status": "completed", "changed_paths": ["slug.py"], "acceptance_command": "python -m unittest", "acceptance_result": "passed"}
         with tempfile.TemporaryDirectory() as temporary:
@@ -211,6 +230,12 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         failed = {"case_id": "case", "status": "failed:verification"}
         with tempfile.TemporaryDirectory() as temporary, patch.object(self.runner, "load_cases", return_value=[{"attempts": 1}]), patch.object(self.runner, "run_case", return_value=failed):
             self.assertEqual(self.runner.main(["--harness", "claude", "--output-dir", temporary, "--execute"]), 1)
+
+    def test_live_execution_requires_a_private_existing_output_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            insecure = Path(temporary) / "missing"
+            with self.assertRaises(SystemExit):
+                self.runner.main(["--harness", "claude", "--output-dir", str(insecure), "--execute"])
 
 
 if __name__ == "__main__":
