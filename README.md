@@ -156,6 +156,15 @@ running the same install command.
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
     silent downgrade.
+11. Use `software-design` for capability-based tool selection during design and
+    implementation: it checks repository-configured commands, host-exposed
+    integrations, and task-relevant installed tools without crawling the
+    machine, then prefers the best fit and structured authoritative evidence.
+    When Context7 MCP is already exposed and current third-party documentation
+    matters, it resolves the library and queries relevant docs; otherwise it
+    continues through project docs, local help, official sources, or a bounded
+    fallback. The plugin does not install or configure Context7 and does not use
+    its CLI as a fallback.
 
 ## Validation
 

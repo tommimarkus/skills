@@ -103,3 +103,18 @@ it adds no Python smell codes. Retest: trigger cases
 Merge back (remove the extension detail) if fresh Python reviews show no lift
 over the core's ownership/error/performance guidance, or if project-first
 assimilation cannot improve decisions beyond generic advice.
+
+2026-08 capability-based tool-selection expansion: the shorter generic core
+left fresh agents prone to inventing parsers, treating one tool category as
+universally preferred, or assuming an optional documentation service was an
+installed CLI. The accepted core rule adds bounded discovery, task-fit and
+authority criteria, existing-tool reuse, and a conditional Context7 MCP path
+that never installs or reconfigures the service. Retest behavior cases
+`software-design-behavior-tool-selection-existing-structured`,
+`software-design-behavior-tool-selection-context7-available`,
+`software-design-behavior-tool-selection-context7-absent`, and
+`software-design-behavior-tool-selection-bounded-fallback`; keep
+`software-design-behavior-tool-selection-repository-contract` as the named-tool
+control. Merge back (shorten the rule) if fresh-context runs consistently select
+the authoritative project-fit tool, degrade safely when Context7 is absent, and
+preserve repository-required contracts without these explicit rails.

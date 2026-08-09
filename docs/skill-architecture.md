@@ -141,6 +141,16 @@ Use progressive disclosure deliberately:
   check whether this repo's own practice already uses a different one (e.g.
   CalVer, not SemVer) — mandating an option the repo contradicts in its own
   dogfooding is an internal-consistency smell.
+- Express tool capabilities and selection criteria instead of prescribing a
+  fashionable product or a universal MCP/CLI/script order. Treat optional MCP
+  documentation services as conditional evidence sources when the host already
+  exposes them; project configuration, installed versions, and observed tool
+  behavior still decide what is available and true locally.
+- Fix a named tool choice only when repository policy, authoritative-state
+  access, compatibility, or operation fragility requires it. Preserve justified
+  contracts such as Dediren MCP routing and provider lifecycle tooling order;
+  capability-based selection does not erase an intentional authority or safety
+  boundary.
 - A reference that disclaims a concern to a runtime layer — an "X cannot be
   proven from static source" line, or assigning X *only* to a runtime evidence
   layer — has bounded the *evidence*, not the *design obligation*. That concern
