@@ -182,8 +182,8 @@ running the same install command.
     `list` emits bounded discovery, `gc --dry-run` previews outcome-specific
     retention (completed 30 days, blocked 90 days, abandoned 7 days), and
     `purge` requires one exact closed target and parent authority—there is no
-    bulk deletion. Invalid, ambiguous, and active state is preserved. Version-1
-    ledgers remain readable and mutable in place with
+    bulk deletion. Invalid, ambiguous, and active state is preserved.
+    Version-1 ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
     Their terminal `integrated` state remains unchanged; `cleaned` is v2-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
