@@ -111,7 +111,10 @@ running the same install command.
   the newest executable already present in the former verified release cache;
   it never populates that cache. Each
   operation carries an absolute `workspaceRoot`, preserving the selected
-  project as Dediren's path boundary.
+  project as Dediren's path boundary and child-process working directory, so a
+  replaced host plugin cache cannot strand later calls in a deleted directory.
+  Backend stderr remains visible in host logs; bounded command, cwd, exit, and
+  stderr context is also returned with adapter failures.
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 

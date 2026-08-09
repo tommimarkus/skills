@@ -69,9 +69,15 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 import time
                 from pathlib import Path
 
-                selected_root = sys.argv[2]
+                selected_root = sys.argv[3] if sys.argv[1] == "mcp" else sys.argv[2]
+                actual_cwd = os.getcwd()
                 modern = os.environ.get("FAKE_MODERN") == "1"
                 lifecycle_log = os.environ.get("FAKE_LIFECYCLE_LOG")
+
+                stderr_bytes = int(os.environ.get("FAKE_STDERR_BYTES", "0"))
+                if stderr_bytes:
+                    sys.stderr.write("stderr-head\\n" + ("x" * stderr_bytes) + "\\nstderr-tail\\n")
+                    sys.stderr.flush()
 
                 def log(event):
                     if lifecycle_log:
@@ -105,6 +111,11 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                     {
                         "name": "dediren_future_tool",
                         "description": "A tool added by a newer installed Dediren.",
+                        "inputSchema": {"type": "object", "properties": {}},
+                    },
+                    {
+                        "name": "dediren_guide",
+                        "description": "Read the installed Dediren guide.",
                         "inputSchema": {"type": "object", "properties": {}},
                     },
                 ]
@@ -162,6 +173,12 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                 },
                             }
                         elif method == "tools/call":
+                            if os.environ.get("FAKE_EXIT_METHOD") == method:
+                                sys.stderr.write(
+                                    os.environ.get("FAKE_STDERR_MESSAGE", "backend failed") + "\\n"
+                                )
+                                sys.stderr.flush()
+                                os._exit(int(os.environ.get("FAKE_EXIT_CODE", "23")))
                             crash_marker = os.environ.get("FAKE_CRASH_MARKER")
                             if crash_marker and not Path(crash_marker).exists():
                                 Path(crash_marker).touch()
@@ -178,6 +195,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                         "type": "text",
                                         "text": json.dumps({
                                             "root": selected_root,
+                                            "cwd": actual_cwd,
                                             "arguments": request["params"]["arguments"],
                                         }),
                                     }],
@@ -260,11 +278,38 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         tools = responses_by_id(result)[2]["result"]["tools"]
         self.assertEqual(
             {tool["name"] for tool in tools},
-            {"dediren_validate", "dediren_future_tool"},
+            {"dediren_validate", "dediren_future_tool", "dediren_guide"},
         )
         for tool in tools:
             self.assertIn("workspaceRoot", tool["inputSchema"]["properties"])
             self.assertIn("workspaceRoot", tool["inputSchema"]["required"])
+
+    def test_upstream_launcher_logs_only_resolved_command_and_arguments(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace with spaces"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            result = subprocess.run(
+                ["bash", str(LAUNCHER), "--upstream", str(workspace)],
+                cwd=REPO_ROOT,
+                check=False,
+                text=True,
+                input=json.dumps(
+                    {"jsonrpc": "2.0", "id": 26, "method": "server/discover", "params": {}}
+                )
+                + "\n",
+                capture_output=True,
+                timeout=10,
+                env={**os.environ, "DEDIREN_COMMAND": str(fake_backend)},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["id"], 26)
+        self.assertIn("dediren-mcp: exec", result.stderr)
+        self.assertIn(str(fake_backend.resolve()), result.stderr)
+        self.assertIn("mcp --root", result.stderr)
+        self.assertNotIn("DEDIREN_COMMAND=", result.stderr)
 
     def test_tool_call_routes_to_backend_for_the_explicit_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -313,6 +358,173 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
             payload["arguments"],
             {"source": "model.json", "profile": "archimate"},
         )
+        self.assertEqual(payload["cwd"], str(workspace.resolve()))
+
+    def test_cached_discovery_survives_deleted_router_cwd_for_workspace_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            launch_cwd = root / "plugin-backup"
+            launch_cwd.mkdir()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            process = subprocess.Popen(
+                ["bash", str(LAUNCHER)],
+                cwd=launch_cwd,
+                text=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_MODERN": "1",
+                },
+            )
+            assert process.stdin is not None
+            assert process.stdout is not None
+            try:
+                process.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 20, "method": "tools/list", "params": {}})
+                    + "\n"
+                )
+                process.stdin.flush()
+                self.assertIn("result", json.loads(process.stdout.readline()))
+                launch_cwd.rmdir()
+                process.stdin.write(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": 21,
+                            "method": "tools/call",
+                            "params": {
+                                "name": "dediren_guide",
+                                "arguments": {"workspaceRoot": str(workspace)},
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+                process.stdin.flush()
+                response = json.loads(process.stdout.readline())
+                payload = json.loads(response["result"]["content"][0]["text"])
+            finally:
+                close_process(process)
+
+        self.assertEqual(payload["root"], str(workspace.resolve()))
+        self.assertEqual(payload["cwd"], str(workspace.resolve()))
+
+    def test_cold_discovery_survives_deleted_router_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            launch_cwd = root / "plugin-backup"
+            launch_cwd.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            process = subprocess.Popen(
+                ["bash", str(LAUNCHER)],
+                cwd=launch_cwd,
+                text=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(fake_backend)},
+            )
+            assert process.stdin is not None
+            assert process.stdout is not None
+            try:
+                process.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 22, "method": "ping", "params": {}})
+                    + "\n"
+                )
+                process.stdin.flush()
+                self.assertIn("result", json.loads(process.stdout.readline()))
+                launch_cwd.rmdir()
+                process.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 23, "method": "tools/list", "params": {}})
+                    + "\n"
+                )
+                process.stdin.flush()
+                response = json.loads(process.stdout.readline())
+            finally:
+                close_process(process)
+
+        self.assertEqual(
+            {tool["name"] for tool in response["result"]["tools"]},
+            {"dediren_validate", "dediren_future_tool", "dediren_guide"},
+        )
+
+    def test_backend_failure_exposes_command_cwd_exit_and_stderr_without_stdout_noise(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace with spaces"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            result = run_router(
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 24,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "dediren_guide",
+                            "arguments": {"workspaceRoot": str(workspace)},
+                        },
+                    }
+                ],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_EXIT_METHOD": "tools/call",
+                    "FAKE_EXIT_CODE": "23",
+                    "FAKE_STDERR_MESSAGE": "backend diagnostic detail",
+                },
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(result.stdout.splitlines()), 1, result.stdout)
+        error = responses_by_id(result)[24]["error"]
+        self.assertEqual(error["code"], -32000)
+        self.assertIn("exit 23", error["message"])
+        self.assertIn(str(fake_backend), error["message"])
+        self.assertIn(f"cwd: {workspace.resolve()}", error["message"])
+        self.assertIn("backend diagnostic detail", error["message"])
+        self.assertIn("backend diagnostic detail", result.stderr)
+
+    def test_oversized_backend_stderr_is_drained_and_bounded_in_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            result = run_router(
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 25,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "dediren_guide",
+                            "arguments": {"workspaceRoot": str(workspace)},
+                        },
+                    }
+                ],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_STDERR_BYTES": str(256 * 1024),
+                    "FAKE_EXIT_METHOD": "tools/call",
+                    "FAKE_STDERR_MESSAGE": "final diagnostic tail",
+                },
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        message = responses_by_id(result)[25]["error"]["message"]
+        self.assertLess(len(message.encode("utf-8")), 18 * 1024)
+        self.assertIn("stderr-head", message)
+        self.assertIn("stderr truncated", message)
+        self.assertIn("final diagnostic tail", message)
 
     def test_tool_call_rejects_a_path_that_escapes_workspace_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -367,6 +579,10 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         error = responses_by_id(result)[8]["error"]
         self.assertEqual(error["code"], -32000)
         self.assertIn("timed out", error["message"])
+        self.assertIn(str(fake_backend), error["message"])
+        self.assertIn(f"cwd: {root.resolve()}", error["message"])
+        self.assertIn("exit ", error["message"])
+        self.assertIn("stderr:", error["message"])
         self.assertIn("stop ", log)
 
     def test_dead_workspace_backend_is_restarted_only_for_the_next_tool_call(self) -> None:
@@ -472,7 +688,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                     if lifecycle_log.exists():
                         log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
                         if any(
-                            line.startswith(f"stop {REPO_ROOT.resolve()} ") for line in log_lines
+                            line.startswith(f"stop {root.resolve()} ") for line in log_lines
                         ):
                             break
                     time.sleep(0.05)
@@ -488,7 +704,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 close_process(process)
 
         self.assertTrue(
-            any(line.startswith(f"stop {REPO_ROOT.resolve()} ") for line in log_lines),
+            any(line.startswith(f"stop {root.resolve()} ") for line in log_lines),
             log_lines,
         )
 

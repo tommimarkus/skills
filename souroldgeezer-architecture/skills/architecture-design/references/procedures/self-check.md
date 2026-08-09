@@ -26,10 +26,11 @@ upstream process per explicit workspace root. Startup and catalog waits default
 to 120 seconds (`DEDIREN_MCP_STARTUP_TIMEOUT_SEC`); tool-call waits default to
 360 seconds (`DEDIREN_MCP_REQUEST_TIMEOUT_SEC`). Each override must be a positive
 number of seconds. A known-dead process is replaced for the next call, an
-uncertain tool call is never auto-retried, and EOF or router termination closes
-every child. A host sandbox therefore works when it permits this local stdio MCP
-process, the external executable, and the selected workspace; the adapter does
-not bypass host filesystem or network policy.
+uncertain tool call is never
+auto-retried, and EOF or router termination closes every child. A host sandbox
+therefore works when it permits this local stdio MCP process, the external
+executable, and the selected workspace; the adapter does not bypass host
+filesystem or network policy.
 Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
 `2026.07.28` or newer before rendering; this is a compatibility floor, not a pin.
 

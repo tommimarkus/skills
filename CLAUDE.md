@@ -28,6 +28,9 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   Claude declares the launcher inline, Codex points at `mcp/codex.mcp.json`, and
   Copilot points at `mcp/copilot.mcp.json`. The shared router preserves the
   caller's workspace and requires an absolute `workspaceRoot` per operation.
+  It starts every upstream child in an explicit valid directory, independent of
+  the host launcher's inherited cwd, and mirrors child stderr while retaining a
+  bounded diagnostic excerpt for adapter errors.
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is host-managed:
   resolve the current `dediren` from `PATH`, or use `DEDIREN_COMMAND` for an

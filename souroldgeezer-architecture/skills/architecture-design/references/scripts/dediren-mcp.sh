@@ -64,4 +64,15 @@ else
     exit 127
   fi
 fi
+
+if [[ "$dediren_command" == */* ]]; then
+  dediren_dir="$(cd "$(dirname "$dediren_command")" && pwd -P)"
+  dediren_command="$dediren_dir/${dediren_command##*/}"
+else
+  dediren_command="$(command -v "$dediren_command")"
+fi
+
+printf 'dediren-mcp: exec' >&2
+printf ' %q' "$dediren_command" mcp --root "$root" "$@" >&2
+printf '\n' >&2
 exec "$dediren_command" mcp --root "$root" "$@"

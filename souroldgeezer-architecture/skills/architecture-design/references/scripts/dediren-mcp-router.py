@@ -8,6 +8,7 @@ import json
 import math
 import os
 import queue
+import shlex
 import signal
 import subprocess
 import sys
@@ -22,6 +23,9 @@ LEGACY_PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 SERVER_META = {"io.modelcontextprotocol/serverInfo": SERVER_INFO}
 DEFAULT_STARTUP_TIMEOUT_SECONDS = 120.0
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 360.0
+STDERR_HEAD_BYTES = 4 * 1024
+STDERR_TAIL_BYTES = 12 * 1024
+STDERR_MIRROR_LOCK = threading.Lock()
 WORKSPACE_ROOT_SCHEMA = {
     "type": "string",
     "description": (
@@ -41,6 +45,70 @@ class BackendError(RuntimeError):
     pass
 
 
+class DiagnosticExcerpt:
+    """Retain a bounded byte excerpt while stderr is drained continuously."""
+
+    def __init__(self) -> None:
+        self.head = bytearray()
+        self.tail = bytearray()
+        self.total = 0
+        self.lock = threading.Lock()
+
+    def append(self, chunk: bytes) -> None:
+        with self.lock:
+            self.total += len(chunk)
+            head_remaining = STDERR_HEAD_BYTES - len(self.head)
+            if head_remaining > 0:
+                self.head.extend(chunk[:head_remaining])
+                chunk = chunk[head_remaining:]
+            if chunk:
+                self.tail.extend(chunk)
+                if len(self.tail) > STDERR_TAIL_BYTES:
+                    del self.tail[:-STDERR_TAIL_BYTES]
+
+    def render(self) -> str:
+        with self.lock:
+            head = bytes(self.head)
+            tail = bytes(self.tail)
+            total = self.total
+        if total > STDERR_HEAD_BYTES + STDERR_TAIL_BYTES:
+            omitted = total - STDERR_HEAD_BYTES - STDERR_TAIL_BYTES
+            marker = f"\n...[stderr truncated; {omitted} bytes omitted]...\n".encode()
+            excerpt = head + marker + tail
+        else:
+            excerpt = head + tail
+        return excerpt.decode("utf-8", errors="replace").strip()
+
+
+def mirror_stderr(chunk: bytes) -> None:
+    with STDERR_MIRROR_LOCK:
+        try:
+            binary_stderr = getattr(sys.stderr, "buffer", None)
+            if binary_stderr is not None:
+                binary_stderr.write(chunk)
+                binary_stderr.flush()
+                return
+            sys.stderr.write(chunk.decode("utf-8", errors="replace"))
+            sys.stderr.flush()
+        except (OSError, ValueError):
+            # A closed host log stream must not stop draining the child pipe.
+            return
+
+
+def diagnostic_context(
+    command: tuple[str, ...],
+    cwd: Path,
+    exit_code: int | None,
+    stderr_excerpt: str,
+) -> str:
+    rendered_exit = str(exit_code) if exit_code is not None else "unknown"
+    rendered_stderr = stderr_excerpt or "<none captured>"
+    return (
+        f"exit {rendered_exit}; command: {shlex.join(command)}; cwd: {cwd}; "
+        f"stderr:\n{rendered_stderr}"
+    )
+
+
 class Backend:
     def __init__(
         self,
@@ -54,25 +122,37 @@ class Backend:
         self.request_timeout = request_timeout
         self.responses: queue.Queue[dict[str, Any] | None] = queue.Queue()
         self.closed = False
+        self.command = (str(launcher), "--upstream", str(root))
+        self.diagnostics = DiagnosticExcerpt()
         try:
             self.process = subprocess.Popen(
-                [str(launcher), "--upstream", str(root)],
+                self.command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=None,
+                stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
                 env=os.environ.copy(),
+                cwd=root,
                 start_new_session=os.name == "posix",
             )
         except OSError as exc:
-            raise BackendError(f"could not start the installed Dediren CLI: {exc}") from exc
-        self.reader = threading.Thread(
+            context = diagnostic_context(self.command, root, None, "")
+            raise BackendError(
+                f"could not start the installed Dediren CLI: {exc} ({context})"
+            ) from exc
+        self.stdout_reader = threading.Thread(
             target=self._read_responses,
             name=f"dediren-mcp-{self.process.pid}",
             daemon=True,
         )
-        self.reader.start()
+        self.stderr_reader = threading.Thread(
+            target=self._read_stderr,
+            name=f"dediren-mcp-stderr-{self.process.pid}",
+            daemon=True,
+        )
+        self.stdout_reader.start()
+        self.stderr_reader.start()
         self.next_id = 1
         self.modern = False
         try:
@@ -125,6 +205,32 @@ class Backend:
         finally:
             self.responses.put(None)
 
+    def _read_stderr(self) -> None:
+        if self.process.stderr is None:
+            return
+        descriptor = self.process.stderr.fileno()
+        try:
+            while True:
+                chunk = os.read(descriptor, 4096)
+                if not chunk:
+                    return
+                self.diagnostics.append(chunk)
+                mirror_stderr(chunk)
+        except OSError:
+            return
+
+    def _failure(self, summary: str) -> str:
+        exit_code = self.process.poll()
+        if exit_code is not None and threading.current_thread() is not self.stderr_reader:
+            self.stderr_reader.join(timeout=1)
+        context = diagnostic_context(
+            self.command,
+            self.root,
+            exit_code,
+            self.diagnostics.render(),
+        )
+        return f"{summary} ({context})"
+
     def send(self, message: dict[str, Any]) -> None:
         if self.process.stdin is None:
             raise BackendError("Dediren stdin is unavailable")
@@ -132,7 +238,8 @@ class Backend:
             self.process.stdin.write(json.dumps(message, separators=(",", ":")) + "\n")
             self.process.stdin.flush()
         except (BrokenPipeError, OSError) as exc:
-            raise BackendError("Dediren closed its input") from exc
+            self.close()
+            raise BackendError(self._failure("Dediren closed its input")) from exc
 
     def request(
         self,
@@ -170,25 +277,23 @@ class Backend:
             if remaining <= 0:
                 self.close()
                 raise BackendError(
-                    f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
+                    self._failure(
+                        f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
+                    )
                 )
             try:
                 response = self.responses.get(timeout=remaining)
             except queue.Empty as exc:
                 self.close()
                 raise BackendError(
-                    f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
+                    self._failure(
+                        f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
+                    )
                 ) from exc
             if response is None:
-                exit_code = self.process.poll()
-                if exit_code is None:
-                    try:
-                        exit_code = self.process.wait(timeout=0.1)
-                    except subprocess.TimeoutExpired:
-                        exit_code = None
                 self.close()
                 raise BackendError(
-                    f"Dediren exited before responding to {method} (exit {exit_code})"
+                    self._failure(f"Dediren exited before responding to {method}")
                 )
             if response.get("id") == request_id:
                 return response
@@ -211,20 +316,29 @@ class Backend:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=2)
-        for stream in (self.process.stdin, self.process.stdout):
+        readers = (self.stdout_reader, self.stderr_reader)
+        for reader in readers:
+            if reader.is_alive() and threading.current_thread() is not reader:
+                reader.join(timeout=1)
+        for stream in (self.process.stdin, self.process.stdout, self.process.stderr):
             if stream is not None and not stream.closed:
                 try:
                     stream.close()
                 except OSError:
                     pass
-        if self.reader.is_alive() and threading.current_thread() is not self.reader:
-            self.reader.join(timeout=1)
+        for reader in readers:
+            if reader.is_alive() and threading.current_thread() is not reader:
+                reader.join(timeout=1)
 
 
 class Router:
     def __init__(self) -> None:
         default_launcher = Path(__file__).with_name("dediren-mcp.sh")
-        self.launcher = Path(os.environ.get("DEDIREN_MCP_LAUNCHER", default_launcher))
+        configured_launcher = Path(
+            os.environ.get("DEDIREN_MCP_LAUNCHER", default_launcher)
+        ).expanduser()
+        self.launcher = configured_launcher.resolve(strict=False)
+        self.catalog_root = self.launcher.parent
         self.startup_timeout = positive_timeout(
             "DEDIREN_MCP_STARTUP_TIMEOUT_SEC", DEFAULT_STARTUP_TIMEOUT_SECONDS
         )
@@ -289,7 +403,7 @@ class Router:
             return self.tools
         catalog_root: Path | None = None
         if backend is None:
-            catalog_root = Path.cwd().resolve()
+            catalog_root = self.catalog_root
             backend = self.backend(catalog_root)
         try:
             raw_tools: list[Any] = []

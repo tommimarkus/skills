@@ -595,7 +595,9 @@ tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead
 workspace process only for the next call, never auto-retries an uncertain call,
-and closes children on EOF or termination. Call its tools before using the same
+and closes children on EOF or termination. Children set cwd; stderr errors do
+not pollute JSON-RPC stdout. Call its tools before
+using the same
 external executable as a CLI fallback. The skill requires seven tools: three that
 author, validate, and build — `dediren_validate`, `dediren_build`,
 `dediren_guide` — and four read-only model-intelligence and verification tools —
