@@ -35,6 +35,30 @@ class EstimateTokensTest(unittest.TestCase):
         self.assertEqual(slc.estimate_tokens(""), 0)
         self.assertEqual(slc.estimate_tokens("word"), slc.estimate_tokens("word"))
 
+    def test_file_edit_cost_fidelity_ceilings(self):
+        root = REPO_ROOT
+        routes = {
+            "dispatcher": {"files": [], "selection_metadata": [{"entry":"software-design","kind":"skill-description","text":(REPO_ROOT / "souroldgeezer-design/skills/software-design/SKILL.md").read_text().split("---", 2)[1]}]},
+            "ordinary": {"files": ["souroldgeezer-design/skills/software-design/references/procedures/file-edit-lane.md"]},
+            "cache-aware": {"files": ["souroldgeezer-design/skills/software-design/references/procedures/file-edit-lane.md"], "selection_metadata": [{"entry":"tool_state","kind":"skill-description","text":"validated local capability cache helper output"}]},
+        }
+        ceilings = {"dispatcher": 900, "ordinary": 1500, "cache-aware": 2200}
+        for name, scenario in routes.items():
+            with self.subTest(name=name):
+                measured = slc.measure_scenario({"id": name, **scenario}, root)
+                self.assertLessEqual(measured["total"], ceilings[name])
+
+    def test_existing_software_design_scenarios_stay_within_five_percent(self):
+        scenarios = json.loads((REPO_ROOT / "tests/skill_load_cost/scenarios.json").read_text())
+        snapshot = json.loads((REPO_ROOT / "tests/skill_load_cost/cost-snapshot.json").read_text())
+        for scenario in scenarios:
+            if not scenario["id"].startswith("sd-"):
+                continue
+            with self.subTest(scenario=scenario["id"]):
+                self.assertIn(scenario["id"], snapshot)
+                measured = slc.measure_scenario(scenario, REPO_ROOT)["total"]
+                self.assertLessEqual(measured, int(snapshot[scenario["id"]] * 1.05))
+
 
 class MeasureScenarioTest(unittest.TestCase):
     def test_sums_tokens_across_declared_files(self):
