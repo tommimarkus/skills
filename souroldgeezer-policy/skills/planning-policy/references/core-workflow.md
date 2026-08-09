@@ -52,6 +52,16 @@ to, not one assumed mid-edit.
    Re-cut what fails: split a step that carries more than one concern or hides
    discovery inside execution; merge steps that share a read-set and an
    acceptance check.
+
+   For an executable plan, load
+   [plan-contract.md](plan-contract.md). It makes these readiness tests
+   machine-checkable: every leaf has the complete handoff contract, a stable
+   top-level work unit prevents artificial splitting, and the weighted
+   medium-ready gate is calculated before approval. Use one of its documented
+   Claude `${CLAUDE_SKILL_DIR}` or Codex absolute `<skill-dir>` commands. A
+   missing settled decision, unknown read/write boundary, failed command, or
+   other load-bearing gap is stop-and-return in every tier; every leaf carries
+   the exact `missing_load_bearing_information` stop marker. Do not improvise.
 6. **Present for approval.** In the Claude Code lane, put the agreed approach into
    the plan and call `ExitPlanMode` for approval. In the Codex lane, use the
    native plan approval control when exposed; otherwise present the proposed
@@ -123,16 +133,36 @@ subagent checks reality against: a step told `small` that finds itself reading
 forty files has a concrete mismatch to report back, and the parent re-cuts.
 That pairing is what makes the band load-bearing rather than decorative.
 
-Under-specified handoffs, not mis-tuned runtimes, are how delegation fails. So
-name the agent type when a specialized one fits the step — its definition already
-carries the model and tool set — and otherwise let the model and reasoning effort
-inherit from the session rather than pinning them. Pin either only with a reason
-stated in the plan. Where delegated steps write the same files concurrently, the
-plan says so and isolates them.
+Under-specified handoffs, not mis-tuned runtimes, are how delegation fails. Name
+a specialized agent type when one fits the step, select its portable tier, and
+let the matching host adapter map that tier to its supported execution settings.
+Do not hand-tune model or reasoning effort per leaf outside that mapping. If the
+adapter cannot map the selected tier or the host exposes no delegation
+capability, stop and return the blocker to the parent. Where delegated steps
+write the same files concurrently, the plan says so and isolates them.
 
 Groom before selecting tiers: splitting usually confines the expensive tier to
 the part that needs it — one large analytical step re-cuts into one small
 analytical step plus several mechanical ones — which is a direct cost lever.
+
+The portable leaf fields and the `mechanical`/`standard`/`analytical`/`deep`
+judgment are shared across hosts; host overlays map them to host agent names.
+Analytical and deep work names the irreducible unknown or risk. The plan groups
+leaves by stable top-level work unit; each unit is weighted once from its
+declared original size (`small=1`, `medium=2`, `large=3`) and is medium-ready
+only when every leaf is mechanical or standard. Require weighted readiness of
+at least 0.60, unless the user explicitly approves and the plan records an
+analytical-heavy exception. This prevents gaming the threshold by splitting a
+large concern into many small leaves.
+
+### Selective audit routing
+
+Initial inspection may route to exactly one owning audit only if the domain
+matches, the audit could materially change the approach or acceptance command,
+targeted inspection or focused tests cannot answer it, and the plan names both a
+bounded question and its evidence surface. Otherwise send ordinary domain
+design to the owning design skill. A vague request to “review risks” is not an
+audit route.
 
 This plugin ships an execution-tier roster so a plan names a tier instead of
 tuning knobs per call — each definition already carries its model, effort, and

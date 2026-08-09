@@ -22,14 +22,15 @@ absolute: a departure is legitimate when stated in the plan, which keeps the
 choice visible instead of silent. The parent-retained verification exists because
 a subagent's "verified" attests only to its own drafting checks.
 
-The delegation contract covers what the step is handed, not how the host is
-tuned. Runtime knobs are deliberately out of scope: hosts default to inheriting
-the session's model and reasoning effort, agent definitions already carry their
-own model and tool set, and the parameter surface differs per host and moves
-between releases. Enumerating knobs here would date quickly and drift across the
-two runtimes, while the failure mode that actually costs a delegated step — an
-under-specified handoff to a subagent with no conversation history — is squarely
-plan content.
+The delegation contract selects a portable tier rather than per-step runtime
+knobs. The host adapter maps that tier to its supported model, effort, and tool
+settings, so the shared plan stays stable while host parameter surfaces change.
+Hand-tuning a leaf outside its mapped tier is not a shared-contract option. If
+the host lacks a mapping or delegation capability, the executor stops and
+returns the blocker to the parent; the portable plan is retained rather than
+silently downgraded. The failure mode that actually costs a delegated step — an
+under-specified handoff to a subagent with no conversation history — remains
+squarely plan content.
 
 Grooming the plan's steps before presenting it for approval exists because this
 repository's own sessions produced the failure it fixes, not a hypothetical one:
@@ -51,6 +52,16 @@ touches — to the parent during grooming follows the same reasoning: one
 enumeration done once, while the parent is already oriented, replaces the same
 search repeated inside every subagent it would otherwise delegate to, and that
 cost asymmetry is the reason, not a preference for tidier handoffs.
+
+The shared plan contract extends that loop without assigning host behavior to
+the core workflow: stable leaf IDs, dependencies, boundaries, decision records,
+one acceptance command, stop conditions, and a return shape make a fresh
+executor's handoff auditable. A common portable tier lets the same plan travel
+between Claude Code and Codex overlays. The weighted medium-ready gate measures
+stable top-level work units once at their original size, so a plan cannot improve
+its readiness score by splitting a concern into decorative leaves. Every tier
+stops and returns when a load-bearing decision is missing; analytical/deep work
+records the one irreducible uncertainty rather than silently widening scope.
 
 ## IP provenance
 

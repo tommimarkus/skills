@@ -23,9 +23,14 @@ in force, exceptions/opt-outs applied, and the brainstorm → approved-plan cycl
 (or the blocker).
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
-enforcement, guidance edits, or adoption. When editing triggers, behavior, or
+enforcement, guidance edits, or adoption. When grooming executable leaves,
+delegating, or checking a returned handoff, read
+[references/plan-contract.md](references/plan-contract.md) and run its
+validator before approval or dispatch. When editing triggers, behavior, or
 evals, also read the eval packs under `references/evals/` and
-`references/source-grounding.md`.
+`references/source-grounding.md`. Host-specific behavior is additive only:
+read `extensions/claude-code.md` or `extensions/codex.md` when present and the
+matching host needs its dispatch mapping; neither replaces the shared contract.
 
 Modes: default `enforce-initialized` when loaded repo/user guidance initializes
 this policy and the model is about to start new feature or build work, or on an
@@ -63,16 +68,24 @@ decomposition, integration, and verification; a subagent's "verified" covers
 only its own drafting. In Codex use the host's delegation mechanism when exposed,
 otherwise keep the decomposition in the plan and say delegation was unavailable.
 
-Each delegated step carries its own task boundary, a named read-set of the files
-it reads and writes, one acceptance check narrow enough to fail if the step is
-wrong, a size band, and the return shape the parent needs — a subagent has no
-conversation history and must finish from that handoff alone. The parent
-enumerates the read-set once while grooming instead of leaving every subagent to
-search for it. The band (`small`/`medium`/`large`) follows from the read-set and
-check rather than being estimated apart from them, and travels to the subagent as
-the referent it checks its real scope against; `large` names in the plan why the
-step cannot be cut smaller. Name a specialized agent type when one fits; let
-model and reasoning effort inherit unless the plan states a reason to pin them.
+Every executable leaf uses the shared contract: stable ID and dependencies;
+task/boundary; named read/write sets; settled decisions; size and portable tier;
+worktree owner; exactly one acceptance command; return contract; stop
+conditions; and stable top-level work-unit ID. The parent enumerates the sets
+once while grooming. Missing load-bearing information is stop-and-return in
+every tier, never an invitation to invent it; every leaf records the exact stop
+marker `missing_load_bearing_information`. Analytical/deep leaves name their
+irreducible unknown or risk. Select the portable tier the leaf needs; the
+matching host adapter maps it to supported execution settings. Do not hand-tune
+model or reasoning effort per leaf outside that mapping. If the adapter cannot
+map the selected tier or delegation capability is unavailable, stop and return
+that blocker to the parent.
+
+Use selective audit routing only when a named owning audit has a bounded
+question and evidence surface, the domain matches, the answer can materially
+change approach or acceptance, and targeted inspection/focused tests cannot
+resolve it. Otherwise ordinary domain design goes to its owning design skill;
+“review risks” is not an audit route.
 
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
 repo/user guidance initializes `planning-policy`, or the user explicitly asks to
