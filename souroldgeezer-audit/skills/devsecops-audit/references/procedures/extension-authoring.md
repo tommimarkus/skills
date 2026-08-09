@@ -33,6 +33,7 @@ Each extension file in `../../extensions/` is intentionally short. Required cont
 | `dockerfile.md` | `**/Dockerfile`, `**/docker-compose*.yml` | Container routing; full `docker.*` rules in docs |
 | `dotnet-security.md` | C# under `api/` `app/` `shared/` `tests/` | .NET security routing; full `dns.*` rules in docs |
 | `python-security.md` | `*.py`, Python handlers/jobs/CLIs, Python runtime/dependency files | Python security routing; full `pys.*` rules in docs |
+| `jsts-security.md` | JS/TS, React, Node.js, or Vite source/configuration | JS/TS security routing; full `jsts.*` rules in docs |
 
 ## Cost Banding
 <!-- lean-audit:sync-intentional -->

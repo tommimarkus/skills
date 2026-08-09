@@ -272,3 +272,32 @@ See [devsecops-extensions/python-security.md](devsecops-extensions/python-securi
 | `pys.POS-3` | Path/archive containment with resource limits |
 | `pys.POS-4` | CSPRNG for a capability value |
 | `pys.POS-5` | Verified TLS, bound SQL, or controlled outbound destination |
+
+### `jsts.*` — JavaScript/TypeScript security extension
+
+See [devsecops-extensions/jsts-security.md](devsecops-extensions/jsts-security.md) for evidence requirements and exact carve-outs.
+
+| Code | Intent |
+|---|---|
+| `jsts.HC-1` | External data reaches dynamic execution or module loading |
+| `jsts.HC-2` | External data reaches shell-capable process execution |
+| `jsts.HC-3` | External content reaches an executable HTML sink |
+| `jsts.HC-4` | External keys reach prototype-pollution-prone merge/path logic |
+| `jsts.HC-5` | External path can escape a fixed filesystem base |
+| `jsts.HC-6` | Predictable randomness creates a security capability |
+| `jsts.HC-7` | TLS verification disabled in a shipped outbound client |
+| `jsts.HC-8` | SQL interpolation with external input |
+| `jsts.HC-9` | Outbound URL trust/SSRF policy uncertain |
+| `jsts.HC-10` | Secret material reaches a client bundle |
+| `jsts.HC-11` | Vite dev server externally exposed without a clear boundary |
+| `jsts.POS-1` | Fixed code/module allowlist |
+| `jsts.POS-2` | Fixed executable and non-shell argument vector |
+| `jsts.POS-3` | Sanitized external HTML or text-node rendering |
+| `jsts.POS-4` | Prototype-changing keys rejected before merge |
+| `jsts.POS-5` | Resolved path containment under a fixed base |
+| `jsts.POS-6` | CSPRNG creates capability values |
+| `jsts.POS-7` | Verified TLS with deployment-appropriate CA |
+| `jsts.POS-8` | Bound SQL values and literal identifier allowlist |
+| `jsts.POS-9` | Controlled outbound destination and DNS/IP policy |
+| `jsts.POS-10` | Server-only secrets absent from client bundle |
+| `jsts.POS-11` | Loopback-only or controlled Vite dev listener |

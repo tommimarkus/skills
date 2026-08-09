@@ -43,6 +43,13 @@ tables, diagrams, screenshots, or documentation.
   Handling: primary/official anchors for the Python `pys.*` rule pack's risk
   direction. The pack, catalog, and eval use original paraphrases and synthetic
   scenarios only; they do not reproduce external examples or prose.
+- Source: Node.js child process, crypto, and TLS documentation; MDN dynamic
+  import and HTML sink documentation; Vite server options; OWASP SSRF Prevention
+  Cheat Sheet.
+  Handling: primary anchors for the JavaScript/TypeScript `jsts.*` pack's risk
+  direction. The routing card, rule pack, catalog, and evals use original
+  synthetic scenarios and paraphrases only; no upstream examples or prose are
+  copied.
 - Source: `references/procedures/threat-model-planning.md`.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal
