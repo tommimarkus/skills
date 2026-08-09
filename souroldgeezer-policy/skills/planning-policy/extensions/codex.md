@@ -20,7 +20,7 @@ Use this settled mapping:
 | `plan-step-analytical` | `gpt-5.6-sol` / `high` |
 | `plan-step-deep` | `gpt-5.6-sol` / `xhigh` |
 
-This applies the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model): Luna suits efficient high-volume work, Terra balances capability and cost, Sol is the frontier tier, and `medium` is the balanced reasoning starting point while higher effort is for demonstrated reasoning gains. It is a settled repository mapping, not a claim that every host account exposes every model.
+This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's

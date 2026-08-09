@@ -44,15 +44,12 @@ approval or asks explicitly and ends the turn. Non-interactive surfaces only
 return a proposal/open questions and say approval was not obtained. No spec,
 commit, implementation, or delegation happens before approval.
 
-For an approved plan with at least two delegated steps, only the parent creates
-the persistent ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/`.
-Keep compact checkpoint state and bounded evidence paths/returns, never raw
-logs; parent-only lifecycle and retry operations preserve rehydration. A
-successful leaf closes `completed` → `integrated` → `cleaned`; only cleaned
-dependencies become ready, from a worktree created at the then-current parent
-tip. The parent uses the Git-policy helper named by the ledger contract, not a
-routine cherry-pick, and validates `--closeout` after every successful leaf is
-cleaned.
+For two or more delegated steps, only the parent creates
+`<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
+evidence paths, and returns, never raw logs. Successful leaves close
+`completed` → `integrated` → `cleaned`; only then create dependent worktrees
+from the current parent tip. Use the ledger's Git-policy helper, not a routine
+cherry-pick, then validate `--closeout`.
 
 Use this standing template for adoption (Codex substitutes its available native
 approval/delegation wording):
