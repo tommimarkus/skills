@@ -25,9 +25,12 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [core workflow §enforcement](references/core-workflow.md#enforcement) and
   [§approval-and-output](references/core-workflow.md#approval-and-output).
 - **Executable plan, delegation, or returned handoff:** also read
-  [plan contract](references/plan-contract.md) and run its validator before
-  approval or dispatch. For an approved plan with two or more delegated steps,
-  the parent alone uses the bounded checkpoint ledger described there.
+  [plan contract](references/plan-contract.md) and run its advertised
+  [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
+  command before approval or dispatch. For an approved plan with two or more
+  delegated steps, the parent alone uses the contract's `init`, `transition`,
+  `show`, and `validate` commands from
+  [`planning_ledger.py`](references/scripts/planning_ledger.py).
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never
@@ -58,3 +61,7 @@ sibling request, unenterable non-interactive plan mode, or new build work with
 no approved plan and no logged opt-out. Do not write a spec, commit, or start
 implementation in this skill. After guidance edits run the documented checks,
 `git diff --check`, and skill-architecture validation.
+
+Ask vs continue: continue once goal, constraints, and success are clear. If the
+request is ambiguous, input is missing, or scope is uncertain, ask the user
+before grooming.

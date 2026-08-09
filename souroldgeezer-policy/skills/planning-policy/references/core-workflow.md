@@ -6,9 +6,9 @@ and user approval before implementation.
 
 ## Enforcement
 
-1. Select the lane: Claude calls `EnterPlanMode` unless already there; Codex
-   uses native Plan mode when exposed, otherwise stays read-only for explicit
-   approval. Never claim a mode change.
+1. Select the lane: the **Claude Code lane** calls `EnterPlanMode` unless already
+   there; the **Codex lane** uses native Plan mode when exposed, otherwise stays
+   read-only for explicit approval. Never claim a mode change.
 2. Orient only enough to ask good questions. Ask focused questions about goal,
    constraints, and success; stop when an approach is clear.
 3. State the approach in one or two sentences and name a real tradeoff/pick.

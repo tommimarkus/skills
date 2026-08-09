@@ -70,3 +70,17 @@ uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validat
 It emits one JSON object, exits `0` for a valid plan that passes the readiness
 gate (or its recorded exception), `1` for a contract failure, and `2` for usage
 or unreadable/invalid JSON.
+
+## Parent ledger helper
+
+Only after approval, and only for two or more delegated steps, resolve the
+parent-owned helper with one host form:
+
+```text
+uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
+uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
+```
+
+The parent calls `init` once, `transition` for lifecycle/retry changes, `show`
+to rehydrate a bounded summary, and `validate` before handoff or closeout.
+Mutations require `--actor parent`; retain bounded evidence paths, not raw logs.
