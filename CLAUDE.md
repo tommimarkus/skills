@@ -304,6 +304,15 @@ opaque attempt ID. Concurrent agents require independent ready steps and
 separate worktrees/write paths. Finite `max_attempts` (1–5) stops unchanged
 progress as `blocked:no_progress`, exhaustion as terminal
 `blocked:retry_exhausted`, and boundary expansion as terminal `oversized`.
+The ledger is the sole retry-policy owner. New v2 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+behavior, and `portable_tier` is initial only. Only `failed:acceptance` and
+`blocked:needs_higher_tier` are eligible: one same-tier retry follows only
+`failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately;
+later retries use higher mapped tiers through `deep` and `max_attempts`. Each
+retry persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
+assignment checks. Terminal precedence is repeated result, ineligible outcome,
+exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
 Successful v2 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the

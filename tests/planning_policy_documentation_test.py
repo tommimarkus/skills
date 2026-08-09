@@ -40,6 +40,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "`completed` → `integrated` → `cleaned`",
             "planning-worktree-result-v1", "validate --closeout",
             "terminal `integrated` state remains unchanged",
+            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
+            "retry-remediation-v1", "blocked:needs_higher_tier",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, readme)
@@ -57,6 +59,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "`completed` → `integrated` → `cleaned`",
             "planning-worktree-result-v1", "validate --closeout",
             "Routine integration never cherry-picks",
+            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
+            "retry-remediation-v1", "blocked:needs_higher_tier",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, claude)
@@ -94,6 +98,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "`completed` → `integrated` → `cleaned`",
             "planning-worktree-result-v1", "validate --closeout",
             "terminal `integrated` state remains unchanged",
+            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
+            "retry-remediation-v1", "blocked:needs_higher_tier",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, standard)

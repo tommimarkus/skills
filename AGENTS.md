@@ -133,6 +133,16 @@ independent ready steps with separate worktrees and write paths. A step has a
 finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 `blocked:no_progress`; an exhausted step is terminal `blocked:retry_exhausted`;
 and a boundary overrun is terminal `oversized`, never an expanded retry.
+The ledger is the sole retry-policy owner: new v2 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+behavior. `portable_tier` is initial only. Only `failed:acceptance` and
+`blocked:needs_higher_tier` are eligible; one same-tier retry is allowed only
+after `failed:acceptance`, while `blocked:needs_higher_tier` escalates
+immediately. Later retries use higher tiers through `deep`/`max_attempts`.
+Each retry persists a bounded `retry-remediation-v1` artifact and checks
+identity, prior-return digest, worktree, boundary, and assignment. Terminal
+precedence is repeated result (`blocked:no_progress`), ineligible outcome,
+exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
 Successful v2 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the

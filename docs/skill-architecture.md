@@ -134,6 +134,16 @@ Their terminal `integrated` state remains unchanged.
 Current planning-policy cannot approve or dispatch an unversioned version-1
 plan as new work; new documentation uses `init-v2`. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.
+The ledger is the sole retry-policy owner: new v2 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+behavior. `portable_tier` is initial only. Only `failed:acceptance` and
+`blocked:needs_higher_tier` are eligible; one same-tier retry follows only
+`failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.
+Later retries use higher tiers through `deep`/`max_attempts`. Each retry writes
+a bounded `retry-remediation-v1` artifact and checks identity, prior-return
+digest, worktree, boundary, and assignment. Terminal precedence is repeated
+result (`blocked:no_progress`), ineligible outcome, exhaustion
+(`blocked:retry_exhausted`), then tier ceiling.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

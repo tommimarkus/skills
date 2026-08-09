@@ -161,6 +161,15 @@ running the same install command.
     `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
+    The ledger is the sole retry-policy owner: new v2 runs stamp
+    `retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve
+    old behavior. `portable_tier` is initial only. Only `failed:acceptance` and
+    `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
+    `failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.
+    Later retries use higher tiers through `deep`/`max_attempts`; each retry
+    persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
+    assignment checks. Terminal precedence is repeated result, ineligible
+    outcome, exhaustion, then tier ceiling.
 
     Successful leaves continue `completed` → `integrated` → `cleaned`.
     The parent ingests bounded `planning-worktree-result-v1` evidence from the
