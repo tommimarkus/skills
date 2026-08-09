@@ -1,0 +1,1 @@
+{"client_versions":{"v1":"accepts integer id","v2":"accepts string id"},"production_observation":"v1 is still active","required_conclusion":"support both integer and string ids during the migration"}
