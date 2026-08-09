@@ -38,6 +38,14 @@ to host execution settings; do not record per-leaf model or reasoning-effort
 overrides. If no mapping or delegation capability is available, stop and return
 the adapter blocker to the parent rather than silently changing tiers.
 
+Retry behavior is ledger-owned and does not add plan fields or alter readiness.
+New version-2 runs stamp `retry_policy: escalating_remediation_v1`; policy-less
+existing version-2 runs and every version-1 ledger preserve their prior retry
+behavior. A retry keeps the approved leaf task, boundary, read/write sets, and
+step/attempt identity rules intact. Only the ledger may create and persist the
+bounded remediation artifact that selects a next mapped agent/host and target
+tier.
+
 `work_units` declares each stable top-level unit once as `{ "id": "…",
 "original_size": "…" }`. Every leaf names one declared unit and every unit
 has at least one leaf. Do not create extra leaves merely to improve readiness:

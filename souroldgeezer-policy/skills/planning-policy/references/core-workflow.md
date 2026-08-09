@@ -51,6 +51,13 @@ evidence paths, and returns, never raw logs. Successful leaves close
 from the current parent tip. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
+For a new version-2 run, the parent uses the ledger's
+`escalating_remediation_v1` retry policy. The ledger alone decides whether an
+eligible return gets one same-tier remediation attempt or a higher mapped tier;
+it preserves the leaf's task, boundary, read/write sets, and attempt identity
+semantics. An agent reports bounded evidence and never self-escalates, alters
+its contract, or treats an oversized/missing-input stop as retryable work.
+
 Use this standing template for adoption (Codex substitutes its available native
 approval/delegation wording):
 

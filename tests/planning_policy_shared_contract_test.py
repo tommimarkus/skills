@@ -194,6 +194,16 @@ class SharedContractTest(unittest.TestCase):
             "planning-worktree-result-v1", "validate --closeout",
             "planning worktree closeout",
             "terminal `integrated` state is unchanged",
+            "escalating_remediation_v1",
+            "retry-remediation-v1",
+            "exact `failed:acceptance`",
+            "`blocked:needs_higher_tier`",
+            "same-tier retry",
+            "same-tier-used",
+            "prior-return digest",
+            "reuse or fresh",
+            "target tier",
+            "terminal precedence",
         )
         for anchor in required:
             with self.subTest(anchor=anchor):

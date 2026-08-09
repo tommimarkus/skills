@@ -57,6 +57,10 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-audit-bounded-owner",
             "planning-policy-behavior-claude-clean-closeout",
             "planning-policy-behavior-codex-clean-closeout",
+            "planning-policy-behavior-retry-same-tier-remediation",
+            "planning-policy-behavior-retry-immediate-escalation",
+            "planning-policy-behavior-retry-terminal-precedence",
+            "planning-policy-behavior-retry-legacy-compatibility",
         }
         self.assertTrue(required.issubset(self.behavior))
         for host in ("claude", "codex"):
@@ -77,6 +81,21 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertFalse(self.contract.validate({"work_units": [{"id": "design", "original_size": "medium"}], "leaves": [ordinary]})["valid"])
         self.assertFalse(self.contract.validate({"work_units": [{"id": "risk", "original_size": "medium"}], "leaves": [vague]})["valid"])
         self.assertTrue(self.contract.validate({"work_units": [{"id": "audit", "original_size": "medium"}], "leaves": [bounded]})["valid"])
+
+    def test_retry_behavior_cases_bind_remediation_and_preserve_compatibility(self):
+        same_tier = self.behavior["planning-policy-behavior-retry-same-tier-remediation"]
+        self.assertIn("failed:acceptance", " ".join(same_tier["required_checks"]))
+        self.assertIn("one same-tier", " ".join(same_tier["required_checks"]))
+        self.assertIn("retry-remediation-v1", " ".join(same_tier["expected_artifacts"]))
+        escalation = self.behavior["planning-policy-behavior-retry-immediate-escalation"]
+        self.assertIn("blocked:needs_higher_tier", " ".join(escalation["required_checks"]))
+        self.assertIn("higher tier", " ".join(escalation["required_checks"]))
+        terminal = self.behavior["planning-policy-behavior-retry-terminal-precedence"]
+        self.assertIn("exhaustion", " ".join(terminal["required_checks"]))
+        self.assertIn("ceiling", " ".join(terminal["required_checks"]))
+        legacy = self.behavior["planning-policy-behavior-retry-legacy-compatibility"]
+        self.assertIn("legacy_unbounded", " ".join(legacy["required_checks"]))
+        self.assertIn("policy-less", " ".join(legacy["required_checks"]))
 
     def test_forward_matrix_uses_identical_fixtures_and_exact_mappings(self):
         by_id = {case["id"]: case for case in self.forward}

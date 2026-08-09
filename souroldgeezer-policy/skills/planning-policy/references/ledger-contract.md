@@ -30,6 +30,10 @@ lowercase 64-hex-character SHA-256 hash. Every version-2 lifecycle command
 compares the supplied or stored plan hash with that copy before changing or
 trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
+Every new version-2 run also stamps `retry_policy: escalating_remediation_v1`.
+Policy-less existing version-2 checkpoints and all version-1 ledgers retain
+their existing behavior; this policy does not change contract version 2 or its
+readiness gate.
 
 ## Version-2 lifecycle
 
@@ -75,13 +79,25 @@ The step-wide attempt count starts at 1 and may never exceed the leaf's
 version-2 `max_attempts` (1 through 5). The parent assigns each attempt a
 helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
 which the returned handoff echoes with the same `step_id` and `agent_id`; an
-agent cannot borrow another step's remaining attempts. A retry needs a bounded
-reason, safe relative evidence path when evidence exists, and a new progress fingerprint. The
-progress fingerprint is the SHA-256 of the canonical bounded return facts for
-the attempt, excluding volatile timestamps. If its value is unchanged from the
-previous attempt, reject the retry as `blocked:no_progress`. Once an attempted
-step reaches `max_attempts` without completion, mark it terminal
-`blocked:retry_exhausted` and do not create another current attempt.
+agent cannot borrow another step's remaining attempts. Under
+`escalating_remediation_v1`, the ledger is the sole retry owner. It may retry
+only an exact `failed:acceptance` return or `blocked:needs_higher_tier`; every
+other outcome is ineligible. An exact `failed:acceptance` gets at most one
+same-tier retry total, and only after bounded remediation. A
+`blocked:needs_higher_tier` escalates immediately. Later eligible retries use a
+higher mapped tier, may skip tiers, and stop at `deep` and `max_attempts`.
+
+Before creating a new current attempt, the ledger persists one bounded
+`retry-remediation-v1` artifact under the run. It binds `step_id`, prior
+`attempt_id`, the prior-return digest, diagnosis, action, reuse or fresh mode,
+next agent/host, target tier, and optional paired evidence. It records
+the current tier, whether the same-tier retry has been used (`same-tier-used`),
+the current assignment, and the remediation digest. Remediation cannot change
+the approved worktree, task, boundary, read/write sets, or identity semantics.
+The progress fingerprint is the SHA-256 of the canonical bounded return facts
+for the attempt, excluding volatile timestamps. The terminal precedence is repeated
+result (`blocked:no_progress`), then ineligible outcome, exhaustion
+(`blocked:retry_exhausted`), then tier ceiling; none creates another attempt.
 
 If changed paths, a failed acceptance result, or the return show that the
 assigned task/boundary/read/write sets no longer bound the work, mark the step

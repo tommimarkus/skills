@@ -32,7 +32,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   the parent alone uses its `init-v2`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py). Lifecycle and
-  retention commands do not replace approval or dispatch validation.
+  retention commands do not replace approval or dispatch validation. The ledger
+  is the sole retry owner: it records bounded remediation and chooses the next
+  mapped tier without changing the approved leaf contract.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never
