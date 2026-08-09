@@ -46,44 +46,47 @@ class PlanningLedgerTest(unittest.TestCase):
             ]
         )
 
-    def plan(self, count=2, max_attempts=2):
+    def plan(self, count=2, max_attempts=2, portable_tier="standard"):
         leaves = []
         units = []
         for n in range(count):
             sid = f"step{n}"
-            leaves.append(
-                {
-                    "id": sid,
-                    "dependencies": [],
-                    "task": "task",
-                    "boundary": "boundary",
-                    "read_set": ["src"],
-                    "write_set": ["src"],
-                    "settled_decisions": "decision",
-                    "size": "small",
-                    "portable_tier": "standard",
-                    "worktree_owner": "owner",
-                    "acceptance_command": "uv run test",
-                    "return_contract": "bounded-step-return-v1",
-                    "stop_conditions": ["missing_load_bearing_information"],
-                    "work_unit_id": sid,
-                    "max_attempts": max_attempts,
-                }
-            )
+            leaf = {
+                "id": sid,
+                "dependencies": [],
+                "task": "task",
+                "boundary": "boundary",
+                "read_set": ["src"],
+                "write_set": ["src"],
+                "settled_decisions": "decision",
+                "size": "small",
+                "portable_tier": portable_tier,
+                "worktree_owner": "owner",
+                "acceptance_command": "uv run test",
+                "return_contract": "bounded-step-return-v1",
+                "stop_conditions": ["missing_load_bearing_information"],
+                "work_unit_id": sid,
+                "max_attempts": max_attempts,
+            }
+            if portable_tier in {"analytical", "deep"}:
+                leaf["irreducible_unknown_or_risk"] = "retry behavior at the tier boundary"
+            leaves.append(leaf)
             units.append({"id": sid, "original_size": "small"})
         path = self.root / "plan.json"
-        path.write_text(
-            json.dumps(
-                {
-                    "contract_version": 2,
-                    "objective": "objective",
-                    "scope_summary": "scope",
-                    "approved_decisions": ["decision"],
-                    "leaves": leaves,
-                    "work_units": units,
-                }
-            )
-        )
+        plan = {
+            "contract_version": 2,
+            "objective": "objective",
+            "scope_summary": "scope",
+            "approved_decisions": ["decision"],
+            "leaves": leaves,
+            "work_units": units,
+        }
+        if portable_tier in {"analytical", "deep"}:
+            plan["analytical_heavy_exception"] = {
+                "rationale": "exercise retry tier boundaries",
+                "user_approved_by": "test fixture",
+            }
+        path.write_text(json.dumps(plan))
         return path
 
     def assignments(self, count=2):
@@ -104,7 +107,7 @@ class PlanningLedgerTest(unittest.TestCase):
         )
         return path
 
-    def init2(self, count=2, max_attempts=2, plan_path=None):
+    def init2(self, count=2, max_attempts=2, plan_path=None, portable_tier="standard"):
         code, data = self.call(
             *self.common,
             "init-v2",
@@ -112,7 +115,7 @@ class PlanningLedgerTest(unittest.TestCase):
             "parent",
             "--approved",
             "--plan-file",
-            str(plan_path or self.plan(count, max_attempts)),
+            str(plan_path or self.plan(count, max_attempts, portable_tier)),
             "--assignments-file",
             str(self.assignments(count)),
         )
@@ -226,6 +229,229 @@ class PlanningLedgerTest(unittest.TestCase):
             run,
             "--return-file",
             str(path),
+        )
+
+    def remediation(
+        self,
+        step,
+        target_tier=None,
+        executor_mode="fresh",
+        next_agent_id="next-agent",
+        next_harness="codex",
+        prior_return_sha256=None,
+        evidence=False,
+    ):
+        value = {
+            "schema": "retry-remediation-v1",
+            "step_id": step["id"],
+            "prior_attempt_id": step["attempt_id"],
+            "prior_return_sha256": prior_return_sha256 or step["return_sha256"],
+            "diagnosis": "acceptance failure is locally remediable",
+            "remediation_action": "apply the bounded correction and rerun acceptance",
+            "executor_mode": executor_mode,
+            "next_agent_id": next_agent_id,
+            "next_harness": next_harness,
+            "target_portable_tier": target_tier or step["current_tier"],
+        }
+        if evidence:
+            value.update(evidence_path="evidence/retry.json", sha256="d" * 64)
+        return value
+
+    def retry(self, run, remediation, agent_id=""):
+        path = self.root / "retry-remediation.json"
+        path.write_text(json.dumps(remediation))
+        arguments = [
+            *self.common,
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run,
+            "--step-id",
+            remediation["step_id"],
+            "--to",
+            "ready",
+            "--retry",
+            "--retry-remediation-file",
+            str(path),
+        ]
+        if agent_id:
+            arguments += ["--agent-id", agent_id]
+        return self.call(*arguments)
+
+    def test_new_v2_stamps_escalating_retry_state(self):
+        run = self.init2()
+        checkpoint = self.checkpoint(run)
+        self.assertEqual("escalating_remediation_v1", checkpoint["retry_policy"])
+        step = checkpoint["steps"]["step0"]
+        self.assertEqual("standard", step["current_tier"])
+        self.assertFalse(step["same_tier_retry_used"])
+        self.assertEqual({"agent_id": "", "harness": "codex"}, step["current_assignment"])
+        self.assertEqual("", step["retry_remediation_path"])
+        self.assertEqual("", step["retry_remediation_sha256"])
+
+    def test_policyless_v2_keeps_legacy_retry_behavior_without_new_state(self):
+        run = self.init2()
+        checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text())
+        checkpoint.pop("retry_policy")
+        for step in checkpoint["steps"].values():
+            for field in (
+                "current_tier",
+                "same_tier_retry_used",
+                "current_assignment",
+                "retry_remediation_path",
+                "retry_remediation_sha256",
+            ):
+                step.pop(field)
+        checkpoint_path.write_text(json.dumps(checkpoint))
+        before = checkpoint_path.read_bytes()
+        self.assertEqual(0, self.call(*self.common, "show", "--run-id", run)[0])
+        self.assertEqual(before, checkpoint_path.read_bytes())
+
+        step = self.start(run)
+        blocked = self.returned(step, "blocked", blockers=[self.blocker("arbitrary")])
+        self.assertEqual(0, self.record(run, blocked)[0])
+        code, _ = self.call(
+            *self.common,
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run,
+            "--step-id",
+            "step0",
+            "--to",
+            "ready",
+            "--agent-id",
+            "legacy-next",
+            "--retry",
+            "--summary",
+            "legacy evidence",
+        )
+        self.assertEqual(0, code)
+        current = self.checkpoint(run)
+        self.assertNotIn("retry_policy", current)
+        self.assertNotIn("current_tier", current["steps"]["step0"])
+
+    def test_same_tier_retry_persists_validated_remediation_and_assignment(self):
+        run = self.init2(max_attempts=3)
+        first = self.start(run, agent="first-agent")
+        returned = self.returned(
+            first,
+            "failed",
+            code=1,
+            blockers=[self.blocker("failed:acceptance", "focused acceptance failed")],
+        )
+        self.assertEqual(0, self.record(run, returned)[0])
+        failed = self.checkpoint(run)["steps"]["step0"]
+        approved_worktree = failed["assignment"]["worktree"]
+        remediation = self.remediation(
+            failed,
+            next_agent_id="fresh-agent",
+            next_harness="claude-code",
+            evidence=True,
+        )
+        code, result = self.retry(run, remediation)
+        self.assertEqual(0, code, result)
+
+        state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual("standard", state["current_tier"])
+        self.assertTrue(state["same_tier_retry_used"])
+        self.assertEqual(
+            {"agent_id": "fresh-agent", "harness": "claude-code"},
+            state["current_assignment"],
+        )
+        self.assertEqual("fresh-agent", state["agent_id"])
+        self.assertEqual(approved_worktree, state["assignment"]["worktree"])
+        artifact_path = (
+            self.root / "planning-policy/ledgers/plan" / run / state["retry_remediation_path"]
+        )
+        self.assertEqual(remediation, json.loads(artifact_path.read_text()))
+        self.assertEqual(ledger.digest(remediation), state["retry_remediation_sha256"])
+        events = (self.root / "planning-policy/ledgers/plan" / run / "events.jsonl").read_text()
+        self.assertNotIn(remediation["diagnosis"], events)
+
+    def test_retry_remediation_rejects_stale_identity_bad_mode_and_tier_decrease(self):
+        run = self.init2(max_attempts=3, portable_tier="analytical")
+        first = self.start(run, agent="first-agent")
+        self.assertEqual(
+            0,
+            self.record(
+                run,
+                self.returned(
+                    first,
+                    "failed",
+                    code=1,
+                    blockers=[self.blocker("failed:acceptance")],
+                ),
+            )[0],
+        )
+        failed = self.checkpoint(run)["steps"]["step0"]
+        invalid = (
+            self.remediation(failed, prior_return_sha256="0" * 64),
+            self.remediation(failed, executor_mode="reuse", next_agent_id="different-agent"),
+            self.remediation(failed, target_tier="standard"),
+        )
+        for remediation in invalid:
+            with self.subTest(remediation=remediation):
+                self.assertEqual(3, self.retry(run, remediation)[0])
+        valid = self.remediation(failed, executor_mode="reuse", next_agent_id="first-agent")
+        self.assertEqual(0, self.retry(run, valid)[0])
+
+    def test_needs_higher_tier_escalates_and_later_retry_cannot_stay_same_tier(self):
+        run = self.init2(max_attempts=4)
+        first = self.start(run, agent="first")
+        self.assertEqual(
+            0,
+            self.record(
+                run,
+                self.returned(
+                    first,
+                    "blocked",
+                    code=None,
+                    blockers=[self.blocker("blocked:needs_higher_tier")],
+                ),
+            )[0],
+        )
+        blocked = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(3, self.retry(run, self.remediation(blocked))[0])
+        self.assertEqual(
+            0,
+            self.retry(
+                run,
+                self.remediation(
+                    blocked, target_tier="analytical", next_agent_id="analytical-agent"
+                ),
+            )[0],
+        )
+        second = self.start_after_ready(run)
+        self.assertEqual(
+            0,
+            self.record(
+                run,
+                self.returned(
+                    second,
+                    "failed",
+                    code=1,
+                    blockers=[self.blocker("failed:acceptance")],
+                ),
+            )[0],
+        )
+        failed = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(
+            3,
+            self.retry(
+                run,
+                self.remediation(failed, target_tier="analytical", next_agent_id="same-tier-agent"),
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.retry(
+                run,
+                self.remediation(failed, target_tier="deep", next_agent_id="deep-agent"),
+            )[0],
         )
 
     def test_v1_lifecycle_byte_shape_and_disclosure(self):
@@ -450,34 +676,16 @@ class PlanningLedgerTest(unittest.TestCase):
     def test_retry_fingerprints_exhaustion_and_oversized(self):
         run = self.init2(max_attempts=2)
         step = self.start(run)
-        failed = self.returned(step, "failed", code=1, blockers=[self.blocker("failed_acceptance")])
+        failed = self.returned(step, "failed", code=1, blockers=[self.blocker("failed:acceptance")])
         self.assertEqual(0, self.record(run, failed)[0])
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
-                run,
-                "--step-id",
-                "step0",
-                "--to",
-                "ready",
-                "--agent-id",
-                "again",
-                "--retry",
-                "--summary",
-                "changed evidence",
-            )[0],
-        )
+        failed_state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(0, self.retry(run, self.remediation(failed_state))[0])
         step = self.start_after_ready(run)
         self.assertEqual(
             0,
             self.record(
                 run,
-                self.returned(step, "failed", code=1, blockers=[self.blocker("failed_acceptance")]),
+                self.returned(step, "failed", code=1, blockers=[self.blocker("failed:acceptance")]),
             )[0],
         )
         self.assertEqual("blocked", self.checkpoint(run)["steps"]["step0"]["status"])
@@ -519,28 +727,10 @@ class PlanningLedgerTest(unittest.TestCase):
     def test_repeated_noncompleted_fingerprint_stops_progress(self):
         run = self.init2()
         step = self.start(run)
-        value = self.returned(step, "blocked", blockers=[self.blocker("missing_input")])
+        value = self.returned(step, "failed", code=1, blockers=[self.blocker("failed:acceptance")])
         self.assertEqual(0, self.record(run, value)[0])
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
-                run,
-                "--step-id",
-                "step0",
-                "--to",
-                "ready",
-                "--agent-id",
-                "second",
-                "--retry",
-                "--summary",
-                "evidence",
-            )[0],
-        )
+        failed_state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(0, self.retry(run, self.remediation(failed_state))[0])
         step = self.start_after_ready(run)
         value["attempt_id"] = step["attempt_id"]
         value["agent_id"] = step["agent_id"]
@@ -550,14 +740,14 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("blocked:no_progress", state["reason"])
         self.assertFalse(state["retry_allowed"])
 
-    def test_reassignment_increments_once_and_requires_retry_reason(self):
+    def test_reassignment_increments_once_and_requires_retry_remediation(self):
         run = self.init2()
         step = self.start(run)
         self.assertEqual(
             0,
             self.record(
                 run,
-                self.returned(step, "failed", code=1, blockers=[self.blocker("failed_acceptance")]),
+                self.returned(step, "failed", code=1, blockers=[self.blocker("failed:acceptance")]),
             )[0],
         )
         self.assertEqual(
@@ -577,24 +767,13 @@ class PlanningLedgerTest(unittest.TestCase):
                 "second",
             )[0],
         )
+        failed_state = self.checkpoint(run)["steps"]["step0"]
         self.assertEqual(
             0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
+            self.retry(
                 run,
-                "--step-id",
-                "step0",
-                "--to",
-                "ready",
-                "--agent-id",
-                "second",
-                "--retry",
-                "--summary",
-                "new evidence",
+                self.remediation(failed_state, next_agent_id="second"),
+                agent_id="second",
             )[0],
         )
         state = self.checkpoint(run)["steps"]["step0"]
@@ -860,36 +1039,25 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.record(
-                run, self.returned(first, "blocked", blockers=[self.blocker("waiting", "first")])
-            )[0],
-        )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
                 run,
-                "--step-id",
-                "step0",
-                "--to",
-                "ready",
-                "--agent-id",
-                "second",
-                "--retry",
-                "--summary",
-                "changed evidence",
+                self.returned(
+                    first,
+                    "failed",
+                    code=1,
+                    blockers=[self.blocker("failed:acceptance", "first")],
+                ),
             )[0],
         )
+        first_state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(0, self.retry(run, self.remediation(first_state))[0])
         second = self.start_after_ready(run)
         changed = self.returned(
             second,
-            "blocked",
+            "failed",
+            code=1,
             blockers=[
                 {
-                    "code": "waiting",
+                    "code": "failed:acceptance",
                     "summary": "second",
                     "evidence_path": "evidence/two.json",
                     "sha256": "b" * 64,
@@ -905,34 +1073,28 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.record(
-                run, self.returned(first, "blocked", blockers=[self.blocker("waiting", "first")])
-            )[0],
-        )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
                 run,
-                "--step-id",
-                "step0",
-                "--to",
-                "ready",
-                "--agent-id",
-                "second",
-                "--retry",
-                "--summary",
-                "changed",
+                self.returned(
+                    first,
+                    "failed",
+                    code=1,
+                    blockers=[self.blocker("failed:acceptance", "first")],
+                ),
             )[0],
         )
+        first_state = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual(0, self.retry(run, self.remediation(first_state))[0])
         second = self.start_after_ready(run)
         self.assertEqual(
             0,
             self.record(
-                run, self.returned(second, "blocked", blockers=[self.blocker("waiting", "second")])
+                run,
+                self.returned(
+                    second,
+                    "failed",
+                    code=1,
+                    blockers=[self.blocker("failed:acceptance", "second")],
+                ),
             )[0],
         )
         state = self.checkpoint(run)["steps"]["step0"]

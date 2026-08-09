@@ -2,6 +2,7 @@
 """Parent-owned checkpoint ledger with byte-compatible legacy commands."""
 
 from __future__ import annotations
+
 import argparse
 import hashlib
 import importlib.util
@@ -16,10 +17,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-
-MAX_CHECKPOINT = 24 * 1024
+MAX_CHECKPOINT = 32 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
+MAX_REMEDIATION = 4 * 1024
 MAX_TOKENS = 1200
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
@@ -89,6 +90,27 @@ RETENTION_DAYS = {
     "superseded": 7,
 }
 LIFECYCLE_FIELDS = {"run_status", "outcome", "closed_at", "purge_after"}
+ESCALATING_RETRY_POLICY = "escalating_remediation_v1"
+PORTABLE_TIERS = ("mechanical", "standard", "analytical", "deep")
+RETRY_STATE_FIELDS = {
+    "current_tier",
+    "same_tier_retry_used",
+    "current_assignment",
+    "retry_remediation_path",
+    "retry_remediation_sha256",
+}
+REMEDIATION_FIELDS = {
+    "schema",
+    "step_id",
+    "prior_attempt_id",
+    "prior_return_sha256",
+    "diagnosis",
+    "remediation_action",
+    "executor_mode",
+    "next_agent_id",
+    "next_harness",
+    "target_portable_tier",
+}
 
 
 class Error(Exception):
@@ -374,6 +396,8 @@ def active_run(data):
 
 
 def validate_steps2(data, leafs):
+    if data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}:
+        raise Error("invalid v2 retry policy")
     steps = data.get("steps")
     if not isinstance(steps, dict) or set(steps) != set(leafs):
         raise Error("blocked:plan_tampered")
@@ -390,6 +414,31 @@ def validate_steps2(data, leafs):
             or not isinstance(step.get("retry_allowed"), bool)
         ):
             raise Error("blocked:plan_tampered")
+        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+            assignment = step.get("current_assignment")
+            if (
+                not RETRY_STATE_FIELDS.issubset(step)
+                or step.get("current_tier") not in PORTABLE_TIERS
+                or PORTABLE_TIERS.index(step["current_tier"])
+                < PORTABLE_TIERS.index(leafs[sid]["portable_tier"])
+                or not isinstance(step.get("same_tier_retry_used"), bool)
+                or not isinstance(assignment, dict)
+                or set(assignment) != {"agent_id", "harness"}
+                or assignment.get("agent_id") != step.get("agent_id")
+                or not isinstance(assignment.get("harness"), str)
+                or not 1 <= len(assignment["harness"]) <= 160
+                or not assignment["harness"].strip()
+                or not isinstance(step.get("retry_remediation_path"), str)
+                or not isinstance(step.get("retry_remediation_sha256"), str)
+                or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
+            ):
+                raise Error("blocked:plan_tampered")
+            if step["retry_remediation_path"]:
+                rel(step["retry_remediation_path"], "retry remediation path")
+                require_sha256(
+                    step["retry_remediation_sha256"],
+                    "blocked:plan_tampered",
+                )
     dependency_order(steps)
 
 
@@ -698,6 +747,14 @@ def init2(args):
             "return_path": "",
             "return_sha256": "",
             "retry_allowed": True,
+            "current_tier": leaf["portable_tier"],
+            "same_tier_retry_used": False,
+            "current_assignment": {
+                "agent_id": "",
+                "harness": assigned[sid]["harness"],
+            },
+            "retry_remediation_path": "",
+            "retry_remediation_sha256": "",
             **CLOSEOUT_FIELDS,
         }
         for sid, leaf in leaves.items()
@@ -718,6 +775,7 @@ def init2(args):
         "closed_at": None,
         "purge_after": None,
         "close_reason": "",
+        "retry_policy": ESCALATING_RETRY_POLICY,
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
@@ -736,6 +794,7 @@ def init2(args):
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": data["plan_hash"],
+        "retry_policy": data["retry_policy"],
     }
 
 
@@ -753,6 +812,7 @@ def load2(args):
         data.get("schema") != 2
         or data.get("plan_id") != args.plan_id
         or data.get("run_id") != args.run_id
+        or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
     ):
         raise Error("invalid v2 checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
@@ -767,6 +827,7 @@ def load2(args):
         for field, default in CLOSEOUT_FIELDS.items():
             step.setdefault(field, default)
     validate_steps2(data, leafs)
+    validate_retry_artifacts(directory, data)
     lifecycle(data)
     return directory, data, plan, leafs
 
@@ -785,22 +846,191 @@ def advance(step, old, expected, target, summary):
     step.update(status=target, reason=summary[:480])
 
 
-def ready(args, data, step):
+def valid_remediation(value):
+    if not isinstance(value, dict) or len(canon(value)) > MAX_REMEDIATION:
+        raise Error("retry-remediation-v1 exceeds 4 KiB")
+    optional = {"evidence_path", "sha256"}
+    if (
+        set(value) - (REMEDIATION_FIELDS | optional)
+        or REMEDIATION_FIELDS - set(value)
+        or value.get("schema") != "retry-remediation-v1"
+        or value.get("executor_mode") not in {"reuse", "fresh"}
+        or value.get("target_portable_tier") not in PORTABLE_TIERS
+    ):
+        raise Error("invalid retry-remediation-v1 schema")
+    ident(value["step_id"], "remediation step id")
+    uuid4(value["prior_attempt_id"], "prior attempt id")
+    require_sha256(value["prior_return_sha256"], "invalid prior return sha256")
+    for field in ("diagnosis", "remediation_action"):
+        if not isinstance(value[field], str) or not value[field] or len(value[field]) > 480:
+            raise Error(f"retry remediation requires bounded {field}")
+    if (
+        not isinstance(value["next_agent_id"], str)
+        or not 1 <= len(value["next_agent_id"]) <= 128
+        or not value["next_agent_id"].strip()
+    ):
+        raise Error("retry remediation requires bounded next_agent_id")
+    if (
+        not isinstance(value["next_harness"], str)
+        or not 1 <= len(value["next_harness"]) <= 160
+        or not value["next_harness"].strip()
+    ):
+        raise Error("retry remediation requires bounded next_harness")
+    if ("evidence_path" in value) != ("sha256" in value):
+        raise Error("retry remediation evidence digest pair required")
+    if "evidence_path" in value:
+        rel(value["evidence_path"], "retry remediation evidence")
+        require_sha256(value["sha256"], "invalid retry remediation evidence sha256")
+    return value
+
+
+def read_remediation(path):
+    try:
+        raw = Path(path).read_bytes()
+        value = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid retry-remediation-v1") from exc
+    if len(raw) > MAX_REMEDIATION:
+        raise Error("retry-remediation-v1 exceeds 4 KiB")
+    return valid_remediation(value)
+
+
+def current_return(directory, step):
+    if not step.get("return_path") or not step.get("return_sha256"):
+        raise Error("retry requires a current prior return")
+    path = directory / rel(step["return_path"], "return path")
+    value = read_json(path, "current prior return is missing")
+    if digest(value) != step["return_sha256"]:
+        raise Error("current prior return digest mismatch")
+    return value
+
+
+def retry_outcome(value):
+    blockers = value.get("blockers", [])
+    if not isinstance(blockers, list) or len(blockers) != 1:
+        return ""
+    code = blockers[0].get("code") if isinstance(blockers[0], dict) else ""
+    if value.get("status") == "failed" and code == "failed:acceptance":
+        return "failed:acceptance"
+    if value.get("status") == "blocked" and code == "blocked:needs_higher_tier":
+        return "blocked:needs_higher_tier"
+    return ""
+
+
+def needs_higher_tier(step, outcome):
+    return outcome == "blocked:needs_higher_tier" or (
+        outcome == "failed:acceptance"
+        and (step["same_tier_retry_used"] or step["attempt_count"] > 1)
+    )
+
+
+def store_remediation(args, directory, step):
+    if not args.retry_remediation_file:
+        raise Error("retry requires --retry-remediation-file")
+    value = read_remediation(args.retry_remediation_file)
+    prior = current_return(directory, step)
+    if (
+        value["step_id"] != step["id"]
+        or value["prior_attempt_id"] != step["attempt_id"]
+        or value["prior_return_sha256"] != step["return_sha256"]
+        or digest(prior) != value["prior_return_sha256"]
+    ):
+        raise Error("stale retry remediation identity")
+    outcome = retry_outcome(prior)
+    if not outcome:
+        raise Error("prior outcome is not retry eligible")
+    if value["executor_mode"] == "reuse":
+        if value["next_agent_id"] != step["agent_id"]:
+            raise Error("reuse remediation must keep the current agent identity")
+    elif value["next_agent_id"] == step["agent_id"]:
+        raise Error("fresh remediation requires a new agent identity")
+    if args.agent_id and args.agent_id != value["next_agent_id"]:
+        raise Error("--agent-id does not match retry remediation")
+    current = PORTABLE_TIERS.index(step["current_tier"])
+    target = PORTABLE_TIERS.index(value["target_portable_tier"])
+    if target < current:
+        raise Error("retry target tier cannot decrease")
+    if outcome == "blocked:needs_higher_tier" and target == current:
+        raise Error("blocked:needs_higher_tier requires a higher target tier")
+    if step["attempt_count"] > 1 and target == current:
+        raise Error("later eligible retries require a higher target tier")
+    if target == current and step["same_tier_retry_used"]:
+        raise Error("same-tier retry already used")
+    destination = directory / "retry-remediations" / step["id"] / f"{step['attempt_id']}.json"
+    write(destination, value, MAX_REMEDIATION)
+    return value, str(destination.relative_to(directory)), digest(value), target == current
+
+
+def validate_retry_artifacts(directory, data):
+    if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
+        return
+    for step in data["steps"].values():
+        path = step["retry_remediation_path"]
+        if not path:
+            continue
+        value = read_json(directory / path, "missing retry remediation artifact")
+        valid_remediation(value)
+        expected_path = (
+            Path("retry-remediations") / step["id"] / f"{value['prior_attempt_id']}.json"
+        )
+        if (
+            value["step_id"] != step["id"]
+            or path != str(expected_path)
+            or value["target_portable_tier"] != step["current_tier"]
+            or value["next_agent_id"] != step["current_assignment"]["agent_id"]
+            or value["next_harness"] != step["current_assignment"]["harness"]
+            or digest(value) != step["retry_remediation_sha256"]
+        ):
+            raise Error("retry remediation artifact digest mismatch")
+
+
+def ready(args, directory, data, step):
     if not isinstance(args.agent_id, str) or not 1 <= len(args.agent_id) <= 128:
-        raise Error("ready requires bounded --agent-id")
+        if step["status"] == "pending" or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
+            raise Error("ready requires bounded --agent-id")
     if step["status"] not in {"pending", "blocked", "failed"} or not step["retry_allowed"]:
         raise Error("step cannot be readied")
-    if step["status"] != "pending" and (not args.retry or not args.summary):
-        raise Error("retry requires --retry and bounded --summary")
+    retry_state = None
+    if step["status"] != "pending":
+        if not args.retry:
+            raise Error("retry requires --retry")
+        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+            retry_state = store_remediation(args, directory, step)
+        elif not args.summary:
+            raise Error("retry requires --retry and bounded --summary")
+    elif args.retry or args.retry_remediation_file:
+        raise Error("initial ready transition is not a retry")
     if any(data["steps"][dep]["status"] != "cleaned" for dep in step["dependencies"]):
         raise Error("dependencies are not cleaned")
     if step["attempt_count"] >= step["max_attempts"]:
         raise Error("blocked:retry_exhausted")
+    if retry_state:
+        remediation, path, remediation_sha, same_tier = retry_state
+        step.update(
+            current_tier=remediation["target_portable_tier"],
+            same_tier_retry_used=step["same_tier_retry_used"] or same_tier,
+            current_assignment={
+                "agent_id": remediation["next_agent_id"],
+                "harness": remediation["next_harness"],
+            },
+            retry_remediation_path=path,
+            retry_remediation_sha256=remediation_sha,
+        )
+        next_agent_id = remediation["next_agent_id"]
+        reason = remediation["diagnosis"]
+    else:
+        next_agent_id = args.agent_id
+        reason = args.summary or "ready"
+        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+            step["current_assignment"] = {
+                "agent_id": next_agent_id,
+                "harness": step["assignment"]["harness"],
+            }
     step["attempt_count"] += 1
-    step["agent_id"] = args.agent_id
+    step["agent_id"] = next_agent_id
     step["attempt_id"] = str(uuid.uuid4())
     step["status"] = "ready"
-    step["reason"] = (args.summary or "ready")[:480]
+    step["reason"] = reason[:480]
 
 
 def transition2(args):
@@ -809,7 +1039,7 @@ def transition2(args):
     old = step["status"]
     new = args.to
     if new == "ready":
-        ready(args, data, step)
+        ready(args, directory, data, step)
     elif new == "in_progress":
         advance(step, old, "ready", new, args.summary or "in progress")
     elif new in {"integrated", "cleaned"}:
@@ -1181,6 +1411,8 @@ def record(args):
             "blocked:no_progress",
             "repeated non-completed progress fingerprint",
         )
+    elif data.get("retry_policy") == ESCALATING_RETRY_POLICY and not retry_outcome(value):
+        step.update(status=value["status"], retry_allowed=False)
     elif step["attempt_count"] >= step["max_attempts"]:
         stop_step(
             step,
@@ -1189,9 +1421,25 @@ def record(args):
             "blocked:retry_exhausted",
             "attempt limit reached with differing progress fingerprint",
         )
+    elif (
+        data.get("retry_policy") == ESCALATING_RETRY_POLICY
+        and needs_higher_tier(step, retry_outcome(value))
+        and step["current_tier"] == PORTABLE_TIERS[-1]
+    ):
+        stop_step(
+            step,
+            "blocked",
+            "blocked:retry_ceiling_reached",
+            "blocked:retry_ceiling_reached",
+            "eligible retry requires a tier above deep",
+        )
     else:
         step["status"] = value["status"]
-    if step["reason"] not in {"blocked:no_progress", "blocked:retry_exhausted"}:
+    if step["reason"] not in {
+        "blocked:no_progress",
+        "blocked:retry_exhausted",
+        "blocked:retry_ceiling_reached",
+    }:
         step["blockers"] = value["blockers"]
     event(
         directory,
@@ -1223,6 +1471,7 @@ def safe_run_contents(directory):
         "events.jsonl",
         "plan.json",
         "returns",
+        "retry-remediations",
         "worktree-results",
     }
     children = list(directory.iterdir())
@@ -1261,6 +1510,22 @@ def safe_run_contents(directory):
                 item.is_symlink() or not item.is_file() for item in step_dir.iterdir()
             ):
                 raise Error("unexpected worktree-results contents")
+    remediations = directory / "retry-remediations"
+    if remediations.exists():
+        if remediations.is_symlink() or not remediations.is_dir():
+            raise Error("unexpected retry-remediations contents")
+        for step_dir in remediations.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected retry-remediations contents")
+            ident(step_dir.name, "retry-remediation step id")
+            for remediation in step_dir.iterdir():
+                if (
+                    remediation.is_symlink()
+                    or not remediation.is_file()
+                    or remediation.suffix != ".json"
+                ):
+                    raise Error("unexpected retry-remediations contents")
+                uuid4(remediation.stem, "retry-remediation attempt id")
 
 
 def classify_legacy(directory, current):
@@ -1312,7 +1577,7 @@ def classify_v2(plan_id, directory, current):
     if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
         raise Error("v2 directory identity mismatch")
     if len(canon(checkpoint) + b"\n") > MAX_CHECKPOINT:
-        raise Error("v2 checkpoint exceeds 16 KiB")
+        raise Error("v2 checkpoint exceeds bounded limit")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != checkpoint.get("plan_hash") or not SHA.fullmatch(
         checkpoint.get("plan_hash", "")
@@ -1321,11 +1586,17 @@ def classify_v2(plan_id, directory, current):
     if not plan_validator()(plan).get("dispatch_ready"):
         raise Error("blocked:plan_tampered")
     validate_steps2(checkpoint, leaves_by_id(plan))
+    validate_retry_artifacts(directory, checkpoint)
     returns = directory / "returns"
     if returns.exists() and any(
         step_dir.name not in checkpoint["steps"] for step_dir in returns.iterdir()
     ):
         raise Error("unexpected returns step")
+    remediations = directory / "retry-remediations"
+    if remediations.exists() and any(
+        step_dir.name not in checkpoint["steps"] for step_dir in remediations.iterdir()
+    ):
+        raise Error("unexpected retry-remediations step")
     lifecycle(checkpoint)
     validate_events2(directory, checkpoint)
     entry = {
@@ -1563,6 +1834,14 @@ def summary(data):
             "agent_id": s["agent_id"],
             "progress_fingerprint": s["fingerprints"][-1] if s["fingerprints"] else "",
             "reason": s["reason"][:480],
+            **(
+                {
+                    "current_tier": s["current_tier"],
+                    "current_assignment": s["current_assignment"],
+                }
+                if data.get("retry_policy") == ESCALATING_RETRY_POLICY
+                else {}
+            ),
         }
         for s in ordered_steps(steps)
     ]
@@ -1583,6 +1862,11 @@ def summary(data):
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
+        **(
+            {"retry_policy": data["retry_policy"]}
+            if data.get("retry_policy") == ESCALATING_RETRY_POLICY
+            else {}
+        ),
         "run_status": data["run_status"],
         "outcome": data["outcome"],
         "closed_at": data["closed_at"],
@@ -1634,6 +1918,11 @@ def show(args):
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
             "plan_hash": data["plan_hash"],
+            **(
+                {"retry_policy": data["retry_policy"]}
+                if data.get("retry_policy") == ESCALATING_RETRY_POLICY
+                else {}
+            ),
             "run_status": data["run_status"],
             "outcome": data["outcome"],
             "closed_at": data["closed_at"],
@@ -1657,6 +1946,17 @@ def show(args):
                 "integration_result_sha256": step["integration_result_sha256"],
                 "cleanup_result_path": step["cleanup_result_path"],
                 "cleanup_result_sha256": step["cleanup_result_sha256"],
+                **(
+                    {
+                        "current_tier": step["current_tier"],
+                        "same_tier_retry_used": step["same_tier_retry_used"],
+                        "current_assignment": step["current_assignment"],
+                        "retry_remediation_path": step["retry_remediation_path"],
+                        "retry_remediation_sha256": step["retry_remediation_sha256"],
+                    }
+                    if data.get("retry_policy") == ESCALATING_RETRY_POLICY
+                    else {}
+                ),
             },
             "omitted_blockers": 0,
         }
@@ -1693,6 +1993,11 @@ def validate(args):
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
+        **(
+            {"retry_policy": data["retry_policy"]}
+            if data.get("retry_policy") == ESCALATING_RETRY_POLICY
+            else {}
+        ),
         "run_status": data["run_status"],
         "outcome": data["outcome"],
         "closed_at": data["closed_at"],
@@ -1725,6 +2030,7 @@ def parse():
     trans.add_argument("--agent-id", default="")
     trans.add_argument("--summary", default="")
     trans.add_argument("--retry", action="store_true")
+    trans.add_argument("--retry-remediation-file", default="")
     trans.add_argument("--evidence-path", default="")
     trans.add_argument("--blocker-code", default="")
     trans.add_argument("--worktree-result", default="")

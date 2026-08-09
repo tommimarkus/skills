@@ -33,44 +33,54 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             code = ledger.main(arguments)
         return code, json.loads(stream.getvalue())
 
-    def plan(self, plan_id="plan", count=2, dependent=False):
+    def plan(
+        self,
+        plan_id="plan",
+        count=2,
+        dependent=False,
+        max_attempts=2,
+        portable_tier="standard",
+    ):
         path = self.root / f"{plan_id}-plan.json"
         leaves = []
         for number in range(count):
             step_id = f"step{number}"
-            leaves.append(
-                {
-                    "id": step_id,
-                    "dependencies": ["step0"] if dependent and number == 1 else [],
-                    "task": "task",
-                    "boundary": "boundary",
-                    "read_set": ["src"],
-                    "write_set": ["src"],
-                    "settled_decisions": "settled",
-                    "size": "small",
-                    "portable_tier": "standard",
-                    "worktree_owner": "owner",
-                    "acceptance_command": "uv run test",
-                    "return_contract": "bounded-step-return-v1",
-                    "stop_conditions": ["missing_load_bearing_information"],
-                    "work_unit_id": step_id,
-                    "max_attempts": 2,
-                }
-            )
-        path.write_text(
-            json.dumps(
-                {
-                    "contract_version": 2,
-                    "objective": "objective",
-                    "scope_summary": "scope",
-                    "approved_decisions": ["settled"],
-                    "leaves": leaves,
-                    "work_units": [
-                        {"id": f"step{number}", "original_size": "small"} for number in range(count)
-                    ],
-                }
-            )
-        )
+            leaf = {
+                "id": step_id,
+                "dependencies": ["step0"] if dependent and number == 1 else [],
+                "task": "task",
+                "boundary": "boundary",
+                "read_set": ["src"],
+                "write_set": ["src"],
+                "settled_decisions": "settled",
+                "size": "small",
+                "portable_tier": portable_tier,
+                "worktree_owner": "owner",
+                "acceptance_command": "uv run test",
+                "return_contract": "bounded-step-return-v1",
+                "stop_conditions": ["missing_load_bearing_information"],
+                "work_unit_id": step_id,
+                "max_attempts": max_attempts,
+            }
+            if portable_tier in {"analytical", "deep"}:
+                leaf["irreducible_unknown_or_risk"] = "retry terminal precedence"
+            leaves.append(leaf)
+        plan = {
+            "contract_version": 2,
+            "objective": "objective",
+            "scope_summary": "scope",
+            "approved_decisions": ["settled"],
+            "leaves": leaves,
+            "work_units": [
+                {"id": f"step{number}", "original_size": "small"} for number in range(count)
+            ],
+        }
+        if portable_tier in {"analytical", "deep"}:
+            plan["analytical_heavy_exception"] = {
+                "rationale": "exercise retry terminal precedence",
+                "user_approved_by": "test fixture",
+            }
+        path.write_text(json.dumps(plan))
         return path
 
     def assignments(self, plan_id="plan", count=2):
@@ -91,7 +101,14 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         )
         return path
 
-    def init2(self, plan_id="plan", count=2, dependent=False):
+    def init2(
+        self,
+        plan_id="plan",
+        count=2,
+        dependent=False,
+        max_attempts=2,
+        portable_tier="standard",
+    ):
         code, result = self.call(
             *self.common(plan_id),
             "init-v2",
@@ -99,7 +116,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             "parent",
             "--approved",
             "--plan-file",
-            str(self.plan(plan_id, count, dependent)),
+            str(self.plan(plan_id, count, dependent, max_attempts, portable_tier)),
             "--assignments-file",
             str(self.assignments(plan_id, count)),
         )
@@ -167,6 +184,164 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             "--return-file",
             str(path),
         )
+
+    def eligible_return(self, step, outcome="failed:acceptance", summary="eligible"):
+        status = "failed" if outcome == "failed:acceptance" else "blocked"
+        value = self.returned(step, status)
+        value["acceptance"]["exit_code"] = 1 if status == "failed" else None
+        value["acceptance"]["summary"] = summary
+        value["blockers"] = [{"code": outcome, "summary": summary}]
+        return value
+
+    def retry(self, plan_id, run_id, step, target_tier, next_agent="next-agent"):
+        remediation = {
+            "schema": "retry-remediation-v1",
+            "step_id": step["id"],
+            "prior_attempt_id": step["attempt_id"],
+            "prior_return_sha256": step["return_sha256"],
+            "diagnosis": "bounded retry diagnosis",
+            "remediation_action": "bounded retry action",
+            "executor_mode": "fresh",
+            "next_agent_id": next_agent,
+            "next_harness": "codex",
+            "target_portable_tier": target_tier,
+        }
+        path = self.root / f"{plan_id}-retry-remediation.json"
+        path.write_text(json.dumps(remediation))
+        return self.call(
+            *self.common(plan_id),
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--step-id",
+            step["id"],
+            "--to",
+            "ready",
+            "--retry",
+            "--retry-remediation-file",
+            str(path),
+        )
+
+    def continue_ready(self, plan_id, run_id, step_id="step0"):
+        code, result = self.call(
+            *self.common(plan_id),
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--step-id",
+            step_id,
+            "--to",
+            "in_progress",
+        )
+        self.assertEqual(0, code, result)
+        return self.checkpoint(plan_id, run_id)["steps"][step_id]
+
+    def test_repeated_result_precedes_exhaustion_and_ceiling(self):
+        repeated_run = self.init2("repeated", max_attempts=2, portable_tier="deep")
+        first = self.start("repeated", repeated_run, "step0")
+        repeated = self.eligible_return(first, summary="same failure")
+        self.assertEqual(0, self.record("repeated", repeated_run, repeated)[0])
+        failed = self.checkpoint("repeated", repeated_run)["steps"]["step0"]
+        self.assertEqual(0, self.retry("repeated", repeated_run, failed, "deep")[0])
+        second = self.continue_ready("repeated", repeated_run)
+        repeated["attempt_id"] = second["attempt_id"]
+        repeated["agent_id"] = second["agent_id"]
+        self.assertEqual(0, self.record("repeated", repeated_run, repeated)[0])
+        state = self.checkpoint("repeated", repeated_run)["steps"]["step0"]
+        self.assertEqual("blocked:no_progress", state["reason"])
+
+    def test_ineligible_outcome_precedes_exhaustion(self):
+        ineligible_run = self.init2("ineligible", max_attempts=1)
+        step = self.start("ineligible", ineligible_run, "step0")
+        arbitrary = self.returned(step, "blocked")
+        arbitrary["blockers"] = [{"code": "blocked:missing_input", "summary": "missing"}]
+        self.assertEqual(0, self.record("ineligible", ineligible_run, arbitrary)[0])
+        state = self.checkpoint("ineligible", ineligible_run)["steps"]["step0"]
+        self.assertFalse(state["retry_allowed"])
+        self.assertEqual("blocked:missing_input", state["blockers"][0]["code"])
+
+    def test_attempt_exhaustion_precedes_tier_ceiling(self):
+        exhausted_run = self.init2("exhausted", max_attempts=2, portable_tier="deep")
+        first = self.start("exhausted", exhausted_run, "step0")
+        self.assertEqual(
+            0,
+            self.record("exhausted", exhausted_run, self.eligible_return(first))[0],
+        )
+        failed = self.checkpoint("exhausted", exhausted_run)["steps"]["step0"]
+        self.assertEqual(0, self.retry("exhausted", exhausted_run, failed, "deep")[0])
+        second = self.continue_ready("exhausted", exhausted_run)
+        self.assertEqual(
+            0,
+            self.record(
+                "exhausted",
+                exhausted_run,
+                self.eligible_return(second, "blocked:needs_higher_tier", "higher needed"),
+            )[0],
+        )
+        state = self.checkpoint("exhausted", exhausted_run)["steps"]["step0"]
+        self.assertEqual("blocked:retry_exhausted", state["reason"])
+
+    def test_deep_retry_that_requires_escalation_reaches_ceiling(self):
+        ceiling_run = self.init2("ceiling", max_attempts=3, portable_tier="deep")
+        step = self.start("ceiling", ceiling_run, "step0")
+        self.assertEqual(
+            0,
+            self.record(
+                "ceiling",
+                ceiling_run,
+                self.eligible_return(step, "blocked:needs_higher_tier", "higher needed"),
+            )[0],
+        )
+        state = self.checkpoint("ceiling", ceiling_run)["steps"]["step0"]
+        self.assertEqual("blocked:retry_ceiling_reached", state["reason"])
+
+    def test_retry_remediation_is_bounded_and_exact(self):
+        run_id = self.init2("bounded", max_attempts=3)
+        step = self.start("bounded", run_id, "step0")
+        self.assertEqual(0, self.record("bounded", run_id, self.eligible_return(step))[0])
+        failed = self.checkpoint("bounded", run_id)["steps"]["step0"]
+        base = {
+            "schema": "retry-remediation-v1",
+            "step_id": failed["id"],
+            "prior_attempt_id": failed["attempt_id"],
+            "prior_return_sha256": failed["return_sha256"],
+            "diagnosis": "diagnosis",
+            "remediation_action": "action",
+            "executor_mode": "fresh",
+            "next_agent_id": "next-agent",
+            "next_harness": "codex",
+            "target_portable_tier": "standard",
+        }
+        invalid = (
+            {**base, "diagnosis": "x" * 481},
+            {**base, "unexpected": True},
+            {**base, "evidence_path": "evidence/retry.json"},
+            {**base, "evidence_path": "../escape", "sha256": "a" * 64},
+        )
+        path = self.root / "bounded-invalid-remediation.json"
+        for value in invalid:
+            with self.subTest(value=value):
+                path.write_text(json.dumps(value))
+                code, _ = self.call(
+                    *self.common("bounded"),
+                    "transition",
+                    "--actor",
+                    "parent",
+                    "--run-id",
+                    run_id,
+                    "--step-id",
+                    "step0",
+                    "--to",
+                    "ready",
+                    "--retry",
+                    "--retry-remediation-file",
+                    str(path),
+                )
+                self.assertEqual(3, code)
 
     def worktree_result(self, plan_id, step_id, action="integrate"):
         integrated = "b" * 40
