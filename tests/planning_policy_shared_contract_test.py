@@ -26,6 +26,22 @@ def leaf(identifier, unit, tier="standard", dependencies=None):
     return result
 
 
+def v2_plan(*leaves, work_units=None, **overrides):
+    plan = {
+        "contract_version": 2,
+        "objective": "Implement the approved bounded change",
+        "scope_summary": "Only the assigned files and acceptance command are in scope.",
+        "approved_decisions": ["Use the settled shared contract shape."],
+        "work_units": work_units or [{"id": "u1", "original_size": "medium"}],
+        "leaves": list(leaves),
+    }
+    for item in plan["leaves"]:
+        item["max_attempts"] = 2
+        item["return_contract"] = "bounded-step-return-v1"
+    plan.update(overrides)
+    return plan
+
+
 class SharedContractTest(unittest.TestCase):
     def test_accepts_weighted_medium_ready_plan(self):
         plan = {"work_units": [{"id": "u1", "original_size": "medium"}, {"id": "u2", "original_size": "small"}], "leaves": [leaf("one", "u1"), leaf("two", "u2", "analytical")]}
@@ -121,6 +137,38 @@ class SharedContractTest(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertTrue(result["valid"])
         self.assertEqual(result["standard_ready_ratio"], 1.0)
+
+    def test_accepts_dispatch_ready_version_two_plan(self):
+        result = MODULE.validate(v2_plan(leaf("one", "u1")))
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["contract_version"], 2)
+        self.assertTrue(result["dispatch_ready"])
+        self.assertEqual(result["warnings"], [])
+
+    def test_legacy_unversioned_plan_is_valid_but_not_dispatch_ready(self):
+        result = MODULE.validate({"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [leaf("one", "u1")]})
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["contract_version"], 1)
+        self.assertFalse(result["dispatch_ready"])
+        self.assertTrue(any("legacy" in warning for warning in result["warnings"]))
+
+    def test_version_two_requires_bounded_fields_and_leaf_retry_contract(self):
+        invalid = v2_plan(leaf("one", "u1"), objective="", approved_decisions=[])
+        invalid["leaves"][0]["max_attempts"] = 6
+        invalid["leaves"][0]["return_contract"] = "commit and focused output"
+        result = MODULE.validate(invalid)
+        self.assertFalse(result["valid"])
+        self.assertFalse(result["dispatch_ready"])
+        self.assertTrue(any("objective" in error for error in result["errors"]))
+        self.assertTrue(any("approved_decisions" in error for error in result["errors"]))
+        self.assertTrue(any("max_attempts" in error for error in result["errors"]))
+        self.assertTrue(any("return_contract" in error for error in result["errors"]))
+
+    def test_rejects_unsupported_explicit_contract_version(self):
+        result = MODULE.validate({"contract_version": 1, "work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [leaf("one", "u1")]})
+        self.assertFalse(result["valid"])
+        self.assertIsNone(result["contract_version"])
+        self.assertFalse(result["dispatch_ready"])
 
 
 if __name__ == "__main__":

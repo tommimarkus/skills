@@ -6,6 +6,17 @@ their dispatch syntax without changing these fields.
 
 ## Plan JSON
 
+New executable plans use `contract_version: 2`. They also declare a concise
+`objective` (1–240 characters), `scope_summary` (1–480 characters), and
+`approved_decisions` (one to eight non-empty strings, each at most 240
+characters). These are the parent-approved facts a leaf may rely on; a leaf
+does not search for or invent a replacement decision.
+
+An unversioned existing plan remains a valid version-1 plan when it satisfies
+the version-1 fields below. The validator marks it `dispatch_ready: false` and
+emits a deprecation warning. Migrate it to version 2 before dispatching new
+delegated work. An explicit version other than `2` is invalid.
+
 `leaves` and `work_units` are arrays. Each executable leaf has non-empty
 `id`, `dependencies`, `task`, `boundary`, `read_set`, `write_set`,
 `settled_decisions`, `size`, `portable_tier`, `worktree_owner`, one string
@@ -16,7 +27,11 @@ identifiers (`[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*`, at most 64 characters).
 `stop_conditions` are arrays. Every leaf's `stop_conditions` includes the exact
 marker `missing_load_bearing_information`. `size` and a work unit's `original_size` are
 `small`, `medium`, or `large`; portable tiers are `mechanical`, `standard`,
-`analytical`, or `deep`.
+`analytical`, or `deep`. In version 2, each leaf also has `max_attempts`, an
+integer from 1 through 5, and its `return_contract` is exactly
+`bounded-step-return-v1`. The bounded return records the assigned step and
+attempt, status, changed paths, focused acceptance outcome, blockers, typed
+notes, commit hash, and any unstarted remainder; it never carries raw logs.
 
 The shared plan selects only `portable_tier`. The matching host adapter maps it
 to host execution settings; do not record per-leaf model or reasoning-effort
@@ -67,9 +82,12 @@ uv run python "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py"
 uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validate plan.json
 ```
 
-It emits one JSON object, exits `0` for a valid plan that passes the readiness
-gate (or its recorded exception), `1` for a contract failure, and `2` for usage
-or unreadable/invalid JSON.
+It emits one JSON object with `contract_version`, `dispatch_ready`, and
+`warnings`, as well as validity and readiness facts. It exits `0` for a valid
+plan that passes the readiness gate (or its recorded exception), `1` for a
+contract failure, and `2` for usage or unreadable/invalid JSON. Only a valid
+version-2 plan is dispatch-ready; a valid unversioned version-1 plan is
+inspection-compatible but has a deprecation warning and cannot be dispatched.
 
 ## Parent ledger helper
 
@@ -84,3 +102,5 @@ uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <pla
 The parent calls `init` once, `transition` for lifecycle/retry changes, `show`
 to rehydrate a bounded summary, and `validate` before handoff or closeout.
 Mutations require `--actor parent`; retain bounded evidence paths, not raw logs.
+Read [ledger contract](ledger-contract.md) before initializing or resuming that
+parent-owned ledger.

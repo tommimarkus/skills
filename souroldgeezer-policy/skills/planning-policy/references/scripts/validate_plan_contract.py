@@ -19,6 +19,8 @@ REQUIRED = (
     "settled_decisions", "size", "portable_tier", "worktree_owner",
     "acceptance_command", "return_contract", "stop_conditions", "work_unit_id",
 )
+V2_REQUIRED = ("contract_version", "objective", "scope_summary", "approved_decisions")
+V2_RETURN_CONTRACT = "bounded-step-return-v1"
 
 
 def nonempty(value: Any) -> bool:
@@ -36,10 +38,52 @@ def vague_audit_question(value: Any) -> bool:
     return normalized in {"review risks", "review for risks", "review the risks", "risk review", "risks"}
 
 
+def nonempty_string_in_range(value: Any, minimum: int, maximum: int) -> bool:
+    return isinstance(value, str) and minimum <= len(value.strip()) <= maximum
+
+
+def contract_result(contract_version: int | None, dispatch_ready: bool, warnings: list[str],
+                    errors: list[str], ratio: float = 0.0, ready_weight: int = 0,
+                    total_weight: int = 0, exception_valid: bool = False) -> dict[str, Any]:
+    return {
+        "valid": not errors,
+        "contract_version": contract_version,
+        "dispatch_ready": dispatch_ready and not errors,
+        "warnings": warnings,
+        "standard_ready_ratio": ratio,
+        "ready_weight": ready_weight,
+        "total_weight": total_weight,
+        "analytical_heavy_exception": exception_valid,
+        "errors": errors,
+    }
+
+
 def validate(plan: Any) -> dict[str, Any]:
     errors: list[str] = []
+    warnings: list[str] = []
     if not isinstance(plan, dict):
-        return {"valid": False, "standard_ready_ratio": 0.0, "errors": ["plan must be an object"]}
+        return contract_result(None, False, warnings, ["plan must be an object"])
+    raw_version = plan.get("contract_version")
+    if raw_version is None:
+        contract_version = 1
+        warnings.append("unversioned plan is legacy contract version 1; migrate to contract_version 2 before dispatch")
+    elif raw_version == 2 and isinstance(raw_version, int):
+        contract_version = 2
+        for field in V2_REQUIRED:
+            if field not in plan:
+                errors.append(f"{field} is required for contract version 2")
+        if not nonempty_string_in_range(plan.get("objective"), 1, 240):
+            errors.append("objective must be a non-empty string from 1 to 240 characters")
+        if not nonempty_string_in_range(plan.get("scope_summary"), 1, 480):
+            errors.append("scope_summary must be a non-empty string from 1 to 480 characters")
+        decisions = plan.get("approved_decisions")
+        if not isinstance(decisions, list) or not 1 <= len(decisions) <= 8:
+            errors.append("approved_decisions must be an array containing 1 to 8 strings")
+        elif any(not nonempty_string_in_range(decision, 1, 240) for decision in decisions):
+            errors.append("approved_decisions entries must be non-empty strings from 1 to 240 characters")
+    else:
+        contract_version = None
+        errors.append("contract_version must be 2 when specified")
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:
@@ -110,6 +154,12 @@ def validate(plan: Any) -> dict[str, Any]:
                 errors.append(f"{prefix}.{field} is host-adapter controlled; select portable_tier instead")
         if not isinstance(leaf.get("acceptance_command"), str) or not leaf.get("acceptance_command", "").strip():
             errors.append(f"{prefix}.acceptance_command must be exactly one non-empty command string")
+        if contract_version == 2:
+            attempts = leaf.get("max_attempts")
+            if not isinstance(attempts, int) or isinstance(attempts, bool) or not 1 <= attempts <= 5:
+                errors.append(f"{prefix}.max_attempts must be an integer from 1 to 5 for contract version 2")
+            if leaf.get("return_contract") != V2_RETURN_CONTRACT:
+                errors.append(f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} for contract version 2")
         if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(leaf.get("irreducible_unknown_or_risk")):
             errors.append(f"{prefix}.irreducible_unknown_or_risk is required for analytical or deep work")
         unit_id = leaf.get("work_unit_id")
@@ -173,14 +223,8 @@ def validate(plan: Any) -> dict[str, Any]:
     exception_valid = isinstance(exception, dict) and nonempty(exception.get("rationale")) and nonempty(exception.get("user_approved_by"))
     if ratio < 0.60 and not exception_valid:
         errors.append("standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception")
-    return {
-        "valid": not errors,
-        "standard_ready_ratio": ratio,
-        "ready_weight": ready_weight,
-        "total_weight": total_weight,
-        "analytical_heavy_exception": exception_valid,
-        "errors": errors,
-    }
+    return contract_result(contract_version, contract_version == 2, warnings, errors, ratio,
+                           ready_weight, total_weight, exception_valid)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         plan = json.loads(args.plan.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        print(json.dumps({"valid": False, "standard_ready_ratio": 0.0, "errors": [str(error)]}, sort_keys=True))
+        print(json.dumps(contract_result(None, False, [], [str(error)]), sort_keys=True, separators=(",", ":")))
         return 2
     result = validate(plan)
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
