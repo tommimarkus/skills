@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -96,6 +97,44 @@ def base(args: argparse.Namespace) -> tuple[Path, Path, str, str]:
     if upstream.returncode == 0:
         raise Error("delegated branch must not have an upstream")
     return repo, leaf, branch, target
+
+
+def cleanup_base(args: argparse.Namespace) -> tuple[Path, Path, str, str]:
+    repo = Path(args.repo_root).resolve()
+    leaf = Path(args.worktree).resolve()
+    branch = args.branch
+    target = args.target
+    if not repo.is_dir():
+        raise Error("repository must exist")
+    if not BRANCH.fullmatch(branch) or not BRANCH.fullmatch(target):
+        raise Error("invalid branch or target")
+    if run(repo, "rev-parse", "--show-toplevel").stdout.strip() != str(repo):
+        raise Error("--repo-root must be the parent worktree root")
+    if run(repo, "symbolic-ref", "--short", "HEAD").stdout.strip() != target:
+        raise Error("parent worktree must be checked out on the exact target")
+    clean(repo, "parent")
+    inactive(repo, "parent")
+    return repo, leaf, branch, target
+
+
+def branch_tip(repo: Path, branch: str) -> str | None:
+    exists = run(repo, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}", check=False)
+    if exists.returncode == 1:
+        return None
+    if exists.returncode:
+        raise Error("cannot inspect delegated branch")
+    return resolve_commit(repo, f"refs/heads/{branch}")
+
+
+def require_no_upstream(repo: Path, branch: str) -> None:
+    upstream = run(
+        repo,
+        "for-each-ref",
+        "--format=%(upstream)",
+        f"refs/heads/{branch}",
+    ).stdout.strip()
+    if upstream:
+        raise Error("delegated branch must not have an upstream")
 
 
 def result_fields(
@@ -191,7 +230,7 @@ def read_integrated(path: str) -> dict[str, object]:
 
 
 def cleanup(args: argparse.Namespace) -> dict[str, object]:
-    repo, leaf, branch, target = base(args)
+    repo, leaf, branch, target = cleanup_base(args)
     integrated = read_integrated(args.integrated_result)
     expected = {
         "repo_root": str(repo),
@@ -202,11 +241,46 @@ def cleanup(args: argparse.Namespace) -> dict[str, object]:
     if any(integrated[key] != value for key, value in expected.items()):
         raise Error("integrated result does not own the exact branch/worktree")
     rebased = str(integrated["rebased_commit"])
-    if resolve_commit(leaf, "HEAD") != rebased or resolve_commit(repo, branch) != rebased:
-        raise Error("registered branch no longer matches the integrated commit")
+    if integrated["parent_after"] != rebased:
+        raise Error("integrated result does not record the fast-forward commit")
+
+    registered = worktrees(repo)
+    leaf_exists = os.path.lexists(leaf)
+    leaf_registered = leaf in registered
+    registered_branch = registered.get(leaf)
+    branch_worktrees = [path for path, value in registered.items() if value == branch]
+    if leaf_registered:
+        if not leaf_exists:
+            raise Error("stale worktree registration must be repaired before cleanup")
+        if registered_branch != branch:
+            raise Error("worktree is not registered on the exact branch")
+    else:
+        if leaf_exists:
+            raise Error("unexpected filesystem entry exists at the owned worktree path")
+        if branch_worktrees:
+            raise Error("delegated branch is registered at an unexpected worktree")
+
+    tip = branch_tip(repo, branch)
+    if tip is not None:
+        require_no_upstream(repo, branch)
+        if tip != rebased:
+            raise Error("delegated branch no longer matches the integrated commit")
+    if leaf_registered:
+        clean(leaf, "leaf")
+        inactive(leaf, "leaf")
+        if resolve_commit(leaf, "HEAD") != rebased or tip != rebased:
+            raise Error("registered branch no longer matches the integrated commit")
+
     parent_commit = resolve_commit(repo, target)
     if run(repo, "merge-base", "--is-ancestor", rebased, target, check=False).returncode:
-        raise Error("branch is not merged into target")
+        raise Error("integrated commit is not merged into target")
+    if tip is None:
+        return {
+            **integrated,
+            "action": "cleanup",
+            "parent_commit": parent_commit,
+        }
+
     merged = {
         line.removeprefix("+").strip()
         for line in run(
@@ -216,9 +290,10 @@ def cleanup(args: argparse.Namespace) -> dict[str, object]:
     if branch not in merged:
         raise Error("git branch --merged did not confirm the exact branch")
 
-    removed = run(repo, "worktree", "remove", str(leaf), check=False)
-    if removed.returncode:
-        raise Error("clean worktree removal failed; branch retained")
+    if leaf_registered:
+        removed = run(repo, "worktree", "remove", str(leaf), check=False)
+        if removed.returncode:
+            raise Error("clean worktree removal failed; branch retained")
     run(repo, "worktree", "prune")
     deleted = run(repo, "branch", "-d", branch, check=False)
     if deleted.returncode:

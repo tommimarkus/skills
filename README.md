@@ -175,9 +175,10 @@ running the same install command.
     The parent ingests bounded `planning-worktree-result-v1` evidence from the
     Git-policy helper, which rebases and fast-forward-only merges rather than
     routinely cherry-picking, then proves merged ancestry before non-force
-    cleanup. Dependencies become ready only after cleanup and start from the
-    then-current parent tip; `validate --closeout` requires every successful
-    leaf to be cleaned.
+    cleanup. Cleanup retries safely after partial removal by revalidating
+    recorded identity, branch state, and target ancestry. Dependencies become
+    ready only after cleanup and start from the then-current parent tip;
+    `validate --closeout` requires every successful leaf to be cleaned.
 
     The ledger records bounded lifecycle returns. Every handoff is one
     at-most-8-KiB `bounded-step-return-v1` JSON object with

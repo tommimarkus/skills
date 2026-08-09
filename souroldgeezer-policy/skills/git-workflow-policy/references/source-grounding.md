@@ -13,7 +13,11 @@ The delegated closeout helper exists because cherry-picked equivalent commits
 do not preserve branch ancestry: later non-force deletion correctly refuses
 them. Rebasing the owned branch onto the live parent tip and fast-forwarding
 preserves ancestry, while a separate merged-branch proof keeps cleanup
-recoverable and deterministic.
+recoverable and deterministic. Cleanup treats worktree removal and branch
+deletion as separate verified states so a process crash between them can be
+retried without weakening branch-tip, upstream, ancestry, registration, or
+filesystem-ownership checks. Once both owned artifacts are absent, target
+ancestry of the recorded integrated commit is the idempotent completion proof.
 
 ## Boundary Decisions
 

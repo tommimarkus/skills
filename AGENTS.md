@@ -148,9 +148,11 @@ Successful v2 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
-Routine integration never cherry-picks. Dependencies become ready only after
-their prerequisites are cleaned, and their worktrees start at the then-current
-parent tip. `validate --closeout` requires every successful step to be cleaned.
+Cleanup retries safely after partial removal by revalidating recorded identity,
+branch state, and target ancestry. Routine integration never cherry-picks.
+Dependencies become ready only after their prerequisites are cleaned, and their
+worktrees start at the then-current parent tip. `validate --closeout` requires
+every successful step to be cleaned.
 
 Use bounded checkpoint and lifecycle/retry returns, never raw logs. Every
 delegated handoff is one at-most-8-KiB `bounded-step-return-v1` JSON object;

@@ -21,8 +21,14 @@ identities plus the exact branch/worktree.
 
 Pass the successful integrate result to `cleanup`. It proves the exact branch
 is in `git branch --merged <target>`, removes the clean worktree, prunes
-metadata, and uses `git branch -d`; it never force-deletes. If cleanup fails,
-retain the branch and retry after fixing the stated condition.
+metadata, and uses `git branch -d`; it never force-deletes. Cleanup is safely
+retryable across its removal boundary: if the owned worktree is already absent
+and unregistered, the helper rechecks the branch tip, upstream, and merged
+ancestry before non-force deletion; if both worktree and branch are absent, it
+rechecks that the integrated commit remains in the target and returns success.
+Stale registrations, unexpected filesystem entries, changed tips, upstreams,
+dirty state, and identity mismatches stop recovery. If cleanup fails, preserve
+the remaining state and retry only after fixing the stated condition.
 
 Use `integrate --require-patch-equivalent` only for explicitly approved
 historical retirement: every `git cherry` row must be `-`, and the rebased

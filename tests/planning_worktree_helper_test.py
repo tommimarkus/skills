@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -126,6 +127,149 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         self.assertEqual("cleanup", cleaned["action"])
         self.assertFalse(leaf.exists())
         self.assertNotIn("task/equivalent", git(self.root, "branch", "--list").stdout)
+
+    def test_cleanup_removes_registered_worktree_and_branch(self) -> None:
+        leaf = self.add_worktree("ordinary-cleanup")
+        source = self.commit(leaf, "ordinary.txt", "ordinary\n")
+        result, integrated = self.integrate("ordinary-cleanup", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+        result, cleaned = self.cleanup("ordinary-cleanup", leaf, integrated)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cleanup", cleaned["action"])
+        self.assertFalse(leaf.exists())
+        self.assertNotIn("task/ordinary-cleanup", git(self.root, "branch", "--list").stdout)
+
+    def test_cleanup_retry_after_worktree_removal_deletes_branch(self) -> None:
+        leaf = self.add_worktree("worktree-removed")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("worktree-removed", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+
+        result, cleaned = self.cleanup("worktree-removed", leaf, integrated)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cleanup", cleaned["action"])
+        self.assertNotIn("task/worktree-removed", git(self.root, "branch", "--list").stdout)
+
+    def test_cleanup_retry_after_worktree_and_branch_removal_is_idempotent(self) -> None:
+        leaf = self.add_worktree("fully-removed")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("fully-removed", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+        git(self.root, "branch", "-d", "task/fully-removed")
+
+        result, cleaned = self.cleanup("fully-removed", leaf, integrated)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cleanup", cleaned["action"])
+        self.assertEqual(integrated["parent_after"], cleaned["parent_commit"])
+
+    def test_cleanup_refuses_dirty_registered_worktree(self) -> None:
+        leaf = self.add_worktree("dirty-cleanup")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("dirty-cleanup", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.write(leaf / "dirty.txt", "dirty\n")
+
+        result, value = self.cleanup("dirty-cleanup", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("clean", value["error"])
+        self.assertTrue(leaf.exists())
+        self.assertIn("task/dirty-cleanup", git(self.root, "branch", "--list").stdout)
+
+    def test_cleanup_refuses_integrated_result_identity_mismatch(self) -> None:
+        leaf = self.add_worktree("identity-mismatch")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("identity-mismatch", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        mismatched = {**integrated, "worktree": str(leaf.parent / "other")}
+
+        result, value = self.cleanup("identity-mismatch", leaf, mismatched)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("does not own", value["error"])
+        self.assertTrue(leaf.exists())
+        self.assertIn("task/identity-mismatch", git(self.root, "branch", "--list").stdout)
+
+    def test_missing_worktree_recovery_refuses_stale_registration(self) -> None:
+        leaf = self.add_worktree("stale-registration")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("stale-registration", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        shutil.rmtree(leaf)
+
+        result, value = self.cleanup("stale-registration", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("stale", value["error"])
+        self.assertIn("task/stale-registration", git(self.root, "branch", "--list").stdout)
+
+    def test_missing_worktree_recovery_refuses_unregistered_filesystem_entry(self) -> None:
+        leaf = self.add_worktree("unexpected-entry")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("unexpected-entry", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+        self.write(leaf / "unowned.txt", "unowned\n")
+
+        result, value = self.cleanup("unexpected-entry", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unexpected filesystem entry", value["error"])
+        self.assertIn("task/unexpected-entry", git(self.root, "branch", "--list").stdout)
+
+    def test_missing_worktree_recovery_refuses_changed_branch_tip(self) -> None:
+        leaf = self.add_worktree("changed-tip")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("changed-tip", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+        git(self.root, "branch", "-f", "task/changed-tip", integrated["parent_before"])
+
+        result, value = self.cleanup("changed-tip", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("integrated commit", value["error"])
+        self.assertIn("task/changed-tip", git(self.root, "branch", "--list").stdout)
+
+    def test_missing_worktree_recovery_refuses_branch_upstream(self) -> None:
+        leaf = self.add_worktree("upstream-recovery")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("upstream-recovery", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+        git(
+            self.root,
+            "branch",
+            "--set-upstream-to",
+            "main",
+            "task/upstream-recovery",
+        )
+
+        result, value = self.cleanup("upstream-recovery", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("upstream", value["error"])
+        self.assertIn("task/upstream-recovery", git(self.root, "branch", "--list").stdout)
+
+    def test_missing_worktree_recovery_refuses_unmerged_branch(self) -> None:
+        leaf = self.add_worktree("unmerged-recovery")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result, integrated = self.integrate("unmerged-recovery", leaf, source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        git(self.root, "worktree", "remove", str(leaf))
+        git(self.root, "reset", "--hard", integrated["parent_before"])
+
+        result, value = self.cleanup("unmerged-recovery", leaf, integrated)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("merged", value["error"])
+        self.assertIn("task/unmerged-recovery", git(self.root, "branch", "--list").stdout)
 
     def test_refuses_dirty_unowned_and_upstream_worktrees(self) -> None:
         leaf = self.add_worktree("refuse")

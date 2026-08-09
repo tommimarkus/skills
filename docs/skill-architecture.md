@@ -125,8 +125,10 @@ unchanged progress is `blocked:no_progress`, exhaustion is terminal
 and its bounded `show` rehydrates one step or a truncated summary. Successful
 v2 leaves continue `completed` → `integrated` → `cleaned`; bounded
 `planning-worktree-result-v1` evidence ties returned and rebased commits to
-rebase/fast-forward integration and non-force cleanup. Dependencies wait for
-`cleaned`, start from the current parent tip, and `validate --closeout` requires
+rebase/fast-forward integration and non-force cleanup. Partial cleanup retries
+revalidate recorded identity, remaining branch state, and target ancestry.
+Dependencies wait for `cleaned`, start from the current parent tip, and
+`validate --closeout` requires
 every successful leaf to be cleaned. Version-1
 ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
