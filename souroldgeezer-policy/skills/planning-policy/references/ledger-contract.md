@@ -55,6 +55,22 @@ procedure and ingest each successful helper result. Leave a cleanup failure at
 `integrated` so it can be retried. Create a dependent leaf's worktree only
 after its prerequisites are cleaned, from the then-current parent tip.
 
+Every new version-2 checkpoint records `run_status: active`, with `outcome`,
+`closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
+--outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
+sets the other three fields. A completed close requires every step to be
+`cleaned`. A blocked close requires a bounded obstruction reason and refuses
+`ready` or `in_progress` work. An abandoned close requires a bounded reason,
+refuses `in_progress` work, and changes pending or assigned-but-unstarted work
+to `discarded`. Closed runs refuse step transitions and returned handoffs.
+
+`reopen --actor parent --run-id <id> --reason <bounded-reason>` is limited to a
+blocked run whose retention period has not elapsed and which still has at least
+one retryable pending, blocked, or failed step below its attempt limit. Reopen
+clears the terminal lifecycle fields and returns the run to `active`; it does
+not assign or start an attempt. A dependency is ready-compatible only after it
+is `cleaned`.
+
 The step-wide attempt count starts at 1 and may never exceed the leaf's
 version-2 `max_attempts` (1 through 5). The parent assigns each attempt a
 helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
@@ -119,6 +135,29 @@ When a pre-closeout version-2 checkpoint lacks returned/integrated commit or
 helper-result fields, reading it supplies empty compatibility defaults; the next
 mutation persists the current shape without changing its approved-plan hash.
 
+## Listing, retention, and deletion
+
+`list` scans either the bounded `--plan-id` scope or the ledger root and emits
+bounded run summaries plus counts. `gc [--dry-run]` reports bounded `kept`,
+`eligible`, `removed`, and `invalid` groups; mutation requires `--actor parent`.
+Active runs are always kept regardless of age. Closed version-2 runs retain
+completed outcomes for 30 days, blocked outcomes for 90 days, and abandoned
+outcomes for 7 days. The boundary is exact: a run becomes eligible at
+`purge_after`, not one second earlier. Initialization and successful closure run
+garbage collection after validating candidate directories.
+
+`purge --actor parent` deletes exactly one closed target: use `--plan-id` plus
+`--run-id` for version 2, or `--plan-id` plus `--legacy` for one terminal
+version-1 ledger. Before `purge_after`, deletion additionally requires both
+`--before-retention` and a bounded `--reason`. There is no clear-all command.
+
+Scanning never follows or removes a symlink. An unknown schema, malformed
+checkpoint, unexpected directory content, invalid plan/run identity, or
+ambiguous legacy terminal state is reported in `invalid` and preserved. A v2
+run directory contains only `checkpoint.json`, `events.jsonl`, `plan.json`, and
+the optional validated `returns/` and `worktree-results/` trees; conservative
+validation wins over age.
+
 ## Version-1 compatibility
 
 An unversioned version-1 plan remains inspection-compatible only. Its validator
@@ -130,6 +169,15 @@ terminal `integrated` state is unchanged and it does not gain `cleaned`. Current
 planning-policy does not approve or dispatch an unversioned version-1 plan as
 new work; initialize a separate version-2 `<plan-id>/<run-id>` run after
 approval.
+
+Lifecycle listing and garbage collection never rewrite a version-1 checkpoint
+or event stream. A legacy ledger with every step `integrated` is unambiguously
+completed and receives 30-day retention from its last update. A legacy ledger
+whose every step is `discarded` or `superseded` receives 7-day retention. Other
+nonterminal legacy ledgers remain active and age-protected. A terminal mixture
+of integrated and discarded/superseded states is ambiguous: report and preserve
+it rather than infer an outcome. Explicit legacy purge uses the exact plan ID;
+there is no bulk legacy deletion.
 
 Remove this compatibility path only in a later published contract-major change,
 after the migration has been documented and no active version-1 ledger remains.

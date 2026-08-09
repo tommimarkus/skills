@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Parent-owned checkpoint ledger; ``init`` and no-run-id operations are v1."""
+"""Parent-owned checkpoint ledger with byte-compatible legacy commands."""
 
 from __future__ import annotations
-
 import argparse
 import hashlib
 import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
 
 MAX_CHECKPOINT = 24 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
@@ -57,6 +58,7 @@ V2_STATES = {
     "blocked",
     "failed",
     "oversized",
+    "discarded",
 }
 WORKTREE_RESULT_FIELDS = {
     "schema",
@@ -79,6 +81,14 @@ CLOSEOUT_FIELDS = {
     "cleanup_result_path": "",
     "cleanup_result_sha256": "",
 }
+RETENTION_DAYS = {
+    "completed": 30,
+    "blocked": 90,
+    "abandoned": 7,
+    "discarded": 7,
+    "superseded": 7,
+}
+LIFECYCLE_FIELDS = {"run_status", "outcome", "closed_at", "purge_after"}
 
 
 class Error(Exception):
@@ -87,6 +97,33 @@ class Error(Exception):
 
 def now():
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def timestamp(value, label="timestamp"):
+    if not isinstance(value, str) or not value.endswith("Z"):
+        raise Error(f"invalid {label}")
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as exc:
+        raise Error(f"invalid {label}") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise Error(f"invalid {label}")
+    return parsed
+
+
+def retained_until(closed_at, outcome):
+    return (
+        (timestamp(closed_at, "closed_at") + timedelta(days=RETENTION_DAYS[outcome]))
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def bounded_reason(value, label, required=False):
+    if not isinstance(value, str) or len(value) > 480 or (required and not value):
+        raise Error(f"{label} requires a bounded reason")
+    return value
 
 
 def canon(value):
@@ -304,6 +341,86 @@ def leaves_by_id(plan):
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
 
 
+def lifecycle(data):
+    """Validate lifecycle fields, accepting old active v2 checkpoints in memory."""
+    present = LIFECYCLE_FIELDS.intersection(data)
+    if not present:
+        data.update(run_status="active", outcome=None, closed_at=None, purge_after=None)
+    elif present != LIFECYCLE_FIELDS:
+        raise Error("invalid v2 lifecycle fields")
+    status = data["run_status"]
+    if status == "active":
+        if any(data[key] is not None for key in ("outcome", "closed_at", "purge_after")):
+            raise Error("active run has terminal lifecycle fields")
+    elif status == "closed":
+        outcome = data["outcome"]
+        if outcome not in {"completed", "blocked", "abandoned"}:
+            raise Error("invalid closed run outcome")
+        timestamp(data["closed_at"], "closed_at")
+        timestamp(data["purge_after"], "purge_after")
+        if data["purge_after"] != retained_until(data["closed_at"], outcome):
+            raise Error("invalid closed run retention")
+    else:
+        raise Error("invalid run_status")
+    reason = data.setdefault("close_reason", "")
+    if not isinstance(reason, str) or len(reason) > 480:
+        raise Error("invalid close_reason")
+    return data
+
+
+def active_run(data):
+    if lifecycle(data)["run_status"] != "active":
+        raise Error("run is closed")
+
+
+def validate_steps2(data, leafs):
+    steps = data.get("steps")
+    if not isinstance(steps, dict) or set(steps) != set(leafs):
+        raise Error("blocked:plan_tampered")
+    for sid, step in steps.items():
+        if (
+            not isinstance(step, dict)
+            or step.get("id") != sid
+            or step.get("status") not in V2_STATES
+            or step.get("dependencies") != leafs[sid]["dependencies"]
+            or step.get("max_attempts") != leafs[sid]["max_attempts"]
+            or not isinstance(step.get("attempt_count"), int)
+            or isinstance(step.get("attempt_count"), bool)
+            or not 0 <= step["attempt_count"] <= step["max_attempts"]
+            or not isinstance(step.get("retry_allowed"), bool)
+        ):
+            raise Error("blocked:plan_tampered")
+    dependency_order(steps)
+
+
+def validate_events2(directory, data):
+    path = required_file(directory, "events.jsonl", "v2 events.jsonl does not exist")
+    previous = 0
+    actions = {"init-v2", "transition-v2", "record-return", "close-v2", "reopen-v2"}
+    try:
+        lines = path.read_text().splitlines()
+    except OSError as exc:
+        raise Error("invalid v2 events") from exc
+    for line in lines:
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise Error("invalid v2 event") from exc
+        if (
+            not isinstance(value, dict)
+            or value.get("sequence") != previous + 1
+            or value.get("actor") != "parent"
+            or value.get("plan_id") != data["plan_id"]
+            or value.get("run_id") != data["run_id"]
+            or value.get("action") not in actions
+            or not isinstance(value.get("at"), str)
+        ):
+            raise Error("invalid v2 event")
+        previous += 1
+    if previous != data.get("event_sequence"):
+        raise Error("v2 event sequence mismatch")
+
+
 # Legacy state is deliberately byte-compatible; these paths never load a v2 run.
 def parse_v1(raw):
     try:
@@ -343,6 +460,8 @@ def parse_v1(raw):
 
 
 def load1(directory):
+    if directory.is_symlink() or not directory.is_dir():
+        raise Error("ledger checkpoint does not exist")
     path = required_file(directory, "checkpoint.json", "ledger checkpoint does not exist")
     data = json.loads(path.read_text())
     if (
@@ -423,18 +542,20 @@ def init1(args):
     directory = plan_dir(args)
     if directory.exists():
         raise Error("ledger already exists; init is not an overwrite operation")
-    timestamp = now()
+    steps = parse_v1(args.steps_json)
+    collect_ledgers(root(args), None, timestamp(now()), remove=True)
+    created_at = now()
     data = {
         "schema_version": 1,
         "plan_id": args.plan_id,
         "approved": True,
-        "created_at": timestamp,
-        "updated_at": timestamp,
+        "created_at": created_at,
+        "updated_at": created_at,
         "event_sequence": 1,
-        "steps": parse_v1(args.steps_json),
+        "steps": steps,
     }
     write(directory / "checkpoint.json", data, MAX_LEGACY_CHECKPOINT)
-    initial_event(directory, timestamp, "init", args.plan_id, step_count=len(data["steps"]))
+    initial_event(directory, created_at, "init", args.plan_id, step_count=len(data["steps"]))
     return {
         **legacy_fields(),
         "ok": True,
@@ -547,13 +668,20 @@ def init2(args):
     approved_parent(args)
     plan = read_plan(args.plan_file)
     assigned = assignments(args.assignments_file, plan)
+    ledger_root = root(args)
+    collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
     directory = plan_dir(args)
+    existing, invalid = scan_ledgers(ledger_root, args.plan_id, timestamp(now()))
+    if invalid:
+        raise Error("target plan ledger directory is invalid")
+    if any(entry["legacy"] for entry in existing):
+        raise Error("cannot add a v2 run inside a legacy ledger directory")
     run_id = str(uuid.uuid4())
     run = directory / run_id
     if run.exists():
         raise Error("generated run already exists")
     leaves = leaves_by_id(plan)
-    timestamp = now()
+    created_at = now()
     steps = {
         sid: {
             "id": sid,
@@ -582,16 +710,21 @@ def init2(args):
         "objective": plan["objective"][:240],
         "scope_summary": plan["scope_summary"][:480],
         "approved_decisions": plan["approved_decisions"],
-        "created_at": timestamp,
-        "updated_at": timestamp,
+        "created_at": created_at,
+        "updated_at": created_at,
         "event_sequence": 1,
+        "run_status": "active",
+        "outcome": None,
+        "closed_at": None,
+        "purge_after": None,
+        "close_reason": "",
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
     write(run / "checkpoint.json", data)
     initial_event(
         run,
-        timestamp,
+        created_at,
         "init-v2",
         args.plan_id,
         run_id=run_id,
@@ -607,10 +740,20 @@ def init2(args):
 
 
 def load2(args):
+    parent_directory = plan_dir(args)
+    if parent_directory.is_symlink() or not parent_directory.is_dir():
+        raise Error("unknown run id")
     directory = v2_dir(args)
+    if directory.is_symlink() or not directory.is_dir():
+        raise Error("unknown run id")
+    safe_run_contents(directory)
     path = required_file(directory, "checkpoint.json", "unknown run id")
     data = read_json(path, "invalid v2 checkpoint")
-    if data.get("schema") != 2 or data.get("run_id") != args.run_id:
+    if (
+        data.get("schema") != 2
+        or data.get("plan_id") != args.plan_id
+        or data.get("run_id") != args.run_id
+    ):
         raise Error("invalid v2 checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
@@ -620,24 +763,20 @@ def load2(args):
     leafs = leaves_by_id(plan)
     if set(data.get("steps", {})) != set(leafs):
         raise Error("blocked:plan_tampered")
-    for sid, step in data["steps"].items():
+    for step in data["steps"].values():
         for field, default in CLOSEOUT_FIELDS.items():
             step.setdefault(field, default)
-        if (
-            step.get("dependencies") != leafs[sid]["dependencies"]
-            or step.get("max_attempts") != leafs[sid]["max_attempts"]
-        ):
-            raise Error("blocked:plan_tampered")
-        if not 0 <= step.get("attempt_count", -1) <= step["max_attempts"]:
-            raise Error("blocked:plan_tampered")
-        if step.get("status") not in V2_STATES:
-            raise Error("blocked:plan_tampered")
+    validate_steps2(data, leafs)
+    lifecycle(data)
     return directory, data, plan, leafs
 
 
 def mutating_run(args):
     parent(args.actor)
-    return load2(args)
+    loaded = load2(args)
+    validate_events2(loaded[0], loaded[1])
+    active_run(loaded[1])
+    return loaded
 
 
 def advance(step, old, expected, target, summary):
@@ -758,6 +897,101 @@ def worktree_result(path, directory, sid, step, leaf, target):
     destination = directory / "worktree-results" / sid / f"{target}.json"
     write(destination, value, 4096)
     return value, str(destination.relative_to(directory)), digest(value)
+
+
+def close2(args):
+    parent(args.actor)
+    directory, data, plan, leafs = load2(args)
+    validate_events2(directory, data)
+    active_run(data)
+    statuses = {step["status"] for step in data["steps"].values()}
+    if args.outcome == "completed" and statuses != {"cleaned"}:
+        raise Error("completed close requires every step cleaned")
+    if args.outcome == "blocked":
+        if statuses.intersection({"ready", "in_progress"}):
+            raise Error("blocked close refuses live work")
+        bounded_reason(args.reason, "blocked close obstruction", required=True)
+    if args.outcome == "abandoned":
+        if "in_progress" in statuses:
+            raise Error("abandoned close refuses in_progress work")
+        bounded_reason(args.reason, "abandoned close", required=True)
+        for step in data["steps"].values():
+            if step["status"] in {"pending", "ready"}:
+                step.update(status="discarded", retry_allowed=False, reason="discarded: abandoned")
+    closed_at = now()
+    data.update(
+        run_status="closed",
+        outcome=args.outcome,
+        closed_at=closed_at,
+        purge_after=retained_until(closed_at, args.outcome),
+        close_reason=bounded_reason(args.reason, "close"),
+    )
+    event(
+        directory,
+        data,
+        "close-v2",
+        outcome=args.outcome,
+        purge_after=data["purge_after"],
+        reason=data["close_reason"],
+    )
+    gc_result = collect_ledgers(root(args), None, timestamp(now()), remove=True)
+    return {
+        "ok": True,
+        "action": "close",
+        "plan_id": data["plan_id"],
+        "run_id": data["run_id"],
+        "run_status": data["run_status"],
+        "outcome": data["outcome"],
+        "closed_at": data["closed_at"],
+        "purge_after": data["purge_after"],
+        "gc_removed_count": gc_result["counts"]["removed"],
+        "gc_invalid_count": gc_result["counts"]["invalid"],
+    }
+
+
+def reopen2(args):
+    parent(args.actor)
+    directory, data, plan, leafs = load2(args)
+    validate_events2(directory, data)
+    if data["run_status"] != "closed" or data["outcome"] != "blocked":
+        raise Error("only a retained blocked run may reopen")
+    if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
+        raise Error("blocked run is no longer retained")
+    retryable = [
+        step
+        for step in data["steps"].values()
+        if step["status"] in {"pending", "blocked", "failed"}
+        and step["retry_allowed"]
+        and step["attempt_count"] < step["max_attempts"]
+    ]
+    if not retryable:
+        raise Error("blocked run has no retryable step")
+    bounded_reason(args.reason, "reopen", required=True)
+    previous_outcome = data["outcome"]
+    data.update(
+        run_status="active",
+        outcome=None,
+        closed_at=None,
+        purge_after=None,
+        close_reason="",
+    )
+    event(
+        directory,
+        data,
+        "reopen-v2",
+        previous_outcome=previous_outcome,
+        reason=args.reason,
+    )
+    return {
+        "ok": True,
+        "action": "reopen",
+        "plan_id": data["plan_id"],
+        "run_id": data["run_id"],
+        "run_status": "active",
+        "retryable_steps": [
+            step["id"] for step in ordered_steps(data["steps"]) if step in retryable
+        ],
+    }
 
 
 def valid_return(value, data, step, leaf):
@@ -971,6 +1205,354 @@ def record(args):
     return result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
 
 
+def invalid_entry(base, path, code, summary):
+    try:
+        relative = str(path.relative_to(base))
+    except ValueError:
+        relative = path.name
+    return {
+        "path": relative[:240],
+        "code": code,
+        "summary": summary[:480],
+    }
+
+
+def safe_run_contents(directory):
+    allowed = {
+        "checkpoint.json",
+        "events.jsonl",
+        "plan.json",
+        "returns",
+        "worktree-results",
+    }
+    children = list(directory.iterdir())
+    if any(child.is_symlink() for child in children):
+        raise Error("symlink in run directory")
+    names = {child.name for child in children}
+    if not {"checkpoint.json", "events.jsonl", "plan.json"}.issubset(names):
+        raise Error("missing required v2 contents")
+    if names - allowed:
+        raise Error("unexpected v2 contents")
+    for name in ("checkpoint.json", "events.jsonl", "plan.json"):
+        if not (directory / name).is_file():
+            raise Error("unexpected v2 contents")
+    returns = directory / "returns"
+    if returns.exists():
+        if returns.is_symlink() or not returns.is_dir():
+            raise Error("unexpected returns contents")
+        for step_dir in returns.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected returns contents")
+            ident(step_dir.name, "return step id")
+            for returned in step_dir.iterdir():
+                if returned.is_symlink() or not returned.is_file() or returned.suffix != ".json":
+                    raise Error("unexpected returns contents")
+                uuid4(returned.stem, "return attempt id")
+    results = directory / "worktree-results"
+    if results.exists():
+        if results.is_symlink() or not results.is_dir():
+            raise Error("unexpected worktree-results contents")
+        for step_dir in results.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected worktree-results contents")
+            ident(step_dir.name, "worktree-result step id")
+            names = {item.name for item in step_dir.iterdir()}
+            if names - {"integrated.json", "cleaned.json"} or any(
+                item.is_symlink() or not item.is_file() for item in step_dir.iterdir()
+            ):
+                raise Error("unexpected worktree-results contents")
+
+
+def classify_legacy(directory, current):
+    data = load1(directory)
+    validate_events1(directory, data)
+    if data["plan_id"] != directory.name:
+        raise Error("legacy directory identity mismatch")
+    timestamp(data["updated_at"], "legacy updated_at")
+    states = {step["state"] for step in data["steps"].values()}
+    entry = {
+        "plan_id": data["plan_id"],
+        "run_id": "",
+        "contract_version": 1,
+        "updated_at": data["updated_at"],
+        "legacy": True,
+        "_path": directory,
+    }
+    if states == {"integrated"}:
+        outcome = "completed"
+    elif states and states.issubset({"discarded", "superseded"}):
+        outcome = (
+            "discarded"
+            if states == {"discarded"}
+            else ("superseded" if states == {"superseded"} else "abandoned")
+        )
+    elif states.issubset({"integrated", "discarded", "superseded"}):
+        raise Error("ambiguous legacy terminal state")
+    else:
+        entry.update(run_status="active", outcome=None, closed_at=None, purge_after=None)
+        entry["retention_state"] = "active"
+        return entry
+    closed_at = data["updated_at"]
+    purge_after = retained_until(closed_at, outcome)
+    entry.update(
+        run_status="closed",
+        outcome=outcome,
+        closed_at=closed_at,
+        purge_after=purge_after,
+        retention_state="eligible" if current >= timestamp(purge_after, "purge_after") else "kept",
+    )
+    return entry
+
+
+def classify_v2(plan_id, directory, current):
+    safe_run_contents(directory)
+    checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
+    if checkpoint.get("schema") != 2:
+        raise Error("unknown checkpoint schema")
+    if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
+        raise Error("v2 directory identity mismatch")
+    if len(canon(checkpoint) + b"\n") > MAX_CHECKPOINT:
+        raise Error("v2 checkpoint exceeds 16 KiB")
+    plan = read_json(directory / "plan.json", "blocked:plan_tampered")
+    if digest(plan) != checkpoint.get("plan_hash") or not SHA.fullmatch(
+        checkpoint.get("plan_hash", "")
+    ):
+        raise Error("blocked:plan_tampered")
+    if not plan_validator()(plan).get("dispatch_ready"):
+        raise Error("blocked:plan_tampered")
+    validate_steps2(checkpoint, leaves_by_id(plan))
+    returns = directory / "returns"
+    if returns.exists() and any(
+        step_dir.name not in checkpoint["steps"] for step_dir in returns.iterdir()
+    ):
+        raise Error("unexpected returns step")
+    lifecycle(checkpoint)
+    validate_events2(directory, checkpoint)
+    entry = {
+        "plan_id": plan_id,
+        "run_id": directory.name,
+        "contract_version": 2,
+        "run_status": checkpoint["run_status"],
+        "outcome": checkpoint["outcome"],
+        "updated_at": checkpoint["updated_at"],
+        "closed_at": checkpoint["closed_at"],
+        "purge_after": checkpoint["purge_after"],
+        "legacy": False,
+        "_path": directory,
+        "_step_ids": sorted(checkpoint["steps"]),
+    }
+    if checkpoint["run_status"] == "active":
+        entry["retention_state"] = "active"
+    else:
+        entry["retention_state"] = (
+            "eligible" if current >= timestamp(checkpoint["purge_after"], "purge_after") else "kept"
+        )
+    return entry
+
+
+def scan_ledgers(base, plan_filter, current):
+    entries, invalid = [], []
+    if not base.exists():
+        return entries, invalid
+    if base.is_symlink() or not base.is_dir():
+        return entries, [
+            invalid_entry(base, base, "invalid_root", "ledger root is not a directory")
+        ]
+    for plan in sorted(base.iterdir(), key=lambda path: path.name):
+        if plan_filter and plan.name != plan_filter:
+            continue
+        if plan.is_symlink():
+            invalid.append(invalid_entry(base, plan, "symlink", "symlink plan entry preserved"))
+            continue
+        if not plan.is_dir():
+            invalid.append(
+                invalid_entry(base, plan, "unexpected_contents", "unexpected ledger-root entry")
+            )
+            continue
+        try:
+            ident(plan.name, "plan id")
+            children = list(plan.iterdir())
+        except (Error, OSError) as exc:
+            invalid.append(invalid_entry(base, plan, "invalid_plan", str(exc)))
+            continue
+        if any(child.is_symlink() for child in children):
+            invalid.append(invalid_entry(base, plan, "symlink", "symlink ledger content preserved"))
+            continue
+        names = {child.name for child in children}
+        if "checkpoint.json" in names:
+            if names != {"checkpoint.json", "events.jsonl"} or any(
+                not child.is_file() for child in children
+            ):
+                invalid.append(
+                    invalid_entry(
+                        base,
+                        plan,
+                        "unexpected_contents",
+                        "legacy ledger has unexpected or mixed contents",
+                    )
+                )
+                continue
+            try:
+                raw = read_json(plan / "checkpoint.json", "malformed legacy checkpoint")
+                if raw.get("schema_version") != 1:
+                    raise Error("unknown checkpoint schema")
+                entries.append(classify_legacy(plan, current))
+            except (Error, OSError, json.JSONDecodeError, TypeError) as exc:
+                message = str(exc)
+                code = (
+                    "ambiguous_legacy"
+                    if "ambiguous legacy" in message
+                    else (
+                        "unknown_schema"
+                        if "unknown checkpoint schema" in message
+                        else (
+                            "malformed_checkpoint"
+                            if "malformed" in message
+                            else "invalid_checkpoint"
+                        )
+                    )
+                )
+                invalid.append(invalid_entry(base, plan, code, message))
+            continue
+        if not children or any(not child.is_dir() for child in children):
+            invalid.append(
+                invalid_entry(base, plan, "unexpected_contents", "v2 plan has unexpected contents")
+            )
+            continue
+        for run in sorted(children, key=lambda path: path.name):
+            try:
+                uuid4(run.name)
+                entries.append(classify_v2(plan.name, run, current))
+            except (Error, OSError, json.JSONDecodeError, TypeError) as exc:
+                message = str(exc)
+                code = (
+                    "unknown_schema"
+                    if "unknown checkpoint schema" in message
+                    else ("malformed_checkpoint" if "malformed" in message else "invalid_run")
+                )
+                invalid.append(invalid_entry(base, run, code, message))
+    return entries, invalid
+
+
+def public_entry(entry):
+    return {key: value for key, value in entry.items() if not key.startswith("_")}
+
+
+def bounded_report(action, groups, **facts):
+    result = {"ok": True, "action": action, **facts}
+    result["counts"] = {name: len(values) for name, values in groups.items()}
+    result.update(
+        {name: [public_entry(value) for value in values] for name, values in groups.items()}
+    )
+    result.update(truncated=False, omitted_count=0)
+    while proxy_tokens(result) > MAX_TOKENS:
+        candidates = [name for name, values in groups.items() if result[name]]
+        if not candidates:
+            break
+        name = max(candidates, key=lambda candidate: len(result[candidate]))
+        result[name].pop()
+        result["truncated"] = True
+        result["omitted_count"] += 1
+    result["summary_proxy_tokens"] = proxy_tokens(result)
+    return result
+
+
+def remove_entry(entry):
+    path = entry["_path"]
+    if path.is_symlink() or not path.is_dir():
+        raise Error("refusing changed purge target")
+    if entry["contract_version"] == 2:
+        safe_run_contents(path)
+        returns = path / "returns"
+        if returns.exists() and any(
+            step_dir.name not in entry["_step_ids"] for step_dir in returns.iterdir()
+        ):
+            raise Error("refusing changed returns purge target")
+    else:
+        children = list(path.iterdir())
+        if {child.name for child in children} != {"checkpoint.json", "events.jsonl"} or any(
+            child.is_symlink() or not child.is_file() for child in children
+        ):
+            raise Error("refusing changed legacy purge target")
+    parent_path = path.parent
+    shutil.rmtree(path)
+    if entry["contract_version"] == 2:
+        try:
+            parent_path.rmdir()
+        except OSError:
+            pass
+
+
+def collect_ledgers(base, plan_filter, current, remove):
+    entries, invalid = scan_ledgers(base, plan_filter, current)
+    kept = [entry for entry in entries if entry["retention_state"] != "eligible"]
+    eligible = [entry for entry in entries if entry["retention_state"] == "eligible"]
+    removed = []
+    if remove:
+        for entry in eligible:
+            try:
+                remove_entry(entry)
+                removed.append(entry)
+            except (Error, OSError) as exc:
+                invalid.append(invalid_entry(base, entry["_path"], "purge_failed", str(exc)))
+    return bounded_report(
+        "gc",
+        {"kept": kept, "eligible": eligible, "removed": removed, "invalid": invalid},
+        dry_run=not remove,
+    )
+
+
+def list_runs(args):
+    plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
+    entries, invalid = scan_ledgers(root(args), plan_filter, timestamp(now()))
+    return bounded_report("list", {"runs": entries, "invalid": invalid})
+
+
+def gc(args):
+    if not args.dry_run:
+        parent(args.actor)
+    plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
+    return collect_ledgers(root(args), plan_filter, timestamp(now()), remove=not args.dry_run)
+
+
+def purge(args):
+    parent(args.actor)
+    plan_id = ident(args.plan_id, "plan id")
+    if bool(args.run_id) == bool(args.legacy):
+        raise Error("purge requires exactly one of --run-id or --legacy")
+    if args.before_retention:
+        bounded_reason(args.reason, "--before-retention", required=True)
+    else:
+        bounded_reason(args.reason, "purge")
+    target_run = "" if args.legacy else uuid4(args.run_id)
+    entries, invalid = scan_ledgers(root(args), plan_id, timestamp(now()))
+    matches = [
+        entry
+        for entry in entries
+        if (entry["legacy"] if args.legacy else entry["run_id"] == target_run)
+    ]
+    if not matches:
+        detail = invalid[0]["summary"] if invalid else "exact closed run not found"
+        raise Error(detail)
+    if len(matches) != 1 or matches[0]["run_status"] != "closed":
+        raise Error("purge target must be exactly one closed run")
+    entry = matches[0]
+    early = timestamp(now()) < timestamp(entry["purge_after"], "purge_after")
+    if early and not args.before_retention:
+        raise Error("retention period has not elapsed; use --before-retention with --reason")
+    remove_entry(entry)
+    return {
+        "ok": True,
+        "action": "purge",
+        "plan_id": entry["plan_id"],
+        "run_id": entry["run_id"],
+        "contract_version": entry["contract_version"],
+        "outcome": entry["outcome"],
+        "early": early,
+        "reason": args.reason,
+    }
+
+
 def summary(data):
     steps = data["steps"]
     rows = [
@@ -1001,6 +1583,10 @@ def summary(data):
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
+        "run_status": data["run_status"],
+        "outcome": data["outcome"],
+        "closed_at": data["closed_at"],
+        "purge_after": data["purge_after"],
         "objective": data["objective"],
         "scope_summary": data["scope_summary"],
         "approved_decisions": data["approved_decisions"],
@@ -1048,6 +1634,10 @@ def show(args):
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
             "plan_hash": data["plan_hash"],
+            "run_status": data["run_status"],
+            "outcome": data["outcome"],
+            "closed_at": data["closed_at"],
+            "purge_after": data["purge_after"],
             "step": {
                 "id": step["id"],
                 "status": step["status"],
@@ -1097,11 +1687,16 @@ def validate(args):
         ]
         if unfinished:
             raise Error("closeout requires every successful step to be cleaned")
+    validate_events2(directory, data)
     return {
         "ok": True,
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
+        "run_status": data["run_status"],
+        "outcome": data["outcome"],
+        "closed_at": data["closed_at"],
+        "purge_after": data["purge_after"],
         "errors": [],
         "closeout": bool(args.closeout),
     }
@@ -1111,7 +1706,7 @@ def parse():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root")
     parser.add_argument("--ledger-root")
-    parser.add_argument("--plan-id", required=True)
+    parser.add_argument("--plan-id")
     commands = parser.add_subparsers(dest="command", required=True)
     init = commands.add_parser("init")
     init.add_argument("--actor", required=True)
@@ -1143,6 +1738,25 @@ def parse():
     va = commands.add_parser("validate")
     va.add_argument("--run-id")
     va.add_argument("--closeout", action="store_true")
+    commands.add_parser("list")
+    close = commands.add_parser("close")
+    close.add_argument("--actor", required=True)
+    close.add_argument("--run-id", required=True)
+    close.add_argument("--outcome", choices=("completed", "blocked", "abandoned"), required=True)
+    close.add_argument("--reason", default="")
+    reopen = commands.add_parser("reopen")
+    reopen.add_argument("--actor", required=True)
+    reopen.add_argument("--run-id", required=True)
+    reopen.add_argument("--reason", required=True)
+    garbage = commands.add_parser("gc")
+    garbage.add_argument("--actor", default="")
+    garbage.add_argument("--dry-run", action="store_true")
+    purging = commands.add_parser("purge")
+    purging.add_argument("--actor", required=True)
+    purging.add_argument("--run-id")
+    purging.add_argument("--legacy", action="store_true")
+    purging.add_argument("--before-retention", action="store_true")
+    purging.add_argument("--reason", default="")
     return parser
 
 
@@ -1159,8 +1773,18 @@ def main(argv=None):
             value = record(args)
         elif args.command == "show":
             value = show(args)
-        else:
+        elif args.command == "validate":
             value = validate(args)
+        elif args.command == "list":
+            value = list_runs(args)
+        elif args.command == "close":
+            value = close2(args)
+        elif args.command == "reopen":
+            value = reopen2(args)
+        elif args.command == "gc":
+            value = gc(args)
+        else:
+            value = purge(args)
         return out(value)
     except Error as exc:
         return out({"ok": False, "error": str(exc)}, 3)
