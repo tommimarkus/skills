@@ -156,6 +156,108 @@ def parent(actor):
         raise Error("only actor 'parent' may mutate a ledger")
 
 
+def approved_parent(args):
+    parent(args.actor)
+    if not args.approved:
+        raise Error("--approved is required")
+
+
+def initial_event(directory, timestamp, action, plan_id, **facts):
+    payload = {
+        "sequence": 1,
+        "at": timestamp,
+        "actor": "parent",
+        "action": action,
+        "plan_id": plan_id,
+        **facts,
+    }
+    (directory / "events.jsonl").write_bytes(canon(payload) + b"\n")
+
+
+def selected_step(data, step_id):
+    sid = ident(step_id, "step id")
+    if sid not in data["steps"]:
+        raise Error("unknown step id")
+    return sid, data["steps"][sid]
+
+
+def dependency_order(steps):
+    """Reject unknown or cyclic dependencies in either ledger schema."""
+    if any(dep not in steps for step in steps.values() for dep in step["dependencies"]):
+        raise Error("unknown dependency")
+    visiting, visited = set(), set()
+
+    def visit(step_id):
+        if step_id in visiting:
+            raise Error("dependency cycle")
+        if step_id not in visited:
+            visiting.add(step_id)
+            for dependency in steps[step_id]["dependencies"]:
+                visit(dependency)
+            visiting.remove(step_id)
+            visited.add(step_id)
+
+    for step_id in steps:
+        visit(step_id)
+
+
+def read_json(path, message):
+    try:
+        return json.loads(Path(path).read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise Error(message) from exc
+
+
+def required_file(directory, name, message):
+    path = directory / name
+    if not path.is_file():
+        raise Error(message)
+    return path
+
+
+def require_sha256(value, message):
+    if not isinstance(value, str) or not SHA.fullmatch(value):
+        raise Error(message)
+
+
+def proxy_tokens(value):
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return len(PROXY_TOKEN_RE.findall(encoded))
+
+
+def stop_step(step, status, reason, code, summary):
+    step.update(
+        status=status,
+        retry_allowed=False,
+        reason=reason,
+        blockers=[{"code": code, "summary": summary}],
+    )
+
+
+def reject_return(directory, data, step, sid, reason, code, summary):
+    stop_step(step, "oversized", reason, code, summary)
+    event(directory, data, "record-return", step_id=sid, status="oversized")
+
+
+def result2(action, args, sid, step, **extra):
+    return {
+        "ok": True,
+        "action": action,
+        "run_id": args.run_id,
+        "step_id": sid,
+        "status": step["status"],
+        **extra,
+    }
+
+
+def ordered_steps(steps):
+    return sorted(steps.values(), key=lambda value: value["id"])
+
+
+def leaves_by_id(plan):
+    return {leaf["id"]: leaf for leaf in plan["leaves"]}
+
+
 # Legacy state is deliberately byte-compatible; these paths never load a v2 run.
 def parse_v1(raw):
     try:
@@ -190,30 +292,12 @@ def parse_v1(raw):
             "blocker_code": "",
             **fields,
         }
-    if any(d not in steps for s in steps.values() for d in s["dependencies"]):
-        raise Error("unknown dependency")
-    visiting, visited = set(), set()
-
-    def visit(step_id):
-        if step_id in visiting:
-            raise Error("legacy dependency cycle")
-        if step_id in visited:
-            return
-        visiting.add(step_id)
-        for dependency in steps[step_id]["dependencies"]:
-            visit(dependency)
-        visiting.remove(step_id)
-        visited.add(step_id)
-
-    for step_id in steps:
-        visit(step_id)
+    dependency_order(steps)
     return steps
 
 
 def load1(directory):
-    path = directory / "checkpoint.json"
-    if not path.is_file():
-        raise Error("ledger checkpoint does not exist")
+    path = required_file(directory, "checkpoint.json", "ledger checkpoint does not exist")
     data = json.loads(path.read_text())
     if (
         data.get("schema_version") != 1
@@ -251,21 +335,10 @@ def load1(directory):
             and not re.fullmatch(r"blocked:[a-z][a-z0-9_]{0,63}", step["blocker_code"])
         ):
             raise Error("invalid legacy blocker")
-    visiting, visited = set(), set()
-
-    def visit(step_id):
-        if step_id in visiting:
-            raise Error("legacy dependency cycle")
-        if step_id in visited:
-            return
-        visiting.add(step_id)
-        for dep in data["steps"][step_id]["dependencies"]:
-            visit(dep)
-        visiting.remove(step_id)
-        visited.add(step_id)
-
-    for step_id in data["steps"]:
-        visit(step_id)
+    try:
+        dependency_order(data["steps"])
+    except Error as exc:
+        raise Error("invalid legacy dependencies") from exc
     return data
 
 
@@ -281,9 +354,7 @@ def legacy_fields():
 
 
 def validate_events1(directory, data):
-    path = directory / "events.jsonl"
-    if not path.is_file():
-        raise Error("legacy events.jsonl does not exist")
+    path = required_file(directory, "events.jsonl", "legacy events.jsonl does not exist")
     previous = 0
     for line in path.read_text().splitlines():
         event = json.loads(line)
@@ -302,9 +373,7 @@ def validate_events1(directory, data):
 
 
 def init1(args):
-    parent(args.actor)
-    if not args.approved:
-        raise Error("--approved is required")
+    approved_parent(args)
     directory = plan_dir(args)
     if directory.exists():
         raise Error("ledger already exists; init is not an overwrite operation")
@@ -319,19 +388,7 @@ def init1(args):
         "steps": parse_v1(args.steps_json),
     }
     write(directory / "checkpoint.json", data)
-    (directory / "events.jsonl").write_bytes(
-        canon(
-            {
-                "sequence": 1,
-                "at": timestamp,
-                "actor": "parent",
-                "action": "init",
-                "plan_id": args.plan_id,
-                "step_count": len(data["steps"]),
-            }
-        )
-        + b"\n"
-    )
+    initial_event(directory, timestamp, "init", args.plan_id, step_count=len(data["steps"]))
     return {
         **legacy_fields(),
         "ok": True,
@@ -346,10 +403,7 @@ def transition1(args):
     parent(args.actor)
     directory = plan_dir(args)
     data = load1(directory)
-    sid = ident(args.step_id, "step id")
-    if sid not in data["steps"]:
-        raise Error("unknown step id")
-    step = data["steps"][sid]
+    sid, step = selected_step(data, args.step_id)
     old, new = step["state"], args.to
     if new not in TRANS[old]:
         raise Error(f"transition {old} -> {new} is not allowed")
@@ -407,10 +461,7 @@ def plan_validator():
 
 
 def read_plan(path):
-    try:
-        data = json.loads(Path(path).read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Error("cannot read plan file") from exc
+    data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
     if not result.get("valid") or not result.get("dispatch_ready"):
         raise Error("plan is not dispatch-ready")
@@ -418,13 +469,10 @@ def read_plan(path):
 
 
 def assignments(path, plan):
-    try:
-        values = json.loads(Path(path).read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Error("cannot read assignments file") from exc
+    values = read_json(path, "cannot read assignments file")
     if not isinstance(values, list):
         raise Error("assignments file must be an array")
-    leaves = {x["id"]: x for x in plan["leaves"]}
+    leaves = leaves_by_id(plan)
     result = {}
     for value in values:
         if not isinstance(value, dict) or set(value) != {
@@ -450,9 +498,7 @@ def assignments(path, plan):
 
 
 def init2(args):
-    parent(args.actor)
-    if not args.approved:
-        raise Error("--approved is required")
+    approved_parent(args)
     plan = read_plan(args.plan_file)
     assigned = assignments(args.assignments_file, plan)
     directory = plan_dir(args)
@@ -460,7 +506,7 @@ def init2(args):
     run = directory / run_id
     if run.exists():
         raise Error("generated run already exists")
-    leaves = {x["id"]: x for x in plan["leaves"]}
+    leaves = leaves_by_id(plan)
     timestamp = now()
     steps = {
         sid: {
@@ -496,19 +542,13 @@ def init2(args):
     }
     write(run / "plan.json", plan, 64 * 1024)
     write(run / "checkpoint.json", data)
-    (run / "events.jsonl").write_bytes(
-        canon(
-            {
-                "sequence": 1,
-                "at": timestamp,
-                "actor": "parent",
-                "action": "init-v2",
-                "plan_id": args.plan_id,
-                "run_id": run_id,
-                "plan_hash": data["plan_hash"],
-            }
-        )
-        + b"\n"
+    initial_event(
+        run,
+        timestamp,
+        "init-v2",
+        args.plan_id,
+        run_id=run_id,
+        plan_hash=data["plan_hash"],
     )
     return {
         "ok": True,
@@ -521,21 +561,16 @@ def init2(args):
 
 def load2(args):
     directory = v2_dir(args)
-    path = directory / "checkpoint.json"
-    if not path.is_file():
-        raise Error("unknown run id")
-    data = json.loads(path.read_text())
+    path = required_file(directory, "checkpoint.json", "unknown run id")
+    data = read_json(path, "invalid v2 checkpoint")
     if data.get("schema") != 2 or data.get("run_id") != args.run_id:
         raise Error("invalid v2 checkpoint")
-    try:
-        plan = json.loads((directory / "plan.json").read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Error("blocked:plan_tampered") from exc
+    plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
     if not plan_validator()(plan).get("dispatch_ready"):
         raise Error("blocked:plan_tampered")
-    leafs = {x["id"]: x for x in plan["leaves"]}
+    leafs = leaves_by_id(plan)
     if set(data.get("steps", {})) != set(leafs):
         raise Error("blocked:plan_tampered")
     for sid, step in data["steps"].items():
@@ -547,6 +582,17 @@ def load2(args):
         if not 0 <= step.get("attempt_count", -1) <= step["max_attempts"]:
             raise Error("blocked:plan_tampered")
     return directory, data, plan, leafs
+
+
+def mutating_run(args):
+    parent(args.actor)
+    return load2(args)
+
+
+def advance(step, old, expected, target, summary):
+    if old != expected:
+        raise Error(f"only {expected} steps can become {target}")
+    step.update(status=target, reason=summary[:480])
 
 
 def ready(args, data, step):
@@ -568,26 +614,16 @@ def ready(args, data, step):
 
 
 def transition2(args):
-    parent(args.actor)
-    directory, data, plan, leafs = load2(args)
-    sid = ident(args.step_id, "step id")
-    if sid not in data["steps"]:
-        raise Error("unknown step id")
-    step = data["steps"][sid]
+    directory, data, plan, leafs = mutating_run(args)
+    sid, step = selected_step(data, args.step_id)
     old = step["status"]
     new = args.to
     if new == "ready":
         ready(args, data, step)
     elif new == "in_progress":
-        if old != "ready":
-            raise Error("only ready steps can start")
-        step["status"] = "in_progress"
-        step["reason"] = (args.summary or "in progress")[:480]
+        advance(step, old, "ready", new, args.summary or "in progress")
     elif new == "integrated":
-        if old != "completed":
-            raise Error("only completed steps can integrate")
-        step["status"] = "integrated"
-        step["reason"] = (args.summary or "integrated")[:480]
+        advance(step, old, "completed", new, args.summary or "integrated")
     else:
         raise Error("v2 transition only permits ready, in_progress, or integrated")
     event(
@@ -599,14 +635,7 @@ def transition2(args):
         to_status=step["status"],
         attempt_id=step["attempt_id"],
     )
-    return {
-        "ok": True,
-        "action": "transition",
-        "run_id": args.run_id,
-        "step_id": sid,
-        "status": step["status"],
-        "attempt_id": step["attempt_id"],
-    }
+    return result2("transition", args, sid, step, attempt_id=step["attempt_id"])
 
 
 def valid_return(value, data, step, leaf):
@@ -668,9 +697,7 @@ def valid_return(value, data, step, leaf):
         raise Error("acceptance evidence digest pair required")
     if "evidence_path" in accept:
         rel(accept["evidence_path"], "acceptance evidence")
-        0 if SHA.fullmatch(accept["sha256"]) else (_ for _ in ()).throw(
-            Error("invalid acceptance sha256")
-        )
+        require_sha256(accept["sha256"], "invalid acceptance sha256")
     blockers = value["blockers"]
     if not isinstance(blockers, list) or len(blockers) > 8:
         raise Error("invalid blockers")
@@ -690,9 +717,7 @@ def valid_return(value, data, step, leaf):
             raise Error("blocker evidence digest pair required")
         if "evidence_path" in blocker:
             rel(blocker["evidence_path"], "blocker evidence")
-            0 if SHA.fullmatch(blocker["sha256"]) else (_ for _ in ()).throw(
-                Error("invalid blocker sha256")
-            )
+            require_sha256(blocker["sha256"], "invalid blocker sha256")
     notes = value["notes"]
     if (
         not isinstance(notes, list)
@@ -722,8 +747,6 @@ def valid_return(value, data, step, leaf):
         accept["exit_code"] != 0 or (paths and not value["commit_hash"])
     ):
         raise Error("completed return requires exit 0 and changed work commit hash")
-    if value["status"] == "completed" and accept["exit_code"] not in {0, None}:
-        raise Error("failed acceptance must be failed")
     if value["status"] in {"blocked", "failed", "oversized"} and not blockers:
         raise Error("non-completed returns require blockers")
     if value["status"] == "oversized" and not rem:
@@ -732,8 +755,7 @@ def valid_return(value, data, step, leaf):
 
 
 def record(args):
-    parent(args.actor)
-    directory, data, plan, leafs = load2(args)
+    directory, data, plan, leafs = mutating_run(args)
     raw = Path(args.return_file).read_bytes()
     try:
         value = json.loads(raw)
@@ -744,23 +766,29 @@ def record(args):
     if step is None or step["status"] != "in_progress":
         raise Error("return is not for current in_progress step")
     if len(raw) > MAX_RETURN:
-        step["status"] = "oversized"
-        step["retry_allowed"] = False
-        step["reason"] = "bounded-step-return-v1 exceeds 8 KiB"
-        step["blockers"] = [{"code": "oversized_return", "summary": "return exceeds 8 KiB"}]
-        event(directory, data, "record-return", step_id=sid, status="oversized")
+        reject_return(
+            directory,
+            data,
+            step,
+            sid,
+            "bounded-step-return-v1 exceeds 8 KiB",
+            "oversized_return",
+            "return exceeds 8 KiB",
+        )
         raise Error("bounded-step-return-v1 exceeds 8 KiB")
     try:
         value = valid_return(value, data, step, leafs[sid])
     except Error as exc:
         if str(exc) == "changed path outside write_set":
-            step["status"] = "oversized"
-            step["retry_allowed"] = False
-            step["reason"] = "oversized: changed path outside write_set"
-            step["blockers"] = [
-                {"code": "scope_expanded", "summary": "changed path outside write_set"}
-            ]
-            event(directory, data, "record-return", step_id=sid, status="oversized")
+            reject_return(
+                directory,
+                data,
+                step,
+                sid,
+                "oversized: changed path outside write_set",
+                "scope_expanded",
+                "changed path outside write_set",
+            )
         raise
     fingerprint = digest(
         {
@@ -786,37 +814,28 @@ def record(args):
     previous = step["fingerprints"][-1] if step["fingerprints"] else ""
     step["fingerprints"].append(fingerprint)
     step["fingerprints"] = step["fingerprints"][-5:]
-    if value["status"] == "completed":
-        step["status"] = "completed"
-        step["retry_allowed"] = False
-    elif value["status"] == "oversized":
-        step["status"] = "oversized"
-        step["retry_allowed"] = False
+    if value["status"] in {"completed", "oversized"}:
+        step.update(status=value["status"], retry_allowed=False)
     elif previous == fingerprint:
-        step["status"] = "blocked"
-        step["retry_allowed"] = False
-        step["reason"] = "blocked:no_progress"
+        stop_step(
+            step,
+            "blocked",
+            "blocked:no_progress",
+            "blocked:no_progress",
+            "repeated non-completed progress fingerprint",
+        )
     elif step["attempt_count"] >= step["max_attempts"]:
-        step["status"] = "blocked"
-        step["retry_allowed"] = False
-        step["reason"] = "blocked:retry_exhausted"
+        stop_step(
+            step,
+            "blocked",
+            "blocked:retry_exhausted",
+            "blocked:retry_exhausted",
+            "attempt limit reached with differing progress fingerprint",
+        )
     else:
         step["status"] = value["status"]
-    step["blockers"] = value["blockers"]
-    if step["reason"] == "blocked:no_progress":
-        step["blockers"] = [
-            {
-                "code": "blocked:no_progress",
-                "summary": "repeated non-completed progress fingerprint",
-            }
-        ]
-    if step["reason"] == "blocked:retry_exhausted":
-        step["blockers"] = [
-            {
-                "code": "blocked:retry_exhausted",
-                "summary": "attempt limit reached with differing progress fingerprint",
-            }
-        ]
+    if step["reason"] not in {"blocked:no_progress", "blocked:retry_exhausted"}:
+        step["blockers"] = value["blockers"]
     event(
         directory,
         data,
@@ -826,14 +845,7 @@ def record(args):
         attempt_id=step["attempt_id"],
         fingerprint=fingerprint,
     )
-    return {
-        "ok": True,
-        "action": "record-return",
-        "run_id": args.run_id,
-        "step_id": sid,
-        "status": step["status"],
-        "progress_fingerprint": fingerprint,
-    }
+    return result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
 
 
 def summary(data):
@@ -847,7 +859,7 @@ def summary(data):
             "progress_fingerprint": s["fingerprints"][-1] if s["fingerprints"] else "",
             "reason": s["reason"][:480],
         }
-        for s in sorted(steps.values(), key=lambda x: x["id"])
+        for s in ordered_steps(steps)
     ]
     counts = {
         status: sum(s["status"] == status for s in steps.values())
@@ -855,7 +867,7 @@ def summary(data):
     }
     actions = [
         f"ready:{s['id']}"
-        for s in sorted(steps.values(), key=lambda x: x["id"])
+        for s in ordered_steps(steps)
         if s["status"] in {"pending", "blocked", "failed"}
         and s["retry_allowed"]
         and all(steps[d]["status"] == "completed" for d in s["dependencies"])
@@ -880,17 +892,11 @@ def summary(data):
         "truncated": False,
         "omitted_count": 0,
     }
-    while (
-        len(re.findall(r"\w+|[^\w\s]", json.dumps(result, sort_keys=True, separators=(",", ":"))))
-        > MAX_TOKENS
-        and result["steps"]
-    ):
+    while proxy_tokens(result) > MAX_TOKENS and result["steps"]:
         result["steps"].pop()
         result["truncated"] = True
         result["omitted_count"] += 1
-    result["summary_proxy_tokens"] = len(
-        re.findall(r"\w+|[^\w\s]", json.dumps(result, sort_keys=True, separators=(",", ":")))
-    )
+    result["summary_proxy_tokens"] = proxy_tokens(result)
     return result
 
 
@@ -903,9 +909,7 @@ def show(args):
             "plan_id": data["plan_id"],
             "steps": list(data["steps"].values()),
         }
-        result["summary_proxy_tokens"] = len(
-            re.findall(r"\w+|[^\w\s]", json.dumps(result, sort_keys=True, separators=(",", ":")))
-        )
+        result["summary_proxy_tokens"] = proxy_tokens(result)
         if result["summary_proxy_tokens"] > MAX_TOKENS:
             raise Error("legacy ledger summary exceeds 1200 proxy tokens")
         return result
@@ -937,13 +941,10 @@ def show(args):
             },
             "omitted_blockers": 0,
         }
-        token_count = lambda value: len(
-            re.findall(r"\w+|[^\w\s]", json.dumps(value, sort_keys=True, separators=(",", ":")))
-        )
-        while token_count(result) > MAX_TOKENS and result["step"]["blockers"]:
+        while proxy_tokens(result) > MAX_TOKENS and result["step"]["blockers"]:
             result["step"]["blockers"].pop()
             result["omitted_blockers"] += 1
-        result["summary_proxy_tokens"] = token_count(result)
+        result["summary_proxy_tokens"] = proxy_tokens(result)
         return result
     return summary(data)
 
