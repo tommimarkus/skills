@@ -70,23 +70,27 @@ one of `completed`, `blocked`, `failed`, or `oversized`. It contains:
   most 240 characters (no absolute path or `..` segment), each inside the
   leaf's approved `write_set`.
 - `acceptance`: the exact plan `acceptance_command` (at most 480 characters),
-  an integer `exit_code` from 0 through 255, and a `summary` of at most 480
-  characters; optional `evidence_path` is a safe repository-relative path of
-  at most 240 characters and optional `sha256` is exactly 64 lowercase
-  hexadecimal characters.
-- `blockers`: at most 8 non-empty typed blocker codes of at most 120
-  characters; `notes`: at most 8 objects whose `type` is 1 through 64
-  characters and whose message is at most 480 characters;
+  an integer or `null` `exit_code`, and a `summary` of at most 480 characters.
+  Its optional `evidence_path` and `sha256` appear as a pair: the path is safe
+  and repository-relative (at most 240 characters), and the hash is exactly 64
+  lowercase hexadecimal characters.
+- `blockers`: at most 8 objects, each with `code`, a `summary` of at most 240
+  characters, and the optional paired `evidence_path`/`sha256` evidence fields
+  above. `notes`: at most 8 objects whose `type` is exactly one of `finding`,
+  `decision_needed`, `residual_risk`, `untouched`, or `verification_limit`, and
+  whose message is at most 480 characters;
   `unstarted_remainder`: at most 8 stable leaf IDs or bounded parent actions,
   each at most 240 characters.
 - `commit_hash`: empty, or exactly 40 or 64 lowercase hexadecimal characters.
 
-No return includes raw logs, credentials, or an unbounded transcript. A
-`completed` return requires `acceptance.exit_code: 0` and a non-empty commit
-hash; a failed acceptance must be `failed`, never completed. `blocked` and
-`oversized` returns each include at least one typed blocker; `failed` and
-`oversized` returns preserve their typed reason. The parent computes and records
-the progress fingerprint after validating these invariants.
+The return does not list `run_id`; the required lifecycle `--run-id` matches it
+to ledger state. No return includes raw logs, credentials, or an unbounded
+transcript. A `completed` return requires `acceptance.exit_code: 0`; it requires
+a non-empty `commit_hash` only when `changed_paths` is non-empty. A failed
+acceptance must be `failed`, never completed. Each `blocked`, `failed`, and
+`oversized` return requires at least one blocker, and `oversized` also requires
+a non-empty `unstarted_remainder`. The parent computes and records the progress
+fingerprint after validating these invariants.
 
 `show` emits one machine-readable bounded summary: plan/run IDs, plan hash,
 contract version, aggregate counts, and for each included step only its ID,

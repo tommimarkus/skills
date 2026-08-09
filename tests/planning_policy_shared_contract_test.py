@@ -181,8 +181,13 @@ class SharedContractTest(unittest.TestCase):
             "oversized", "SHA-256", "blocked:plan_tampered", "--step-id",
             "truncated: true", "contract_version: 1", "dispatch_ready: false",
             "no active version-1 ledger remains", "at most 8 KiB",
-            "1 through 128 characters", "0 through 255", "at most 32 unique",
-            "at most 8 non-empty typed blocker codes", "40 or 64 lowercase",
+            "1 through 128 characters", "integer or `null` `exit_code`",
+            "at most 32 unique", "at most 8 objects, each with `code`",
+            "summary` of at most 240", "optional paired `evidence_path`/`sha256`",
+            "`finding`", "`decision_needed`", "`residual_risk`", "`untouched`",
+            "`verification_limit`",
+            "The return does not list `run_id`", "40 or 64 lowercase",
+            "only when `changed_paths` is non-empty", "oversized` also requires",
         )
         for anchor in required:
             with self.subTest(anchor=anchor):
