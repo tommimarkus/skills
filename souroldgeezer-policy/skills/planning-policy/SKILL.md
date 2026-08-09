@@ -28,8 +28,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [plan contract](references/plan-contract.md) and run its advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
   command before approval or dispatch. For an approved plan with two or more
-  delegated steps, the parent alone uses the contract's `init`, `transition`,
-  `show`, and `validate` commands from
+  delegated steps, read the [ledger contract](references/ledger-contract.md);
+  the parent alone uses its `init-v2`, `transition`, `record-return`, `show`,
+  and `validate` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py).
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
