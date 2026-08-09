@@ -34,8 +34,9 @@ Load [references/procedures/fragility-review.md](references/procedures/fragility
 when Review assesses changed code for hidden preconditions or whether a nearby
 change could miss a volatile design decision. Load
 [references/procedures/native-tool-evidence.md](references/procedures/native-tool-evidence.md)
-only when a native analyzer, type checker, linter, or similar tool finding is
-available as fragility evidence; this procedure is separately owned.
+only when a repository-configured native tool supplied evidence, a relevant
+tool was detected without a repository-owned invocation, or a demonstrated
+evidence gap makes one optional suggestion relevant.
 For Lookup, do not load the core reference: answer from the matched catalog
 below and cite the core-reference section it names for Lookup (a `Cite` column
 or a cite sentence). If the lookup needs code evidence, cross-section

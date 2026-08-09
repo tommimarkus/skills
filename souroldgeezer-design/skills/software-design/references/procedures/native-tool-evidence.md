@@ -2,9 +2,10 @@
 
 Native Tool Evidence shows repeatable evidence from tools this project already uses. It does not require the project to adopt or configure a tool.
 
-Load this procedure when a Build, Extract, or Review task needs to decide
-whether an already-used analyzer can add evidence, or when an optional tool
-suggestion was declined and the decision must be kept quiet in this clone.
+Load this procedure when a Build, Extract, or Review task has evidence from a
+repository-configured native tool, detects a relevant tool without a
+repository-owned invocation, or has a demonstrated evidence gap for which one
+optional suggestion may be relevant.
 
 ## Evidence protocol
 
@@ -29,6 +30,10 @@ Persist only an explicit `no`, `not now`, or `defer`. At that moment say:
 
 > I’ll remember only this optional tool suggestion in this clone until `<date>` so it is not repeatedly offered. Fragility findings remain active.
 
+Set `<date>` to 30 UTC calendar days after the explicit decision. The record is
+active before that date. The suggestion is eligible again on its stored UTC
+date.
+
 Use Git's local configuration, which is clone-local and shared across linked
 worktrees; do not use Git's worktree-specific configuration. Git documents the
 local configuration scope in its [configuration manual](https://git-scm.com/docs/git-config/2.51.2.html)
@@ -48,8 +53,8 @@ git config --local --get softwaredesign.tool-decision-typescript-unchecked-index
 ```
 
 An active record means total silence: no suggestion and no suppression reminder.
-Reading never slides the deadline. The suggestion is eligible again on its
-stored UTC date. Renew it only after a new explicit `no`, `not now`, or `defer`.
+Reading never slides the deadline. Renew it only after a new explicit `no`,
+`not now`, or `defer`.
 
 List and clear decisions exactly with:
 

@@ -23,6 +23,8 @@ class SoftwareDesignNativeToolEvidenceTest(unittest.TestCase):
             "demonstrated evidence gap",
             "never a prerequisite",
             "Equivalent tools share one capability key",
+            "30 UTC calendar days after the explicit decision",
+            "eligible again on its stored UTC date",
             "missing optional tooling never blocks",
             "never makes the design concern `not-assessed`",
             "Tool findings remain candidates",

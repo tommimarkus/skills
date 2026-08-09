@@ -18,7 +18,12 @@ class SoftwareDesignFragilitySurfaceTest(unittest.TestCase):
         self.assertIn("not style review, speculative abstraction, analyzer", skill)
         self.assertIn("references/procedures/fragility-review.md", skill)
         self.assertIn("references/procedures/native-tool-evidence.md", skill)
-        self.assertIn("only when a native analyzer, type checker, linter", skill)
+        for condition in (
+            "repository-configured native tool supplied evidence",
+            "detected without a repository-owned invocation",
+            "evidence gap makes one optional suggestion relevant",
+        ):
+            self.assertIn(condition, skill)
 
     def test_latent_precondition_card_requires_real_safety_evidence(self) -> None:
         catalog = read(CATALOG)
