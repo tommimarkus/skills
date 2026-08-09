@@ -97,6 +97,14 @@ Run log:
   Adjudicated covered: root-facade import cost (`python.SD-B-*` → core),
   `lru_cache` hidden singletons (`python.SD-C-1`), metaclass ladder (core).
   Same merge-back.
+- 2026-08-09 `python.md` lenses A+B (GPT-5.6 Terra): one gap fixed — public
+  annotation/overload compatibility-diff and release impact were added to the
+  typed-public-surface contract, using the project's configured compatibility
+  check first and a bounded manual/generated diff only as fallback. Other
+  Python/API pressure areas were covered or delegated: project-first
+  assimilation, async/resource ownership, context-local state, API contract
+  routing, and security/test/release policy boundaries. No Python smell code
+  was added.
 - 2026-07-22 `shell-script.md` lenses A+B (Fable 5): one gap fixed — env
   added to the inspected contracts (the inbound env-var config surface;
   parity with python's env reads). Otherwise the tightest mapping of the

@@ -98,7 +98,8 @@ it adds no Python smell codes. Retest: trigger cases
 `software-design-behavior-python-project-first-assimilation`,
 `software-design-behavior-python-async-resource-ownership`,
 `software-design-behavior-python-context-local-state`, and
-`software-design-behavior-python-failure-and-performance-contracts`.
+`software-design-behavior-python-failure-and-performance-contracts`, and
+`software-design-behavior-python-typed-contract-compatibility`.
 Merge back (remove the extension detail) if fresh Python reviews show no lift
 over the core's ownership/error/performance guidance, or if project-first
 assimilation cannot improve decisions beyond generic advice.

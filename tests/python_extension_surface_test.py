@@ -22,6 +22,10 @@ class PythonExtensionSurfaceTest(unittest.TestCase):
             "sync/async",
             "contextvars",
             "py.typed",
+            "supported prior release",
+            "public-API or type-compatibility check",
+            "bounded manual or generated diff",
+            "release-policy",
             "profile",
             "api-design",
             "devsecops-audit",
@@ -77,6 +81,8 @@ class PythonExtensionSurfaceTest(unittest.TestCase):
                 ("contextvars from thread-local and globals", "mandate contextvars"),
             "software-design-behavior-python-failure-and-performance-contracts":
                 ("SD-S-5", "recommend an optimization from intuition alone"),
+            "software-design-behavior-python-typed-contract-compatibility":
+                ("supported prior release or named baseline", "prescribe a particular checker"),
         }
         for case_id, (required, forbidden) in expected.items():
             with self.subTest(case_id=case_id):

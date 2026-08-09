@@ -69,7 +69,15 @@ Treat the distribution and typing surface as a contract: `py.typed`, public
 annotations, overloads, protocols, re-exports, and generated stubs all affect
 what consumers can rely on. Check that the package's declared and runtime
 surfaces agree and that type-only claims do not silently stand in for runtime
-validation; route HTTP schemas and API error contracts to `api-design`.
+validation; route HTTP schemas and API error contracts to `api-design`. When
+one of these public surfaces changes, compare it with the supported prior
+release or the project's named compatibility baseline. Use the project's
+configured public-API or type-compatibility check first; only when no
+equivalent exists, make a bounded manual or generated diff of the changed
+public symbols and disclose its limits. Identify breaking, deprecation, and
+migration consequences and the resulting release impact; delegate release
+execution and policy to `release-policy` rather than prescribing a versioning
+tool or scheme here.
 Before recommending a performance change, establish the user-visible measure,
 capture a representative profile or other runtime evidence, and identify the
 owning boundary for the bottleneck. Optimize the smallest evidenced hot path,
