@@ -1,4 +1,5 @@
 import contextlib, importlib.util, io, json, tempfile, unittest
+from unittest.mock import patch
 from pathlib import Path
 
 SCRIPT = (
@@ -571,6 +572,108 @@ class PlanningLedgerTest(unittest.TestCase):
             ],
         )
         self.assertEqual(3, self.record(two, self.returned(step))[0])
+
+    def test_uuid_collision_refuses_second_init_v2(self):
+        fixed = ledger.uuid.UUID("12345678-1234-4234-8234-123456789abc")
+        with patch.object(ledger.uuid, "uuid4", return_value=fixed):
+            self.init2()
+            code, _ = self.call(
+                *self.common,
+                "init-v2",
+                "--actor",
+                "parent",
+                "--approved",
+                "--plan-file",
+                str(self.plan()),
+                "--assignments-file",
+                str(self.assignments()),
+            )
+        self.assertEqual(3, code)
+
+    def test_changed_progress_allows_retry_before_numeric_limit(self):
+        run = self.init2(max_attempts=3)
+        first = self.start(run)
+        self.assertEqual(
+            0,
+            self.record(
+                run, self.returned(first, "blocked", blockers=[self.blocker("waiting", "first")])
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--step-id",
+                "step0",
+                "--to",
+                "ready",
+                "--agent-id",
+                "second",
+                "--retry",
+                "--summary",
+                "changed evidence",
+            )[0],
+        )
+        second = self.start_after_ready(run)
+        changed = self.returned(
+            second,
+            "blocked",
+            blockers=[
+                {
+                    "code": "waiting",
+                    "summary": "second",
+                    "evidence_path": "evidence/two.json",
+                    "sha256": "b" * 64,
+                }
+            ],
+        )
+        self.assertEqual(0, self.record(run, changed)[0])
+        self.assertTrue(self.checkpoint(run)["steps"]["step0"]["retry_allowed"])
+
+    def test_numeric_exhaustion_uses_typed_retry_exhausted_blocker(self):
+        run = self.init2(max_attempts=2)
+        first = self.start(run)
+        self.assertEqual(
+            0,
+            self.record(
+                run, self.returned(first, "blocked", blockers=[self.blocker("waiting", "first")])
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--step-id",
+                "step0",
+                "--to",
+                "ready",
+                "--agent-id",
+                "second",
+                "--retry",
+                "--summary",
+                "changed",
+            )[0],
+        )
+        second = self.start_after_ready(run)
+        self.assertEqual(
+            0,
+            self.record(
+                run, self.returned(second, "blocked", blockers=[self.blocker("waiting", "second")])
+            )[0],
+        )
+        state = self.checkpoint(run)["steps"]["step0"]
+        self.assertFalse(state["retry_allowed"])
+        self.assertEqual("blocked:retry_exhausted", state["blockers"][0]["code"])
 
 
 if __name__ == "__main__":

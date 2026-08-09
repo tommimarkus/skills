@@ -221,11 +221,35 @@ def load1(directory):
             dep not in data["steps"] for dep in step["dependencies"]
         ):
             raise Error("invalid legacy dependencies")
+        if sid in step["dependencies"]:
+            raise Error("legacy dependency cycle")
+        for field in ("harness", "tier", "model_or_alias", "effort", "worktree"):
+            if (
+                not isinstance(step.get(field), str)
+                or not step[field].strip()
+                or len(step[field]) > 160
+            ):
+                raise Error("invalid legacy assignment")
         if not isinstance(step.get("blocker_code"), str) or (
             step["blocker_code"]
             and not re.fullmatch(r"blocked:[a-z][a-z0-9_]{0,63}", step["blocker_code"])
         ):
             raise Error("invalid legacy blocker")
+    visiting, visited = set(), set()
+
+    def visit(step_id):
+        if step_id in visiting:
+            raise Error("legacy dependency cycle")
+        if step_id in visited:
+            return
+        visiting.add(step_id)
+        for dep in data["steps"][step_id]["dependencies"]:
+            visit(dep)
+        visiting.remove(step_id)
+        visited.add(step_id)
+
+    for step_id in data["steps"]:
+        visit(step_id)
     return data
 
 
