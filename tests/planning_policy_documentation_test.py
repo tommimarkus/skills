@@ -30,7 +30,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "no `run_id` or raw logs",
             "blocked:plan_tampered",
             "Version-1 ledgers remain readable and mutable",
-            "failed:retry_exhausted",
+            "retry_policy: legacy_unbounded",
+            "cannot approve or dispatch an unversioned version-1\n    plan as new work",
+            "blocked:retry_exhausted",
             "blocked:no_progress",
             "terminal `oversized`",
             "blocked:model_unavailable",
@@ -48,6 +50,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "contract_version: 2", "<plan-id>/<run-id>",
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1 ledgers remain readable and mutable",
+            "retry_policy: legacy_unbounded",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, claude)
@@ -62,6 +65,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "contract_version: 2", "<plan-id>/<run-id>",
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1 ledgers remain readable and mutable",
+            "retry_policy: legacy_unbounded",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, agents)
@@ -76,7 +80,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "contract_version: 2", "<plan-id>/<run-id>", "lowercase UUID4",
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1\nledgers remain readable and mutable",
-            "failed:retry_exhausted", "blocked:no_progress", "terminal\n`oversized`",
+            "retry_policy: legacy_unbounded", "blocked:retry_exhausted",
+            "blocked:no_progress", "terminal\n`oversized`",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, standard)

@@ -303,7 +303,7 @@ UUID4 `run-id`. It assigns every declared step once and issues one current
 opaque attempt ID. Concurrent agents require independent ready steps and
 separate worktrees/write paths. Finite `max_attempts` (1–5) stops unchanged
 progress as `blocked:no_progress`, exhaustion as terminal
-`failed:retry_exhausted`, and boundary expansion as terminal `oversized`.
+`blocked:retry_exhausted`, and boundary expansion as terminal `oversized`.
 
 Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
 logs. Every delegated handoff is one at-most-8-KiB
@@ -311,9 +311,12 @@ logs. Every delegated handoff is one at-most-8-KiB
 no `run_id`. The ledger stores a canonical approved-plan SHA-256 hash;
 `blocked:plan_tampered` prevents dispatch or retry on a mismatch. Bounded
 `show` rehydrates one step or a truncated run summary, never raw history.
-Version-1 ledgers remain readable and mutable through legacy commands until
-every version-1 ledger is terminal, but cannot start attempts or convert in
-place. Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
+Version-1 ledgers remain readable and mutable in place with
+`retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
+Current planning-policy cannot approve or dispatch an unversioned version-1
+plan as new work; new documentation uses `init-v2`. Remove legacy support only
+in a later explicit breaking release after no version-1 ledger is nonterminal.
+Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
 `opus`/`high`, `opus`/`xhigh` — for mechanical, standard, analytical, and deep
 work respectively. These are aliases, not claims about a resolved version. If
 an alias or effort is unavailable, return `blocked:model_unavailable` with the

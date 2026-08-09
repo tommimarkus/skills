@@ -119,13 +119,15 @@ using a lowercase UUID4 run ID. It assigns each declared step one current,
 opaque attempt identity; concurrent agents require independent ready steps and
 separate worktrees/write paths. Finite `max_attempts` converges retries:
 unchanged progress is `blocked:no_progress`, exhaustion is terminal
-`failed:retry_exhausted`, and an exceeded bounded assignment is terminal
+`blocked:retry_exhausted`, and an exceeded bounded assignment is terminal
 `oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
 `blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
 and its bounded `show` rehydrates one step or a truncated summary. Version-1
-ledgers remain readable and mutable through legacy commands until every
-version-1 ledger is terminal; they cannot dispatch new attempts or convert in
-place.
+ledgers remain readable and mutable in place with
+`retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
+Current planning-policy cannot approve or dispatch an unversioned version-1
+plan as new work; new documentation uses `init-v2`. Remove legacy support only
+in a later explicit breaking release after no version-1 ledger is nonterminal.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

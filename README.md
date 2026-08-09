@@ -158,7 +158,7 @@ running the same install command.
     attempt identity. Ready agents may work concurrently only on independent
     steps with separate worktrees and write paths. A leaf has a finite
     `max_attempts` (1 through 5): unchanged return facts stop retries as
-    `blocked:no_progress`, exhaustion is terminal `failed:retry_exhausted`, and
+    `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
 
@@ -169,9 +169,12 @@ running the same install command.
     remainder. It includes no `run_id` or raw logs. The ledger preserves an approved
     plan copy and SHA-256 hash; a mismatch is `blocked:plan_tampered`. Its
     bounded `show` rehydrates either one step or a truncated run summary, not
-    event history. Version-1 ledgers remain readable and mutable through their
-    legacy commands until every version-1 ledger is terminal; they cannot start
-    a new delegated attempt or be converted in place. The optional fresh-context comparison is
+    event history. Version-1 ledgers remain readable and mutable in place with
+    `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
+    Current planning-policy cannot approve or dispatch an unversioned version-1
+    plan as new work; new documentation uses `init-v2`. Remove legacy support
+    only in a later explicit breaking release after no version-1 ledger is
+    nonterminal. The optional fresh-context comparison is
     `uv run python scripts/planning_policy_forward_eval.py --harness both
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
