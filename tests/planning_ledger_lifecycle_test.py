@@ -66,7 +66,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                 leaf["irreducible_unknown_or_risk"] = "retry terminal precedence"
             leaves.append(leaf)
         plan = {
-            "contract_version": 2,
+            "contract_version": 3,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],
@@ -111,7 +111,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
     ):
         code, result = self.call(
             *self.common(plan_id),
-            "init-v2",
+            "init-v3",
             "--actor",
             "parent",
             "--approved",
@@ -786,7 +786,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertLessEqual(listed["summary_proxy_tokens"], 1200)
         code, _ = self.call(
             *self.common("linked"),
-            "init-v2",
+            "init-v3",
             "--actor",
             "parent",
             "--approved",

@@ -61,6 +61,9 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-retry-immediate-escalation",
             "planning-policy-behavior-retry-terminal-precedence",
             "planning-policy-behavior-retry-legacy-compatibility",
+            "planning-policy-behavior-v3-cost-advisory",
+            "planning-policy-behavior-v3-trace-opt-in",
+            "planning-policy-behavior-v3-v2-resume-only",
         }
         self.assertTrue(required.issubset(self.behavior))
         for host in ("claude", "codex"):
@@ -152,8 +155,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             payload = json.loads((output / "planning-policy-forward-eval.json").read_text(encoding="utf-8"))
         self.assertEqual(payload["schema"], "planning-policy-forward-eval/v1")
-        self.assertEqual(len(payload["runs"]), 16)
-        self.assertEqual(Counter(run["status"] for run in payload["runs"]), {"not_run:execute_required": 16})
+        self.assertEqual(len(payload["runs"]), 20)
+        self.assertEqual(Counter(run["status"] for run in payload["runs"]), {"not_run:execute_required": 20})
         self.assertTrue(all("evidence_paths" in run and "raw_log" not in run for run in payload["runs"]))
         self.assertFalse((output / ".forward-workdirs").exists())
 

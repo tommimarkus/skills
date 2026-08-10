@@ -111,8 +111,11 @@ readiness gate from those declared units rather than leaf count, and require an
 explicit user-approved exception when analytical work legitimately dominates.
 The portable contract owns those fields and stop markers; a host overlay may add
 dispatch syntax but cannot rewrite them. New executable plans use
-`contract_version: 2`; unversioned version-1 plans remain inspection-readable
-but `dispatch_ready: false` with a migration deprecation warning. Once an
+`contract_version: 3`; version-2 plans are resume-only and new v2 initialization
+returns `blocked:contract_migration_required`. Unversioned version-1 plans remain
+inspection-readable only. The v3 advisory cost profile and validator advisory
+keep stable-proxy, declared-model-token, and provider-measured lanes separate;
+missing or invalid cost data never changes execution control. Once an
 approved multi-step delegation needs persistence, exactly one parent owns the
 checkpoint ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`,
 using a lowercase UUID4 run ID. It assigns each declared step one current,
@@ -123,7 +126,7 @@ unchanged progress is `blocked:no_progress`, exhaustion is terminal
 `oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
 `blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
 and its bounded `show` rehydrates one step or a truncated summary. Successful
-v2 leaves continue `completed` → `integrated` → `cleaned`; bounded
+v2/v3 leaves continue `completed` → `integrated` → `cleaned`; bounded
 `planning-worktree-result-v1` evidence ties returned and rebased commits to
 rebase/fast-forward integration and non-force cleanup. Partial cleanup retries
 revalidate recorded identity, remaining branch state, and target ancestry.
@@ -134,9 +137,9 @@ ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
 Their terminal `integrated` state remains unchanged.
 Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v2`. Remove legacy support only
+plan as new work; new documentation uses `init-v3`. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.
-The ledger is the sole retry-policy owner: new v2 runs stamp
+The ledger is the sole retry-policy owner: new v3 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry follows only

@@ -15,12 +15,219 @@ TIERS = {"mechanical", "standard", "analytical", "deep"}
 AUDIT_OWNERS = {"devsecops-audit", "test-quality-audit", "ip-hygiene", "lean-audit"}
 STABLE_ID = re.compile(r"^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$")
 REQUIRED = (
-    "id", "dependencies", "task", "boundary", "read_set", "write_set",
-    "settled_decisions", "size", "portable_tier", "worktree_owner",
-    "acceptance_command", "return_contract", "stop_conditions", "work_unit_id",
+    "id",
+    "dependencies",
+    "task",
+    "boundary",
+    "read_set",
+    "write_set",
+    "settled_decisions",
+    "size",
+    "portable_tier",
+    "worktree_owner",
+    "acceptance_command",
+    "return_contract",
+    "stop_conditions",
+    "work_unit_id",
 )
 V2_REQUIRED = ("contract_version", "objective", "scope_summary", "approved_decisions")
 V2_RETURN_CONTRACT = "bounded-step-return-v1"
+COST_SCHEMA = "planning-execution-cost-v1"
+COST_LANES = (
+    "parent_baseline",
+    "parent_turns",
+    "retained_return_context",
+    "final_verification",
+)
+PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
+
+
+def proxy_tokens(value: Any) -> int:
+    serialized = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    matches = PROXY_TOKEN_RE.finditer(serialized)
+    return sum(map(lambda _match: 1, matches))
+
+
+def token_range(value: Any) -> dict[str, int] | None:
+    if type(value) is not dict:
+        return None
+    if sorted(value) != ["expected", "high", "low"]:
+        return None
+    low, expected, high = (value.get(key) for key in ("low", "expected", "high"))
+    for item in (low, expected, high):
+        if type(item) is not int or item < 0:
+            return None
+    if not low <= expected <= high:
+        return None
+    return {"low": low, "expected": expected, "high": high}
+
+
+def attempt_multiplication(attempts: dict[str, dict[str, int | None]]) -> dict[str, int]:
+    totals = {"expected": 0, "maximum": 0}
+    for attempt in attempts.values():
+        totals["expected"] += attempt["expected"] or 0
+        totals["maximum"] += attempt["maximum"] or 0
+    return totals
+
+
+def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return bounded cost guidance without contributing contract errors."""
+    codes: list[str] = []
+    profile = plan.get("execution_cost")
+    canonical_plan_tokens = proxy_tokens(plan)
+    handoffs = [
+        proxy_tokens({key: leaf.get(key) for key in REQUIRED if key in leaf})
+        for leaf in leaves
+        if isinstance(leaf, dict)
+    ]
+    stable = {
+        "canonical_plan": canonical_plan_tokens,
+        "largest_handoff": max(handoffs, default=0),
+    }
+    attempts = {
+        str(leaf.get("id")): {
+            "expected": 1,
+            "maximum": leaf.get("max_attempts")
+            if isinstance(leaf.get("max_attempts"), int)
+            else None,
+        }
+        for leaf in leaves
+        if isinstance(leaf, dict) and stable_id(leaf.get("id"))
+    }
+    result: dict[str, Any] = {
+        "schema": "planning-cost-advisory-v1",
+        "mode": "advisory",
+        "codes": codes,
+        "stable_proxy": stable,
+        "attempts": attempts,
+        "retry_multiplication": attempt_multiplication(attempts),
+        "repeated_shared_prefix_proxy": 0,
+        "largest_repeated_context_driver": "canonical_plan",
+        "declared_total_run": None,
+        "declared_maximum_run": None,
+        "retained_context_range": None,
+        "final_verification_reserve": "indeterminate",
+        "tracing": "off",
+    }
+    if profile is None:
+        codes.extend(
+            (
+                "PLANCOST-MISSING-PROFILE",
+                "PLANCOST-UNKNOWN-RANGES",
+                "PLANCOST-UNBOUNDED-FINAL-VERIFY",
+            )
+        )
+        return result
+    if (
+        not isinstance(profile, dict)
+        or len(json.dumps(profile, separators=(",", ":")).encode()) > 4096
+    ):
+        codes.append("PLANCOST-INVALID-PROFILE")
+        return result
+    allowed = {
+        "schema",
+        "mode",
+        "expected_attempts",
+        "leaf_attempt_overrides",
+        "declared_model_tokens",
+        "final_verification_commands",
+        "assumptions",
+        "unknowns",
+    }
+    commands = profile.get("final_verification_commands")
+    assumptions = profile.get("assumptions", [])
+    unknowns = profile.get("unknowns", [])
+    valid_profile = (
+        not set(profile) - allowed
+        and profile.get("schema") == COST_SCHEMA
+        and profile.get("mode") == "advisory"
+        and isinstance(profile.get("expected_attempts", 1), int)
+        and not isinstance(profile.get("expected_attempts", 1), bool)
+        and 1 <= profile.get("expected_attempts", 1) <= 5
+        and isinstance(commands, list)
+        and 1 <= len(commands) <= 4
+        and all(nonempty_string_in_range(command, 1, 480) for command in commands)
+        and isinstance(assumptions, list)
+        and len(assumptions) <= 8
+        and all(nonempty_string_in_range(value, 1, 240) for value in assumptions)
+        and isinstance(unknowns, list)
+        and len(unknowns) <= 8
+        and all(nonempty_string_in_range(value, 1, 240) for value in unknowns)
+    )
+    overrides = profile.get("leaf_attempt_overrides", {})
+    if not isinstance(overrides, dict) or set(overrides) - set(attempts):
+        valid_profile = False
+        overrides = {}
+    default_attempts = profile.get("expected_attempts", 1)
+    for leaf_id, item in attempts.items():
+        expected = overrides.get(leaf_id, default_attempts)
+        maximum = item["maximum"]
+        if (
+            not isinstance(expected, int)
+            or isinstance(expected, bool)
+            or maximum is None
+            or not 1 <= expected <= maximum
+        ):
+            valid_profile = False
+            expected = 1
+        item["expected"] = expected
+    if not valid_profile:
+        codes.append("PLANCOST-INVALID-PROFILE")
+        result["retry_multiplication"] = attempt_multiplication(attempts)
+        return result
+    result["retry_multiplication"] = attempt_multiplication(attempts)
+    repeated_attempts = max(0, result["retry_multiplication"]["expected"] - len(attempts))
+    result["repeated_shared_prefix_proxy"] = canonical_plan_tokens * repeated_attempts
+    if repeated_attempts:
+        codes.append("PLANCOST-RETRY-MULTIPLICATION")
+    if result["repeated_shared_prefix_proxy"] > stable["largest_handoff"]:
+        codes.append("PLANCOST-DOMINANT-SHARED-PREFIX")
+
+    declared = profile.get("declared_model_tokens")
+    if not isinstance(declared, dict):
+        codes.append("PLANCOST-UNKNOWN-RANGES")
+        return result
+    fixed = {lane: token_range(declared.get(lane)) for lane in COST_LANES}
+    workers_raw = declared.get("worker_attempts")
+    workers = (
+        {leaf_id: token_range(workers_raw.get(leaf_id)) for leaf_id in attempts}
+        if isinstance(workers_raw, dict) and not set(workers_raw) - set(attempts)
+        else {}
+    )
+    if (
+        any(value is None for value in fixed.values())
+        or set(workers) != set(attempts)
+        or any(value is None for value in workers.values())
+    ):
+        codes.append("PLANCOST-UNKNOWN-RANGES")
+        if fixed["final_verification"] is None:
+            codes.append("PLANCOST-UNBOUNDED-FINAL-VERIFY")
+        return result
+    result["retained_context_range"] = fixed["retained_return_context"]
+    result["final_verification_reserve"] = "known"
+    totals = {
+        key: sum(fixed[lane][key] for lane in COST_LANES) for key in ("low", "expected", "high")
+    }
+    maximum = dict(totals)
+    for leaf_id, value in workers.items():
+        expected_count = attempts[leaf_id]["expected"]
+        maximum_count = attempts[leaf_id]["maximum"]
+        for key in totals:
+            totals[key] += value[key] * expected_count
+            maximum[key] += value[key] * maximum_count
+    result["declared_total_run"] = totals
+    result["declared_maximum_run"] = maximum
+    return result
+
+
+def bounded_cost_advisory(value: dict[str, Any]) -> dict[str, Any]:
+    value["attempts_omitted"] = 0
+    while proxy_tokens(value) > 600 and value.get("attempts"):
+        value["attempts"].pop(next(reversed(value["attempts"])))
+        value["attempts_omitted"] += 1
+    if proxy_tokens(value) > 600:
+        value["codes"] = value["codes"][:8]
+    return value
 
 
 def nonempty(value: Any) -> bool:
@@ -35,26 +242,42 @@ def vague_audit_question(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     normalized = re.sub(r"\s+", " ", value.strip().lower())
-    return normalized in {"review risks", "review for risks", "review the risks", "risk review", "risks"}
+    return normalized in {
+        "review risks",
+        "review for risks",
+        "review the risks",
+        "risk review",
+        "risks",
+    }
 
 
 def nonempty_string_in_range(value: Any, minimum: int, maximum: int) -> bool:
     return isinstance(value, str) and minimum <= len(value.strip()) <= maximum
 
 
-def contract_result(contract_version: int | None, dispatch_ready: bool, warnings: list[str],
-                    errors: list[str], ratio: float = 0.0, ready_weight: int = 0,
-                    total_weight: int = 0, exception_valid: bool = False) -> dict[str, Any]:
+def contract_result(
+    contract_version: int | None,
+    dispatch_ready: bool,
+    warnings: list[str],
+    errors: list[str],
+    ratio: float = 0.0,
+    ready_weight: int = 0,
+    total_weight: int = 0,
+    exception_valid: bool = False,
+    advisory: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         "valid": not errors,
         "contract_version": contract_version,
         "dispatch_ready": dispatch_ready and not errors,
+        "resume_ready": contract_version in {2, 3} and not errors,
         "warnings": warnings,
         "standard_ready_ratio": ratio,
         "ready_weight": ready_weight,
         "total_weight": total_weight,
         "analytical_heavy_exception": exception_valid,
         "errors": errors,
+        "cost_advisory": advisory or cost_advisory({}, []),
     }
 
 
@@ -66,12 +289,15 @@ def validate(plan: Any) -> dict[str, Any]:
     raw_version = plan.get("contract_version")
     if raw_version is None:
         contract_version = 1
-        warnings.append("unversioned plan is legacy contract version 1; migrate to contract_version 2 before dispatch")
-    elif raw_version == 2 and isinstance(raw_version, int):
-        contract_version = 2
+        warnings.append(
+            "unversioned plan is legacy contract version 1; "
+            "migrate to contract_version 3 before dispatch"
+        )
+    elif raw_version in {2, 3} and isinstance(raw_version, int):
+        contract_version = raw_version
         for field in V2_REQUIRED:
             if field not in plan:
-                errors.append(f"{field} is required for contract version 2")
+                errors.append(f"{field} is required for contract version {contract_version}")
         if not nonempty_string_in_range(plan.get("objective"), 1, 240):
             errors.append("objective must be a non-empty string from 1 to 240 characters")
         if not nonempty_string_in_range(plan.get("scope_summary"), 1, 480):
@@ -80,10 +306,12 @@ def validate(plan: Any) -> dict[str, Any]:
         if not isinstance(decisions, list) or not 1 <= len(decisions) <= 8:
             errors.append("approved_decisions must be an array containing 1 to 8 strings")
         elif any(not nonempty_string_in_range(decision, 1, 240) for decision in decisions):
-            errors.append("approved_decisions entries must be non-empty strings from 1 to 240 characters")
+            errors.append(
+                "approved_decisions entries must be non-empty strings from 1 to 240 characters"
+            )
     else:
         contract_version = None
-        errors.append("contract_version must be 2 when specified")
+        errors.append("contract_version must be 2 or 3 when specified")
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:
@@ -121,7 +349,15 @@ def validate(plan: Any) -> dict[str, Any]:
         for field in REQUIRED:
             if field not in leaf:
                 errors.append(f"{prefix}.{field} is required")
-        for field in ("id", "task", "boundary", "settled_decisions", "worktree_owner", "return_contract", "work_unit_id"):
+        for field in (
+            "id",
+            "task",
+            "boundary",
+            "settled_decisions",
+            "worktree_owner",
+            "return_contract",
+            "work_unit_id",
+        ):
             if not nonempty(leaf.get(field)):
                 errors.append(f"{prefix}.{field} is required and non-empty")
         leaf_id = leaf.get("id")
@@ -137,31 +373,60 @@ def validate(plan: Any) -> dict[str, Any]:
         elif stable_id(leaf_id):
             for dependency_index, dependency in enumerate(leaf["dependencies"]):
                 if not stable_id(dependency):
-                    errors.append(f"{prefix}.dependencies[{dependency_index}] must be a stable bounded identifier")
+                    errors.append(
+                        f"{prefix}.dependencies[{dependency_index}] must be a stable "
+                        "bounded identifier"
+                    )
                 else:
                     dependencies[leaf_id].append(dependency)
         for field in ("read_set", "write_set", "stop_conditions"):
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
-        if isinstance(leaf.get("stop_conditions"), list) and "missing_load_bearing_information" not in leaf["stop_conditions"]:
+        if (
+            isinstance(leaf.get("stop_conditions"), list)
+            and "missing_load_bearing_information" not in leaf["stop_conditions"]
+        ):
             errors.append(f"{prefix}.stop_conditions must include missing_load_bearing_information")
         if leaf.get("size") not in SIZES:
             errors.append(f"{prefix}.size must be small, medium, or large")
         if leaf.get("portable_tier") not in TIERS:
-            errors.append(f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep")
+            errors.append(
+                f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep"
+            )
         for field in ("model", "model_override", "reasoning_effort", "reasoning_effort_override"):
             if field in leaf:
-                errors.append(f"{prefix}.{field} is host-adapter controlled; select portable_tier instead")
-        if not isinstance(leaf.get("acceptance_command"), str) or not leaf.get("acceptance_command", "").strip():
-            errors.append(f"{prefix}.acceptance_command must be exactly one non-empty command string")
-        if contract_version == 2:
+                errors.append(
+                    f"{prefix}.{field} is host-adapter controlled; select portable_tier instead"
+                )
+        if (
+            not isinstance(leaf.get("acceptance_command"), str)
+            or not leaf.get("acceptance_command", "").strip()
+        ):
+            errors.append(
+                f"{prefix}.acceptance_command must be exactly one non-empty command string"
+            )
+        if contract_version in {2, 3}:
             attempts = leaf.get("max_attempts")
-            if not isinstance(attempts, int) or isinstance(attempts, bool) or not 1 <= attempts <= 5:
-                errors.append(f"{prefix}.max_attempts must be an integer from 1 to 5 for contract version 2")
+            if (
+                not isinstance(attempts, int)
+                or isinstance(attempts, bool)
+                or not 1 <= attempts <= 5
+            ):
+                errors.append(
+                    f"{prefix}.max_attempts must be an integer from 1 to 5 for "
+                    f"contract version {contract_version}"
+                )
             if leaf.get("return_contract") != V2_RETURN_CONTRACT:
-                errors.append(f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} for contract version 2")
-        if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(leaf.get("irreducible_unknown_or_risk")):
-            errors.append(f"{prefix}.irreducible_unknown_or_risk is required for analytical or deep work")
+                errors.append(
+                    f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
+                    f"for contract version {contract_version}"
+                )
+        if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(
+            leaf.get("irreducible_unknown_or_risk")
+        ):
+            errors.append(
+                f"{prefix}.irreducible_unknown_or_risk is required for analytical or deep work"
+            )
         unit_id = leaf.get("work_unit_id")
         if unit_id not in unit_sizes:
             errors.append(f"{prefix}.work_unit_id must name a declared work unit")
@@ -177,7 +442,12 @@ def validate(plan: Any) -> dict[str, Any]:
                 for field in required_audit:
                     if not nonempty(audit.get(field)):
                         errors.append(f"{prefix}.selective_audit.{field} is required")
-                for field in ("initial_inspection", "domain_match", "materially_changes_approach_or_acceptance", "targeted_inspection_or_focused_tests_cannot_resolve"):
+                for field in (
+                    "initial_inspection",
+                    "domain_match",
+                    "materially_changes_approach_or_acceptance",
+                    "targeted_inspection_or_focused_tests_cannot_resolve",
+                ):
                     if audit.get(field) is not True:
                         errors.append(f"{prefix}.selective_audit.{field} must be true")
                 if audit.get("owner") not in AUDIT_OWNERS:
@@ -194,6 +464,7 @@ def validate(plan: Any) -> dict[str, Any]:
                 errors.append(f"leaf {leaf_id} depends on unknown leaf {dep}")
     visiting: set[str] = set()
     visited: set[str] = set()
+
     def visit(node: str) -> None:
         if node in visiting:
             errors.append(f"cyclic dependency at leaf {node}")
@@ -206,6 +477,7 @@ def validate(plan: Any) -> dict[str, Any]:
                 visit(dep)
         visiting.remove(node)
         visited.add(node)
+
     for leaf_id in dependencies:
         visit(leaf_id)
 
@@ -220,11 +492,29 @@ def validate(plan: Any) -> dict[str, Any]:
             ready_weight += weight
     ratio = ready_weight / total_weight if total_weight else 0.0
     exception = plan.get("analytical_heavy_exception")
-    exception_valid = isinstance(exception, dict) and nonempty(exception.get("rationale")) and nonempty(exception.get("user_approved_by"))
+    exception_valid = (
+        isinstance(exception, dict)
+        and nonempty(exception.get("rationale"))
+        and nonempty(exception.get("user_approved_by"))
+    )
     if ratio < 0.60 and not exception_valid:
-        errors.append("standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception")
-    return contract_result(contract_version, contract_version == 2, warnings, errors, ratio,
-                           ready_weight, total_weight, exception_valid)
+        errors.append(
+            "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
+        )
+    if contract_version == 2:
+        warnings.append("blocked:contract_migration_required")
+    advisory = bounded_cost_advisory(cost_advisory(plan, leaves))
+    return contract_result(
+        contract_version,
+        contract_version == 3,
+        warnings,
+        errors,
+        ratio,
+        ready_weight,
+        total_weight,
+        exception_valid,
+        advisory,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -236,7 +526,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         plan = json.loads(args.plan.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        print(json.dumps(contract_result(None, False, [], [str(error)]), sort_keys=True, separators=(",", ":")))
+        print(
+            json.dumps(
+                contract_result(None, False, [], [str(error)]),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
         return 2
     result = validate(plan)
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))

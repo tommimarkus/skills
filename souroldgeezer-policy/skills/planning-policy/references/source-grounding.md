@@ -1,5 +1,14 @@
 # Planning Policy Source Grounding
 
+## 2026-08-10 contract-v3 execution economics
+
+The v3 additions are grounded in the repository's prior bounded-handoff and
+token-awareness assessment: preserve unknown token quantities, keep proxy,
+declared-model-token, and provider-measured lanes separate, reserve final
+verification explicitly, and make runtime measurement a separate opt-in. The
+implementation generalizes the v2 ledger rather than duplicating it; existing
+v2 records remain resume-only and new initialization moves forward to v3.
+
 This skill centralizes a plan-first discipline into an install-passive,
 enforcement-active policy that a repository or a user's global guidance file
 initializes with local scope and exceptions, plus an on-demand "plan this first"
@@ -81,7 +90,7 @@ contracts are repository-authored from the same durable-ledger need; they do
 not derive from an external orchestration framework.
 
 Runtime-escalating remediation follows the same boundary: the ledger, not a
-leaf or host adapter, owns retries. A new version-2 run stamps
+leaf or host adapter, owns retries. A new version-3 run stamps
 `escalating_remediation_v1`, while policy-less existing version-2 checkpoints
 and version-1 ledgers retain prior behavior. It allows one same-tier retry only
 after exact `failed:acceptance`; `blocked:needs_higher_tier` immediately moves

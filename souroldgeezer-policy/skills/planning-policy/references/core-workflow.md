@@ -22,6 +22,10 @@ and user approval before implementation.
    validate it using its Claude `${CLAUDE_SKILL_DIR}` or Codex absolute
    `<skill-dir>` form, and re-cut any missing boundary, decision, or failed
    command. Every leaf includes `missing_load_bearing_information`.
+5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
+   contract. Leave unavailable token ranges unknown; never infer them from a
+   size, tier, model name, or stable-proxy count. Contract validation calculates
+   the advisory in the same invocation.
 
 Delegate unless the plan records one case: indivisible/trivial, needs user
 mid-flight, context cannot travel, or each result redefines the next. Overlap
@@ -51,12 +55,17 @@ evidence paths, and returns, never raw logs. Successful leaves close
 from the current parent tip. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
-For a new version-2 run, the parent uses the ledger's
+For a new version-3 run, the parent uses the ledger's
 `escalating_remediation_v1` retry policy. The ledger alone decides whether an
 eligible return gets one same-tier remediation attempt or a higher mapped tier;
 it preserves the leaf's task, boundary, read/write sets, and attempt identity
 semantics. An agent reports bounded evidence and never self-escalates, alters
 its contract, or treats an oversized/missing-input stop as retryable work.
+
+The human plan includes one compact **Execution economics** line: expected/high
+attempts; largest repeated-context driver; declared-model-token range or
+`indeterminate`; final-verification reserve or `indeterminate`; `tracing: off`.
+Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
 
 Use this standing template for adoption (Codex substitutes its available native
 approval/delegation wording):

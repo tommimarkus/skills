@@ -74,7 +74,7 @@ class PlanningLedgerTest(unittest.TestCase):
             units.append({"id": sid, "original_size": "small"})
         path = self.root / "plan.json"
         plan = {
-            "contract_version": 2,
+            "contract_version": 3,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["decision"],
@@ -110,7 +110,7 @@ class PlanningLedgerTest(unittest.TestCase):
     def init2(self, count=2, max_attempts=2, plan_path=None, portable_tier="standard"):
         code, data = self.call(
             *self.common,
-            "init-v2",
+            "init-v3",
             "--actor",
             "parent",
             "--approved",
@@ -611,7 +611,7 @@ class PlanningLedgerTest(unittest.TestCase):
             3,
             self.call(
                 *self.common,
-                "init-v2",
+                "init-v3",
                 "--actor",
                 "parent",
                 "--approved",
@@ -1022,7 +1022,7 @@ class PlanningLedgerTest(unittest.TestCase):
             self.init2()
             code, _ = self.call(
                 *self.common,
-                "init-v2",
+                "init-v3",
                 "--actor",
                 "parent",
                 "--approved",

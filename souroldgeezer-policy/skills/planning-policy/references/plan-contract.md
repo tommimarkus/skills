@@ -1,61 +1,57 @@
 # Shared Plan Contract
 
-Use this contract only when grooming an executable approved plan, delegating a
-leaf, or checking a returned handoff. It is runtime-neutral: host overlays add
-their dispatch syntax without changing these fields.
+Runtime-neutral executable-plan fields; host adapters add syntax only.
 
 ## Plan JSON
 
-New executable plans use `contract_version: 2`. They also declare a concise
-`objective` (1–240 characters), `scope_summary` (1–480 characters), and
-`approved_decisions` (one to eight non-empty strings, each at most 240
-characters). These are the parent-approved facts a leaf may rely on; a leaf
-does not search for or invent a replacement decision.
+Version 3 requires `objective` (1–240 characters), `scope_summary` (1–480), and
+one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
 
-An unversioned existing plan remains a valid version-1 plan when it satisfies
-the version-1 fields below. The validator marks it `dispatch_ready: false` and
-emits a deprecation warning. Migrate it to version 2 before dispatching new
-delegated work. An explicit version other than `2` is invalid.
+Version 2 is resume-only (`dispatch_ready: false`, `resume_ready: true`,
+`blocked:contract_migration_required`); `init-v2` refuses new runs. Version 1 is
+inspection-only. Other explicit versions are invalid.
 
-`leaves` and `work_units` are arrays. Each executable leaf has non-empty
+Each `leaves` entry has non-empty
 `id`, `dependencies`, `task`, `boundary`, `read_set`, `write_set`,
 `settled_decisions`, `size`, `portable_tier`, `worktree_owner`, one string
 `acceptance_command`, `return_contract`, `stop_conditions`, and `work_unit_id`.
-Leaf and work-unit IDs, and each dependency ID, are stable lowercase bounded
-identifiers (`[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*`, at most 64 characters).
-`dependencies` is an array of other leaf IDs; `read_set`, `write_set`, and
-`stop_conditions` are arrays. Every leaf's `stop_conditions` includes the exact
-marker `missing_load_bearing_information`. `size` and a work unit's `original_size` are
-`small`, `medium`, or `large`; portable tiers are `mechanical`, `standard`,
-`analytical`, or `deep`. In version 2, each leaf also has `max_attempts`, an
-integer from 1 through 5, and its `return_contract` is exactly
-`bounded-step-return-v1`. The bounded return records the assigned step and
-attempt, status, changed paths, focused acceptance outcome, blockers, typed
-notes, commit hash, and any unstarted remainder; it never carries raw logs.
+IDs/dependencies match `[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*` (maximum 64).
+Dependencies/read/write/stops are arrays; stops include
+`missing_load_bearing_information`. Sizes are small/medium/large and tiers are
+mechanical/standard/analytical/deep. Versions 2/3 require `max_attempts` 1–5 and
+exact `bounded-step-return-v1`, never raw logs.
 
-The shared plan selects only `portable_tier`. The matching host adapter maps it
-to host execution settings; do not record per-leaf model or reasoning-effort
-overrides. If no mapping or delegation capability is available, stop and return
-the adapter blocker to the parent rather than silently changing tiers.
+Select only `portable_tier`; model/effort belong to the host adapter. Missing
+mapping or delegation returns its blocker without a silent tier change.
 
-Retry behavior is ledger-owned and does not add plan fields or alter readiness.
-New version-2 runs stamp `retry_policy: escalating_remediation_v1`; policy-less
-existing version-2 runs and every version-1 ledger preserve their prior retry
-behavior. A retry keeps the approved leaf task, boundary, read/write sets, and
-step/attempt identity rules intact. Only the ledger may create and persist the
-bounded remediation artifact that selects a next mapped agent/host and target
-tier.
+Retries are ledger-owned, add no plan fields, and preserve the approved boundary
+and identity. New v3 uses `escalating_remediation_v1`; old policy-less state is
+unchanged.
 
-`work_units` declares each stable top-level unit once as `{ "id": "…",
-"original_size": "…" }`. Every leaf names one declared unit and every unit
-has at least one leaf. Do not create extra leaves merely to improve readiness:
-the unit is weighted once at its declared original size.
+`work_units` declares `{id, original_size}` once; every nonempty unit owns at
+least one leaf and is weighted once, preventing readiness-by-splitting.
 
-Analytical and deep leaves also require a non-empty
-`irreducible_unknown_or_risk`. Missing any load-bearing decision, an unknown
-outside that field, a scope expansion, a failed acceptance command, or a stop
-condition means stop, preserve evidence, and return to the parent. No tier may
-invent the missing information.
+Analytical/deep requires `irreducible_unknown_or_risk`. Missing decisions,
+scope expansion, failed acceptance, or a stop condition returns bounded evidence;
+no tier invents input.
+
+## Advisory execution cost
+
+Version 3 adds an at-most-4-KiB `execution_cost` object: schema
+`planning-execution-cost-v1`, `mode: advisory`, expected attempts (default 1),
+optional per-leaf overrides within `max_attempts`, one to four final-verification
+commands, and at most eight bounded assumptions and unknowns each. Optional
+`declared_model_tokens` ranges (`low <= expected <= high`) cover parent baseline,
+per-leaf worker attempts, parent turns, retained return context, and final
+verification. Unknowns stay unknown; never mix stable-proxy,
+declared-model-token, and provider-measured lanes.
+
+The same validator call emits an at-most-600-proxy-token
+`planning-cost-advisory-v1`: plan/handoff proxy size, retry and shared-prefix
+multiplication, complete declared totals/retained context, and verification
+reserve. Stable codes cover missing/invalid/unknown data, dominant prefix,
+retries, unbounded verification, and comparable observed drift. Every finding
+is advisory; execution control is invariant.
 
 ## Readiness gate
 
@@ -71,15 +67,9 @@ not the leaf contract.
 
 ## Selective audit routing
 
-Normally send domain design to its owning design skill. An initial-inspection
-leaf may set `selective_audit` only for one owning audit (`devsecops-audit`,
-`test-quality-audit`, `ip-hygiene`, or `lean-audit`) and only with all of:
-`owner`, `initial_inspection: true`, `domain_match: true`,
-`materially_changes_approach_or_acceptance: true`,
-`targeted_inspection_or_focused_tests_cannot_resolve: true`, a bounded
-`question`, and an `evidence_surface`. Only one leaf in a plan may route this
-way. “Review risks” and “review for risks” are not bounded questions.
-Do not use an audit route for ordinary domain design.
+Ordinary design uses its owning design skill. When one unresolved bounded
+initial-inspection question may justify an audit route, load
+[selective audit routing](selective-audit.md) before adding `selective_audit`.
 
 ## Validator
 
@@ -90,24 +80,20 @@ uv run python "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py"
 uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validate plan.json
 ```
 
-It emits one JSON object with `contract_version`, `dispatch_ready`, and
-`warnings`, as well as validity and readiness facts. It exits `0` for a valid
-plan that passes the readiness gate (or its recorded exception), `1` for a
-contract failure, and `2` for usage or unreadable/invalid JSON. Only a valid
-version-2 plan is dispatch-ready; a valid unversioned version-1 plan is
-inspection-compatible but has a deprecation warning and cannot be dispatched.
+Output includes validity/readiness, `contract_version`, `dispatch_ready`,
+`resume_ready`, `warnings`, and `cost_advisory`. Exit 0 is valid, 1 contract
+failure, 2 usage/JSON failure. Only v3 dispatches.
 
 ## Parent ledger helper
 
-Only after approval, and only for two or more delegated steps, resolve the
-parent-owned helper with one host form:
+After approval, for two or more delegated steps, resolve the parent helper:
 
 ```text
 uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
 uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
 ```
 
-The parent uses `init-v2`; `transition` for retry and `completed` → `integrated`
+The parent uses `init-v3`; `transition` for retry and `completed` → `integrated`
 → `cleaned`; `show`; and `validate --closeout` before terminal `close`. `reopen`
 is blocked-run only; `list`, `gc --dry-run`, and exact-target `purge` manage
 retention. Mutations require `--actor parent`. Keep bounded evidence, not raw

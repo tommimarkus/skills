@@ -114,8 +114,10 @@ bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 ### Planning-policy execution contract (Codex)
 
 The shared `planning-policy` contract is runtime-neutral. New executable plans
-use `contract_version: 2`; an unversioned version-1 plan is readable for
-inspection but `dispatch_ready: false` with a migration deprecation warning.
+use `contract_version: 3`. Version-2 plans are resume-only
+(`dispatch_ready: false`, `resume_ready: true`) and new v2 initialization stops
+as `blocked:contract_migration_required`; unversioned version-1 plans remain
+inspection-readable only.
 Every executable leaf
 has decision-complete, stable fields: IDs/dependencies, task/boundary, named
 read/write sets, settled decisions, size, portable tier, worktree owner, one
@@ -124,7 +126,14 @@ unit ID. A missing load-bearing field stops as `blocked:missing_input`; do not
 search for or invent it. Work units are weighted once from their original size
 (`small=1`, `medium=2`, `large=3`) and require `standard_ready_ratio >= 0.60`;
 only an explicitly user-approved, recorded analytical-heavy exception waives
-that gate. Route an initial inspection to at most one owning audit only when
+that gate. Each v3 plan carries an at-most-4-KiB advisory
+`planning-execution-cost-v1` block. The existing validator invocation emits an
+at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles,
+unknown ranges, shared-prefix repetition, retry multiplication, and verification
+reserve never affect validity, readiness, dispatch, retry, or lifecycle. Keep
+stable-proxy, declared-model-token, and provider-measured lanes separate. The
+human plan has one compact `Execution economics` summary and `tracing: off`.
+Route an initial inspection to at most one owning audit only when
 its bounded question and evidence surface remain unresolved by targeted
 inspection or focused tests; ordinary design is not an audit route.
 
@@ -137,7 +146,7 @@ independent ready steps with separate worktrees and write paths. A step has a
 finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 `blocked:no_progress`; an exhausted step is terminal `blocked:retry_exhausted`;
 and a boundary overrun is terminal `oversized`, never an expanded retry.
-The ledger is the sole retry-policy owner: new v2 runs stamp
+The ledger is the sole retry-policy owner: new v3 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry is allowed only
@@ -148,7 +157,7 @@ identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
-Successful v2 steps continue `completed` → `integrated` → `cleaned`.
+Successful v2/v3 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
@@ -167,19 +176,27 @@ run summary, not history. Version-1 ledgers remain readable and mutable in
 place with `retry_policy: legacy_unbounded` until every version-1 ledger is
 terminal. Version-1 keeps its terminal `integrated` state and does not gain
 `cleaned`. Current planning-policy cannot approve or dispatch an unversioned
-version-1 plan as new work; new documentation uses `init-v2`. Remove legacy
+version-1 plan as new work; new documentation uses `init-v3`. Remove legacy
 support only in a later explicit breaking release after no version-1 ledger is
 nonterminal. The parent owns integration and
 end-to-end verification; a delegated return covers only its assigned drafting
 and acceptance check.
 
-The parent closes a version-2 run with explicit `completed`, `blocked`, or
+The parent closes a version-2/3 run with explicit `completed`, `blocked`, or
 `abandoned` outcome, reopens only an eligible retained blocked run, and uses
 `list` for bounded discovery. `gc --dry-run` previews conservative retention:
 completed runs 30 days, blocked runs 90 days, abandoned runs 7 days; active,
 invalid, and ambiguous records remain preserved. `purge --actor parent` targets
 one closed run only (and needs `--before-retention` plus reason before expiry);
 there is no bulk deletion.
+
+Runtime tracing is a separate explicit opt-in per v3 run. Ordinary planning and
+execution create no usage directory, inspect no telemetry, install no hooks,
+and make no network or provider call. Only an explicit request to trace,
+measure, or calibrate loads the `trace-init`, `trace-record`, `trace-show`, and
+`trace-close` procedure. Usage records contain bounded counters plus
+harness/model provenance, never prompts, completions, arguments, results, or
+raw logs; they live outside the checkpoint and follow run retention/purge.
 
 Codex maps the portable tiers exactly: `mechanical` → `gpt-5.6-luna`/`low`,
 `standard` → `gpt-5.6-terra`/`medium`, `analytical` → `gpt-5.6-sol`/`high`, and

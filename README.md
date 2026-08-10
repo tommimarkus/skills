@@ -136,9 +136,10 @@ running the same install command.
    guidance into the initialization/options and removes competing policy prose.
 9. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
 10. Use `planning-policy` to turn an approved implementation approach into a
-    delegation-ready plan. New executable plans use `contract_version: 2`; an
-    unversioned version-1 plan remains readable for inspection but is
-    `dispatch_ready: false` with a migration deprecation warning. Its shared,
+    delegation-ready plan. New executable plans use `contract_version: 3`.
+    Version-2 plans are resume-only (`dispatch_ready: false`,
+    `resume_ready: true`) and `init-v2` rejects new runs with
+    `blocked:contract_migration_required`; version 1 remains inspection-only. Its shared,
     runtime-neutral contract gives every leaf
     stable IDs, dependencies, task/boundary, named reads and writes, settled
     decisions, size, portable tier, owner, one acceptance command, return shape,
@@ -161,7 +162,13 @@ running the same install command.
     `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
-    The ledger is the sole retry-policy owner: new v2 runs stamp
+    Each v3 plan includes bounded advisory `planning-execution-cost-v1` data;
+    the same validator invocation emits `planning-cost-advisory-v1` within 600
+    proxy tokens. Unknown token ranges remain indeterminate, execution control
+    is invariant, and proxy, declared-model-token, and provider-measured lanes
+    stay separate. The human plan includes compact **Execution economics** and
+    `tracing: off`.
+    The ledger is the sole retry-policy owner: new v3 runs stamp
     `retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve
     old behavior. `portable_tier` is initial only. Only `failed:acceptance` and
     `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
@@ -195,15 +202,18 @@ running the same install command.
     bulk deletion. Invalid, ambiguous, and active state is preserved.
     Version-1 ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-    Their terminal `integrated` state remains unchanged; `cleaned` is v2-only.
+    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
-    plan as new work; new documentation uses `init-v2`. Remove legacy support
+    plan as new work; new documentation uses `init-v3`. Remove legacy support
     only in a later explicit breaking release after no version-1 ledger is
     nonterminal. The optional fresh-context comparison is
     `uv run python scripts/planning_policy_forward_eval.py --harness both
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
-    silent downgrade.
+    silent downgrade. Token tracing is separately opt-in for one v3 run through
+    `trace-init`, `trace-record`, `trace-show`, and `trace-close`; ordinary use
+    creates no usage state or telemetry calls. Counter/provenance-only records
+    live outside the checkpoint and follow the run's retention and purge rules.
 11. Use `software-design` for bounded non-code content edits that require no
     design decision through its early-return File Edit lane. It selects the
     user or repository-required format-aware operation first, uses `jq` for

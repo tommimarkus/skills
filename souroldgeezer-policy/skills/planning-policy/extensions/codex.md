@@ -1,5 +1,10 @@
 # Codex execution adapter
 
+Render the shared plan's compact **Execution economics** line without inventing
+token ranges: expected/high attempts, largest repeated-context driver, declared
+range or `indeterminate`, final-verification reserve, and `tracing: off`.
+Normal dispatch never enables or inspects usage tracing.
+
 Read this additive adapter after the shared execution shape when the approved
 plan will execute in Codex. It does not replace the portable handoff contract.
 

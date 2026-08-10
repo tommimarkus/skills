@@ -1,5 +1,10 @@
 # Claude Code Execution Adapter
 
+Render the shared plan's compact **Execution economics** line without inventing
+token ranges: expected/high attempts, largest repeated-context driver, declared
+range or `indeterminate`, final-verification reserve, and `tracing: off`.
+Normal dispatch never enables or inspects usage tracing.
+
 Read this adapter when an approved `planning-policy` plan dispatches its steps
 through Claude Code. It adds host execution details to the portable tier roster;
 it does not replace the shared workflow.

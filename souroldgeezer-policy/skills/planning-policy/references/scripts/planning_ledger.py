@@ -21,7 +21,9 @@ MAX_CHECKPOINT = 32 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
 MAX_REMEDIATION = 4 * 1024
+MAX_USAGE = 4 * 1024
 MAX_TOKENS = 1200
+MAX_USAGE_TOKENS = 600
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
@@ -110,6 +112,36 @@ REMEDIATION_FIELDS = {
     "next_agent_id",
     "next_harness",
     "target_portable_tier",
+}
+USAGE_FIELDS = {
+    "schema",
+    "run_id",
+    "step_id",
+    "attempt_id",
+    "actor",
+    "stage",
+    "harness",
+    "model",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+}
+USAGE_STAGES = {
+    "prepare",
+    "implement",
+    "validate",
+    "integrate",
+    "final_verify",
+    "unknown",
+}
+RAW_USAGE_FIELDS = {
+    "prompt",
+    "completion",
+    "arguments",
+    "results",
+    "raw_log",
+    "messages",
+    "content",
 }
 
 
@@ -443,9 +475,16 @@ def validate_steps2(data, leafs):
 
 
 def validate_events2(directory, data):
-    path = required_file(directory, "events.jsonl", "v2 events.jsonl does not exist")
+    schema = data.get("schema")
+    path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
-    actions = {"init-v2", "transition-v2", "record-return", "close-v2", "reopen-v2"}
+    actions = {
+        f"init-v{schema}",
+        f"transition-v{schema}",
+        "record-return",
+        f"close-v{schema}",
+        f"reopen-v{schema}",
+    }
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
@@ -676,10 +715,15 @@ def plan_validator():
     return module.validate
 
 
-def read_plan(path):
+def read_plan(path, contract_version=3):
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
-    if not result.get("valid") or not result.get("dispatch_ready"):
+    ready_key = "dispatch_ready" if contract_version == 3 else "resume_ready"
+    if (
+        not result.get("valid")
+        or not result.get(ready_key)
+        or result.get("contract_version") != contract_version
+    ):
         raise Error("plan is not dispatch-ready")
     return data
 
@@ -714,8 +758,12 @@ def assignments(path, plan):
 
 
 def init2(args):
+    raise Error("blocked:contract_migration_required")
+
+
+def init3(args):
     approved_parent(args)
-    plan = read_plan(args.plan_file)
+    plan = read_plan(args.plan_file, 3)
     assigned = assignments(args.assignments_file, plan)
     ledger_root = root(args)
     collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
@@ -724,7 +772,7 @@ def init2(args):
     if invalid:
         raise Error("target plan ledger directory is invalid")
     if any(entry["legacy"] for entry in existing):
-        raise Error("cannot add a v2 run inside a legacy ledger directory")
+        raise Error("cannot add a v3 run inside a legacy ledger directory")
     run_id = str(uuid.uuid4())
     run = directory / run_id
     if run.exists():
@@ -760,7 +808,7 @@ def init2(args):
         for sid, leaf in leaves.items()
     }
     data = {
-        "schema": 2,
+        "schema": 3,
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": digest(plan),
@@ -783,14 +831,14 @@ def init2(args):
     initial_event(
         run,
         created_at,
-        "init-v2",
+        "init-v3",
         args.plan_id,
         run_id=run_id,
         plan_hash=data["plan_hash"],
     )
     return {
         "ok": True,
-        "action": "init-v2",
+        "action": "init-v3",
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": data["plan_hash"],
@@ -809,16 +857,18 @@ def load2(args):
     path = required_file(directory, "checkpoint.json", "unknown run id")
     data = read_json(path, "invalid v2 checkpoint")
     if (
-        data.get("schema") != 2
+        data.get("schema") not in {2, 3}
         or data.get("plan_id") != args.plan_id
         or data.get("run_id") != args.run_id
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
     ):
-        raise Error("invalid v2 checkpoint")
+        raise Error("invalid run checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
-    if not plan_validator()(plan).get("dispatch_ready"):
+    plan_result = plan_validator()(plan)
+    ready_key = "dispatch_ready" if data["schema"] == 3 else "resume_ready"
+    if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
         raise Error("blocked:plan_tampered")
     leafs = leaves_by_id(plan)
     if set(data.get("steps", {})) != set(leafs):
@@ -1064,7 +1114,7 @@ def transition2(args):
     event(
         directory,
         data,
-        "transition-v2",
+        f"transition-v{data['schema']}",
         step_id=sid,
         from_status=old,
         to_status=step["status"],
@@ -1159,7 +1209,7 @@ def close2(args):
     event(
         directory,
         data,
-        "close-v2",
+        f"close-v{data['schema']}",
         outcome=args.outcome,
         purge_after=data["purge_after"],
         reason=data["close_reason"],
@@ -1208,7 +1258,7 @@ def reopen2(args):
     event(
         directory,
         data,
-        "reopen-v2",
+        f"reopen-v{data['schema']}",
         previous_outcome=previous_outcome,
         reason=args.reason,
     )
@@ -1473,6 +1523,7 @@ def safe_run_contents(directory):
         "returns",
         "retry-remediations",
         "worktree-results",
+        "usage",
     }
     children = list(directory.iterdir())
     if any(child.is_symlink() for child in children):
@@ -1526,6 +1577,35 @@ def safe_run_contents(directory):
                 ):
                     raise Error("unexpected retry-remediations contents")
                 uuid4(remediation.stem, "retry-remediation attempt id")
+    usage = directory / "usage"
+    if usage.exists():
+        validate_usage_dir(usage)
+
+
+def validate_usage_dir(usage):
+    if usage.is_symlink() or not usage.is_dir():
+        raise Error("unexpected usage contents")
+    names = {item.name for item in usage.iterdir()}
+    if names - {"trace.json", "records"} or "trace.json" not in names:
+        raise Error("unexpected usage contents")
+    metadata = read_json(usage / "trace.json", "invalid usage trace")
+    if (
+        set(metadata) != {"schema", "initialized_at", "closed_at"}
+        or metadata.get("schema") != "planning-usage-trace-v1"
+        or not isinstance(metadata.get("initialized_at"), str)
+        or not isinstance(metadata.get("closed_at"), str)
+    ):
+        raise Error("invalid usage trace")
+    records = usage / "records"
+    if records.exists():
+        if records.is_symlink() or not records.is_dir():
+            raise Error("unexpected usage contents")
+        for record in records.iterdir():
+            if record.is_symlink() or not record.is_file() or record.suffix != ".json":
+                raise Error("unexpected usage contents")
+            uuid4(record.stem, "usage record id")
+            value = read_json(record, "invalid usage record")
+            valid_usage_summary(value)
 
 
 def classify_legacy(directory, current):
@@ -1572,7 +1652,7 @@ def classify_legacy(directory, current):
 def classify_v2(plan_id, directory, current):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
-    if checkpoint.get("schema") != 2:
+    if checkpoint.get("schema") not in {2, 3}:
         raise Error("unknown checkpoint schema")
     if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
         raise Error("v2 directory identity mismatch")
@@ -1583,7 +1663,12 @@ def classify_v2(plan_id, directory, current):
         checkpoint.get("plan_hash", "")
     ):
         raise Error("blocked:plan_tampered")
-    if not plan_validator()(plan).get("dispatch_ready"):
+    plan_result = plan_validator()(plan)
+    ready_key = "dispatch_ready" if checkpoint["schema"] == 3 else "resume_ready"
+    if (
+        not plan_result.get(ready_key)
+        or plan_result.get("contract_version") != checkpoint["schema"]
+    ):
         raise Error("blocked:plan_tampered")
     validate_steps2(checkpoint, leaves_by_id(plan))
     validate_retry_artifacts(directory, checkpoint)
@@ -1602,7 +1687,7 @@ def classify_v2(plan_id, directory, current):
     entry = {
         "plan_id": plan_id,
         "run_id": directory.name,
-        "contract_version": 2,
+        "contract_version": checkpoint["schema"],
         "run_status": checkpoint["run_status"],
         "outcome": checkpoint["outcome"],
         "updated_at": checkpoint["updated_at"],
@@ -1732,7 +1817,7 @@ def remove_entry(entry):
     path = entry["_path"]
     if path.is_symlink() or not path.is_dir():
         raise Error("refusing changed purge target")
-    if entry["contract_version"] == 2:
+    if entry["contract_version"] in {2, 3}:
         safe_run_contents(path)
         returns = path / "returns"
         if returns.exists() and any(
@@ -1747,7 +1832,7 @@ def remove_entry(entry):
             raise Error("refusing changed legacy purge target")
     parent_path = path.parent
     shutil.rmtree(path)
-    if entry["contract_version"] == 2:
+    if entry["contract_version"] in {2, 3}:
         try:
             parent_path.rmdir()
         except OSError:
@@ -1858,7 +1943,7 @@ def summary(data):
     ]
     result = {
         "ok": True,
-        "contract_version": 2,
+        "contract_version": data["schema"],
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
@@ -1885,6 +1970,11 @@ def summary(data):
         "truncated": False,
         "omitted_count": 0,
     }
+    return bounded_step_summary(result)
+
+
+def bounded_step_summary(result):
+    result.pop("summary_proxy_tokens", None)
     while proxy_tokens(result) > MAX_TOKENS and result["steps"]:
         result["steps"].pop()
         result["truncated"] = True
@@ -1914,7 +2004,7 @@ def show(args):
         step = data["steps"][sid]
         result = {
             "ok": True,
-            "contract_version": 2,
+            "contract_version": data["schema"],
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
             "plan_hash": data["plan_hash"],
@@ -1965,7 +2055,194 @@ def show(args):
             result["omitted_blockers"] += 1
         result["summary_proxy_tokens"] = proxy_tokens(result)
         return result
-    return summary(data)
+    result = summary(data)
+    if (directory / "usage").exists():
+        result["trace"] = {"initialized": True}
+        return bounded_step_summary(result)
+    return result
+
+
+def valid_usage_summary(value):
+    if not isinstance(value, dict):
+        raise Error("invalid planning-usage-summary-v1")
+    if len(canon(value)) > MAX_USAGE:
+        raise Error("planning-usage-summary-v1 exceeds 4 KiB")
+    if set(value) & RAW_USAGE_FIELDS:
+        raise Error("raw-content fields are forbidden in planning-usage-summary-v1")
+    if set(value) != USAGE_FIELDS or value.get("schema") != "planning-usage-summary-v1":
+        raise Error("invalid planning-usage-summary-v1 fields")
+    for key in ("run_id", "step_id", "attempt_id", "actor", "harness", "model"):
+        if not isinstance(value.get(key), str) or not value[key] or len(value[key]) > 160:
+            raise Error(f"invalid usage {key}")
+    if value.get("stage") not in USAGE_STAGES:
+        raise Error("invalid usage stage")
+    counters = [value.get(key) for key in ("input_tokens", "output_tokens", "total_tokens")]
+    if any(not isinstance(item, int) or isinstance(item, bool) or item < 0 for item in counters):
+        raise Error("invalid usage token counters")
+    if value["input_tokens"] + value["output_tokens"] != value["total_tokens"]:
+        raise Error("usage total_tokens must equal input_tokens plus output_tokens")
+    return value
+
+
+def usage_path(directory):
+    return directory / "usage"
+
+
+def trace_run(args, require_usage=True, require_open=False):
+    parent(args.actor)
+    directory, data, plan, leafs = load2(args)
+    if data["schema"] != 3:
+        raise Error("tracing requires a contract version 3 run")
+    usage = usage_path(directory)
+    if require_usage and not usage.exists():
+        raise Error("trace-init is required")
+    metadata = read_json(usage / "trace.json", "invalid usage trace") if usage.exists() else None
+    if require_open and metadata and metadata.get("closed_at"):
+        raise Error("usage trace is closed")
+    return directory, data, plan, leafs, usage, metadata
+
+
+def trace_result(action, data, **facts):
+    return {
+        "ok": True,
+        "action": action,
+        "plan_id": data["plan_id"],
+        "run_id": data["run_id"],
+        **facts,
+    }
+
+
+def trace_init(args):
+    directory, data, _plan, _leafs, usage, _metadata = trace_run(args, require_usage=False)
+    active_run(data)
+    if usage.exists():
+        raise Error("tracing is already initialized")
+    write(
+        usage / "trace.json",
+        {"schema": "planning-usage-trace-v1", "initialized_at": now(), "closed_at": ""},
+        MAX_USAGE,
+    )
+    return trace_result("trace-init", data)
+
+
+def trace_record(args):
+    directory, data, _plan, _leafs, _usage, _metadata = trace_run(args, require_open=True)
+    value = valid_usage_summary(read_json(args.usage_file, "cannot read usage file"))
+    supplied_identity = (value["run_id"],)
+    checkpoint_identity = (data["run_id"],)
+    if supplied_identity == checkpoint_identity:
+        pass
+    else:
+        raise Error("usage run identity mismatch")
+    parent_identity = value["step_id"] == "parent" and value["attempt_id"] == "run"
+    if value["actor"] == "parent" and not parent_identity:
+        raise Error("parent usage identity must be parent/run")
+    if value["actor"] == "worker":
+        step = data["steps"].get(value["step_id"])
+        if step is None or not step["attempt_id"] or value["attempt_id"] != step["attempt_id"]:
+            raise Error("worker usage attempt identity mismatch")
+        assignment = step["current_assignment"]
+        if value["harness"] != assignment["harness"]:
+            raise Error("worker usage harness provenance mismatch")
+        if value["model"] != step["assignment"]["model_or_alias"]:
+            raise Error("worker usage model provenance mismatch")
+    if value["actor"] not in {"parent", "worker"}:
+        raise Error("usage actor must be parent or worker")
+    record_id = str(uuid.uuid4())
+    relative = f"usage/records/{record_id}.json"
+    write(directory / relative, value, MAX_USAGE)
+    return trace_result(
+        "trace-record",
+        data,
+        record_path=relative,
+        record_sha256=digest(value),
+    )
+
+
+def trace_show(args):
+    _directory, data, plan, _leafs, usage, _metadata = trace_run(args)
+    records_dir = usage / "records"
+    values = (
+        []
+        if not records_dir.exists()
+        else [
+            valid_usage_summary(read_json(path, "invalid usage record"))
+            for path in sorted(records_dir.iterdir())
+        ]
+    )
+    stages = {}
+    cycles = set()
+    totals = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    provenance = set()
+    for value in values:
+        stage = stages.setdefault(value["stage"], {"records": 0, "total_tokens": 0})
+        stage["records"] += 1
+        stage["total_tokens"] += value["total_tokens"]
+        cycles.add((value["step_id"], value["attempt_id"]))
+        provenance.add((value["harness"], value["model"]))
+        for key in totals:
+            totals[key] += value[key]
+    forecast = plan_validator()(plan)["cost_advisory"]
+    comparison = "indeterminate:forecast"
+    findings = []
+    declared = plan.get("execution_cost", {}).get("declared_model_tokens", {})
+    worker_ranges = declared.get("worker_attempts") if isinstance(declared, dict) else None
+    if (
+        values
+        and all(value["actor"] == "worker" for value in values)
+        and isinstance(worker_ranges, dict)
+    ):
+        cycle_keys = {(value["step_id"], value["attempt_id"]) for value in values}
+        ranges = [worker_ranges.get(step_id) for step_id, _attempt_id in cycle_keys]
+        if all(
+            isinstance(value, dict)
+            and set(value) == {"low", "expected", "high"}
+            and all(isinstance(value[key], int) for key in value)
+            for value in ranges
+        ):
+            low = sum(value["low"] for value in ranges)
+            high = sum(value["high"] for value in ranges)
+            observed = totals["total_tokens"]
+            comparison = {"lane": "worker_attempts", "low": low, "observed": observed, "high": high}
+            if observed < low or observed > high:
+                findings.append("PLANCOST-COMPARABLE-OBSERVED-DRIFT")
+    result = {
+        "ok": True,
+        "schema": "planning-usage-advisory-v1",
+        "mode": "advisory",
+        "plan_id": data["plan_id"],
+        "run_id": data["run_id"],
+        "records": len(values),
+        "cycles": len(cycles),
+        "stages": stages,
+        "provider_measured": totals,
+        "provenance": [
+            {"harness": harness, "model": model} for harness, model in sorted(provenance)
+        ],
+        "forecast_comparison": (
+            comparison
+            if comparison != "indeterminate:forecast"
+            else (
+                "indeterminate:provenance"
+                if forecast.get("declared_total_run") is not None
+                else comparison
+            )
+        ),
+        "findings": findings,
+    }
+    while proxy_tokens(result) > MAX_USAGE_TOKENS and result["provenance"]:
+        result["provenance"].pop()
+    result["summary_proxy_tokens"] = proxy_tokens(result)
+    return result
+
+
+def trace_close(args):
+    _directory, data, _plan, _leafs, usage, metadata = trace_run(args)
+    if metadata.get("closed_at"):
+        raise Error("usage trace is already closed")
+    metadata["closed_at"] = now()
+    write(usage / "trace.json", metadata, MAX_USAGE)
+    return trace_result("trace-close", data)
 
 
 def validate(args):
@@ -2022,6 +2299,11 @@ def parse():
     init2.add_argument("--approved", action="store_true")
     init2.add_argument("--plan-file", required=True)
     init2.add_argument("--assignments-file", required=True)
+    init3_parser = commands.add_parser("init-v3")
+    init3_parser.add_argument("--actor", required=True)
+    init3_parser.add_argument("--approved", action="store_true")
+    init3_parser.add_argument("--plan-file", required=True)
+    init3_parser.add_argument("--assignments-file", required=True)
     trans = commands.add_parser("transition")
     trans.add_argument("--actor", required=True)
     trans.add_argument("--run-id")
@@ -2054,6 +2336,19 @@ def parse():
     reopen.add_argument("--actor", required=True)
     reopen.add_argument("--run-id", required=True)
     reopen.add_argument("--reason", required=True)
+    trace_init_parser = commands.add_parser("trace-init")
+    trace_init_parser.add_argument("--actor", required=True)
+    trace_init_parser.add_argument("--run-id", required=True)
+    trace_record_parser = commands.add_parser("trace-record")
+    trace_record_parser.add_argument("--actor", required=True)
+    trace_record_parser.add_argument("--run-id", required=True)
+    trace_record_parser.add_argument("--usage-file", required=True)
+    trace_show_parser = commands.add_parser("trace-show")
+    trace_show_parser.add_argument("--actor", required=True)
+    trace_show_parser.add_argument("--run-id", required=True)
+    trace_close_parser = commands.add_parser("trace-close")
+    trace_close_parser.add_argument("--actor", required=True)
+    trace_close_parser.add_argument("--run-id", required=True)
     garbage = commands.add_parser("gc")
     garbage.add_argument("--actor", default="")
     garbage.add_argument("--dry-run", action="store_true")
@@ -2073,6 +2368,8 @@ def main(argv=None):
             value = init1(args)
         elif args.command == "init-v2":
             value = init2(args)
+        elif args.command == "init-v3":
+            value = init3(args)
         elif args.command == "transition":
             value = transition2(args) if args.run_id else transition1(args)
         elif args.command == "record-return":
@@ -2087,6 +2384,14 @@ def main(argv=None):
             value = close2(args)
         elif args.command == "reopen":
             value = reopen2(args)
+        elif args.command == "trace-init":
+            value = trace_init(args)
+        elif args.command == "trace-record":
+            value = trace_record(args)
+        elif args.command == "trace-show":
+            value = trace_show(args)
+        elif args.command == "trace-close":
+            value = trace_close(args)
         elif args.command == "gc":
             value = gc(args)
         else:

@@ -29,12 +29,21 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
   command before approval or dispatch. For an approved plan with two or more
   delegated steps, read the [ledger contract](references/ledger-contract.md);
-  the parent alone uses its `init-v2`, `transition`, `record-return`, `show`,
+  the parent alone uses its `init-v3`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py). Lifecycle and
   retention commands do not replace approval or dispatch validation. The ledger
   is the sole retry owner: it records bounded remediation and chooses the next
   mapped tier without changing the approved leaf contract.
+- **Compatibility or audit route only:** read
+  [ledger compatibility](references/ledger-compatibility.md) when inspecting or
+  resuming v2 state, and [selective audit](references/selective-audit.md) only
+  when targeted inspection leaves its bounded audit question unresolved.
+- **Usage tracing (explicit opt-in only):** only after the user explicitly asks
+  to trace, measure, or calibrate one run, read
+  [usage tracing](references/usage-tracing.md). Ordinary planning and execution
+  never inspect telemetry, create trace state, install hooks, call a network, or
+  contact a provider.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never
