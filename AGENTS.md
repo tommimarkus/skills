@@ -95,6 +95,10 @@ before React for Vite + React, retains React before Next.js, and permits Vite
 alone. JavaScript/TypeScript software guidance remains the existing
 `typescript.md` lane; security uses its separate evidence-gated `jsts.*` pack,
 and Node/React lifecycle-test rules remain under test-quality-audit.
+Every Deep test-quality audit also assesses suite health: feedback lanes,
+project-declared budgets, layer/count/runtime evidence, reliability, ownership,
+overlap, and retirement discipline. Quick remains per-test. Missing optional
+history or effectiveness evidence is `unknown`, not a prompt to build analytics.
 
 When a shared workflow needs host behavior, state the capability and give a
 runtime mapping with a safe fallback. For example, Claude planning retains

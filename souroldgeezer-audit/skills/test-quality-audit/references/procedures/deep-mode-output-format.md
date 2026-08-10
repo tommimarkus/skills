@@ -1,91 +1,122 @@
 # Deep mode output format
 
-**When this runs:** read before producing the deep-mode output in steps 5 and 6 of the workflow in [../../SKILL.md](../../SKILL.md). Defines the templates for the per-file rollup, the suite-level assessment (pyramid ratio, gap report, runtime distribution, determinism findings, mutation testing subsection), and the prioritized remediation worklist. The gap-report, determinism, and mutation states the templates embed are defined in [sut-surface-enumeration.md](sut-surface-enumeration.md), [determinism-verification.md](determinism-verification.md), and [mutation-testing.md](mutation-testing.md). Quick-mode audits only emit per-test findings and do not use these templates.
+**When this runs:** every Deep audit loads this file before workflow steps 5
+and 6. It defines the per-file rollup, suite assessment, required Suite health
+block, and prioritized remediation worklist. Quick-mode audits emit per-test
+findings only and do not load this procedure.
+
+## Evidence ladder
+
+Use the highest evidence level already available; do not build a collector,
+parser, persistent store, normalized schema, or CI-provider adapter.
+
+1. **Static snapshot:** tests, runner configuration, lane declarations,
+   ownership, skip/quarantine markers, and test-to-SUT mapping.
+2. **Current-run evidence:** readable runner/CI artifacts or an acceptable
+   project-configured command. If a result format is unfamiliar, disclose it
+   and mark unavailable fields `unknown`; do not propose parser development.
+3. **Historical trends:** only history already accessible through supplied
+   reports, dashboards, git history, or CI history. Keep trends separate from
+   current facts.
+4. **Effectiveness evidence:** only mutation results or failure-attribution
+   evidence support conclusions about fault detection or retirement.
+
+Missing optional evidence is `unknown` with a limitation, not a request to add
+instrumentation. Stop only when the user explicitly requested a trend or
+effectiveness conclusion that the available evidence cannot support.
 
 ## Per-file rollup
 
-After all per-test findings, emit a per-file rollup table:
+After all per-test findings, emit:
 
 ```markdown
 ## Per-file rollup
 
 | File | Tests | Spec | Char | Ambig | Top smells | Grade |
 |---|---|---|---|---|---|---|
-| `OrderServiceTests.cs` | 14 | 6 | 5 | 3 | HC-5, HC-7, dotnet.HC-1 | weak |
+| `OrderServiceTests.cs` | 14 | 6 | 5 | 3 | HC-5, HC-7 | weak |
 ```
 
-Columns:
-
-- **Tests** — total per file.
-- **Spec / Char / Ambig** — verdict counts. For integration-rubric files, substitute `Incidental` for `Char`; for E2E, include the dominant verdict per sub-lane.
-- **Top smells** — the 2–4 most frequent codes by count.
-- **Grade** — `strong` / `adequate` / `weak` / `not assessed`.
+For integration files, substitute `Incidental` for `Char`; for E2E, include
+the dominant sub-lane verdict. Grade is `strong`, `adequate`, `weak`, or
+`not assessed`.
 
 ## Suite assessment
-
-Then emit the suite-level assessment block:
 
 ```markdown
 ## Suite assessment
 
-- **Extensions loaded:** dotnet
+- **Extensions loaded:** <names>
 - **Overall verdict:** <strong / adequate / weak / not assessed>
-- **Top risks:** <3-5 bullets by impact>
-- **Verification limits:** <what neither static audit nor mutation testing can determine>
-- **Assurance level:** reasonable (Deep — enumerated surface; sampling noted if used)
-- **Independence:** independent / self-review / unknown (audit-craft.md §2)
+- **Top risks:** <3-5 evidence-backed bullets>
+- **Verification limits:** <unknown or unavailable evidence>
+- **Assurance level:** reasonable (Deep; sampling noted when used)
+- **Independence:** <independent / self-review / unknown>
 
-### Pyramid ratio
+### Suite health
 
-- **Unit:** <N tests> (<percentage>)
-- **Integration:** <N tests> (<percentage>)
-- **E2E:** <N tests> (<percentage>) — break down by sub-lane F/A/P/S when non-zero
-- **Shape:** `pyramid` / `diamond` / `inverted` / `hourglass`
-- **Finding:** <none / "unit coverage is thin — <percentage> unit vs Google 70-80% guidance" / "E2E inflated — <percentage> vs ≤10% guidance">
+- **Evidence sources:** <configuration, runner/CI artifacts, dashboards,
+  supplied or git history, coverage/mutation reports; label each>
+- **Window:** <current snapshot/run and any historical range, or unknown>
+- **Limitations:** <unavailable/unreadable fields and comparability limits>
+
+| Lane/layer | Purpose/cadence | Count | Current runtime | Declared budget | Reliability | Owner |
+|---|---|---:|---:|---:|---|---|
+| unit / pre-commit | <available value> | <N> | <distribution> | <project-declared value> | <flake/retry/skip/quarantine facts> | <owner> |
+```
+
+Include only available table fields; use `unknown` only where the absent field
+is material to a verdict. Record layer distribution without treating a pyramid,
+test count, or test-to-code ratio as a target by itself. For runtime, report the
+observed distribution, slow-tail concentration, and comparable regressions.
+Declare a breach only against a project-declared budget; without one, outliers
+are observations rather than breaches.
+
+Keep **current facts** separate from **historical trends**. Then emit four
+verdicts with cited `SH-*` evidence or `unknown`:
+
+- **Feedback:** lane purpose, cadence, selection safety, full-suite safety net,
+  and project-declared budgets.
+- **Efficiency:** count/layer distribution, runtime and cost, slow tail,
+  cross-layer overlap, and effectiveness per cost where supported.
+- **Reliability:** flakes, retries, skips, quarantine ownership, exits, and
+  trends where available.
+- **Maintainability:** ownership, requirement/risk mapping, overlap review,
+  and frequent bounded portfolio gardening.
+
+Classify each portfolio candidate as `keep`, `strengthen`, `move down`,
+`consolidate`, `schedule later`, or `verify-then-retire`. Never recommend
+deletion from coverage similarity alone. A retirement candidate needs
+distinct-contract review plus mutation, failure-attribution, or
+controlled-removal evidence; absent that evidence, use `verify-then-retire`.
 
 ### Gap report
 
-<One of the states documented in [sut-surface-enumeration.md § Gap report format](sut-surface-enumeration.md#gap-report-format):
- State A — enumeration ran (SUT projects list, counts table, confirmation state, top probable gaps, reconciliation with mutation)
- State B — skipped (extension has no SUT surface enumeration section / quick mode / E2E-only scope)>
-
-### Runtime distribution
-
-- **Source:** `.trx` / JUnit XML file parsed from the most recent test run (or "none found — skipped")
-- **Top 10 slowest tests:** `<test name> — <elapsed>` (one line each)
-- **Findings:** <any unit test > 100 ms; any in-process integration test > 2 s; total-time warning if > 5 min>
+Use one state from
+[sut-surface-enumeration.md](sut-surface-enumeration.md#gap-report-format):
+enumeration ran, or skipped with reason.
 
 ### Determinism findings
 
-<One of:
- Section from [determinism-verification.md](determinism-verification.md) (runtime-proven flakes with suspected causes)
- Skipped (reason: suite too large / extension has no cheap-rerun command / no static smells to motivate run)>
+Use the applicable state from
+[determinism-verification.md](determinism-verification.md): runtime-proven facts,
+or skipped with reason.
 
 ### Mutation testing
 
-<One of the three states documented in [mutation-testing.md § Output states](mutation-testing.md#output-states):
- State A — ran successfully (score + reconciliation bullets)
- State B — skipped, tool not installed (install command + one-liner rationale)
- State C — attempted and failed, or hit documented limitation (root cause + workaround)>
+Use the applicable state from [mutation-testing.md](mutation-testing.md): ran,
+skipped because unavailable, or attempted and failed. Do not turn tool absence
+into an instrumentation recommendation.
 
 ## Prioritized remediation worklist
 
-- **P0** — <work item, expected impact, effort estimate>
-- **P1** — <work item> `[mutation]` ← tag items surfaced by mutation testing
+- **P0** — <work item, evidence, expected impact, effort, candidate class>
+- **P1** — <work item> `[mutation]`
 - **P2** — ...
-```
 
-Worklist rules:
-
-- Priority is `severity × SUT risk tier` per the audit-craft.md §3 mapping table; tag the deciding tier.
-- Static-only `probable-static` gap entries are verification work, not direct
-  implementation work. Phrase them as "verify whether ..." and include the
-  mutation/manual-review step needed to confirm.
-- `referenced-weak` and `referenced-incidental` gap entries are test-strengthening
-  work, not covered surfaces. Phrase them as "add or verify a contract oracle
-  for ..." and name the missing invalid, unauthorized, conflict, timeout,
-  duplicate, boundary, or state-change behavior.
-- `confirmed-mutation` and `confirmed-manual` gaps may become implementation
-  work items.
-- `dismissed-indirect` gaps do not become worklist items; cite the covering
-  public-boundary test evidence in the gap report.
+Priority is `severity × SUT risk tier` per audit-craft.md §3. Static-only gaps
+are verification work. `referenced-weak` and `referenced-incidental` entries are
+strengthening work. Only `confirmed-mutation` and `confirmed-manual` gaps may
+become implementation work; `dismissed-indirect` gaps do not enter the worklist.
+The audit remains advisory and never deletes, quarantines, rewrites, or
+reschedules tests automatically.

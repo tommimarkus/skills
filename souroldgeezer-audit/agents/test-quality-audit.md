@@ -1,6 +1,6 @@
 ---
 name: test-quality-audit
-description: Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, or suite gaps.
+description: Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, suite gaps, suite strategy, runtime growth, portfolio maintenance, or TDD-generated suite pressure.
 tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
 ---

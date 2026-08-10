@@ -4,6 +4,41 @@ Compact reference for cite-by-code usage in audit reports. Codes align 1:1 with 
 
 Framework-specific smells are namespaced in their extension file (e.g. `dotnet.HC-1`). Each extension smell may declare an `Applies to:` field of `unit`, `integration`, `e2e`, or any combination; absent tag defaults to `unit` for backwards compatibility.
 
+## Suite health (Deep mode only)
+
+These cross-rubric codes assess the portfolio rather than one test. Test-count
+growth alone is not a smell. Test count, test-to-code ratio, layer percentages,
+and “never failed” history are context until tied to requirements, risk,
+runtime, reliability, or effectiveness evidence.
+
+### High-confidence smells (`SH-HC-*`)
+
+`SH-HC-1` — A feedback lane breaches a project-declared runtime or cost budget on comparable current-run evidence.
+`SH-HC-2` — A costly higher-layer test duplicates a contract already proved at a cheaper layer without a distinct higher-layer outcome or risk.
+`SH-HC-3` — Selective execution can omit affected tests and has neither validated selection evidence nor a periodic full-suite safety net.
+`SH-HC-4` — Quarantines, retries, skips, or flaky-test suppressions lack an owner, reason, exit criterion, or bounded review cadence.
+`SH-HC-5` — Retirement policy treats coverage overlap, test count, test-to-code ratio, or “never failed” history as sufficient deletion evidence.
+
+### Low-confidence smells (`SH-LC-*`)
+
+`SH-LC-1` — Sustained suite growth has no visible mapping to changed requirements or SUT risk; ask for context before judging waste.
+`SH-LC-2` — Runtime is concentrated in a slow tail, but no project budget is breached or comparable regression is established.
+`SH-LC-3` — An expensive feedback lane has no visible owner or execution cadence; ownership may exist outside inspected evidence.
+
+### Positive signals (`SH-POS-*`)
+
+`SH-POS-1` — Tiered feedback lanes have named purpose, cadence, ownership, and project-declared budgets.
+`SH-POS-2` — Suite growth maps to requirements or risk while runtime and effectiveness-per-cost stay stable or improve.
+`SH-POS-3` — Selective execution is validated against affected-test evidence and backed by periodic full-suite runs.
+`SH-POS-4` — Quarantine has owned exits, and the portfolio receives frequent bounded maintenance rather than rare large cleanup campaigns.
+
+Retirement requires a distinct-contract review plus mutation, failure-attribution,
+or controlled-removal evidence. Coverage-only similarity can produce false
+positives, so it supports a `verify-then-retire` candidate, never deletion by
+itself. Frequent bounded gardening is a qualitative maintenance practice; the
+supporting empirical evidence concerns visual GUI suites and is not a universal
+numeric cadence.
+
 ## Unit rubric
 
 Applies when `SKILL.md` step 0b selects the unit rubric. Cite as `HC-N`, `LC-N`, `POS-N`.
@@ -197,7 +232,7 @@ For auditors trained on Gerard Meszaros's *xUnit Test Patterns* (xunitpatterns.c
 | Eager Test | `LC-8`, `I-LC-4`, `E-LC-3` | Parameterized test where all cases assert the same thing (no-op eager variant); a test bundling multiple distinct behaviors. |
 | Test Code Duplication | `E-LC-5` | Page Object god-object with duplicated navigation / setup across pages. |
 | Resource Optimism | `HC-11`, `I-HC-A5`, `I-HC-A11` | Test assumes the clock, filesystem, network, or shared fixture is in a known state without verifying it. |
-| Slow Test | `dotnet.LC-5` (slow unit), runtime-distribution subsection in deep-mode step 5 | Slow unit tests; slow integration or E2E tests are expected by rubric but still reported. |
+| Slow Test | `dotnet.LC-5` (slow unit), Suite health runtime evidence in deep-mode step 5 | Runtime outliers are reported against project budgets or as observed distribution facts. |
 
 ### Meszaros smells not directly captured as a core code
 

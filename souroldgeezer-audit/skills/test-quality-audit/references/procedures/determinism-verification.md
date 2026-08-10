@@ -34,5 +34,5 @@ Static smells `HC-11`, `LC-5`, `I-HC-A5`, `I-HC-A11`, `E-HC-F3` all flag *suspec
 ```markdown
 ### Determinism findings (skipped)
 
-- **Reason:** suite size (827 test methods) exceeds the 500-method threshold for automatic rerun. Recommend: rerun the top-10 slowest tests from the `## Runtime distribution` subsection instead, or opt in explicitly for a full rerun.
+- **Reason:** suite size (827 test methods) exceeds the 500-method threshold for automatic rerun. Recommend: rerun a bounded sample from the slow tail recorded in `## Suite health`, or opt in explicitly for a full rerun.
 ```

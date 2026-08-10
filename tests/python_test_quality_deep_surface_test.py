@@ -7,6 +7,7 @@ SKILL = "souroldgeezer-audit/skills/test-quality-audit/SKILL.md"
 INDEX = "souroldgeezer-audit/skills/test-quality-audit/extensions/index.md"
 PYTHON_CORE = "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md"
 PYTHON_DEEP = "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/deep.md"
+DEEP_OUTPUT = "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md"
 SCENARIOS = REPO_ROOT / "tests" / "skill_load_cost" / "scenarios.json"
 
 
@@ -100,7 +101,9 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
             ],
         )
         self.assertNotIn(PYTHON_DEEP, quick)
+        self.assertNotIn(DEEP_OUTPUT, quick)
         self.assertIn(PYTHON_DEEP, deep)
+        self.assertIn(DEEP_OUTPUT, deep)
         self.assertIn(core, deep)
         self.assertIn(integration, deep)
         self.assertEqual(
@@ -112,7 +115,7 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
             ],
         )
         self.assertEqual(len(quick), 5)
-        self.assertEqual(len(deep), 8)
+        self.assertEqual(len(deep), 9)
 
 
 if __name__ == "__main__":

@@ -120,7 +120,7 @@ running the same install command.
 
 ## Examples
 
-1. Audit a workflow, Dockerfile, or .NET™ logging path with `devsecops-audit`. All four audit skills (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, `lean-audit`) now disclose auditor independence and assurance level and weight findings by subject materiality via the shared [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md).
+1. Audit a workflow, Dockerfile, or .NET™ logging path with `devsecops-audit`. All four audit skills (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, `lean-audit`) disclose auditor independence and assurance level and weight findings by subject materiality via the shared [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md). Every Deep `test-quality-audit` also reports suite health from project-declared budgets and available static, current-run, historical, and effectiveness evidence; Quick mode remains per-test.
 2. Review an API surface, extract an existing contract, or build against a brownfield API baseline with `api-design`; its stack packs load a compact core plus only the requested build or review lane, including Python® ASGI/WSGI and serverless API routing.
 3. Design or review a frontend app route, screen, or component set with `app-design`, including standalone Vite, Vite + React, React + Next.js, and Blazor WebAssembly surfaces; Vite owns development/build/deployment mechanics while React owns component lifecycle and state.
 4. Review or extract a dediren ArchiMate® or UML® architecture/design package, including UML® sequence views or Java™ source evidence, with `architecture-design`.

@@ -1,7 +1,7 @@
 ---
 name: test-quality-audit
 description: >-
-  Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, or suite gaps.
+  Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, suite gaps, suite strategy, runtime growth, portfolio maintenance, or TDD-generated suite pressure.
 ---
 
 # Test Quality Audit
@@ -31,7 +31,7 @@ in all modes (discipline + output contract). In Deep mode only, also load
 [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md)
 (scale) — these are
 Deep-scale tools; Quick must not load them.
-This skill adds the test rubric and `HC-*/I-*/E-*` namespace on top; it does not
+This skill adds the test rubric and `HC-*/I-*/E-*/SH-*` namespace on top; it does not
 restate craft.
 
 Load the selected rubric before judging:
@@ -65,6 +65,11 @@ Quick mode loads only the matched stack's `core.md` and one selected rubric
 addon. In Deep mode only, also load the matched stack's `deep.md` (SUT
 enumeration, determinism, mutation); Quick mode never loads it.
 
+In every Deep audit, load
+[`references/procedures/deep-mode-output-format.md`](references/procedures/deep-mode-output-format.md)
+for the required Suite health evidence ladder and output contract. Quick mode
+remains per-test and never loads this procedure.
+
 Load [`references/extensions/authoring.md`](references/extensions/authoring.md) only when editing extension structure.
 
 Load procedures only when needed from `references/procedures/`: per-test
@@ -75,7 +80,7 @@ auth matrix enumeration
 ([`auth-matrix-enumeration.md`](references/procedures/auth-matrix-enumeration.md),
 step 2.6, deep integration only), migration upgrade-path enumeration
 ([`migration-upgrade-path.md`](references/procedures/migration-upgrade-path.md),
-step 2.7, deep integration only), guardrails, deep output, and
+step 2.7, deep integration only), guardrails, and
 SUT/determinism gates. Load
 [`references/procedures/mutation-nodejs.md`](references/procedures/mutation-nodejs.md) or
 [`references/procedures/mutation-dotnet.md`](references/procedures/mutation-dotnet.md)
@@ -85,7 +90,8 @@ evidence is requested or reached.
 ## Modes
 
 Quick audits one file, one test, or a PR diff with per-test findings only.
-Deep audits a suite/module, enumerates tests, then adds rollups and a worklist.
+Deep audits a suite/module, enumerates tests, assesses suite health, then adds
+rollups and a worklist.
 Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 
 ## Workflow
@@ -102,11 +108,15 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
    and use the highest applicable severity.
-5. Deep only: run gated suite checks when extension support exists and cost is
-   acceptable; never run them in Quick mode, and never mutate E2E targets.
+5. Deep only: assess feedback lanes and declared budgets; count and layer mix;
+   current runtime and slow-tail concentration; flake, retry, skip, and
+   quarantine health; ownership, overlap, and retirement discipline. Use only
+   project-configured commands and already-readable evidence; never build an
+   ingestion layer. Run gated suite checks when extension support exists and
+   cost is acceptable; never run them in Quick mode, and never mutate E2E targets.
 6. Report. Quick emits per-test findings only. Deep adds rollup, suite
-   assessment, pyramid ratio, gap report, runtime distribution, determinism,
-   mutation section, and remediation worklist.
+   assessment, required Suite health block, gap report, determinism, mutation
+   section, and remediation worklist.
 
 ## Rules and Stop Conditions
 
@@ -116,6 +126,15 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 - Reward positives; stay read-only unless fixes are requested.
 - If extension data or optional tooling is missing/fails, report the limit and
   continue with static findings.
+- Evidence progresses from static snapshot, to current run when readable
+  artifacts or an acceptable configured command exist, to accessible history,
+  then effectiveness only with mutation or failure-attribution evidence.
+  Missing optional evidence is `unknown`, not a request for instrumentation.
+  Stop only when the user explicitly requires an unsupported trend or
+  effectiveness conclusion.
+- `tdd-policy` owns RED→GREEN→REFACTOR. This audit judges the accumulated suite;
+  test count, test-to-code ratio, and “never failed” history are informational
+  alone.
 
 ## Skill Maintenance
 

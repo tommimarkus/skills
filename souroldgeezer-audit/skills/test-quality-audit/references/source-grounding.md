@@ -60,3 +60,24 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   cleanup facts; rules require observable outcomes for detached work, Effect
   cleanup, and application lifecycle ownership, and use original repo-authored
   examples rather than copied source material.
+- Source: Baldassarre et al., “Studying Test-Driven Development and its
+  Retainment Over a Six-month Time Span,” at
+  `https://arxiv.org/abs/2105.03312`.
+  Handling: linked for the observed combination of more tests and stronger
+  fault-detection capability in that study; it grounds the rule that test-count
+  growth alone is informational, not a smell.
+- Source: Memon et al., “Taming Google-Scale Continuous Testing,” at
+  `https://research.google/pubs/taming-google-scale-continuous-testing/`.
+  Handling: linked for continuous-testing workload scale, latency, and cost
+  pressures; guidance remains project-budgeted rather than importing Google's
+  operating thresholds.
+- Source: Koochakzadeh and Garousi, “A Tester-Assisted Methodology for Test
+  Redundancy Detection,” at `https://doi.org/10.1155/2010/932686`.
+  Handling: linked for coverage-based redundancy false-positive risk and the
+  use of mutation evidence plus review; no source prose or examples are copied.
+- Source: Alégroth, Feldt, and Kolström, “Maintenance of Automated Test Suites
+  in Industry: An Empirical study on Visual GUI Testing,” at
+  `https://arxiv.org/abs/1602.01226`.
+  Handling: linked for the study's finding that frequent maintenance was less
+  costly than infrequent large maintenance in its visual GUI-suite setting;
+  guidance treats this as qualitative, scoped evidence, not a universal cadence.

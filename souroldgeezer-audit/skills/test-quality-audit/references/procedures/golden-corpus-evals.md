@@ -47,6 +47,12 @@ tests, narrow happy scenarios, edge cases, auth/session matrix gaps, and weak
 references that should not suppress a gap.
 ```
 
+For a case with `expected_suite_health_smells`, also supply its
+`deep_mode_context` and ask for the required Suite health block. Grade evidence
+sources/window/limitations, current facts versus trends, the four verdicts,
+`SH-*` codes, candidate class, and forbidden actions. Do not add missing
+history, parse an unfamiliar format, or infer effectiveness from coverage.
+
 ## Scoring
 
 Compare output with the corpus entry:
@@ -62,6 +68,8 @@ Compare output with the corpus entry:
 - **Gap-state pass:** `expected_gap_state`, when present, matches.
 - **Risk-tier pass:** `expected_risk_tier`, when present, matches.
 - **Worklist-priority pass:** `expected_worklist_priority`, when present, matches.
+- **Suite-health pass:** expected `SH-*` smells/positives, evidence states,
+  candidate action, and forbidden actions match when present.
 - **Verdict pass:** `expected_verdict`, `expected_severity`, and
   `expected_action` match.
 - **False-positive note:** any extra smell code must be justified by evidence
@@ -98,6 +106,9 @@ Record results in the change discussion or closeout notes:
   `expected_gap_state`, `expected_risk_tier`, `expected_worklist_priority`, or
   `deep_mode_context` when the case is about boundary, gap, risk-tier, or
   worklist-priority behavior.
+- Suite-health cases may include `expected_suite_health_smells`,
+  `expected_suite_health_positives`, `expected_trend_state`,
+  `expected_current_run_state`, and `forbidden_actions`.
 - Use `forbidden_smells` to pin known false-positive regressions.
 - When changing expected outcomes, state whether the change reflects a rubric
   improvement or a deliberate behavior change.
