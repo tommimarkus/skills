@@ -18,16 +18,16 @@ runtime, reliability, or effectiveness evidence.
 `SH-HC-3` — Selective execution can omit affected tests and has neither validated selection evidence nor a periodic full-suite safety net.
 `SH-HC-4` — Quarantines, retries, skips, or flaky-test suppressions lack an owner, reason, exit criterion, or bounded review cadence.
 `SH-HC-5` — Retirement policy treats coverage overlap, test count, test-to-code ratio, or “never failed” history as sufficient deletion evidence.
-`SH-HC-6` — The latest trustworthy suite run fails, or reports a non-zero exit, and the portfolio presents it as healthy or omits it from the current-execution disposition.
+`SH-HC-6` — The configured current run fails, errors, or exits nonzero.
 
 ### Low-confidence smells (`SH-LC-*`)
 
 `SH-LC-1` — Sustained suite growth has no visible mapping to changed requirements or SUT risk; ask for context before judging waste.
 `SH-LC-2` — Runtime is concentrated in a slow tail, but no project budget is breached or comparable regression is established.
 `SH-LC-3` — An expensive feedback lane has no visible owner or execution cadence; ownership may exist outside inspected evidence.
-`SH-LC-4` — Every change runs one monolithic suite with no evidenced lane purpose, selection safety, or feedback decomposition; ask whether the shape impairs feedback before calling it waste.
-`SH-LC-5` — A broad execution lane has visible runtime or cost pressure but no project-declared budget or comparable regression; record the observation, not a breach.
-`SH-LC-6` — Portfolio, lane, quarantine, or retirement ownership is absent from inspected evidence; ask for the responsible owner before treating maintenance as unmanaged.
+`SH-LC-4` — Observed cost is material to the intended cadence but lacks a project-declared budget or comparable baseline; identify whether cost is tail-concentrated or broadly distributed.
+`SH-LC-5` — The routine change path is one mixed full-suite lane with no faster lane or deliberately lower cadence.
+`SH-LC-6` — No visible portfolio owner, overlap/gardening review, or retirement cadence.
 
 ### Positive signals (`SH-POS-*`)
 
@@ -35,7 +35,7 @@ runtime, reliability, or effectiveness evidence.
 `SH-POS-2` — Suite growth maps to requirements or risk while runtime and effectiveness-per-cost stay stable or improve.
 `SH-POS-3` — Selective execution is validated against affected-test evidence and backed by periodic full-suite runs.
 `SH-POS-4` — Quarantine has owned exits, and the portfolio receives frequent bounded maintenance rather than rare large cleanup campaigns.
-`SH-POS-5` — Named lanes have an evidenced current passing result, runtime distribution, safe execution policy, ownership, and a periodic full-suite safety net; count alone does not earn this signal.
+`SH-POS-5` — Fast, full, and expensive lanes have distinct purposes and deliberate cadences.
 
 Retirement requires a distinct-contract review plus mutation, failure-attribution,
 or controlled-removal evidence. Coverage-only similarity can produce false

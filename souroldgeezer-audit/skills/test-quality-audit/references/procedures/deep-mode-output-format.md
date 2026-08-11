@@ -34,10 +34,27 @@ safe and what it can support; sampling cannot fill an absent current-run result
 or runtime distribution. If the target or runner cannot be established, stop
 the suite-health verdict at `not assessed` and say why.
 
-Use a configured one-shot suite command only when it is read-only, has bounded
-cost acceptable to the engagement, and does not mutate E2E targets or external
-state. Call this a **safe one-shot suite execution** only after those checks;
-otherwise rely on readable current artifacts and disclose the limitation.
+Run one project-configured full suite automatically when it is local,
+read-only, non-browser, non-external, and expected to finish within about ten
+minutes. Ask before longer, unknown, browser, external-service, rerun, or
+mutation work. Call this a **safe one-shot suite execution** only after those
+checks; otherwise rely on readable current artifacts and disclose the
+limitation.
+
+When a JUnit XML report is already available, the bundled one-shot parser can
+extract bounded distribution evidence without retaining failure bodies or
+captured output:
+
+```text
+python3 "${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --junit <report.xml>
+python3 "<absolute-loaded-skill-dir>/references/scripts/suite_health_snapshot.py" --junit <report.xml>
+```
+
+The first form is for Claude Code. In Codex, replace
+`<absolute-loaded-skill-dir>` with the absolute directory reported for the
+loaded `SKILL.md`. The helper accepts one explicit `testsuite` or `testsuites`
+document. It is not repository discovery, a datastore, a trend collector, or a
+CI adapter, and it writes no files.
 
 ## Per-file rollup
 
@@ -73,23 +90,29 @@ the dominant sub-lane verdict. Grade is `strong`, `adequate`, `weak`, or
   supplied or git history, coverage/mutation reports; label each>
 - **Window:** <current snapshot/run and any historical range, or unknown>
 - **Limitations:** <unavailable/unreadable fields and comparability limits>
+- **Current execution:** collection count; pass/fail/error/skip outcomes;
+  elapsed time; duration distribution
+- **Lane selection:** <selected lanes and purpose>; **ownership/cadence:**
+  <available evidence or unknown>
 
 | Lane/layer | Purpose/cadence | Count | Current result | Runtime distribution | Declared budget | Reliability | Owner |
 |---|---|---:|---:|---:|---:|---|---|
 | unit / pre-commit | <available value> | <N> | <pass/fail/unknown> | <median/tail or unknown> | <project-declared value> | <flake/retry/skip/quarantine facts> | <owner> |
 ```
 
-Current-run evidence is mandatory for a supported-positive **Current execution**
-disposition: record a current pass/fail result, or `unknown-evidence-gap` with
-its limit. Runtime distribution is mandatory for a supported-positive
+Always report collection count, pass/fail/error/skip outcomes, elapsed time,
+duration distribution, lane selection, and available ownership/cadence
+evidence. Current-run evidence is mandatory for a supported-positive **Current
+execution** disposition: record the current outcomes and exit status, or
+`unknown-evidence-gap` with its limit. Runtime distribution is mandatory for a supported-positive
 **Efficiency** disposition: record the available distribution and slow tail, or
 `unknown-evidence-gap`. Include the current-result and runtime-distribution
 columns even when their values are `unknown`; other immaterial fields may be
 omitted. Record layer distribution without treating a pyramid,
 test count, or test-to-code ratio as a target by itself. For runtime, report the
 observed distribution, slow-tail concentration, and comparable regressions.
-Declare a breach only against a project-declared budget; without one, outliers
-are observations rather than breaches.
+Declare a breach only against a project-declared budget; without one, count,
+elapsed time, and outliers are informational observations rather than breaches.
 
 Keep **current facts** separate from **historical trends**. Then emit all five
 dimension dispositions with cited `SH-*` evidence. Each disposition is exactly

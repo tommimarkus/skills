@@ -104,18 +104,23 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 3a. Deep only — risk pass: enumerate the SUT surface, assign each surface a risk
     tier per `materiality.md`, record the tier map, and focus enumeration and
     mutation budget on high-tier surfaces first.
+3b. Deep only — mandatory suite-management pass: before per-test sampling,
+    establish the portfolio target, configured runner, lane selection and
+    cadence, declared budgets, owners, collection count, current
+    pass/fail/error/skip outcomes, elapsed time, duration distribution,
+    reliability evidence, overlap review, and retirement discipline. Run one
+    configured full suite automatically only when it is local, read-only,
+    non-browser, non-external, and expected to finish within about ten minutes;
+    ask before longer, unknown, browser, external-service, rerun, or mutation
+    work. Use readable artifacts when execution is not authorized or safe.
 4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
    and use the highest applicable severity.
-5. Deep only: establish portfolio target, runner, lanes, cadence, selection,
-   declared budgets, owners, current result, and runtime distribution before
-   sampling. Then assess feedback lanes; count and layer mix; current runtime
-   and slow-tail concentration; flake, retry, skip, and
-   quarantine health; ownership, overlap, and retirement discipline. Use only
+5. Deep only: combine the suite-management pass with sampled per-test evidence;
+   close all five required dimensions, suite verdict, portfolio candidates,
+   gaps, determinism, mutation, and prioritized worklist. Use only
    project-configured commands and already-readable evidence; never build an
-   ingestion layer. A one-shot suite execution requires a read-only command,
-   bounded acceptable cost, and no E2E/external-state mutation; otherwise
-   disclose the current-run gap. Never run suite checks in Quick mode.
+   ingestion layer. Never run suite checks in Quick mode.
 6. Report. Quick emits per-test findings, then `Quick gate: <status>`. Use the
    shared precedence: fail if any substantiated in-scope `block` remains; else
    `not-evaluated` when required evidence or machinery cannot rule out blockers;

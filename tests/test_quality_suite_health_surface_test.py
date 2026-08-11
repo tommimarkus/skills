@@ -37,6 +37,10 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("In every Deep audit, load", skill)
         self.assertIn("deep-mode-output-format.md", skill)
         self.assertIn("Quick mode remains per-test", skill_compact)
+        self.assertLess(
+            skill.index("3b. Deep only — mandatory suite-management pass"),
+            skill.index("4. Apply core smells"),
+        )
 
         scenarios = {row["id"]: row for row in json.loads(read(SCENARIOS))}
         procedure = (
@@ -55,6 +59,7 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
     def test_suite_health_contract_uses_progressive_project_evidence(self) -> None:
         output = read(OUTPUT)
         output_lower = output.lower()
+        output_compact = " ".join(output_lower.split())
         for phrase in (
             "## suite health",
             "static snapshot",
@@ -90,6 +95,31 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertNotIn("### Runtime distribution", output)
         for universal_threshold in ("> 100 ms", "> 2 s", "> 5 min", "70-80%"):
             self.assertNotIn(universal_threshold, output)
+
+        for required_execution_fact in (
+            "collection count",
+            "pass/fail/error/skip",
+            "elapsed time",
+            "duration distribution",
+            "lane selection",
+            "ownership/cadence",
+            "about ten minutes",
+            "longer, unknown, browser, external-service, rerun, or mutation",
+        ):
+            with self.subTest(required_execution_fact=required_execution_fact):
+                self.assertIn(required_execution_fact, output_compact)
+
+        self.assertIn(
+            'python3 "${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
+            output,
+        )
+        self.assertIn(
+            'python3 "<absolute-loaded-skill-dir>/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
+            output,
+        )
+        for excluded_role in ("repository discovery", "datastore", "trend collector", "CI adapter"):
+            with self.subTest(excluded_role=excluded_role):
+                self.assertIn(excluded_role, output)
 
         self.assertLess(
             output_lower.index("## management evidence before sampling"),
@@ -129,6 +159,30 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("distinct-contract review", catalog)
         self.assertIn("controlled-removal evidence", catalog)
         self.assertIn("coverage-only", catalog.lower())
+        compact_catalog = " ".join(catalog.split())
+        self.assertIn(
+            "`SH-HC-6` — The configured current run fails, errors, or exits nonzero.",
+            compact_catalog,
+        )
+        self.assertIn(
+            "`SH-LC-4` — Observed cost is material to the intended cadence but lacks a "
+            "project-declared budget or comparable baseline; identify whether cost is "
+            "tail-concentrated or broadly distributed.",
+            compact_catalog,
+        )
+        self.assertIn(
+            "`SH-LC-5` — The routine change path is one mixed full-suite lane with no "
+            "faster lane or deliberately lower cadence.",
+            compact_catalog,
+        )
+        self.assertIn(
+            "`SH-LC-6` — No visible portfolio owner, overlap/gardening review, or retirement cadence.",
+            compact_catalog,
+        )
+        self.assertIn(
+            "`SH-POS-5` — Fast, full, and expensive lanes have distinct purposes and deliberate cadences.",
+            compact_catalog,
+        )
 
     def test_behavior_and_golden_cases_pin_suite_health_boundaries(self) -> None:
         behaviors = read_jsonl(BEHAVIORS)
@@ -165,8 +219,8 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("delete-from-coverage-alone", golden["TQA-GOLD-0035"]["forbidden_actions"])
         self.assertIn("SH-POS-5", golden["TQA-GOLD-0046"]["expected_suite_health_positives"])
         self.assertIn("SH-HC-6", golden["TQA-GOLD-0047"]["expected_suite_health_smells"])
-        self.assertIn("SH-LC-4", golden["TQA-GOLD-0048"]["expected_suite_health_smells"])
-        self.assertIn("SH-LC-5", golden["TQA-GOLD-0049"]["expected_suite_health_smells"])
+        self.assertIn("SH-LC-5", golden["TQA-GOLD-0048"]["expected_suite_health_smells"])
+        self.assertIn("SH-LC-4", golden["TQA-GOLD-0049"]["expected_suite_health_smells"])
         self.assertIn("SH-LC-6", golden["TQA-GOLD-0050"]["expected_suite_health_smells"])
         self.assertEqual([], golden["TQA-GOLD-0051"]["expected_suite_health_smells"])
         self.assertIn("SH-POS-5", golden["TQA-GOLD-0051"]["expected_suite_health_positives"])
