@@ -360,10 +360,14 @@ def run_mcp_session(
     argv: Sequence[str],
     *,
     cwd: Path,
+    workspace_root: Path,
     env: Mapping[str, str],
     runner: Runner = run_command,
     label: str,
 ) -> set[str]:
+    workspace_root = workspace_root.resolve()
+    if not workspace_root.is_dir():
+        raise SmokeFailure(f"{label} Dediren workspace root does not exist: {workspace_root}")
     requests = [
         {
             "jsonrpc": "2.0",
@@ -392,6 +396,15 @@ def run_mcp_session(
                 }
             },
         },
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "dediren_guide",
+                "arguments": {"workspaceRoot": str(workspace_root)},
+            },
+        },
     ]
     input_text = "".join(json.dumps(request) + "\n" for request in requests)
     result = checked(
@@ -412,7 +425,7 @@ def run_mcp_session(
             continue
         if isinstance(message, dict) and isinstance(message.get("id"), int):
             responses[message["id"]] = message
-    if set(responses) != {1, 2, 3}:
+    if set(responses) != {1, 2, 3, 4}:
         raise SmokeFailure(
             f"{label} Dediren adapter omitted JSON-RPC responses; "
             f"ids={sorted(responses)}, stderr={result.stderr[-2000:]}"
@@ -445,6 +458,17 @@ def run_mcp_session(
     discovery = responses[3].get("result", {})
     if "2026-07-28" not in discovery.get("supportedVersions", []):
         raise SmokeFailure(f"{label} Dediren adapter omitted stateless protocol discovery")
+    guide_response = responses[4]
+    if "error" in guide_response:
+        raise SmokeFailure(f"{label} Dediren dediren_guide returned a JSON-RPC error")
+    guide_result = guide_response.get("result")
+    if not isinstance(guide_result, dict):
+        raise SmokeFailure(f"{label} Dediren dediren_guide response omitted result")
+    if guide_result.get("isError") is True:
+        raise SmokeFailure(f"{label} Dediren dediren_guide returned isError")
+    content = guide_result.get("content")
+    if not isinstance(content, list) or not content:
+        raise SmokeFailure(f"{label} Dediren dediren_guide response had empty content")
     return names
 
 
@@ -794,6 +818,7 @@ def run_host_smoke(
         codex_tools = mcp_runner(
             [codex_server["command"], *codex_server.get("args", [])],
             cwd=codex_mcp_cwd,
+            workspace_root=repo,
             env=codex_mcp_env,
             label="Codex",
         )
@@ -834,7 +859,8 @@ def run_host_smoke(
         ]
         claude_tools = mcp_runner(
             [claude_command, *claude_args],
-            cwd=repo,
+            cwd=claude_arch_root,
+            workspace_root=repo,
             env=claude_mcp_env,
             label="Claude",
         )
@@ -859,16 +885,26 @@ def run_host_smoke(
             )
             for value in copilot_server.get("args", [])
         ]
-        copilot_cwd = Path(
-            expand_copilot(
-                copilot_server.get("cwd", str(repo)),
-                plugin_root=copilot_arch_root,
-                plugin_data=copilot_plugin_data,
+        copilot_cwd = copilot_arch_root
+        configured_cwd = copilot_server.get("cwd")
+        if isinstance(configured_cwd, str) and configured_cwd:
+            expanded_cwd = Path(
+                expand_copilot(
+                    configured_cwd,
+                    plugin_root=copilot_arch_root,
+                    plugin_data=copilot_plugin_data,
+                )
             )
-        )
+            if expanded_cwd.is_absolute():
+                copilot_cwd = expanded_cwd
+            else:
+                copilot_cwd = (copilot_arch_root / expanded_cwd).resolve()
+        if not copilot_cwd.resolve().is_relative_to(copilot_arch_root.resolve()):
+            raise SmokeFailure("installed Copilot Dediren adapter cwd escapes the plugin root")
         copilot_tools = mcp_runner(
             [copilot_command, *copilot_args],
             cwd=copilot_cwd,
+            workspace_root=repo,
             env=copilot_mcp_env,
             label="Copilot",
         )
