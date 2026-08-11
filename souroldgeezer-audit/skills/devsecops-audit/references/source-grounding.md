@@ -8,7 +8,7 @@ tables, diagrams, screenshots, or documentation.
 - Source: `../../../docs/security-reference/devsecops.md`.
   Handling: local bundled rubric owned by this repo; eval prompts are original
   synthetic scenarios for quick/deep mode selection, presence-vs-efficacy
-  evidence, and honest static limits.
+  evidence, Quick-gate status, and honest static limits.
 - Source: `extensions/*.md` and `references/procedures/*.md`.
   Handling: local extension and procedure contracts; eval cases exercise
   extension loading, cost stance, MCP availability, and output disclosure

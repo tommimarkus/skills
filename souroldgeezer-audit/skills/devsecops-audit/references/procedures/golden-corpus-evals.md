@@ -14,8 +14,8 @@ Start a fresh audit context; provide only `target`, `config_snippet`, and any
 `supporting_context`. Withhold all `expected_*` and `ground_truth` fields.
 ```text
 Use devsecops-audit in quick mode on the supplied artifact only. Report finding
-codes, positive-signal codes, severity, risk tier, and recommended action. Do
-not restate rubric prose.
+codes, positive-signal codes, severity, risk tier, recommended action, and the
+final `Quick gate: <status>`. Do not restate rubric prose.
 ```
 
 ## Stable eval prompt (deep-mode cases)
@@ -31,6 +31,8 @@ defect was surfaced as reachable/exploitable.
   justified by the snippet.
 - **Severity / verdict / risk-tier:** match `expected_severity`,
   `expected_verdict`, `expected_risk_tier` when present.
+- **Quick gate:** `fail` for any expected `block`; otherwise use the shared
+  `fail > not-evaluated > pass-limited` contract from `audit-craft.md` §4a.
 
 ## Output
 Record in the change discussion:

@@ -16,13 +16,15 @@ extension.
 
 This extension splits smells into two bands:
 
-- **Band 1 — always-block.** Remediation is free or near-free. Fires under all cost stances.
+- **Band 1 — always-evaluated.** Remediation is free or near-free, so every
+  code is evaluated under all cost stances. Evaluation cost does not set finding
+  severity: each rule's stated severity still controls.
 - **Band 2 — cost-gated.** Remediation requires a paid Azure SKU. Fires only when the resolved cost stance is `full` or `mixed` with the specific code enabled.
 
 The cost-stance resolver is
 [../../../skills/devsecops-audit/references/procedures/cost-stance-detection.md](../../../skills/devsecops-audit/references/procedures/cost-stance-detection.md).
 
-## Band 1 — always-block
+## Band 1 — always-evaluated
 
 ### `bicep.HC-1` — Shared keys / connection strings instead of managed identity
 
@@ -247,7 +249,7 @@ enableFreeTier\s*:\s*true
 
 ## Band 2 — cost-gated
 
-Each Band 2 code fires only when the resolved cost stance is `full`, or `mixed` with the specific code listed in `mixedEnabled`. Under `free`, the skill emits one `info` suppression line for this extension and does not evaluate these codes individually.
+Each Band 2 code is evaluated only when the resolved cost stance is `full`, or `mixed` with the specific code listed in `mixedEnabled`. Under `free`, the skill emits one `info` suppression line for this extension and does not evaluate these codes individually. Cost gating controls evaluation, not the severity of a finding that was evaluated.
 
 ### `bicep.B2-1` — Defender for Cloud Standard tier absent
 

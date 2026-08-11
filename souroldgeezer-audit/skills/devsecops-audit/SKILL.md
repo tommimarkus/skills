@@ -54,11 +54,20 @@ Load [`references/procedures/golden-corpus-evals.md`](references/procedures/gold
    coverage overlaps; otherwise disclose unavailable/not applicable.
 6. For Deep, probe GitHub MCP once; on failure record unavailable and continue
    static-only. Never retry.
-7. Apply codes; separate fact from inference; emit output/footer.
+7. Apply codes only after evidence gates and carve-outs. For the
+   same condition, the most-specific applicable loaded rule controls severity;
+   suppress its duplicate general code. If separately applicable rules still
+   overlap, duplicate overlaps use the highest applicable severity. Separate
+   fact from inference; emit output/footer.
 
 ## Outputs
 
-- Quick: findings only; no rollup or MCP probes.
+- Quick: findings only; no rollup or MCP probes. After Quick findings, emit
+  `Quick gate: <status>` with `fail > not-evaluated > pass-limited` precedence:
+  fail for a substantiated in-scope `block`; not-evaluated when required evidence
+  or machinery cannot rule out blockers; otherwise pass-limited. Warn and info
+  never fail the gate, risk tier remains orthogonal, and a clean rerun is
+  required after remediation.
 - Deep: opens with the Risk plan, then rubric §9 sections 1-12: scope, target levels, stage matrix,
   CICD-SEC scan, smells, positives, provenance, evidence-per-release,
   framework coupling, live-state block, verdict, honest limits.
