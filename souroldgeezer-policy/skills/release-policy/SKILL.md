@@ -38,6 +38,14 @@ target/action authority. Apply `git-workflow-policy` preflight before release
 writes. Delegate PR/MR lifecycle to `pr-ops`, issues to `issue-ops`, security to
 `devsecops-audit`, and test adequacy to `test-quality-audit`.
 
+Bind full verification evidence to the clean candidate commit and its ordered
+verification plan. Fast-forwarding that exact commit preserves the evidence. An
+explicitly documented, atomic fixed-surface version-only update runs the
+repository's focused version or metadata checks instead of repeating the full
+candidate gate. Candidate or source drift, a changed plan, missing evidence,
+non-version edits, non-fast-forward integration, or conflicting repository or
+host policy invalidates reuse and requires fresh full verification.
+
 In `adopt-guidance`, absorb existing related guidance into initialization
 options/exceptions, then remove or replace competing release prose; do not leave
 a pointer beside duplicate version/tag/publication rules.

@@ -18,3 +18,13 @@ when needed.
   post-release verification: `release-policy`.
 - Security controls: `devsecops-audit`.
 - Test-suite adequacy: `test-quality-audit`.
+
+## Verification Evidence Decision
+
+Treat a clean candidate commit plus its ordered verification plan as the unit
+that owns full-gate evidence. Exact fast-forward integration preserves that
+unit. A documented atomic fixed-surface version-only follow-up is a narrower
+verification event: focused version or metadata checks cover the only allowed
+change. Any source, plan, evidence, surface, or integration drift breaks that
+equivalence and restores the full gate; conflicting repository or host policy
+always stops reuse.

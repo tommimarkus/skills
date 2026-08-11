@@ -43,7 +43,28 @@ trigger for matching version update, changelog/release note, tag, provider
 release, publication, rollback, or release-exception actions. Do not downgrade
 an initialized policy to lookup because the user did not name the skill.
 
-## Release Baseline
+## Verification Evidence Reuse
+
+Full verification evidence belongs to both the clean candidate commit and the
+ordered verification plan that produced it. Record enough evidence to identify
+the candidate, the plan and its order, and the outcome of every required stage.
+Fast-forwarding that exact commit does not change its source and therefore does
+not invalidate the evidence.
+
+After that fast-forward, a repository may require an atomic version-only update
+on its default branch. Reuse the candidate evidence only when repository
+guidance explicitly documents the exception and fixes the complete allowed
+surface. Confirm that the update touches only those version or metadata cells,
+then run the repository's focused version or metadata checks. Do not
+unconditionally repeat the full candidate gate merely because the verified
+commit moved by fast-forward or received that documented version-only update.
+
+Require fresh full verification when the candidate or source drifts, the
+ordered verification plan changes, evidence is missing or cannot be tied to the
+candidate and plan, the update contains any non-version change, or integration
+is not a fast-forward of the exact candidate. Conflicting repository or host
+policy is a stop condition; this policy never turns the reuse contract into an
+override.
 
 ## Adoption Consolidation
 
