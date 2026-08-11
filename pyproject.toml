@@ -16,7 +16,10 @@ dev = [
 ]
 
 [tool.ruff]
-include = ["souroldgeezer-audit/skills/lean-audit/references/scripts/**/*.py"]
+include = [
+    "souroldgeezer-audit/skills/lean-audit/references/scripts/**/*.py",
+    "souroldgeezer-audit/skills/test-quality-audit/references/scripts/**/*.py",
+]
 target-version = "py311"
 line-length = 100
 
@@ -24,6 +27,9 @@ line-length = 100
 select = ["E", "F", "W", "I", "UP", "B"]
 
 [tool.mypy]
-files = ["souroldgeezer-audit/skills/lean-audit/references/scripts"]
+files = [
+    "souroldgeezer-audit/skills/lean-audit/references/scripts",
+    "souroldgeezer-audit/skills/test-quality-audit/references/scripts",
+]
 python_version = "3.11"
 strict = true
