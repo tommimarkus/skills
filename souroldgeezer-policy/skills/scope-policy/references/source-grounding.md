@@ -3,8 +3,9 @@
 This skill centralizes change-footprint discipline into a passive policy that
 repositories initialize with a declared scope level and escalation mode. Plugin
 installation alone does not enforce it; the standing repo guidance line — which
-must embed the invariant and a level, since this skill deliberately has no bare
-default — is the enforcement authority. `adopt-guidance` consolidates existing
+must embed the invariant and a level — is the enforcement authority; a bare
+line falls back to the default profile (`balanced` / `stop`), matching the
+sibling policies rather than stopping. `adopt-guidance` consolidates existing
 scope prose into that standing block. Escalation only fires when the task cannot
 be completed correctly at the declared level, never for elegance, and always
 with evidence. Keep guidance original; the level/escalation naming pattern below

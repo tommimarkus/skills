@@ -12,11 +12,10 @@ consumer's own guidance, the standing line (which carries the invariant
 itself) as enforcement authority, low-friction opt-out — is canonical in
 [`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md);
 this skill supplies the invariant, levels, escalation, and adoption on demand.
-Unlike `tdd-policy` and `planning-policy`, a bare initialization has no
-default profile: a standing line naming `scope-policy` without a level is
-`blocked:missing_input` — the invariant only binds once a rung is named, so a
-level-less line cannot satisfy the posture core's "carries the invariant"
-rule.
+Bare initialization uses the default profile in
+[references/core-workflow.md](references/core-workflow.md): level `balanced`,
+escalation `stop`. `adopt-guidance` still writes the level inline so the
+standing line carries the invariant without relying on that fallback.
 
 Invariant: a change stays inside a declared scope level; work that cannot be
 done at that level escalates one rung under a declared escalation mode, never
@@ -44,8 +43,9 @@ level per the reference template), `preflight` (check a working diff against
 the declared level and list the out-of-level hunks).
 
 Rules: do not enforce just because the plugin is installed. Enforce when
-loaded repo guidance initializes `scope-policy` with a level, or the user
-explicitly asks to enforce scope. Apply the declared level's footprint; record
+loaded repo guidance initializes `scope-policy`, or the user explicitly asks to
+enforce scope. Apply initialized options; bare initialization uses the default
+profile. Apply the declared level's footprint; record
 out-of-level findings rather than doing them, and route them to `issue-ops`.
 Delegate existing-code reuse/debt disposition to the design skills'
 `project-assimilation`, duplication/waste assessment to `lean-audit`, solution
@@ -54,9 +54,9 @@ minimalism and code/module design to `software-design`, plan-first approach to
 to `git-workflow-policy`.
 
 Ask vs continue: continue when the level, escalation mode, scope, and
-exceptions are clear. Stop and ask on a level-less standing line, ambiguous
-footprint, an unlogged exception request, or a level-3 (`open`) task that
-cannot be completed even after disclosing the derived footprint.
+exceptions are clear. Stop and ask on an ambiguous footprint, an unlogged
+exception request, or a level-3 (`open`) task that cannot be completed even
+after disclosing the derived footprint.
 
 Enforcement honesty follows the posture core's limits rule (enforced-by-default
 posture, no mechanical guarantee). No deterministic script ships with this
@@ -64,11 +64,10 @@ skill: judging whether a refactor stays inside the blast radius is not
 mechanizable, and diffing paths against scope globs alone is too thin to earn
 a bundled engine.
 
-Stop and report if a change would widen past its declared level without a
-disclosed escalation, and do not proceed on a level-less standing line. Stop if
-the task cannot proceed even at `open`'s model-derived footprint — that is
-task-exceeds-request, not a scope problem; escalate it to the user rather than
-widening further.
+Stop and report if a change would widen past the level in force without a
+disclosed escalation. Stop if the task cannot proceed even at `open`'s
+model-derived footprint — that is task-exceeds-request, not a scope problem;
+escalate it to the user rather than widening further.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
 repo's documented skill-architecture validation. End with the output footer

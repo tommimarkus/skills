@@ -13,11 +13,11 @@ widens.
 
 ## Enforcement
 
-Select `enforce-initialized` for initialized guidance naming a level, or an
-explicit request; otherwise `lookup`. `inspect` reports the level and
-escalation mode in force without judging a specific diff. `adopt-guidance`
-writes the standing block — MUST embed the invariant and a level; a
-level-less line is `blocked:missing_input`, never a silent default. `preflight`
+Select `enforce-initialized` for initialized guidance, or an explicit request;
+otherwise `lookup`. `inspect` reports the level and escalation mode in force
+without judging a specific diff. `adopt-guidance` writes the standing block —
+MUST embed the invariant and a level, so the line never leans on the default.
+`preflight`
 diffs the working change against the declared level's footprint and lists the
 hunks that fall outside it, before they land.
 
@@ -79,8 +79,10 @@ invariant and a level inline, never a bare pointer. Template:
 > only when the level is insurmountable; escalation <stop|auto>. Scope
 > <globs>. Exceptions <globs>. Opt out per task by saying "<phrase>" (logged).`
 
-There is no default profile: a `scope-policy` line with no level does not
-resolve to one and stops as `blocked:missing_input`.
+Default profile: bare initialization is level `balanced`, escalation `stop`.
+It covers a hand-written bare line; an ambiguous or contradictory level (two
+named levels, or a level outside the three) is `blocked:missing_input`, never
+a silent pick.
 
 Opt-out ladder mirrors the posture core: disable the line, a single logged
 per-task phrase, or scope/exception globs — every path stays one line or one
@@ -93,7 +95,7 @@ End every run with:
 ```text
 Scope policy: <enforced-initialized | on-demand | opt-out applied | not initialized>
 Source: <initialization line | explicit request>
-Level: <targeted | balanced | open> (<declared | escalated from <level>>)
+Level: <targeted | balanced | open> (<declared | defaulted | escalated from <level>>)
 Escalation: <stop | auto> — <none | rung change + reason>
 Recorded out-of-level: <none | N findings (routed)>
 Opt-outs: <none | phrase logged>
