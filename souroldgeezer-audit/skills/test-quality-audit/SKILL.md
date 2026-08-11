@@ -25,12 +25,11 @@ lack a safe default. For discipline on false positives, limits, and severity, se
 ## Load Map
 
 Load [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md)
-in all modes (discipline + output contract). In Deep mode only, also load
-[`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md)
-(risk tier) and
+and [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md)
+in all modes (discipline, output contract, and grounded per-test risk tier).
+In Deep mode only, also load
 [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md)
-(scale) — these are
-Deep-scale tools; Quick must not load them.
+for scale; Quick must not load it.
 This skill adds the test rubric and `HC-*/I-*/E-*/SH-*` namespace on top; it does not
 restate craft.
 
@@ -114,7 +113,12 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
    project-configured commands and already-readable evidence; never build an
    ingestion layer. Run gated suite checks when extension support exists and
    cost is acceptable; never run them in Quick mode, and never mutate E2E targets.
-6. Report. Quick emits per-test findings only. Deep adds rollup, suite
+6. Report. Quick emits per-test findings, then `Quick gate: <status>`. Use the
+   shared precedence: fail if any substantiated in-scope `block` remains; else
+   `not-evaluated` when required evidence or machinery cannot rule out blockers;
+   else `pass-limited`. Warn/info do not fail, risk is orthogonal, and a
+   remediated block needs a clean rerun. Quick remains per-test and never emits
+   `Gap-*` findings or a remediation worklist. Deep adds rollup, suite
    assessment, required Suite health block, gap report, determinism, mutation
    section, and remediation worklist.
 

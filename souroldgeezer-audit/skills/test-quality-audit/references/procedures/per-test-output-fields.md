@@ -132,6 +132,15 @@ For every E2E test case, emit:
 Use the matching field names for integration and E2E findings. Include the
 rubric on every finding so mixed files remain auditable.
 
+## Quick Gate
+
+After all Quick per-test findings, emit `Quick gate: <status>`. Use
+`fail` for any substantiated in-scope block, `not-evaluated` if required
+evidence or machinery cannot rule out blockers, otherwise `pass-limited`.
+Warnings and info do not fail it; SUT risk remains orthogonal. A repaired
+block requires a clean rerun. Do not add Gap findings, a rollup, or a worklist
+to Quick output.
+
 ## Severity Rules
 
 - `block` — no assertions (`HC-1` / `I-HC-A10` / `E-HC-F1`), test logic that

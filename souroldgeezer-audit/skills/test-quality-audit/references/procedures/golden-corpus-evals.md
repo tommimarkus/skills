@@ -72,6 +72,10 @@ Compare output with the corpus entry:
   candidate action, and forbidden actions match when present.
 - **Verdict pass:** `expected_verdict`, `expected_severity`, and
   `expected_action` match.
+- **Mode/gate pass:** `mode` is explicit; Quick cases match `expected_gate`
+  (`fail` / `not-evaluated` / `pass-limited`) and Deep cases set it to `null`.
+  Quick cases never emit `Gap-*` or worklist output; Deep gap cases supply SUT
+  context.
 - **False-positive note:** any extra smell code must be justified by evidence
   in the snippet. Record unjustified extras.
 - **False-negative note:** any missing expected code is a regression unless the
@@ -99,7 +103,7 @@ Record results in the change discussion or closeout notes:
 
 - Add cases one at a time.
 - Keep snippets minimal and original to this repository.
-- Include at least `id`, `stack`, `rubric`, `test_type`, `test_snippet`,
+- Include at least `id`, `mode`, `expected_gate`, `stack`, `rubric`, `test_type`, `test_snippet`,
   `expected_smells`, `expected_positives`, `expected_verdict`,
   `expected_severity`, and `expected_action`.
 - Include `expected_boundary_evidence`, `expected_coverage_strength`,
