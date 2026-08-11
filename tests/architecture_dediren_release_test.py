@@ -474,6 +474,39 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, guide)
 
+    def test_shipped_render_policies_match_live_reference_defaults(self) -> None:
+        """Every shipped policy mirrors the notation-aware Dediren resource exactly."""
+        resource_uris = {
+            "archimate": "dediren://fixture/render-policy/archimate-svg.json",
+            "uml": "dediren://fixture/render-policy/uml-svg.json",
+        }
+        reference_policies = {}
+        for profile, uri in resource_uris.items():
+            by_id = mcp_session(
+                FIXTURE,
+                [{
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "resources/read",
+                    "params": {"uri": uri},
+                }],
+            )
+            contents = by_id[2]["result"]["contents"]
+            self.assertEqual(len(contents), 1, contents)
+            reference_policies[profile] = json.loads(contents[0]["text"])
+
+        shipped_policies = {
+            FIXTURE / "render-policy.json": "archimate",
+            MIXED_FIXTURE / "render-policy.json": "archimate",
+            MIXED_FIXTURE / "render-policy-uml.json": "uml",
+            RENDERED_FIXTURE / "render-policy.json": "archimate",
+            RENDERED_FIXTURE / "render-policy-uml.json": "uml",
+        }
+        for policy_path, profile in shipped_policies.items():
+            with self.subTest(policy=policy_path.relative_to(REPO_ROOT)):
+                shipped = json.loads(policy_path.read_text(encoding="utf-8"))
+                self.assertEqual(shipped, reference_policies[profile])
+
     def test_release_fixture_model_validates_and_renders(self) -> None:
         package = json.loads((FIXTURE / "package.json").read_text(encoding="utf-8"))
         view = package["views"][0]

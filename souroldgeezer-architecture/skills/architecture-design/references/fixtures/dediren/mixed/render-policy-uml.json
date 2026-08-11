@@ -1,27 +1,163 @@
 {
   "render_policy_schema_version": "render-policy.schema.v3",
   "semantic_profile": "uml",
-  "page": { "width": 900, "height": 520 },
-  "margin": { "top": 32, "right": 32, "bottom": 32, "left": 32 },
+  "page": {
+    "width": 900,
+    "height": 520
+  },
+  "margin": {
+    "top": 32,
+    "right": 32,
+    "bottom": 32,
+    "left": 32
+  },
   "style": {
-    "background": { "fill": "#ffffff" },
-    "font": { "family": "Inter, Arial, sans-serif", "size": 14 },
-    "node": { "fill": "#ffffff", "stroke": "#000000", "stroke_width": 1.25, "rx": 0, "label_fill": "#000000" },
-    "edge": { "stroke": "#000000", "stroke_width": 1.25, "label_fill": "#000000", "label_horizontal_position": "center", "label_horizontal_side": "auto", "label_vertical_position": "center", "label_vertical_side": "left" },
-    "group": { "fill": "#ffffff", "stroke": "#000000", "stroke_width": 1, "rx": 0, "label_fill": "#000000", "label_size": 12 },
+    "background": {
+      "fill": "#ffffff"
+    },
+    "font": {
+      "family": "Inter, Arial, sans-serif",
+      "size": 14
+    },
+    "node": {
+      "fill": "#ffffff",
+      "stroke": "#000000",
+      "stroke_width": 1.25,
+      "rx": 0,
+      "label_fill": "#000000"
+    },
+    "edge": {
+      "stroke": "#000000",
+      "stroke_width": 1.25,
+      "label_fill": "#000000",
+      "label_horizontal_position": "center",
+      "label_horizontal_side": "auto",
+      "label_vertical_position": "center",
+      "label_vertical_side": "left"
+    },
+    "group": {
+      "fill": "#ffffff",
+      "stroke": "#000000",
+      "stroke_width": 1,
+      "rx": 0,
+      "label_fill": "#000000",
+      "label_size": 12
+    },
     "node_type_overrides": {
       "Package": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_package" },
       "Class": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_class" },
-      "Enumeration": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_enumeration" }
+      "Interface": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_interface" },
+      "DataType": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_data_type" },
+      "Enumeration": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_enumeration" },
+      "Activity": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "rx": 12, "decorator": "uml_activity" },
+      "Action": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "rx": 12, "decorator": "uml_action" },
+      "InitialNode": { "fill": "#000000", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_initial_node" },
+      "ActivityFinalNode": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_activity_final_node" },
+      "DecisionNode": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_decision_node" },
+      "MergeNode": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_merge_node" },
+      "ForkNode": { "fill": "#000000", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_fork_node" },
+      "JoinNode": { "fill": "#000000", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_join_node" },
+      "ObjectNode": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_object_node" },
+      "Interaction": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_interaction" },
+      "Lifeline": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_lifeline" },
+      "ExecutionSpecification": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_execution_specification" },
+      "Gate": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_gate" },
+      "DestructionOccurrenceSpecification": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_destruction_occurrence" },
+      "State": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "rx": 16, "decorator": "uml_state" },
+      "FinalState": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_final_state" },
+      "Pseudostate": { "fill": "#000000", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_pseudostate" },
+      "Actor": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_actor" },
+      "UseCase": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_use_case" },
+      "ExtensionPoint": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_extension_point" },
+      "Component": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_component" },
+      "Port": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_port" },
+      "Node": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_node" },
+      "Device": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_device" },
+      "ExecutionEnvironment": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_execution_environment" },
+      "Artifact": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_artifact" },
+      "DeploymentSpecification": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_deployment_specification" }
     },
     "edge_type_overrides": {
       "Association": { "marker_start": "none", "marker_end": "none" },
       "Composition": { "marker_start": "filled_diamond", "marker_end": "none" },
       "Aggregation": { "marker_start": "hollow_diamond", "marker_end": "none" },
-      "Dependency": { "line_style": "dashed", "marker_end": "open_arrow" }
+      "Generalization": { "marker_end": "hollow_triangle" },
+      "Realization": { "line_style": "dashed", "marker_end": "hollow_triangle" },
+      "Dependency": { "line_style": "dashed", "marker_end": "open_arrow" },
+      "ControlFlow": { "marker_end": "open_arrow" },
+      "ObjectFlow": { "marker_end": "open_arrow" },
+      "Transition": {
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center",
+        "label_horizontal_side": "auto",
+        "label_vertical_position": "center"
+      },
+      "Include": {
+        "line_style": "dashed",
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center"
+      },
+      "Extend": {
+        "line_style": "dashed",
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center"
+      },
+      "Usage": {
+        "line_style": "dashed",
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center"
+      },
+      "Deployment": {
+        "line_style": "dashed",
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center"
+      },
+      "Manifestation": {
+        "line_style": "dashed",
+        "marker_end": "open_arrow",
+        "label_horizontal_position": "center"
+      },
+      "CommunicationPath": {
+        "marker_start": "none",
+        "marker_end": "none",
+        "label_horizontal_position": "center"
+      }
     },
     "group_type_overrides": {
-      "Package": { "fill": "#ffffff", "stroke": "#000000", "label_fill": "#000000", "decorator": "uml_package" }
+      "Package": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "label_fill": "#000000",
+        "decorator": "uml_package"
+      },
+      "StateMachine": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "label_fill": "#000000",
+        "rx": 0,
+        "decorator": "uml_state_machine"
+      },
+      "Region": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "label_fill": "#000000",
+        "rx": 0,
+        "decorator": "uml_region"
+      },
+      "Component": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "label_fill": "#000000",
+        "rx": 0,
+        "decorator": "uml_component"
+      },
+      "Device": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "label_fill": "#000000",
+        "rx": 0,
+        "decorator": "uml_device"
+      }
     },
     "node_overrides": {},
     "edge_overrides": {},
