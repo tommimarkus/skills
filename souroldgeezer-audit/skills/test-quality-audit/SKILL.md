@@ -69,6 +69,14 @@ In every Deep audit, load
 for the required Suite health evidence ladder and output contract. Quick mode
 remains per-test and never loads this procedure.
 
+In Deep mode, when a JUnit XML report is already available, use the bundled
+[`references/scripts/suite_health_snapshot.py`](references/scripts/suite_health_snapshot.py)
+through the host-specific command documented by that procedure. Execute the
+one-shot helper without loading its source during an audit. Skill maintainers
+can verify its packaged entry point with `python3
+"${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --help` in
+Claude Code, or by substituting Codex's absolute loaded-skill directory.
+
 Load [`references/extensions/authoring.md`](references/extensions/authoring.md) only when editing extension structure.
 
 Load procedures only when needed from `references/procedures/`: per-test

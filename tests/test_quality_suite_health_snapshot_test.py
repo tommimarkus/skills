@@ -7,7 +7,6 @@ from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module, write_fixture
 
-
 SCRIPT = (
     REPO_ROOT
     / "souroldgeezer-audit/skills/test-quality-audit/references/scripts/suite_health_snapshot.py"
@@ -35,10 +34,14 @@ class SuiteHealthSnapshotTest(unittest.TestCase):
               <testsuite name="unit" time="10">
                 <testcase classname="alpha" name="fast" time="1" />
                 <testcase classname="alpha" name="skip" time="2"><skipped /></testcase>
-                <testcase classname="beta" name="failure" time="3"><failure>secret failure body</failure></testcase>
+                <testcase classname="beta" name="failure" time="3">
+                  <failure>secret failure body</failure>
+                </testcase>
               </testsuite>
               <testsuite name="integration" time="20">
-                <testcase classname="beta" name="error" time="4"><error>secret error body</error></testcase>
+                <testcase classname="beta" name="error" time="4">
+                  <error>secret error body</error>
+                </testcase>
                 <testcase classname="gamma" name="negative" time="-5" />
               </testsuite>
             </testsuites>
@@ -102,7 +105,7 @@ class SuiteHealthSnapshotTest(unittest.TestCase):
     def test_output_is_capped_at_sixteen_kib(self) -> None:
         module = load_script_module("suite_health_snapshot_cap", SCRIPT)
         root = module.parse_junit(
-            "<testsuite time=\"1\">"
+            '<testsuite time="1">'
             + "".join(
                 f'<testcase classname="{number * "x"}" name="{number * "y"}" time="1" />'
                 for number in range(1, 40)

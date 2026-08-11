@@ -36,6 +36,8 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("suite strategy, runtime growth, portfolio maintenance", skill)
         self.assertIn("In every Deep audit, load", skill)
         self.assertIn("deep-mode-output-format.md", skill)
+        self.assertIn("references/scripts/suite_health_snapshot.py", skill)
+        self.assertIn("when a JUnit XML report is already available", skill)
         self.assertIn("Quick mode remains per-test", skill_compact)
         self.assertLess(
             skill.index("3b. Deep only — mandatory suite-management pass"),
