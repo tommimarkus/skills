@@ -31,6 +31,25 @@ auto-retried, and EOF or router termination closes every child. A host sandbox
 therefore works when it permits this local stdio MCP process, the external
 executable, and the selected workspace; the adapter does not bypass host
 filesystem or network policy.
+
+The host configuration is intentionally specific: Claude Code interpolates
+`${CLAUDE_PLUGIN_ROOT}` in its inline command and has a host-defined launcher
+cwd; Codex uses a plugin-relative command with `cwd: "."`; Copilot CLI
+interpolates `${PLUGIN_ROOT}` and has a host-defined launcher cwd. Regardless of
+that configuration, the shared launcher/router has no harness detection and
+sets each upstream child cwd from the absolute per-call `workspaceRoot`. The
+three `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, and
+`DEDIREN_MCP_REQUEST_TIMEOUT_SEC` overrides apply uniformly. Router values and
+Codex `startup_timeout_sec` are seconds; Copilot `timeout` is milliseconds.
+The maintained adapters are Claude Code, Codex, and Copilot CLI.
+
+Generic local-client compatibility is limited to local stdio process launch with
+Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an absolute
+`workspaceRoot` per tool call. It does not establish another maintained harness.
+Preserve the legacy verified-release-cache fallback. Streamable HTTP is future
+work only for an explicit remote/shared multi-client service requirement; first
+design authentication, origin validation, port/service lifecycle, session
+isolation, and workspace authorization.
 Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
 `2026.07.28` or newer before rendering; this is a compatibility floor, not a pin.
 

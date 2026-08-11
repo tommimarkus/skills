@@ -110,6 +110,19 @@ Build.
    skill's source path and use `<skill-dir>/references/scripts/`; in this source
    repo that fallback is `souroldgeezer-architecture/skills/architecture-design`.
    Carry the runtime-appropriate resolved path into raw reference procedures.
+   Adapter configuration remains host-specific: Claude Code interpolates
+   `${CLAUDE_PLUGIN_ROOT}`, Codex uses its plugin-relative launcher and
+   `cwd: "."`, and Copilot CLI interpolates `${PLUGIN_ROOT}`. The shared
+   launcher/router has no harness detection; in every case it launches the
+   upstream child at the absolute `workspaceRoot` supplied per tool call.
+   Its maintained adapters are Claude Code, Codex, and Copilot CLI. Generic
+   local-client compatibility is limited to local stdio process launch with
+   Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an absolute
+   `workspaceRoot` per tool call; it is not another maintained harness. Preserve
+   the legacy verified-release-cache fallback. Streamable HTTP is future work
+   only for an explicit remote/shared multi-client service requirement, with
+   authentication, origin validation, port/service lifecycle, session isolation,
+   and workspace authorization addressed first.
 3. Select notation from `plugins.generic-graph.semantic_profile`, view kinds,
    export request, or prompt. Load
    [`references/notations/archimate.md`](references/notations/archimate.md) for

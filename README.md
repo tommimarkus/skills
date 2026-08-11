@@ -115,6 +115,24 @@ running the same install command.
   replaced host plugin cache cannot strand later calls in a deleted directory.
   Backend stderr remains visible in host logs; bounded command, cwd, exit, and
   stderr context is also returned with adapter failures.
+- Dediren configuration is host-specific, while the shared launcher/router has
+  no harness detection. The maintained adapters are Claude Code, Codex, and
+  Copilot CLI:
+
+  | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
+  |---|---|---|---|---|
+  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` inline | Host launch cwd; router uses `workspaceRoot` for the upstream child | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values: seconds |
+  | Codex | Plugin-relative command, `cwd: "."` | Plugin root for launcher; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `startup_timeout_sec`: seconds |
+  | Copilot CLI | `${PLUGIN_ROOT}` | Host launch cwd; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `timeout`: milliseconds |
+
+  Generic local-client compatibility is limited to a local stdio process launch
+  with Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an
+  absolute `workspaceRoot` per tool call; it does not promise support for another
+  harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
+  is future work only for an explicit remote/shared multi-client service: it
+  introduces authentication, origin validation, port/service lifecycle, session
+  isolation, and workspace authorization requirements. See the MCP
+  [transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 - Use the repo-local `uv` tooling for the skill architecture report.
 - Use the validation script before asking for review.
 

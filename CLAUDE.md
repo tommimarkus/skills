@@ -40,6 +40,25 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   adapters against their official plugin references and MCP against the current
   [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover).
 
+  The architecture plugin's Dediren configuration is host-specific, while the
+  shared launcher/router has no harness detection. Its maintained adapters are
+  Claude Code, Codex, and Copilot CLI:
+
+  | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
+  |---|---|---|---|---|
+  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
+  | Codex | Literal plugin-relative command with `cwd: "."` | Plugin root for launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `startup_timeout_sec` is seconds |
+  | Copilot CLI | `${PLUGIN_ROOT}` in `mcp/copilot.mcp.json` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds |
+
+  Generic local-client compatibility means a local stdio process launch with
+  Bash, Python, and Dediren access; `DEDIREN_COMMAND` is optional and every tool
+  call supplies an absolute `workspaceRoot`. It does not add another maintained
+  harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
+  is future work only for an explicit remote/shared multi-client service need:
+  it would require authentication, origin validation, port/service lifecycle,
+  session isolation, and workspace authorization. See the MCP
+  [transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+
 ## Keeping CLAUDE.md and README.md current (MUST)
 
 **Both MUST be kept current as the repo evolves** — each is load-bearing, and stale guidance causes downstream bugs. Treat drift as a blocking bug; fix it in the same commit that introduced it. Before finishing any task that changes repo structure or a skill's contract, re-read both and amend any section now wrong or incomplete.

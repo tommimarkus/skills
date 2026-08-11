@@ -547,6 +547,53 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
         self._assert_phrases_per_surface(expectations)
 
+    def test_dediren_host_adapter_and_generic_local_client_contract_is_documented(self) -> None:
+        """The shared router stays harness-neutral while host configuration differs."""
+        expectations = {
+            REPO_ROOT / "AGENTS.md": [
+                "shared launcher/router has no harness detection",
+                "Generic local-client compatibility",
+                "absolute `workspaceRoot` on every tool call",
+                "Streamable HTTP is future work only",
+                "authentication, origin validation, port and service lifecycle, session isolation, and workspace authorization",
+                "Preserve the legacy verified-release-cache fallback",
+            ],
+            REPO_ROOT / "CLAUDE.md": [
+                "shared launcher/router has no harness detection",
+                "Generic local-client compatibility",
+                "absolute `workspaceRoot`",
+                "Streamable HTTP is future work only",
+                "`startup_timeout_sec` is seconds",
+                "`timeout` is milliseconds",
+            ],
+            REPO_ROOT / "README.md": [
+                "shared launcher/router has no harness detection",
+                "Generic local-client compatibility",
+                "absolute `workspaceRoot` per tool call",
+                "Streamable HTTP is future work only",
+                "`startup_timeout_sec`: seconds",
+                "`timeout`: milliseconds",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
+                "shared launcher/router has no harness detection",
+                "Generic local-client compatibility",
+                "absolute `workspaceRoot` per tool call",
+                "Streamable HTTP is future work only",
+                "legacy verified-release-cache fallback",
+            ],
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md": [
+                "shared launcher/router has no harness detection",
+                "Generic local-client compatibility",
+                "absolute `workspaceRoot` per tool call",
+                "Streamable HTTP is future work only",
+                "Codex `startup_timeout_sec` are seconds",
+                "Copilot `timeout` is milliseconds",
+                "legacy verified-release-cache fallback",
+            ],
+        }
+
+        self._assert_phrases_per_surface(expectations)
+
     def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
         surfaces = [
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",

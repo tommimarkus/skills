@@ -43,6 +43,30 @@ Do not copy a published skill to make it runtime-specific. Put portable
 workflow in `skills/**`; isolate host metadata, hook configuration, MCP launch
 variables, and UI presentation in the host adapter.
 
+### Dediren MCP adapter contract
+
+The architecture plugin's Dediren configuration is host-specific, while its
+shared launcher/router has no harness detection. The maintained host adapters
+are Claude Code, Codex, and Copilot CLI; the router only launches a local
+stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
+call.
+
+| Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
+|---|---|---|---|---|
+| Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Inherit `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
+| Codex | Literal plugin-relative command with `cwd: "."` | Plugin root for launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `startup_timeout_sec` is seconds |
+| Copilot CLI | `${PLUGIN_ROOT}` in `mcp/copilot.mcp.json` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds |
+
+Generic local-client compatibility means only that a local client can launch a
+stdio process and permits Bash, Python, and the host-managed Dediren executable;
+it may optionally set `DEDIREN_COMMAND` and must pass an absolute
+`workspaceRoot` on every tool call. It is not a support or packaging promise for
+another harness. Preserve the legacy verified-release-cache fallback; it never
+downloads a runtime. Streamable HTTP is future work only for an explicit
+remote/shared multi-client service requirement, because it adds authentication,
+origin validation, port and service lifecycle, session isolation, and workspace
+authorization responsibilities.
+
 ## Required conventions
 
 - `git-workflow-policy: feature branches, persistent repo-local worktrees,
