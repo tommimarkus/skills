@@ -196,6 +196,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                         "text": json.dumps({
                                             "root": selected_root,
                                             "cwd": actual_cwd,
+                                            "argv": sys.argv[1:],
                                             "arguments": request["params"]["arguments"],
                                         }),
                                     }],
@@ -359,6 +360,66 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
             {"source": "model.json", "profile": "archimate"},
         )
         self.assertEqual(payload["cwd"], str(workspace.resolve()))
+
+    def test_absolute_adapter_routes_dediren_command_from_an_unrelated_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            unrelated_cwd = root / "unrelated-cwd"
+            unrelated_cwd.mkdir()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+
+            result = subprocess.run(
+                ["bash", str(LAUNCHER.resolve())],
+                cwd=unrelated_cwd,
+                check=False,
+                text=True,
+                input="".join(
+                    json.dumps(message) + "\n"
+                    for message in [
+                        {
+                            "jsonrpc": "2.0",
+                            "id": 30,
+                            "method": "initialize",
+                            "params": {
+                                "protocolVersion": "2024-11-05",
+                                "capabilities": {},
+                                "clientInfo": {"name": "adapter-test", "version": "1"},
+                            },
+                        },
+                        {"jsonrpc": "2.0", "id": 31, "method": "tools/list", "params": {}},
+                        {
+                            "jsonrpc": "2.0",
+                            "id": 32,
+                            "method": "tools/call",
+                            "params": {
+                                "name": "dediren_guide",
+                                "arguments": {"workspaceRoot": str(workspace.resolve())},
+                            },
+                        },
+                    ]
+                ),
+                capture_output=True,
+                timeout=30,
+                env={**os.environ, "DEDIREN_COMMAND": str(fake_backend)},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        self.assertEqual(responses[30]["result"]["protocolVersion"], "2024-11-05")
+        self.assertIn(
+            "dediren_guide",
+            {tool["name"] for tool in responses[31]["result"]["tools"]},
+        )
+        payload = json.loads(responses[32]["result"]["content"][0]["text"])
+        self.assertEqual(
+            payload["argv"],
+            ["mcp", "--root", str(workspace.resolve())],
+        )
+        self.assertEqual(payload["root"], str(workspace.resolve()))
+        self.assertEqual(payload["cwd"], str(workspace.resolve()))
+        self.assertEqual(payload["arguments"], {})
 
     def test_cached_discovery_survives_deleted_router_cwd_for_workspace_call(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
