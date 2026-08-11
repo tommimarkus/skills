@@ -25,6 +25,20 @@ Missing optional evidence is `unknown` with a limitation, not a request to add
 instrumentation. Stop only when the user explicitly requested a trend or
 effectiveness conclusion that the available evidence cannot support.
 
+## Management evidence before sampling
+
+Before sampling tests or projecting findings, establish the portfolio target,
+runner, lanes, cadence, selection policy, declared budgets, owners, and the
+latest accessible run. This management evidence determines whether sampling is
+safe and what it can support; sampling cannot fill an absent current-run result
+or runtime distribution. If the target or runner cannot be established, stop
+the suite-health verdict at `not assessed` and say why.
+
+Use a configured one-shot suite command only when it is read-only, has bounded
+cost acceptable to the engagement, and does not mutate E2E targets or external
+state. Call this a **safe one-shot suite execution** only after those checks;
+otherwise rely on readable current artifacts and disclose the limitation.
+
 ## Per-file rollup
 
 After all per-test findings, emit:
@@ -60,29 +74,43 @@ the dominant sub-lane verdict. Grade is `strong`, `adequate`, `weak`, or
 - **Window:** <current snapshot/run and any historical range, or unknown>
 - **Limitations:** <unavailable/unreadable fields and comparability limits>
 
-| Lane/layer | Purpose/cadence | Count | Current runtime | Declared budget | Reliability | Owner |
-|---|---|---:|---:|---:|---|---|
-| unit / pre-commit | <available value> | <N> | <distribution> | <project-declared value> | <flake/retry/skip/quarantine facts> | <owner> |
+| Lane/layer | Purpose/cadence | Count | Current result | Runtime distribution | Declared budget | Reliability | Owner |
+|---|---|---:|---:|---:|---:|---|---|
+| unit / pre-commit | <available value> | <N> | <pass/fail/unknown> | <median/tail or unknown> | <project-declared value> | <flake/retry/skip/quarantine facts> | <owner> |
 ```
 
-Include only available table fields; use `unknown` only where the absent field
-is material to a verdict. Record layer distribution without treating a pyramid,
+Current-run evidence is mandatory for a supported-positive **Current execution**
+disposition: record a current pass/fail result, or `unknown-evidence-gap` with
+its limit. Runtime distribution is mandatory for a supported-positive
+**Efficiency** disposition: record the available distribution and slow tail, or
+`unknown-evidence-gap`. Include the current-result and runtime-distribution
+columns even when their values are `unknown`; other immaterial fields may be
+omitted. Record layer distribution without treating a pyramid,
 test count, or test-to-code ratio as a target by itself. For runtime, report the
 observed distribution, slow-tail concentration, and comparable regressions.
 Declare a breach only against a project-declared budget; without one, outliers
 are observations rather than breaches.
 
-Keep **current facts** separate from **historical trends**. Then emit four
-verdicts with cited `SH-*` evidence or `unknown`:
+Keep **current facts** separate from **historical trends**. Then emit all five
+dimension dispositions with cited `SH-*` evidence. Each disposition is exactly
+`supported-positive`, `substantiated-finding`, or `unknown-evidence-gap`:
 
 - **Feedback:** lane purpose, cadence, selection safety, full-suite safety net,
   and project-declared budgets.
+- **Current execution:** latest result, exit status, failures, and whether a
+  safe one-shot suite execution was run or intentionally not run.
 - **Efficiency:** count/layer distribution, runtime and cost, slow tail,
   cross-layer overlap, and effectiveness per cost where supported.
 - **Reliability:** flakes, retries, skips, quarantine ownership, exits, and
   trends where available.
 - **Maintainability:** ownership, requirement/risk mapping, overlap review,
   and frequent bounded portfolio gardening.
+
+Derive the overall verdict deterministically: **weak — any block**;
+**adequate — warnings or material unknowns without blocks**; **strong — all
+five dimensions are supported-positive** without material limits; **not
+assessed — target or runner cannot be established**. Sampling or count-only
+facts never upgrade a dimension by themselves.
 
 Classify each portfolio candidate as `keep`, `strengthen`, `move down`,
 `consolidate`, `schedule later`, or `verify-then-retire`. Never recommend

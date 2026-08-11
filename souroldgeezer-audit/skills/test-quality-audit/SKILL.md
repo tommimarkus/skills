@@ -107,12 +107,15 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
    and use the highest applicable severity.
-5. Deep only: assess feedback lanes and declared budgets; count and layer mix;
-   current runtime and slow-tail concentration; flake, retry, skip, and
+5. Deep only: establish portfolio target, runner, lanes, cadence, selection,
+   declared budgets, owners, current result, and runtime distribution before
+   sampling. Then assess feedback lanes; count and layer mix; current runtime
+   and slow-tail concentration; flake, retry, skip, and
    quarantine health; ownership, overlap, and retirement discipline. Use only
    project-configured commands and already-readable evidence; never build an
-   ingestion layer. Run gated suite checks when extension support exists and
-   cost is acceptable; never run them in Quick mode, and never mutate E2E targets.
+   ingestion layer. A one-shot suite execution requires a read-only command,
+   bounded acceptable cost, and no E2E/external-state mutation; otherwise
+   disclose the current-run gap. Never run suite checks in Quick mode.
 6. Report. Quick emits per-test findings, then `Quick gate: <status>`. Use the
    shared precedence: fail if any substantiated in-scope `block` remains; else
    `not-evaluated` when required evidence or machinery cannot rule out blockers;

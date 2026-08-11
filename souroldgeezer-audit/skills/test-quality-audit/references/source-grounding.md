@@ -71,6 +71,11 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: linked for continuous-testing workload scale, latency, and cost
   pressures; guidance remains project-budgeted rather than importing Google's
   operating thresholds.
+- Source: local `audit-craft.md` and `sampling-projection.md` Deep-audit
+  contracts.
+  Handling: management evidence precedes sampling; current execution and
+  runtime distribution are reported from available project evidence, while
+  one-shot execution remains read-only, bounded, and opt-in by safety.
 - Source: Koochakzadeh and Garousi, “A Tester-Assisted Methodology for Test
   Redundancy Detection,” at `https://doi.org/10.1155/2010/932686`.
   Handling: linked for coverage-based redundancy false-positive risk and the

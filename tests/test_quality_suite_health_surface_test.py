@@ -74,6 +74,13 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "consolidate",
             "schedule later",
             "verify-then-retire",
+            "management evidence before sampling",
+            "safe one-shot suite execution",
+            "current-run evidence is mandatory",
+            "runtime distribution is mandatory",
+            "supported-positive",
+            "substantiated-finding",
+            "unknown-evidence-gap",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, output_lower)
@@ -84,6 +91,18 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         for universal_threshold in ("> 100 ms", "> 2 s", "> 5 min", "70-80%"):
             self.assertNotIn(universal_threshold, output)
 
+        self.assertLess(
+            output_lower.index("## management evidence before sampling"),
+            output_lower.index("## per-file rollup"),
+        )
+        for dimension in ("Feedback", "Current execution", "Efficiency", "Reliability", "Maintainability"):
+            with self.subTest(dimension=dimension):
+                self.assertIn(f"**{dimension}:**", output)
+        self.assertIn("weak — any block", output)
+        self.assertIn("adequate — warnings or material unknowns without blocks", output)
+        self.assertIn("strong — all five dimensions are supported-positive", " ".join(output.split()))
+        self.assertIn("not assessed — target or runner cannot be established", " ".join(output.split()))
+
     def test_suite_health_codes_and_retirement_gate_are_documented(self) -> None:
         catalog = read(CATALOG)
         for code in (
@@ -92,13 +111,18 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "SH-HC-3",
             "SH-HC-4",
             "SH-HC-5",
+            "SH-HC-6",
             "SH-LC-1",
             "SH-LC-2",
             "SH-LC-3",
+            "SH-LC-4",
+            "SH-LC-5",
+            "SH-LC-6",
             "SH-POS-1",
             "SH-POS-2",
             "SH-POS-3",
             "SH-POS-4",
+            "SH-POS-5",
         ):
             self.assertIn(f"`{code}`", catalog)
         self.assertIn("test-count growth alone is not a smell", " ".join(catalog.lower().split()))
@@ -116,6 +140,12 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "test-quality-behavior-suite-unfamiliar-results",
             "test-quality-behavior-suite-selection-and-quarantine",
             "test-quality-behavior-suite-retirement-evidence",
+            "test-quality-behavior-suite-healthy-lanes",
+            "test-quality-behavior-suite-failed-current-run",
+            "test-quality-behavior-suite-monolithic-every-change",
+            "test-quality-behavior-suite-broad-unbudgeted-cost",
+            "test-quality-behavior-suite-missing-ownership",
+            "test-quality-behavior-suite-count-only-neutrality",
         }
         self.assertTrue(expected_behavior_ids.issubset(behaviors))
         for case_id in expected_behavior_ids:
@@ -123,7 +153,7 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             self.assertEqual("synthetic", case["source_kind"])
             self.assertFalse(case["contains_third_party_text"])
 
-        expected_golden_ids = {f"TQA-GOLD-{number:04d}" for number in range(30, 36)}
+        expected_golden_ids = {f"TQA-GOLD-{number:04d}" for number in (*range(30, 36), *range(46, 52))}
         self.assertTrue(expected_golden_ids.issubset(golden))
         self.assertEqual([], golden["TQA-GOLD-0030"]["expected_suite_health_smells"])
         self.assertIn("SH-POS-2", golden["TQA-GOLD-0030"]["expected_suite_health_positives"])
@@ -133,6 +163,13 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("SH-HC-3", golden["TQA-GOLD-0034"]["expected_suite_health_smells"])
         self.assertIn("SH-HC-4", golden["TQA-GOLD-0034"]["expected_suite_health_smells"])
         self.assertIn("delete-from-coverage-alone", golden["TQA-GOLD-0035"]["forbidden_actions"])
+        self.assertIn("SH-POS-5", golden["TQA-GOLD-0046"]["expected_suite_health_positives"])
+        self.assertIn("SH-HC-6", golden["TQA-GOLD-0047"]["expected_suite_health_smells"])
+        self.assertIn("SH-LC-4", golden["TQA-GOLD-0048"]["expected_suite_health_smells"])
+        self.assertIn("SH-LC-5", golden["TQA-GOLD-0049"]["expected_suite_health_smells"])
+        self.assertIn("SH-LC-6", golden["TQA-GOLD-0050"]["expected_suite_health_smells"])
+        self.assertEqual([], golden["TQA-GOLD-0051"]["expected_suite_health_smells"])
+        self.assertIn("SH-POS-5", golden["TQA-GOLD-0051"]["expected_suite_health_positives"])
 
     def test_triggers_wrappers_docs_and_sources_cover_the_public_contract(self) -> None:
         triggers = read_jsonl(TRIGGERS)
