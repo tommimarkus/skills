@@ -17,6 +17,10 @@ This reference treats contract, security, reliability, and observability as base
 - **2.7 Observability is baseline:** W3C `traceparent` on every request; structured logs; correlation ID in every error response; OpenTelemetry / platform telemetry at worker startup; per-request cost signals (Cosmos RU, storage request count) as structured fields.
 - **2.8 Performance is responsiveness:** HTTP and data clients live in DI / module scope, not handler bodies; hosting selection is a design-time decision keyed to latency, scale, and cost.
 - **2.9 Progressive enhancement:** sync HTTP is baseline; 202+polling, webhooks, orchestration, and queue-backed processors are additive — reach for the simplest pattern that satisfies the requirement.
+- **2.10 Surface architecture:** default to one canonical HTTP contract per
+  capability and consumer/trust/lifecycle boundary. Separate only for a
+  documented migration, consumer-specific BFF, public/private trust split,
+  regulatory/regional separation, or explicit scale/failure-domain need.
 
 ## 3. Decisions
 
@@ -148,6 +152,18 @@ Secrets live in the platform secret manager and are referenced from runtime conf
 **Default:** platform secret references in runtime settings; managed/workload identity on the API runtime with the minimum data-plane role needed. Azure Cosmos DB accounts have `disableLocalAuth=true`. Azure Storage accounts have `allowSharedKeyAccess=false`. No secrets in code literals, no keys in local settings committed to git.
 
 *When to deviate:* never for new code. Legacy code is migration debt, not a reference pattern.
+
+### 3.18 API surface architecture
+Treat an API portfolio as contracts serving named capabilities across explicit
+consumer, trust, and lifecycle boundaries. Duplicate routes, policies, and
+aggregations are not automatically debt: an intentional boundary can justify a
+separate contract.
+
+**Default:** one canonical HTTP contract per capability and consumer/trust/lifecycle boundary. Record a decision to keep, separate, standardize, aggregate, consolidate, or deprecate from contract inventories, consumer journeys, versions, gateway/client wiring, and available usage/deprecation evidence.
+
+*When to deviate:* documented migrations, consumer-specific BFFs, public/private
+trust splits, regulatory/regional separation, and explicit scale or
+failure-domain needs may retain separate contracts. Never infer traffic, latency, organizational ownership, or runtime benefit from static contracts. Keep architecture-model changes delegated through the existing pairing procedure.
 
 ## 4. Primitives cheatsheet
 
@@ -424,6 +440,24 @@ A production-grade receiver:
 - **SAD-G-orchestration-overkill** — workflow orchestration for a single-step async job. Fix: queue-backed handler per §5.8.
 - **SAD-G-static-runtime-claim** — a review claiming p95 latency, cold-start time, or error rate from static analysis. Fix: restate as "static signals aligned; runtime metrics require load test / RUM."
 - **SAD-G-version-drift** — coexisting versioning strategies (URI-path for most, query string for some) or an "implicit v1" that's really v1.5. Fix per §3.2.
+- **SAD-A-capability-overlap** — multiple contracts claim the same capability
+  for the same consumer/trust/lifecycle boundary without an intentional
+  separation. Fix per §3.18 and the surface-architecture procedure.
+- **SAD-A-policy-drift** — equivalent surface contracts differ in auth, error,
+  version, or lifecycle policy without an evidence-backed boundary. Fix by
+  standardizing or separating explicitly.
+- **SAD-A-consumer-chattiness** — a consumer journey needs avoidable sequential
+  calls across contracts despite a supported aggregation boundary. Verify with
+  journey and runtime evidence; static contracts do not prove latency.
+- **SAD-A-internal-boundary-leak** — a public or partner surface exposes an
+  internal service contract rather than a boundary-owned HTTP contract. Fix by
+  separating or aggregating at the boundary.
+- **SAD-A-lifecycle-sprawl** — versions or deprecation paths accumulate without
+  an owner, sunset evidence, or a retirement decision. Fix by consolidating or
+  deprecating with lifecycle evidence.
+- **SAD-A-duplicated-aggregation** — multiple boundary endpoints duplicate the
+  same downstream composition without an intentional consumer-specific reason.
+  Fix by standardizing, aggregating, or keeping with documented rationale.
 
 ## 7. Review checklist
 
@@ -446,6 +480,9 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Versioning strategy is explicit; no implicit v1 `[static][contract]`.
 - Idempotency semantics documented for every mutating operation `[contract]`.
 - Pagination shape is cursor-based (or justified offset) `[static][contract]`.
+- API surface decisions use contract inventory, consumer journey, version, and
+  gateway/client-wiring evidence; usage and deprecation evidence are recorded
+  when available `[static][contract][runtime]`.
 
 ### Security (hard requirements)
 - HTTPS-only enforced at platform `[iac]`.
@@ -485,4 +522,4 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 
 ## 8. Out of scope
 
-Not covered: gRPC / GraphQL / SOAP / JSON-RPC; runtimes without a bundled extension; Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Redis (future extensions); Cosmos DB non-NoSQL APIs (MongoDB, Cassandra, Gremlin, Table); data-model design (schema, DDD, event-sourcing, CQRS); general .NET / Node.js / Next.js code quality (→ `devsecops-audit`, `test-quality-audit`); web frontend app / UI (→ `app-design`); runtime SLO verification (p95, cold-start, error rate, RU charges — require load test / RUM; tagged `[load]` / `[runtime]` in §7).
+Not covered: gRPC / GraphQL / SOAP / JSON-RPC; runtimes without a bundled extension; Azure SQL, Table Storage, Queue Storage, Service Bus, Event Hubs, Redis (future extensions); Cosmos DB non-NoSQL APIs (MongoDB, Cassandra, Gremlin, Table); data-model design (schema, DDD, event-sourcing, CQRS); enterprise governance or organizational design; general .NET / Node.js / Next.js code quality (→ `devsecops-audit`, `test-quality-audit`); web frontend app / UI (→ `app-design`); runtime SLO verification (p95, cold-start, error rate, RU charges — require load test / RUM; tagged `[load]` / `[runtime]` in §7).

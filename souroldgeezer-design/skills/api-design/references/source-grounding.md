@@ -22,6 +22,12 @@ screenshots.
   Handling: local sibling-skill boundary; hosted Next.js API guidance keeps
   Route Handlers, Pages API routes, and API-like Server Actions in api-design
   while frontend route/layout/screen/component behavior delegates to app-design.
+- Source: `references/procedures/surface-architecture.md` and the API reference
+  surface-architecture rule.
+  Handling: repo-authored HTTP contract portfolio guidance; synthetic cases
+  exercise evidence-bound keep/separate/standardize/aggregate/consolidate/
+  deprecate decisions without asserting traffic, latency, ownership, or runtime
+  benefit from static contracts.
 
 Mode-routing evals are original synthetic cases. They assert that factual
 Extract stays core-only, explicit debt/compliance Extract adds only Review,

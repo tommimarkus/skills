@@ -13,6 +13,9 @@ observability, and verification-layer disclosure. Use
 [../../docs/api-reference/api-design.md](../../docs/api-reference/api-design.md)
 as the core reference; this file is the router.
 
+Keep one canonical HTTP contract per capability and consumer/trust/lifecycle
+boundary unless a documented exception applies.
+
 Delegate general code/module design, frontend app work, infrastructure topology,
 ArchiMate packages, pipeline/security posture, and test quality to
 `software-design`, `app-design`, `infra-design`, `architecture-design`,
@@ -46,6 +49,9 @@ Load what applies:
   [../../docs/design-reference/architecture-pairing-core.md](../../docs/design-reference/architecture-pairing-core.md))
   when a paired `docs/architecture/<feature>.dediren/` package exists or the
   user asks to update architecture after API work.
+- [references/procedures/surface-architecture.md](references/procedures/surface-architecture.md)
+  when API surface architecture, overlap, consolidation, consumer journeys, or
+  API portfolio decisions are in scope.
 - [references/procedures/red-flags.md](references/procedures/red-flags.md)
   before final output in Build and Review.
 - [extensions/azure-functions-dotnet.md](extensions/azure-functions-dotnet.md)
