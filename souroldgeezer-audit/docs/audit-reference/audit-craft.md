@@ -67,6 +67,23 @@ rollup. Deep/in-depth = reasonable assurance: enumerate the subject surface,
 roll up, sample+project at scale (§6), emit a graded verdict. Every output
 states its assurance level on one line.
 
+## §4a Bounded-lane gate
+
+A bounded-lane gate is a mechanical status check, not a rollup or
+reasonable-assurance verdict. It supplements the limited-assurance finding
+output; it does not change Deep, in-depth, or full-repo behavior.
+
+- `test-quality-audit` and `devsecops-audit` use `Quick gate: <status>`.
+- `ip-hygiene` uses `triage gate: <status>`.
+- `lean-audit` uses `limited-scope gate: <status>` for a bounded scope.
+
+Status precedence is `fail` if any substantiated in-scope `block` exists;
+otherwise `not-evaluated` when required evidence or machinery cannot rule out
+blockers; otherwise `pass-limited`. Warn and info findings never make this gate
+fail. A remediated block needs a clean rerun before the gate can pass. Subject
+risk tier remains orthogonal (§3): it prioritizes remediation but does not
+change the gate status.
+
 ## §5 Disclosure-footer contract
 
 Every audit output ends with a footer reporting: extensions loaded · tool/MCP

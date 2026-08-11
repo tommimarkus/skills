@@ -105,6 +105,17 @@ runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise
 emits a proposed plan for explicit approval.
 
+### Bounded audit-lane gate
+
+The shared audit craft contract defines a bounded-lane gate: `Quick gate: <status>`
+for test-quality and DevSecOps, `triage gate: <status>` for IP, and
+`limited-scope gate: <status>` for bounded Lean. Its status is `fail` for a
+substantiated in-scope block, otherwise `not-evaluated` when required evidence
+or machinery cannot rule out blockers, otherwise `pass-limited`. This is a
+mechanical limited-scope check, not a Deep/in-depth/full-repo rollup or
+reasonable-assurance verdict; see
+[`audit-craft.md §4a`](souroldgeezer-audit/docs/audit-reference/audit-craft.md).
+
 `software-design` also owns an early-return File Edit lane for bounded non-code
 content changes with no software-design or sibling-owned decision. It does not
 expand into source-code work: use the shared workflow's format-aware precedence
