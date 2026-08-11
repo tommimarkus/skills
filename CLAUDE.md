@@ -185,8 +185,8 @@ internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of 
 .agents/plugins/marketplace.json       ← native Codex marketplace manifest
 souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
   docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + provider-agnostic lifecycle/escalation core + extension-authoring template (github.md, gitlab.md, provider-lifecycle-core.md, authoring.md)
-souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy, tdd-policy, planning-policy)
-  docs/policy-reference/    ← shared enforcement-posture core (policy-posture-core.md) all four policy skills cite
+souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy, tdd-policy, planning-policy, scope-policy)
+  docs/policy-reference/    ← shared enforcement-posture core (policy-posture-core.md) all five policy skills cite
 souroldgeezer-audit/        ← published audit plugin (devsecops-audit, test-quality-audit, ip-hygiene, lean-audit)
   docs/audit-reference/     ← shared audit craft core (audit-craft.md, materiality.md, sampling-projection.md)
 souroldgeezer-design/       ← published design plugin (software-design, app-design, api-design, infra-design)
@@ -218,7 +218,7 @@ Current `<kind>-reference/` directories in use:
 - `souroldgeezer-design/docs/infra-reference/infra-design.md` — infra-design playbook
 - `souroldgeezer-design/docs/design-reference/architecture-pairing-core.md` — shared architecture-pairing mechanics the api-design / software-design pairing procedures and Load Maps cite
 - `souroldgeezer-architecture/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate® 3.2, with UML® notation overlays under the skill references); `source-weighting.md` beside it is the source-evidence evaluator the skill loads when weighting extracted / reverse-lifted inputs
-- `souroldgeezer-policy/docs/policy-reference/policy-posture-core.md` — shared enforcement-posture core (passive install, standing-line authority, invariant-inline standing blocks, low-friction opt-out, honest limits) all four policy skills cite
+- `souroldgeezer-policy/docs/policy-reference/policy-posture-core.md` — shared enforcement-posture core (passive install, standing-line authority, invariant-inline standing blocks, low-friction opt-out, honest limits) all five policy skills cite
 - `souroldgeezer-ops/docs/provider-reference/{github,gitlab}.md` — shared provider mechanics both ops skills' extensions cite; `provider-lifecycle-core.md` beside them holds the provider-agnostic lifecycle-marker and escalation core that both providers and both skills' SKILL.md / extensions cite; `authoring.md` is the shared extension-authoring template the two `extensions/README.md` entrypoints cite
 
 Migration note: `architecture-design` moved from `souroldgeezer-design` to `souroldgeezer-architecture` — if you installed `souroldgeezer-design` for architecture work, see [docs/maintenance-procedures.md § architecture-design plugin migration](docs/maintenance-procedures.md) for the install and canonical-handoff details.
@@ -395,6 +395,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `release-policy` | `souroldgeezer-policy` | Passive distribution policy (versions, changelog, tags, publication); standing enforcement once initialized |
 | `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path |
 | `planning-policy` | `souroldgeezer-policy` | Active opt-out plan-first policy; install-passive, enforced-by-default once initialized; opens plan mode (EnterPlanMode) and runs a light brainstorm before new build work, approving the approach via ExitPlanMode with no spec file; low-friction opt-out |
+| `scope-policy` | `souroldgeezer-policy` | Passive change-footprint policy; bounds a change to a declared level (`targeted` / `balanced` / `open`), records out-of-level findings instead of doing them, and requires a level on standing initialization |
 | `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain, and evidence-backed JavaScript/TypeScript security paths; cost stance via `config.yaml` |
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack, including Deep suite health and Node/React async lifecycle ownership |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces |
@@ -412,8 +413,9 @@ Design and audit skills share the Build / Extract / Review / Lookup (design) and
 - `app-design` / `api-design` / `infra-design` / `software-design` → `architecture-design` drift review via the paired package at `docs/architecture/<feature>.dediren/`; `app-design` ↔ `api-design` at the frontend/API boundary.
 - `git-workflow-policy` → `pr-ops`, `issue-ops`, `release-policy`; `release-policy` applies `git-workflow-policy` preflight then → `pr-ops`; `issue-ops` ↔ `pr-ops` handoff.
 - `tdd-policy` → `test-quality-audit` (test adequacy), `software-design` (design), `git-workflow-policy` preflight; siblings hand test-first enforcement to `tdd-policy`.
-- `planning-policy` → the design skills (`software-design`, `app-design`, `api-design`, `infra-design`), `architecture-design`, the audits, and `pr-ops` / `issue-ops` once the approach is approved; composes with `tdd-policy` (plan first, then test-first); siblings hand pre-implementation approach planning to `planning-policy`.
+- `planning-policy` → the design skills (`software-design`, `app-design`, `api-design`, `infra-design`), `architecture-design`, the audits, and `pr-ops` / `issue-ops` once the approach is approved; composes with `tdd-policy` (plan first, then test-first); siblings hand pre-implementation approach planning to `planning-policy`. A plan states the declared scope level and escalation mode among its settled decisions; each leaf's existing `boundary`/`write_set` materializes it, with no new plan field.
 - `lean-audit` → `devsecops-audit` (security), `test-quality-audit` (tests), `ip-hygiene` (copyright / marks / licence), the design skills (code / structure); sibling skills may hand duplication / waste assessment to `lean-audit`.
+- `scope-policy` → `issue-ops` (record out-of-level findings), the design skills' project assimilation (existing-code disposition), `lean-audit` (duplication / waste), `software-design` (solution minimalism and design), `planning-policy` (plan-first approach), `tdd-policy` (test-first), `git-workflow-policy` (commit/branch); siblings hand change-footprint bounding to `scope-policy`.
 
 **Extension composition order** (load in order when the target spans layers): app `vite.md` → `react.md` for Vite + React, while React + Next.js stays `react.md` → `nextjs.md` and Vite/Blazor™ WASM can load standalone; api picks one base core — `azure-functions-dotnet.md` (Azure® Functions™ .NET), `nodejs.md` (hosted Node, then `nextjs.md` for Next.js), or `python.md` (ASGI/WSGI/serverless API routing) — plus the `azure-cosmosdb.md` / `azure-blob-storage.md` cores as needed, then loads only the lane selected by Build, Review, or the narrow Extract/Lookup route; infra `azure.md` + (`bicep.md` | `terraform.md`); test-quality `references/extensions/nodejs/core.md` → `references/extensions/nextjs/core.md` (Next.js is a strict superset of Node.js).
 
