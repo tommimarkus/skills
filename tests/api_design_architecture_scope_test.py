@@ -4,6 +4,31 @@ from tests.surface_test_lib import read, read_jsonl
 
 
 class ApiDesignArchitectureScopeTest(unittest.TestCase):
+    def test_trigger_metadata_names_portfolio_scope_and_matches_claude_agent(self) -> None:
+        skill = read("souroldgeezer-design/skills/api-design/SKILL.md")
+        agent = read("souroldgeezer-design/agents/api-design.md")
+        skill_description = next(
+            line for line in skill.split("---", 2)[1].splitlines()
+            if line.startswith("description:")
+        )
+        agent_description = next(
+            line for line in agent.split("---", 2)[1].splitlines()
+            if line.startswith("description:")
+        )
+
+        self.assertEqual(skill_description, agent_description)
+        for phrase in (
+            "API architecture",
+            "portfolio cohesion",
+            "fragmentation",
+            "sprawl",
+            "consolidation",
+            "overlap",
+            "consumer chattiness",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, skill_description)
+
     def test_router_keeps_architecture_invariant_compact_and_conditional(self) -> None:
         skill = read("souroldgeezer-design/skills/api-design/SKILL.md")
 
