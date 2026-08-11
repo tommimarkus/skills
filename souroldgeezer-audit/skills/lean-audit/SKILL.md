@@ -100,9 +100,9 @@ second mode; coverage still derives assurance.
 ## Workflow
 
 1. Establish the whole-repo, directory, named-file, or diff scope. Engines scan a
-   directory, so use the repo root or nearest common directory and retain only
-   findings touching the in-scope path set. Disclose `.lean-audit.toml` or
-   `heuristic-only`.
+   directory, so use the repo root or nearest common directory; filter findings
+   to the requested paths and apply declared carve-outs before deriving any
+   limited-scope gate. Disclose `.lean-audit.toml` or `heuristic-only`.
 2. Run the markdown engine as JSON (use `uv`; `python3` is fallback only at
    ≥3.11):
 
@@ -144,6 +144,19 @@ second mode; coverage still derives assurance.
    findings carry their own dial-adjusted priority (see procedure); merge them into
    the worklist under the `LA-PUC-*` band with their separate priority rationale.
 7. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
+
+   **Limited-scope gate.** Emit `limited-scope gate: <status>` only for a file,
+   named-file, or diff coverage — never for a directory or whole-repo rollup.
+   Derive it after scope filtering and declared carve-outs; never derive it from
+   a directory-wide engine exit alone. If a confirmed in-scope block exists,
+   `fail` wins: high-band `LA-DUP-1`, `LA-DUP-2`, `LA-CODE-DUP-1`, `LA-RUN-2`,
+   or `LA-RUN-3` when the expected lane exceeds declared capacity. Otherwise
+   emit `not-evaluated` when the Python ≥3.11 floor is unmet, a required
+   deterministic engine is unavailable, or an activated run-viability lens lacks
+   evidence and cannot rule out overflow. Otherwise emit `pass-limited`.
+   Per-use, platform-redundancy, minify, and judgment-only findings are warn/info
+   and nonblocking. State the machinery/evidence cause for `not-evaluated` in
+   the footer; it is a limited-assurance status, not a full-repo verdict.
 
 ## Platform-redundancy lens (opt-in)
 
