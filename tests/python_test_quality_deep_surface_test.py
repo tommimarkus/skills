@@ -8,6 +8,7 @@ INDEX = "souroldgeezer-audit/skills/test-quality-audit/extensions/index.md"
 PYTHON_CORE = "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md"
 PYTHON_DEEP = "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/deep.md"
 DEEP_OUTPUT = "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md"
+MATERIALITY = "souroldgeezer-audit/docs/audit-reference/materiality.md"
 SCENARIOS = REPO_ROOT / "tests" / "skill_load_cost" / "scenarios.json"
 
 
@@ -98,6 +99,7 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
                 "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
                 core,
                 addon,
+                MATERIALITY,
             ],
         )
         self.assertNotIn(PYTHON_DEEP, quick)
@@ -114,7 +116,7 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
                 integration,
             ],
         )
-        self.assertEqual(len(quick), 5)
+        self.assertEqual(len(quick), 6)
         self.assertEqual(len(deep), 9)
 
 
