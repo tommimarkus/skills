@@ -406,6 +406,17 @@
     ]
   },
   {
+    "id": "review-surface-architecture",
+    "skill": "api-design",
+    "load_routes": [
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/surface-architecture.md", "predicate": "conditional:surface-architecture"},
+      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"}
+    ]
+  },
+  {
     "id": "extract-python-factual",
     "skill": "api-design",
     "load_routes": [

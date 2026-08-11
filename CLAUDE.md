@@ -401,7 +401,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; deterministic engines + judgment; surface-gated per-use cost (`LA-PUC-*`) and staged-workflow run viability/orchestrator survivability (`LA-RUN-*`, `LA-ORCH-*`) with metadata-only trace calibration; read-only; plus explicit-request-only propose-only minify (`LA-MIN-*`) and live-verified platform redundancy (`LA-NAT-*`) |
 | `software-design` | `souroldgeezer-design` | Code/module/script design plus bounded non-code File Edit lane; core `SD-*` + per-language extensions including the shared JavaScript/TypeScript lane |
 | `app-design` | `souroldgeezer-design` | Frontend app design (Vite / React / Next.js / Blazor™ WASM); WCAG 2.2 / i18n / Core Web Vitals baselines |
-| `api-design` | `souroldgeezer-design` | HTTP API design; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |
+| `api-design` | `souroldgeezer-design` | HTTP API endpoint and surface architecture; portfolio cohesion, fragmentation, sprawl, consolidation, overlap, consumer chattiness; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |
 | `infra-design` | `souroldgeezer-design` | Infrastructure / IaC design; core `ID-*` + Azure® / Terraform™ / Bicep™ extensions |
 | `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, shareable HTML gallery, drift, reverse lookup |
 

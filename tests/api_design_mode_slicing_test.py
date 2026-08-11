@@ -77,6 +77,7 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
         review = targets("review-functions-cosmos-blob")
         factual = targets("extract-functions-cosmos-factual")
         debt = targets("extract-functions-cosmos-debt")
+        surface = targets("review-surface-architecture")
 
         self.assertTrue(
             any("api-design.md#" in target for target in lookup),
@@ -90,6 +91,11 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
         self.assertFalse(any("/build.md" in target or "/review.md" in target for target in factual))
         self.assertTrue(any("/review.md" in target for target in debt))
         self.assertFalse(any("/build.md" in target for target in debt))
+        self.assertIn(
+            "souroldgeezer-design/skills/api-design/references/procedures/surface-architecture.md",
+            surface,
+        )
+        self.assertFalse(any("/build.md" in target or "/review.md" in target for target in surface))
 
     def test_full_api_closure_preserves_fidelity_baseline(self) -> None:
         slc = load_script_module("api_design_mode_slicing_load_cost", LOAD_COST_SCRIPT)
