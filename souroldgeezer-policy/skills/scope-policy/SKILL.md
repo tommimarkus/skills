@@ -32,7 +32,9 @@ or explicit request, the declared level and escalation mode, any rung change
 with its evidence, and the out-of-level findings recorded.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
-enforcement, guidance edits, or adoption.
+enforcement, guidance edits, or adoption. When editing triggers, behavior,
+source grounding, or evals, also read `references/evals` and
+[references/source-grounding.md](references/source-grounding.md).
 
 Modes: default `enforce-initialized` when loaded repo guidance initializes
 this policy and the model is about to change code, or on an explicit enforce
@@ -62,9 +64,11 @@ skill: judging whether a refactor stays inside the blast radius is not
 mechanizable, and diffing paths against scope globs alone is too thin to earn
 a bundled engine.
 
-Stop before letting a change widen past its declared level without a disclosed
-escalation. Stop at `open` when the task is insurmountable even at the
-model-derived footprint — that is task-exceeds-request, not a scope problem.
+Stop and report if a change would widen past its declared level without a
+disclosed escalation, and do not proceed on a level-less standing line. Stop if
+the task cannot proceed even at `open`'s model-derived footprint — that is
+task-exceeds-request, not a scope problem; escalate it to the user rather than
+widening further.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
 repo's documented skill-architecture validation. End with the output footer

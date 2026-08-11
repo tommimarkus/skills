@@ -273,7 +273,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             )
 
             self.assertEqual(summary.plugins, 5)
-            self.assertEqual(summary.skills, 15)
+            self.assertEqual(summary.skills, 16)
             self.assertEqual(summary.dediren_tools, 7)
             self.assertEqual(summary.copilot_skills, 1)
             self.assertIn("no plugin validate command", summary.codex_validator)

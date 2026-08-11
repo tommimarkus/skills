@@ -27,6 +27,10 @@ and user approval before implementation.
    size, tier, model name, or stable-proxy count. Contract validation calculates
    the advisory in the same invocation.
 
+When guidance initializes `scope-policy`, the plan records its level and
+escalation mode in `settled_decisions`; each leaf's `boundary`/`write_set`
+materializes them, adding no plan field. `scope-policy` owns the semantics.
+
 Delegate unless the plan records one case: indivisible/trivial, needs user
 mid-flight, context cannot travel, or each result redefines the next. Overlap
 is a sequencing/isolation issue, not an inline exception. Select an owning

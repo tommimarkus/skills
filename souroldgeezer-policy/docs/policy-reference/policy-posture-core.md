@@ -1,9 +1,9 @@
 # Policy Posture Core
 
 The enforcement posture every `souroldgeezer-policy` skill (`git-workflow-policy`,
-`release-policy`, `tdd-policy`, `planning-policy`) shares. Each skill's SKILL.md
-and core-workflow cite this file and add only their own invariant, modes,
-options, and domain rules.
+`release-policy`, `tdd-policy`, `planning-policy`, `scope-policy`) shares. Each
+skill's SKILL.md and core-workflow cite this file and add only their own
+invariant, modes, options, and domain rules.
 
 ## Passive install, explicit opt-in
 

@@ -236,8 +236,8 @@ def load_expectations(repo: Path) -> list[PluginExpectation]:
         )
 
     skill_count = sum(len(expectation.skills) for expectation in expectations)
-    if skill_count != 15:
-        raise SmokeFailure(f"expected 15 shared public skills, found {skill_count}")
+    if skill_count != 16:
+        raise SmokeFailure(f"expected 16 shared public skills, found {skill_count}")
     return expectations
 
 
