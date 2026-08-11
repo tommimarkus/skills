@@ -96,6 +96,29 @@ Before finishing, answer:
 
 All no: exit with `nothing to check`. Any yes: load only the relevant bucket.
 
+### Triage Gate
+
+Triage additionally emits exactly one `triage gate: <fail | not-evaluated |
+pass-limited>` line, after any finding or `stopped:` line and before the
+disclosure footer. Do not emit this line in in-depth mode.
+
+Use the shared precedence in `audit-craft.md` §4a, with these IP-specific
+blockers. Set `fail` when substantiated in-scope evidence confirms any of:
+
+- misleading mark claims or branding;
+- unauthorized logos or endorsement implications;
+- unlicensed copied expression;
+- missing operative copyright or licence notices; or
+- incompatible or restricted bundled content.
+
+Set `not-evaluated` when required evidence cannot rule out those blockers. In
+particular, unclear source authority, holder policy, or redistribution terms
+are `not-evaluated` unless a confirmed blocker already makes the gate `fail`.
+Ordinary mark-symbol, grammar, or optional-attribution convention issues are
+nonblocking unless loaded authority makes them distribution-critical: preserve
+their underlying `warn` or `info` severity, but keep the gate `pass-limited`.
+A remediated blocker requires a clean triage rerun before `pass-limited`.
+
 ## In-Depth
 
 Run in-depth instead of change-scoped triage when the user asks for it by
@@ -150,9 +173,9 @@ Stop and ask before finishing when:
 ## Output Contract
 
 Emit one line per finding; a single run may emit several. A run with no
-findings emits exactly one line: `nothing to check` (no triage hits) or
-`checked: <bucket list>; no IP hygiene changes needed`. Finding lines use
-one of:
+findings emits `nothing to check` (no triage hits) or
+`checked: <bucket list>; no IP hygiene changes needed`. Finding lines use one
+of:
 
 - `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>]; consequence: <effect if unaddressed>`
 - `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`
@@ -161,7 +184,8 @@ one of:
 
 Severity is block | warn | info (audit-craft §3); risk tier is high |
 medium | low | unknown (materiality). In-depth runs append the rollup line
-from the In-Depth section.
+from the In-Depth section. Triage runs append the `triage gate:` line from
+Triage Gate after their result or finding lines; in-depth runs do not.
 
 For fixes, include the source authority or reference path used.
 

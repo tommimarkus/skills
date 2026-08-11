@@ -22,5 +22,8 @@ external docs.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/`.
   Handling: repo-authored planted-defect fixtures scoring recall and
   false-positive rate; every case declares its third party or upstream as
-  fictional (FictionalCloud, FictionalMark, ExampleLib, Synthetic Docs Ltd)
-  inline, and no content is copied from any real source.
+  fictional (FictionalCloud, FictionalMark, ExampleLib, Synthetic Docs Ltd,
+  and Imaginary Assets Cooperative) inline. The corpus also labels each
+  synthetic triage outcome (`fail`, `not-evaluated`, or `pass-limited`) and
+  includes a clean control plus a nonblocking convention control; no content
+  is copied from any real source.

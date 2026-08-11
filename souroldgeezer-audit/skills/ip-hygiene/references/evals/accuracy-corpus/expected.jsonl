@@ -1,6 +1,8 @@
-{"case":"c1-mark-led-name","bucket":"trademark","expect":"finding","note":"third-party mark as leading artifact brand"}
-{"case":"c2-false-registration","bucket":"trademark","expect":"finding","note":"registration symbol without verified registration"}
-{"case":"c3-dropped-notice","bucket":"copyright","expect":"finding","note":"permissive snippet incorporated without its notice"}
-{"case":"c4-vendored-no-license","bucket":"licence/assets","expect":"finding","note":"vendored dir with no licence file"}
-{"case":"c5-near-verbatim","bucket":"copyright","expect":"finding","note":"near-verbatim copy of the fictional third party's paragraph, no citation"}
-{"case":"c6-clean-control","bucket":"none","expect":"no-finding","note":"false-positive control"}
+{"case":"c1-mark-led-name","bucket":"trademark","expect":"finding","triage_gate":"fail","note":"third-party mark as leading artifact brand"}
+{"case":"c2-false-registration","bucket":"trademark","expect":"finding","triage_gate":"fail","note":"registration symbol without verified registration"}
+{"case":"c3-dropped-notice","bucket":"copyright","expect":"finding","triage_gate":"fail","note":"permissive snippet incorporated without its notice"}
+{"case":"c4-vendored-no-license","bucket":"licence/assets","expect":"finding","triage_gate":"fail","note":"vendored dir with no licence file"}
+{"case":"c5-near-verbatim","bucket":"copyright","expect":"finding","triage_gate":"fail","note":"near-verbatim copy of the fictional third party's paragraph, no citation"}
+{"case":"c6-clean-control","bucket":"none","expect":"no-finding","triage_gate":"pass-limited","note":"false-positive control"}
+{"case":"c7-unclear-redistribution","bucket":"licence/assets","expect":"stopped","triage_gate":"not-evaluated","note":"fictional bundled asset has no confirmed redistribution authority"}
+{"case":"c8-symbol-convention","bucket":"trademark","expect":"finding","triage_gate":"pass-limited","note":"ordinary fictional mark-symbol convention issue is nonblocking"}
