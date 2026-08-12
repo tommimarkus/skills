@@ -101,13 +101,13 @@ Classify each as holder policy or operative licence term only after reading the
 page and the exact material-specific terms. A policy does not expand a licence
 unless it expressly grants permission.
 
-- **The Open Group trade-mark policy:** <https://www.opengroup.org/legal/trademarks>
+- **The Open Group trade-mark policy:** <https://www.opengroup.org/trademarks>
 - **Microsoft trade-mark guidelines:** <https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks>
-- **OMG trade-mark policy:** <https://www.omg.org/about/policies/trademarks.htm>
+- **OMG trade-mark policy:** <https://www.omg.org/legal/tm_guidelines.htm>
 - **W3C trade-mark policy:** <https://www.w3.org/trademark-license/>
 - **GitHub logo policy:** <https://github.com/logos>
 - **IETF Trust policies and licence information:**
-  <https://trustee.ietf.org/policy-and-procedures/> and
+  <https://trustee.ietf.org/documents/policies-and-procedures/> and
   <https://trustee.ietf.org/documents/trust-legal-provisions/>
 - **Microsoft Learn terms:** <https://learn.microsoft.com/legal/termsofuse>
 - **OpenAPI Specification file licence:**
