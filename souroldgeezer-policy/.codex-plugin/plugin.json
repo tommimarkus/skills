@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-policy",
-  "version": "2026.8.16",
+  "version": "2026.8.17",
   "description": "Passive policy skills for repo-initialized git workflow, release versioning, test-driven development, plan-first brainstorming before new build work, and declared change-scope levels with single-rung escalation, plus runtime-appropriate delegation guidance for approved plan steps.",
   "author": {
     "name": "Sour Old Geezer",
@@ -10,7 +10,14 @@
   "homepage": "https://github.com/tommimarkus/skills",
   "repository": "https://github.com/tommimarkus/skills",
   "license": "MIT",
-  "keywords": ["policy", "git", "release", "tdd", "planning", "scope"],
+  "keywords": [
+    "policy",
+    "git",
+    "release",
+    "tdd",
+    "planning",
+    "scope"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Sour Old Geezer Policy",
@@ -18,7 +25,10 @@
     "longDescription": "Adopt and enforce explicit repository policies for Git, releases, test-driven development, plan-first work, and how wide a change may reach.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://github.com/tommimarkus/skills",
     "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
