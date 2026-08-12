@@ -27,15 +27,21 @@ launcher that exits without a useful message.
 Releases publish one platform-neutral archive, a `SHA256SUMS` file, and
 CycloneDX SBOMs, all covered by GitHub™ artifact attestations.
 
-Download the archive and its checksums with any HTTP client — `curl` below, but
-a browser download works the same:
+Download the archive and its checksums into a working directory. Any HTTPS
+client does; `curl` and `wget` are the two you can practically count on, so use
+whichever the host already has:
 
 ```bash
 VERSION=2026.08.2   # or newer; see https://github.com/tommimarkus/dediren/releases
 BASE="https://github.com/tommimarkus/dediren/releases/download/v${VERSION}"
+ARCHIVE="dediren-agent-bundle-${VERSION}.tar.xz"
 
-curl -fLO "${BASE}/dediren-agent-bundle-${VERSION}.tar.xz"
+# curl — -L is required, because release assets redirect to object storage
+curl -fLO "${BASE}/${ARCHIVE}"
 curl -fLO "${BASE}/SHA256SUMS"
+
+# or wget — follows redirects and keeps the remote filename by default
+wget "${BASE}/${ARCHIVE}" "${BASE}/SHA256SUMS"
 ```
 
 Verify before unpacking. The checksum check needs no extra tooling and is the
@@ -53,8 +59,7 @@ CLI installed **and** authenticated, plus API reachability, none of which the
 rest of this procedure requires:
 
 ```bash
-gh attestation verify "dediren-agent-bundle-${VERSION}.tar.xz" \
-  --repo tommimarkus/dediren
+gh attestation verify "${ARCHIVE}" --repo tommimarkus/dediren
 ```
 
 Skip it on an air-gapped or otherwise locked-down host; the checksum check
@@ -65,7 +70,7 @@ the host relaunches the server from this path on every session:
 
 ```bash
 mkdir -p ~/.local/lib
-tar -xf "dediren-agent-bundle-${VERSION}.tar.xz" -C ~/.local/lib
+tar -xf "${ARCHIVE}" -C ~/.local/lib
 ```
 
 That yields the launcher at
