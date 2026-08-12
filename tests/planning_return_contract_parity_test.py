@@ -3,8 +3,9 @@
 The return contract is stated once in `planning_ledger.py` and restated in seven
 worker- and parent-facing documents. Nothing used to check the restatements, so
 they drifted: blocker evidence was rendered as required when the validator makes
-it optional, and the Codex adapter invented a `blocked:oversized` status. Both
-reached a real dispatch. This gate derives its expectations from the module
+it optional, and this repo's `extensions/codex.md` adapter named a
+`blocked:oversized` status that the schema has never had. Both reached a real
+dispatch. This gate derives its expectations from the module
 constants, so a restatement that contradicts the code fails here rather than in
 a live run.
 """
@@ -66,8 +67,9 @@ class ReturnStatusParityTest(unittest.TestCase):
     def test_no_restatement_invents_a_blocked_prefixed_status(self):
         """`oversized` is a status; `blocked:` prefixes name blocker codes.
 
-        The Codex adapter shipped `blocked:oversized`, which no valid return can
-        carry, so a worker obeying it never reached the terminal path.
+        This repo's `extensions/codex.md` shipped `blocked:oversized`, which no
+        valid return can carry, so a worker obeying it never reached the
+        terminal path.
         """
         for path in RESTATEMENTS:
             text = normalized(path)
