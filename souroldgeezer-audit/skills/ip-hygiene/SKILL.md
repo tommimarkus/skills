@@ -41,7 +41,14 @@ Load only the references selected by the evidence:
 When changing trigger, workflow, gates, source, or eval behavior, inspect
 `references/evals/`, its accuracy corpus, and
 [source-grounding.md](references/source-grounding.md). Keep evals synthetic or
-originally paraphrased.
+originally paraphrased. After a blind evaluator writes actual records without
+reading expected outcomes, score them with:
+
+`${CLAUDE_SKILL_DIR}/references/scripts/score_ip_hygiene_eval.py --expected ${CLAUDE_SKILL_DIR}/references/evals/accuracy-corpus/expected.jsonl --actual <actual.jsonl> --families <comma-separated-families>`
+
+In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
+for this loaded `SKILL.md`. Structural corpus checks do not establish model
+recall; this command compares the separately produced blind results.
 
 ## Criteria And Authority
 
