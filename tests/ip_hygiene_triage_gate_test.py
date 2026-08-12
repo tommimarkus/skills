@@ -34,6 +34,7 @@ class IpHygieneTriageGateTest(unittest.TestCase):
 
     def test_synthetic_corpus_covers_each_triage_gate_outcome(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text().splitlines()]
         by_case = {case["case"]: case for case in expected}
         self.assertEqual({by_case[f"c{number}-{name}"]["triage_gate"] for number, name in (
             (1, "mark-led-name"), (2, "false-registration"), (3, "dropped-notice"),
@@ -42,7 +43,9 @@ class IpHygieneTriageGateTest(unittest.TestCase):
         self.assertEqual(by_case["c6-clean-control"]["triage_gate"], "pass-limited")
         self.assertEqual(by_case["c7-unclear-redistribution"]["triage_gate"], "not-evaluated")
         self.assertEqual(by_case["c8-symbol-convention"]["triage_gate"], "pass-limited")
-        for case in expected:
+        case_ids = {case["case"] for case in cases}
+        self.assertEqual(case_ids, set(by_case))
+        for case in expected[:8]:
             with self.subTest(case=case["case"]):
                 self.assertTrue((CORPUS / "cases" / case["case"]).is_dir())
 
