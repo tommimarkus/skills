@@ -179,7 +179,7 @@ class PlanningLedgerTest(unittest.TestCase):
             "blockers": blockers or [],
             "notes": [{"type": "finding", "message": "ok"}],
             "unstarted_remainder": remainder or [],
-            "commit_hash": "a" * 40 if status == "completed" and changed else "",
+            "commit_hash": "a" * 40 if changed else "",
         }
 
     def worktree_result(self, step, action="integrate", ok=True):
@@ -840,6 +840,34 @@ class PlanningLedgerTest(unittest.TestCase):
         value = self.returned(step, "completed")
         self.assertEqual("", value["commit_hash"])
         self.assertEqual(0, self.record(run, value)[0])
+
+    def test_changed_work_needs_a_commit_hash_on_every_status(self):
+        """A non-completed stop that edited files must name the commit holding them."""
+        for status, remainder in (("oversized", ["step1"]), ("failed", []), ("blocked", [])):
+            with self.subTest(status=status):
+                run = self.init2()
+                step = self.start(run)
+                value = self.returned(
+                    step,
+                    status,
+                    changed=["src/file.py"],
+                    blockers=[self.blocker()],
+                    remainder=remainder,
+                )
+                self.assertEqual("a" * 40, value["commit_hash"])
+                self.assertEqual(0, self.record(run, value)[0])
+
+                run = self.init2()
+                step = self.start(run)
+                value = self.returned(
+                    step,
+                    status,
+                    changed=["src/file.py"],
+                    blockers=[self.blocker()],
+                    remainder=remainder,
+                )
+                value["commit_hash"] = ""
+                self.assertEqual(3, self.record(run, value)[0])
 
     def test_v2_tracks_returned_integrated_and_cleaned_commits(self):
         run = self.init2()

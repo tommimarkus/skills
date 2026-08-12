@@ -65,6 +65,12 @@ procedure and ingest each successful helper result. Leave a cleanup failure at
 `integrated` so it can be retried. Create a dependent leaf's worktree only
 after its prerequisites are cleaned, from the then-current parent tip.
 
+A terminally non-completed leaf — `oversized`, or a `blocked`/`failed` outcome
+the retry policy will not retry — still owns a worktree. Dispose of it in the
+same closeout: read the bounded return to decide whether to integrate the
+committed partial slice or discard it, then remove the worktree and its branch
+without force. A terminal leaf never leaves an undisposed worktree behind.
+
 Every new version-3 checkpoint records `run_status: active`, with `outcome`,
 `closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
 --outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
@@ -108,7 +114,13 @@ result (`blocked:no_progress`), then ineligible outcome, exhaustion
 If changed paths, a failed acceptance result, or the return show that the
 assigned task/boundary/read/write sets no longer bound the work, mark the step
 `oversized`. Preserve the bounded evidence and return it to the parent; do not
-split, broaden, or retry it under the same leaf. A leaf blocked for missing
+split, broaden, or retry it under the same leaf. Prefer stopping before changing
+anything, so an `oversized` return normally carries no `changed_paths`. When a
+leaf only proves oversized after work began, leave the worktree in the state the
+return describes: either commit the finished slice and name it in `commit_hash`,
+or revert to a clean tree and report no `changed_paths`. The parent then decides
+whether to integrate or discard that partial work; it is never left uncommitted
+for a later session to discover. A leaf blocked for missing
 load-bearing information reports `blocked:missing_input`; it does not discover
 or invent the missing decision.
 
@@ -139,8 +151,10 @@ contains:
 
 The return does not list `run_id`; the required lifecycle `--run-id` matches it
 to ledger state. No return includes raw logs, credentials, or an unbounded
-transcript. A `completed` return requires `acceptance.exit_code: 0`; it requires
-a non-empty `commit_hash` only when `changed_paths` is non-empty. A failed
+transcript. A `completed` return requires `acceptance.exit_code: 0`. Any return
+requires a non-empty `commit_hash` only when `changed_paths` is non-empty, and
+that rule holds for every status, so changed work is always attributable to a
+commit rather than left loose in a worktree. A failed
 acceptance must be `failed`, never completed. Each `blocked`, `failed`, and
 `oversized` return requires at least one blocker, and `oversized` also requires
 a non-empty `unstarted_remainder`. The parent computes and records the progress

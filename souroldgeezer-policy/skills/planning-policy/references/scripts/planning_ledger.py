@@ -51,6 +51,19 @@ TRANS = {
     "discarded": set(),
 }
 NOTE_TYPES = {"finding", "decision_needed", "residual_risk", "untouched", "verification_limit"}
+# Single source for the bounded-step-return-v1 contract. Every prose restatement
+# of these facts is checked against them by tests/planning_return_contract_parity_test.py.
+RETURN_STATUSES = {"completed", "blocked", "failed", "oversized"}
+MAX_CHANGED_PATHS = 32
+MAX_BLOCKERS = 8
+MAX_NOTES = 8
+MAX_REMAINDER = 8
+MAX_BLOCKER_CODE = 120
+MAX_ACCEPTANCE_SUMMARY = 480
+MAX_NOTE_MESSAGE = 480
+MAX_BLOCKER_SUMMARY = 240
+MAX_REMAINDER_ITEM = 240
+MAX_PATH = 240
 V2_STATES = {
     "pending",
     "ready",
@@ -209,7 +222,7 @@ def uuid4(value, label="run id"):
     return value
 
 
-def rel(value, label="path", maximum=240):
+def rel(value, label="path", maximum=MAX_PATH):
     if (
         not isinstance(value, str)
         or not value
@@ -1298,10 +1311,14 @@ def valid_return(value, data, step, leaf):
         or value["agent_id"] != step["agent_id"]
     ):
         raise Error("stale or foreign return identity")
-    if value["status"] not in {"completed", "blocked", "failed", "oversized"}:
+    if value["status"] not in RETURN_STATUSES:
         raise Error("invalid return status")
     paths = value["changed_paths"]
-    if not isinstance(paths, list) or len(paths) > 32 or len(set(paths)) != len(paths):
+    if (
+        not isinstance(paths, list)
+        or len(paths) > MAX_CHANGED_PATHS
+        or len(set(paths)) != len(paths)
+    ):
         raise Error("invalid changed_paths")
     for path in paths:
         rel(path, "changed path")
@@ -1326,7 +1343,7 @@ def valid_return(value, data, step, leaf):
             )
         )
         or not isinstance(accept["summary"], str)
-        or len(accept["summary"]) > 480
+        or len(accept["summary"]) > MAX_ACCEPTANCE_SUMMARY
     ):
         raise Error("invalid acceptance")
     if ("evidence_path" in accept) != ("sha256" in accept):
@@ -1335,7 +1352,7 @@ def valid_return(value, data, step, leaf):
         rel(accept["evidence_path"], "acceptance evidence")
         require_sha256(accept["sha256"], "invalid acceptance sha256")
     blockers = value["blockers"]
-    if not isinstance(blockers, list) or len(blockers) > 8:
+    if not isinstance(blockers, list) or len(blockers) > MAX_BLOCKERS:
         raise Error("invalid blockers")
     for blocker in blockers:
         if (
@@ -1344,9 +1361,9 @@ def valid_return(value, data, step, leaf):
             or {"code", "summary"} - set(blocker)
             or not isinstance(blocker["code"], str)
             or not blocker["code"]
-            or len(blocker["code"]) > 120
+            or len(blocker["code"]) > MAX_BLOCKER_CODE
             or not isinstance(blocker["summary"], str)
-            or len(blocker["summary"]) > 240
+            or len(blocker["summary"]) > MAX_BLOCKER_SUMMARY
         ):
             raise Error("invalid blocker")
         if ("evidence_path" in blocker) != ("sha256" in blocker):
@@ -1357,13 +1374,13 @@ def valid_return(value, data, step, leaf):
     notes = value["notes"]
     if (
         not isinstance(notes, list)
-        or len(notes) > 8
+        or len(notes) > MAX_NOTES
         or any(
             not isinstance(x, dict)
             or set(x) != {"type", "message"}
             or x["type"] not in NOTE_TYPES
             or not isinstance(x["message"], str)
-            or len(x["message"]) > 480
+            or len(x["message"]) > MAX_NOTE_MESSAGE
             for x in notes
         )
     ):
@@ -1371,19 +1388,21 @@ def valid_return(value, data, step, leaf):
     rem = value["unstarted_remainder"]
     if (
         not isinstance(rem, list)
-        or len(rem) > 8
-        or any(not isinstance(x, str) or not x or len(x) > 240 for x in rem)
+        or len(rem) > MAX_REMAINDER
+        or any(not isinstance(x, str) or not x or len(x) > MAX_REMAINDER_ITEM for x in rem)
     ):
         raise Error("invalid unstarted_remainder")
     if not isinstance(value["commit_hash"], str) or (
         value["commit_hash"] and not COMMIT.fullmatch(value["commit_hash"])
     ):
         raise Error("invalid commit_hash")
-    if value["status"] == "completed" and (
-        accept["exit_code"] != 0 or (paths and not value["commit_hash"])
-    ):
-        raise Error("completed return requires exit 0 and changed work commit hash")
-    if value["status"] in {"blocked", "failed", "oversized"} and not blockers:
+    if value["status"] == "completed" and accept["exit_code"] != 0:
+        raise Error("completed return requires exit 0")
+    # Any status that changed files must name the commit holding them, so a
+    # non-completed stop leaves the worktree in a state the parent can act on.
+    if paths and not value["commit_hash"]:
+        raise Error("changed work requires a commit hash")
+    if value["status"] in RETURN_STATUSES - {"completed"} and not blockers:
         raise Error("non-completed returns require blockers")
     if value["status"] == "oversized" and not rem:
         raise Error("oversized return requires unstarted_remainder")

@@ -59,11 +59,17 @@ such as `blocked:missing_input`. Keep at most 32 safe repository-relative change
 paths, eight blockers, eight typed notes, and eight remainder strings. Acceptance
 exactly echoes the command and carries integer/null exit code, a <=480-character
 summary, and optional relative evidence path plus 64-hex digest. Every blocker
-has code, <=240-character summary, relative evidence path, and 64-hex digest.
+has code and a <=240-character summary; its relative evidence path and 64-hex
+digest are optional and paired — supply both or neither, and omit both when the
+stop has no evidence artifact, as `oversized` and `blocked:missing_input` do.
 Note types are exactly `finding`, `decision_needed`, `residual_risk`, `untouched`,
 or `verification_limit`; remainder items are <=240 characters. `commit_hash` is
 an empty string or 40/64-hex hash. Keep the return <=8 KiB. Use `completed` only
-when acceptance exits `0`; completed changed work needs a commit hash. Blocked,
-failed, and oversized returns require a blocker; oversized also needs remainder.
+when acceptance exits `0`; completed changed work needs a commit hash, as does
+any other status whose changed paths are non-empty. Blocked, failed, and
+oversized returns require a blocker; oversized also needs remainder. Prefer
+stopping before you change anything; when the stop only becomes clear after work
+began, commit the finished slice and name it in `commit_hash`, or revert to a
+clean tree and report no changed paths — never leave edits uncommitted.
 Do not invent a decision. Verification is local to your drafting; the parent owns
 integration and final verification.

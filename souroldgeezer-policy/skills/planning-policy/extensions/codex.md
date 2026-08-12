@@ -66,10 +66,11 @@ Call the host mechanism with a prompt containing all of the following:
   unavailable mapped model, or a required decision outside the handoff.
 
 For a missing load-bearing input, return `blocked:missing_input`; do not search
-for or invent it. If the work exceeds its stated size, stop and return
-`blocked:oversized` with the unstarted remainder so the parent re-cuts it. Do
-not make integration decisions, edit outside the named writes, or substitute a
-local check for the parent’s end-to-end verification.
+for or invent it. If the work exceeds its stated size, stop and return the
+status `oversized` — a status value, not a `blocked:` code — with the unstarted
+remainder so the parent re-cuts it. Do not make integration decisions, edit
+outside the named writes, or substitute a local check for the parent’s
+end-to-end verification.
 
 ## Bounded step return
 
@@ -87,18 +88,24 @@ when it ingests the return; the return itself does not carry `run_id`.
 "evidence_path"?: string, "sha256"?: string }`: command exactly echoes the
 assigned command, summary is at most 480 characters, and an evidence path is
 safe and repository-relative with a 64-hex digest. `blockers` has at most eight
-objects of `{ "code": string, "summary": string, "evidence_path": string,
-"sha256": string }`; each summary is at most 240 characters, paths are safe
-and repository-relative, and digests are 64-hex. Blocker codes carry semantics
-such as `blocked:missing_input`. `notes` has at most eight `{ "type": string,
+objects of `{ "code": string, "summary": string, "evidence_path"?: string,
+"sha256"?: string }`; each summary is at most 240 characters. Blocker evidence is
+optional and paired: supply a safe repository-relative path together with its
+64-hex digest, or omit both. A stop with no evidence artifact — `oversized`, or
+`blocked:missing_input` — omits both rather than inventing a path. Blocker codes
+carry semantics such as `blocked:missing_input`. `notes` has at most eight `{ "type": string,
 "message": string }` objects; type is exactly `finding`, `decision_needed`,
 `residual_risk`, `untouched`, or `verification_limit`. `unstarted_remainder`
 has at most eight strings of at most 240 characters. `commit_hash` is an empty
 string or a 40- or 64-hex hash. Keep the serialized object at most 8 KiB.
 
 Use `completed` only after the assigned acceptance command exits `0`; completed
-work with changed paths needs a commit hash. `blocked`, `failed`, and `oversized`
-each require a blocker; `oversized` also requires an unstarted remainder. Stop
+work with changed paths needs a commit hash, and so does any other status whose
+changed paths are non-empty. `blocked`, `failed`, and `oversized`
+each require a blocker; `oversized` also requires an unstarted remainder. Prefer
+stopping before you change anything; when a stop only becomes clear after work
+began, commit the finished slice and name it in `commit_hash`, or revert to a
+clean tree and report no changed paths — never leave edits uncommitted. Stop
 with the applicable blocker code, preserve unstarted work, and do not make a new
 decision. The parent interprets the bounded return and owns integration and
 final verification. For every successful leaf it ingests the Git-policy

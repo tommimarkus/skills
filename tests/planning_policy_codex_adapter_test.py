@@ -46,11 +46,13 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             "run ID, step ID, agent ID, and attempt ID",
             "`bounded-step-return-v1` profile below",
             "`blocked:missing_input`",
-            "`blocked:oversized`",
+            "status `oversized`",
             "`blocked:model_unavailable`",
             "do not silently downgrade",
         ):
             self.assertIn(marker, self.text)
+        # `oversized` is a bounded-step-return-v1 status, never a `blocked:` code.
+        self.assertNotIn("`blocked:oversized`", self.text)
 
     def test_maps_only_the_ledger_selected_retry_target(self):
         normalized = " ".join(self.text.split())
