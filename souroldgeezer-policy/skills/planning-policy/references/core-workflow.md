@@ -40,7 +40,7 @@ otherwise use the owning design skill.
 
 Portable tier is selected once per leaf: `mechanical`, `standard`,
 `analytical`, or `deep`; no per-leaf runtime tuning. Analytical/deep names its
-irreducible risk. Stable work units are weighted once (`small=1`, `medium=2`,
+irreducible risk; a leaf with no open implementation choice is `mechanical`. Stable work units are weighted once (`small=1`, `medium=2`,
 `large=3`); medium-ready units contain only mechanical/standard leaves and
 need ratio `>=0.60`, unless the recorded user-approved analytical-heavy
 exception applies. The adapter maps tiers or returns its blocker.
@@ -67,8 +67,9 @@ semantics. An agent reports bounded evidence and never self-escalates, alters
 its contract, or treats an oversized/missing-input stop as retryable work.
 
 The human plan includes one compact **Execution economics** line: expected/high
-attempts; largest repeated-context driver; declared-model-token range or
-`indeterminate`; final-verification reserve or `indeterminate`; `tracing: off`.
+attempts; tier mix; largest repeated-context driver; declared-model-token range
+or `indeterminate`; final-verification reserve or `indeterminate`;
+`tracing: off`.
 Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
 
 Use this standing template for adoption (Codex substitutes its available native

@@ -40,6 +40,7 @@ COST_LANES = (
     "final_verification",
 )
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
+GLOB_CHARS = ("*", "?", "[")
 
 
 def proxy_tokens(value: Any) -> int:
@@ -68,6 +69,43 @@ def attempt_multiplication(attempts: dict[str, dict[str, int | None]]) -> dict[s
         totals["expected"] += attempt["expected"] or 0
         totals["maximum"] += attempt["maximum"] or 0
     return totals
+
+
+def mechanical_shaped(leaf: dict[str, Any]) -> bool:
+    """Report whether a standard leaf's own declared fields already settle its edit."""
+    if leaf.get("portable_tier") != "standard":
+        return False
+    if nonempty(leaf.get("open_implementation_choice")):
+        return False
+    if leaf.get("size") != "small" or not nonempty(leaf.get("settled_decisions")):
+        return False
+    if nonempty(leaf.get("irreducible_unknown_or_risk")) or leaf.get("selective_audit") is not None:
+        return False
+    writes = leaf.get("write_set")
+    if not isinstance(writes, list) or not writes:
+        return False
+    return all(
+        isinstance(path, str) and path.strip() and not any(char in path for char in GLOB_CHARS)
+        for path in writes
+    )
+
+
+def tier_mix(leaves: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {tier: 0 for tier in sorted(TIERS)}
+    over_assigned = 0
+    for leaf in leaves:
+        if not isinstance(leaf, dict):
+            continue
+        if leaf.get("portable_tier") in counts:
+            counts[leaf["portable_tier"]] += 1
+        if mechanical_shaped(leaf):
+            over_assigned += 1
+    total = sum(counts.values())
+    return {
+        "counts": counts,
+        "mechanical_share": round(counts["mechanical"] / total, 2) if total else 0.0,
+        "over_assigned": over_assigned,
+    }
 
 
 def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[str, Any]:
@@ -108,7 +146,10 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         "retained_context_range": None,
         "final_verification_reserve": "indeterminate",
         "tracing": "off",
+        "tier_mix": tier_mix(leaves),
     }
+    if result["tier_mix"]["over_assigned"]:
+        codes.append("PLANCOST-TIER-OVER-ASSIGNED")
     if profile is None:
         codes.extend(
             (

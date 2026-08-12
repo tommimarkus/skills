@@ -125,6 +125,38 @@ class PlanningPolicyV3ContractTest(unittest.TestCase):
         self.assertGreater(bounded["attempts_omitted"], 0)
         self.assertLessEqual(contract.proxy_tokens(bounded), 600)
 
+    def test_settled_leaf_tiered_standard_is_advisory_not_an_error(self) -> None:
+        over = contract.validate(plan())
+        self.assertTrue(over["valid"] and over["dispatch_ready"])
+        self.assertIn("PLANCOST-TIER-OVER-ASSIGNED", over["cost_advisory"]["codes"])
+        self.assertEqual(1, over["cost_advisory"]["tier_mix"]["over_assigned"])
+
+        named = plan()
+        named["leaves"][0]["open_implementation_choice"] = "Pick the retry boundary"
+        silenced = contract.validate(named)["cost_advisory"]
+        self.assertNotIn("PLANCOST-TIER-OVER-ASSIGNED", silenced["codes"])
+        self.assertEqual(0, silenced["tier_mix"]["over_assigned"])
+
+    def test_tier_mix_reports_the_share_and_spares_unsettled_shapes(self) -> None:
+        routed = plan()
+        routed["leaves"][0]["portable_tier"] = "mechanical"
+        mix = contract.validate(routed)["cost_advisory"]["tier_mix"]
+        self.assertEqual(1.0, mix["mechanical_share"])
+        self.assertEqual(0, mix["over_assigned"])
+        self.assertEqual(1, mix["counts"]["mechanical"])
+
+        for field, value in (
+            ("write_set", ["src/**/*.py"]),
+            ("size", "medium"),
+            ("settled_decisions", {}),
+        ):
+            unsettled = plan()
+            unsettled["leaves"][0][field] = value
+            advisory = contract.validate(unsettled)["cost_advisory"]
+            self.assertEqual(
+                0, advisory["tier_mix"]["over_assigned"], f"{field}={value!r} is not settled work"
+            )
+
 
 class PlanningPolicyV3LedgerTest(unittest.TestCase):
     def setUp(self) -> None:

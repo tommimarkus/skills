@@ -31,7 +31,11 @@ unchanged.
 `work_units` declares `{id, original_size}` once; every nonempty unit owns at
 least one leaf and is weighted once, preventing readiness-by-splitting.
 
-Analytical/deep requires `irreducible_unknown_or_risk`. Missing decisions,
+Analytical/deep requires `irreducible_unknown_or_risk`; mechanical mirrors it —
+`settled_decisions` and an enumerated `write_set` leaving no open choice.
+`standard` names its remaining judgment in optional
+`open_implementation_choice`; lacking one it is advisory
+`PLANCOST-TIER-OVER-ASSIGNED`, never an error. Missing decisions,
 scope expansion, failed acceptance, or a stop condition returns bounded evidence;
 no tier invents input.
 
@@ -50,7 +54,9 @@ The same validator call emits an at-most-600-proxy-token
 `planning-cost-advisory-v1`: plan/handoff proxy size, retry and shared-prefix
 multiplication, complete declared totals/retained context, and verification
 reserve. Stable codes cover missing/invalid/unknown data, dominant prefix,
-retries, unbounded verification, and comparable observed drift. Every finding
+retries, unbounded verification, comparable observed drift, and tier
+over-assignment; `tier_mix` reports per-tier counts, mechanical share, and
+over-assigned count. Every finding
 is advisory; execution control is invariant.
 
 ## Readiness gate

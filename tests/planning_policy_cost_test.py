@@ -39,14 +39,22 @@ class PlanningPolicyCostTest(unittest.TestCase):
         self.assertLessEqual(lookup["load_total"], 900)
         self.assertLessEqual(direct["load_total"], 750)
         self.assertLessEqual(agent_lookup["total"], 900)
-        self.assertLessEqual(claude["load_total"], 4000)
+        # claude and codex were re-baselined together, from 4000/4200, to carry the
+        # downward tier test. The contract gated only escalation: analytical/deep had
+        # to name an irreducible unknown, while nothing had to be argued to pick
+        # standard, so standard absorbed settled work and mechanical rarely fired.
+        # The added tokens state the mirror (a leaf whose settled decisions and
+        # enumerated write set leave no open choice is mechanical), the optional
+        # open_implementation_choice that names a real remaining judgment, and the
+        # tier_mix the plan discloses. Both adapters load the same two references.
+        self.assertLessEqual(claude["load_total"], 4100)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
         # and the commit-or-revert rule for a stop that already edited files.
         # codex.md had 12 tokens of headroom, so the corrections could not fit.
         # Every added token states a contract fact a live dispatch got wrong.
-        self.assertLessEqual(codex["load_total"], 4200)
+        self.assertLessEqual(codex["load_total"], 4300)
         self.assertLessEqual(ledger["load_total"], 4300)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertEqual("load-map", direct["rows"][0]["anchor"])
