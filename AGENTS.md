@@ -132,6 +132,11 @@ authorization responsibilities.
   `${COPILOT_PLUGIN_DATA}`. Keep a separate Copilot MCP file; never let Copilot
   fall through to the Codex bootstrap.
 
+Inspect existing tests before selecting the RED test: extend a suitable cohesive
+scenario without weakening coverage; create a new test when the scenario is
+distinct or reuse would weaken clarity or regression coverage. A pre-existing
+failure counts as RED only when it precisely represents the intended behavior.
+
 ## Runtime parity
 
 Every published plugin appears in both marketplaces and has both manifests.

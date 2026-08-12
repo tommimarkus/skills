@@ -439,6 +439,11 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `infra-design` | `souroldgeezer-design` | Infrastructure / IaC design; core `ID-*` + Azure® / Terraform™ / Bicep™ extensions |
 | `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, shareable HTML gallery, drift, reverse lookup |
 
+Inspect existing tests before selecting the RED test: extend a suitable cohesive
+scenario without weakening coverage; create a new test when the scenario is
+distinct or reuse would weaken clarity or regression coverage. A pre-existing
+failure counts as RED only when it precisely represents the intended behavior.
+
 Design and audit skills share the Build / Extract / Review / Lookup (design) and Quick / Deep (audit) mode dispatch from § "Skill architecture (shared pattern across skills)".
 
 **Delegation map** (the cross-skill handoff view no single `SKILL.md` gives):

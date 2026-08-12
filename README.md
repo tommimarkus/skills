@@ -184,8 +184,14 @@ schemas, and the troubleshooting table — is bundled with the plugin at
    guidance such as `AGENTS.md`, matching git or release actions must run that
    policy before changing state. Adopt mode consolidates existing related
    guidance into the initialization/options and removes competing policy prose.
-9. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
-10. Use `planning-policy` to turn an approved implementation approach into a
+9. Use `tdd-policy` for standing or on-demand test-first enforcement.
+   Inspect existing tests before selecting the RED test: extend a suitable
+   cohesive scenario without weakening coverage; create a new test when the
+   scenario is distinct or reuse would weaken clarity or regression coverage.
+   A pre-existing failure counts as RED only when it precisely represents the
+   intended behavior.
+10. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
+11. Use `planning-policy` to turn an approved implementation approach into a
     delegation-ready plan. New executable plans use `contract_version: 3`.
     Version-2 plans are resume-only (`dispatch_ready: false`,
     `resume_ready: true`) and `init-v2` rejects new runs with
@@ -264,7 +270,7 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     `trace-init`, `trace-record`, `trace-show`, and `trace-close`; ordinary use
     creates no usage state or telemetry calls. Counter/provenance-only records
     live outside the checkpoint and follow the run's retention and purge rules.
-11. Use `software-design` for bounded non-code content edits that require no
+12. Use `software-design` for bounded non-code content edits that require no
     design decision through its early-return File Edit lane. It selects the
     user or repository-required format-aware operation first, uses `jq` for
     JSON and Mike Farah `yq` for YAML/TOML/XML where repository guidance
@@ -273,7 +279,7 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     `tool_state.py list` and `tool_state.py gc`; it never creates a tracked
     preference file or grants target-specific authority.
 
-12. Use `software-design` for capability-based tool selection during design and
+13. Use `software-design` for capability-based tool selection during design and
     implementation: it checks repository-configured commands, host-exposed
     integrations, and task-relevant installed tools without crawling the
     machine, then prefers the best fit and structured authoritative evidence.
@@ -282,7 +288,7 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     continues through project docs, local help, official sources, or a bounded
     fallback. The plugin does not install or configure Context7 and does not use
     its CLI as a fallback.
-13. Use `software-design` Review's additive fragility check when changed code
+14. Use `software-design` Review's additive fragility check when changed code
     may hide a precondition or scatter a nearby volatile decision. It is an
     evidence-based review of regression risk, not a style rule, speculative
     abstraction demand, analyzer requirement, or development-method mandate.

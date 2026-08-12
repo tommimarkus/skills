@@ -38,6 +38,18 @@ spikes/prototypes/throwaway/generated (logged); enforcement `model`.
 variant — it is a logged opt-out downgrade (see Opt-out ladder), never offered
 as a way to "do TDD."
 
+## Selecting the RED test
+
+Inspect the existing tests before choosing where to express RED.
+
+- Minimally extend a suitable existing test when the expectation belongs to the
+  same cohesive scenario, without removing or weakening its coverage.
+- Create a new test when the behavior is distinct or reuse would make the test unclear
+  or weaken its value as regression coverage.
+- An existing failing test counts as RED only when its failure precisely represents the intended behavior.
+  Unrelated failures do not establish RED; add or extend a focused test and
+  observe it fail for the intended reason.
+
 ## Config options
 
 - `variant` — which discipline satisfies the invariant (`test-first` | `test-alongside`; see Variants).
