@@ -326,7 +326,7 @@ Two agent classes live under `<plugin>/agents/`.
 
 `scripts/check-runtime-metadata-parity.py` derives the canonical router body from the paired skill name and rejects any extra or changed body text, so a wrapper cannot quietly become a second workflow. It also rejects unpaired published agents except the four exact `souroldgeezer-policy/agents/plan-step-*.md` execution-tier names below. When a skill's invocation contract changes, update the shared `SKILL.md`; touch its wrapper only when the mirrored trigger metadata or Claude-specific frontmatter must change.
 
-**Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
+**Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier, and stops for a parent re-cut rather than expanding when a step outgrows its size band. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 
 ### Planning-policy execution contract (Claude Code)
 
@@ -378,7 +378,10 @@ Cleanup retries safely after partial removal by revalidating recorded identity,
 branch state, and target ancestry. Routine integration never cherry-picks.
 Dependencies become ready only after their prerequisites are cleaned, and their
 worktrees start at the then-current parent tip. `validate --closeout` requires
-every successful step to be cleaned.
+every successful step to be cleaned. A terminal non-completed leaf — `oversized`,
+or an unretryable `blocked`/`failed` — still owns a worktree and is disposed in
+the same closeout: its committed partial work is integrated or discarded, never
+left uncommitted.
 
 Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
 logs. Every delegated handoff is one at-most-8-KiB
