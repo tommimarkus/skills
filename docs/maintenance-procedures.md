@@ -9,7 +9,9 @@ prefers an explicit `DEDIREN_COMMAND`, then the current host-managed `dediren`
 from `PATH`. As a migration fallback only, the launcher selects the newest
 executable already present under the former verified release cache; it never
 downloads or pins one there. Updating Dediren remains a host operation, not a
-plugin release procedure.
+plugin release procedure; the operator-facing install/update steps are bundled
+with the plugin at
+[`souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md`](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md).
 
 After a host upgrade, run the live runtime suite and the three-harness smoke with
 that executable:

@@ -17,7 +17,11 @@ procedure shows `${CLAUDE_SKILL_DIR}`.
 ## Server availability
 
 The current Dediren CLI must already be executable in the MCP process sandbox.
-The plugin never downloads, pins, downgrades, or patches it. Claude Code launches
+The plugin never downloads, pins, downgrades, or patches it. When it is missing,
+below the floor, or unresolvable by the host process, read
+`references/procedures/dediren-install.md` and hand the user its operator steps
+for installing, exposing, and updating the runtime, instead of improvising an
+install or working around the gap. Claude Code launches
 the adapter from its manifest; Codex uses `mcp/codex.mcp.json`; Copilot uses the
 root `plugin.json` plus `mcp/copilot.mcp.json`. The router handles both the legacy
 `initialize` / `initialized` exchange and MCP 2026-07-28 stateless

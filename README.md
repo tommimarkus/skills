@@ -84,6 +84,23 @@ copilot plugin install souroldgeezer-architecture@souroldgeezer
 For local development, add the clone path as the marketplace source before
 running the same install command.
 
+### Dediren runtime (architecture plugin only)
+
+`souroldgeezer-architecture` drives a **host-managed** Dediren CLI. Installing
+the plugin does not install Dediren, and the plugin never downloads or pins it,
+so a fresh host needs one operator step before `architecture-design` can
+validate, render, or export anything. In short: install **Java™ 21+**, unpack
+the current
+[Dediren agent bundle](https://github.com/tommimarkus/dediren/releases) to a
+durable path, then either put its `bin/dediren` on `PATH` or point
+`DEDIREN_COMMAND` at it and restart the host. The compatibility floor is
+`2026.07.28`.
+
+Full procedure — verification, the host-process `PATH` caveat, offline export
+schemas, updating, and the exit-127 troubleshooting table — is bundled with the
+plugin at
+[dediren-install.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md).
+
 ## Local development
 
 - Keep task worktrees in the primary checkout's persistent, gitignored
@@ -106,7 +123,8 @@ running the same install command.
 - `architecture-design` drives a host-managed current Dediren CLI through three
   MCP adapters and a shared compatibility router. The plugin does not bundle,
   download, pin, or downgrade Dediren. Install `dediren` on `PATH`, or set
-  `DEDIREN_COMMAND` to an explicit executable for controlled validation. To
+  `DEDIREN_COMMAND` to an explicit executable for controlled validation — see
+  "Dediren runtime" under "Install" for the procedure. To
   avoid stranding pre-multi-harness installs, the MCP launcher otherwise reuses
   the newest executable already present in the former verified release cache;
   it never populates that cache. Each

@@ -49,7 +49,9 @@ The architecture plugin's Dediren configuration is host-specific, while its
 shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
-call.
+call. Dediren itself is operator-installed on the host; the bundled procedure at
+[`souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md`](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)
+is the single place that documents installing, exposing, and updating it.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|
