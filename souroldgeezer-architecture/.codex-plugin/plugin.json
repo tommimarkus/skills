@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-architecture",
-  "version": "2026.8.9",
+  "version": "2026.8.10",
   "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, a shareable self-contained HTML gallery, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, and maintained architecture evidence.",
   "author": {
     "name": "Sour Old Geezer",
@@ -10,7 +10,12 @@
   "homepage": "https://github.com/tommimarkus/skills",
   "repository": "https://github.com/tommimarkus/skills",
   "license": "MIT",
-  "keywords": ["architecture", "archimate", "uml", "dediren"],
+  "keywords": [
+    "architecture",
+    "archimate",
+    "uml",
+    "dediren"
+  ],
   "skills": "./skills/",
   "mcpServers": "./mcp/codex.mcp.json",
   "interface": {
@@ -19,7 +24,10 @@
     "longDescription": "Build and review maintained ArchiMate and UML dediren packages, rendered evidence, exports, drift, and source reverse lookup.",
     "developerName": "Sour Old Geezer",
     "category": "Productivity",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://github.com/tommimarkus/skills",
     "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
