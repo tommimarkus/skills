@@ -46,6 +46,19 @@ class IpHygieneTriageGateTest(unittest.TestCase):
             with self.subTest(case=case["case"]):
                 self.assertTrue((CORPUS / "cases" / case["case"]).is_dir())
 
+    def test_accuracy_corpus_has_complete_adversarial_contract_records(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        self.assertGreaterEqual(len(expected), 32)
+        families = {case["family"] for case in expected}
+        self.assertEqual(families, {"IP-SRC", "IP-COPY", "IP-DB", "IP-LIC", "IP-MARK"})
+        for case in expected:
+            with self.subTest(case=case["case"]):
+                for key in ("required_codes", "forbidden_codes", "severity", "triage_gate",
+                            "in_depth_verdict", "authority_class", "fact_status", "counsel_outcome"):
+                    self.assertIn(key, case)
+        self.assertTrue(any(case["counsel_outcome"] == "required" for case in expected))
+        self.assertTrue(any(case["expect"] == "no-finding" for case in expected))
+
 
 if __name__ == "__main__":
     unittest.main()

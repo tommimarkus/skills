@@ -1,16 +1,28 @@
 # Accuracy Corpus (audit-of-the-audit)
 
-Synthetic planted-defect cases scoring the skill's recall and
-false-positive rate (audit-craft §8). Rerun after any rubric, gate,
-bucket, or output-contract change: run the skill in-depth over `cases/`,
-compare emitted findings to `expected.jsonl` (match on case id + bucket),
-and report recall (expected found / expected) and false positives
-(unexpected findings). For the bounded triage-gate check, run each case
-change-scoped and compare its `triage_gate` value. Every file here is
-repo-authored; nothing is copied from any third-party source.
-`cases/c6-clean-control` MUST stay finding-free — it is the false-positive
-control. `c7-unclear-redistribution` preserves ambiguity without inventing a
-blocker; `c8-symbol-convention` proves an ordinary convention finding remains
-nonblocking. A `stopped:` output line whose question names a case's planted
-issue counts as a recall hit for that case; its bucket matches when the stop
-reason concerns that bucket's subject matter.
+Thirty-two synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
+`IP-LIC`, and `IP-MARK`, including ambiguity, every counsel-required stop, and
+clean controls. All names and facts are repo-authored fictional material.
+
+## Blind evaluation
+
+Give an evaluator `cases.jsonl`, not `expected.jsonl`. It writes one JSONL
+record per case using this actual result schema: `case`, `codes` (array),
+`severity`, `triage_gate`, `in_depth_verdict`, `authority_class`,
+`fact_status`, `counsel_outcome`, and optional `legal_clearance` (which must
+never be true). A no-finding control uses an empty `codes` array. Do not copy
+the expected codes into the prompt.
+Expected records use `required_codes` and `forbidden_codes` alongside the
+required outcome fields; they remain scorer input, not evaluator guidance.
+
+Score results deterministically:
+
+```text
+python references/scripts/score_ip_hygiene_eval.py --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
+```
+
+The scorer fails for a missed designated blocker, a forbidden clean-control
+finding, a wrong lane gate or in-depth verdict, or a legal-clearance overclaim.
+It also checks authority, fact/inference status, severity, and counsel outcome.
+Structural validation is not model recall: the corpus schema only proves that
+the test inventory is well formed; blind evaluation measures the model result.

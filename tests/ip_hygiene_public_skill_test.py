@@ -26,7 +26,9 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             "references/drive-by.md",
             "references/evals/accuracy-corpus/README.md",
             "references/evals/accuracy-corpus/expected.jsonl",
+            "references/evals/accuracy-corpus/cases.jsonl",
             "references/evals/behavior-cases.jsonl",
+            "references/scripts/score_ip_hygiene_eval.py",
             "references/evals/trigger-cases.jsonl",
             "references/fence-posts.md",
             "references/ip-hygiene-reference.md",
@@ -44,7 +46,8 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("not legal advice", skill)
         self.assertIn("nothing to check", skill)
         self.assertIn("checked: <bucket list>; no IP hygiene changes needed", skill)
-        self.assertIn("fixed: <path:line> - <remedy summary>", skill)
+        self.assertIn("remediated:", skill)
+        self.assertIn("counsel outcome", skill)
         self.assertIn(
             "deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit",
             skill,

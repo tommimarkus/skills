@@ -180,6 +180,8 @@ or machinery cannot rule out blockers, otherwise `pass-limited`. This is a
 mechanical limited-scope check, not a Deep/in-depth/full-repo rollup or
 reasonable-assurance verdict; see
 [`audit-craft.md §4a`](souroldgeezer-audit/docs/audit-reference/audit-craft.md).
+IP findings retain their coded criterion, authority class, fact/inference,
+remediation, and counsel outcome; neither gate nor verdict is legal clearance.
 
 `software-design` also owns an early-return File Edit lane for bounded non-code
 content changes with no software-design or sibling-owned decision. It does not

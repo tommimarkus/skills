@@ -21,9 +21,9 @@ external docs.
   audit craft and materiality output contracts and do not reproduce rubric prose.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/`.
   Handling: repo-authored planted-defect fixtures scoring recall and
-  false-positive rate; every case declares its third party or upstream as
-  fictional (FictionalCloud, FictionalMark, ExampleLib, Synthetic Docs Ltd,
-  and Imaginary Assets Cooperative) inline. The corpus also labels each
-  synthetic triage outcome (`fail`, `not-evaluated`, or `pass-limited`) and
-  includes a clean control plus a nonblocking convention control; no content
-  is copied from any real source.
+  false-positive rate. Thirty-two cases cover each coded criterion family,
+  ambiguity, all counsel-required stops, and clean controls. Expected records
+  are withheld from blind evaluators and the deterministic scorer checks codes,
+  severity, lane/verdict, authority, fact status, counsel, and clearance
+  overclaim. Structural completeness is not evidence of model recall. No
+  content is copied from a real source.
