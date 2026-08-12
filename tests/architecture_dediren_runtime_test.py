@@ -6,6 +6,7 @@ lane stays in `architecture_dediren_release_test.py` behind
 `DEDIREN_RUNTIME_SMOKE=1`.
 """
 
+import errno
 import hashlib
 import importlib.util
 import io
@@ -16,6 +17,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 from typing import Any, Callable
 
@@ -263,6 +265,106 @@ class ProvisioningTest(unittest.TestCase):
 
         with self.assertRaises(runtime.DedirenError):
             runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+    def test_invalid_staged_bundle_does_not_replace_an_incomplete_existing_target(self) -> None:
+        """A broken download must not destroy a recoverable incomplete bundle."""
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        target = runtime.bundle_dir(self.home, version)
+        target.mkdir(parents=True)
+        marker = target / "keep-me"
+        marker.write_text("incomplete", encoding="utf-8")
+
+        def missing_manifest(archive: tarfile.TarFile) -> None:
+            launcher = b"#!/usr/bin/env bash\nexit 0\n"
+            info = tarfile.TarInfo(f"dediren-agent-bundle-{version}/bin/dediren")
+            info.size = len(launcher)
+            info.mode = 0o755
+            archive.addfile(info, io.BytesIO(launcher))
+
+        payload, checksums = fake_release(version, members=missing_manifest)
+        runtime.fetch = stub_fetch(payload, checksums)
+
+        with self.assertRaises(runtime.DedirenError):
+            runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertEqual(marker.read_text(encoding="utf-8"), "incomplete")
+
+    def test_launcher_is_made_executable_before_atomic_publication(self) -> None:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+
+        def non_executable_launcher(archive: tarfile.TarFile) -> None:
+            root = f"dediren-agent-bundle-{version}"
+            launcher = b"#!/usr/bin/env bash\nexit 0\n"
+            info = tarfile.TarInfo(f"{root}/bin/dediren")
+            info.size = len(launcher)
+            info.mode = 0o644
+            archive.addfile(info, io.BytesIO(launcher))
+            manifest = b'{}'
+            info = tarfile.TarInfo(f"{root}/bundle.json")
+            info.size = len(manifest)
+            archive.addfile(info, io.BytesIO(manifest))
+
+        payload, checksums = fake_release(version, members=non_executable_launcher)
+        runtime.fetch = stub_fetch(payload, checksums)
+        target = runtime.bundle_dir(self.home, version)
+        replace = runtime.os.replace
+
+        def assert_staged_launcher_is_executable(source: object, destination: object) -> None:
+            if Path(destination) == target:
+                self.assertTrue(os.access(Path(source) / "bin" / "dediren", os.X_OK))
+            replace(source, destination)
+
+        with mock.patch.object(runtime.os, "replace", side_effect=assert_staged_launcher_is_executable):
+            runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+    def test_publish_failure_restores_quarantined_incomplete_target(self) -> None:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        target = runtime.bundle_dir(self.home, version)
+        target.mkdir(parents=True)
+        marker = target / "incomplete-before-publish"
+        marker.write_text("recover me", encoding="utf-8")
+        payload, checksums = fake_release(version)
+        runtime.fetch = stub_fetch(payload, checksums)
+        replace = runtime.os.replace
+        publication_attempted = False
+
+        def fail_only_the_staged_publication(source: object, destination: object) -> None:
+            nonlocal publication_attempted
+            if Path(destination) == target and not publication_attempted:
+                publication_attempted = True
+                raise OSError("simulated publication failure")
+            replace(source, destination)
+
+        with mock.patch.object(runtime.os, "replace", side_effect=fail_only_the_staged_publication):
+            with self.assertRaises(runtime.DedirenError):
+                runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertEqual(marker.read_text(encoding="utf-8"), "recover me")
+
+    def test_lock_timeout_is_fatal_and_never_provisions_unlocked(self) -> None:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        payload, checksums = fake_release(version)
+        runtime.fetch = stub_fetch(payload, checksums)
+        original_wait = runtime.LOCK_WAIT_SECONDS
+        runtime.LOCK_WAIT_SECONDS = 0
+        self.addCleanup(lambda: setattr(runtime, "LOCK_WAIT_SECONDS", original_wait))
+
+        with mock.patch.object(runtime.fcntl, "flock", side_effect=OSError(errno.EAGAIN, "busy")):
+            with self.assertRaises(runtime.DedirenError):
+                runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertFalse(runtime.bundle_dir(self.home, version).exists())
+
+    def test_unexpected_lock_error_is_fatal_and_never_provisions_unlocked(self) -> None:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        payload, checksums = fake_release(version)
+        runtime.fetch = stub_fetch(payload, checksums)
+
+        with mock.patch.object(runtime.fcntl, "flock", side_effect=OSError(errno.EPERM, "not permitted")):
+            with self.assertRaises(runtime.DedirenError):
+                runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertFalse(runtime.bundle_dir(self.home, version).exists())
 
 
 class ExtractionSafetyTest(unittest.TestCase):

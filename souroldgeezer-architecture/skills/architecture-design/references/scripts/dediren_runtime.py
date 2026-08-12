@@ -543,13 +543,7 @@ def extract(archive_path: Path, destination: Path) -> None:
 
 
 def _locked(lock_path: Path, wait_seconds: float):
-    """Best-effort cross-session lock around the install.
-
-    Several sessions can resolve at once against one plugin data directory. The
-    wait is bounded because this runs on the MCP server's startup path; on
-    timeout the caller proceeds anyway, and the re-check plus the atomic
-    replace below keep a lost race from producing a half-installed bundle.
-    """
+    """Take the bounded cross-session lock around the install, or fail safely."""
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     handle = open(lock_path, "w")
     deadline = time.monotonic() + wait_seconds
@@ -559,15 +553,39 @@ def _locked(lock_path: Path, wait_seconds: float):
             return handle
         except OSError as exc:
             if exc.errno not in (errno.EACCES, errno.EAGAIN):
-                return handle
+                handle.close()
+                raise DedirenError(
+                    f"could not acquire the install lock {lock_path}: {exc}",
+                    EXIT_UNAVAILABLE,
+                ) from exc
             if time.monotonic() >= deadline:
-                print(
-                    "dediren-mcp: timed out waiting for the install lock; "
-                    "proceeding best-effort.",
-                    file=sys.stderr,
+                handle.close()
+                raise DedirenError(
+                    f"timed out waiting for the install lock: {lock_path}",
+                    EXIT_UNAVAILABLE,
                 )
-                return handle
             time.sleep(0.25)
+
+
+def validate_staged_bundle(bundle: Path) -> Path:
+    """Verify required staged files and launcher mode before publication."""
+    manifest = bundle / "bundle.json"
+    launcher = bundle_launcher(bundle)
+    if not manifest.is_file():
+        raise DedirenError(f"staged bundle has no manifest at {manifest}", EXIT_UNAVAILABLE)
+    if not launcher.is_file():
+        raise DedirenError(f"staged bundle has no launcher at {launcher}", EXIT_UNAVAILABLE)
+    launcher.chmod(launcher.stat().st_mode | 0o111)
+    if not os.access(launcher, os.X_OK):
+        raise DedirenError(f"staged bundle launcher is not executable: {launcher}", EXIT_UNAVAILABLE)
+    return launcher
+
+
+def quarantine_path(target: Path) -> Path:
+    """Reserve a unique sibling name for an atomic incomplete-target move."""
+    reserved = Path(tempfile.mkdtemp(prefix=f".quarantine-{target.name}-", dir=target.parent))
+    reserved.rmdir()
+    return reserved
 
 
 def provision(home: Path, version: str, repo: str) -> Path:
@@ -611,18 +629,37 @@ def provision(home: Path, version: str, repo: str) -> Path:
                     f"{archive_name}",
                     EXIT_UNAVAILABLE,
                 )
+            staged_bundle = roots[0]
+            launcher = validate_staged_bundle(staged_bundle)
+            quarantined: Path | None = None
             if target.exists():
-                shutil.rmtree(target)
-            os.replace(roots[0], target)
+                quarantined = quarantine_path(target)
+                try:
+                    os.replace(target, quarantined)
+                except OSError as exc:
+                    raise DedirenError(
+                        f"could not quarantine incomplete bundle {target}: {exc}",
+                        EXIT_UNAVAILABLE,
+                    ) from exc
+            try:
+                os.replace(staged_bundle, target)
+            except OSError as exc:
+                if quarantined is not None and quarantined.exists():
+                    try:
+                        os.replace(quarantined, target)
+                    except OSError as restore_exc:
+                        raise DedirenError(
+                            f"could not publish bundle {target}: {exc}; also could not restore "
+                            f"quarantined bundle: {restore_exc}",
+                            EXIT_UNAVAILABLE,
+                        ) from restore_exc
+                raise DedirenError(f"could not publish bundle {target}: {exc}", EXIT_UNAVAILABLE) from exc
+            if quarantined is not None:
+                shutil.rmtree(quarantined)
+            launcher = bundle_launcher(target)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
 
-        launcher = bundle_launcher(target)
-        if not launcher.is_file():
-            raise DedirenError(
-                f"installed bundle has no launcher at {launcher}", EXIT_UNAVAILABLE
-            )
-        launcher.chmod(launcher.stat().st_mode | 0o111)
         return launcher
     finally:
         lock.close()
