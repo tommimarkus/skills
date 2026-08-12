@@ -18,11 +18,12 @@ only their deltas to it.
   `dediren_validate {workspaceRoot, profile: "uml"}`.
 - The SVG render path needs generated render metadata, which `dediren_build`
   produces (mapped to `generated/render-metadata/<view>.json`).
-- UML/XMI compatibility export (`uml-xmi`) runs only when requested and emits
-  conformant UML 2.5.1 abstract syntax for whatever view kind is exported —
-  class, data, activity, sequence, state-machine, use-case, component, and
-  deployment (the model *abstract syntax*; diagram *geometry* interchange is a
-  separate whole-model concern, below). When an exported view holds content
+- UML/XMI compatibility export (`uml-xmi`) runs only when requested. Per-view
+  XMI covers advertised kinds according to actual diagnostics — class, data,
+  activity, sequence, state-machine, use-case, component, and deployment — and
+  its validation level must be disclosed as `XMI envelope only`,
+  `UML-content schema`, or `importer validated`; envelope-only validation does
+  not establish conformant UML abstract syntax. When an exported view holds content
   outside it, or in-view content the mapping cannot yet represent, the runtime
   declares it — never dropped silently — with `info` diagnostics
   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` (the
@@ -34,7 +35,11 @@ only their deltas to it.
   UMLDI diagrams), complete across the built views. Its UMLDI diagram content is
   **provisional** — classifier-diagram views only (`uml-class` / `uml-data`),
   unverified against real UML importers — so keep the per-view `uml-xmi` export
-  the schema-validatable evidence (architecture.md §10).
+  best-effort evidence (architecture.md §10).
+
+`uml-data` is a Dediren-local classifier-structure view, not a UML Annex A
+diagram kind. Local view-family names are package/runtime vocabulary; standard
+UML diagram kinds remain a separate notation question.
 
 `properties.uml.*` placement is documented per kind — load the kind's file
 under `uml/`.

@@ -1,6 +1,9 @@
 # UML Data Views (`uml-data`)
 
 Concern: data-type and enumeration structure for implementation handoff.
+`uml-data` is a Dediren-local classifier-structure view, not a UML Annex A
+diagram kind; report it as a local view-family name rather than a standard UML
+diagram kind.
 Delegate persistence and storage decisions to `software-design` (and
 `infra-design` for managed data infrastructure).
 

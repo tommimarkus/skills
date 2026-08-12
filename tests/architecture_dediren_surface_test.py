@@ -543,7 +543,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("ArchiMate-aware modeling skill", architecture_reference)
         self.assertIn("not a certified or complete conforming ArchiMate tool", architecture_reference)
         self.assertIn(
-            "schema validation plus ArchiMate semantic validation",
+            "schema plus semantic-profile validation",
             architecture_reference,
         )
         self.assertIn(
@@ -853,7 +853,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         expected_phrases = [
             "Notation: archimate | uml | mixed | unsupported",
             "Cross-notation links: none | UML elaborates ArchiMate",
-            "Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked",
+            "Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>; view/count; omissions; represented content; XMI envelope only | UML-content schema | importer validated) | blocked",
             "Handoff boundary: architecture/design model | companion material required | delegated to <skill>",
         ]
 
@@ -927,7 +927,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             # output-format.md cites architecture.md §9 for layout concurrency
             # rather than restating the per-view/serial-rerun detail (ad4db28).
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
-                "`metadata`, `layout`, `render`",
+                "`package.json` declares bindings and paths",
+                "runtime owns projection, layout, rendering, and export execution",
                 "`architecture.md` §9",
                 "reproducible output",
             ],
@@ -1457,6 +1458,52 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for legacy_prefix in ["AD-", "AD-Q", "AD-L", "AD-B", "AD-DR"]:
             with self.subTest(legacy_prefix=legacy_prefix):
                 self.assertNotIn(legacy_prefix, smell_catalog)
+
+    def test_standards_guidance_preserves_evidence_and_notation_boundaries(self) -> None:
+        """Public guidance must not turn envelope-only XMI into UML conformance."""
+        architecture = compact_file(ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md")
+        output = compact_file(ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md")
+        source_grounding = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md"
+        )
+        uml_hub = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md"
+        )
+        data = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "data.md"
+        )
+        deployment = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "deployment.md"
+        )
+        self_check = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md"
+        )
+
+        self.assertIn("Quality level: not assessed", output)
+        self.assertIn("schema plus semantic-profile validation", architecture)
+        self.assertIn("XMI envelope only", output)
+        self.assertIn("UML-content schema", output)
+        self.assertIn("importer validated", output)
+        self.assertIn("view/count", output)
+        self.assertIn("omissions", output)
+        self.assertIn("represented content", output)
+        self.assertIn("Dediren issue #71", source_grounding)
+        self.assertIn("issue closure alone cannot broaden", source_grounding)
+        self.assertIn("active structure -> behavior", architecture)
+        self.assertNotIn("or vice versa", architecture)
+        self.assertIn("Physical active and passive structure extends Technology", architecture)
+        self.assertIn("Motivation is not an ArchiMate layer or aspect", architecture)
+        self.assertIn("stakeholders, concerns, purpose, scope/abstraction", architecture)
+        self.assertIn("allowed elements/relationships, conventions, audience, quality target", architecture)
+        self.assertIn("`Device` is physical", deployment)
+        self.assertIn("`ExecutionEnvironment` is software/runtime", deployment)
+        self.assertIn("`Node` is a generic computational resource", deployment)
+        self.assertIn("Dediren-local classifier-structure view", data)
+        self.assertIn("not a UML Annex A diagram kind", uml_hub)
+        self.assertIn("root `mcp.json` deliberately declares no `env` or `cwd`", self_check)
+        self.assertIn("legacy Copilot lane explicitly sets `DEDIREN_HOME`", self_check)
+        self.assertIn("package.json declares bindings and paths", architecture)
+        self.assertIn("runtime owns projection, layout, rendering, and export execution", architecture)
 
     def test_old_runtime_files_are_removed(self) -> None:
         retired_paths = [

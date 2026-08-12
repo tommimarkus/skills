@@ -12,10 +12,10 @@ release bundle.
 
 Node types:
 
-- `Device` — a physical or virtual host; `properties.uml.kind: "device"`.
-- `ExecutionEnvironment` — a runtime container on a device;
+- `Device` is physical; `properties.uml.kind: "device"`.
+- `ExecutionEnvironment` is software/runtime, a container on a device;
   `properties.uml.node` (owning device/node id).
-- `Node` — a generic runtime node; `properties.uml: {}`.
+- `Node` is a generic computational resource; `properties.uml: {}`.
 - `Artifact` — a deployable unit (e.g. JAR, image); `properties.uml: {}`.
 - `DeploymentSpecification` — deployment configuration (e.g. YAML);
   `properties.uml: {}`.
@@ -74,11 +74,11 @@ Synthetic `uml-deployment` source (lending domain):
 
 Shared UML contract — validation, render metadata, on-request XMI export:
 [uml.md §"Validation, Render, Export"](../uml.md#validation-render-export).
-No `uml-deployment`-specific deltas: the `uml-xmi` export emits the full
-deployment abstract syntax above (the node and relationship types this file
-lists) with no `DEDIREN_XMI_*_OMITTED` diagnostic. Verified on Dediren 2026.07.29
-by `test_release_uml_deployment_worked_example_xmi_full_pipeline`, which exports
-this file's own Worked Example.
+No `uml-deployment`-specific mapping claim is made beyond the shared contract.
+Report this local view's actual diagnostics, represented content, and one
+validation level (`XMI envelope only`, `UML-content schema`, or `importer
+validated`); envelope-only validation does not establish conformant UML abstract
+syntax. The earlier 2026.07.29 worked-example check is not a re-adoption gate.
 
 ## Findings
 

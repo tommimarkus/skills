@@ -24,16 +24,20 @@ what actually ran: `dediren_verify` stale results as `ARCH-R-2` / `ARCH-E-4` on 
 relevant finding, its freshness on the `Gallery:` line alongside `dediren_status`
 and `build-gallery.py --check`, and `dediren_diff` / `dediren_query` facts inline
 where they support a finding or answer (`architecture.md` §9).
+Without runtime schema plus semantic-profile validation, report `Quality level:
+not assessed`; schema-only validation does not establish `source-valid`.
 
 Ownership/layout: imported release bundles are upstream artifacts; report
-`Dediren tool issues`. Packages define per-view `projection`, `metadata`,
-`layout`, `render`; generated metadata, layouts, SVGs, optional OEF/XMI are
-reproducible output.
+`Dediren tool issues`. `package.json` declares bindings and paths; the runtime
+owns projection, layout, rendering, and export execution. Generated metadata,
+layouts, SVGs, optional OEF/XMI are reproducible output.
 When the `architecture.md` §9 grouped-layout fallback was used, report the
 regression plus both validation counts.
 
-Export readiness never claims bare "ready": qualify with coverage — views
-exported vs. total actual views, and content kinds exported vs. authored (per
+Export readiness never claims bare "ready": retain `XMI ready (<coverage>)` and
+qualify it with view/count, omissions, represented content, and validation level
+exactly one of `XMI envelope only`, `UML-content schema`, or `importer validated`.
+Qualify coverage with views exported vs. total actual views, and content kinds exported vs. authored (per
 [external-validation-handoff](procedures/external-validation-handoff.md)
 required disclosures) — e.g. `OEF ready (1 of 2 views)`, `XMI ready (classes
 only)`. A single-view or classes-only export keeps an `ok` envelope but carries
@@ -44,7 +48,8 @@ interchange document (`model.oef.xml` / `model.uml.xml`, `architecture.md` §10)
 a separate artifact, complete across the built views with no omission diagnostic;
 disclose it distinctly from the per-view coverage qualifier. Its `model.uml.xml`
 UMLDI diagram content is provisional (classifier-diagram views only), so it does
-not upgrade a per-view `XMI ready (classes only)` claim.
+not upgrade a per-view `XMI ready (classes only)` claim. Envelope-only evidence
+never describes XMI as conformant UML abstract syntax.
 
 Render readiness for a UML view that authors association end adornments
 qualifies the same way: count rendered vs. authored end-adornment labels per
@@ -131,7 +136,7 @@ Reference: souroldgeezer-architecture/docs/architecture-reference/architecture.m
 Package: docs/architecture/<feature>.dediren/
 Notation: archimate | uml | mixed | unsupported
 Dediren: MCP server (<version>) | CLI fallback (<version>) | not run (dediren runtime unavailable); Validation: source; semantic; projection; metadata; layout; layout validation; SVG; accessible name; visual; OEF; XMI
-Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>) | blocked
+Quality level: source-valid | view-readable | render-ready | review-ready | not assessed; Export readiness: not requested | OEF ready (<coverage>) | XMI ready (<coverage>; view/count; omissions; represented content; XMI envelope only | UML-content schema | importer validated) | blocked
 Cross-notation links: none | UML elaborates ArchiMate <ids> | broken <ids> | not assessed
 Cross-package identity: single package | consistent | conflicts <n>, candidates <n> | not assessed
 Handoff boundary: architecture/design model | companion material required | delegated to <skill>

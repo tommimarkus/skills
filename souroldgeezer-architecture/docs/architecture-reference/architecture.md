@@ -38,7 +38,7 @@ reported in the footer; they are not added as placeholders.
 
 - `source-valid`: `model.json` passes schema validation, ids are unique,
   relationships resolve, and the assessed ArchiMate relationships have passed
-  schema validation plus ArchiMate semantic validation via
+  schema plus semantic-profile validation via
   `dediren_validate {workspaceRoot, source, profile: "archimate"}`.
 - `view-readable`: source-valid plus every actual view in `package.json`
   projects, lays out, and layout-validates (inside `dediren_build`). This proves
@@ -51,6 +51,8 @@ reported in the footer; they are not added as placeholders.
   the audience, diagram kind, and change scope.
 
 The package rollup is the weakest applicable level across actual views.
+Without runtime semantic validation, report `Quality level: not assessed`; schema
+validation alone never establishes `source-valid`.
 
 ### Implementation-Readiness Review
 
@@ -172,9 +174,10 @@ presentation, and the diagram / render-metadata / layout outputs:
 }
 ```
 
-Projection, layout and the render stage are the runtime's business — the package
-declares *what* each view is and *where* its artifacts go, never the per-stage
-plugin chain. `presentation.title` / `question` double as that view's SVG
+The package.json declares bindings and paths; the runtime owns projection,
+layout, rendering, and export execution. The package declares *what* each view
+is and *where* its artifacts go, never the per-stage plugin chain.
+`presentation.title` / `question` double as that view's SVG
 accessible name, per view even under a shared render policy — which is why a
 render policy shared by several views must **not** carry its own `accessibility`
 block: a policy-level `title` / `description` overrides the per-view text and
@@ -321,9 +324,9 @@ Primary layers:
 - **Business**: Actor, Role, Collaboration, Interface, Process, Function,
   Interaction, Event, Service, Object, Contract, Representation, Product.
 - **Application**: Component, Collaboration, Interface, Function, Interaction, Process, Event, Service, Data Object.
-- **Technology**: Node, Device, System Software, and related Technology* elements, Artifact, Communication Network, Path.
+- **Technology**: Node, Device, System Software, and related Technology* elements, Artifact, Communication Network, Path. Physical active and passive structure extends Technology.
 - **Physical**: Equipment, Facility, Distribution Network, Material.
-- **Motivation**: Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value.
+- **Motivation**: Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value. Motivation is not an ArchiMate layer or aspect; its placement is viewpoint-dependent.
 - **Implementation & Migration**: Work Package, Deliverable, Implementation Event, Plateau, Gap.
 
 Primary aspects:
@@ -347,7 +350,7 @@ Core relationship families:
 
 - **Composition**: whole/part, lifecycle-strength ownership.
 - **Aggregation**: whole/part, weaker ownership.
-- **Assignment**: active structure performs behavior (or vice versa).
+- **Assignment**: active structure -> behavior; the active structure performs the behavior.
 - **Realization**: concrete element fulfills a more abstract service,
   requirement, capability, or deliverable.
 - **Serving**: source behavior/service used by target.
@@ -443,10 +446,11 @@ handoff or participant context rarely justifies this view.
 ### Custom Viewpoint Path
 
 Custom viewpoint path: when the requested concern does not fit a seed diagram
-kind, define the stakeholder concern, allowed element types, allowed
-relationship types, audience, and quality target before editing source. Store
-the resulting view as an actual view in `package.json`; do not create empty
-placeholder views for viewpoint coverage.
+kind, define stakeholders, concerns, purpose, scope/abstraction, allowed
+elements/relationships, conventions, audience, quality target, and relation to
+the model and standard viewpoints before authoring. Store the resulting view as
+an actual view in `package.json`; do not create empty placeholder views for
+viewpoint coverage.
 
 ## 7. View Design Rules
 
@@ -623,7 +627,7 @@ the MCP sandbox and
 must report version `2026.07.28` or newer before rendering. When the
 `dediren_*` tools are absent, the skill's internal CLI fallback may drive that
 same resolved executable. Only when neither lane can execute do runtime
-checks cap at `source-valid` (not a hard stop) and disclose
+checks require `Quality level: not assessed` (not a hard stop) and disclose
 `not run (dediren runtime unavailable)`
 (see `references/procedures/self-check.md`).
 
@@ -950,8 +954,8 @@ replace, the per-view exports. The build-result lists them under its
 The UMLDI diagram content in `model.uml.xml` is emitted only for
 classifier-diagram views (`uml-class` / `uml-data`) and is **provisional** —
 unverified against real UML importers — so treat that diagram interchange as
-best-effort and keep the per-view `uml-xmi` export the schema-validatable
-evidence (`references/procedures/external-validation-handoff.md`).
+best-effort and keep the per-view `uml-xmi` export as evidence at its disclosed
+validation level (`references/procedures/external-validation-handoff.md`).
 
 OEF and XMI export policies also gain an optional per-view identity `views` map:
 OEF takes `view_identifier` / `view_name` / `viewpoint`, XMI takes

@@ -111,10 +111,12 @@ Build.
    repo that fallback is `souroldgeezer-architecture/skills/architecture-design`.
    Carry the runtime-appropriate resolved path into raw reference procedures.
    Adapter configuration remains host-specific: Claude Code interpolates
-   `${CLAUDE_PLUGIN_ROOT}`, Codex uses its Agent Plugins root `mcp.json` (the
-   legacy `.codex-plugin` lane stays literal with `cwd: "."`), and Copilot CLI
-   interpolates `${PLUGIN_ROOT}`; each sets `DEDIREN_HOME` from its own
-   plugin-data token. The shared
+   `${CLAUDE_PLUGIN_ROOT}` and explicitly sets `DEDIREN_HOME` from
+   `${CLAUDE_PLUGIN_DATA}`. Codex Agent Plugins and the root Copilot lane export
+   plugin-data variables read by the resolver while root `mcp.json` declares no
+   `env` or `cwd`; the legacy `.codex-plugin` lane stays literal with `cwd: "."`
+   and has no plugin-data root, while legacy Copilot explicitly sets
+   `DEDIREN_HOME` from `${COPILOT_PLUGIN_DATA}`. The shared
    launcher/router has no harness detection; in every case it launches the
    upstream child at the absolute `workspaceRoot` supplied per tool call.
    Its maintained adapters are Claude Code, Codex, and Copilot CLI. Generic

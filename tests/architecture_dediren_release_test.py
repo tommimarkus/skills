@@ -1230,6 +1230,22 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertTrue(contents, by_id[3])
         self.assertTrue(contents[0]["text"].strip(), "diagnostics catalog resource is empty")
 
+    def test_release_guidance_keeps_xmi_assurance_at_the_observed_validation_level(self) -> None:
+        """A release test must not let an envelope-only observation become UML conformance."""
+        grounding = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md").read_text(encoding="utf-8")
+        handoff = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "external-validation-handoff.md").read_text(encoding="utf-8")
+        for text in (grounding, handoff):
+            normalized = " ".join(text.split())
+            with self.subTest(surface=text[:40]):
+                self.assertIn("Dediren issue #71", normalized)
+                self.assertIn("XMI envelope only", normalized)
+                self.assertIn("UML-content schema", normalized)
+                self.assertIn("importer validated", normalized)
+                self.assertIn("issue closure alone cannot broaden", normalized)
+        self.assertIn("class/data/activity emitted XMI omission diagnostics", grounding)
+        self.assertIn("other five selected", grounding)
+        self.assertNotIn("conformant UML 2.5.1 abstract syntax for whatever view kind", grounding)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,16 +38,14 @@ qualifier (see [output-format](../output-format.md)):
    candidate/confirmed distinction, when candidate or evidence-labeled content
    is exported disclose that the downstream tool shows it indistinguishably from
    confirmed architecture.
-3. **Content coverage (XMI).** The `uml-xmi` export represents the single
-   laid-out view's class-diagram structure — classes, associations, and
-   attributes with canonical UML 2.5.1 serialization (multiplicities as owned
-   `lowerValue`/`upperValue`, attribute types resolved to `uml:PrimitiveType`
-   or in-scope classifiers) (dediren 2026.07.1+). Content outside the exported
-   view — other views' elements/relationships and sequence/deployment/activity
-   dynamic content — is declared, not dropped silently, with `info` diagnostics
-   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` while the
-   envelope `status` stays `ok`; read `.diagnostics[]`, qualify as e.g. `XMI
-   ready (classes only)`, and report the gap under `Dediren tool issues`.
+3. **Content coverage (XMI).** Retain `XMI ready (<coverage>)`, but disclose
+   view/count, omissions, and represented content from the actual diagnostics.
+   On the pinned 2026.08.2 reproduction, class/data/activity emitted
+   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`, while
+   the other five selected view families did not. An `ok` envelope never erases
+   omissions. Per-view coverage therefore follows observed diagnostics, not a
+   blanket claim for a UML kind; model-scoped aggregate and provisional UMLDI
+   remain class/data family only.
 4. **Schema validation.** Dediren runs its own OEF/XMI schema validation in-JVM
    — it no longer shells out to `xmllint` internally, so there is no
    `*_SCHEMA_VALIDATOR` override to configure; the `DEDIREN_OEF_SCHEMA_DIR` /
@@ -61,17 +59,15 @@ qualifier (see [output-format](../output-format.md)):
      `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that diagram
      schema (dediren 2026.07.1+; earlier runtimes named the model-only
      `archimate3_Model.xsd`, which rejects `<views>`).
-   - *XMI (UML).* Validation of the `uml-xmi` output is partial (`uml-xmi
-     capabilities` → `schema_validation.kind: omg-xmi-xsd-partial`): pointing
-     `DEDIREN_XMI_SCHEMA_PATH` at the bare OMG `XMI.xsd` — the schema the runtime
-     caches by default — checks only the XMI envelope, not the UML content, so a
-     canonical serialization (item 3) is not itself a schema-validated one. To
-     schema-check the emitted `uml:*` content, point `DEDIREN_XMI_SCHEMA_PATH` at
-     a driver schema that imports `XMI.xsd` plus a UML 2.5.1 XSD and run `xmllint
-     --nonet --noout --schema <driver.xsd> <document>`; OMG publishes no
-     importable UML 2.5.1 XSD, so supply or generate one (for example from the
-     Eclipse UML2 metamodel) or import the document into a UML tool. Never report
-     "XMI schema-validated" when only the envelope was checked; report the
-     achieved level under `Dediren tool issues`.
+   - *XMI (UML).* Dediren's `DEDIREN_EXPORT_SCHEMA_CONFORMANCE` validates only
+     the OMG XMI 2.5.1 envelope; it does not validate UML namespace content.
+     Report exactly one validation level: `XMI envelope only`, `UML-content
+     schema`, or `importer validated`. Do not describe envelope-only output as
+     conformant UML abstract syntax. [Dediren issue #71](https://github.com/tommimarkus/dediren/issues/71)
+     tracks the limitation.
+     A later release may broaden this promise only after independent verification
+     of that pinned release plus local regression coverage; issue closure alone
+     cannot broaden it. For deeper validation, supply a UML-content schema or
+     validate an import with a real UML tool, then report the level actually run.
    In restricted environments pre-fetch XSDs and pass offline paths per
    [self-check](self-check.md) envelope/schema guidance.

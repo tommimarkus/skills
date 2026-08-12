@@ -44,13 +44,12 @@ executable, and the selected workspace; the adapter does not bypass host
 filesystem or network policy.
 
 The host configuration is intentionally specific: Claude Code interpolates
-`${CLAUDE_PLUGIN_ROOT}` in its inline command and sets `DEDIREN_HOME` from
-`${CLAUDE_PLUGIN_DATA}`; Codex and Copilot share the Agent Plugins root
-`mcp.json`, which declares only `type` and `command` because the two hosts
-expand it differently — Codex interpolates `${PLUGIN_DATA}`, Copilot does not —
-and both instead export the plugin data directory into the child process. The
-retained legacy `.codex-plugin` lane stays literal with `cwd: "."` and gets no
-plugin data root at all. Regardless of
+`${CLAUDE_PLUGIN_ROOT}` in its inline command and explicitly sets `DEDIREN_HOME`
+from `${CLAUDE_PLUGIN_DATA}`. Codex Agent Plugins and the root Copilot lane
+export plugin-data variables read by the resolver; root `mcp.json` deliberately
+declares no `env` or `cwd`. The retained legacy `.codex-plugin` lane stays
+literal with `cwd: "."` and gets no plugin data root at all; the legacy Copilot
+lane explicitly sets `DEDIREN_HOME` from `${COPILOT_PLUGIN_DATA}`. Regardless of
 that configuration, the shared launcher/router has no harness detection and
 sets each upstream child cwd from the absolute per-call `workspaceRoot`. The
 three `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, and
@@ -88,7 +87,7 @@ resolved executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
 internal machinery; the user never has to retype the model command. Do not
 hand-fetch or substitute a runtime outside the launcher's own provisioning. If
 neither MCP nor CLI can execute, disclose
-`not run (dediren runtime unavailable)` and cap at `source-valid` — a
+`not run (dediren runtime unavailable)` and report `Quality level: not assessed` — a
 capability cap, not a hard stop. Disclose which lane ran in the footer
 (`Dediren: MCP server | CLI fallback | not run`) and identify the missing external
 prerequisite rather than fabricating a pass.
