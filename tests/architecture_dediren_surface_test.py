@@ -1491,8 +1491,14 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("issue closure alone cannot broaden", source_grounding)
         self.assertIn("active structure -> behavior", architecture)
         self.assertNotIn("or vice versa", architecture)
-        self.assertIn("Physical active and passive structure extends Technology", architecture)
-        self.assertIn("Motivation is not an ArchiMate layer or aspect", architecture)
+        self.assertIn(
+            "Physical active/passive structure extends the Technology layer", architecture
+        )
+        self.assertIn(
+            "Motivation spans the layers as a cross-cutting aspect", architecture
+        )
+        self.assertIn("Motivation is not a layer", architecture)
+        self.assertNotIn("Motivation is not an ArchiMate layer or aspect", architecture)
         self.assertIn("stakeholders, concerns, purpose, scope/abstraction", architecture)
         self.assertIn("allowed elements/relationships, conventions, audience, quality target", architecture)
         self.assertIn("`Device` is physical", deployment)

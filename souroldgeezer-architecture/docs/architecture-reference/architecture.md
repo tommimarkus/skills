@@ -318,15 +318,17 @@ layout.
 ArchiMate separates architecture content by layer and aspect. Do not collapse
 these distinctions for convenience.
 
-Primary layers:
+Full-framework layer and extension placement:
 
 - **Strategy**: Capability, Resource, Course of Action, Value Stream.
 - **Business**: Actor, Role, Collaboration, Interface, Process, Function,
   Interaction, Event, Service, Object, Contract, Representation, Product.
 - **Application**: Component, Collaboration, Interface, Function, Interaction, Process, Event, Service, Data Object.
-- **Technology**: Node, Device, System Software, and related Technology* elements, Artifact, Communication Network, Path. Physical active and passive structure extends Technology.
-- **Physical**: Equipment, Facility, Distribution Network, Material.
-- **Motivation**: Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value. Motivation is not an ArchiMate layer or aspect; its placement is viewpoint-dependent.
+- **Technology**: Node, Device, System Software, and related Technology*
+  elements, Artifact, Communication Network, Path. Physical active/passive
+  structure extends the Technology layer with Equipment, Facility,
+  Distribution Network, and Material; physical behavior uses the Technology
+  behavior elements.
 - **Implementation & Migration**: Work Package, Deliverable, Implementation Event, Plateau, Gap.
 
 Primary aspects:
@@ -337,6 +339,10 @@ Primary aspects:
   services.
 - **Passive structure** is acted on: business objects, contracts, products, data
   objects, artifacts, material.
+- Motivation spans the layers as a cross-cutting aspect: Stakeholder, Driver,
+  Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, and
+  Value. Motivation is not a layer; select its placement from the viewpoint's
+  concern.
 
 Do not model one thing as both active structure and behavior. Do not connect
 active structure directly to passive structure when a behavior element is the
