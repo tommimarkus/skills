@@ -122,8 +122,22 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         """Each host loads the shared router through its native MCP adapter.
 
         An inline ``mcpServers`` object is valid Claude packaging but leaves the
-        Codex plugin enabled without registering any Dediren tools.
+        Codex plugin enabled without registering any Dediren tools. Each adapter
+        also has to hand the launcher that host's own writable plugin data
+        directory, since the runtime refuses to guess one.
         """
+        claude_manifest = json.loads(
+            (ARCH_PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        claude_dediren = claude_manifest["mcpServers"]["dediren"]
+        self.assertEqual(
+            claude_dediren["command"],
+            "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+        )
+        self.assertEqual(
+            claude_dediren["env"], {"DEDIREN_HOME": "${CLAUDE_PLUGIN_DATA}/dediren"}
+        )
+
         codex_manifest = json.loads(
             (ARCH_PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
@@ -139,12 +153,47 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         )
         self.assertEqual(dediren["args"], [])
         self.assertEqual(dediren["cwd"], ".")
+        # The legacy Codex adapter passes MCP fields literally, so it can carry
+        # no data-directory substitution at all; that is exactly why the Agent
+        # Plugins lane below exists, and why this one keeps its timeout.
         self.assertNotIn("env", dediren)
         self.assertNotIn("codex plugin", json.dumps(dediren))
         self.assertNotIn("${PLUGIN_", json.dumps(dediren))
         self.assertGreaterEqual(dediren["startup_timeout_sec"], 120)
 
-        copilot_manifest = json.loads((ARCH_PLUGIN / "plugin.json").read_text(encoding="utf-8"))
+        # Current Codex lane: the Agent Plugins manifest and its mandated
+        # sibling mcp.json, the one place ${PLUGIN_DATA} actually interpolates.
+        agent_manifest = json.loads((ARCH_PLUGIN / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            agent_manifest["$schema"],
+            "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        )
+        self.assertEqual(
+            agent_manifest["extensions"]["com.openai"]["interface"],
+            codex_manifest["interface"],
+        )
+        agent_config = json.loads((ARCH_PLUGIN / "mcp.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            agent_config["$schema"],
+            "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+        )
+        agent_dediren = agent_config["mcpServers"]["dediren"]
+        self.assertEqual(agent_dediren["type"], "stdio")
+        self.assertEqual(
+            agent_dediren["command"],
+            "./skills/architecture-design/references/scripts/dediren-mcp.sh",
+        )
+        # Deliberately minimal. Copilot CLI also consumes this file once the root
+        # manifest declares the Agent Plugins $schema — verified live, it reports
+        # sourcePluginSpec and ignores mcp/copilot.mcp.json — but it does not
+        # interpolate ${PLUGIN_ROOT} / ${PLUGIN_DATA} here, so a declared env or
+        # cwd would reach one host expanded and the other verbatim. Both hosts
+        # instead export PLUGIN_DATA (and Copilot COPILOT_PLUGIN_DATA) into the
+        # child as absolute paths, which is what the resolver reads. The format
+        # defines no timeout for a stdio server either.
+        self.assertEqual(set(agent_dediren), {"type", "command"})
+
+        copilot_manifest = agent_manifest
         self.assertEqual(copilot_manifest["name"], codex_manifest["name"])
         self.assertEqual(copilot_manifest["version"], codex_manifest["version"])
         self.assertEqual(copilot_manifest["description"], codex_manifest["description"])
@@ -161,7 +210,9 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertEqual(copilot_dediren["args"], [])
         self.assertEqual(copilot_dediren["tools"], ["*"])
         self.assertNotIn("cwd", copilot_dediren)
-        self.assertNotIn("env", copilot_dediren)
+        self.assertEqual(
+            copilot_dediren["env"], {"DEDIREN_HOME": "${COPILOT_PLUGIN_DATA}/dediren"}
+        )
         self.assertNotIn("codex plugin", json.dumps(copilot_dediren))
         launcher = (
             ARCH_PLUGIN
@@ -171,7 +222,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "scripts"
             / "dediren-mcp.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn("DEDIREN_COMMAND", launcher)
+        # Resolution and provisioning belong to dediren_runtime.py, so the shell
+        # launcher carries neither a runtime override nor an install lane of its
+        # own; a second copy of either would drift from the tested one.
+        self.assertIn("dediren_runtime.py", launcher)
+        self.assertIn("--exec-upstream", launcher)
+        self.assertNotIn("DEDIREN_COMMAND", launcher)
         self.assertNotIn("--ensure-bundle", launcher)
 
     def test_codex_mcp_adapter_resolves_the_installed_launcher_without_nested_codex(self) -> None:
@@ -520,7 +576,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "references"
             / "procedures"
             / "architecture-operational-workflow.md": [
-                "current host-managed Dediren CLI",
+                "pinned checksum-verified install",
                 "plugins.generic-graph.semantic_profile",
                 "architecture.md` §9",
                 "endpoint legality",
@@ -1313,15 +1369,26 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("/home/souroldgeezer/Documents", source_grounding)
         self.assertNotIn("~/Documents", source_grounding)
 
-    def test_repo_guidance_rejects_plugin_runtime_provisioning(self) -> None:
+    def test_repo_guidance_documents_plugin_runtime_provisioning(self) -> None:
+        """Adopting a Dediren release is a plugin release procedure now.
+
+        The plugin provisions its own pinned runtime, so the maintenance guidance
+        has to carry the pin, the floor, the resolution order that decides when
+        provisioning even runs, and the air-gapped opt-out. What stays true is
+        that the runtime is upstream-owned: no vendored tree, and no revival of
+        the deleted downloader by name.
+        """
         maintenance_guidance = (
             REPO_ROOT / "docs" / "maintenance-procedures.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("does not bundle or download Dediren", maintenance_guidance)
-        self.assertIn("current host-managed `dediren`", maintenance_guidance)
-        self.assertIn("migration fallback only", maintenance_guidance)
-        self.assertRegex(maintenance_guidance, r"never\s+downloads or pins one there")
+        self.assertIn("pinned, checksum-verified", maintenance_guidance)
+        self.assertIn("DEDIREN_VERSION_DEFAULT", maintenance_guidance)
+        self.assertIn("DEDIREN_VERSION_FLOOR", maintenance_guidance)
+        self.assertIn("DEDIREN_AUTO_INSTALL=0", maintenance_guidance)
+        self.assertIn("Java is\nnever downloaded", maintenance_guidance)
+        # Java stays a host prerequisite, and the runtime is still not ours to
+        # modify or vendor.
         self.assertNotIn("dediren-release.sh", maintenance_guidance)
         self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
@@ -1355,8 +1422,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "references"
             / "procedures"
             / "self-check.md": [
-                "independently managed upstream runtime",
-                "Do not patch, download, pin, or downgrade",
+                # The runtime is upstream-owned whichever lane produced it, so
+                # the don't-touch rule survives the plugin gaining an installer:
+                # provisioning a pinned release is not licence to modify one.
+                "upstream runtime, whether the launcher",
+                "Do not patch, hand-download, or downgrade",
                 "Dediren tool issues",
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [

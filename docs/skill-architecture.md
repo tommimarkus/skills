@@ -352,10 +352,16 @@ bare variable.
 Codex support is additive to that Claude contract. In Codex, resolve an absolute
 `<skill-dir>` from the source path reported for the loaded `SKILL.md`, carry it
 into raw procedures, and use documented `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`
-variables only in Codex hook contexts that support them. Codex plugin MCP fields
-are literal; use a plugin-relative `cwd` / path when changing directory is safe,
-or a tested source-discovery bootstrap when the server must preserve the caller's
-workspace. Shared skill prose may show both runtime forms; it must not delete or
+variables only in Codex hook contexts that support them. Codex MCP interpolation
+is lane-dependent: the Agent Plugins root `mcp.json` interpolates
+`${PLUGIN_ROOT}` / `${PLUGIN_DATA}`, so it is the only Codex lane that can give a
+server a writable plugin data root, while the legacy `.codex-plugin` +
+`mcp/codex.mcp.json` fields are literal — there, use a plugin-relative `cwd` /
+path when changing directory is safe, or a tested source-discovery bootstrap when
+the server must preserve the caller's
+workspace. A server that needs plugin data must therefore degrade gracefully on
+the legacy lane rather than assume the directory exists. Shared skill prose may
+show both runtime forms; it must not delete or
 generalize away the Claude substitutions above.
 
 A skill that ships a hook entrypoint (a guard or gate script) must include an

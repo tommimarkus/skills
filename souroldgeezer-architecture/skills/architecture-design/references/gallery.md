@@ -257,7 +257,7 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   `build-gallery.py`. Every surface is a token.
 - **Add a view:** add it to the package's `package.json` `views[]` (with the
   right `model` so its notation lands it in the right section), render its SVG
-  and render-metadata by building the package through the host-managed MCP server
+  and render-metadata by building the package through the plugin's MCP server
   (one `dediren_build` call with the `package` argument), then rebuild the
   gallery. Section, code letter, and counts are all derived — nothing to
   hand-edit in the markup.

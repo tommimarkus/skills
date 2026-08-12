@@ -22,11 +22,15 @@ making either runtime load the other's file first.
 
 - `.agents/plugins/marketplace.json`: native Codex marketplace.
 - `.claude-plugin/marketplace.json`: Claude Code marketplace.
-- `<plugin>/.codex-plugin/plugin.json`: native Codex manifest.
-- `<plugin>/mcp/codex.mcp.json`: Codex MCP adapter when the Codex manifest
+- `<plugin>/plugin.json` + `<plugin>/mcp.json`: Agent Plugins 1.0.0 manifest and
+  its MCP configuration — the current Codex lane, and the only one that
+  interpolates `${PLUGIN_DATA}` in MCP config. The same root `plugin.json` is the
+  native Copilot manifest when that plugin supports Copilot CLI directly; its own
+  MCP adapter lives at `<plugin>/mcp/copilot.mcp.json`.
+- `<plugin>/.codex-plugin/plugin.json`: legacy Codex manifest, retained as the
+  fallback lane.
+- `<plugin>/mcp/codex.mcp.json`: legacy Codex MCP adapter when that manifest
   declares `mcpServers`.
-- `<plugin>/plugin.json`: native Copilot manifest when that plugin supports
-  Copilot CLI directly; its MCP adapter lives at `<plugin>/mcp/copilot.mcp.json`.
 - `<plugin>/.claude-plugin/plugin.json`: Claude manifest.
 - `<plugin>/skills/<skill>/SKILL.md`: shared runtime-neutral workflow.
 - `<plugin>/skills/<skill>/extensions/`: on-demand supporting packs; a stack
@@ -49,22 +53,46 @@ The architecture plugin's Dediren configuration is host-specific, while its
 shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
-call. Dediren itself is operator-installed on the host; the bundled procedure at
+call. Dediren itself is provisioned by the plugin: on first use the launcher
+installs the pinned, checksum-verified release (pin `2026.08.2`, support floor
+`2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
+into the host's own per-plugin writable data directory. That directory resolves
+from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,
+`COPILOT_PLUGIN_DATA`, or `PLUGIN_DATA` with `/dediren` appended; there is no
+invented fallback, so a host offering none exits 78 naming `DEDIREN_HOME`.
+Executables resolve in order: an explicit `DEDIREN_COMMAND` (honoured without a
+floor probe — the deliberate lane for pinning one executable for controlled
+validation), the managed install, a host `dediren` on `PATH` that reports at or
+above the floor, the legacy verified-release-cache migration lane, then
+provisioning the pin. Java stays host-managed and is never downloaded: the
+release ships jars with no bundled JRE, so Java 21+ is a host prerequisite. The
+bundled procedure at
 [`souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md`](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)
-is the single place that documents installing, exposing, and updating it.
+is the single place that documents what provisioning does, how to override it,
+how to run air-gapped, and how to diagnose a failure.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|
-| Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Inherit `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
-| Codex | Literal plugin-relative command with `cwd: "."` | Plugin root for launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `startup_timeout_sec` is seconds |
-| Copilot CLI | `${PLUGIN_ROOT}` in `mcp/copilot.mcp.json` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds |
+| Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command; `DEDIREN_HOME` set explicitly from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Inherit `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
+| Codex | Agent Plugins root `plugin.json` + `mcp.json`, declaring only `type` / `command`; Codex exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child. The retained legacy `.codex-plugin` + `mcp/codex.mcp.json` lane is literal (plugin-relative command, `cwd: "."`) and receives no plugin data root | Plugin root for the launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` on every host | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; the legacy `startup_timeout_sec` is seconds |
+| Copilot CLI | With the Agent Plugins `$schema` on the root manifest, Copilot reads that root `mcp.json` and ignores `mcp/copilot.mcp.json`; it does not interpolate `${PLUGIN_ROOT}` / `${PLUGIN_DATA}` there, and exports `PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `CLAUDE_PLUGIN_DATA` into the child as absolute paths. `mcp/copilot.mcp.json` is the legacy lane | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds (legacy lane only) |
+
+The shared root `mcp.json` therefore declares no `env` and no `cwd`: one host
+would expand a token there and the other would not. Both export the plugin data
+directory into the child, which is what the resolver reads.
+
+Codex's 30s startup default is safe: the router answers `initialize` itself
+without touching Dediren, and provisioning happens later, on the first
+`tools/list`.
 
 Generic local-client compatibility means only that a local client can launch a
-stdio process and permits Bash, Python, and the host-managed Dediren executable;
-it may optionally set `DEDIREN_COMMAND` and must pass an absolute
+stdio process and permits Bash, Python, and Java 21+ with a writable plugin data
+directory; it must set `DEDIREN_HOME` to an absolute path when it offers no
+plugin data variable, may optionally set `DEDIREN_COMMAND` instead, and must
+pass an absolute
 `workspaceRoot` on every tool call. It is not a support or packaging promise for
-another harness. Preserve the legacy verified-release-cache fallback; it never
-downloads a runtime. Streamable HTTP is future work only for an explicit
+another harness. Preserve the legacy verified-release-cache fallback; nothing
+populates it any more. Streamable HTTP is future work only for an explicit
 remote/shared multi-client service requirement, because it adds authentication,
 origin validation, port and service lifecycle, session isolation, and workspace
 authorization responsibilities.
@@ -91,11 +119,15 @@ authorization responsibilities.
 - Shared skill commands must preserve documented Claude substitutions and add a
   Codex source-path form beside them. Never replace `${CLAUDE_SKILL_DIR}` or
   `${CLAUDE_PLUGIN_ROOT}` with a generic placeholder as the only instruction.
-- Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex plugin MCP
-  fields are literal: use plugin-relative `cwd` / paths where changing directory
+- Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex MCP
+  interpolation depends on the lane: the Agent Plugins root `mcp.json`
+  interpolates `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`, so it is the only Codex lane
+  that can hand a server a writable plugin data root; the legacy
+  `.codex-plugin` + `mcp/codex.mcp.json` fields stay **literal** — use
+  plugin-relative `cwd` / paths where changing directory
   is correct, or a tested source-discovery bootstrap when the server must preserve
-  the caller's workspace. Claude MCP and hook commands use
-  `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}`.
+  the caller's workspace, and expect no plugin data root there. Claude MCP and
+  hook commands use `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}`.
 - Copilot plugin MCP commands use `${PLUGIN_ROOT}` and writable plugin data uses
   `${COPILOT_PLUGIN_DATA}`. Keep a separate Copilot MCP file; never let Copilot
   fall through to the Codex bootstrap.
@@ -108,8 +140,9 @@ The Claude manifest and README preserve CalVer `YYYY.0M.MICRO`; Codex derives
 strict SemVer `YYYY.M.MICRO` from that authority. Marketplace entries never
 carry a `version` field.
 
-When a plugin has a root Copilot `plugin.json`, keep its name, description,
-skills path, and strict-SemVer version aligned with the Codex manifest.
+When a plugin has a root `plugin.json` (the Agent Plugins manifest, also read by
+Copilot CLI), keep its name, description, skills path, and strict-SemVer version
+aligned with the legacy Codex manifest.
 
 Each public `SKILL.md` keeps its matching Claude subagent. Codex discovers the
 same skill through the Codex manifest's `skills` path; do not create a parallel
@@ -289,9 +322,11 @@ The host smoke must keep both safety flags. It uses temporary `CODEX_HOME`,
 `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without
 replacing `HOME`, verifies installed plugin, skill, agent, and Dediren MCP
 surfaces, and fingerprints the normal host plugin/config control planes before
-and after. Dediren itself is host-managed: the smoke uses `dediren` from `PATH`
-or `DEDIREN_COMMAND`, never a plugin-owned pin. Absence of a standalone Codex
-validator is a reported skip, not a fabricated pass.
+and after. Dediren itself is plugin-provisioned, so the smoke resolves it
+through the launcher's own lanes — an explicit `DEDIREN_COMMAND`, or a temporary
+`DEDIREN_HOME` that keeps a provisioned bundle out of normal host state — and
+never installs into a real per-plugin data directory. Absence of a standalone
+Codex validator is a reported skip, not a fabricated pass.
 
 ## Documentation and ownership
 

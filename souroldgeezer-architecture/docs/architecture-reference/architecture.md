@@ -587,10 +587,13 @@ applies them, with the finding codes, is
 ## 9. Runtime Evidence
 
 The skill drives Dediren through a shared router with native Claude Code, Codex,
-and Copilot MCP adapters. The plugin bundles the adapters, not Dediren: the
-router executes the current host-managed `dediren` from `DEDIREN_COMMAND` or
-`PATH`, with a migration-only fallback to the newest executable already present
-in the former verified release cache. It discovers that installation's live
+and Copilot MCP adapters. The plugin bundles the adapters and provisions the
+runtime: the launcher resolves an explicit `DEDIREN_COMMAND`, then its own
+managed install in the host's per-plugin writable data directory, then a
+`dediren` on `PATH` that reports at or above the floor, then the migration-only
+fallback to the newest executable already present in the former verified release
+cache — and otherwise installs the pinned, checksum-verified release
+(`2026.08.2`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead
@@ -613,13 +616,15 @@ raw procedures. It locates this skill's own helper scripts, not Dediren.
 Read the format contract through `dediren_guide` (`{workspaceRoot}` for the topic
 index, then `{workspaceRoot, topic: "source-json"}`) before authoring or repairing source JSON. It is the
 fast contract for Minimal Source JSON, Artifact Map, Semantic Profiles, Command
-Handoff, and Repair Rules. The plugin never downloads, pins, downgrades, or
-patches Dediren. The external CLI must be executable inside the MCP sandbox and
+Handoff, and Repair Rules. The plugin pins and checksum-verifies the release it
+installs, but never downgrades or patches Dediren, and never installs Java —
+Java 21+ stays a host prerequisite. The resolved CLI must be executable inside
+the MCP sandbox and
 must report version `2026.07.28` or newer before rendering. When the
 `dediren_*` tools are absent, the skill's internal CLI fallback may drive that
-same host-managed executable. Only when neither lane can execute do runtime
+same resolved executable. Only when neither lane can execute do runtime
 checks cap at `source-valid` (not a hard stop) and disclose
-`not run (host-managed Dediren unavailable)`
+`not run (dediren runtime unavailable)`
 (see `references/procedures/self-check.md`).
 
 The tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint
@@ -628,7 +633,8 @@ reports close parallel route channels during layout validation. Each
 `dediren_build` call walks its views through projection, layout, layout
 validation, and rendering inside the server.
 
-The host-managed Dediren installation is an upstream distribution artifact. Do
+The resolved Dediren installation is an upstream distribution artifact, whether
+the plugin provisioned it or the host supplied it. Do
 not patch its schemas, plugin manifests, binaries, Java helpers, fixtures, or
 `bundle.json` to fix tool behavior. When the runtime, schema, layout, render, export, or
 helper behavior appears wrong, report it under `Dediren tool issues` with the

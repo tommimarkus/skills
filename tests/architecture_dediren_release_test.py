@@ -826,12 +826,10 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(f"CACHED 2026.07.29 mcp --root {REPO_ROOT}", result.stdout)
 
-    def test_mcp_launcher_does_not_download_or_pin_dediren(self) -> None:
-        launcher_script = MCP_LAUNCHER.read_text(encoding="utf-8")
-        self.assertIn("DEDIREN_COMMAND", launcher_script)
-        self.assertNotIn("dediren-release.sh", launcher_script)
-        self.assertNotIn("DEDIREN_VERSION", launcher_script)
-        self.assertNotIn("curl", launcher_script)
+    # The launcher's own contract — that it delegates resolution and
+    # provisioning to `dediren_runtime.py` rather than carrying a second copy of
+    # either — is covered in architecture_dediren_runtime_test.py, beside the
+    # resolver it constrains.
 
     def test_mcp_server_exposes_the_seven_tools_the_skill_drives(self) -> None:
         """The host-managed `dediren mcp` stdio server exposes the core tools the

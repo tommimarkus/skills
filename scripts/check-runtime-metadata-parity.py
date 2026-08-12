@@ -184,7 +184,7 @@ def compare(
 
 
 # lean-audit:dup-intentional:begin -- validation helpers intentionally share
-# one evidence signature while applying different equality/containment rules.
+# one evidence signature while applying different containment/resolution rules.
 def require_text_contains(
     findings: list[Finding],
     repo: Path,
@@ -195,6 +195,32 @@ def require_text_contains(
 ) -> None:
     if expected not in actual_text:
         findings.append(Finding(repo_relative(repo, path), field, expected, "missing"))
+
+
+def require_bundled_executable(
+    findings: list[Finding],
+    repo: Path,
+    path: Path,
+    field: str,
+    launcher: Path,
+) -> None:
+    """Require a manifest-referenced launcher to exist and be executable.
+
+    Every host fails the same way here — a stdio server that cannot be exec'd
+    gets no retry — so all adapters share this last-mile check even though they
+    reach the path through incompatible substitutions.
+    """
+    if not launcher.is_file():
+        findings.append(
+            Finding(
+                repo_relative(repo, path),
+                field,
+                f"bundled file at {repo_relative(repo, launcher)}",
+                "missing",
+            )
+        )
+    elif not os.access(launcher, os.X_OK):
+        findings.append(Finding(repo_relative(repo, path), field, "executable launcher", "not executable"))
 # lean-audit:dup-intentional:end
 
 
@@ -346,20 +372,13 @@ def check_claude_mcp_server_block(
                 Finding(repo_relative(repo, path), f"{field}.command", f"path under {root_token}", command or "missing")
             )
         else:
-            launcher = plugin_dir / command[len(root_token) :].lstrip("/")
-            if not launcher.is_file():
-                findings.append(
-                    Finding(
-                        repo_relative(repo, path),
-                        f"{field}.command",
-                        f"bundled file at {repo_relative(repo, launcher)}",
-                        "missing",
-                    )
-                )
-            elif not os.access(launcher, os.X_OK):
-                findings.append(
-                    Finding(repo_relative(repo, path), f"{field}.command", "executable launcher", "not executable")
-                )
+            require_bundled_executable(
+                findings,
+                repo,
+                path,
+                f"{field}.command",
+                plugin_dir / command[len(root_token) :].lstrip("/"),
+            )
 
         env = server.get("env")
         if isinstance(env, dict):
@@ -386,6 +405,17 @@ CODEX_MCP_LITERAL_TOKENS = (
     "${CLAUDE_PLUGIN_DATA}",
 )
 
+# The Agent Plugins lane is the one Codex path that DOES interpolate, so its
+# constraints are the inverse of the legacy adapter's: exactly two substitutions
+# resolve, the launcher stays inside the plugin, and the stdio server carries no
+# host-specific extras (a timeout there is silently dropped, not honoured).
+AGENT_PLUGINS_PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+AGENT_PLUGINS_MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+AGENT_PLUGINS_SUBSTITUTIONS = ("PLUGIN_ROOT", "PLUGIN_DATA")
+AGENT_PLUGINS_CWD_PREFIXES = ("./", "${PLUGIN_ROOT}", "${PLUGIN_DATA}")
+AGENT_PLUGINS_STDIO_KEYS = frozenset({"type", "command", "args", "env", "cwd"})
+SUBSTITUTION_TOKEN_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
 
 def valid_mcp_servers(
     repo: Path,
@@ -410,6 +440,30 @@ def valid_mcp_servers(
     return valid
 
 
+def server_string_fields(
+    field: str,
+    server: dict[str, Any],
+    *,
+    include_command: bool,
+) -> list[tuple[str, Any]]:
+    """Every substitutable string on one server, as (finding field, value) pairs.
+
+    Token rules apply to whatever the host expands, so the scan set is the same
+    everywhere even though each host expands a different token vocabulary.
+    """
+    fields: list[tuple[str, Any]] = []
+    if include_command:
+        fields.append((f"{field}.command", server.get("command")))
+    fields.append((f"{field}.cwd", server.get("cwd")))
+    args = server.get("args", [])
+    if isinstance(args, list):
+        fields.extend((f"{field}.args[{index}]", value) for index, value in enumerate(args))
+    env = server.get("env", {})
+    if isinstance(env, dict):
+        fields.extend((f"{field}.env.{key}", value) for key, value in sorted(env.items()))
+    return fields
+
+
 def check_codex_mcp_server_block(
     repo: Path,
     path: Path,
@@ -426,18 +480,8 @@ def check_codex_mcp_server_block(
     for name, server in valid_mcp_servers(repo, path, servers, findings):
         field = f"mcpServers.{name}"
 
-        string_fields: list[tuple[str, Any]] = [
-            (f"{field}.command", server.get("command")),
-            (f"{field}.cwd", server.get("cwd")),
-        ]
         args = server.get("args", [])
-        if isinstance(args, list):
-            string_fields.extend((f"{field}.args[{index}]", value) for index, value in enumerate(args))
-        env = server.get("env", {})
-        if isinstance(env, dict):
-            string_fields.extend((f"{field}.env.{key}", value) for key, value in sorted(env.items()))
-
-        for value_field, value in string_fields:
+        for value_field, value in server_string_fields(field, server, include_command=True):
             text = normalize_text(value)
             for token in CODEX_MCP_LITERAL_TOKENS:
                 if token in text:
@@ -527,38 +571,16 @@ def check_copilot_mcp_server_block(
                 )
             )
         else:
-            launcher = plugin_dir / command[len(root_token) :].lstrip("/")
-            if not launcher.is_file():
-                findings.append(
-                    Finding(
-                        repo_relative(repo, path),
-                        f"{field}.command",
-                        f"bundled file at {repo_relative(repo, launcher)}",
-                        "missing",
-                    )
-                )
-            elif not os.access(launcher, os.X_OK):
-                findings.append(
-                    Finding(
-                        repo_relative(repo, path),
-                        f"{field}.command",
-                        "executable launcher",
-                        "not executable",
-                    )
-                )
+            require_bundled_executable(
+                findings,
+                repo,
+                path,
+                f"{field}.command",
+                plugin_dir / command[len(root_token) :].lstrip("/"),
+            )
 
         args = server.get("args", [])
-        env = server.get("env", {})
-        string_fields: list[tuple[str, Any]] = [(f"{field}.cwd", server.get("cwd"))]
-        if isinstance(args, list):
-            string_fields.extend(
-                (f"{field}.args[{index}]", item) for index, item in enumerate(args)
-            )
-        if isinstance(env, dict):
-            string_fields.extend(
-                (f"{field}.env.{key}", item) for key, item in sorted(env.items())
-            )
-        for value_field, value in string_fields:
+        for value_field, value in server_string_fields(field, server, include_command=False):
             text = normalize_text(value)
             for foreign in ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}", "${PLUGIN_DATA}"):
                 if foreign in text:
@@ -582,6 +604,173 @@ def check_copilot_mcp_server_block(
             )
 
 
+def check_agent_plugins_mcp_server_block(
+    repo: Path,
+    path: Path,
+    plugin_dir: Path,
+    servers: dict[str, Any],
+    findings: list[Finding],
+) -> None:
+    """Check one Agent Plugins stdio server against the format's own constraints.
+
+    The format resolves paths itself, so it accepts only its own two
+    substitutions, keeps ``command`` inside the plugin, refuses env names that
+    would shadow those substitutions, and defines no further stdio keys. Each
+    violation is silent at runtime: a foreign token arrives literally, and an
+    unknown key is dropped rather than honoured.
+    """
+    for name, server in valid_mcp_servers(repo, path, servers, findings):
+        field = f"mcpServers.{name}"
+
+        server_type = normalize_text(server.get("type")) or "stdio"
+        if server_type != "stdio":
+            # The remaining checks describe the stdio shape only; a different
+            # transport has a different key set and is not this lane's contract.
+            findings.append(Finding(repo_relative(repo, path), f"{field}.type", "stdio", server_type))
+            continue
+
+        unknown_keys = sorted(set(server) - AGENT_PLUGINS_STDIO_KEYS)
+        if unknown_keys:
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    field,
+                    f"only {', '.join(sorted(AGENT_PLUGINS_STDIO_KEYS))} on a stdio server",
+                    ", ".join(unknown_keys),
+                )
+            )
+
+        for value_field, value in server_string_fields(field, server, include_command=True):
+            for token in SUBSTITUTION_TOKEN_RE.findall(normalize_text(value)):
+                if token not in AGENT_PLUGINS_SUBSTITUTIONS:
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            value_field,
+                            "only ${PLUGIN_ROOT} / ${PLUGIN_DATA} substitute here",
+                            "${" + token + "}",
+                        )
+                    )
+
+        env = server.get("env", {})
+        if isinstance(env, dict):
+            for key in sorted(env):
+                if key in AGENT_PLUGINS_SUBSTITUTIONS:
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            f"{field}.env.{key}",
+                            "an env name the format does not reserve",
+                            key,
+                        )
+                    )
+        else:
+            findings.append(
+                Finding(repo_relative(repo, path), f"{field}.env", "environment object", normalize_text(env))
+            )
+
+        command = normalize_text(server.get("command"))
+        contained = "bare command name or contained ./ path"
+        if not command:
+            findings.append(Finding(repo_relative(repo, path), f"{field}.command", contained, "missing"))
+        elif command.startswith("./"):
+            relative = command.removeprefix("./")
+            if ".." in Path(relative).parts:
+                findings.append(Finding(repo_relative(repo, path), f"{field}.command", contained, command))
+            else:
+                require_bundled_executable(
+                    findings, repo, path, f"{field}.command", plugin_dir / relative
+                )
+        elif "/" in command or "\\" in command:
+            findings.append(Finding(repo_relative(repo, path), f"{field}.command", contained, command))
+
+        cwd = normalize_text(server.get("cwd"))
+        if not cwd:
+            continue
+        if not cwd.startswith(AGENT_PLUGINS_CWD_PREFIXES):
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    f"{field}.cwd",
+                    f"one of {', '.join(AGENT_PLUGINS_CWD_PREFIXES)} as prefix",
+                    cwd,
+                )
+            )
+            continue
+        for prefix in ("./", "${PLUGIN_ROOT}"):
+            # A ${PLUGIN_DATA} cwd is created by the host at run time; the two
+            # plugin-root spellings must already exist in the shipped tree.
+            if cwd.startswith(prefix):
+                bundled_dir = plugin_dir / cwd[len(prefix) :].lstrip("/")
+                if not bundled_dir.is_dir():
+                    findings.append(
+                        Finding(
+                            repo_relative(repo, path),
+                            f"{field}.cwd",
+                            f"bundled directory at {repo_relative(repo, bundled_dir)}",
+                            "missing",
+                        )
+                    )
+                break
+
+
+def check_agent_plugins_packaging(repo: Path, plugin_dir: Path, findings: list[Finding]) -> dict[str, Any]:
+    """Check the Agent Plugins 1.0.0 lane and return the servers it declares.
+
+    This is the only Codex lane that interpolates ``${PLUGIN_DATA}``; the legacy
+    ``.codex-plugin`` adapter passes MCP fields literally and keeps its own
+    checks. The format mandates the root manifest's sibling ``mcp.json``, so the
+    two declarations are checked as one pair — a manifest that opts into the
+    schema without the file registers nothing, and an ``mcp.json`` no manifest
+    opts into is never read.
+    """
+    manifest_path = plugin_dir / "plugin.json"
+    mcp_path = plugin_dir / "mcp.json"
+    manifest_schema = (
+        normalize_text(read_json(manifest_path).get("$schema")) if manifest_path.is_file() else ""
+    )
+    declared = manifest_schema == AGENT_PLUGINS_PLUGIN_SCHEMA
+
+    if not mcp_path.is_file():
+        if declared:
+            findings.append(
+                Finding(
+                    repo_relative(repo, mcp_path),
+                    "exists",
+                    "present (the root manifest declares the Agent Plugins schema)",
+                    "missing",
+                )
+            )
+        return {}
+
+    if not declared:
+        findings.append(
+            Finding(
+                repo_relative(repo, manifest_path),
+                "$schema",
+                AGENT_PLUGINS_PLUGIN_SCHEMA,
+                manifest_schema or "missing",
+            )
+        )
+
+    config = read_json(mcp_path)
+    compare(findings, repo, mcp_path, "$schema", AGENT_PLUGINS_MCP_SCHEMA, config.get("$schema"))
+    servers = config.get("mcpServers")
+    if not isinstance(servers, dict):
+        findings.append(
+            Finding(
+                repo_relative(repo, mcp_path),
+                "mcpServers",
+                "server object map",
+                normalize_text(servers) or "missing",
+            )
+        )
+        return {}
+
+    check_agent_plugins_mcp_server_block(repo, mcp_path, plugin_dir, servers, findings)
+    return servers
+
+
 # lean-audit:dup-intentional:begin -- checker passes share this repository and
 # finding-collector signature but own independent packaging/skill semantics.
 def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
@@ -589,9 +778,10 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
 
     The checked set is derived from the manifests, never a hardcoded plugin list,
     so a second MCP-bundling plugin is covered the day it lands. Claude accepts
-    an inline object; Codex and Copilot use distinct file-backed adapters with
-    incompatible path/substitution semantics. A shared launcher sitting on disk
-    proves nothing about any host's registration.
+    an inline object; Codex reads the Agent Plugins root ``mcp.json`` with the
+    legacy ``.codex-plugin`` adapter behind it, and Copilot has its own
+    file-backed adapter — all with incompatible path/substitution semantics. A
+    shared launcher sitting on disk proves nothing about any host's registration.
     """
 # lean-audit:dup-intentional:end
     for plugin_dir in plugin_dirs:
@@ -606,6 +796,7 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
         copilot_declared = (
             read_json(copilot_path).get("mcpServers") if copilot_path.is_file() else None
         )
+        agent_servers = check_agent_plugins_packaging(repo, plugin_dir, findings)
         if claude_declared is None and codex_declared is None:
             continue
 
@@ -748,6 +939,15 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
                 "mcpServers:names",
                 sorted(claude_servers),
                 sorted(copilot_servers),
+            )
+        if claude_servers and agent_servers:
+            compare(
+                findings,
+                repo,
+                plugin_dir / "mcp.json",
+                "mcpServers:names",
+                sorted(claude_servers),
+                sorted(agent_servers),
             )
 
 

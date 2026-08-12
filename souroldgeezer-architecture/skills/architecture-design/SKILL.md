@@ -82,21 +82,21 @@ Build.
    runtime claim may skip it.
 2. Before any runtime claim, run
    [self-check](references/procedures/self-check.md). The plugin supplies
-   Claude Code, Codex, and Copilot MCP adapters, but Dediren itself is the
-   host-managed current `dediren` executable (`PATH` or `DEDIREN_COMMAND`) and
-   is never bundled or pinned by this plugin. A migration fallback may reuse the
-   newest executable already present in the former verified release cache, but
-   never downloads one. The router discovers that
+   Claude Code, Codex, and Copilot MCP adapters and provisions Dediren itself:
+   on first use the launcher installs the pinned, checksum-verified release into
+   the host's per-plugin writable data directory unless an existing runtime
+   resolves first (self-check § Server availability owns that order). Java 21+
+   stays a host prerequisite and is never installed. The router discovers the resolved
    executable's live tool catalog and adds a required absolute `workspaceRoot`
    to every tool call. Drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
    `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
    mode above) — prefer MCP over the CLI. Extract, Review, and Lookup need only the
    read-only tool subset; Build also needs `dediren_build`. When the `dediren_*`
-   tools are absent, an internal CLI fallback may drive the same host-managed
+   tools are absent, an internal CLI fallback may drive the same resolved
    executable; self-check § Server availability owns the availability check and
-   exact `source-valid` cap condition. Never auto-install, download, or downgrade
-   Dediren from the plugin. Defer
+   exact `source-valid` cap condition. Provisioning is the launcher's job: never
+   hand-install, patch, or downgrade Dediren from this workflow. Defer
    the format guide (`dediren_guide`) until authoring source JSON, a command
    handoff, or a repair loop is imminent — a notation Lookup or a mechanical edit
    that reaches no runtime command never loads it. Lookup may skip self-check
@@ -111,13 +111,16 @@ Build.
    repo that fallback is `souroldgeezer-architecture/skills/architecture-design`.
    Carry the runtime-appropriate resolved path into raw reference procedures.
    Adapter configuration remains host-specific: Claude Code interpolates
-   `${CLAUDE_PLUGIN_ROOT}`, Codex uses its plugin-relative launcher and
-   `cwd: "."`, and Copilot CLI interpolates `${PLUGIN_ROOT}`. The shared
+   `${CLAUDE_PLUGIN_ROOT}`, Codex uses its Agent Plugins root `mcp.json` (the
+   legacy `.codex-plugin` lane stays literal with `cwd: "."`), and Copilot CLI
+   interpolates `${PLUGIN_ROOT}`; each sets `DEDIREN_HOME` from its own
+   plugin-data token. The shared
    launcher/router has no harness detection; in every case it launches the
    upstream child at the absolute `workspaceRoot` supplied per tool call.
    Its maintained adapters are Claude Code, Codex, and Copilot CLI. Generic
    local-client compatibility is limited to local stdio process launch with
-   Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an absolute
+   Bash, Python, and Java 21+, an absolute `DEDIREN_HOME` when the client offers
+   no plugin data directory (or `DEDIREN_COMMAND` instead), and an absolute
    `workspaceRoot` per tool call; it is not another maintained harness. Preserve
    the legacy verified-release-cache fallback. Streamable HTTP is future work
    only for an explicit remote/shared multi-client service requirement, with
@@ -150,7 +153,7 @@ Build.
    schema plus semantic-profile validation. When a run (re)generates package
    output, build it through the MCP server following self-check § Building a package
    (one `dediren_build` call with `workspaceRoot` and the `package` argument;
-   the host-managed `dediren build --package` command is the CLI fallback when
+   the resolved `dediren build --package` command is the CLI fallback when
    the server is unavailable). Then complete each rendered SVG's
    accessible name. Return
    [output](references/output-format.md).
@@ -181,9 +184,10 @@ Build.
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
 | OEF/downstream validation | [`references/procedures/external-validation-handoff.md`](references/procedures/external-validation-handoff.md) |
-| Dediren MCP server (execution) | Claude Code, Codex, and Copilot adapters launch [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh), whose router discovers the live tools of the host-managed current `dediren` executable (or an already-installed legacy-cache migration fallback) and adds required `workspaceRoot` routing. The skill requires `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); newer tools remain visible. |
-| Dediren runtime install / update (operator action) | Read `references/procedures/dediren-install.md` only to hand the user install, exposure, or update steps when Dediren is missing, unresolvable by the host process, or below the `2026.07.28` floor; never install it from this skill |
-| Package build (native `dediren_build {workspaceRoot, package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the host-managed `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
+| Dediren MCP server (execution) | Claude Code, Codex, and Copilot adapters launch [`references/scripts/dediren-mcp.sh`](references/scripts/dediren-mcp.sh), whose router discovers the live tools of the resolved Dediren executable — the provisioned pin, `DEDIREN_COMMAND`, a floor-meeting `PATH` install, or an already-installed legacy-cache migration fallback — and adds required `workspaceRoot` routing. The skill requires `dediren_validate` / `dediren_build` / `dediren_guide` plus the read-only `dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9); newer tools remain visible. |
+| Dediren runtime resolver (bundled deterministic helper) | `references/scripts/dediren_runtime.py` is what the adapters exec: it resolves the runtime, provisioning the pinned checksum-verified release into the host's plugin data directory when nothing else serves. Load only to confirm what is installed, or when a lane reports no runtime: `python3 ${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren_runtime.py --print-path` (read-only, no network; Codex `python3 <skill-dir>/references/scripts/…`). Its other modes and every failure path belong to the operator procedure below. |
+| Dediren provisioning failure / override (operator action) | Provisioning is automatic. Read `references/procedures/dediren-install.md` only to hand the user its steps when it fails or must be overridden — missing Java 21+, no plugin data directory (exit 78), a download or checksum failure, air-gapped operation, a pinned or floor-violating `DEDIREN_VERSION`, or a resolved runtime below the `2026.07.28` floor; never hand-install the runtime from this skill |
+| Package build (native `dediren_build {workspaceRoot, package}` lane) | The package manifest is dediren-native `package.json` (`package.schema.v1`); the single-call flow, the `package-build-result` rollup, and the resolved `build --package` CLI fallback are owned by [`references/procedures/self-check.md`](references/procedures/self-check.md) § Building a package |
 | SVG visible title band | [`references/scripts/svg-accessible-name.py`](references/scripts/svg-accessible-name.py); run per rendered view (title = view label, desc = the view's architecture question) before render-ready claims; adds the band and sets the runtime-written name, refusing an unnamed artifact (exit 4); `--check` verifies (§9) |
 | .NET extraction | [`references/procedures/lifting-rules-dotnet.md`](references/procedures/lifting-rules-dotnet.md) |
 | Java extraction | [`references/procedures/lifting-rules-java.md`](references/procedures/lifting-rules-java.md) |
@@ -193,6 +197,6 @@ Build.
 | Examples/smoke tests | `references/fixtures/dediren/basic/` |
 | Mixed-package regression fixture (skill maintenance) | Inspect `references/fixtures/dediren/mixed/` only when changing mixed ArchiMate/UML model bindings, per-model render/export policies, or their regression coverage; do not load it for ordinary model work. |
 | Dediren fixture policy maintenance | Read `references/fixtures/dediren/README.md` only when refreshing shipped fixture render policies; the notation-aware reference defaults must remain exact and must not accumulate local visual overrides. |
-| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n references/scripts/dediren-mcp.sh` and `python -m py_compile references/scripts/dediren-mcp-router.py` after editing the adapter |
+| Skill maintenance | `references/evals`, [`references/source-grounding.md`](references/source-grounding.md); run `bash -n references/scripts/dediren-mcp.sh` and `python -m py_compile references/scripts/dediren-mcp-router.py references/scripts/dediren_runtime.py` after editing the adapter or its runtime resolver |
 | Shareable gallery build/refresh | [`references/scripts/build-gallery.py`](references/scripts/build-gallery.py) via `${CLAUDE_SKILL_DIR}/references/scripts/build-gallery.py <package>` (Claude Code) or `<skill-dir>/references/scripts/build-gallery.py <package>` (Codex); drift check `--check`; design system in [`references/gallery.md`](references/gallery.md) |
 | Gallery builder fixture (tests) | `references/fixtures/dediren/rendered/` — multi-model package (package-level `presentation` lang/dir) with committed `references/fixtures/dediren/rendered/generated/svg/` and `references/fixtures/dediren/rendered/generated/render-metadata/`, built against by the gallery-builder tests |

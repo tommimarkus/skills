@@ -9,7 +9,10 @@
   "license": "MIT",
   "mcpServers": {
     "dediren": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh"
+      "command": "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+      "env": {
+        "DEDIREN_HOME": "${CLAUDE_PLUGIN_DATA}/dediren"
+      }
     }
   }
 }

@@ -3,6 +3,9 @@
     "type": "local",
     "command": "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
     "args": [],
+    "env": {
+      "DEDIREN_HOME": "${COPILOT_PLUGIN_DATA}/dediren"
+    },
     "tools": [
       "*"
     ],

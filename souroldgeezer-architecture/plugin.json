@@ -1,4 +1,5 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "souroldgeezer-architecture",
   "version": "2026.8.12",
   "description": "Reference-driven ArchiMate® and UML® architecture/design modeling for enterprise, solution, and application architectures. Covers dediren package source, SVG render evidence, a shareable self-contained HTML gallery, optional OEF/XMI export, cross-notation handoff links, build/extract/review/render/validate/lookup, drift detection, .NET™ / Java™ / Bicep™ / workflow lifting, per-view readiness, and maintained architecture evidence.",
@@ -17,5 +18,28 @@
     "dediren"
   ],
   "skills": "./skills/",
-  "mcpServers": "./mcp/copilot.mcp.json"
+  "mcpServers": "./mcp/copilot.mcp.json",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Sour Old Geezer Architecture",
+        "shortDescription": "Maintained architecture models and evidence",
+        "longDescription": "Build and review maintained ArchiMate and UML dediren packages, rendered evidence, exports, drift, and source reverse lookup.",
+        "developerName": "Sour Old Geezer",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/tommimarkus/skills",
+        "privacyPolicyURL": "https://github.com/tommimarkus/skills/blob/main/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/tommimarkus/skills/blob/main/TERMS.md",
+        "defaultPrompt": [
+          "Build a maintained architecture model.",
+          "Review this dediren package for drift.",
+          "Lift this codebase into an architecture view."
+        ]
+      }
+    }
+  }
 }

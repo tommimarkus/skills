@@ -16,7 +16,7 @@ Guards: apply `architecture.md` §5 (interface/service semantics,
 component-interface ownership, Triggering for process sequencing); define the
 view concern, allowed element types, and relationship types.
 
-Evidence: disclose which Dediren lane ran — the host-managed MCP server or the internal
+Evidence: disclose which Dediren lane ran — the plugin's MCP server or the internal
 CLI fallback — and its runtime version. Runtime semantics and the notation-specific
 `source-valid` validation tools (`dediren_validate` with `profile`) are defined in
 `architecture.md` §9. When the read-only evidence tools were run, disclose only

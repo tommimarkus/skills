@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -472,11 +473,74 @@ def run_mcp_session(
     return names
 
 
+_RUNTIME_MODULE: Any = None
+
+
+def runtime_module(repo: Path) -> Any:
+    """The shipped resolver, imported once so the smoke asserts real behaviour."""
+    global _RUNTIME_MODULE
+    if _RUNTIME_MODULE is None:
+        path = (
+            repo
+            / "souroldgeezer-architecture/skills/architecture-design/references/scripts"
+            / "dediren_runtime.py"
+        )
+        spec = importlib.util.spec_from_file_location("dediren_runtime", path)
+        if spec is None or spec.loader is None:
+            raise SmokeFailure(f"could not load the Dediren resolver at {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _RUNTIME_MODULE = module
+    return _RUNTIME_MODULE
+
+
+def assert_managed_runtime_home(
+    repo: Path,
+    expanded_env: dict[str, str],
+    plugin_data: Path,
+    *,
+    label: str,
+) -> None:
+    """Each host must leave the launcher its own per-plugin writable directory.
+
+    Asserted through the shipped resolver against the real child environment
+    rather than against a declared string, because the hosts get there by
+    different routes: Claude interpolates `DEDIREN_HOME` in its manifest, while
+    the Agent Plugins lane hands the child absolute `PLUGIN_DATA` /
+    `COPILOT_PLUGIN_DATA` variables and interpolates nothing. What has to hold
+    on every host is the resolved directory, not how it was spelled.
+    """
+    resolved = runtime_module(repo).data_home(expanded_env)
+    if resolved is None:
+        raise SmokeFailure(
+            f"{label} left the launcher no plugin data directory; it would exit 78"
+        )
+    if not resolved.is_absolute():
+        raise SmokeFailure(f"{label} resolved a non-absolute runtime home: {resolved}")
+    candidates = [plugin_data] + [
+        Path(expanded_env[name])
+        for name in ("CLAUDE_PLUGIN_DATA", "COPILOT_PLUGIN_DATA", "PLUGIN_DATA")
+        if expanded_env.get(name, "").startswith("/")
+    ]
+    if not any(resolved.is_relative_to(candidate) for candidate in candidates):
+        raise SmokeFailure(
+            f"{label} resolved a runtime home outside every per-plugin data "
+            f"directory it was given: {resolved}"
+        )
+
+
 def expand_claude(value: str, *, plugin_root: Path, plugin_data: Path, project: Path) -> str:
     return (
         value.replace("${CLAUDE_PLUGIN_ROOT}", str(plugin_root))
         .replace("${CLAUDE_PLUGIN_DATA}", str(plugin_data))
         .replace("${CLAUDE_PROJECT_DIR}", str(project))
+    )
+
+
+def expand_codex(value: str, *, plugin_root: Path, plugin_data: Path) -> str:
+    """Agent Plugins substitution, which the legacy `.codex-plugin` lane lacks."""
+    return value.replace("${PLUGIN_ROOT}", str(plugin_root)).replace(
+        "${PLUGIN_DATA}", str(plugin_data)
     )
 
 
@@ -798,30 +862,82 @@ def run_host_smoke(
             raise SmokeFailure("Copilot incorrectly loaded the Codex MCP bootstrap")
 
         codex_arch_root = codex_installs[architecture.name]
-        codex_manifest = read_json(codex_arch_root / ".codex-plugin" / "plugin.json")
-        codex_mcp_path = codex_arch_root / str(codex_manifest.get("mcpServers", "")).removeprefix(
-            "./"
-        )
-        codex_servers = read_json(codex_mcp_path)
+        # The live Codex lane is the Agent Plugins manifest: a root plugin.json
+        # carrying the canonical $schema, whose MCP config is fixed at ./mcp.json
+        # and is the only Codex lane that interpolates ${PLUGIN_DATA}. The
+        # retained `.codex-plugin` + mcp/codex.mcp.json pair is the literal
+        # fallback for builds without Agent Plugins support, and is checked below.
+        codex_root_manifest = read_json(codex_arch_root / "plugin.json")
+        if not str(codex_root_manifest.get("$schema", "")).startswith(
+            "https://agent-plugins.org/schemas/"
+        ):
+            raise SmokeFailure("installed Codex plugin root manifest is not an Agent Plugins manifest")
+        codex_servers = read_json(codex_arch_root / "mcp.json").get("mcpServers", {})
         codex_server = codex_servers.get("dediren")
         if not isinstance(codex_server, dict):
             raise SmokeFailure("installed Codex plugin omitted the Dediren adapter")
+        codex_plugin_data = runtime_data / "codex" / architecture.name
         codex_mcp_env = codex_env.copy()
+        # Codex injects these two into every Agent Plugins stdio child, so the
+        # manifest needs no `env` of its own. This smoke launches the server
+        # directly rather than through Codex's MCP client, so it has to supply
+        # them the same way for the lane to be exercised faithfully.
+        codex_mcp_env["PLUGIN_ROOT"] = str(codex_arch_root)
+        codex_mcp_env["PLUGIN_DATA"] = str(codex_plugin_data)
+        for key, value in codex_server.get("env", {}).items():
+            codex_mcp_env[key] = expand_codex(
+                value, plugin_root=codex_arch_root, plugin_data=codex_plugin_data
+            )
+        assert_managed_runtime_home(
+            repo, codex_mcp_env, codex_plugin_data, label="Codex"
+        )
+        codex_command = expand_codex(
+            codex_server["command"], plugin_root=codex_arch_root, plugin_data=codex_plugin_data
+        )
+        if codex_command.startswith("./"):
+            codex_command = str(codex_arch_root / codex_command[2:])
         codex_mcp_cwd = codex_arch_root
         configured_cwd = codex_server.get("cwd")
         if isinstance(configured_cwd, str) and configured_cwd:
-            if Path(configured_cwd).is_absolute():
-                raise SmokeFailure("installed Codex Dediren adapter uses an absolute cwd")
-            codex_mcp_cwd = (codex_arch_root / configured_cwd).resolve()
-            if not codex_mcp_cwd.is_relative_to(codex_arch_root.resolve()):
-                raise SmokeFailure("installed Codex Dediren adapter cwd escapes the plugin root")
+            expanded_cwd = Path(
+                expand_codex(
+                    configured_cwd, plugin_root=codex_arch_root, plugin_data=codex_plugin_data
+                )
+            )
+            codex_mcp_cwd = (
+                expanded_cwd if expanded_cwd.is_absolute() else (codex_arch_root / expanded_cwd)
+            ).resolve()
+            if not (
+                codex_mcp_cwd.is_relative_to(codex_arch_root.resolve())
+                or codex_mcp_cwd.is_relative_to(codex_plugin_data.resolve())
+            ):
+                raise SmokeFailure(
+                    "installed Codex Dediren adapter cwd escapes the plugin root and data directory"
+                )
+        codex_mcp_cwd.mkdir(parents=True, exist_ok=True)
         codex_tools = mcp_runner(
-            [codex_server["command"], *codex_server.get("args", [])],
+            [codex_command, *codex_server.get("args", [])],
             cwd=codex_mcp_cwd,
             workspace_root=repo,
             env=codex_mcp_env,
             label="Codex",
         )
+
+        legacy_codex_manifest = read_json(codex_arch_root / ".codex-plugin" / "plugin.json")
+        legacy_codex_path = codex_arch_root / str(
+            legacy_codex_manifest.get("mcpServers", "")
+        ).removeprefix("./")
+        legacy_codex_server = read_json(legacy_codex_path).get("dediren")
+        if not isinstance(legacy_codex_server, dict):
+            raise SmokeFailure("legacy Codex fallback omitted the Dediren adapter")
+        if Path(str(legacy_codex_server.get("command", ""))).is_absolute():
+            raise SmokeFailure("legacy Codex Dediren adapter uses an absolute command")
+        for value in json.dumps(legacy_codex_server), str(legacy_codex_server.get("cwd", "")):
+            if "${PLUGIN_DATA}" in value or "${PLUGIN_ROOT}" in value:
+                raise SmokeFailure(
+                    "legacy Codex Dediren adapter uses substitution tokens the literal lane "
+                    "never expands"
+                )
 
         claude_arch_record = claude_by_name[architecture.name]
         claude_arch_root = Path(claude_arch_record["installPath"])
@@ -842,6 +958,9 @@ def run_host_smoke(
                 plugin_data=claude_plugin_data,
                 project=repo,
             )
+        assert_managed_runtime_home(
+            repo, claude_mcp_env, claude_plugin_data, label="Claude"
+        )
         claude_command = expand_claude(
             claude_server["command"],
             plugin_root=claude_arch_root,
@@ -872,6 +991,9 @@ def run_host_smoke(
                 plugin_root=copilot_arch_root,
                 plugin_data=copilot_plugin_data,
             )
+        assert_managed_runtime_home(
+            repo, copilot_mcp_env, copilot_plugin_data, label="Copilot"
+        )
         copilot_command = expand_copilot(
             copilot_server["command"],
             plugin_root=copilot_arch_root,

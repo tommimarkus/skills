@@ -12,6 +12,8 @@ from tests.surface_test_lib import REPO_ROOT, write_fixture as write
 CHECKER = REPO_ROOT / "scripts" / "check-runtime-metadata-parity.py"
 EXAMPLE_PLUGIN = "souroldgeezer-example"
 EXAMPLE_LAUNCHER = "skills/example-skill/references/scripts/example-mcp.sh"
+AGENT_PLUGINS_PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+AGENT_PLUGINS_MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
 POLICY_EXECUTION_TIER_AGENTS = (
     "plan-step-analytical",
     "plan-step-deep",
@@ -34,12 +36,30 @@ def write_mcp_config(plugin: Path, servers: dict, relative: str = "mcp/codex.mcp
     path.write_text(json.dumps(servers, indent=2), encoding="utf-8")
 
 
+def write_agent_plugins_mcp(plugin: Path, servers: dict, schema: str = AGENT_PLUGINS_MCP_SCHEMA) -> None:
+    """Write the Agent Plugins root `mcp.json`, whose path the format mandates."""
+    path = plugin / "mcp.json"
+    path.write_text(json.dumps({"$schema": schema, "mcpServers": servers}, indent=2), encoding="utf-8")
+
+
+def agent_plugins_server(**overrides) -> dict:
+    server = {
+        "type": "stdio",
+        "command": f"./{EXAMPLE_LAUNCHER}",
+        "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+        "cwd": "${PLUGIN_ROOT}",
+    }
+    server.update(overrides)
+    return server
+
+
 def add_mcp_packaging(repo: Path) -> None:
     """Give the clean fixture a bundled MCP server in the shape each host documents:
-    Claude an inline object, with distinct file-backed Codex and Copilot adapters.
+    Claude an inline object, Codex the Agent Plugins root `mcp.json` over its
+    legacy file-backed adapter, and Copilot its own file-backed adapter.
 
-    Both point at the same launcher on purpose — that shared file existing is
-    exactly the evidence that must NOT be read as proof either host registered it.
+    They all point at the same launcher on purpose — that shared file existing is
+    exactly the evidence that must NOT be read as proof any host registered it.
     """
     plugin = repo / EXAMPLE_PLUGIN
 
@@ -74,6 +94,7 @@ def add_mcp_packaging(repo: Path) -> None:
     write_manifest(
         plugin / "plugin.json",
         {
+            "$schema": AGENT_PLUGINS_PLUGIN_SCHEMA,
             "name": EXAMPLE_PLUGIN,
             "version": codex_version,
             "description": claude["description"],
@@ -81,6 +102,7 @@ def add_mcp_packaging(repo: Path) -> None:
             "mcpServers": "./mcp/copilot.mcp.json",
         },
     )
+    write_agent_plugins_mcp(plugin, {"example": agent_plugins_server()})
     write_mcp_config(
         plugin,
         {
@@ -574,6 +596,150 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             f"{EXAMPLE_PLUGIN}/plugin.json",
             "Copilot config-file path",
             "missing",
+        )
+
+    # --- Agent Plugins 1.0.0 lane ------------------------------------------
+    # Codex reads MCP config here, and this is the only Codex lane that expands
+    # ${PLUGIN_DATA}; the legacy .codex-plugin adapter above still passes the
+    # same token through literally. The two lanes are asserted separately so a
+    # rule relaxed for one cannot silently relax the other.
+
+    def test_agent_plugins_mcp_config_is_required_when_the_manifest_declares_the_schema(self) -> None:
+        """The format mandates the sibling file: opting in without it registers
+        no server, and the plugin still installs clean."""
+
+        def drop_agent_plugins_mcp(repo: Path) -> None:
+            (repo / EXAMPLE_PLUGIN / "mcp.json").unlink()
+
+        self._assert_mcp_fixture_flags(
+            drop_agent_plugins_mcp,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "exists",
+            "missing",
+        )
+
+    def test_agent_plugins_mcp_config_without_the_declared_schema_is_detected(self) -> None:
+        """An `mcp.json` no manifest opts into is never read."""
+
+        def drop_manifest_schema(repo: Path) -> None:
+            path = repo / EXAMPLE_PLUGIN / "plugin.json"
+            manifest = read_manifest(path)
+            del manifest["$schema"]
+            write_manifest(path, manifest)
+
+        self._assert_mcp_fixture_flags(
+            drop_manifest_schema,
+            f"{EXAMPLE_PLUGIN}/plugin.json",
+            "$schema",
+            AGENT_PLUGINS_PLUGIN_SCHEMA,
+        )
+
+    def test_agent_plugins_mcp_config_requires_the_canonical_schema(self) -> None:
+        def use_a_foreign_schema(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"example": agent_plugins_server()},
+                schema="https://example.invalid/mcp.schema.json",
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_a_foreign_schema,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "$schema",
+            AGENT_PLUGINS_MCP_SCHEMA,
+        )
+
+    def test_foreign_data_token_in_agent_plugins_mcp_config_is_detected(self) -> None:
+        """Only ${PLUGIN_ROOT} / ${PLUGIN_DATA} expand here; another host's token
+        reaches the server as a literal and strands its data directory."""
+
+        def use_copilot_data_token(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "example": agent_plugins_server(
+                        env={"EXAMPLE_CACHE_DIR": "${COPILOT_PLUGIN_DATA}/example"}
+                    )
+                },
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_copilot_data_token,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers.example.env.EXAMPLE_CACHE_DIR",
+            "${COPILOT_PLUGIN_DATA}",
+        )
+
+    def test_agent_plugins_mcp_command_must_stay_contained(self) -> None:
+        def escape_the_plugin_directory(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"example": agent_plugins_server(command=f"../{EXAMPLE_PLUGIN}/{EXAMPLE_LAUNCHER}")},
+            )
+
+        self._assert_mcp_fixture_flags(
+            escape_the_plugin_directory,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers.example.command",
+            "bare command name or contained ./ path",
+        )
+
+    def test_agent_plugins_mcp_env_may_not_shadow_a_substitution_name(self) -> None:
+        def shadow_the_data_root(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"example": agent_plugins_server(env={"PLUGIN_DATA": "./example"})},
+            )
+
+        self._assert_mcp_fixture_flags(
+            shadow_the_data_root,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers.example.env.PLUGIN_DATA",
+        )
+
+    def test_agent_plugins_stdio_server_rejects_an_unknown_key(self) -> None:
+        """The legacy Codex adapter's `startup_timeout_sec` has no counterpart
+        here; carried over, it is dropped rather than honoured."""
+
+        def carry_over_a_timeout(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"example": agent_plugins_server(startup_timeout_sec=180)},
+            )
+
+        self._assert_mcp_fixture_flags(
+            carry_over_a_timeout,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers.example",
+            "startup_timeout_sec",
+        )
+
+    def test_agent_plugins_mcp_cwd_must_use_a_supported_prefix(self) -> None:
+        def use_a_bare_relative_cwd(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"example": agent_plugins_server(cwd="skills")},
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_a_bare_relative_cwd,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers.example.cwd",
+            "${PLUGIN_ROOT}",
+        )
+
+    def test_agent_plugins_mcp_server_names_must_match_across_hosts(self) -> None:
+        def rename_the_agent_plugins_server(repo: Path) -> None:
+            write_agent_plugins_mcp(
+                repo / EXAMPLE_PLUGIN,
+                {"renamed": agent_plugins_server()},
+            )
+
+        self._assert_mcp_fixture_flags(
+            rename_the_agent_plugins_server,
+            f"{EXAMPLE_PLUGIN}/mcp.json",
+            "mcpServers:names",
+            "renamed",
         )
 
     def make_clean_fixture(self, repo: Path, plugin_name: str = EXAMPLE_PLUGIN) -> None:

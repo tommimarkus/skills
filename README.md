@@ -86,19 +86,21 @@ running the same install command.
 
 ### Dediren runtime (architecture plugin only)
 
-`souroldgeezer-architecture` drives a **host-managed** Dediren CLI. Installing
-the plugin does not install Dediren, and the plugin never downloads or pins it,
-so a fresh host needs one operator step before `architecture-design` can
-validate, render, or export anything. In short: install **Java™ 21+**, unpack
-the current
-[Dediren agent bundle](https://github.com/tommimarkus/dediren/releases) to a
-durable path, then either put its `bin/dediren` on `PATH` or point
-`DEDIREN_COMMAND` at it and restart the host. The compatibility floor is
-`2026.07.28`.
+`souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
+itself**. On first use the MCP launcher provisions the pinned, checksum-verified
+[Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
+(`2026.08.2`, support floor `2026.07.28`) into the host's own per-plugin writable
+data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
+above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
+executable for controlled validation.
 
-Full procedure — verification, the host-process `PATH` caveat, offline export
-schemas, updating, and the exit-127 troubleshooting table — is bundled with the
-plugin at
+The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
+bundled JRE, so the plugin never downloads a Java runtime, and a missing or
+too-old `java` is reported by name.
+
+Full procedure — what provisioning does, the `DEDIREN_HOME` / `DEDIREN_VERSION`
+overrides, air-gapped operation with `DEDIREN_AUTO_INSTALL=0`, offline export
+schemas, and the troubleshooting table — is bundled with the plugin at
 [dediren-install.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md).
 
 ## Local development
@@ -117,15 +119,19 @@ plugin at
   `.codex-plugin/plugin.json`. Codex requires strict SemVer, so its version is the
   normalized form of the Claude CalVer authority (`YYYY.0M.MICRO` →
   `YYYY.M.MICRO`).
-- The MCP-equipped architecture plugin also has a native Copilot `plugin.json`.
-  Keep its identity and strict-SemVer version aligned with Codex; its adapter lives at
-  `mcp/copilot.mcp.json`, beside the Codex adapter.
-- `architecture-design` drives a host-managed current Dediren CLI through three
-  MCP adapters and a shared compatibility router. The plugin does not bundle,
-  download, pin, or downgrade Dediren. Install `dediren` on `PATH`, or set
-  `DEDIREN_COMMAND` to an explicit executable for controlled validation — see
-  "Dediren runtime" under "Install" for the procedure. To
-  avoid stranding pre-multi-harness installs, the MCP launcher otherwise reuses
+- The MCP-equipped architecture plugin also has a root `plugin.json` — the Agent
+  Plugins 1.0.0 manifest Codex now reads, with its MCP configuration in the root
+  `mcp.json`, and the same file serves as the native Copilot manifest through
+  `mcp/copilot.mcp.json`. The `.codex-plugin` + `mcp/codex.mcp.json` pair is
+  retained as the legacy Codex fallback. Keep the root manifest's identity and
+  strict-SemVer version aligned with it.
+- `architecture-design` drives Dediren through three
+  MCP adapters and a shared compatibility router. The launcher provisions the
+  pinned, checksum-verified release into the host's per-plugin writable data
+  directory when nothing else serves; `DEDIREN_HOME` overrides that directory
+  and `DEDIREN_COMMAND` still selects an explicit executable for controlled
+  validation — see "Dediren runtime" under "Install" for the procedure. To
+  avoid stranding pre-multi-harness installs, the MCP launcher also still reuses
   the newest executable already present in the former verified release cache;
   it never populates that cache. Each
   operation carries an absolute `workspaceRoot`, preserving the selected
@@ -139,13 +145,21 @@ plugin at
 
   | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
   |---|---|---|---|---|
-  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` inline | Host launch cwd; router uses `workspaceRoot` for the upstream child | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values: seconds |
-  | Codex | Plugin-relative command, `cwd: "."` | Plugin root for launcher; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `startup_timeout_sec`: seconds |
-  | Copilot CLI | `${PLUGIN_ROOT}` | Host launch cwd; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `timeout`: milliseconds |
+  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` inline; `DEDIREN_HOME` from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router uses `workspaceRoot` for the upstream child | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values: seconds |
+  | Codex | Agent Plugins `mcp.json` (only `type` / `command`); Codex exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child. The legacy `mcp/codex.mcp.json` lane stays literal (plugin-relative command, `cwd: "."`, no plugin data root) | Plugin root for the launcher; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` everywhere | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; legacy `startup_timeout_sec`: seconds |
+  | Copilot CLI | Reads the same root `mcp.json` once the root manifest declares the Agent Plugins `$schema`, ignoring `mcp/copilot.mcp.json`; it interpolates nothing there and exports `PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `CLAUDE_PLUGIN_DATA` into the child | Host launch cwd; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `timeout`: milliseconds (legacy lane only) |
+
+  That shared file declares no `env` and no `cwd`, because a token there would
+  reach Codex expanded and Copilot verbatim.
+
+  The 30s Codex default is safe because the router answers `initialize` itself
+  without touching Dediren; provisioning happens on the first `tools/list`.
 
   Generic local-client compatibility is limited to a local stdio process launch
-  with Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an
-  absolute `workspaceRoot` per tool call; it does not promise support for another
+  with Bash, Python, and Java 21+, an absolute `DEDIREN_HOME` when the client
+  offers no plugin data directory (or an explicit `DEDIREN_COMMAND` instead), and
+  an absolute `workspaceRoot` per tool call; it does not promise support for
+  another
   harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
   is future work only for an explicit remote/shared multi-client service: it
   introduces authentication, origin validation, port/service lifecycle, session
@@ -312,14 +326,15 @@ an explicit skip; Claude strict validation still runs for every plugin.
 `scripts/validate-fragmentation.sh` includes
 `scripts/test-stop-hooks.sh`.
 
-Optional host-managed Dediren smoke lane:
+Optional Dediren runtime smoke lane:
 
 ```text
 DEDIREN_RUNTIME_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
 ```
 
-The smoke lane uses the current `dediren` on `PATH`, or the executable selected
-by `DEDIREN_COMMAND`; it never downloads a runtime.
+The smoke lane resolves Dediren through the launcher's own lanes — set
+`DEDIREN_COMMAND` to run it against one explicit executable, or `DEDIREN_HOME`
+to keep any provisioned bundle in a scratch directory.
 
 ## Detailed docs
 

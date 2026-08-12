@@ -3,10 +3,11 @@
 <!-- lean-audit:sync-intentional -->
 Before runtime claims, prefer the plugin's Dediren MCP adapter: call its tools —
 `dediren_validate`, `dediren_build`, `dediren_guide` — with an absolute
-`workspaceRoot` on every operation. The adapter is bundled; Dediren is not. It
-discovers the current host-managed `dediren` executable's live tools from `PATH`
-or `DEDIREN_COMMAND`; a migration fallback may reuse the newest executable
-already present in the former verified release cache, but never downloads one.
+`workspaceRoot` on every operation. The adapter is bundled and provisions
+Dediren: it discovers the resolved executable's live tools, whether that came
+from `DEDIREN_COMMAND`, the plugin's own managed install, a floor-meeting
+`dediren` on `PATH`, the former verified release cache, or a first-use install
+of the pinned release.
 The server contract and the `${CLAUDE_SKILL_DIR}` semantics are canonical in
 `architecture.md` §9 Runtime Evidence; `${CLAUDE_SKILL_DIR}` locates this skill's
 own helper scripts (`build-gallery.py`, `svg-accessible-name.py`), not Dediren.
@@ -16,14 +17,20 @@ procedure shows `${CLAUDE_SKILL_DIR}`.
 
 ## Server availability
 
-The current Dediren CLI must already be executable in the MCP process sandbox.
-The plugin never downloads, pins, downgrades, or patches it. When it is missing,
-below the floor, or unresolvable by the host process, read
-`references/procedures/dediren-install.md` and hand the user its operator steps
-for installing, exposing, and updating the runtime, instead of improvising an
-install or working around the gap. Claude Code launches
-the adapter from its manifest; Codex uses `mcp/codex.mcp.json`; Copilot uses the
-root `plugin.json` plus `mcp/copilot.mcp.json`. The router handles both the legacy
+Dediren must be executable in the MCP process sandbox, and the launcher gets it
+there itself: it resolves `DEDIREN_COMMAND`, its managed install under the
+plugin data directory, a `dediren` on `PATH` reporting at or above the floor, or
+the former verified release cache — and otherwise installs the pinned
+`2026.08.2` release, verified against `SHA256SUMS` before unpacking, on the first
+`tools/list`. It never installs Java, never downgrades, and never patches the
+runtime. When provisioning fails or must be overridden — no Java 21+, no plugin
+data directory (exit 78), a download or checksum failure, an air-gapped host, or
+a resolved runtime below the floor — read
+`references/procedures/dediren-install.md` and hand the user its steps, instead
+of improvising an install or working around the gap. Claude Code launches
+the adapter from its manifest; Codex and Copilot both use the Agent Plugins root
+`plugin.json` plus its `mcp.json`, with `mcp/codex.mcp.json` and
+`mcp/copilot.mcp.json` retained as their legacy lanes. The router handles both the legacy
 `initialize` / `initialized` exchange and MCP 2026-07-28 stateless
 `server/discover`, obtains `tools/list` from the installed Dediren, and keeps one
 upstream process per explicit workspace root. Startup and catalog waits default
@@ -37,25 +44,37 @@ executable, and the selected workspace; the adapter does not bypass host
 filesystem or network policy.
 
 The host configuration is intentionally specific: Claude Code interpolates
-`${CLAUDE_PLUGIN_ROOT}` in its inline command and has a host-defined launcher
-cwd; Codex uses a plugin-relative command with `cwd: "."`; Copilot CLI
-interpolates `${PLUGIN_ROOT}` and has a host-defined launcher cwd. Regardless of
+`${CLAUDE_PLUGIN_ROOT}` in its inline command and sets `DEDIREN_HOME` from
+`${CLAUDE_PLUGIN_DATA}`; Codex and Copilot share the Agent Plugins root
+`mcp.json`, which declares only `type` and `command` because the two hosts
+expand it differently — Codex interpolates `${PLUGIN_DATA}`, Copilot does not —
+and both instead export the plugin data directory into the child process. The
+retained legacy `.codex-plugin` lane stays literal with `cwd: "."` and gets no
+plugin data root at all. Regardless of
 that configuration, the shared launcher/router has no harness detection and
 sets each upstream child cwd from the absolute per-call `workspaceRoot`. The
 three `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, and
-`DEDIREN_MCP_REQUEST_TIMEOUT_SEC` overrides apply uniformly. Router values and
-Codex `startup_timeout_sec` are seconds; Copilot `timeout` is milliseconds.
+`DEDIREN_MCP_REQUEST_TIMEOUT_SEC` overrides apply uniformly, as do
+`DEDIREN_HOME`, `DEDIREN_VERSION`, and `DEDIREN_AUTO_INSTALL`. Router values and
+the legacy Codex `startup_timeout_sec` are seconds; Copilot `timeout` is
+milliseconds; the Agent Plugins lane has no MCP startup-timeout field, so Codex's
+30s default applies — safe, because the router answers `initialize` itself and
+provisioning waits for the first `tools/list`.
 The maintained adapters are Claude Code, Codex, and Copilot CLI.
 
 Generic local-client compatibility is limited to local stdio process launch with
-Bash, Python, and Dediren access, optional `DEDIREN_COMMAND`, and an absolute
-`workspaceRoot` per tool call. It does not establish another maintained harness.
+Bash, Python, and Java 21+, and an absolute `workspaceRoot` per tool call. Such a
+client must also give the launcher somewhere to install: `DEDIREN_HOME` set to an
+absolute path when it exposes none of `CLAUDE_PLUGIN_DATA` /
+`COPILOT_PLUGIN_DATA` / `PLUGIN_DATA`, or `DEDIREN_COMMAND` pointing at an
+executable it manages itself. It does not establish another maintained harness.
 Preserve the legacy verified-release-cache fallback. Streamable HTTP is future
 work only for an explicit remote/shared multi-client service requirement; first
 design authentication, origin validation, port/service lifecycle, session
 isolation, and workspace authorization.
 Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
-`2026.07.28` or newer before rendering; this is a compatibility floor, not a pin.
+`2026.07.28` or newer before rendering; that floor is the resolve gate for a
+host-supplied executable, while the plugin's own install is pinned above it.
 
 `dediren_validate` / `dediren_guide` plus the four read-only tools (`dediren_diff` /
 `dediren_query` / `dediren_verify` / `dediren_status`) are the read-only subset that
@@ -65,10 +84,11 @@ runs full because Build needs `dediren_build`; the launcher never passes
 `--read-only` (architecture §9).
 
 When the MCP tools are absent, use the **internal CLI lane** only if the same
-host-managed executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
-internal machinery; the user never has to retype the model command. Do not fetch
-or substitute a plugin-owned runtime. If neither MCP nor CLI can execute, disclose
-`not run (host-managed Dediren unavailable)` and cap at `source-valid` — a
+resolved executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
+internal machinery; the user never has to retype the model command. Do not
+hand-fetch or substitute a runtime outside the launcher's own provisioning. If
+neither MCP nor CLI can execute, disclose
+`not run (dediren runtime unavailable)` and cap at `source-valid` — a
 capability cap, not a hard stop. Disclose which lane ran in the footer
 (`Dediren: MCP server | CLI fallback | not run`) and identify the missing external
 prerequisite rather than fabricating a pass.
@@ -127,7 +147,7 @@ dediren_guide {workspaceRoot: "/abs/project", topic: "source-json"} # start here
 Its topic scope (Minimal Source JSON, Artifact Map, Semantic Profiles, Command
 Handoff, Repair Rules) is stated in `architecture.md` §9. When running OEF or
 XMI export, follow the installed Dediren guide's schema-cache instructions. The
-export engines inherit the host-managed Dediren environment. If export fails with
+export engines inherit the resolved Dediren process environment. If export fails with
 `DEDIREN_*_SCHEMA_UNAVAILABLE` (offline host), read the diagnostic's
 `message`: it names whether to make that cache writable or to pre-fetch the XSDs and
 pass absolute offline paths via `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`.
@@ -260,6 +280,7 @@ missing adornment is `ARCH-R-2` plus a `Dediren tool issues` entry per
 `architecture.md` §9 — this content has dropped with every stage reporting
 `status: ok`, so envelope checks never prove it.
 
-The selected Dediren executable is an independently managed upstream runtime.
-Do not patch, download, pin, or downgrade it from the plugin workflow; report
+The selected Dediren executable is an upstream runtime, whether the launcher
+provisioned it or the host supplied it. Do not patch, hand-download, or downgrade
+it from this workflow; report
 defects under `Dediren tool issues` per `architecture.md` §9.
