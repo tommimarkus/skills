@@ -27,28 +27,38 @@ launcher that exits without a useful message.
 Releases publish one platform-neutral archive, a `SHA256SUMS` file, and
 CycloneDX SBOMs, all covered by GitHub™ artifact attestations.
 
+Download the archive and its checksums with any HTTP client — `curl` below, but
+a browser download works the same:
+
 ```bash
 VERSION=2026.08.2   # or newer; see https://github.com/tommimarkus/dediren/releases
 BASE="https://github.com/tommimarkus/dediren/releases/download/v${VERSION}"
 
 curl -fLO "${BASE}/dediren-agent-bundle-${VERSION}.tar.xz"
+curl -fLO "${BASE}/SHA256SUMS"
 ```
 
-Verify before unpacking. The attestation check is the stronger of the two and
-needs the GitHub™ CLI:
+Verify before unpacking. The checksum check needs no extra tooling and is the
+baseline (use `shasum -a 256 -c` where `sha256sum` is unavailable; the
+`--ignore-missing` flag skips the release's other assets):
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+That proves the download is intact, not that it is genuine — `SHA256SUMS`
+travels the same channel as the archive. Where provenance matters, add the
+attestation check on top. It is strictly stronger but needs more: the GitHub™
+CLI installed **and** authenticated, plus API reachability, none of which the
+rest of this procedure requires:
 
 ```bash
 gh attestation verify "dediren-agent-bundle-${VERSION}.tar.xz" \
   --repo tommimarkus/dediren
 ```
 
-Without `gh`, fall back to the published checksums (`shasum -a 256 -c` where
-`sha256sum` is unavailable):
-
-```bash
-curl -fLO "${BASE}/SHA256SUMS"
-sha256sum --check --ignore-missing SHA256SUMS
-```
+Skip it on an air-gapped or otherwise locked-down host; the checksum check
+still stands on its own there.
 
 Then unpack somewhere stable and durable — not a temporary directory, because
 the host relaunches the server from this path on every session:
