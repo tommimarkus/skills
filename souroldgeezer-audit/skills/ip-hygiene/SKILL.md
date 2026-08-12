@@ -5,202 +5,219 @@ description: Use when skill, agent, bundled reference, manifest, marketplace/run
 
 # IP Hygiene
 
-Public copyright, trademark, licence, and bundled-asset hygiene check for
-plugin and skill publication surfaces. This is not legal advice or a validator.
+Evidence-bounded copyright, database-right, trade-mark, licence, and asset
+hygiene for plugin and skill publication surfaces. This is not legal advice. It
+does not provide legal clearance, does not certify compliance, and does not perform a freedom-to-operate search.
+No finding or verdict is legal clearance.
 
-Inputs: current diff, touched paths, target repo guidance, and referenced
-source/licence claims. If inputs are missing, inspect the working tree or ask.
+Inputs: the proposed act or current diff; touched paths or review boundary;
+source identity and provenance; target repo guidance; the material's actual
+licence/version/file notices; intended distribution form and audience; and any
+jurisdiction facts supplied by the user. Inspect available repository evidence.
+Ask when a load-bearing fact is unavailable; do not infer permission.
 
-Resolve project conventions in this order:
+## Scope And Load Map
 
-1. explicit user instruction for the current task;
-2. target repo guidance such as `AGENTS.md`, `CLAUDE.md`, `README.md`, or a
-   project policy file;
-3. this skill's default convention.
+Use this skill for published skills, agents, references, extensions, fixtures,
+templates, scripts, assets, plugin manifests, marketplace/runtime metadata, and
+repo guidance that describes those surfaces. General repo-wide IP hygiene is future scope.
 
-Default convention: descriptive nominative references, no default per-mark
-attribution block, and mark-symbol handling driven by public-visible context.
-Treat this as a fallback project convention, not a universal legal rule.
+This skill does not decide patents or freedom to operate, privacy and data protection,
+trade secrets, publicity and personality rights, defamation, export controls or
+sanctions, competition law, employment ownership, or general contract disputes.
+It does not resolve title or give country-specific clearance.
+Route those questions to qualified counsel or the owning review path.
 
-Legal grounding is EU-first (see
-[references/fence-posts.md](references/fence-posts.md)); remedies are chosen
-to hold under stricter regimes, and non-EU authority is persuasive-only.
+Load only the references selected by the evidence:
 
-## Scope
+- source/provenance or an authority dispute: [authority-index.md](references/authority-index.md)
+- copied text, code, examples, interfaces, tables, or datasets: [copyright.md](references/copyright.md)
+- public marks, names, symbols, logos, affiliation, or branding: [trademark.md](references/trademark.md)
+- licences, notices, third-party code, schemas, data, fonts, or media: [licence-assets.md](references/licence-assets.md)
+- a pre-existing issue reached through touched content: [drive-by.md](references/drive-by.md)
+- scope, remedy, or legal-policy boundary changes: [fence-posts.md](references/fence-posts.md)
+- an old link targeting the pre-split router: [ip-hygiene-reference.md](references/ip-hygiene-reference.md)
 
-Use this skill for skill/plugin publication surfaces: skills, agents,
-per-skill metadata, bundled references, extensions, fixtures, templates,
-scripts, assets, plugin manifests, marketplace/runtime metadata, and repo
-guidance sections that describe those surfaces.
+When changing trigger, workflow, gates, source, or eval behavior, inspect
+`references/evals/`, its accuracy corpus, and
+[source-grounding.md](references/source-grounding.md). Keep evals synthetic or
+originally paraphrased.
 
-General repo-wide IP hygiene is future scope. If the task is unrelated to
-skill/plugin publication surfaces, say the skill is out of scope and stop.
+## Criteria And Authority
 
-Load only hit buckets:
+Every conclusion cites one criterion family and classifies the authority it
+uses. The authority classes are: binding law, operative licence term, holder
+policy, project convention, and conservative repository policy. They are not
+interchangeable: a holder request is not legislation, and a repository default
+does not establish infringement.
 
-- Q1 public marks: [references/trademark.md](references/trademark.md)
-- Q2/Q3 copyright: [references/copyright.md](references/copyright.md)
-- Q4 assets/licences: [references/licence-assets.md](references/licence-assets.md)
-- Q5 drive-by: [references/drive-by.md](references/drive-by.md)
-- source authority: [references/authority-index.md](references/authority-index.md)
-- policy boundary changes: [references/fence-posts.md](references/fence-posts.md)
-- following a pre-split citation that targets `ip-hygiene-reference.md`: [references/ip-hygiene-reference.md](references/ip-hygiene-reference.md)
+Use these stable criteria families; the loaded reference supplies the numbered
+criterion:
 
-When changing this skill's trigger/workflow/gates/source/evals, inspect
-`references/evals/` (including `references/evals/accuracy-corpus/`) and [references/source-grounding.md](references/source-grounding.md).
-Evals stay synthetic or originally paraphrased.
+- `IP-SRC-*` — source identity, provenance, authority, applicability, and the
+  separation between citation and permission.
+- `IP-COPY-*` — protected expression, quotation, paraphrase, software, and
+  non-text copying.
+- `IP-DB-*` — database copyright, protected selection/arrangement, and sui
+  generis extraction or re-utilization.
+- `IP-LIC-*` — operative licence, covered material and act, notices,
+  modifications, combinations, distribution, and special permissions.
+- `IP-MARK-*` — referential use, artifact branding, registration, endorsement,
+  holder policy, and optional symbol convention.
 
-## Core Conformance
+Conform to [audit-craft.md](../../docs/audit-reference/audit-craft.md) sections
+2, 3, and 5, including skepticism, fact-vs-inference, read-only audit stance,
+the 5 C's, independence, and the disclosure footer. Apply
+[materiality.md](../../docs/audit-reference/materiality.md) to the risk tier;
+do not let subject risk change finding severity or gate precedence.
 
-Apply audit core principles before judging:
-- Conform to [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2 (skepticism,
-  criteria-citation, independence/self-review, false-positive discipline), §3
-  (the full finding contract), and §5 (disclosure footer). This skill keeps
-  its IP-issue finding shape and
-  triage/in-depth modes in place of §4's Quick/Deep names or a smell catalog.
-- Apply [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) risk tier where an IP
-  issue's consequence varies (e.g. published trademark vs internal note).
+## Select A Lane
 
-## Triage
+The lanes are prospective decision, limited-assurance triage, and
+reasonable-hygiene in-depth review.
 
-First, when a change set or target paths are available, run the objective
-pre-filter to surface bundled-asset / schema / vendored candidates:
+- **Prospective decision** — the user asks whether or how a specified future
+  act can proceed. Test that act against the identified source, audience,
+  distribution form, and authority. Return `prospective decision:
+  <proceed-with-stated-controls | do-not-proceed | insufficient-evidence |
+  counsel-required>` plus the evidence and limits. This is a scoped hygiene
+  decision, not clearance.
+- **Limited-assurance triage** — a change-scoped or path-scoped review. It does
+  not enumerate the whole publication surface. Emit findings, one `triage
+  gate:` line, and a limited-assurance footer.
+- **Reasonable-hygiene in-depth review** — the user names in-depth/full review,
+  repo guidance requires it, or the boundary is a whole plugin/publication
+  surface. Enumerate and risk-survey the surface, then emit findings, exactly one
+  in-depth verdict, and a reasonable-assurance footer. Reasonable hygiene is not
+  reasonable legal assurance.
+
+If the requested lane or boundary is ambiguous, ask before fieldwork.
+
+## Triage Procedure
+
+When paths are available, first run the read-only objective pre-filter:
 
 `${CLAUDE_SKILL_DIR}/references/scripts/ip-prefilter.sh --format text -- <touched paths>`
 
 Claude Code substitutes `${CLAUDE_SKILL_DIR}` with this skill's installed path.
 In Codex, replace it with the absolute `<skill-dir>` reported for this loaded
-`SKILL.md`. A bare relative path would not resolve from the target repo's
-working directory.
+`SKILL.md`. Execute it as a black box; inspect `references/scripts/` only when
+maintaining that machinery.
 
-Execute the resolved command without loading its source. Inspect
-`references/scripts/` only when maintaining the pre-filter implementation or
-its packaged path wiring; ordinary triage uses the command above as a black box.
+The pre-filter finds filesystem candidates, not legal conclusions. An empty
+result does not rule out marks, copied prose, inline code, or uncertain source
+authority. Answer all five questions by judgment:
 
-It scans only objective filesystem facts (Q3/Q4 candidates). Use its hits as
-evidence when answering Q3 and Q4. It does NOT answer any question: an empty
-result is NOT a clean bill of health — copied prose (Q2), inline code samples
-(Q3), and public marks (Q1) are out of its reach, so still answer all five
-questions by judgment. Hits raise candidates; they never replace the triage.
+1. Does a public surface mention or brand with a third-party mark, logo,
+   product, organization, or standard?
+2. Does the change quote, closely paraphrase, restructure, or copy text?
+3. Does it copy code, configuration, an example, interface expression, figure,
+   table, schema, fixture, or dataset?
+4. Does it bundle or redistribute third-party software, documentation, schema,
+   data, font, binary, image, audio, video, logo, SDK, or sample?
+5. Does a touched edit reproduce, modify, link, or otherwise propagate a
+   pre-existing issue in the same file or source it uses?
 
-Before finishing, answer:
-
-1. **Public-surface trademark:** third-party mark/product/standard on a
-   public-visible surface?
-2. **Copyrighted text:** quoted, close-paraphrased, summarized, or restructured
-   source prose?
-3. **Copyrighted non-text:** third-party code/config/sample/figure/table/fixture?
-4. **Third-party asset/schema:** bundled or linked schema/spec/binary/logo/SDK/sample?
-5. **Drive-by propagation:** touched file has pre-existing content that hits
-   1-4, especially copied or linked by this edit?
-
-All no: exit with `nothing to check`. Any yes: load only the relevant bucket.
+All no: emit `nothing to check`. Any yes or unknown: load only the relevant
+references and record the evidence gap or finding.
 
 ### Triage Gate
 
-Triage additionally emits exactly one `triage gate: <fail | not-evaluated |
-pass-limited>` line, after any finding or `stopped:` line and before the
-disclosure footer. Do not emit this line in in-depth mode.
+Emit exactly one `triage gate: <fail | not-evaluated |
+pass-limited>` line after findings or `stopped:` and before the footer. Do not emit this line in in-depth mode.
+Do not emit it in the prospective lane either. Apply audit-craft section 4a:
 
-Use the shared precedence in `audit-craft.md` §4a, with these IP-specific
-blockers. Set `fail` when substantiated in-scope evidence confirms any of:
-
-- misleading mark claims or branding;
-- unauthorized logos or endorsement implications;
-- unlicensed copied expression;
-- missing operative copyright or licence notices; or
-- incompatible or restricted bundled content.
-
-Set `not-evaluated` when required evidence cannot rule out those blockers. In
-particular, unclear source authority, holder policy, or redistribution terms
-are `not-evaluated` unless a confirmed blocker already makes the gate `fail`.
-Ordinary mark-symbol, grammar, or optional-attribution convention issues are
+- `fail` only when a substantiated in-scope `block` confirms misleading mark claims or branding,
+  unauthorized logos or endorsement implications,
+  unlicensed copied expression, missing operative copyright or licence notices,
+  or incompatible or restricted bundled content.
+- `not-evaluated` when evidence prevents ruling out a block. In particular,
+  unclear source authority, holder policy, or redistribution terms are
+  `not-evaluated` unless a confirmed blocker already makes the gate `fail`.
+  Missing operative licence, jurisdiction/applicability, or other required
+  evidence follows the same rule.
+- `pass-limited` otherwise. Ordinary mark-symbol, grammar, or optional-attribution convention issues are
 nonblocking unless loaded authority makes them distribution-critical: preserve
-their underlying `warn` or `info` severity, but keep the gate `pass-limited`.
+their underlying `warn` or `info` severity.
+
 A remediated blocker requires a clean triage rerun before `pass-limited`.
 
-## In-Depth
+## In-Depth Procedure And Verdict
 
-Run in-depth instead of change-scoped triage when the user asks for it by
-name (in-depth, full, whole-surface), when repo guidance gates a breaking or
-additive change on an in-depth run, or when the requested scope is a whole
-plugin or publication surface rather than a change set. If the mode is
-ambiguous, ask.
+1. Enumerate every in-scope publication surface and the distribution forms it
+   produces. Record exclusions.
+2. Survey risk before catalog work; prioritize public names/branding, bundled
+   or vendored material, notices, generated packages, and copied documentation.
+3. Run the pre-filter over the full enumeration, then apply all five triage
+   questions per surface and all hit criteria.
+4. Corroborate source identity, actual file-level licence, holder policy, and
+   jurisdiction/applicability. Mark static conclusions as inference. At scale,
+   sample and project under audit-craft section 6 and disclose the basis.
+5. Emit findings and exactly
+   `in-depth verdict: <blocked | qualified | no-blocker-identified>`:
+   - `blocked` — a substantiated blocking condition or mandatory counsel
+     escalation prevents a repository hygiene decision;
+   - `qualified` — no substantiated block remains, but findings or material
+     evidence/sampling limitations qualify the result;
+   - `no-blocker-identified` — sufficient appropriate evidence over the stated
+     surface identified no blocking criterion. It does not mean clean,
+     non-infringing, compatible, or cleared.
 
-1. Enumerate the in-scope publication surfaces: skills, agents, references,
-   extensions, fixtures, templates, scripts, assets, manifests,
-   marketplace/runtime metadata, and guidance sections describing them.
-2. Run the objective pre-filter over the full enumeration.
-3. Answer the five triage questions per surface, loading every hit bucket.
-4. Tier each finding per the materiality reference (Core Conformance); when
-   enumeration exceeds budget, sample and project per audit-craft §6 and
-   disclose the sampling basis.
-5. Emit one Output Contract line per finding, then the closing rollup line
-   `in-depth verdict: <clean | N issue(s): <bucket counts>>`, and the
-   disclosure footer at reasonable assurance.
+## Finding And Remediation Contract
 
-## Rationalization Gates
+Audits are read-only by default. Emit one structured `finding:` record per
+issue. Each record must contain:
 
-Before reporting an issue:
+- criterion and authority class;
+- condition and exact location;
+- source identity and provenance;
+- intended act — mention, link, quote, copy, modify, aggregate, link/import, execute, or redistribute;
+- distribution form and audience;
+- jurisdiction and applicability;
+- fact or inference, confidence and evidence;
+- cause, consequence, recommendation, severity, risk tier, and counsel outcome.
 
-- **False positive:** do not flag descriptive internal product, library, tool,
-  or standard mentions unless they copy expression, bundle material, or affect a
-  public-visible surface.
-- **False negative / unsupported evidence:** do not downgrade copied prose or
-  examples, bundled third-party assets, unclear redistribution terms, or
-  endorsement-like wording because the reference is useful.
-- **Confidence:** if authority, licence terms, trademark policy, or target repo
-  convention is unclear and load-bearing, stop and ask instead of inventing a
-  remedy.
+`counsel outcome` is `not-triggered`, `recommended`, or `required`, with the
+trigger stated. A no-finding run emits `nothing to check` or `checked: <bucket list>; no IP hygiene changes needed`;
+neither is clearance.
 
-## Check Buckets
+Only an explicit fix request authorizes repairs. Keep audit findings unchanged,
+make the requested bounded repair, and add a separate `remediated:` record with
+the finding ID, changed location, action, authority used, and verification. A
+fresh rerun is required for a new gate or verdict. Do not reuse a pre-fix result.
+The former `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>];
+consequence: <effect if unaddressed>` form is retired in favor of `remediated:`.
 
-Buckets: **copyright**, **trademark**, **licence/assets**, **drive-by**.
-For drive-by, fix only small same-file issues with already-open authority;
-otherwise use the deferred output. Fix copies introduced by the current edit.
+For an out-of-bound drive-by issue, preserve the compact observation:
+`deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`,
+and include its full finding data.
 
-## Stop Conditions
+## Counsel Escalation And Stops
 
-Stop and ask before finishing when:
+Set `counsel outcome: required`, stop the affected decision, and do not propose
+legal conclusions for a live or threatened dispute; a cease-and-desist or other
+demand; a bespoke agreement; contested ownership; unresolved combined-work or copyleft classification;
+country-specific clearance; or reliance on a disputed exception. The unaffected
+review boundary may continue if it remains separable.
 
-- vendor policy, licence, source authority, or target repo convention is
-  ambiguous and load-bearing;
-- asset redistribution terms are unclear or restrictive;
-- a remedy would remove a load-bearing reference;
-- the issue is outside copyright, trademark, licence, or bundled-asset hygiene;
-- the task is outside skill/plugin publication surfaces.
+Also stop the affected decision when source identity, authority, licence text,
+holder policy, intended act, distribution form/audience, or
+jurisdiction/applicability is load-bearing and unknown; a remedy would delete a
+load-bearing reference; or the question falls outside the declared scope. State
+the exact missing fact. Never turn absence of evidence into permission or a
+block.
 
-## Output Contract
+## Disclosure And Verification
 
-Emit one line per finding; a single run may emit several. A run with no
-findings emits `nothing to check` (no triage hits) or
-`checked: <bucket list>; no IP hygiene changes needed`. Finding lines use one
-of:
+Every output ends with the audit-craft section 5 footer: extensions loaded;
+tool/MCP availability; reference paths and authority classes; evidence limits
+(for triage, touched paths plus drive-by neighbors examined and untouched files
+not swept); independence (`independent | self-review | unknown`); and assurance
+level (`prospective bounded decision | limited triage | reasonable-hygiene
+in-depth`). Restate that the result is not legal advice, clearance,
+certification, or an FTO opinion.
 
-- `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>]; consequence: <effect if unaddressed>`
-- `deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`
-- `stopped: <the load-bearing question>` (a Stop Condition fired; ask
-  instead of inventing a remedy)
-
-Severity is block | warn | info (audit-craft §3); risk tier is high |
-medium | low | unknown (materiality). In-depth runs append the rollup line
-from the In-Depth section. Triage runs append the `triage gate:` line from
-Triage Gate after their result or finding lines; in-depth runs do not.
-
-For fixes, include the source authority or reference path used.
-
-Every output ends with a disclosure footer per audit-craft.md §5: check
-bucket(s) used · tool/MCP availability · reference path(s) · evidence limits
-(for change-scoped triage, name the scope boundary: touched paths + drive-by
-neighbors examined; untouched files not swept) · independence (independent |
-self-review | unknown) · assurance level (limited for triage / reasonable for
-in-depth).
-
-## Verification
-
-After editing this skill or references in the marketplace source repo, rerun
-its `scripts/skill-architecture-report.sh .` from the repo root when available
-(repo tooling, not bundled with the installed plugin).
-
-When editing `references/authority-index.md`, spot-check that the affected
-external links still resolve to the cited documents before finishing.
+After editing this skill or references in the marketplace source repo, run its
+focused tests and `scripts/skill-architecture-report.sh .` from the clean task
+worktree. When editing `authority-index.md`, spot-check affected primary-source
+links and report verification limits.

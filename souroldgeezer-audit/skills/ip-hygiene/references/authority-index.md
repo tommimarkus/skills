@@ -1,60 +1,117 @@
 # IP Hygiene Authority Index
 
-Short source notes only. Use primary sources for consequential interpretations.
+Primary-source links and original short routing notes. The index is EU-first;
+read [fence-posts.md](fence-posts.md) before changing that boundary. Verify the
+current text, territorial scope, version, and facts before relying on an entry.
 
-The index is EU-first; see [fence-posts.md](fence-posts.md).
+## Authority classes
 
-## Trademark Law
+- **binding law** — an applicable regulation, national law (including a
+  directive's national implementation), or authoritative judicial
+  interpretation. An EU directive is the harmonization source; it is not a
+  substitute for checking the operative national provision when that matters.
+- **operative licence term** — the actual licence/version, exception, or other
+  permission covering the identified material and intended act.
+- **holder policy** — an official holder's naming, logo, attribution, or use
+  rules. Classify separately from law and determine whether it supplies a
+  permission, a contractual condition, or non-binding guidance.
+- **project convention** — the target repository's documented presentation or
+  attribution rule. It cannot create third-party permission.
+- **conservative repository policy** — this skill's risk-control default where
+  authority or facts are incomplete. It is not a legal conclusion.
 
-- **EU Trade Mark Regulation 2017/1001, Art 14** - Use this for EU referential-use limits — Art 14(1)(c) (referring to the proprietor's goods, e.g. compatibility) with the Art 14(2) honest-practices condition. https://eur-lex.europa.eu/eli/reg/2017/1001/oj
-- **Unfair Commercial Practices Directive 2005/29/EC** - Use this for misleading-practice analysis such as a false registration claim (`®` without registration). https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32005L0029
-- **Gillette v. LA-Laboratories, C-228/03** - Use this for EU honest-practices factors in descriptive use. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62003CJ0228
-- **BMW v. Deenik, C-63/97** - Use this for the EU commercial-connection boundary in descriptive use. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:61997CJ0063
+## Marks And Applicable Law
 
-## Copyright Software And Database Law
+- **binding law — EU Trade Mark Regulation 2017/1001, especially Arts 9 and
+  14:** EU-mark exclusive rights, referential use, and honest-practices
+  condition. <https://eur-lex.europa.eu/eli/reg/2017/1001/oj>
+- **binding-law harmonization source — Directive (EU) 2015/2436, especially
+  Arts 10 and 14:** corresponding framework for national marks; check the
+  applicable Member State's implementing law. <https://eur-lex.europa.eu/eli/dir/2015/2436/oj>
+- **binding-law harmonization source — Unfair Commercial Practices Directive
+  2005/29/EC, especially Arts 2, 5, 6 and 7:** use only after establishing a
+  trader-to-consumer commercial practice, context, and transactional-decision
+  materiality. <https://eur-lex.europa.eu/eli/dir/2005/29/oj>
+- **binding law — BMW v Deenik, C-63/97:** referential advertising and the
+  commercial-connection boundary under the then-current EU mark framework.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:61997CJ0063>
+- **binding law — Gillette, C-228/03:** honest-practices assessment for intended
+  purpose and compatibility references under the then-current EU framework.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62003CJ0228>
+- **binding law — Rome II Regulation 864/2007, Art 8:** conflict rule for
+  infringement of intellectual-property rights; it does not itself decide
+  infringement. <https://eur-lex.europa.eu/eli/reg/2007/864/oj>
 
-- **Berne Convention** - Use this for the baseline literary-work, software-work, reproduction, and quotation framework. https://www.wipo.int/treaties/en/ip/berne/
-- **Database Directive 96/9/EC** - Use this for EU sui generis database-right checks. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:31996L0009
-- **InfoSoc Directive 2001/29/EC** - Use this for EU quotation exceptions and the three-step test. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32001L0029
-- **Software Directive 2009/24/EC** - Use this for EU software idea-expression and interoperability rules. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32009L0024
-- **SAS Institute v. World Programming, C-406/10** - Use this for the EU rule that program functionality, programming languages, and data formats are not protected expression. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0406
-- **Infopaq, C-5/08** - Use this for the EU originality standard and the protectability of short extracts. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62008CJ0005
-- **Football Dataco v. Yahoo!, C-604/10** - Use this for originality limits on database and table structure. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0604
-- **Pelham, C-476/17** - Use this for EU quotation-exception limits (exhaustive exceptions; quotation must engage with the quoted work). https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62017CJ0476
+## Copyright, Software, And Databases
 
-## Holder Policies And Content Licences
+- **binding international/national framework — Berne Convention, especially
+  Arts 2, 9 and 10:** protected works, reproduction, and quotation baseline;
+  apply through the relevant law. <https://www.wipo.int/treaties/en/ip/berne/>
+- **binding-law harmonization source — InfoSoc Directive 2001/29/EC, Arts 2 and
+  5:** reproduction and optional quotation exception conditions; check national
+  implementation. <https://eur-lex.europa.eu/eli/dir/2001/29/oj>
+- **binding-law harmonization source — Directive 2009/24/EC, Arts 1, 4, 5 and
+  6:** software expression, restricted acts, lawful-user acts, and
+  interoperability. <https://eur-lex.europa.eu/eli/dir/2009/24/oj>
+- **binding-law harmonization source — Directive 96/9/EC, Arts 1, 3 and 7:**
+  database definition, copyright in original selection/arrangement, and the
+  separate investment-based sui generis right. <https://eur-lex.europa.eu/eli/dir/1996/9/oj>
+- **binding law — SAS Institute v World Programming, C-406/10:** software
+  functionality, language, and data-format boundaries; copied code or original
+  expression remains a separate question.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0406>
+- **binding law — Infopaq, C-5/08:** originality and potentially protectable
+  extracts; no mechanical word-count safe harbor.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62008CJ0005>
+- **binding law — Football Dataco v Yahoo!, C-604/10:** database-copyright
+  originality concerns creative selection or arrangement, not effort alone.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62010CJ0604>
+- **binding law — Pelham, C-476/17:** quotation requires the conditions of the
+  applicable exception and an identifiable engagement with the quoted work.
+  <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62017CJ0476>
 
-- **The Open Group trademarks** - Use this for ArchiMate, TOGAF, UNIX, and related mark policy. https://www.opengroup.org/legal/trademarks
-- **Microsoft trademark guidelines** - Use this for Microsoft, Azure, Windows, Office, and related mark policy. https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks
-- **OMG trademarks** - Use this for UML, BPMN, CORBA, and related OMG mark policy. https://www.omg.org/about/policies/trademarks.htm
-- **W3C trademark policy** - Use this for W3C mark policy. https://www.w3.org/Consortium/Legal/trademark-license
-- **GitHub logos** - Use this for GitHub logo and asset policy. https://github.com/logos
-- **IETF Trust policies** - Use this for IETF trademark and material policy. https://trustee.ietf.org/policy-and-procedures/
-- **Microsoft Learn terms** - Use this for Microsoft documentation terms of use. https://learn.microsoft.com/legal/termsofuse
-- **MicrosoftDocs licences** - Use this for MicrosoftDocs prose and code licence checks. https://github.com/MicrosoftDocs/azure-docs/blob/main/LICENSE
-- **OpenAPI Specification licence** - Use this for the Apache-licensed OpenAPI source boundary. https://github.com/OAI/OpenAPI-Specification/blob/main/LICENSE
-- **IETF licence info** - Use this for RFC material licence checks. https://trustee.ietf.org/license-info/
-- **W3C document licence** - Use this for W3C recommendation reproduction terms. https://www.w3.org/copyright/document-license-2023/
-- **The Open Group publications** - Use this for ArchiMate specification access and redistribution boundaries. https://pubs.opengroup.org/
-- **OMG BPMN and UML specs** - Use this for OMG specification access and redistribution terms. https://www.omg.org/spec/
-- **WCAG 2.2** - Use this for the W3C recommendation source. https://www.w3.org/TR/WCAG22/
+## Operative Software And Content Licences
 
-## Open-Source And AI-Authored Content
+These links classify licence text as an operative licence term only after the
+review establishes the exact version, covered material, holder, and applicable
+file-level notices.
 
-- **MIT License** - Use this for the repo baseline and permissive-licence checks. https://opensource.org/license/mit
-- **Apache License 2.0** - Use this for Apache-licensed source and notice checks. https://www.apache.org/licenses/LICENSE-2.0
-- **BSD 2-Clause License** - Use this for BSD permissive-licence checks. https://opensource.org/license/bsd-2-clause
-- **BSD 3-Clause License** - Use this for BSD permissive-licence checks. https://opensource.org/license/bsd-3-clause
-- **GNU GPL, LGPL, and AGPL licences** - Use this for GPL-family licence text checks. https://www.gnu.org/licenses/
-- **Creative Commons licences** - Use this for Creative Commons licence and attribution checks. https://creativecommons.org/licenses/
-- **CC0 Public Domain Dedication** - Use this for public-domain dedication checks. https://creativecommons.org/public-domain/cc0/
-- **SIL Open Font License 1.1** - Use this for font bundling and reserved-font-name conditions. https://opensource.org/license/ofl-1-1
-- **OSI-approved licences index** - Use this for open-source licence identification. https://opensource.org/licenses
-- **GNU licence notes** - Use this for GPL-family compatibility guidance. https://www.gnu.org/licenses/license-list.html
-- **GPL FAQ** - Use this for GPL, LGPL, and AGPL compatibility questions. https://www.gnu.org/licenses/gpl-faq.html
-- **OSI licence categories** - Use this for OSI licence grouping and category checks. https://opensource.org/licenses/category
+- **MIT License:** <https://opensource.org/license/mit>
+- **Apache License 2.0:** <https://www.apache.org/licenses/LICENSE-2.0>
+- **BSD 2-Clause License:** <https://opensource.org/license/bsd-2-clause>
+- **BSD 3-Clause License:** <https://opensource.org/license/bsd-3-clause>
+- **GNU General Public License 3.0:** <https://www.gnu.org/licenses/gpl-3.0.html>
+- **GNU Lesser General Public License 3.0:** <https://www.gnu.org/licenses/lgpl-3.0.html>
+- **GNU Affero General Public License 3.0:** <https://www.gnu.org/licenses/agpl-3.0.html>
+- **GNU licence FAQ — holder/licensor guidance, not an operative term:**
+  <https://www.gnu.org/licenses/gpl-faq.html>
+- **Creative Commons 4.0 legal code selector:**
+  <https://creativecommons.org/share-your-work/cclicenses/>
+- **Creative Commons Attribution 4.0 legal code:**
+  <https://creativecommons.org/licenses/by/4.0/legalcode.en>
+- **CC0 1.0 legal code:**
+  <https://creativecommons.org/publicdomain/zero/1.0/legalcode.en>
+- **SIL Open Font License 1.1:** <https://openfontlicense.org/open-font-license-official-text/>
+- **OFL FAQ — holder/licensor guidance, not an operative term:**
+  <https://openfontlicense.org/ofl-faq/>
 
-### Non-EU (US) — persuasive only; no EU authority yet
+## Holder Policies And Publication Terms
 
-- **Thaler v. Perlmutter, No. 23-5233 (D.C. Cir. 2025)** - Use this for US judicial guidance on non-human authorship (persuasive only). https://www.courtlistener.com/
-- **US Copyright Office AI guidance** - Use this for US registration and policy guidance on AI-generated material. https://www.copyright.gov/ai/
+Classify each as holder policy or operative licence term only after reading the
+page and the exact material-specific terms. A policy does not expand a licence
+unless it expressly grants permission.
+
+- **The Open Group trade-mark policy:** <https://www.opengroup.org/legal/trademarks>
+- **Microsoft trade-mark guidelines:** <https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks>
+- **OMG trade-mark policy:** <https://www.omg.org/about/policies/trademarks.htm>
+- **W3C trade-mark policy:** <https://www.w3.org/trademark-license/>
+- **GitHub logo policy:** <https://github.com/logos>
+- **IETF Trust policies and licence information:**
+  <https://trustee.ietf.org/policy-and-procedures/> and
+  <https://trustee.ietf.org/documents/trust-legal-provisions/>
+- **Microsoft Learn terms:** <https://learn.microsoft.com/legal/termsofuse>
+- **OpenAPI Specification file licence:**
+  <https://github.com/OAI/OpenAPI-Specification/blob/main/LICENSE>
+- **W3C document licence:** <https://www.w3.org/copyright/document-license-2023/>
+- **The Open Group publications:** <https://pubs.opengroup.org/>
+- **OMG specifications:** <https://www.omg.org/spec/>

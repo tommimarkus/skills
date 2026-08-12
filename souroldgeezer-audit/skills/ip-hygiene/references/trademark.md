@@ -1,63 +1,75 @@
-# IP Hygiene Trademark Checks
+# IP Hygiene Trade-Mark Checks
 
-Load this when triage Q1 hits.
+Load this for public mark mentions, artifact names, compatibility claims,
+symbols, logos, certification, endorsement, or affiliation. The EU-first frame
+covers EU trade marks and harmonized national marks; for a national conclusion,
+check the Member State's implementing law and relevant register.
 
-## Public-Visible Surfaces
+## Public Surfaces And Authority
 
-Treat these as public-visible unless target repo guidance says otherwise:
-`README.md`, `AGENTS.md`, `CLAUDE.md`, marketplace manifests, plugin manifests,
-and frontmatter `description:` fields, plus shipped rendered artifacts
-(galleries, published docs pages).
+Treat README/guidance, marketplaces, manifests, package/plugin/skill names,
+frontmatter descriptions, public docs, galleries, release artifacts, and logos
+as public-visible unless evidence narrows the audience.
 
-## Convention
+Apply authority classes separately:
 
-Apply the convention resolved by `SKILL.md`. If the target repo has no
-convention, use the default convention: descriptive nominative references, no
-default per-mark attribution block, and `®` / `™` on significant
-public-visible uses when a mark is registered or claimed and the symbol is
-known.
+- binding law: the applicable EU-mark or harmonized national-mark rules and
+  authoritative decisions;
+- holder policy: official naming, compatibility, attribution, and logo rules;
+- project convention: the target repo's presentation choices;
+- conservative repository policy: a reversible default when evidence does not
+  support a stronger legal claim.
 
-Mark symbols are holder-policy and reader-clarity conventions, not an EU
-legal duty; a resolved convention of "no symbols" is acceptable when no
-holder policy or repo guidance requires them.
+## Criteria
 
-## Check
+Treat referential use, artifact branding, registration status, endorsement or
+commercial connection, holder policy, and optional symbols as separate
+questions.
 
-- Add or preserve mark symbols according to the resolved project convention.
-- Mid-paragraph repeats in the same file may omit the symbol unless project
-  guidance requires every significant mention.
-- Internal references, procedures, extensions, and smell catalogs do not need
-  symbols on every mention.
-- Use product and standard marks adjectivally: product/standard mark plus noun.
-  Do not pluralize or use product/standard marks possessively.
-- Corporate-name possessives are allowed when referring to the company, not a
-  product or standard.
-- Avoid wording that implies endorsement, certification, commercial connection,
-  unfair advantage, denigration, or imitation.
-- Do not bundle or inline logos, brand kits, or icon sets.
-- Do not add per-mark attribution blocks unless a specific holder policy or
-  project convention makes attribution a condition.
-- Do not remove load-bearing nominative references merely to reduce risk.
-- Marks in artifact names and identifiers (plugin, skill, extension,
-  package, and repo names): a third-party mark may appear only as a
-  trailing compatibility descriptor under your own leading brand, never as
-  the artifact's own brand; check the holder's naming rules before keeping
-  one. A bare per-technology filename inside your own artifact (an
-  extension or config file named after the target stack) is a descriptive
-  descriptor, not an artifact brand.
-- Do not add `®` to a mark without a verified registration in the relevant
-  register; use `™` when a mark is claimed but registration is unverified.
-  A false `®` claim is a misleading commercial practice (UCPD 2005/29/EC).
+- **`IP-MARK-1 Referential use`:** determine whether the mark merely identifies
+  or refers to the holder's goods/services, including intended purpose or
+  compatibility, and whether use is in accordance with honest practices. Do not
+  call every descriptive mention licensed, nominative, or non-infringing.
+- **`IP-MARK-2 Artifact branding`:** assess separately whether the sign is used
+  as the artifact's own name or source indicator. Record the sign, goods or
+  services, territory, audience, and any identity/similarity evidence. A
+  trailing compatibility phrase often reduces ambiguity but is a conservative
+  naming control, not a universal safe harbor.
+- **`IP-MARK-3 Connection and endorsement`:** inspect overall presentation for
+  an endorsement or commercial connection claim, official/certified status,
+  sponsorship, imitation, denigration, or unfair advantage. Logos and official
+  badges need express holder-policy/permission review; text referential use does
+  not authorize a logo.
+- **`IP-MARK-4 Registration and symbols`:** verify registration status in the
+  relevant register before making a registration claim. `®` and `™` are optional
+  symbols governed by territory, holder policy, and project convention; their
+  use or omission is not automatically an EU infringement finding.
+- **`IP-MARK-5 Consumer-practice claim`:** apply the UCPD only when the evidence
+  establishes B2C scope: a trader's practice directly connected to promoting,
+  selling, or supplying a product to consumers. Then assess the factual context,
+  the average consumer, deception or omitted material information, and whether
+  it causes or is likely to cause a transactional decision otherwise not taken.
+  A false registration symbol alone does not establish every element.
 
-## Remedies
+## Convention And Controls
 
-- Missing symbol under the resolved convention: add `®` or `™`.
-- Product/standard grammar problem: rewrite to descriptive nominative use.
-- Endorsement, affiliation, denigration, unfair advantage, or imitation risk:
-  reword or stop if no safe wording preserves the skill.
-- Load-bearing uncertainty about holder policy or project convention: stop and
-  ask.
+Resolve holder policy and project convention before applying a presentation
+control. The fallback convention is descriptive referential wording, no default
+per-mark attribution block, no unsupported registration claim, optional symbols
+only when verified and useful, and a clear no-affiliation statement when context
+would otherwise imply connection. This is conservative repository policy, not
+law.
 
-## Source Anchors
+- Use a third-party mark only as much as identification requires; preserve
+  load-bearing technical references.
+- Prefer the artifact owner's leading name plus a plainly separated
+  compatibility statement. Stop on a potentially contested artifact brand
+  rather than declaring it safe.
+- Do not inline or bundle a logo, icon set, certification mark, or brand kit
+  without evidence that the intended use and distribution are permitted.
+- Do not invent a registration, attribution, symbol, or holder requirement.
+- Treat ordinary symbol/grammar convention issues as nonblocking unless an
+  operative holder condition or applicable law makes the issue material.
 
-Use `authority-index.md` for: EUTMR Art 14 (esp. 14(1)(c)), UCPD 2005/29/EC, Gillette, BMW v Deenik, The Open Group trademarks, Microsoft trademark guidelines, OMG, W3C, GitHub, IETF.
+Unknown territory, registration, holder policy, or branding role is an evidence
+gap. Escalate country-specific clearance and disputes to counsel.

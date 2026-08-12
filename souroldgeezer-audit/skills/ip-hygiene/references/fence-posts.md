@@ -1,34 +1,69 @@
 # IP Hygiene Fence-Posts
 
-Load this when changing policy boundaries, remedies, or scope.
+Load this before changing scope, authority classes, criteria, remedies,
+assurance language, or counsel boundaries.
 
-## Rejected Expansions
+## Fixed Scope Boundary
 
-- **General repo-wide IP review:** rejected for this version. The public skill
-  owns skill/plugin publication surfaces first; broader repo-wide review is a
-  future expansion point.
-- **Per-mark attribution block as a universal default:** rejected because many
-  plugin-skill references are descriptive nominative references. A target repo
-  convention or specific holder policy can require attribution for that mark.
-- **Adjacent legal regimes:** GDPR/privacy, patents, export control, trade
-  secrets, publicity rights, defamation, and contract law stay out of scope.
-  Create a separate review path if one becomes relevant.
-- **Mechanical word-count or regex rules:** word-count and pattern checks are
-  heuristics only. They do not replace qualitative judgment about substantial
-  similarity, trademark policy, or source authority.
-- **Non-EU legal grounding as a first-class authority set:** rejected for
-  now. Analysis and the authority index are EU-first (CJEU case law, EU
-  instruments, and international treaties the EU adheres to), because that
-  is the law the maintainer can evaluate.
-  Publication is worldwide and infringement claims follow the law of the
-  country for which protection is claimed (Rome II Art 8), so remedies stay
-  conservative enough to hold under stricter non-EU regimes instead of
-  relying on any non-EU doctrine (for example US fair use). Non-EU entries
-  are admitted to the authority index only where EU law is silent (currently
-  AI authorship) and are labelled persuasive-only. Source-backed review:
-  2026-07-15 in-depth skill review (EUR-Lex targets verified live).
+- The skill owns source/provenance, copyright expression, EU database rights,
+  EU-first trade-mark hygiene, operative third-party licence terms, notices, and
+  bundled assets on plugin/skill publication surfaces.
+- General repo-wide review remains future scope.
+- It does not decide patents or freedom to operate, privacy and data protection,
+  trade secrets, publicity and personality rights, defamation, export controls
+  or sanctions, competition law, employment ownership, or general contract
+  disputes. An incidental signal is recorded and routed, not analyzed.
+- This is not legal advice, legal clearance, certification, an infringement
+  opinion, a compatibility certification, or a freedom-to-operate search.
+
+## EU-First Boundary
+
+Analyze EU instruments, CJEU interpretation, and harmonized national frameworks
+first. A directive is a harmonization source; consult operative national
+implementation when the answer depends on Member State law. EU trade marks and
+harmonized national marks are separate rights even where their rules align.
+
+Publication can reach other territories. Record known audience/territory and
+use the Rome II conflict rule only to frame applicable-law uncertainty; it does
+not decide infringement. Do not rely on US fair use, nominative-use, or other
+non-EU doctrine as the default. Country-specific clearance requires counsel.
+
+## Rejected Shortcuts
+
+- **Citation as permission:** rejected. Citation records provenance; licence,
+  consent, or an applicable exception must separately cover the act.
+- **One copyright bucket:** rejected. Separate lawful quotation, original
+  paraphrase, copied expression, functional ideas/interfaces, database
+  copyright, and the sui generis database right.
+- **One licence label for a repository:** rejected. Resolve exact material,
+  holder, version, file override, act, distribution, exceptions, and additional
+  permissions. A repo-wide licence does not grant rights in third-party items.
+- **Copyleft by name alone:** rejected. Split GPL/LGPL/AGPL and analyze
+  modification, combination, linking/importing, aggregation, distribution, and
+  network facts. Disputed combined-work classification goes to counsel.
+- **Mark symbols as a universal duty:** rejected. Separate referential use,
+  artifact branding, registration, endorsement/connection, holder policy, and
+  optional symbol convention.
+- **Automatic UCPD claim:** rejected. Establish B2C commercial-practice scope,
+  context, deception/omission, materiality, and transactional-decision effect.
+- **Mechanical thresholds:** rejected. Regex, word count, file extension, and
+  the pre-filter surface candidates; they do not establish protected expression,
+  permission, infringement, compatibility, or a verdict.
+
+## Remedy And Counsel Boundary
+
+Audits stay read-only unless the user explicitly requests a fix. Repairs produce
+separate `remediated:` records and never alter the old audit result; a fresh
+rerun is required. Do not delete a load-bearing source reference merely to make
+a gate pass.
+
+Counsel is required for live/threatened disputes, cease-and-desist demands,
+bespoke agreements, contested ownership, unresolved combined-work/copyleft
+classification, country-specific clearance, or reliance on a disputed
+exception. Do not relax these triggers through project convention.
 
 ## Revision Discipline
 
-Do not change these fence-posts casually. Use brainstorming, a design, and
-source-backed review before expanding or relaxing scope.
+Change a fence-post only under an approved, source-backed plan. Link and
+paraphrase primary sources in original wording; never paste external legal,
+licence, policy, or example text into the bundle.
