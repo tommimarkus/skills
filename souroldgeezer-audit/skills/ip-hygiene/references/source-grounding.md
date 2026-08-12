@@ -23,7 +23,10 @@ external docs.
   Handling: repo-authored planted-defect fixtures scoring recall and
   false-positive rate. Thirty-two cases cover each coded criterion family,
   ambiguity, all counsel-required stops, and clean controls. Expected records
-  are withheld from blind evaluators and the deterministic scorer checks codes,
-  severity, lane/verdict, authority, fact status, counsel, and clearance
-  overclaim. Structural completeness is not evidence of model recall. No
-  content is copied from a real source.
+  are withheld from blind evaluators. Every prompt instead gives distinct,
+  wholly fictional material, provenance, intended act/distribution, and the
+  scenario's ambiguity or counsel-trigger facts without naming an expected
+  code or decision. The deterministic scorer checks codes, severity,
+  lane/verdict, authority, fact status, counsel, and clearance overclaim.
+  Structural completeness is not evidence of model recall. No content is
+  copied from a real source.

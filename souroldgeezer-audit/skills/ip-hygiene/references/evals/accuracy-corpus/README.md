@@ -2,7 +2,10 @@
 
 Thirty-two synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
 `IP-LIC`, and `IP-MARK`, including ambiguity, every counsel-required stop, and
-clean controls. All names and facts are repo-authored fictional material.
+clean controls. All names and facts are repo-authored fictional material. Each
+blind prompt provides distinct material, source/provenance, intended act and
+distribution context, plus the ambiguity or counsel-trigger fact relevant to
+that scenario. It does not disclose its expected record or criterion code.
 
 ## Blind evaluation
 
@@ -26,3 +29,5 @@ finding, a wrong lane gate or in-depth verdict, or a legal-clearance overclaim.
 It also checks authority, fact/inference status, severity, and counsel outcome.
 Structural validation is not model recall: the corpus schema only proves that
 the test inventory is well formed; blind evaluation measures the model result.
+The focused contract test also rejects duplicate, placeholder, or
+under-specified prompts; it checks fixture quality, not an evaluator's answer.

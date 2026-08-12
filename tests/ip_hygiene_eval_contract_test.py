@@ -13,6 +13,18 @@ SCORER = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/s
 
 
 class IpHygieneEvalContractTest(unittest.TestCase):
+    def test_blind_cases_have_distinct_substantive_synthetic_facts(self) -> None:
+        cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(len(cases), 32)
+        prompts = [case["prompt"] for case in cases]
+        self.assertEqual(len(prompts), len(set(prompts)))
+        self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
+        for case in cases:
+            self.assertTrue(case["synthetic"], case["case"])
+            for fact_heading in ("Material:", "Provenance:", "Act and distribution:", "Decision context:"):
+                self.assertIn(fact_heading, case["prompt"], case["case"])
+            self.assertGreaterEqual(len(case["prompt"]), 420, case["case"])
+
     def test_readme_documents_blind_actual_result_schema_and_limits(self) -> None:
         text = read("souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/README.md")
         self.assertIn("actual result schema", text.lower())
