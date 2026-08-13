@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -9,6 +10,30 @@ from tests.surface_test_lib import REPO_ROOT, read
 
 
 CORPUS = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus"
+REFERENCES = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references"
+CRITERION_DEFINITION = re.compile(r"^- \*\*`(IP-[A-Z]+-\d+) ", re.MULTILINE)
+
+# Deliberate tripwire against silent truncation, and the one place the corpus
+# size is stated. Cases 043-052 carry the source-code lane.
+CORPUS_SIZE = 52
+
+
+def defined_criteria() -> set[str]:
+    """Every criterion the skill's reference files define, parsed from the
+    canonical `- **`IP-FAM-N Title`:**` bullet each definition uses.
+
+    Derived rather than restated so the corpus-coverage assertion below tracks
+    the skill instead of a second copy of it: adding a criterion to a reference
+    file makes the corpus owe it a case, and the test fails loudly in either
+    direction (a corpus code with no definition, or a definition with no case)
+    rather than silently going stale."""
+    codes = {
+        code
+        for path in sorted(REFERENCES.glob("*.md"))
+        for code in CRITERION_DEFINITION.findall(path.read_text(encoding="utf-8"))
+    }
+    assert codes, "no criterion definitions parsed — the bullet form has changed"
+    return codes
 SCORER = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/score_ip_hygiene_eval.py"
 VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py"
 
@@ -16,7 +41,7 @@ VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/script
 class IpHygieneEvalContractTest(unittest.TestCase):
     def test_blind_cases_have_distinct_substantive_synthetic_facts(self) -> None:
         cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(len(cases), 42)
+        self.assertEqual(len(cases), CORPUS_SIZE)
         prompts = [case["prompt"] for case in cases]
         self.assertEqual(len(prompts), len(set(prompts)))
         self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
@@ -79,14 +104,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         covered = {code for case in expected.values() for group in case["required_code_groups"] for code in group}
         self.assertIn("IP-COPY-4", covered)
         self.assertIn("IP-MARK-5", covered)
-        complete_codes = {
-            *(f"IP-SRC-{number}" for number in range(1, 5)),
-            *(f"IP-COPY-{number}" for number in range(1, 5)),
-            *(f"IP-DB-{number}" for number in range(1, 3)),
-            *(f"IP-LIC-{number}" for number in range(1, 5)),
-            *(f"IP-MARK-{number}" for number in range(1, 6)),
-        }
-        self.assertEqual(covered, complete_codes)
+        self.assertEqual(covered, defined_criteria())
         self.assertEqual(expected["case-009"]["required_code_groups"], [["IP-SRC-1", "IP-LIC-1"]])
         self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
         self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
@@ -641,7 +659,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             "multiple required propositions need condition/location grounding",
         ))
 
-        mutations.append((expected[:-1], "missing expected case: case-042"))
+        mutations.append((expected[:-1], f"missing expected case: case-{CORPUS_SIZE:03d}"))
 
         for records, message in mutations:
             with self.subTest(message=message), tempfile.TemporaryDirectory() as directory:
@@ -697,7 +715,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
 
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
-        self.assertEqual(len(expected), 42)
+        self.assertEqual(len(expected), CORPUS_SIZE)
         required_keys = {
             "case", "family", "expect", "required_code_groups", "allowed_codes",
             "allowed_classifications", "lane", "outcome", "counsel_outcome",
