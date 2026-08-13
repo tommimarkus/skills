@@ -20,7 +20,10 @@ references, evaluator instructions, and the actual-record validator. It omits
 expected outcomes, the parent scorer, source grounding, repository tests, Git
 metadata/history, prior diagnoses, and evaluator caches. The evaluator writes
 one JSONL record per case in the validator's closed schema, and validates
-structure only. It must read only its assigned bundle: any outside read or
+structure only. The actual result schema uses a per-case `findings` array whose
+entries carry criterion code, severity, authority class, and fact status, plus
+the lane outcome, counsel outcome, and literal-false clearance disclosure. It
+must read only its assigned bundle: any outside read or
 expected-outcome exposure is `blocked:contaminated`, with no produced or revised
 results. Parent-only evaluation privately scores behavioral accuracy.
 
@@ -31,10 +34,12 @@ deterministically:
 python references/scripts/score_ip_hygiene_eval.py --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
 ```
 
-The scorer fails for a missed designated blocker, a forbidden clean-control
-finding, a wrong lane gate or in-depth verdict, or a legal-clearance overclaim.
-It also checks authority, fact/inference status, severity, and counsel outcome.
-Structural validation is not behavioral scoring: the child validator only
-proves record shape; the parent scorer measures the model result. The focused
-contract test also rejects duplicate, placeholder, or under-specified prompts;
-it checks fixture quality, not an evaluator's answer.
+Parent-held expected records declare `required_codes`, explicit allowed codes,
+per-code classifications, lane outcome, counsel outcome, and any substantiated
+designated blocker. The scorer fails for a missing required code, an unsupported
+extra code, a clean-control finding, a wrong classification or lane/counsel
+outcome, or a legal-clearance overclaim. Structural validation is not model recall:
+the child validator proves record shape and case coverage; only the
+parent scorer measures behavioral accuracy. The focused contract test also
+rejects duplicate, placeholder, or under-specified prompts; it checks fixture
+quality, not an evaluator's answer.

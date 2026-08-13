@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate closed-schema blind IP-hygiene evaluation records."""
 
+import argparse
 import json
-import sys
 from pathlib import Path
 
 
@@ -101,13 +101,46 @@ def validate_file(path: Path) -> tuple[dict[str, dict], list[str]]:
     return result, errors
 
 
+def case_ids(path: Path) -> tuple[set[str], list[str]]:
+    result: set[str] = set()
+    errors: list[str] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as error:
+            errors.append(f"cases line {line_number}: invalid JSON: {error.msg}")
+            continue
+        case = item.get("case") if isinstance(item, dict) else None
+        if not isinstance(case, str) or not case:
+            errors.append(f"cases line {line_number}: case must be a nonempty string")
+        elif case in result:
+            errors.append(f"cases line {line_number}: duplicate case: {case}")
+        else:
+            result.add(case)
+    return result, errors
+
+
 def main(argv: list[str] | None = None) -> int:
-    if argv is None:
-        argv = sys.argv[1:]
-    if len(argv) != 1:
-        print("usage: validate_ip_hygiene_actual.py ACTUAL.jsonl")
-        return 2
-    _, errors = validate_file(Path(argv[0]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("actual_path", nargs="?", type=Path)
+    parser.add_argument("--cases", type=Path)
+    parser.add_argument("--actual", type=Path)
+    args = parser.parse_args(argv)
+    if args.actual_path is not None and args.actual is not None:
+        parser.error("use positional ACTUAL.jsonl or --actual, not both")
+    actual_path = args.actual or args.actual_path
+    if actual_path is None:
+        parser.error("an actual JSONL path is required")
+    actual, errors = validate_file(actual_path)
+    if args.cases is not None:
+        expected_cases, case_errors = case_ids(args.cases)
+        errors.extend(case_errors)
+        for case in sorted(expected_cases - set(actual)):
+            errors.append(f"missing actual case: {case}")
+        for case in sorted(set(actual) - expected_cases):
+            errors.append(f"unexpected actual case: {case}")
     print("IP hygiene actual schema: " + ("PASS" if not errors else "FAIL"))
     for error in errors:
         print(error)

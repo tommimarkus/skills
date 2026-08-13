@@ -83,6 +83,29 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertIn("legal_clearance must be literal false", result.stdout)
         self.assertIn("invalid code", result.stdout)
 
+    def test_validator_accepts_blind_bundle_cases_and_actual_flags(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text(
+                "".join(json.dumps(case) + "\n" for case in actual), encoding="utf-8"
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(VALIDATOR),
+                    "--cases",
+                    str(CORPUS / "cases.jsonl"),
+                    "--actual",
+                    str(actual_path),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         self.assertEqual(len(expected), 32)
