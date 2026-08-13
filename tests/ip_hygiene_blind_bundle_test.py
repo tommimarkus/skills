@@ -8,7 +8,7 @@ import importlib.util
 import shutil
 from pathlib import Path
 
-from tests.surface_test_lib import IP_CORPUS_SIZE, REPO_ROOT
+from tests.surface_test_lib import IP_CORPUS_SIZE, REPO_ROOT, load_script_module
 
 
 BUILDER = (
@@ -120,6 +120,72 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("symlink", result.stderr)
 
+
+
+class IpHygieneBundleAllowlistCoverageTest(unittest.TestCase):
+    """The bundle allowlist is a hand-maintained list of a fact that lives in the
+    skill, so it is checked against the skill rather than trusted.
+
+    It silently missed source-code.md and all six language packs when the
+    source-code lane landed: the bundle still built, and the evaluator would
+    have judged code-lane cases without the code-lane reference.
+    """
+
+    #: Deliberately outside the bundle, with the reason it is not evidence.
+    DECLARED_EXCLUSIONS = {
+        # Scope/remedy policy for the auditor, not facts about reviewed material.
+        "fence-posts.md",
+        # Legacy router kept for old inbound links; superseded by the load map.
+        "ip-hygiene-reference.md",
+        # Eval-authoring guidance; giving it to the evaluator would leak method.
+        "source-grounding.md",
+    }
+
+    def _allowlist(self) -> set[str]:
+        builder = load_script_module(
+            "ip_hygiene_bundle_builder",
+            REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/build_ip_hygiene_blind_bundle.py",
+        )
+        return set(builder.ALLOWLIST)
+
+    def test_every_extension_pack_reaches_the_evaluator(self) -> None:
+        allowlist = self._allowlist()
+        packs = sorted(
+            (REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/extensions").glob("*.md")
+        )
+        self.assertTrue(packs, "no extension packs found")
+        for pack in packs:
+            relative = pack.relative_to(REPO_ROOT).as_posix()
+            with self.subTest(pack=pack.name):
+                self.assertIn(
+                    relative,
+                    allowlist,
+                    f"{pack.name} is not in the blind-bundle allowlist; the "
+                    "evaluator would judge its language without it",
+                )
+
+    def test_every_reference_is_bundled_or_declared_excluded(self) -> None:
+        allowlist = self._allowlist()
+        references = sorted(
+            (REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references").glob("*.md")
+        )
+        self.assertTrue(references, "no reference files found")
+        for reference in references:
+            relative = reference.relative_to(REPO_ROOT).as_posix()
+            with self.subTest(reference=reference.name):
+                if reference.name in self.DECLARED_EXCLUSIONS:
+                    self.assertNotIn(
+                        relative,
+                        allowlist,
+                        f"{reference.name} is declared excluded but is bundled",
+                    )
+                    continue
+                self.assertIn(
+                    relative,
+                    allowlist,
+                    f"{reference.name} is neither bundled nor listed in "
+                    "DECLARED_EXCLUSIONS with a reason",
+                )
 
 if __name__ == "__main__":
     unittest.main()

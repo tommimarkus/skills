@@ -20,7 +20,17 @@ ALLOWLIST = (
     "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl",
     "souroldgeezer-audit/skills/ip-hygiene/references/licence-assets.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py",
+    "souroldgeezer-audit/skills/ip-hygiene/references/source-code.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/trademark.md",
+    # Language packs: the corpus poses scenarios in specific languages, and a
+    # real reviewer loads the matching pack. They add no criteria, so they are
+    # evidence surfaces rather than grading inputs.
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/dotnet-csharp.md",
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/java.md",
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/javascript-typescript.md",
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/python.md",
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/rust.md",
+    "souroldgeezer-audit/skills/ip-hygiene/extensions/shell.md",
 )
 ROOT_DESTINATIONS = {
     "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl": "cases.jsonl",
