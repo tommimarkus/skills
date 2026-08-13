@@ -1,5 +1,16 @@
 # Planning Policy Source Grounding
 
+## 2026-08-13 canonical v3 authoring scaffold
+
+The canonical scaffold addresses recurring discriminator drift observed in
+repository-authored executable plans: an author used the mistaken `version` key
+instead of `contract_version`, and the validator then treated the document as an
+unversioned legacy plan. The absence of a fill-in scaffold made the field set
+easy to reconstruct incorrectly from prose. The repository-authored remedy keeps
+`contract_version` first, leaves load-bearing values blank, rejects the alias
+explicitly, and preserves genuinely unversioned version-1 inspection. No
+third-party plan schema or wording informed the scaffold or its synthetic eval.
+
 ## 2026-08-10 contract-v3 execution economics
 
 The v3 additions are grounded in the repository's prior bounded-handoff and

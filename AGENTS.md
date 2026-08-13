@@ -192,7 +192,9 @@ bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 ### Planning-policy execution contract (Codex)
 
 The shared `planning-policy` contract is runtime-neutral. New executable plans
-use `contract_version: 3`. Version-2 plans are resume-only
+use `contract_version: 3`. Start them from
+[references/templates/plan-v3.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json);
+the discriminator is `contract_version`, never `version`. Version-2 plans are resume-only
 (`dispatch_ready: false`, `resume_ready: true`) and new v2 initialization stops
 as `blocked:contract_migration_required`; unversioned version-1 plans remain
 inspection-readable only.

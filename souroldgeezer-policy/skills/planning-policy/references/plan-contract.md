@@ -4,6 +4,12 @@ Runtime-neutral executable-plan fields; host adapters add syntax only.
 
 ## Plan JSON
 
+Start every new plan from the canonical
+[references/templates/plan-v3.json](templates/plan-v3.json) scaffold and fill
+its blank load-bearing values before approval. The first key is
+`contract_version`. Do not use `version`; the validator rejects that mistaken
+alias even when `contract_version` is also present.
+
 Version 3 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
 

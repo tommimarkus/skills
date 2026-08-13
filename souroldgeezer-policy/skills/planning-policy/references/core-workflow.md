@@ -18,7 +18,10 @@ and user approval before implementation.
    choice materially affects implementation; bring its settled choice back here.
 4. Groom after convergence. Name each step’s reads/writes and settled decisions;
    split multiple concerns/checks, merge identical boundaries/checks. A fresh
-   agent must finish from the handoff. Load [plan contract](plan-contract.md),
+   agent must finish from the handoff. Start new plan JSON from the canonical
+   [references/templates/plan-v3.json](templates/plan-v3.json) scaffold; it
+   starts with `contract_version`, and the authored plan keeps that discriminator
+   first. Load [plan contract](plan-contract.md),
    validate it using its Claude `${CLAUDE_SKILL_DIR}` or Codex absolute
    `<skill-dir>` form, and re-cut any missing boundary, decision, or failed
    command. Every leaf includes `missing_load_bearing_information`.

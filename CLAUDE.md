@@ -331,7 +331,9 @@ Two agent classes live under `<plugin>/agents/`.
 ### Planning-policy execution contract (Claude Code)
 
 The shared plan contract is runtime-neutral: new executable plans use
-`contract_version: 3`. Version-2 plans are resume-only
+`contract_version: 3`. Start them from
+[references/templates/plan-v3.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json);
+the discriminator is `contract_version`, never `version`. Version-2 plans are resume-only
 (`dispatch_ready: false`, `resume_ready: true`) and `init-v2` stops new runs as
 `blocked:contract_migration_required`; version-1 remains inspection-only.
 Each leaf has stable IDs and

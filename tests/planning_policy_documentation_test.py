@@ -118,6 +118,29 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("unresolved domain-design", entry)
         self.assertIn("Before approval, invoke the owning design skill", core)
 
+    def test_v3_authors_are_directed_to_the_canonical_scaffold(self) -> None:
+        entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
+        core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
+        contract = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
+        )
+        grounding = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
+        )
+        for text in (entry, core, contract):
+            self.assertIn("references/templates/plan-v3.json", text)
+        self.assertIn("starts with `contract_version`", core)
+        self.assertIn("Do not use `version`", contract)
+        self.assertIn("recurring discriminator drift", grounding)
+        self.assertIn("mistaken `version` key", grounding)
+
+    def test_public_guidance_names_the_scaffold_and_rejects_the_alias(self) -> None:
+        for relative in ("README.md", "AGENTS.md", "CLAUDE.md"):
+            with self.subTest(relative=relative):
+                text = self.text(relative)
+                self.assertIn("references/templates/plan-v3.json", text)
+                self.assertIn("never `version`", text)
+
 
 if __name__ == "__main__":
     unittest.main()

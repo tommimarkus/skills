@@ -15,6 +15,10 @@ LEDGER_CONTRACT = (
     / "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
 )
 LEDGER_COMPATIBILITY = LEDGER_CONTRACT.with_name("ledger-compatibility.md")
+TEMPLATE = (
+    Path(__file__).parents[1]
+    / "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json"
+)
 SPEC = importlib.util.spec_from_file_location("plan_contract", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -60,6 +64,68 @@ def v3_plan(*leaves, work_units=None, **overrides):
 
 
 class SharedContractTest(unittest.TestCase):
+    def test_v3_template_is_canonical_blank_scaffold_and_populates_to_dispatch(self):
+        template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+        self.assertEqual("contract_version", next(iter(template)))
+        self.assertEqual(3, template["contract_version"])
+        self.assertNotIn("version", template)
+        self.assertTrue(
+            {
+                "contract_version",
+                "objective",
+                "scope_summary",
+                "approved_decisions",
+                "work_units",
+                "leaves",
+                "execution_cost",
+            }.issubset(template)
+        )
+        self.assertTrue({"id", "original_size"}.issubset(template["work_units"][0]))
+        self.assertTrue(set(MODULE.REQUIRED).issubset(template["leaves"][0]))
+        self.assertIn("max_attempts", template["leaves"][0])
+        self.assertEqual("bounded-step-return-v1", template["leaves"][0]["return_contract"])
+        self.assertIn(
+            "missing_load_bearing_information", template["leaves"][0]["stop_conditions"]
+        )
+        self.assertTrue(
+            {
+                "schema",
+                "mode",
+                "expected_attempts",
+                "leaf_attempt_overrides",
+                "declared_model_tokens",
+                "final_verification_commands",
+                "assumptions",
+                "unknowns",
+            }.issubset(template["execution_cost"])
+        )
+
+        blank = MODULE.validate(template)
+        self.assertFalse(blank["valid"])
+        self.assertFalse(blank["dispatch_ready"])
+
+        template["objective"] = "Implement one approved bounded change"
+        template["scope_summary"] = "Edit only the named source and focused test."
+        template["approved_decisions"] = ["Use the settled contract shape."]
+        template["work_units"][0].update(id="build", original_size="small")
+        template["leaves"][0].update(
+            id="build",
+            task="Implement the approved change",
+            boundary="Do not edit adjacent modules",
+            read_set=["src/input.py", "tests/input_test.py"],
+            write_set=["src/input.py", "tests/input_test.py"],
+            settled_decisions={"shape": "settled"},
+            size="small",
+            portable_tier="mechanical",
+            worktree_owner="task/build",
+            acceptance_command="uv run python -m unittest tests.input_test",
+            work_unit_id="build",
+            max_attempts=2,
+        )
+        populated = MODULE.validate(template)
+        self.assertTrue(populated["valid"], populated["errors"])
+        self.assertTrue(populated["dispatch_ready"])
+
     def test_accepts_weighted_medium_ready_plan(self):
         plan = {
             "work_units": [
@@ -231,6 +297,29 @@ class SharedContractTest(unittest.TestCase):
         self.assertEqual(result["contract_version"], 1)
         self.assertFalse(result["dispatch_ready"])
         self.assertTrue(any("legacy" in warning for warning in result["warnings"]))
+
+    def test_rejects_version_alias_without_classifying_it_as_legacy(self):
+        aliased = v3_plan(leaf("one", "u1"))
+        aliased["version"] = aliased.pop("contract_version")
+        result = MODULE.validate(aliased)
+        self.assertFalse(result["valid"])
+        self.assertIsNone(result["contract_version"])
+        self.assertEqual(
+            ["version is not a valid plan discriminator; use `contract_version`"],
+            result["errors"],
+        )
+        self.assertFalse(any("legacy" in warning for warning in result["warnings"]))
+
+    def test_rejects_version_alias_even_with_contract_version(self):
+        both = v3_plan(leaf("one", "u1"))
+        both["version"] = 3
+        result = MODULE.validate(both)
+        self.assertFalse(result["valid"])
+        self.assertEqual(3, result["contract_version"])
+        self.assertIn(
+            "version is not a valid plan discriminator; use `contract_version`",
+            result["errors"],
+        )
 
     def test_version_two_requires_bounded_fields_and_leaf_retry_contract(self):
         invalid = v3_plan(leaf("one", "u1"), objective="", approved_decisions=[])

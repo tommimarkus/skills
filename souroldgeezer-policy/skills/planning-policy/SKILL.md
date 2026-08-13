@@ -25,7 +25,8 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [core workflow §enforcement](references/core-workflow.md#enforcement) and
   [§approval-and-output](references/core-workflow.md#approval-and-output).
 - **Executable plan, delegation, or returned handoff:** also read
-  [plan contract](references/plan-contract.md) and run its advertised
+  [plan contract](references/plan-contract.md), start new plan JSON from the
+  [canonical v3 scaffold](references/templates/plan-v3.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
   command before approval or dispatch. For an approved plan with two or more
   delegated steps, read the [ledger contract](references/ledger-contract.md);

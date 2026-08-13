@@ -327,13 +327,19 @@ def validate(plan: Any) -> dict[str, Any]:
     warnings: list[str] = []
     if not isinstance(plan, dict):
         return contract_result(None, False, warnings, ["plan must be an object"])
+    has_version_alias = "version" in plan
+    if has_version_alias:
+        errors.append("version is not a valid plan discriminator; use `contract_version`")
     raw_version = plan.get("contract_version")
     if raw_version is None:
-        contract_version = 1
-        warnings.append(
-            "unversioned plan is legacy contract version 1; "
-            "migrate to contract_version 3 before dispatch"
-        )
+        if has_version_alias:
+            contract_version = None
+        else:
+            contract_version = 1
+            warnings.append(
+                "unversioned plan is legacy contract version 1; "
+                "migrate to contract_version 3 before dispatch"
+            )
     elif raw_version in {2, 3} and isinstance(raw_version, int):
         contract_version = raw_version
         for field in V2_REQUIRED:
