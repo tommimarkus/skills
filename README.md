@@ -188,11 +188,13 @@ schemas, and the troubleshooting table — is bundled with the plugin at
 3. Design or review a frontend app route, screen, or component set with `app-design`, including standalone Vite, Vite + React, React + Next.js, and Blazor WebAssembly surfaces; Vite owns development/build/deployment mechanics while React owns component lifecycle and state.
 4. Review or extract a dediren ArchiMate® or UML® architecture/design package, including UML® sequence views or Java™ source evidence, with `architecture-design`.
 5. Review infrastructure or IaC topology with `infra-design`; existing IaC work uses project assimilation to classify reused assets, legacy debt, and migration moves.
-6. Check a skill/plugin publication-surface edit with `ip-hygiene`. Its findings
-   name a coded criterion and authority class, distinguish fact from inference,
-   state remediation and counsel outcome, and end in the applicable triage gate
-   or in-depth verdict; neither outcome is legal clearance. Its synthetic
-   accuracy corpus has deterministic blind-result scoring.
+6. Check a skill/plugin publication-surface edit, or a source, configuration,
+   or build file repo-wide (including code and doc comments), with
+   `ip-hygiene`. Its findings name a coded criterion and authority class,
+   distinguish fact from inference, state remediation and counsel outcome,
+   and end in the applicable triage gate or in-depth verdict; neither outcome
+   is legal clearance. Its synthetic accuracy corpus has deterministic
+   blind-result scoring.
 7. Initialize repository git workflow governance with `git-workflow-policy`.
 8. Initialize declarative release governance with `release-policy`, for example
    `release-policy: calver YYYY.MM.build, git tagging`. Bare initialization

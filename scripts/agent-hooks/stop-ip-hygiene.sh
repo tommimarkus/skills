@@ -10,6 +10,12 @@ hook_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$hook_dir/stop-hook-lib.sh"
 
 stop_hook_bootstrap "ip-hygiene" || exit 0
+
+# ip-hygiene now covers source, configuration, and build files repo-wide, which
+# is wider than the shared authoring-surface set. Admit this repo's own source
+# and test trees; the shared rules still supply every published surface.
+STOP_HOOK_EXTRA_SURFACES='^(scripts|tests)/'
+export STOP_HOOK_EXTRA_SURFACES
 stop_hook_require_authoring_changes "skip-no-ip-hygiene-changes"
 
 targets=$(
@@ -61,6 +67,15 @@ targets=$(
     }
     $1 == "CLAUDE.md" || $1 == "AGENTS.md" || $1 == "README.md" {
       print $1
+    }
+    $1 == "scripts" && $2 == "agent-hooks" && NF >= 3 {
+      print "scripts/agent-hooks"
+    }
+    $1 == "scripts" && NF == 2 {
+      print "scripts/" $2
+    }
+    $1 == "tests" && NF == 2 {
+      print "tests/" $2
     }
   ' <<<"$changed" |
     sort -u

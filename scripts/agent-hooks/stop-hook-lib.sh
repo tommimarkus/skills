@@ -68,7 +68,8 @@ stop_hook_changed_since_main() {
 # narrower filter (union of the removed evaluate-skill/plugin-eval hooks) —
 # do not point it here.
 stop_hook_filter_authoring_surfaces() {
-  awk '
+  awk -v extra="${STOP_HOOK_EXTRA_SURFACES:-}" '
+    extra != "" && $0 ~ extra { print; next }
     /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|assets\/|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
     /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
     /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
@@ -120,6 +121,11 @@ stop_hook_bootstrap() {
 # stop-ip-hygiene and stop-lesson-capture — stop-skill-architecture uses its
 # own narrower inline filter (see stop_hook_filter_authoring_surfaces) so it
 # does not call this helper.
+#
+# A caller whose scope is genuinely wider than the shared set exports
+# STOP_HOOK_EXTRA_SURFACES with one ERE before calling; paths matching it are
+# admitted in addition to the shared rules. Unset, the extra rule never fires,
+# so a caller that does not set it sees identical behaviour.
 stop_hook_require_authoring_changes() {
   changed=$(stop_hook_changed_since_main | stop_hook_filter_authoring_surfaces)
   if [[ -z "$changed" ]]; then
