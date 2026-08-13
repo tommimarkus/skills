@@ -213,6 +213,13 @@ Use these mechanical boundaries before assigning severity and the lane outcome:
   infringement; citation or paid access is not permission. Missing exception
   analysis does not convert that avoidable publication decision to
   `not-evaluated` unless the decision affirmatively relies on an exception.
+- An operative term that expressly prohibits the act under review — a supplied
+  licence forbidding redistribution of material the change would publish — is a
+  `block`, and `do-not-proceed` in the prospective lane. An express prohibition
+  read against a proposed act is the strongest available signal, not a caution;
+  do not soften it to `warn` because no demand or dispute has been raised. Read
+  the prohibition against the layer it governs: a permissive grant over a
+  generator does not license that generator's output.
   Similarity without a settled copying basis,
   or a result that depends on missing exception/applicability facts, is a
   `warn` and `not-evaluated`, never `pass-limited` while a block cannot be
