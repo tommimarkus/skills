@@ -121,14 +121,17 @@ class IpPrefilterTest(unittest.TestCase):
         self.assertEqual(self._categories("src/prose.py", body), [])
 
     def test_licence_block_flagged(self):
+        # Synthetic licence wording, like every other fixture here: generic
+        # boilerplate phrases the detector keys on, under an invented licence
+        # name, rather than a real licence's distinctive grant text.
         body = (
             "/*\n"
-            " * Permission is hereby granted, free of charge, to any person\n"
-            ' * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.\n'
+            " * Fictional Cormorant Licence v1 -- All rights reserved.\n"
+            ' * This component is provided "as is" under the terms above.\n'
             " */\n"
             "int main(void) { return 0; }\n"
         )
-        self._assert_flagged("src/mit.c", body, "source-licence-block")
+        self._assert_flagged("src/licensed.c", body, "source-licence-block")
 
     def test_single_licence_phrase_is_not_a_licence_block(self):
         self.assertEqual(
@@ -136,8 +139,8 @@ class IpPrefilterTest(unittest.TestCase):
 
     def test_licence_block_not_reported_for_vendored_file(self):
         body = (
-            "// Permission is hereby granted, free of charge, to any person\n"
-            '// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.\n'
+            "// Fictional Cormorant Licence v1 -- All rights reserved.\n"
+            '// This component is provided "as is" under the terms above.\n'
         )
         self.assertNotIn("source-licence-block", self._categories("vendor/dep/index.js", body))
 
