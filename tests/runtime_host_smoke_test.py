@@ -448,6 +448,43 @@ class RuntimeHostSmokeTest(unittest.TestCase):
         )
         self.assertIn("new_tool", actual)
 
+    def test_json_rpc_session_surfaces_tools_list_errors(self) -> None:
+        def fake_runner(argv, *, cwd, env, input_text=None, timeout=120):
+            del cwd, env, input_text, timeout
+            responses = [
+                {"jsonrpc": "2.0", "id": 1, "result": {}},
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "error": {
+                        "code": -32000,
+                        "message": "download failed: temporary failure in name resolution",
+                    },
+                },
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "result": {"supportedVersions": ["2026-07-28"]},
+                },
+                {"jsonrpc": "2.0", "id": 4, "result": {"content": []}},
+            ]
+            return subprocess.CompletedProcess(
+                list(argv), 0, "\n".join(json.dumps(item) for item in responses), ""
+            )
+
+        with self.assertRaisesRegex(
+            smoke.SmokeFailure,
+            "tools/list JSON-RPC error.*temporary failure in name resolution",
+        ):
+            smoke.run_mcp_session(
+                ["fake-dediren"],
+                cwd=SCRIPT.parent,
+                workspace_root=REPO_ROOT,
+                env=os.environ,
+                runner=fake_runner,
+                label="fake",
+            )
+
     def test_json_rpc_session_rejects_invalid_guide_responses(self) -> None:
         invalid_responses = {
             "JSON-RPC error": {"error": {"code": -32000, "message": "guide failed"}},

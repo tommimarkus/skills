@@ -61,6 +61,15 @@ assert_block() {
   jq -e --arg needle "$needle" '.reason | contains($needle)' <<<"$output" >/dev/null
 }
 
+assert_empty() {
+  local output=$1
+  local label=$2
+  if [[ -n "$output" ]]; then
+    printf 'FAIL: %s emitted unexpected output:\n%s\n' "$label" "$output" >&2
+    return 1
+  fi
+}
+
 hook_command() {
   local config=$1
   local index=$2
@@ -90,7 +99,7 @@ assert_block "$arch_blocked_cache_output" 'Skill or plugin surfaces changed'
 
 arch_invalid_json_output=$(printf '{bad json' |
   bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
-[[ -z "$arch_invalid_json_output" ]]
+assert_empty "$arch_invalid_json_output" "invalid JSON hook input"
 
 plugin_fixture="$tmp/plugin-repo"
 make_fixture "$plugin_fixture"
@@ -114,11 +123,11 @@ assert_block "$ip_output" '["souroldgeezer-design/skills/software-design"]'
 
 ip_repeat_output=$(hook_input "$ip_fixture" "ip-hygiene-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$ip_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
-[[ -z "$ip_repeat_output" ]]
+assert_empty "$ip_repeat_output" "repeated IP-hygiene session"
 
 ip_active_output=$(hook_input "$ip_fixture" "ip-hygiene-active" true |
   AGENT_HOOK_DEBUG=1 bash "$ip_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
-[[ -z "$ip_active_output" ]]
+assert_empty "$ip_active_output" "active IP-hygiene Stop hook"
 [[ ! -f "$ip_fixture/.cache/agent-hooks/ip-hygiene-prompted-ip-hygiene-active" ]]
 
 internal_fixture="$tmp/internal-repo"
@@ -145,16 +154,25 @@ assert_block "$internal_ip_output" 'IP hygiene scoped surfaces changed'
 assert_block "$internal_ip_output" '["internal-skills/repo-helper/SKILL.md"]'
 assert_block "$internal_ip_output" '["internal-skills/repo-helper"]'
 
-non_ip_fixture="$tmp/non-ip-repo"
-make_fixture "$non_ip_fixture"
-mkdir -p "$non_ip_fixture/scripts/tools"
-cat >"$non_ip_fixture/scripts/tools/build-helper.sh" <<'SH'
+source_fixture="$tmp/source-repo"
+make_fixture "$source_fixture"
+mkdir -p "$source_fixture/scripts/tools"
+cat >"$source_fixture/scripts/tools/build-helper.sh" <<'SH'
 #!/usr/bin/env bash
 echo helper
 SH
+source_output=$(hook_input "$source_fixture" "source" false |
+  AGENT_HOOK_DEBUG=1 bash "$source_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
+assert_block "$source_output" 'IP hygiene scoped surfaces changed'
+assert_block "$source_output" '["scripts/tools/build-helper.sh"]'
+
+non_ip_fixture="$tmp/non-ip-repo"
+make_fixture "$non_ip_fixture"
+mkdir -p "$non_ip_fixture/private-notes"
+printf 'Local session note.\n' >"$non_ip_fixture/private-notes/session.md"
 non_ip_output=$(hook_input "$non_ip_fixture" "non-ip" false |
   AGENT_HOOK_DEBUG=1 bash "$non_ip_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
-[[ -z "$non_ip_output" ]]
+assert_empty "$non_ip_output" "private prose outside the IP-hygiene surface"
 
 clean_fixture="$tmp/clean-repo"
 make_fixture "$clean_fixture"
@@ -164,9 +182,9 @@ clean_lean_output=$(hook_input "$clean_fixture" "clean-lean" false |
   bash "$clean_fixture/scripts/agent-hooks/stop-lean-cost.sh")
 clean_ip_output=$(hook_input "$clean_fixture" "clean-ip" false |
   AGENT_HOOK_DEBUG=1 bash "$clean_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
-[[ -z "$clean_arch_output" ]]
-[[ -z "$clean_lean_output" ]]
-[[ -z "$clean_ip_output" ]]
+assert_empty "$clean_arch_output" "clean skill-architecture fixture"
+assert_empty "$clean_lean_output" "clean lean-cost fixture"
+assert_empty "$clean_ip_output" "clean IP-hygiene fixture"
 
 # Claude: each hook's command is bound by index (order matters, so a mis-paired
 # command cannot pass). settings.json carries no statusMessage.
@@ -197,7 +215,7 @@ assert_block "$claude_ip_command_output" 'IP hygiene scoped surfaces changed'
 outside_repo_command_output=$(cd "$tmp" &&
   hook_input "$skill_fixture" "outside-repo-command" false |
     bash -c "$(hook_command ".claude/settings.json" 0)")
-[[ -z "$outside_repo_command_output" ]]
+assert_empty "$outside_repo_command_output" "hook command outside a repository"
 
 grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-skill-architecture.sh"
 grep -q 'stop-hook-lib.sh' "$repo_root/scripts/agent-hooks/stop-ip-hygiene.sh"
@@ -230,12 +248,12 @@ assert_block "$arch_skill_claude" 'skill-architecture-report'
 # Once-per-session marker suppresses a repeat in the same session.
 arch_repeat=$(hook_input "$skill_fixture" "arch-skill-hooks" false |
   AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
-[[ -z "$arch_repeat" ]]
+assert_empty "$arch_repeat" "repeated skill-architecture session"
 
 # stop_hook_active short-circuits.
 arch_active=$(hook_input "$skill_fixture" "arch-skill-active" true |
   AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
-[[ -z "$arch_active" ]]
+assert_empty "$arch_active" "active skill-architecture Stop hook"
 
 # Fires on a plugin-manifest change too (union surface set).
 arch_plugin_output=$(hook_input "$plugin_fixture" "arch-plugin-hooks" false |
@@ -248,7 +266,7 @@ assert_block "$arch_plugin_output" '["souroldgeezer-design"]'
 # --- stop-lean-cost (deterministic guard; fail-open with no baselines present) ---
 lean_cost_output=$(hook_input "$skill_fixture" "lean-cost-smoke" false |
   bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
-[[ -z "$lean_cost_output" ]]
+assert_empty "$lean_cost_output" "lean-cost fixture without baselines"
 
 # Guard-absent path: run from a fixture repo that has no lean-audit guard, so
 # repo_root resolves to the fixture and the guard file is missing -> the
@@ -256,7 +274,7 @@ lean_cost_output=$(hook_input "$skill_fixture" "lean-cost-smoke" false |
 lean_cost_absent=$(cd "$skill_fixture" &&
   hook_input "$skill_fixture" "lean-cost-absent" false |
     bash "$skill_fixture/scripts/agent-hooks/stop-lean-cost.sh")
-[[ -z "$lean_cost_absent" ]]
+assert_empty "$lean_cost_absent" "lean-cost fixture without a guard"
 
 # Filter parity: ip-hygiene and lesson-capture share one authoring-surface
 # filter; a lib-level unit check pins the pattern set.
