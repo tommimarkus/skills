@@ -32,12 +32,20 @@ external docs.
   checks required alternative-code groups, correlated allowed codes, severity,
   every authority class (including the distinction between harmonization
   sources and operative binding law), lane/verdict, fact status, counsel, and
-  clearance overclaim. Parent-held evidence anchors require the evaluator's
-  lane evidence and every individual finding to identify at least one
-  distinctive fact from its assigned case;
-  generic placeholders fail. The scorer also validates the complete expected
-  schema and its exact identity match with the assigned case corpus before
-  behavioral scoring.
+  clearance overclaim. Parent-held case anchors require the evaluator's lane
+  evidence and every individual finding to identify at least one distinctive
+  fact from its assigned case; generic placeholders fail. Independently
+  required propositions also carry private code-group-specific
+  condition/location anchors, preventing one planted condition from grounding
+  another while keeping genuine alternative codes together only inside the
+  same proposition group. Mixed fact/inference codes carry private factual
+  proposition anchors; fact-only codes remain bound to their case anchors. The
+  scorer makes legal-category, protected-status, exception, likelihood,
+  infringement, and disputed-merits propositions inference-only. Directly
+  observed content, provenance, evidence, and explicit factual conservative
+  repository-policy propositions remain eligible for `fact`. The scorer also
+  validates the complete expected schema and its exact
+  identity match with the assigned case corpus before behavioral scoring.
   Structural completeness is not evidence of model recall. No content is
   copied from a real source. Blind evaluators receive only the deterministic
   allowlisted bundle: raw cases, the public workflow, directly required local

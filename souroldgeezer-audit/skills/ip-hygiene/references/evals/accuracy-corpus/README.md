@@ -58,12 +58,27 @@ Parent-held expected records retain the family selector and declare
 `required_code_groups`, explicit allowed codes and case-grounding evidence anchors,
 per-code classifications, lane outcome, counsel outcome, and any substantiated
 designated blocker. Each group requires one supported code; codes within the
-same group are accepted alternatives for a condition that legitimately fits
-more than one criterion. Authority classifications distinguish a directive or other
+same group are accepted alternatives only for the same proposition. When a case
+has independently required propositions, `required_proposition_grounding`
+binds each exact code group to its own accepted condition/location anchors, so
+a source-indicator finding cannot borrow a logo/endorsement condition (or vice
+versa). Codes from distinct proposition entries are not interchangeable.
+
+When one code permits both factual and inferential formulations,
+`fact_proposition_anchors` names the directly observed content, provenance,
+evidence, or explicit conservative repository-policy proposition that may be
+labelled `fact`. The scorer fails closed if a mixed code lacks that private
+allowlist; fact-only codes remain condition-grounded in their case anchors. It
+separately treats propositions that apply legal protection or another legal
+category, an exception, likelihood, infringement, or disputed merits as
+inference-only even when the record also contains an observed factual anchor.
+This preserves factual source and repository-policy findings without letting a
+legal-merits conclusion inherit their label. Authority classifications distinguish a directive or other
 EU harmonization source from an operative national binding-law proposition. The
 scorer rejects unknown or zero-coverage family selectors and fails for a missing required code group, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
-outcome, missing distinctive lane or per-finding grounding, an expected/assigned case mismatch, or a
+outcome, missing distinctive lane or per-finding grounding, swapped proposition
+grounding, an expected/assigned case mismatch, or a
 legal-clearance overclaim. Malformed or cross-field-incoherent expected records
 fail closed. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the

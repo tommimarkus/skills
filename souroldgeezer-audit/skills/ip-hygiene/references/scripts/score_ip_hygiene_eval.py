@@ -19,12 +19,14 @@ from validate_ip_hygiene_actual import (
 )
 
 
-EXPECTED_KEYS = {
+EXPECTED_REQUIRED_KEYS = {
     "case", "family", "expect", "required_code_groups", "allowed_codes",
     "allowed_classifications", "lane", "outcome", "counsel_outcome",
     "designated_blocker_criterion", "evidence_anchors",
 }
+EXPECTED_OPTIONAL_KEYS = {"fact_proposition_anchors", "required_proposition_grounding"}
 CLASSIFICATION_KEYS = {"severity", "authority_class", "fact_status"}
+REQUIRED_PROPOSITION_KEYS = {"codes", "condition_location_anchors"}
 FAMILIES = {"IP-SRC", "IP-COPY", "IP-DB", "IP-LIC", "IP-MARK"}
 EXPECTATIONS = {"finding", "stopped", "no-finding"}
 GENERIC_ANCHOR_TOKENS = {
@@ -33,6 +35,24 @@ GENERIC_ANCHOR_TOKENS = {
     "plugin", "policy", "public", "report", "source", "supplied", "table",
     "trademark", "works",
 }
+LEGAL_MERITS_PATTERNS = tuple(map(re.compile, (
+    r"\binfring(?:e(?:s|d)?|ing|ement(?:s)?)\b",
+    r"\bnon[- ]?infringing\b",
+    r"\b(?:copyrightable|uncopyrightable)\b",
+    r"\b(?:protected|unprotected)\s+(?:expression|work|material|content|selection|arrangement|database|mark|logo)\b",
+    r"\b(?:protected|unprotected)\s+(?:by|under)\s+(?:copyright|trade[- ]?mark|database rights?)\b",
+    r"\b(?:copyright|trade[- ]?mark|database[- ]?right|sui generis)\s+(?:protection|protected status|exception)\b",
+    r"\b(?:fair use|fair dealing|quotation exception|copyright exception|trade[- ]?mark exception)\b",
+    r"\b(?:exception|limitation|defen[cs]e)\s+(?:appl(?:y|ies)|covers?|permits?|defeats?|succeeds?|fails?)\b",
+    r"\b(?:likely|unlikely|likelihood)\b.{0,80}\b(?:confusion|infring|protected|exception)\b",
+    r"\b(?:confusingly similar|substantial similarity|substantially similar)\b",
+    r"\b(?:violates?|breaches?)\s+(?:copyright|trade[- ]?mark|database rights?)\b",
+    r"\b(?:copyright|trade[- ]?mark|database rights?)\s+(?:subsists?|applies?|protects?)\b",
+    r"\b(?:owns?|ownership of|title to)\b.{0,80}\b(?:copyright|trade[- ]?mark|database rights?)\b",
+    r"\b(?:copyright|trade[- ]?mark|database rights?)\b.{0,80}\b(?:is owned by|belongs? to)\b",
+    r"\b(?:lawful|unlawful|illegal)\b.{0,80}\b(?:copy|use|publication|distribution|redistribution)\b",
+    r"\b(?:legal merits|merits determination|court would|tribunal would)\b",
+)))
 
 
 def anchor_matches(anchor: str, grounding: str) -> bool:
@@ -46,6 +66,13 @@ def anchor_matches(anchor: str, grounding: str) -> bool:
     return bool(distinctive_tokens.intersection(re.findall(r"[a-z0-9]+", grounding)))
 
 
+def is_legal_merits_proposition(proposition: object) -> bool:
+    if not isinstance(proposition, str):
+        return True
+    folded = proposition.casefold()
+    return any(pattern.search(folded) for pattern in LEGAL_MERITS_PATTERNS)
+
+
 def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
     result: dict[str, dict] = {}
     errors: list[str] = []
@@ -57,7 +84,11 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
         except json.JSONDecodeError as error:
             errors.append(f"expected line {number}: invalid JSON: {error.msg}")
             continue
-        if not isinstance(item, dict) or set(item) != EXPECTED_KEYS:
+        if (
+            not isinstance(item, dict)
+            or not EXPECTED_REQUIRED_KEYS.issubset(item)
+            or not set(item).issubset(EXPECTED_REQUIRED_KEYS | EXPECTED_OPTIONAL_KEYS)
+        ):
             errors.append(f"expected line {number}: keys are closed")
             continue
         case = item["case"]
@@ -117,10 +148,12 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
             classifications_by_code = {}
         if allowed_set != set(classifications_by_code):
             errors.append(f"expected line {number}: classifications must cover exactly allowed codes")
-        for classifications in classifications_by_code.values():
+        mixed_fact_codes: set[str] = set()
+        for code, classifications in classifications_by_code.items():
             if not isinstance(classifications, list) or not classifications:
                 errors.append(f"expected line {number}: empty allowed classification")
                 continue
+            fact_statuses: set[str] = set()
             for classification in classifications:
                 if not isinstance(classification, dict) or set(classification) != CLASSIFICATION_KEYS:
                     errors.append(f"expected line {number}: classification keys are closed")
@@ -131,6 +164,68 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
                     errors.append(f"expected line {number}: invalid classification authority")
                 if not isinstance(classification["fact_status"], str) or classification["fact_status"] not in FACT_STATUSES:
                     errors.append(f"expected line {number}: invalid classification fact_status")
+                else:
+                    fact_statuses.add(classification["fact_status"])
+            if {"fact", "inference"}.issubset(fact_statuses):
+                mixed_fact_codes.add(code)
+        fact_proposition_anchors = item.get("fact_proposition_anchors")
+        if mixed_fact_codes:
+            if not isinstance(fact_proposition_anchors, dict) or set(fact_proposition_anchors) != mixed_fact_codes:
+                errors.append(
+                    f"expected line {number}: fact_proposition_anchors must cover every mixed fact/inference code"
+                )
+            else:
+                for code, fact_anchors in fact_proposition_anchors.items():
+                    if (
+                        not isinstance(fact_anchors, list)
+                        or not fact_anchors
+                        or any(not isinstance(anchor, str) or not anchor.strip() for anchor in fact_anchors)
+                        or len(fact_anchors) != len(set(fact_anchors))
+                    ):
+                        errors.append(
+                            f"expected line {number}: invalid fact proposition anchors for {code}"
+                        )
+        elif fact_proposition_anchors is not None:
+            errors.append(f"expected line {number}: fact_proposition_anchors declared without a mixed code")
+        required_proposition_grounding = item.get("required_proposition_grounding")
+        if valid_groups and len(groups) > 1 and required_proposition_grounding is None:
+            errors.append(
+                f"expected line {number}: multiple required propositions need condition/location grounding"
+            )
+        if required_proposition_grounding is not None:
+            valid_propositions = isinstance(required_proposition_grounding, list) and bool(
+                required_proposition_grounding
+            )
+            proposition_groups: list[frozenset[str]] = []
+            if valid_propositions:
+                for proposition in required_proposition_grounding:
+                    if not isinstance(proposition, dict) or set(proposition) != REQUIRED_PROPOSITION_KEYS:
+                        valid_propositions = False
+                        continue
+                    proposition_codes = proposition["codes"]
+                    proposition_anchors = proposition["condition_location_anchors"]
+                    if (
+                        not isinstance(proposition_codes, list)
+                        or not proposition_codes
+                        or any(not isinstance(code, str) for code in proposition_codes)
+                        or len(proposition_codes) != len(set(proposition_codes))
+                        or not isinstance(proposition_anchors, list)
+                        or not proposition_anchors
+                        or any(not isinstance(anchor, str) or not anchor.strip() for anchor in proposition_anchors)
+                        or len(proposition_anchors) != len(set(proposition_anchors))
+                    ):
+                        valid_propositions = False
+                        continue
+                    proposition_groups.append(frozenset(proposition_codes))
+            expected_groups = [frozenset(group) for group in groups] if valid_groups else []
+            if (
+                not valid_propositions
+                or len(proposition_groups) != len(set(proposition_groups))
+                or set(proposition_groups) != set(expected_groups)
+            ):
+                errors.append(
+                    f"expected line {number}: required_proposition_grounding must cover each required code group exactly"
+                )
         anchors = item["evidence_anchors"]
         valid_anchors = (
             isinstance(anchors, list)
@@ -228,20 +323,53 @@ def main() -> int:
             errors.append(f"{case}: missing actual result")
             continue
         codes = {finding["code"] for finding in got.get("findings", []) if isinstance(finding, dict) and "code" in finding}
+        findings = got.get("findings", [])
         for group in wanted["required_code_groups"]:
             if not codes.intersection(group):
                 errors.append(f"{case}: missing required finding code group: {' | '.join(group)}")
+        for proposition in wanted.get("required_proposition_grounding", []):
+            proposition_grounded = False
+            for finding in findings:
+                if not isinstance(finding, dict) or finding.get("code") not in proposition["codes"]:
+                    continue
+                condition_location = json.dumps(
+                    {key: finding.get(key) for key in ("condition", "location")},
+                    ensure_ascii=False,
+                ).casefold()
+                if any(
+                    anchor_matches(anchor, condition_location)
+                    for anchor in proposition["condition_location_anchors"]
+                ):
+                    proposition_grounded = True
+                    break
+            if not proposition_grounded:
+                errors.append(
+                    f"{case}: ungrounded required proposition: {' | '.join(proposition['codes'])}"
+                )
         for code in codes - set(wanted["allowed_codes"]):
             errors.append(f"{case}: undeclared finding code: {code}")
         if wanted["expect"] == "no-finding" and codes:
             errors.append(f"{case}: forbidden clean-control finding")
-        for finding in got.get("findings", []):
+        for finding in findings:
             if not isinstance(finding, dict) or finding.get("code") not in wanted["allowed_codes"]:
                 continue
             allowed = wanted["allowed_classifications"][finding["code"]]
             classification = {key: finding.get(key) for key in CLASSIFICATION_KEYS}
             if classification not in allowed:
                 errors.append(f"{case}: wrong classification for {finding['code']}")
+            if finding.get("fact_status") == "fact":
+                if is_legal_merits_proposition(finding.get("condition")):
+                    errors.append(
+                        f"{case}: legal-merits proposition must be inference for {finding['code']}"
+                    )
+                fact_anchors = wanted.get("fact_proposition_anchors", {}).get(
+                    finding["code"], wanted["evidence_anchors"]
+                )
+                condition = finding.get("condition", "").casefold()
+                if not any(anchor_matches(anchor, condition) for anchor in fact_anchors):
+                    errors.append(
+                        f"{case}: fact proposition lacks an accepted factual anchor for {finding['code']}"
+                    )
         if got.get("lane") != wanted["lane"]:
             errors.append(f"{case}: wrong lane")
         outcome_field = {"triage": "triage_gate", "in-depth": "in_depth_verdict", "prospective": "prospective_decision"}[wanted["lane"]]

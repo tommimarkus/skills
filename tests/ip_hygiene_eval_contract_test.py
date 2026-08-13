@@ -253,6 +253,49 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertIn("case-040: wrong classification for IP-MARK-5", result.stdout)
         self.assertIn("case-041: wrong classification for IP-MARK-1", result.stdout)
 
+    def test_scorer_rejects_copyright_merits_proposition_labeled_as_fact(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        legal_merits_propositions = (
+            "The protected tutorial expression infringes copyright.",
+            "No copyright exception applies to this publication.",
+            "The tutorial is likely to infringe the publisher's copyright.",
+            "The handbook publisher owns the copyright in the tutorial expression.",
+        )
+        for proposition in legal_merits_propositions:
+            with self.subTest(proposition=proposition):
+                actual = [actual_from_expected(case) for case in expected]
+                finding = next(
+                    finding
+                    for finding in next(
+                        item for item in actual if item["case"] == "case-005"
+                    )["findings"]
+                    if finding["code"] == "IP-COPY-1"
+                )
+                finding.update({"fact_status": "fact", "condition": proposition})
+                result = self.run_scorer(actual)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "case-005: legal-merits proposition must be inference for IP-COPY-1",
+                    result.stdout,
+                )
+
+    def test_scorer_accepts_grounded_direct_fact_for_mixed_classification(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        finding = next(
+            finding for finding in next(item for item in actual if item["case"] == "case-005")["findings"]
+            if finding["code"] == "IP-COPY-1"
+        )
+        finding.update({
+            "fact_status": "fact",
+            "condition": (
+                "The editor's comparison directly records that the 230-word tutorial retains "
+                "the handbook's sentence order and distinctive metaphors."
+            ),
+        })
+        result = self.run_scorer(actual)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_validator_rejects_open_schema_aliases_and_nonliteral_false_clearance(self) -> None:
         self.assertTrue(VALIDATOR.is_file())
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
@@ -475,6 +518,32 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("case-001: ungrounded lane evidence", result.stdout)
 
+    def test_scorer_rejects_swapped_required_proposition_grounding(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        findings = {
+            finding["code"]: finding
+            for finding in next(item for item in actual if item["case"] == "case-001")["findings"]
+        }
+        findings["IP-MARK-2"].update({
+            "condition": "The wave emblem appears beside the marketplace card.",
+            "location": "The wave emblem on the installation page.",
+        })
+        findings["IP-MARK-3"].update({
+            "condition": "Blue Harbor is the first wording in the Northbank title.",
+            "location": "The Blue Harbor Northbank marketplace title.",
+        })
+        result = self.run_scorer(actual)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "case-001: ungrounded required proposition: IP-MARK-2",
+            result.stdout,
+        )
+        self.assertIn(
+            "case-001: ungrounded required proposition: IP-MARK-3",
+            result.stdout,
+        )
+
     def test_scorer_accepts_one_distinctive_case_anchor_when_other_facts_are_paraphrased(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         actual = [actual_from_expected(case) for case in expected]
@@ -482,6 +551,11 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         serialized = json.dumps(case).replace("wave emblem", "the supplied graphic mark")
         case.clear()
         case.update(json.loads(serialized))
+        mark_3 = next(finding for finding in case["findings"] if finding["code"] == "IP-MARK-3")
+        mark_3.update({
+            "condition": "The wave emblem appears beside the marketplace card.",
+            "location": "The wave emblem on the installation page.",
+        })
         result = self.run_scorer(actual)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -549,6 +623,24 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         type_drift[0]["allowed_classifications"]["IP-MARK-2"][0]["severity"] = ["block"]
         mutations.append((type_drift, "invalid classification severity"))
 
+        missing_fact_proposition_anchors = json.loads(json.dumps(expected))
+        index = next(
+            i for i, case in enumerate(missing_fact_proposition_anchors)
+            if case["case"] == "case-005"
+        )
+        missing_fact_proposition_anchors[index].pop("fact_proposition_anchors")
+        mutations.append((
+            missing_fact_proposition_anchors,
+            "fact_proposition_anchors must cover every mixed fact/inference code",
+        ))
+
+        missing_required_proposition_grounding = json.loads(json.dumps(expected))
+        missing_required_proposition_grounding[0].pop("required_proposition_grounding")
+        mutations.append((
+            missing_required_proposition_grounding,
+            "multiple required propositions need condition/location grounding",
+        ))
+
         mutations.append((expected[:-1], "missing expected case: case-042"))
 
         for records, message in mutations:
@@ -606,12 +698,16 @@ class IpHygieneEvalContractTest(unittest.TestCase):
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         self.assertEqual(len(expected), 42)
+        required_keys = {
+            "case", "family", "expect", "required_code_groups", "allowed_codes",
+            "allowed_classifications", "lane", "outcome", "counsel_outcome",
+            "designated_blocker_criterion", "evidence_anchors",
+        }
+        optional_keys = {"fact_proposition_anchors", "required_proposition_grounding"}
         for case in expected:
             with self.subTest(case=case["case"]):
-                self.assertEqual(set(case), {
-                    "case", "family", "expect", "required_code_groups", "allowed_codes", "allowed_classifications",
-                    "lane", "outcome", "counsel_outcome", "designated_blocker_criterion",
-                    "evidence_anchors"})
+                self.assertTrue(required_keys.issubset(case))
+                self.assertTrue(set(case).issubset(required_keys | optional_keys))
                 required = {code for group in case["required_code_groups"] for code in group}
                 self.assertTrue(required.issubset(case["allowed_codes"]))
                 self.assertEqual(set(case["allowed_codes"]), set(case["allowed_classifications"]))
@@ -624,6 +720,22 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                     for item in classifications:
                         self.assertEqual(set(item), {"severity", "authority_class", "fact_status"})
                         self.assertNotEqual(item["authority_class"], "not-applicable")
+                mixed_codes = {
+                    code for code, classifications in case["allowed_classifications"].items()
+                    if {"fact", "inference"}.issubset(
+                        {item["fact_status"] for item in classifications}
+                    )
+                }
+                self.assertEqual(set(case.get("fact_proposition_anchors", {})), mixed_codes)
+                if len(case["required_code_groups"]) > 1:
+                    grounded_groups = {
+                        frozenset(proposition["codes"])
+                        for proposition in case["required_proposition_grounding"]
+                    }
+                    self.assertEqual(
+                        grounded_groups,
+                        {frozenset(group) for group in case["required_code_groups"]},
+                    )
 
 
 def case_records() -> list[dict]:
