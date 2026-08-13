@@ -290,6 +290,12 @@ def main() -> int:
     parser.add_argument("--expected", type=Path, required=True)
     parser.add_argument("--actual", type=Path, required=True)
     parser.add_argument("--families", help="comma-separated criterion families")
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="text for a human error list; json for a per-case record a baseline can diff",
+    )
     args = parser.parse_args()
     expected, errors = expected_records(args.expected)
     assigned_cases, case_errors = case_ids(args.cases)
@@ -315,12 +321,20 @@ def main() -> int:
             errors.append(f"unknown family selector: {family or '<empty>'}")
         if not families & declared_families:
             errors.append("family selection covers zero declared cases")
+    # Everything appended before this point is a contract error about the corpus or
+    # the actual file as a whole, not about one case. Recording the boundary here,
+    # and each case's own span below, attributes every error exactly — the JSON
+    # baseline must not guess ownership by re-parsing message prefixes.
+    contract_error_count = len(errors)
+    case_errors: dict[str, list[str]] = {}
     for case, wanted in expected.items():
         if families is not None and wanted["family"] not in families:
             continue
+        mark = len(errors)
         got = actual.get(case)
         if got is None:
             errors.append(f"{case}: missing actual result")
+            case_errors[case] = errors[mark:]
             continue
         codes = {finding["code"] for finding in got.get("findings", []) if isinstance(finding, dict) and "code" in finding}
         findings = got.get("findings", [])
@@ -405,6 +419,20 @@ def main() -> int:
         ).casefold()
         if not any(anchor_matches(anchor, whole_record) for anchor in anchors):
             errors.append(f"{case}: missing every evidence anchor: {' | '.join(anchors)}")
+        case_errors[case] = errors[mark:]
+    if args.format == "json":
+        failing = {case: found for case, found in case_errors.items() if found}
+        print(json.dumps({
+            "status": "pass" if not errors else "fail",
+            "totals": {
+                "cases_scored": len(case_errors),
+                "cases_failing": len(failing),
+                "issues": len(errors),
+            },
+            "contract_errors": errors[:contract_error_count],
+            "failing_cases": {case: failing[case] for case in sorted(failing)},
+        }, indent=2, sort_keys=False))
+        return 1 if errors else 0
     print("IP hygiene eval: " + ("PASS" if not errors else "FAIL"))
     for error in errors:
         print(error)
