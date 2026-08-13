@@ -270,12 +270,16 @@ souroldgeezer-design/agents/app-design.md
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
 souroldgeezer-audit/.claude-plugin/plugin.json
 souroldgeezer-audit/.codex-plugin/plugin.json
+souroldgeezer-architecture/plugin.json
+souroldgeezer-architecture/mcp.json
+souroldgeezer-architecture/mcp/copilot.mcp.json
 .claude-plugin/marketplace.json
 .agents/plugins/marketplace.json
 internal-skills/lesson-capture/SKILL.md
 .claude/skills/lesson-capture/SKILL.md
 .agents/skills/lesson-capture/SKILL.md
 .codex/hooks.json
+.claude/settings.json
 AGENTS.md
 CLAUDE.md
 README.md
@@ -289,12 +293,17 @@ expected=$(cat <<'EOF'
 .agents/plugins/marketplace.json
 .agents/skills/lesson-capture/SKILL.md
 .claude-plugin/marketplace.json
+.claude/settings.json
 .claude/skills/lesson-capture/SKILL.md
 .codex/hooks.json
 AGENTS.md
 CLAUDE.md
 README.md
+docs/skill-architecture.md
 internal-skills/lesson-capture/SKILL.md
+souroldgeezer-architecture/mcp.json
+souroldgeezer-architecture/mcp/copilot.mcp.json
+souroldgeezer-architecture/plugin.json
 souroldgeezer-audit/.claude-plugin/plugin.json
 souroldgeezer-audit/.codex-plugin/plugin.json
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
@@ -309,3 +318,21 @@ if [[ "$filtered" != "$expected" ]]; then
   exit 1
 fi
 echo "ok: authoring-surface filter parity"
+
+current_metadata_fixture="$tmp/current-metadata-repo"
+make_fixture "$current_metadata_fixture"
+mkdir -p "$current_metadata_fixture/souroldgeezer-design/mcp" \
+  "$current_metadata_fixture/.claude" "$current_metadata_fixture/docs"
+printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/plugin.json"
+printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/mcp.json"
+printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/mcp/copilot.mcp.json"
+printf '{}\n' >"$current_metadata_fixture/.claude/settings.json"
+printf '# Architecture\n' >"$current_metadata_fixture/docs/skill-architecture.md"
+current_metadata_output=$(hook_input "$current_metadata_fixture" "current-metadata" false |
+  AGENT_HOOK_DEBUG=1 bash "$current_metadata_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
+assert_block "$current_metadata_output" 'souroldgeezer-design/plugin.json'
+assert_block "$current_metadata_output" 'souroldgeezer-design/mcp.json'
+assert_block "$current_metadata_output" 'souroldgeezer-design/mcp/copilot.mcp.json'
+assert_block "$current_metadata_output" '.claude/settings.json'
+assert_block "$current_metadata_output" 'docs/skill-architecture.md'
+assert_block "$current_metadata_output" '[".claude/settings.json","docs/skill-architecture.md","souroldgeezer-design"]'

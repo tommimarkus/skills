@@ -16,7 +16,7 @@ VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/script
 class IpHygieneEvalContractTest(unittest.TestCase):
     def test_blind_cases_have_distinct_substantive_synthetic_facts(self) -> None:
         cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(len(cases), 40)
+        self.assertEqual(len(cases), 42)
         prompts = [case["prompt"] for case in cases]
         self.assertEqual(len(prompts), len(set(prompts)))
         self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
@@ -52,12 +52,12 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertEqual(expected["case-018"]["outcome"], "not-evaluated")
         self.assertIsNone(expected["case-018"]["designated_blocker_criterion"])
         for case_id in ("case-017", "case-018", "case-019"):
-            for classifications in expected[case_id]["allowed_classifications"].values():
-                self.assertEqual(
-                    classifications[0]["authority_class"],
-                    "binding-law harmonization source",
-                    case_id,
-                )
+            db_code = "IP-DB-1" if case_id == "case-017" else "IP-DB-2"
+            self.assertEqual(
+                expected[case_id]["allowed_classifications"][db_code][0]["authority_class"],
+                "binding-law harmonization source",
+                case_id,
+            )
         for case_id in ("case-005", "case-013", "case-014", "case-024",
                         "case-027", "case-028"):
             for classifications in expected[case_id]["allowed_classifications"].values():
@@ -79,9 +79,40 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         covered = {code for case in expected.values() for group in case["required_code_groups"] for code in group}
         self.assertIn("IP-COPY-4", covered)
         self.assertIn("IP-MARK-5", covered)
+        complete_codes = {
+            *(f"IP-SRC-{number}" for number in range(1, 5)),
+            *(f"IP-COPY-{number}" for number in range(1, 5)),
+            *(f"IP-DB-{number}" for number in range(1, 3)),
+            *(f"IP-LIC-{number}" for number in range(1, 5)),
+            *(f"IP-MARK-{number}" for number in range(1, 6)),
+        }
+        self.assertEqual(covered, complete_codes)
         self.assertEqual(expected["case-009"]["required_code_groups"], [["IP-SRC-1", "IP-LIC-1"]])
         self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
         self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
+        self.assertEqual(
+            expected["case-040"]["allowed_classifications"]["IP-MARK-5"],
+            [{"severity": "block", "authority_class": "binding-law harmonization source",
+              "fact_status": "inference"}],
+        )
+        self.assertEqual(
+            {case["counsel_outcome"] for case in expected.values()},
+            {"not-triggered", "recommended", "required"},
+        )
+
+    def test_behavior_cases_use_current_finding_verdict_and_assurance_language(self) -> None:
+        behavior_path = CORPUS.parent / "behavior-cases.jsonl"
+        text = behavior_path.read_text(encoding="utf-8")
+        for stale in (
+            "check-bucket result",
+            "cite the relevant ip-hygiene check bucket",
+            "bucket counts",
+            "footer at reasonable assurance",
+            "reasonable-assurance footer",
+        ):
+            self.assertNotIn(stale, text)
+        self.assertIn("criterion code", text)
+        self.assertIn("reasonable-hygiene in-depth", text)
 
     def test_readme_documents_blind_actual_result_schema_and_limits(self) -> None:
         text = read("souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/README.md")
@@ -243,6 +274,34 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_scorer_accepts_reviewed_correlated_and_alternative_criteria(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        replacements = {
+            "case-004": "IP-SRC-1",
+            "case-013": "IP-SRC-2",
+            "case-021": "IP-LIC-3",
+        }
+        by_expected = {case["case"]: case for case in expected}
+        for case_id, code in replacements.items():
+            actual_case = next(case for case in actual if case["case"] == case_id)
+            actual_case["findings"] = [
+                {"code": code, **by_expected[case_id]["allowed_classifications"][code][0]}
+            ]
+        case_017 = next(case for case in actual if case["case"] == "case-017")
+        case_017["findings"].append({
+            "code": "IP-COPY-1",
+            **by_expected["case-017"]["allowed_classifications"]["IP-COPY-1"][0],
+        })
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(item) + "\n" for item in actual), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCORER), "--expected", str(CORPUS / "expected.jsonl"),
+                 "--actual", str(actual_path)], text=True, capture_output=True, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_validator_requires_lane_evidence_contracts(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         actual = [actual_from_expected(case) for case in expected]
@@ -263,7 +322,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
 
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
-        self.assertEqual(len(expected), 40)
+        self.assertEqual(len(expected), 42)
         for case in expected:
             with self.subTest(case=case["case"]):
                 self.assertEqual(set(case), {

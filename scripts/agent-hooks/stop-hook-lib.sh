@@ -74,12 +74,17 @@ stop_hook_filter_authoring_surfaces() {
     /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
     /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
     /^souroldgeezer-[^/]+\/\.codex-plugin\/plugin\.json$/ { print; next }
+    /^souroldgeezer-[^/]+\/plugin\.json$/ { print; next }
+    /^souroldgeezer-[^/]+\/mcp\.json$/ { print; next }
+    /^souroldgeezer-[^/]+\/mcp\/[^/]+\.mcp\.json$/ { print; next }
     /^\.claude-plugin\/marketplace\.json$/ { print; next }
     /^\.agents\/plugins\/marketplace\.json$/ { print; next }
     /^internal-skills\/[^/]+\// { print; next }
     /^\.claude\/skills\/[^/]+\// { print; next }
     /^\.agents\/skills\/[^/]+\// { print; next }
     /^\.codex\/hooks\.json$/ { print; next }
+    /^\.claude\/settings\.json$/ { print; next }
+    /^docs\/skill-architecture\.md$/ { print; next }
     /^(AGENTS|CLAUDE|README)\.md$/ { print; next }
   ' | LC_ALL=C sort -u
 }

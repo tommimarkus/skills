@@ -21,9 +21,9 @@ external docs.
   audit craft and materiality output contracts and do not reproduce rubric prose.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/`.
   Handling: repo-authored planted-defect fixtures scoring recall and
-  false-positive rate. Forty cases cover each coded criterion family and every
+  false-positive rate. Forty-two cases cover each coded criterion family and every
   individual code, all three lanes, every prospective and in-depth outcome,
-  ambiguity, all counsel-required stops, and clean controls. Expected records
+  ambiguity, every counsel-outcome enum, all counsel-required stops, and clean controls. Expected records
   are withheld from blind evaluators. Every prompt instead gives distinct,
   wholly fictional material, provenance, intended act/distribution, the
   explicitly requested lane, and the scenario's ambiguity or counsel-trigger

@@ -44,6 +44,18 @@ targets=$(
     $1 ~ /^souroldgeezer-/ && $2 == ".codex-plugin" {
       print $1
     }
+    $1 ~ /^souroldgeezer-/ && ($2 == "plugin.json" || $2 == "mcp.json" || $2 == "mcp") {
+      print $1
+    }
+    $1 == ".codex" && $2 == "hooks.json" {
+      print ".codex/hooks.json"
+    }
+    $1 == ".claude" && $2 == "settings.json" {
+      print ".claude/settings.json"
+    }
+    $1 == "docs" && $2 == "skill-architecture.md" {
+      print "docs/skill-architecture.md"
+    }
     $1 == "CLAUDE.md" || $1 == "AGENTS.md" || $1 == "README.md" {
       print $1
     }

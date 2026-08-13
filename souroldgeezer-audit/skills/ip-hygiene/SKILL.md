@@ -112,7 +112,7 @@ reasonable-hygiene in-depth review.
 - **Reasonable-hygiene in-depth review** — the user names in-depth/full review,
   repo guidance requires it, or the boundary is a whole plugin/publication
   surface. Enumerate and risk-survey the surface, then emit findings, exactly one
-  in-depth verdict, and a reasonable-assurance footer. Reasonable hygiene is not
+  in-depth verdict, and a `reasonable-hygiene in-depth` footer. Reasonable hygiene is not
   reasonable legal assurance.
 
 If the requested lane or boundary is ambiguous, ask before fieldwork.
@@ -206,7 +206,12 @@ issue. Each record must contain:
 - cause, consequence, recommendation, severity, risk tier, and counsel outcome.
 
 `counsel outcome` is `not-triggered`, `recommended`, or `required`, with the
-trigger stated. A no-finding run emits `nothing to check` or `checked: <bucket list>; no IP hygiene changes needed`;
+trigger stated. Use `recommended` only for a documented, non-mandatory
+risk-management referral when the hygiene decision can be completed from the
+available evidence and no mandatory stop below applies. It does not change the
+finding severity, gate, verdict, or decision, and it is never a substitute for
+missing load-bearing evidence. Use `not-triggered` when neither that prudent
+referral nor a mandatory trigger is evidenced. A no-finding run emits `nothing to check` or `checked: <bucket list>; no IP hygiene changes needed`;
 neither is clearance.
 
 Only an explicit fix request authorizes repairs. Keep audit findings unchanged,
