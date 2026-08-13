@@ -170,6 +170,12 @@ Use progressive disclosure deliberately:
   and a "read this when..." condition.
 - Give each reference a narrow reason to exist.
 - Split heavy material by task path or target platform.
+- Choose between a shared reference and an extension family from the evidence
+  surface, not just the rule's generality. Keep a stack-independent criterion
+  in the shared core or reference, but put its lookup details in stack
+  extensions when stacks differ in where the fact lives, which artifact proves
+  it, or what the ecosystem calls it; collecting every stack's lookup path in
+  one reference defeats progressive disclosure.
 - Keep source anchors as links and paraphrase in original wording.
 - When a reference prescribes a best-practice that picks a convention, scheme,
   or tool, state the underlying invariant and the major production-proven
