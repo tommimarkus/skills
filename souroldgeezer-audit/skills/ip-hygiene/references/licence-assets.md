@@ -26,6 +26,13 @@ actual operative text through [authority-index.md](authority-index.md).
   generated/vendored notices, and separate licences for code, docs, examples,
   data, or assets. Confirm that the reviewer is eligible to select the proposed
   option.
+- **`IP-LIC-5 Notice survival`:** required copyright, licence, attribution, and
+  `NOTICE` information must survive a move, split, extract, refactor, vendoring,
+  generation, bundling, transpilation, or minification. The obligation attaches
+  to the covered material, not to the file path it started in. Removing or
+  truncating a notice while refactoring is a distinct act from copying. Where a
+  licence specifies the location or form of a notice, relocation must still
+  satisfy that form.
 
 Never infer that a repository-wide licence covers third-party material. The
 repository licence ordinarily speaks for material its licensor controls; keep

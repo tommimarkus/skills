@@ -8,7 +8,9 @@ assurance language, or counsel boundaries.
 - The skill owns source/provenance, copyright expression, EU database rights,
   EU-first trade-mark hygiene, operative third-party licence terms, notices, and
   bundled assets on plugin/skill publication surfaces.
-- General repo-wide review remains future scope.
+- It owns the same questions in an audited repository's source, configuration,
+  and build files repo-wide, including their comments and code documentation.
+  Other non-published surfaces remain future scope.
 - It does not decide patents or freedom to operate, privacy and data protection,
   trade secrets, publicity and personality rights, defamation, export controls
   or sanctions, competition law, employment ownership, or general contract

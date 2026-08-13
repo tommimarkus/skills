@@ -1,13 +1,15 @@
 ---
 name: ip-hygiene
-description: Use when skill, agent, bundled reference, manifest, marketplace/runtime metadata, plugin guidance, or bundled asset edits may touch third-party marks, copied source, licences, assets, or existing IP/source hygiene issues. Focused on plugin and skill publication surfaces; not general legal advice.
+description: Use when source, configuration, build, skill, agent, bundled reference, manifest, marketplace/runtime metadata, plugin guidance, or bundled asset edits may touch third-party marks, copied source, licences, notices, assets, or existing IP/source hygiene issues — including code comments, doc comments, and generated-code banners. Covers publication surfaces plus source, configuration, and build files repo-wide; mechanical copy-paste duplication stays with lean-audit, semantic DRY with software-design, and code-level security with devsecops-audit; not general legal advice.
 ---
 
 # IP Hygiene
 
 Evidence-bounded copyright, database-right, trade-mark, licence, and asset
-hygiene for plugin and skill publication surfaces. This is not legal advice. It
-does not provide legal clearance, does not certify compliance, and does not perform a freedom-to-operate search.
+hygiene for plugin and skill publication surfaces and for the source,
+configuration, and build files of an audited repository. This is not legal
+advice. It does not provide legal clearance, does not certify compliance, and
+does not perform a freedom-to-operate search.
 No finding or verdict is legal clearance.
 
 Inputs: the proposed act or current diff; touched paths or review boundary;
@@ -20,7 +22,15 @@ Ask when a load-bearing fact is unavailable; do not infer permission.
 
 Use this skill for published skills, agents, references, extensions, fixtures,
 templates, scripts, assets, plugin manifests, marketplace/runtime metadata, and
-repo guidance that describes those surfaces. General repo-wide IP hygiene is future scope.
+repo guidance that describes those surfaces. In an audited repository, source,
+configuration, and build files are also in scope repo-wide, including their
+comments and code documentation. Other non-published surfaces, such as private
+prose docs, remain future scope.
+
+The code interest is third-party provenance, notices, permission, and marks —
+not internal code quality. Mechanical internal copy-paste duplication stays with
+`lean-audit` (`LA-CODE-DUP-*`); source dead code is out of scope; semantic DRY
+belongs to `software-design`; code-level security belongs to `devsecops-audit`.
 
 This skill does not decide patents or freedom to operate, privacy and data protection,
 trade secrets, publicity and personality rights, defamation, export controls or
@@ -34,9 +44,14 @@ Load only the references selected by the evidence:
 - copied text, code, examples, interfaces, tables, or datasets: [copyright.md](references/copyright.md)
 - public marks, names, symbols, logos, affiliation, or branding: [trademark.md](references/trademark.md)
 - licences, notices, third-party code, schemas, data, fonts, or media: [licence-assets.md](references/licence-assets.md)
+- source, configuration, or build files, their comments, doc comments, and generated banners: [source-code.md](references/source-code.md)
 - a pre-existing issue reached through touched content: [drive-by.md](references/drive-by.md)
 - scope, remedy, or legal-policy boundary changes: [fence-posts.md](references/fence-posts.md)
 - an old link targeting the pre-split router: [ip-hygiene-reference.md](references/ip-hygiene-reference.md)
+
+When a language is detected in the reviewed files, also load the matching pack
+at `extensions/<lang>.md`, selected by the detection signals that pack states.
+Extensions add or carve out criteria; they never override core criteria.
 
 When changing trigger, workflow, gates, source, or eval behavior, inspect
 `references/evals/`, its accuracy corpus, and
@@ -130,10 +145,13 @@ maintaining that machinery.
 
 The pre-filter finds filesystem candidates, not legal conclusions. An empty
 result does not rule out marks, copied prose, inline code, or uncertain source
-authority. Answer all five questions by judgment:
+authority. Answer all six questions by judgment:
 
-1. Does a public surface mention or brand with a third-party mark, logo,
-   product, organization, or standard?
+1. Does a surface a reader sees — public or code-visible — mention or brand with
+   a third-party mark, logo, product, organization, or standard? Identifiers,
+   string literals, package/module names, User-Agent strings, and endpoint paths
+   count; establish the audience from evidence instead of presuming that only a
+   public-facing surface qualifies.
 2. Does the change quote, closely paraphrase, restructure, or copy text?
 3. Does it copy code, configuration, an example, interface expression, figure,
    table, schema, fixture, or dataset?
@@ -141,8 +159,10 @@ authority. Answer all five questions by judgment:
    data, font, binary, image, audio, video, logo, SDK, or sample?
 5. Does a touched edit reproduce, modify, link, or otherwise propagate a
    pre-existing issue in the same file or source it uses?
+6. Does a touched source file carry, need, lose, or transform a copyright or
+   licence notice, attribution comment, or generated-code banner?
 
-All no: emit `nothing to check`. Any yes or unknown: load only the relevant
+All six no: emit `nothing to check`. Any yes or unknown: load only the relevant
 references and record the evidence gap or finding.
 
 ### Triage Gate
@@ -219,7 +239,7 @@ conservative-policy finding; do not label the legal application as fact.
    produces. Record exclusions.
 2. Survey risk before catalog work; prioritize public names/branding, bundled
    or vendored material, notices, generated packages, and copied documentation.
-3. Run the pre-filter over the full enumeration, then apply all five triage
+3. Run the pre-filter over the full enumeration, then apply all six triage
    questions per surface and all hit criteria.
 4. Corroborate source identity, actual file-level licence, holder policy, and
    jurisdiction/applicability. Mark static conclusions as inference. At scale,

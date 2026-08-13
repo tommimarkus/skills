@@ -11,6 +11,13 @@ Treat README/guidance, marketplaces, manifests, package/plugin/skill names,
 frontmatter descriptions, public docs, galleries, release artifacts, and logos
 as public-visible unless evidence narrows the audience.
 
+Marks inside source code — identifiers, comments, string literals, and package
+or module names — raise the same questions and are assessed under `IP-MARK-1`,
+`IP-MARK-2`, and `IP-MARK-4` on evidence of who actually sees them. Evidence
+that visibility is internal-only narrows the branding question; it does not
+eliminate it, because code distributed as source carries those signs to its
+recipients.
+
 Apply authority classes separately:
 
 - binding law: the applicable EU-mark or harmonized national-mark rules and
