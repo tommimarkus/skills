@@ -179,9 +179,15 @@ Use these mechanical boundaries before assigning severity and the lane outcome:
   establishes as false are misleading mark claims: record a `block` and
   `fail`. A requested symbol or presentation convention that is not a
   distribution condition remains `warn` or `info` and `pass-limited`.
-- Known copied expression with no supplied permission may be blocked by
-  conservative repository policy without asserting infringement; citation or
-  paid access is not permission. Similarity without a settled copying basis,
+- A style guide or symbol request issued by the holder is holder policy even
+  when it is optional; `project convention` is reserved for a rule adopted by
+  the repository or publishing project.
+- Known copied expression with no supplied permission is a conservative repository-policy block
+  when publication can omit or independently replace it, without asserting
+  infringement; citation or paid access is not permission. Missing exception
+  analysis does not convert that avoidable publication decision to
+  `not-evaluated` unless the decision affirmatively relies on an exception.
+  Similarity without a settled copying basis,
   or a result that depends on missing exception/applicability facts, is a
   `warn` and `not-evaluated`, never `pass-limited` while a block cannot be
   ruled out.
@@ -201,6 +207,11 @@ Directive category is a binding-law harmonization-source inference until
 operative national law and applicability are established; a separate stop
 based only on missing permission or law may instead be a factual conservative
 repository-policy finding.
+An IP-MARK-1 or IP-MARK-5 finding that applies binding law or a binding-law
+harmonization source is always an `inference`, even when its underlying false
+claim, registration, compatibility test, audience, or transaction facts are
+direct observations. Put those facts in evidence or in a separate factual
+conservative-policy finding; do not label the legal application as fact.
 
 ## In-Depth Procedure And Verdict
 

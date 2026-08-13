@@ -63,6 +63,9 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("A documented preference for later or broader counsel review", normalized)
         self.assertIn("A directly observed source fact remains a fact", normalized)
         self.assertIn("Do not collapse separate planted conditions into one finding", normalized)
+        self.assertIn("A style guide or symbol request issued by the holder is holder policy", normalized)
+        self.assertIn("An IP-MARK-1 or IP-MARK-5 finding that applies binding law", normalized)
+        self.assertIn("Known copied expression with no supplied permission is a conservative repository-policy block", normalized)
 
     def test_runtime_entrypoints_exist_and_point_to_public_skill(self) -> None:
         claude_agent = read("souroldgeezer-audit/agents/ip-hygiene.md")

@@ -160,6 +160,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 {"inference"},
                 case_id,
             )
+        self.assertIn("interoperability guide", expected["case-039"]["evidence_anchors"])
 
     def test_blind_prompts_do_not_disclose_gate_verdict_or_counsel_conclusions(self) -> None:
         prompts = "\n".join(case["prompt"] for case in case_records())

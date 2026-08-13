@@ -26,6 +26,14 @@ Treat referential use, artifact branding, registration status, endorsement or
 commercial connection, holder policy, and optional symbols as separate
 questions.
 
+A style guide, symbol request, or branding rule issued by the holder remains
+`holder policy` even when optional. `Project convention` means the repository
+or publishing project's own adopted presentation rule. Any `IP-MARK-1` or
+`IP-MARK-5` finding that applies binding law or a harmonization source is an
+inference; keep its observed compatibility, registration, claim, audience, and
+transaction facts in evidence or a separate factual conservative-policy
+finding.
+
 - **`IP-MARK-1 Referential use`:** determine whether the mark merely identifies
   or refers to the holder's goods/services, including intended purpose or
   compatibility, and whether use is in accordance with honest practices. Do not
