@@ -6,7 +6,7 @@
     "expected_sha256": "be55a9dca2f2ba28654afcd897cb022a12ae9a06d90f24afc30fa0dccdeebf6c",
     "corpus_cases": 52,
     "harness": "one evaluator per run, full corpus, unsharded, same bundle directory",
-    "model": "inherited session default (claude-opus-5)",
+    "model": "session default at recording time: claude-opus-5; subagent resolution not independently verified",
     "runs_recorded": 2
   },
   "runs": {
