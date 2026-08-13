@@ -166,6 +166,37 @@ their underlying `warn` or `info` severity.
 
 A remediated blocker requires a clean triage rerun before `pass-limited`.
 
+### Classification Decision Boundaries
+
+Use these mechanical boundaries before assigning severity and the lane outcome:
+
+- Unsupported registration or endorsement claims that the supplied evidence
+  establishes as false are misleading mark claims: record a `block` and
+  `fail`. A requested symbol or presentation convention that is not a
+  distribution condition remains `warn` or `info` and `pass-limited`.
+- Known copied expression with no supplied permission may be blocked by
+  conservative repository policy without asserting infringement; citation or
+  paid access is not permission. Similarity without a settled copying basis,
+  or a result that depends on missing exception/applicability facts, is a
+  `warn` and `not-evaluated`, never `pass-limited` while a block cannot be
+  ruled out.
+- A drive-by candidate outside the bounded publication act still receives an
+  `IP-SRC-4` deferred observation. It does not fail the in-scope gate when the
+  stated act neither edits, builds, links, nor distributes it.
+- A documented preference for later or broader counsel review is
+  `recommended` when the present hygiene decision is complete; it does not
+  become `required` and does not change the gate or verdict.
+
+Classify the proposition actually stated in the finding. A directly observed
+source fact remains a fact; an application of a legal category, protection,
+likelihood, exception, or disputed merits proposition is an inference. When a
+record needs both, split the findings or write the condition so its
+`fact | inference` label is unambiguous. For database rights, a potential
+Directive category is a binding-law harmonization-source inference until
+operative national law and applicability are established; a separate stop
+based only on missing permission or law may instead be a factual conservative
+repository-policy finding.
+
 ## In-Depth Procedure And Verdict
 
 1. Enumerate every in-scope publication surface and the distribution forms it
@@ -204,6 +235,10 @@ issue. Each record must contain:
 - jurisdiction and applicability;
 - fact or inference, confidence and evidence;
 - cause, consequence, recommendation, severity, risk tier, and counsel outcome.
+
+Ground the lane evidence and each finding in at least one distinctive source,
+material, path, quantity, or quoted claim from the reviewed facts. Equivalent
+paraphrase is acceptable; generic phrases such as `case evidence` are not.
 
 `counsel outcome` is `not-triggered`, `recommended`, or `required`, with the
 trigger stated. Use `recommended` only for a documented, non-mandatory

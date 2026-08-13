@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from validate_ip_hygiene_actual import (
@@ -26,6 +27,23 @@ EXPECTED_KEYS = {
 CLASSIFICATION_KEYS = {"severity", "authority_class", "fact_status"}
 FAMILIES = {"IP-SRC", "IP-COPY", "IP-DB", "IP-LIC", "IP-MARK"}
 EXPECTATIONS = {"finding", "stopped", "no-finding"}
+GENERIC_ANCHOR_TOKENS = {
+    "claim", "commands", "component", "copyright", "diagram", "evidence",
+    "example", "guide", "inventory", "material", "official", "original",
+    "plugin", "policy", "public", "report", "source", "supplied", "table",
+    "trademark", "works",
+}
+
+
+def anchor_matches(anchor: str, grounding: str) -> bool:
+    folded = anchor.casefold()
+    if folded in grounding:
+        return True
+    distinctive_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", folded)
+        if len(token) >= 5 and token not in GENERIC_ANCHOR_TOKENS
+    }
+    return bool(distinctive_tokens.intersection(re.findall(r"[a-z0-9]+", grounding)))
 
 
 def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
@@ -227,9 +245,9 @@ def main() -> int:
             {key: value for key, value in got.items() if key != "case"},
             ensure_ascii=False,
         ).casefold()
-        for anchor in wanted["evidence_anchors"]:
-            if anchor.casefold() not in grounding:
-                errors.append(f"{case}: missing evidence anchor: {anchor}")
+        anchors = wanted["evidence_anchors"]
+        if not any(anchor_matches(anchor, grounding) for anchor in anchors):
+            errors.append(f"{case}: missing every evidence anchor: {' | '.join(anchors)}")
     print("IP hygiene eval: " + ("PASS" if not errors else "FAIL"))
     for error in errors:
         print(error)

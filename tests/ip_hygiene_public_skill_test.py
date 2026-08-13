@@ -53,6 +53,16 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             skill,
         )
 
+    def test_public_skill_makes_high_risk_classification_boundaries_operational(self) -> None:
+        skill = read(PUBLIC_SKILL_PATH)
+        normalized = " ".join(skill.split())
+        self.assertIn("Unsupported registration or endorsement claims", normalized)
+        self.assertIn("Known copied expression with no supplied permission", normalized)
+        self.assertIn("Similarity without a settled copying basis", normalized)
+        self.assertIn("A drive-by candidate outside the bounded publication act still receives", normalized)
+        self.assertIn("A documented preference for later or broader counsel review", normalized)
+        self.assertIn("A directly observed source fact remains a fact", normalized)
+
     def test_runtime_entrypoints_exist_and_point_to_public_skill(self) -> None:
         claude_agent = read("souroldgeezer-audit/agents/ip-hygiene.md")
         normalized_agent = " ".join(claude_agent.split())

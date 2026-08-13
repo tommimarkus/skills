@@ -33,7 +33,8 @@ external docs.
   every authority class (including the distinction between harmonization
   sources and operative binding law), lane/verdict, fact status, counsel, and
   clearance overclaim. Parent-held evidence anchors require the evaluator's
-  bounded finding and lane evidence to identify facts from its assigned case;
+  bounded finding and lane evidence to identify at least one distinctive fact
+  from its assigned case;
   generic placeholders fail. The scorer also validates the complete expected
   schema and its exact identity match with the assigned case corpus before
   behavioral scoring.

@@ -91,9 +91,9 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
         self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
         self.assertEqual(
-            expected["case-040"]["allowed_classifications"]["IP-MARK-5"],
-            [{"severity": "block", "authority_class": "binding-law harmonization source",
-              "fact_status": "inference"}],
+            {item["fact_status"]
+             for item in expected["case-040"]["allowed_classifications"]["IP-MARK-5"]},
+            {"fact", "inference"},
         )
         self.assertEqual(
             {case["counsel_outcome"] for case in expected.values()},
@@ -112,6 +112,32 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertEqual(expected["case-030"]["expect"], "no-finding")
         self.assertEqual(expected["case-041"]["required_code_groups"], [["IP-MARK-1"]])
         self.assertIn("rejects every", cases_by_id()["case-041"]["prompt"])
+
+        for case_id in ("case-010", "case-013"):
+            self.assertEqual(expected[case_id]["outcome"], "fail", case_id)
+            primary = expected[case_id]["required_code_groups"][0][0]
+            self.assertTrue(
+                any(item["severity"] == "block"
+                    for item in expected[case_id]["allowed_classifications"][primary]),
+                case_id,
+            )
+
+        for case_id in ("case-008", "case-037"):
+            self.assertEqual(
+                {item["severity"]
+                 for item in expected[case_id]["allowed_classifications"]["IP-MARK-4"]},
+                {"info", "warn"},
+                case_id,
+            )
+
+        for case_id, code in (("case-017", "IP-DB-1"), ("case-018", "IP-DB-2"),
+                              ("case-019", "IP-DB-2")):
+            self.assertIn(
+                {"severity": "warn", "authority_class": "conservative repository policy",
+                 "fact_status": "fact"},
+                expected[case_id]["allowed_classifications"][code],
+                case_id,
+            )
 
     def test_blind_prompts_do_not_disclose_gate_verdict_or_counsel_conclusions(self) -> None:
         prompts = "\n".join(case["prompt"] for case in case_records())
@@ -379,7 +405,28 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 finding[field] = "generic placeholder"
         result = self.run_scorer(actual)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("missing evidence anchor: Blue Harbor", result.stdout)
+        self.assertIn("missing every evidence anchor: Blue Harbor | wave emblem", result.stdout)
+
+    def test_scorer_accepts_one_distinctive_case_anchor_when_other_facts_are_paraphrased(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        case = next(item for item in actual if item["case"] == "case-001")
+        serialized = json.dumps(case).replace("wave emblem", "the supplied graphic mark")
+        case.clear()
+        case.update(json.loads(serialized))
+        result = self.run_scorer(actual)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        case = next(item for item in actual if item["case"] == "case-039")
+        serialized = (
+            json.dumps(case)
+            .replace("openPanel", "the functional method name")
+            .replace("creative API annotations", "expressive API annotations")
+        )
+        case.clear()
+        case.update(json.loads(serialized))
+        result = self.run_scorer(actual)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_scorer_fails_closed_on_malformed_or_incoherent_expected_records(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
