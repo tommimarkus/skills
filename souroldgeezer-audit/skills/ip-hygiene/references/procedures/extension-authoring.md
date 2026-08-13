@@ -68,6 +68,18 @@ Each pack must carry exactly these sections, naming what
   specific to this language or its ecosystem (e.g. a package name field, a
   User-Agent constant, an endpoint-path convention) where a third-party mark
   is most likely to appear in this language's code.
+- **Criteria** — a closing disclosure of what the pack does to the criteria
+  set: which core criteria its facts serve, and either the namespaced
+  criterion it adds or carves out, or an explicit statement that it defines
+  none. State this even when the answer is "none" — a reader must be able to
+  tell from the pack alone whether it changed the criteria set.
+
+In practice a pack usually defines no namespaced criterion. The criteria are
+language-independent; what varies is the evidence surface. Add a namespaced
+criterion only for a question core does not already ask — not for a
+language-specific mechanism of a question it does. A minifier stripping
+comments is the mechanism of `IP-LIC-5`, which already names minification, so
+it is evidence, not a new criterion.
 
 ## The Craft Guard
 
@@ -80,17 +92,17 @@ dropped, not padded. This is a shipping condition, not advice.
 
 ## Current Extensions
 
-The packs below are not yet authored; this table records their planned
-detection targets and namespaces for the leaves that will write them.
+A namespace is reserved per pack even when the pack defines no numbered
+criterion, so one can be added later without renumbering.
 
-| File | Applies to | Namespace | Notes |
+| File | Applies to | Namespace | Numbered criteria |
 |---|---|---|---|
-| `python.md` | `*.py`, Python package manifests (e.g. `pyproject.toml`) | `python.` | Not yet authored |
-| `shell.md` | `*.sh`, `*.bash`, `*.zsh` | `shell.` | Not yet authored |
-| `javascript-typescript.md` | `*.js`, `*.jsx`, `*.ts`, `*.tsx`, Node.js/npm manifests | `js.` | Not yet authored |
-| `dotnet-csharp.md` | `*.cs`, `*.csproj`, .NET project/solution files | `dotnet.` | Not yet authored |
-| `java.md` | `*.java`, Maven/Gradle manifests | `java.` | Not yet authored |
-| `rust.md` | `*.rs`, `Cargo.toml` | `rust.` | Not yet authored |
+| `python.md` | `*.py`, Python package manifests (e.g. `pyproject.toml`) | `python.` | none |
+| `shell.md` | `*.sh`, `*.bash`, `*.zsh` | `shell.` | none |
+| `javascript-typescript.md` | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx`, Node.js/npm manifests | `js.` | none |
+| `dotnet-csharp.md` | `*.cs`, `*.csproj`, `*.sln`, `*.nuspec` | `dotnet.` | none |
+| `java.md` | `*.java`, Maven/Gradle manifests | `java.` | none |
+| `rust.md` | `*.rs`, `Cargo.toml` | `rust.` | none |
 
 ## Adding A New Language
 
