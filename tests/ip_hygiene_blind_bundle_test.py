@@ -52,14 +52,10 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
             paths = [entry["path"] for entry in first_manifest["files"]]
             self.assertEqual(paths, sorted(paths))
             self.assertIn("EVALUATOR_INSTRUCTIONS.md", paths)
-            self.assertIn(
-                "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl",
-                paths,
-            )
-            self.assertIn(
-                "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py",
-                paths,
-            )
+            self.assertIn("cases.jsonl", paths)
+            self.assertIn("validate_ip_hygiene_actual.py", paths)
+            self.assertFalse(any(path.endswith("/cases.jsonl") for path in paths))
+            self.assertFalse(any(path.endswith("/validate_ip_hygiene_actual.py") for path in paths))
             self.assertIn("souroldgeezer-audit/skills/ip-hygiene/SKILL.md", paths)
             self.assertIn("souroldgeezer-audit/docs/audit-reference/audit-craft.md", paths)
             self.assertIn("souroldgeezer-audit/docs/audit-reference/materiality.md", paths)

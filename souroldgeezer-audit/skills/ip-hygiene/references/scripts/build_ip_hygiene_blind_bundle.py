@@ -22,6 +22,10 @@ ALLOWLIST = (
     "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py",
     "souroldgeezer-audit/skills/ip-hygiene/references/trademark.md",
 )
+ROOT_DESTINATIONS = {
+    "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl": "cases.jsonl",
+    "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py": "validate_ip_hygiene_actual.py",
+}
 INSTRUCTIONS_PATH = "EVALUATOR_INSTRUCTIONS.md"
 INSTRUCTIONS = """# IP Hygiene Blind Evaluator Instructions
 
@@ -31,11 +35,10 @@ parent scoring material outside it. If you read outside the assigned bundle or
 are exposed to an expected outcome, return `blocked:contaminated` and do not
 produce or revise any results.
 
-For each record in
-`souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl`,
+For each record in `cases.jsonl`,
 apply the bundled IP Hygiene workflow and its bundled references. Write one
 actual JSONL record per case using the result shape enforced by
-`souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py`.
+`validate_ip_hygiene_actual.py`.
 Run that validator on the completed actual records before returning them.
 
 This evaluator validates result structure only. Do not score behavioral accuracy,
@@ -51,8 +54,11 @@ def sha256(path: Path) -> str:
 def build_bundle(repo_root: Path, output: Path) -> None:
     if output.exists():
         raise ValueError(f"output already exists: {output}")
-    sources = [(relative, repo_root / relative) for relative in ALLOWLIST]
-    missing = [relative for relative, source in sources if not source.is_file()]
+    sources = [
+        (ROOT_DESTINATIONS.get(relative, relative), repo_root / relative)
+        for relative in ALLOWLIST
+    ]
+    missing = [str(source.relative_to(repo_root)) for _, source in sources if not source.is_file()]
     if missing:
         raise ValueError("missing allowlisted source: " + ", ".join(missing))
 
@@ -65,7 +71,7 @@ def build_bundle(repo_root: Path, output: Path) -> None:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
 
-        files = [INSTRUCTIONS_PATH, *ALLOWLIST]
+        files = [INSTRUCTIONS_PATH, *(relative for relative, _ in sources)]
         manifest = {
             "schema_version": SCHEMA_VERSION,
             "files": [

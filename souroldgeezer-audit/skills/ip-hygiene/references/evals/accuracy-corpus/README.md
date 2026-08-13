@@ -26,6 +26,8 @@ the lane outcome, counsel outcome, and literal-false clearance disclosure. It
 must read only its assigned bundle: any outside read or
 expected-outcome exposure is `blocked:contaminated`, with no produced or revised
 results. Parent-only evaluation privately scores behavioral accuracy.
+The bundle manifest exposes `cases.jsonl` and `validate_ip_hygiene_actual.py`
+at its root so the evaluator's assigned acceptance command is self-contained.
 
 After receiving uncontaminated actual records, the parent scores results
 deterministically:
