@@ -201,13 +201,6 @@ Use these mechanical boundaries before assigning severity and the lane outcome:
   indicator and a logo/endorsement presentation require separate applicable
   criteria and findings; an alternative code is valid only for the same
   proposition.
-- A criterion naming a specific mechanism — notice survival through a
-  transformation, or the layers of generated or derived material — supplements
-  the permission chain and never discharges it. Cite it alongside the identity,
-  act, distribution, and layering criteria the case still raises. A finding that
-  records only the specific mechanism has dropped the coverage analysis deciding
-  whether the obligation applies at all, and the most specific-sounding code is
-  the one most likely to be cited alone.
 - Unsupported registration or endorsement claims that the supplied evidence
   establishes as false are misleading mark claims: record a `block` and
   `fail`. A requested symbol or presentation convention that is not a
