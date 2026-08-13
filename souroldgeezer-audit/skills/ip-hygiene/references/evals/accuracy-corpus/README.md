@@ -9,16 +9,23 @@ that scenario. It does not disclose its expected record or criterion code.
 
 ## Blind evaluation
 
-Give an evaluator `cases.jsonl`, not `expected.jsonl`. It writes one JSONL
-record per case using this actual result schema: `case`, `codes` (array),
-`severity`, `triage_gate`, `in_depth_verdict`, `authority_class`,
-`fact_status`, `counsel_outcome`, and optional `legal_clearance` (which must
-never be true). A no-finding control uses an empty `codes` array. Do not copy
-the expected codes into the prompt.
-Expected records use `required_codes` and `forbidden_codes` alongside the
-required outcome fields; they remain scorer input, not evaluator guidance.
+Build the allowlisted evaluator bundle and give the evaluator only that bundle:
 
-Score results deterministically:
+```text
+python references/scripts/build_ip_hygiene_blind_bundle.py --repo-root <repo-root> --output <empty-bundle-dir>
+```
+
+The bundle contains raw cases, the public workflow, directly required local
+references, evaluator instructions, and the actual-record validator. It omits
+expected outcomes, the parent scorer, source grounding, repository tests, Git
+metadata/history, prior diagnoses, and evaluator caches. The evaluator writes
+one JSONL record per case in the validator's closed schema, and validates
+structure only. It must read only its assigned bundle: any outside read or
+expected-outcome exposure is `blocked:contaminated`, with no produced or revised
+results. Parent-only evaluation privately scores behavioral accuracy.
+
+After receiving uncontaminated actual records, the parent scores results
+deterministically:
 
 ```text
 python references/scripts/score_ip_hygiene_eval.py --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
@@ -27,7 +34,7 @@ python references/scripts/score_ip_hygiene_eval.py --expected references/evals/a
 The scorer fails for a missed designated blocker, a forbidden clean-control
 finding, a wrong lane gate or in-depth verdict, or a legal-clearance overclaim.
 It also checks authority, fact/inference status, severity, and counsel outcome.
-Structural validation is not model recall: the corpus schema only proves that
-the test inventory is well formed; blind evaluation measures the model result.
-The focused contract test also rejects duplicate, placeholder, or
-under-specified prompts; it checks fixture quality, not an evaluator's answer.
+Structural validation is not behavioral scoring: the child validator only
+proves record shape; the parent scorer measures the model result. The focused
+contract test also rejects duplicate, placeholder, or under-specified prompts;
+it checks fixture quality, not an evaluator's answer.

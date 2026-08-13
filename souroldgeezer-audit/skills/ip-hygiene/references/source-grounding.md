@@ -29,4 +29,9 @@ external docs.
   code or decision. The deterministic scorer checks codes, severity,
   lane/verdict, authority, fact status, counsel, and clearance overclaim.
   Structural completeness is not evidence of model recall. No content is
-  copied from a real source.
+  copied from a real source. Blind evaluators receive only the deterministic
+  allowlisted bundle: raw cases, the public workflow, directly required local
+  references, instructions, and structural validator. Expected records,
+  parent scoring, source grounding, repository tests/history, prior diagnoses,
+  and evaluator caches remain outside that bundle. The child validates output
+  structure only; the parent privately scores behavior.

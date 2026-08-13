@@ -41,8 +41,21 @@ Load only the references selected by the evidence:
 When changing trigger, workflow, gates, source, or eval behavior, inspect
 `references/evals/`, its accuracy corpus, and
 [source-grounding.md](references/source-grounding.md). Keep evals synthetic or
-originally paraphrased. After a blind evaluator writes actual records without
-reading expected outcomes, score them with:
+originally paraphrased. Build a blind evaluator bundle, then give the evaluator
+only that bundle:
+
+`${CLAUDE_SKILL_DIR}/references/scripts/build_ip_hygiene_blind_bundle.py --repo-root <repo-root> --output <empty-bundle-dir>`
+
+In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
+for this loaded `SKILL.md`. The evaluator reads only its assigned bundle and
+must structurally validate its actual records with:
+
+`${CLAUDE_SKILL_DIR}/references/scripts/validate_ip_hygiene_actual.py <actual.jsonl>`
+
+In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
+for this loaded `SKILL.md`. An outside read or expected-outcome exposure is
+`blocked:contaminated`, with no results produced or revised. The parent alone
+privately scores behavior after receiving actual records:
 
 `${CLAUDE_SKILL_DIR}/references/scripts/score_ip_hygiene_eval.py --expected ${CLAUDE_SKILL_DIR}/references/evals/accuracy-corpus/expected.jsonl --actual <actual.jsonl> --families <comma-separated-families>`
 
