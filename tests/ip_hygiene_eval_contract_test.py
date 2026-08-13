@@ -39,7 +39,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         }
         self.assertEqual(
             {frozenset(group) for group in expected["case-001"]["required_code_groups"]},
-            {frozenset({"IP-MARK-2"}), frozenset({"IP-MARK-3"})},
+            {frozenset({"IP-MARK-2", "IP-MARK-3"})},
         )
         self.assertEqual(
             expected["case-002"]["allowed_classifications"]["IP-MARK-4"][0]["authority_class"],
@@ -138,6 +138,21 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 expected[case_id]["allowed_classifications"][code],
                 case_id,
             )
+
+        self.assertIn("IP-MARK-2", expected["case-001"]["required_code_groups"][0])
+        self.assertIn(
+            {"severity": "block", "authority_class": "conservative repository policy",
+             "fact_status": "fact"},
+            expected["case-005"]["allowed_classifications"]["IP-COPY-1"],
+        )
+        self.assertIn("IP-SRC-4", expected["case-011"]["required_code_groups"][0])
+        self.assertIn(
+            {"severity": "info", "authority_class": "conservative repository policy",
+             "fact_status": "fact"},
+            expected["case-012"]["allowed_classifications"]["IP-SRC-4"],
+        )
+        self.assertIn("IP-LIC-1", expected["case-019"]["required_code_groups"][0])
+        self.assertIn("IP-LIC-2", expected["case-022"]["required_code_groups"][0])
 
     def test_blind_prompts_do_not_disclose_gate_verdict_or_counsel_conclusions(self) -> None:
         prompts = "\n".join(case["prompt"] for case in case_records())
