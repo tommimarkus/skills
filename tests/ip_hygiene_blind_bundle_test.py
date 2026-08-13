@@ -8,7 +8,7 @@ import importlib.util
 import shutil
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import IP_CORPUS_SIZE, REPO_ROOT
 
 
 BUILDER = (
@@ -85,7 +85,7 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
                 json.loads(line)
                 for line in (first / "cases.jsonl").read_text(encoding="utf-8").splitlines()
             ]
-            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 43)])
+            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, IP_CORPUS_SIZE + 1)])
             for case in cases:
                 self.assertEqual(set(case), {"case", "prompt", "synthetic"})
                 self.assertIn("Requested lane:", case["prompt"])

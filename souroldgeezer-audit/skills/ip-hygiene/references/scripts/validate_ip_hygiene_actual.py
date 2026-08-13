@@ -41,10 +41,10 @@ INTENDED_ACTS = {
     "mention", "link", "quote", "copy", "modify", "aggregate", "link/import",
     "execute", "redistribute",
 }
-CODES = {*(f"IP-SRC-{number}" for number in range(1, 5)),
+CODES = {*(f"IP-SRC-{number}" for number in range(1, 6)),
          *(f"IP-COPY-{number}" for number in range(1, 5)),
          *(f"IP-DB-{number}" for number in range(1, 3)),
-         *(f"IP-LIC-{number}" for number in range(1, 5)),
+         *(f"IP-LIC-{number}" for number in range(1, 6)),
          *(f"IP-MARK-{number}" for number in range(1, 6))}
 
 

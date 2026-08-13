@@ -1,39 +1,20 @@
 import json
-import re
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, read
+from tests.surface_test_lib import (
+    IP_CORPUS_SIZE as CORPUS_SIZE,
+    REPO_ROOT,
+    ip_defined_criteria as defined_criteria,
+    load_script_module,
+    read,
+)
 
 
 CORPUS = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus"
-REFERENCES = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references"
-CRITERION_DEFINITION = re.compile(r"^- \*\*`(IP-[A-Z]+-\d+) ", re.MULTILINE)
-
-# Deliberate tripwire against silent truncation, and the one place the corpus
-# size is stated. Cases 043-052 carry the source-code lane.
-CORPUS_SIZE = 52
-
-
-def defined_criteria() -> set[str]:
-    """Every criterion the skill's reference files define, parsed from the
-    canonical `- **`IP-FAM-N Title`:**` bullet each definition uses.
-
-    Derived rather than restated so the corpus-coverage assertion below tracks
-    the skill instead of a second copy of it: adding a criterion to a reference
-    file makes the corpus owe it a case, and the test fails loudly in either
-    direction (a corpus code with no definition, or a definition with no case)
-    rather than silently going stale."""
-    codes = {
-        code
-        for path in sorted(REFERENCES.glob("*.md"))
-        for code in CRITERION_DEFINITION.findall(path.read_text(encoding="utf-8"))
-    }
-    assert codes, "no criterion definitions parsed — the bullet form has changed"
-    return codes
 SCORER = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/score_ip_hygiene_eval.py"
 VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py"
 
@@ -811,3 +792,24 @@ def actual_from_expected(case: dict) -> dict:
     if case["lane"] == "prospective":
         result["decision_controls"] = [f"Control publication of {anchors[0]}"]
     return result
+
+
+class IpHygieneCriterionSetSyncTest(unittest.TestCase):
+    """The reference files define the criteria; every surface that restates that
+    set is checked against them here.
+
+    Three copies of this fact existed independently and drifted apart when
+    IP-SRC-5 and IP-LIC-5 were added: the corpus-coverage set, the shipped
+    validator's closed schema, and the blind-bundle test's case range. The
+    validator keeps a literal on purpose -- it is a runtime allowlist that must
+    fail closed without parsing markdown -- so it is gated rather than derived.
+    """
+
+    def test_shipped_validator_allowlist_matches_the_defined_criteria(self) -> None:
+        validator = load_script_module("ip_hygiene_validator", VALIDATOR)
+        self.assertEqual(
+            validator.CODES,
+            defined_criteria(),
+            "validate_ip_hygiene_actual.py CODES has drifted from the criteria "
+            "the reference files define; update it to match",
+        )

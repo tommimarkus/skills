@@ -1,6 +1,7 @@
 """Shared helpers for the repo's surface tests (paths, file reads, per-stack packs)."""
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -166,3 +167,28 @@ def assert_stack_has_synthetic_eval_coverage(
     tc.assertIn(test_quality_behavior_id, eval_ids(f"{test_quality_evals}/behavior-cases.jsonl"))
     tc.assertIn(software_trigger_id, eval_ids(f"{software_evals}/trigger-cases.jsonl"))
     tc.assertIn(software_behavior_id, eval_ids(f"{software_evals}/behavior-cases.jsonl"))
+
+
+# --- ip-hygiene criterion/corpus authority -------------------------------
+# The skill's reference files are the single authority for which criteria
+# exist. Several surfaces restate that set or the corpus size; each one is
+# checked against these helpers rather than carrying its own copy.
+
+IP_HYGIENE_REFERENCES = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references"
+IP_CRITERION_DEFINITION = re.compile(r"^- \*\*`(IP-[A-Z]+-\d+) ", re.MULTILINE)
+
+# Deliberate tripwire against silent corpus truncation, stated once.
+# Cases 043-052 carry the source-code lane.
+IP_CORPUS_SIZE = 52
+
+
+def ip_defined_criteria() -> set[str]:
+    """Every criterion the ip-hygiene reference files define, parsed from the
+    canonical `- **`IP-FAM-N Title`:**` bullet each definition uses."""
+    codes = {
+        code
+        for path in sorted(IP_HYGIENE_REFERENCES.glob("*.md"))
+        for code in IP_CRITERION_DEFINITION.findall(path.read_text(encoding="utf-8"))
+    }
+    assert codes, "no criterion definitions parsed — the bullet form has changed"
+    return codes
