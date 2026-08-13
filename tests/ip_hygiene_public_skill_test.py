@@ -62,6 +62,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("A drive-by candidate outside the bounded publication act still receives", normalized)
         self.assertIn("A documented preference for later or broader counsel review", normalized)
         self.assertIn("A directly observed source fact remains a fact", normalized)
+        self.assertIn("Do not collapse separate planted conditions into one finding", normalized)
 
     def test_runtime_entrypoints_exist_and_point_to_public_skill(self) -> None:
         claude_agent = read("souroldgeezer-audit/agents/ip-hygiene.md")
@@ -126,6 +127,10 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         # rather than the old bolded "(plugin ...)" list format.
         self.assertIn("now a public skill in `souroldgeezer-audit`", claude)
         self.assertNotIn("**`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md]", claude)
+        self.assertIn(
+            "select the repository-required lane: in-depth for breaking or additive public-surface changes, scoped triage for cosmetic changes",
+            " ".join(claude.split()),
+        )
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ more than one criterion. Authority classifications distinguish a directive or ot
 EU harmonization source from an operative national binding-law proposition. The
 scorer rejects unknown or zero-coverage family selectors and fails for a missing required code group, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
-outcome, no distinctive evidence anchor, an expected/assigned case mismatch, or a
+outcome, missing distinctive lane or per-finding grounding, an expected/assigned case mismatch, or a
 legal-clearance overclaim. Malformed or cross-field-incoherent expected records
 fail closed. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the

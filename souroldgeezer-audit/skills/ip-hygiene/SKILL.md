@@ -170,6 +170,11 @@ A remediated blocker requires a clean triage rerun before `pass-limited`.
 
 Use these mechanical boundaries before assigning severity and the lane outcome:
 
+- Do not collapse separate planted conditions into one finding merely because
+  one sentence or artifact contains both. For example, an artifact-title/source
+  indicator and a logo/endorsement presentation require separate applicable
+  criteria and findings; an alternative code is valid only for the same
+  proposition.
 - Unsupported registration or endorsement claims that the supplied evidence
   establishes as false are misleading mark claims: record a `block` and
   `fail`. A requested symbol or presentation convention that is not a

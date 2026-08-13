@@ -39,7 +39,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         }
         self.assertEqual(
             {frozenset(group) for group in expected["case-001"]["required_code_groups"]},
-            {frozenset({"IP-MARK-2", "IP-MARK-3"})},
+            {frozenset({"IP-MARK-2"}), frozenset({"IP-MARK-3"})},
         )
         self.assertEqual(
             expected["case-002"]["allowed_classifications"]["IP-MARK-4"][0]["authority_class"],
@@ -93,7 +93,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertEqual(
             {item["fact_status"]
              for item in expected["case-040"]["allowed_classifications"]["IP-MARK-5"]},
-            {"fact", "inference"},
+            {"inference"},
         )
         self.assertEqual(
             {case["counsel_outcome"] for case in expected.values()},
@@ -139,7 +139,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 case_id,
             )
 
-        self.assertIn("IP-MARK-2", expected["case-001"]["required_code_groups"][0])
+        self.assertIn(["IP-MARK-2"], expected["case-001"]["required_code_groups"])
         self.assertIn(
             {"severity": "block", "authority_class": "conservative repository policy",
              "fact_status": "fact"},
@@ -153,6 +153,13 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         )
         self.assertIn("IP-LIC-1", expected["case-019"]["required_code_groups"][0])
         self.assertIn("IP-LIC-2", expected["case-022"]["required_code_groups"][0])
+        for case_id, code in (("case-040", "IP-MARK-5"), ("case-041", "IP-MARK-1")):
+            self.assertEqual(
+                {item["fact_status"]
+                 for item in expected[case_id]["allowed_classifications"][code]},
+                {"inference"},
+                case_id,
+            )
 
     def test_blind_prompts_do_not_disclose_gate_verdict_or_counsel_conclusions(self) -> None:
         prompts = "\n".join(case["prompt"] for case in case_records())
@@ -221,6 +228,29 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertIn("undeclared finding code", result.stdout)
         self.assertIn("forbidden clean-control finding", result.stdout)
         self.assertIn("legal-clearance overclaim", result.stdout)
+
+    def test_scorer_requires_each_distinct_planted_condition(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        case = next(item for item in actual if item["case"] == "case-001")
+        case["findings"] = [finding for finding in case["findings"] if finding["code"] != "IP-MARK-2"]
+        result = self.run_scorer(actual)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("case-001: missing required finding code group: IP-MARK-2", result.stdout)
+
+    def test_scorer_rejects_legal_merits_applications_labeled_as_fact(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        for case_id, code in (("case-040", "IP-MARK-5"), ("case-041", "IP-MARK-1")):
+            finding = next(
+                finding for finding in next(item for item in actual if item["case"] == case_id)["findings"]
+                if finding["code"] == code
+            )
+            finding["fact_status"] = "fact"
+        result = self.run_scorer(actual)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("case-040: wrong classification for IP-MARK-5", result.stdout)
+        self.assertIn("case-041: wrong classification for IP-MARK-1", result.stdout)
 
     def test_validator_rejects_open_schema_aliases_and_nonliteral_false_clearance(self) -> None:
         self.assertTrue(VALIDATOR.is_file())
@@ -422,6 +452,28 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing every evidence anchor: Blue Harbor | wave emblem", result.stdout)
 
+    def test_scorer_requires_grounding_in_each_finding_and_lane_evidence(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        case = next(item for item in actual if item["case"] == "case-001")
+        for finding in case["findings"]:
+            finding.update({
+                "condition": "generic placeholder", "location": "generic placeholder",
+                "source_provenance": "generic placeholder", "evidence": ["generic placeholder"],
+            })
+        result = self.run_scorer(actual)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("case-001: ungrounded finding: IP-MARK-2", result.stdout)
+        self.assertIn("case-001: ungrounded finding: IP-MARK-3", result.stdout)
+
+        actual = [actual_from_expected(case) for case in expected]
+        case = next(item for item in actual if item["case"] == "case-001")
+        for field in ("reviewed_surface", "exclusions", "evidence", "limits"):
+            case[field] = ["generic placeholder"]
+        result = self.run_scorer(actual)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("case-001: ungrounded lane evidence", result.stdout)
+
     def test_scorer_accepts_one_distinctive_case_anchor_when_other_facts_are_paraphrased(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         actual = [actual_from_expected(case) for case in expected]
@@ -461,6 +513,28 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         index = next(i for i, case in enumerate(counsel_drift) if case["case"] == "case-023")
         counsel_drift[index] = {**counsel_drift[index], "outcome": "no-blocker-identified"}
         mutations.append((counsel_drift, "required counsel must stop the lane"))
+
+        counsel_outcome_drift = json.loads(json.dumps(expected))
+        index = next(i for i, case in enumerate(counsel_outcome_drift) if case["case"] == "case-036")
+        counsel_outcome_drift[index]["counsel_outcome"] = "not-triggered"
+        mutations.append((counsel_outcome_drift, "counsel-required outcome requires counsel outcome required"))
+
+        qualified_block_drift = json.loads(json.dumps(expected))
+        index = next(i for i, case in enumerate(qualified_block_drift) if case["case"] == "case-037")
+        qualified_block_drift[index]["allowed_classifications"]["IP-MARK-4"] = [
+            {"severity": "block", "authority_class": "project convention", "fact_status": "fact"}
+        ]
+        mutations.append((qualified_block_drift, "block severity contradicts nonblocking lane outcome"))
+
+        unsupported_blocked = json.loads(json.dumps(expected))
+        index = next(i for i, case in enumerate(unsupported_blocked) if case["case"] == "case-037")
+        unsupported_blocked[index]["outcome"] = "blocked"
+        mutations.append((unsupported_blocked, "blocked outcome requires a block or required counsel"))
+
+        designated_outcome_drift = json.loads(json.dumps(expected))
+        index = next(i for i, case in enumerate(designated_outcome_drift) if case["case"] == "case-037")
+        designated_outcome_drift[index]["designated_blocker_criterion"] = "IP-MARK-4"
+        mutations.append((designated_outcome_drift, "designated blocker contradicts nonblocking lane outcome"))
 
         blocker_drift = json.loads(json.dumps(expected))
         blocker_drift[0]["allowed_classifications"]["IP-MARK-2"][0]["severity"] = "warn"

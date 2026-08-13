@@ -154,6 +154,8 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
         if item["counsel_outcome"] == "required":
             if not isinstance(item["outcome"], str) or item["outcome"] not in {"blocked", "counsel-required"}:
                 errors.append(f"expected line {number}: required counsel must stop the lane")
+        if item["outcome"] == "counsel-required" and item["counsel_outcome"] != "required":
+            errors.append(f"expected line {number}: counsel-required outcome requires counsel outcome required")
         if item["counsel_outcome"] == "recommended":
             if isinstance(item["outcome"], str) and item["outcome"] in {"blocked", "counsel-required"}:
                 errors.append(f"expected line {number}: recommended counsel cannot be a mandatory stop")
@@ -166,6 +168,8 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
             if isinstance(classification, dict)
         ):
             errors.append(f"expected line {number}: designated blocker must allow block severity")
+        if isinstance(designated, str) and item["outcome"] not in {"fail", "blocked", "do-not-proceed"}:
+            errors.append(f"expected line {number}: designated blocker contradicts nonblocking lane outcome")
         required_has_block = any(
             classification.get("severity") == "block"
             for code in required
@@ -174,8 +178,14 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
         )
         if isinstance(item["outcome"], str) and item["outcome"] in {"fail", "do-not-proceed"} and not required_has_block:
             errors.append(f"expected line {number}: blocking outcome requires a required block classification")
-        if isinstance(item["outcome"], str) and item["outcome"] in {"pass-limited", "no-blocker-identified"} and required_has_block:
-            errors.append(f"expected line {number}: nonblocking outcome cannot require a block classification")
+        nonblocking_outcomes = {
+            "pass-limited", "not-evaluated", "qualified", "no-blocker-identified",
+            "proceed-with-stated-controls", "insufficient-evidence", "counsel-required",
+        }
+        if isinstance(item["outcome"], str) and item["outcome"] in nonblocking_outcomes and required_has_block:
+            errors.append(f"expected line {number}: block severity contradicts nonblocking lane outcome")
+        if item["outcome"] == "blocked" and item["counsel_outcome"] != "required" and not required_has_block:
+            errors.append(f"expected line {number}: blocked outcome requires a block or required counsel")
     return result, errors
 
 
@@ -241,12 +251,31 @@ def main() -> int:
             errors.append(f"{case}: wrong counsel_outcome")
         if got.get("legal_clearance") is not False:
             errors.append(f"{case}: legal-clearance overclaim")
-        grounding = json.dumps(
+        anchors = wanted["evidence_anchors"]
+        lane_grounding = json.dumps(
+            {key: got.get(key) for key in (
+                "reviewed_surface", "exclusions", "evidence", "limits", "decision_controls"
+            ) if key in got},
+            ensure_ascii=False,
+        ).casefold()
+        if not any(anchor_matches(anchor, lane_grounding) for anchor in anchors):
+            errors.append(f"{case}: ungrounded lane evidence")
+        for finding in got.get("findings", []):
+            if not isinstance(finding, dict):
+                continue
+            finding_grounding = json.dumps(
+                {key: finding.get(key) for key in (
+                    "condition", "location", "source_provenance", "evidence"
+                )},
+                ensure_ascii=False,
+            ).casefold()
+            if not any(anchor_matches(anchor, finding_grounding) for anchor in anchors):
+                errors.append(f"{case}: ungrounded finding: {finding.get('code', '<unknown>')}")
+        whole_record = json.dumps(
             {key: value for key, value in got.items() if key != "case"},
             ensure_ascii=False,
         ).casefold()
-        anchors = wanted["evidence_anchors"]
-        if not any(anchor_matches(anchor, grounding) for anchor in anchors):
+        if not any(anchor_matches(anchor, whole_record) for anchor in anchors):
             errors.append(f"{case}: missing every evidence anchor: {' | '.join(anchors)}")
     print("IP hygiene eval: " + ("PASS" if not errors else "FAIL"))
     for error in errors:
