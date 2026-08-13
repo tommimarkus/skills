@@ -17,7 +17,14 @@ OUTCOMES = {
     "prospective_decision": {"proceed-with-stated-controls", "do-not-proceed", "insufficient-evidence", "counsel-required"},
 }
 SEVERITIES = {"block", "warn", "info"}
-AUTHORITIES = {"binding law", "operative licence term", "holder policy", "project convention", "conservative repository policy"}
+AUTHORITIES = {
+    "binding law",
+    "binding-law harmonization source",
+    "operative licence term",
+    "holder policy",
+    "project convention",
+    "conservative repository policy",
+}
 FACT_STATUSES = {"fact", "inference"}
 COUNSEL_OUTCOMES = {"not-triggered", "recommended", "required"}
 CODES = {*(f"IP-SRC-{number}" for number in range(1, 5)),

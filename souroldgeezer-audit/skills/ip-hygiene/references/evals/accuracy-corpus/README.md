@@ -45,7 +45,9 @@ python references/scripts/score_ip_hygiene_eval.py --expected references/evals/a
 Parent-held expected records retain the family selector and declare
 `required_codes`, explicit allowed codes,
 per-code classifications, lane outcome, counsel outcome, and any substantiated
-designated blocker. The scorer fails for a missing required code, an unsupported
+designated blocker. Authority classifications distinguish a directive or other
+EU harmonization source from an operative national binding-law proposition. The
+scorer rejects unknown or zero-coverage family selectors and fails for a missing required code, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
 outcome, an unexpected case ID, or a legal-clearance overclaim. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the

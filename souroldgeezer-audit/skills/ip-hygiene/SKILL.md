@@ -66,10 +66,12 @@ recall; this command compares the separately produced blind results.
 ## Criteria And Authority
 
 Every conclusion cites one criterion family and classifies the authority it
-uses. The authority classes are: binding law, operative licence term, holder
-policy, project convention, and conservative repository policy. They are not
-interchangeable: a holder request is not legislation, and a repository default
-does not establish infringement.
+uses. The authority classes are: binding law, binding-law harmonization source,
+operative licence term, holder policy, project convention, and conservative
+repository policy. They are not interchangeable: a directive is a
+harmonization source until applicable national implementation is established, a
+holder request is not legislation, and a repository default does not establish
+infringement.
 
 Use these stable criteria families; the loaded reference supplies the numbered
 criterion:
@@ -219,6 +221,13 @@ legal conclusions for a live or threatened dispute; a cease-and-desist or other
 demand; a bespoke agreement; contested ownership; unresolved combined-work or copyleft classification;
 country-specific clearance; or reliance on a disputed exception. The unaffected
 review boundary may continue if it remains separable.
+
+Classify a counsel-only stop from the evidence that supports the stop. When the
+facts establish only the dispute, demand, bespoke agreement, contested title,
+unresolved classification, country-specific request, or disputed exception,
+record a `warn` under conservative repository policy and do not promote it to a
+`block`, binding-law conclusion, holder-policy breach, or operative-licence
+conclusion. A separate merits finding requires separate substantiating evidence.
 
 Also stop the affected decision when source identity, authority, licence text,
 holder policy, intended act, distribution form/audience, or

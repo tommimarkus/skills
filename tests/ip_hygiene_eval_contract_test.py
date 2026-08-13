@@ -48,8 +48,18 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertEqual(expected["case-017"]["expect"], "stopped")
         self.assertEqual(expected["case-017"]["outcome"], "not-evaluated")
         self.assertIsNone(expected["case-017"]["designated_blocker_criterion"])
-        for case_id in ("case-005", "case-013", "case-014", "case-017", "case-018",
-                        "case-019", "case-024", "case-027", "case-028"):
+        self.assertEqual(expected["case-018"]["expect"], "stopped")
+        self.assertEqual(expected["case-018"]["outcome"], "not-evaluated")
+        self.assertIsNone(expected["case-018"]["designated_blocker_criterion"])
+        for case_id in ("case-017", "case-018", "case-019"):
+            for classifications in expected[case_id]["allowed_classifications"].values():
+                self.assertEqual(
+                    classifications[0]["authority_class"],
+                    "binding-law harmonization source",
+                    case_id,
+                )
+        for case_id in ("case-005", "case-013", "case-014", "case-024",
+                        "case-027", "case-028"):
             for classifications in expected[case_id]["allowed_classifications"].values():
                 self.assertNotEqual(classifications[0]["authority_class"], "binding law", case_id)
 
@@ -171,6 +181,32 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unexpected actual case: case-999", result.stdout)
+
+    def test_scorer_rejects_unknown_and_zero_coverage_family_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("", encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCORER), "--expected", str(CORPUS / "expected.jsonl"),
+                 "--actual", str(actual_path), "--families", "IP-NOPE"],
+                text=True, capture_output=True, check=False,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown family selector: IP-NOPE", result.stdout)
+
+    def test_validator_accepts_harmonization_source_authority_class(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        finding = next(case for case in actual if case["case"] == "case-017")["findings"][0]
+        self.assertEqual(finding["authority_class"], "binding-law harmonization source")
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(case) + "\n" for case in actual), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(VALIDATOR), "--cases", str(CORPUS / "cases.jsonl"),
+                 "--actual", str(actual_path)], text=True, capture_output=True, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]

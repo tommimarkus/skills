@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import importlib.util
+import shutil
 from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT
@@ -87,6 +89,33 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
             for case in cases:
                 self.assertEqual(set(case), {"case", "prompt", "synthetic"})
                 self.assertIn("Requested lane:", case["prompt"])
+
+    def test_builder_rejects_allowlisted_symlink_even_when_target_is_a_file(self) -> None:
+        spec = importlib.util.spec_from_file_location("ip_blind_builder", BUILDER)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fake_repo = root / "repo"
+            for relative in module.ALLOWLIST:
+                source = REPO_ROOT / relative
+                destination = fake_repo / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+            outside = root / "outside.md"
+            outside.write_text("outside contamination", encoding="utf-8")
+            linked = fake_repo / module.ALLOWLIST[0]
+            linked.unlink()
+            linked.symlink_to(outside)
+            result = subprocess.run(
+                [sys.executable, str(BUILDER), "--repo-root", str(fake_repo),
+                 "--output", str(root / "bundle")],
+                text=True, capture_output=True, check=False,
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("symlink", result.stderr)
 
 
 if __name__ == "__main__":

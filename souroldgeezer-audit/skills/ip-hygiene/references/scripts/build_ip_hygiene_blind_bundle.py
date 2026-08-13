@@ -61,6 +61,19 @@ def build_bundle(repo_root: Path, output: Path) -> None:
         (ROOT_DESTINATIONS.get(relative, relative), repo_root / relative)
         for relative in ALLOWLIST
     ]
+    unsafe = []
+    for _, source in sources:
+        if source.is_symlink():
+            unsafe.append(f"symlink source is forbidden: {source.relative_to(repo_root)}")
+            continue
+        try:
+            resolved = source.resolve(strict=True)
+        except FileNotFoundError:
+            continue
+        if not resolved.is_relative_to(repo_root):
+            unsafe.append(f"source resolves outside repo_root: {source.relative_to(repo_root)}")
+    if unsafe:
+        raise ValueError("; ".join(unsafe))
     missing = [str(source.relative_to(repo_root)) for _, source in sources if not source.is_file()]
     if missing:
         raise ValueError("missing allowlisted source: " + ", ".join(missing))

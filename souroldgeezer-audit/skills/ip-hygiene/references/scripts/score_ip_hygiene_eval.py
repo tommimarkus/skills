@@ -62,9 +62,15 @@ def main() -> int:
     errors.extend(f"actual {error}" for error in actual_errors)
     for case in sorted(set(actual) - set(expected)):
         errors.append(f"unexpected actual case: {case}")
-    families = set(args.families.split(",")) if args.families else None
+    declared_families = {item["family"] for item in expected.values()}
+    families = {item.strip() for item in args.families.split(",")} if args.families else None
+    if families is not None:
+        for family in sorted(families - declared_families):
+            errors.append(f"unknown family selector: {family or '<empty>'}")
+        if not families & declared_families:
+            errors.append("family selection covers zero declared cases")
     for case, wanted in expected.items():
-        if families and wanted["family"] not in families:
+        if families is not None and wanted["family"] not in families:
             continue
         got = actual.get(case)
         if got is None:

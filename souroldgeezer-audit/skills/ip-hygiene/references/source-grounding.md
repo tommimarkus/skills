@@ -28,7 +28,8 @@ external docs.
   explicitly requested lane, and the scenario's ambiguity or counsel-trigger
   facts. Blind input uses opaque case IDs, omits family labels, and does not
   name an expected code, authority class, or decision. The deterministic scorer
-  checks codes, severity,
+  checks codes, severity, the distinction between harmonization sources and
+  operative binding law,
   lane/verdict, authority, fact status, counsel, and clearance overclaim.
   Structural completeness is not evidence of model recall. No content is
   copied from a real source. Blind evaluators receive only the deterministic
