@@ -90,3 +90,37 @@ the child validator proves record shape and case coverage; only the
 parent scorer measures behavioral accuracy. The focused contract test also
 rejects duplicate, placeholder, or under-specified prompts; it checks fixture
 quality, not an evaluator's answer.
+
+## Reading a score against the baseline
+
+A raw score is not interpretable on its own. The evaluator is stochastic, so the
+same corpus and the same bundled guidance produce different results run to run,
+and a bare issue count cannot tell a regression from noise. `baseline.json`
+records what that noise actually looks like.
+
+It holds two runs over one pinned bundle — same corpus bytes, same references,
+one evaluator each, unsharded — with the corpus SHA-256, date, harness shape and
+model recorded beside them. Both runs failed 14 cases, but they were not the
+same 14: 11 cases failed in both, 6 in exactly one, and the issue count ranged
+21 to 26. Failing-set agreement was 65%.
+
+So, when scoring a change:
+
+- A case in `envelope.stable_failures` that keeps failing is **not** news, and a
+  change that fixes one **is**.
+- A case in `envelope.variable_failures`, or a fresh single-run failure, is
+  within noise. One run cannot convict it; run again before believing it.
+- An issue count inside `envelope.issues_range` is unremarkable. Movement well
+  outside that range is the signal worth chasing.
+
+Two constraints keep the comparison honest. Change **one** variable per scored
+run: altering bundled guidance and the harness shape together produces a delta
+that cannot be attributed to either. And compare only against a baseline built
+from the same bundled guidance — a baseline recorded before a `SKILL.md` edit
+does not describe the skill after it.
+
+Refresh the baseline deliberately, by re-running and committing, whenever
+bundled guidance or the corpus changes materially. It is not re-measured by the
+suite: unlike the deterministic `tests/skill_load_cost/cost-snapshot.json`, an
+evaluator score cannot be re-derived in-process, so a stale baseline is caught
+by reading its provenance, not by a gate.

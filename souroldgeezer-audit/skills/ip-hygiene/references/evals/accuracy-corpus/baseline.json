@@ -1,0 +1,82 @@
+{
+  "schema": "ip-hygiene-eval-baseline.v1",
+  "provenance": {
+    "recorded": "2026-08-13",
+    "cases_sha256": "fedb742194599d54b57ca979a81d2a573b63949c86230a704307119c0720fe1d",
+    "expected_sha256": "be55a9dca2f2ba28654afcd897cb022a12ae9a06d90f24afc30fa0dccdeebf6c",
+    "corpus_cases": 52,
+    "harness": "one evaluator per run, full corpus, unsharded, same bundle directory",
+    "model": "inherited session default (claude-opus-5)",
+    "runs_recorded": 2
+  },
+  "runs": {
+    "A": {
+      "issues": 21,
+      "cases_failing": 14,
+      "failing_cases": [
+        "case-009",
+        "case-010",
+        "case-011",
+        "case-013",
+        "case-014",
+        "case-015",
+        "case-017",
+        "case-018",
+        "case-019",
+        "case-021",
+        "case-039",
+        "case-049",
+        "case-050",
+        "case-051"
+      ]
+    },
+    "B": {
+      "issues": 26,
+      "cases_failing": 14,
+      "failing_cases": [
+        "case-004",
+        "case-005",
+        "case-009",
+        "case-010",
+        "case-011",
+        "case-013",
+        "case-015",
+        "case-017",
+        "case-018",
+        "case-021",
+        "case-035",
+        "case-039",
+        "case-050",
+        "case-051"
+      ]
+    }
+  },
+  "envelope": {
+    "issues_range": [
+      21,
+      26
+    ],
+    "stable_failures": [
+      "case-009",
+      "case-010",
+      "case-011",
+      "case-013",
+      "case-015",
+      "case-017",
+      "case-018",
+      "case-021",
+      "case-039",
+      "case-050",
+      "case-051"
+    ],
+    "variable_failures": [
+      "case-004",
+      "case-005",
+      "case-014",
+      "case-019",
+      "case-035",
+      "case-049"
+    ],
+    "failing_set_agreement": 0.65
+  }
+}
