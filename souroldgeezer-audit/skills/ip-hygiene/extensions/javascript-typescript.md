@@ -65,8 +65,8 @@ production build, which is the concrete notice-loss path
 `source-code.md`'s "minification" transformation describes. The ecosystem
 convention that survives it is a licence comment beginning `/*!` or
 containing an `@license`, `@copyright`, or `@preserve` tag, which these tools
-retain by default even when stripping everything else; confirm the retained comment is
-still the full required notice, not a truncated fragment. Some bundler
+retain by default even when stripping everything else; confirm the retained
+comment is still the full required notice, not a truncated fragment. Some bundler
 configurations instead extract retained licence comments into a separate
 output file (a `*.LICENSE.txt`-style sibling of the bundle) rather than
 inlining them — treat that sibling file as the notice's new location and
