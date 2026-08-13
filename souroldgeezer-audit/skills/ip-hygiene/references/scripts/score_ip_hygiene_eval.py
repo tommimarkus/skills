@@ -8,7 +8,7 @@ from pathlib import Path
 from validate_ip_hygiene_actual import CODES, validate_file
 
 
-EXPECTED_KEYS = {"case", "family", "expect", "required_codes", "allowed_codes", "allowed_classifications", "lane", "outcome", "counsel_outcome", "designated_blocker_criterion"}
+EXPECTED_KEYS = {"case", "family", "expect", "required_code_groups", "allowed_codes", "allowed_classifications", "lane", "outcome", "counsel_outcome", "designated_blocker_criterion"}
 CLASSIFICATION_KEYS = {"severity", "authority_class", "fact_status"}
 
 
@@ -30,13 +30,37 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
         if case in result:
             errors.append(f"expected line {number}: duplicate case: {case}")
         result[case] = item
-        required, allowed = item["required_codes"], item["allowed_codes"]
-        if not isinstance(required, list) or not isinstance(allowed, list) or not set(required).issubset(allowed):
-            errors.append(f"expected line {number}: required_codes must be allowed")
-        if not set(required).issubset(CODES) or not set(allowed).issubset(CODES):
+        groups, allowed = item["required_code_groups"], item["allowed_codes"]
+        valid_groups = isinstance(groups, list) and all(
+            isinstance(group, list)
+            and group
+            and all(isinstance(code, str) for code in group)
+            and len(group) == len(set(group))
+            for group in groups
+        )
+        required = {
+            code
+            for group in groups if isinstance(group, list)
+            for code in group if isinstance(code, str)
+        } if isinstance(groups, list) else set()
+        group_entry_count = sum(len(group) for group in groups) if valid_groups else 0
+        valid_allowed = (
+            isinstance(allowed, list)
+            and all(isinstance(code, str) for code in allowed)
+            and len(allowed) == len(set(allowed))
+        )
+        allowed_set = set(allowed) if valid_allowed else set()
+        if (
+            not valid_groups
+            or len(required) != group_entry_count
+            or not valid_allowed
+            or not required.issubset(allowed_set)
+        ):
+            errors.append(f"expected line {number}: required_code_groups must be nonempty groups of allowed codes")
+        if not required.issubset(CODES) or not allowed_set.issubset(CODES):
             errors.append(f"expected line {number}: invalid expected code")
-        if set(required) != set(item["allowed_classifications"]):
-            errors.append(f"expected line {number}: classifications must cover exactly required codes")
+        if allowed_set != set(item["allowed_classifications"]):
+            errors.append(f"expected line {number}: classifications must cover exactly allowed codes")
         for classifications in item["allowed_classifications"].values():
             if not isinstance(classifications, list) or not classifications:
                 errors.append(f"expected line {number}: empty allowed classification")
@@ -44,7 +68,7 @@ def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
             for classification in classifications:
                 if set(classification) != CLASSIFICATION_KEYS:
                     errors.append(f"expected line {number}: classification keys are closed")
-        if item["expect"] == "no-finding" and (required or allowed or item["allowed_classifications"]):
+        if item["expect"] == "no-finding" and (groups or allowed or item["allowed_classifications"]):
             errors.append(f"expected line {number}: clean control must have no findings")
         if item["designated_blocker_criterion"] is not None and item["designated_blocker_criterion"] not in required:
             errors.append(f"expected line {number}: designated blocker must be required")
@@ -77,15 +101,15 @@ def main() -> int:
             errors.append(f"{case}: missing actual result")
             continue
         codes = {finding["code"] for finding in got.get("findings", []) if isinstance(finding, dict) and "code" in finding}
-        required = set(wanted["required_codes"])
-        for code in required - codes:
-            errors.append(f"{case}: missing required finding code: {code}")
+        for group in wanted["required_code_groups"]:
+            if not codes.intersection(group):
+                errors.append(f"{case}: missing required finding code group: {' | '.join(group)}")
         for code in codes - set(wanted["allowed_codes"]):
             errors.append(f"{case}: undeclared finding code: {code}")
         if wanted["expect"] == "no-finding" and codes:
             errors.append(f"{case}: forbidden clean-control finding")
         for finding in got.get("findings", []):
-            if not isinstance(finding, dict) or finding.get("code") not in required:
+            if not isinstance(finding, dict) or finding.get("code") not in wanted["allowed_codes"]:
                 continue
             allowed = wanted["allowed_classifications"][finding["code"]]
             classification = {key: finding.get(key) for key in CLASSIFICATION_KEYS}

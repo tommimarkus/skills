@@ -16,7 +16,7 @@ VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/script
 class IpHygieneEvalContractTest(unittest.TestCase):
     def test_blind_cases_have_distinct_substantive_synthetic_facts(self) -> None:
         cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(len(cases), 36)
+        self.assertEqual(len(cases), 40)
         prompts = [case["prompt"] for case in cases]
         self.assertEqual(len(prompts), len(set(prompts)))
         self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
@@ -38,8 +38,8 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             for item in map(json.loads, (CORPUS / "expected.jsonl").read_text().splitlines())
         }
         self.assertEqual(
-            set(expected["case-001"]["required_codes"]),
-            {"IP-MARK-2", "IP-MARK-3"},
+            {frozenset(group) for group in expected["case-001"]["required_code_groups"]},
+            {frozenset({"IP-MARK-2"}), frozenset({"IP-MARK-3"})},
         )
         self.assertEqual(
             expected["case-002"]["allowed_classifications"]["IP-MARK-4"][0]["authority_class"],
@@ -72,11 +72,21 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             {case["outcome"] for case in prospective},
             {"proceed-with-stated-controls", "do-not-proceed", "insufficient-evidence", "counsel-required"},
         )
+        self.assertEqual(
+            {case["outcome"] for case in expected.values() if case["lane"] == "in-depth"},
+            {"blocked", "qualified", "no-blocker-identified"},
+        )
+        covered = {code for case in expected.values() for group in case["required_code_groups"] for code in group}
+        self.assertIn("IP-COPY-4", covered)
+        self.assertIn("IP-MARK-5", covered)
+        self.assertEqual(expected["case-009"]["required_code_groups"], [["IP-SRC-1", "IP-LIC-1"]])
+        self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
+        self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
 
     def test_readme_documents_blind_actual_result_schema_and_limits(self) -> None:
         text = read("souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/README.md")
         self.assertIn("actual result schema", text.lower())
-        self.assertIn("required_codes", text)
+        self.assertIn("required_code_groups", text)
         self.assertIn("structural validation is not model recall", text.lower())
 
     def test_scorer_accepts_contract_actual_and_family_filters(self) -> None:
@@ -218,18 +228,52 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_scorer_accepts_supported_alternative_criterion_group(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        case = next(item for item in actual if item["case"] == "case-035")
+        case["findings"] = [{"code": "IP-SRC-1", "severity": "warn",
+                             "authority_class": "conservative repository policy", "fact_status": "fact"}]
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(item) + "\n" for item in actual), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCORER), "--expected", str(CORPUS / "expected.jsonl"),
+                 "--actual", str(actual_path)], text=True, capture_output=True, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_validator_requires_lane_evidence_contracts(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        prospective = next(case for case in actual if case["lane"] == "prospective")
+        prospective.pop("decision_controls")
+        qualified = next(case for case in actual if case.get("in_depth_verdict") == "qualified")
+        qualified["limits"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(item) + "\n" for item in actual), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(VALIDATOR), "--cases", str(CORPUS / "cases.jsonl"),
+                 "--actual", str(actual_path)], text=True, capture_output=True, check=False,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("decision_controls", result.stdout)
+        self.assertIn("limits must be a nonempty array", result.stdout)
+
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
-        self.assertEqual(len(expected), 36)
+        self.assertEqual(len(expected), 40)
         for case in expected:
             with self.subTest(case=case["case"]):
                 self.assertEqual(set(case), {
-                    "case", "family", "expect", "required_codes", "allowed_codes", "allowed_classifications",
+                    "case", "family", "expect", "required_code_groups", "allowed_codes", "allowed_classifications",
                     "lane", "outcome", "counsel_outcome", "designated_blocker_criterion"})
-                self.assertTrue(set(case["required_codes"]).issubset(case["allowed_codes"]))
-                self.assertEqual(set(case["required_codes"]), set(case["allowed_classifications"]))
+                required = {code for group in case["required_code_groups"] for code in group}
+                self.assertTrue(required.issubset(case["allowed_codes"]))
+                self.assertEqual(set(case["allowed_codes"]), set(case["allowed_classifications"]))
                 if case["expect"] == "no-finding":
-                    self.assertEqual(case["required_codes"], [])
+                    self.assertEqual(case["required_code_groups"], [])
                     self.assertEqual(case["allowed_codes"], [])
                     self.assertEqual(case["allowed_classifications"], {})
                 for classifications in case["allowed_classifications"].values():
@@ -241,11 +285,18 @@ class IpHygieneEvalContractTest(unittest.TestCase):
 
 def actual_from_expected(case: dict) -> dict:
     findings = []
-    for code in case["required_codes"]:
+    for group in case["required_code_groups"]:
+        code = group[0]
         findings.append({"code": code, **case["allowed_classifications"][code][0]})
     result = {"case": case["case"], "lane": case["lane"], "findings": findings,
               "counsel_outcome": case["counsel_outcome"], "legal_clearance": False}
     outcome_field = {"triage": "triage_gate", "in-depth": "in_depth_verdict",
                      "prospective": "prospective_decision"}[case["lane"]]
     result[outcome_field] = case["outcome"]
+    if case["lane"] == "prospective":
+        result.update({"decision_controls": ["bounded control"], "evidence": ["synthetic facts"],
+                       "limits": ["bounded prospective decision"]})
+    elif case["lane"] == "in-depth":
+        result.update({"reviewed_surface": ["whole synthetic plugin"], "exclusions": ["none"],
+                       "evidence": ["synthetic enumeration"], "limits": ["reasonable-hygiene only"]})
     return result

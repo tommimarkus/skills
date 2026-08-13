@@ -60,7 +60,7 @@ class IpHygieneTriageGateTest(unittest.TestCase):
         self.assertEqual(families, {"IP-SRC", "IP-COPY", "IP-DB", "IP-LIC", "IP-MARK"})
         for case in expected:
             with self.subTest(case=case["case"]):
-                for key in ("required_codes", "allowed_codes", "allowed_classifications", "lane",
+                for key in ("required_code_groups", "allowed_codes", "allowed_classifications", "lane",
                             "outcome", "counsel_outcome", "designated_blocker_criterion"):
                     self.assertIn(key, case)
         self.assertTrue(any(case["counsel_outcome"] == "required" for case in expected))

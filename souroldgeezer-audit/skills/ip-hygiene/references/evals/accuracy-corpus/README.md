@@ -1,9 +1,11 @@
 # Accuracy Corpus (audit-of-the-audit)
 
-Thirty-six synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
+Forty synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
 `IP-LIC`, and `IP-MARK`, including ambiguity, every counsel-required stop, and
 clean controls. The four prospective cases cover every prospective-decision
-outcome; the remaining cases cover triage and in-depth lanes. All names and
+outcome; the in-depth cases cover `blocked`, `qualified`, and
+`no-blocker-identified`; criterion-level cases cover every code including
+`IP-COPY-4` and `IP-MARK-5`. All names and
 facts are repo-authored fictional material. Each
 blind prompt provides distinct material, source/provenance, intended act and
 distribution context, the explicitly requested lane, plus the ambiguity or
@@ -31,6 +33,10 @@ positional or coverage-free validation is rejected. The actual result schema
 uses a per-case `findings` array whose
 entries carry criterion code, severity, authority class, and fact status, plus
 the lane outcome, counsel outcome, and literal-false clearance disclosure. It
+also requires prospective records to name nonempty decision controls, evidence,
+and limits, and in-depth records to name the reviewed surface, exclusions,
+evidence, and limits. These fields preserve the basis of a qualified outcome or
+controlled decision instead of treating the outcome label as clearance. It
 must read only its assigned bundle: any outside read or
 expected-outcome exposure is `blocked:contaminated`, with no produced or revised
 results. Parent-only evaluation privately scores behavioral accuracy.
@@ -45,11 +51,13 @@ python references/scripts/score_ip_hygiene_eval.py --expected references/evals/a
 ```
 
 Parent-held expected records retain the family selector and declare
-`required_codes`, explicit allowed codes,
+`required_code_groups`, explicit allowed codes,
 per-code classifications, lane outcome, counsel outcome, and any substantiated
-designated blocker. Authority classifications distinguish a directive or other
+designated blocker. Each group requires one supported code; codes within the
+same group are accepted alternatives for a condition that legitimately fits
+more than one criterion. Authority classifications distinguish a directive or other
 EU harmonization source from an operative national binding-law proposition. The
-scorer rejects unknown or zero-coverage family selectors and fails for a missing required code, an unsupported
+scorer rejects unknown or zero-coverage family selectors and fails for a missing required code group, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
 outcome, an unexpected case ID, or a legal-clearance overclaim. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the

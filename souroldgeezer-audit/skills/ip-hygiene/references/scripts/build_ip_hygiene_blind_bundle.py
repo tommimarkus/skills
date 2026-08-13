@@ -39,6 +39,10 @@ For each record in `cases.jsonl`,
 apply the bundled IP Hygiene workflow and its bundled references. Write one
 actual JSONL record per case using the result shape enforced by
 `validate_ip_hygiene_actual.py`.
+Prospective records must name nonempty `decision_controls`, `evidence`, and
+`limits`. In-depth records must name nonempty `reviewed_surface`, `exclusions`,
+`evidence`, and `limits`; use an explicit value such as `none` when there are no
+exclusions.
 Run `validate_ip_hygiene_actual.py --cases cases.jsonl --actual <actual.jsonl>`
 on the completed actual records before returning them. The coverage-aware form
 is mandatory: every assigned opaque case ID must occur exactly once and no

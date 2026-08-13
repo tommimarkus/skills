@@ -102,7 +102,9 @@ reasonable-hygiene in-depth review.
   act can proceed. Test that act against the identified source, audience,
   distribution form, and authority. Return `prospective decision:
   <proceed-with-stated-controls | do-not-proceed | insufficient-evidence |
-  counsel-required>` plus the evidence and limits. This is a scoped hygiene
+  counsel-required>` plus the stated decision controls, supporting evidence,
+  and limits. State the controlling non-publication step for `do-not-proceed`
+  or `counsel-required`; never emit a bare outcome. This is a scoped hygiene
   decision, not clearance.
 - **Limited-assurance triage** — a change-scoped or path-scoped review. It does
   not enumerate the whole publication surface. Emit findings, one `triage
@@ -184,6 +186,10 @@ A remediated blocker requires a clean triage rerun before `pass-limited`.
    - `no-blocker-identified` — sufficient appropriate evidence over the stated
      surface identified no blocking criterion. It does not mean clean,
      non-infringing, compatible, or cleared.
+
+Every in-depth result names the reviewed surface, exclusions, supporting
+evidence, and limits, including an explicit `none` where there are no
+exclusions. A verdict without that boundary evidence is incomplete.
 
 ## Finding And Remediation Contract
 

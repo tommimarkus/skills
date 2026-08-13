@@ -85,7 +85,7 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
                 json.loads(line)
                 for line in (first / "cases.jsonl").read_text(encoding="utf-8").splitlines()
             ]
-            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 37)])
+            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 41)])
             for case in cases:
                 self.assertEqual(set(case), {"case", "prompt", "synthetic"})
                 self.assertIn("Requested lane:", case["prompt"])

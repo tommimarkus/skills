@@ -21,15 +21,15 @@ external docs.
   audit craft and materiality output contracts and do not reproduce rubric prose.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/`.
   Handling: repo-authored planted-defect fixtures scoring recall and
-  false-positive rate. Thirty-six cases cover each coded criterion family,
-  all three lanes, every prospective outcome, ambiguity, all counsel-required
-  stops, and clean controls. Expected records
+  false-positive rate. Forty cases cover each coded criterion family and every
+  individual code, all three lanes, every prospective and in-depth outcome,
+  ambiguity, all counsel-required stops, and clean controls. Expected records
   are withheld from blind evaluators. Every prompt instead gives distinct,
   wholly fictional material, provenance, intended act/distribution, the
   explicitly requested lane, and the scenario's ambiguity or counsel-trigger
   facts. Blind input uses opaque case IDs, omits family labels, and does not
   name an expected code, authority class, or decision. The deterministic scorer
-  checks codes, severity, the distinction between harmonization sources and
+  checks required alternative-code groups, allowed codes, severity, the distinction between harmonization sources and
   operative binding law,
   lane/verdict, authority, fact status, counsel, and clearance overclaim.
   Structural completeness is not evidence of model recall. No content is

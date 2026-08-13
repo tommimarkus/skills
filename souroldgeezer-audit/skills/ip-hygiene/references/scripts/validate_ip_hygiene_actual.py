@@ -11,6 +11,11 @@ LANE_FIELDS = {
     "in-depth": "in_depth_verdict",
     "prospective": "prospective_decision",
 }
+LANE_EVIDENCE_FIELDS = {
+    "triage": (),
+    "in-depth": ("reviewed_surface", "exclusions", "evidence", "limits"),
+    "prospective": ("decision_controls", "evidence", "limits"),
+}
 OUTCOMES = {
     "triage_gate": {"fail", "not-evaluated", "pass-limited"},
     "in_depth_verdict": {"blocked", "qualified", "no-blocker-identified"},
@@ -43,7 +48,10 @@ def validate_item(item: object, line: int) -> list[str]:
     if lane not in LANE_FIELDS:
         errors.append(f"{prefix} invalid lane")
         return errors
-    permitted = {"case", "lane", "findings", "counsel_outcome", "legal_clearance", LANE_FIELDS[lane]}
+    permitted = {
+        "case", "lane", "findings", "counsel_outcome", "legal_clearance",
+        LANE_FIELDS[lane], *LANE_EVIDENCE_FIELDS[lane],
+    }
     for key in item:
         if key in {"clearance", "legal_clearance_status"}:
             errors.append(f"{prefix} clearance alias is forbidden: {key}")
@@ -58,6 +66,14 @@ def validate_item(item: object, line: int) -> list[str]:
     outcome_field = LANE_FIELDS[lane]
     if item.get(outcome_field) not in OUTCOMES[outcome_field]:
         errors.append(f"{prefix} invalid {outcome_field}")
+    for field in LANE_EVIDENCE_FIELDS[lane]:
+        value = item.get(field)
+        if (
+            not isinstance(value, list)
+            or not value
+            or any(not isinstance(entry, str) or not entry.strip() for entry in value)
+        ):
+            errors.append(f"{prefix} {field} must be a nonempty array of nonempty strings")
     findings = item.get("findings")
     if not isinstance(findings, list):
         errors.append(f"{prefix} findings must be an array")
