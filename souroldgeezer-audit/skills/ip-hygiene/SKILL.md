@@ -211,6 +211,20 @@ Use these mechanical boundaries before assigning severity and the lane outcome:
   or a result that depends on missing exception/applicability facts, is a
   `warn` and `not-evaluated`, never `pass-limited` while a block cannot be
   ruled out.
+- A missing operative copyright or licence notice on material actually
+  distributed is a `block` and `fail`, consistent with the Triage Gate's
+  `fail` list.
+- A notice that survived a transformation but was relocated or reformatted,
+  where the operative licence does not specify required location or form, is
+  `warn` or `info` and `pass-limited`.
+- Notice survival through a build, bundle, or minification step that cannot be
+  checked because the built artifact is unavailable is `not-evaluated`, not
+  `pass-limited`: unavailable evidence cannot rule out a block.
+- An attribution comment naming a source whose terms are unresolved is an
+  evidence gap under `IP-SRC-2`: `not-evaluated`. It is never a block on its
+  own and never a clearance.
+- A generated-code banner alone is `IP-SRC-5` provenance evidence, not a
+  finding.
 - A drive-by candidate outside the bounded publication act still receives an
   `IP-SRC-4` deferred observation. It does not fail the in-scope gate when the
   stated act neither edits, builds, links, nor distributes it.

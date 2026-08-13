@@ -52,6 +52,15 @@ establishing the audience from evidence per
 visibility narrows but does not eliminate the question, because source
 distributed as source still carries those signs to its recipients.
 
+A code-comment style guide or symbol convention issued by the holder is
+`holder policy` even when optional, not `project convention`; per
+[trademark.md § Criteria](trademark.md), reserve `project convention` for a
+rule the repository or publishing project itself adopted. An `IP-MARK-1` or
+`IP-MARK-5` finding in code that applies binding law or a binding-law
+harmonization source stays an `inference` under
+[SKILL.md § Classification Decision Boundaries](../SKILL.md) even when the
+underlying comment or identifier is a direct observation.
+
 ## Notice Survival Procedure
 
 `IP-LIC-5` is the operational core for source files. For a transformation,
