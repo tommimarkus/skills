@@ -24,6 +24,52 @@ class IpHygieneTriageGateTest(unittest.TestCase):
             with self.subTest(blocker=blocker):
                 self.assertIn(blocker, skill)
 
+    def test_triage_procedure_answers_all_six_questions_including_the_notice_question(self) -> None:
+        skill = read(SKILL_PATH)
+        normalized = " ".join(skill.split())
+        self.assertIn("Answer all six questions by judgment", normalized)
+        self.assertIn("All six no: emit `nothing to check`", normalized)
+        self.assertIn("apply all six triage questions per surface", normalized)
+        self.assertIn(
+            "Does a touched source file carry, need, lose, or transform a copyright or licence notice, "
+            "attribution comment, or generated-code banner?",
+            normalized,
+        )
+        self.assertIn(
+            "Does a surface a reader sees — public or code-visible — mention or brand with",
+            normalized,
+        )
+        self.assertIn("Identifiers, string literals, package/module names, User-Agent strings", normalized)
+
+    def test_notice_classification_boundaries_are_explicit(self) -> None:
+        skill = read(SKILL_PATH)
+        normalized = " ".join(skill.split())
+        self.assertIn(
+            "A missing operative copyright or licence notice on material actually distributed is a "
+            "`block` and `fail`",
+            normalized,
+        )
+        self.assertIn(
+            "A notice that survived a transformation but was relocated or reformatted, where the "
+            "operative licence does not specify required location or form, is `warn` or `info` and "
+            "`pass-limited`",
+            normalized,
+        )
+        self.assertIn(
+            "Notice survival through a build, bundle, or minification step that cannot be checked "
+            "because the built artifact is unavailable is `not-evaluated`, not `pass-limited`",
+            normalized,
+        )
+        self.assertIn(
+            "An attribution comment naming a source whose terms are unresolved is an evidence gap "
+            "under `IP-SRC-2`: `not-evaluated`",
+            normalized,
+        )
+        self.assertIn(
+            "A generated-code banner alone is `IP-SRC-5` provenance evidence, not a finding",
+            normalized,
+        )
+
     def test_ambiguity_and_nonblocking_semantics_are_explicit(self) -> None:
         skill = read(SKILL_PATH)
         self.assertIn("unclear source authority, holder policy, or redistribution terms", skill)

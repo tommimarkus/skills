@@ -164,6 +164,37 @@ class IpHygieneLegalContractTest(unittest.TestCase):
         self.assertNotIn("No licence statement means all rights reserved", licence)
         self.assertNotIn("Do not bundle GPL-family", licence)
 
+    def test_core_authority_class_list_carries_all_six_classes(self) -> None:
+        skill = read(SKILL)
+        normalized = " ".join(skill.split())
+        self.assertIn(
+            "The authority classes are: binding law, binding-law harmonization source, "
+            "operative licence term, holder policy, project convention, and conservative "
+            "repository policy.",
+            normalized,
+        )
+
+    def test_licence_reference_defines_notice_survival(self) -> None:
+        licence = " ".join(read(f"{REFS}/licence-assets.md").split())
+        self.assertContainsAll(
+            licence,
+            (
+                "IP-LIC-5 Notice survival",
+                "must survive a move, split, extract, refactor, vendoring, "
+                "generation, bundling, transpilation, or minification",
+            ),
+        )
+
+    def test_copyright_reference_defines_generated_and_derived_material(self) -> None:
+        copyright_ref = " ".join(read(f"{REFS}/copyright.md").split())
+        self.assertContainsAll(
+            copyright_ref,
+            (
+                "IP-SRC-5 Generated and derived material",
+                "Generator output does not inherit the tool's licence by default",
+            ),
+        )
+
     def test_authority_index_classifies_primary_authority(self) -> None:
         authority = read(f"{REFS}/authority-index.md")
         self.assertContainsAll(

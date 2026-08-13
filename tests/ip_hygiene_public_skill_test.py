@@ -42,7 +42,6 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
     def test_public_skill_contract_is_focused_configurable_and_terse(self) -> None:
         skill = read(PUBLIC_SKILL_PATH)
         self.assertIn("target repo guidance", skill)
-        self.assertIn("General repo-wide IP hygiene is future scope", skill)
         self.assertIn("not legal advice", skill)
         self.assertIn("nothing to check", skill)
         self.assertIn("checked: <reviewed criterion codes and surfaces>; no IP hygiene changes needed", skill)
@@ -52,6 +51,32 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
             "deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit",
             skill,
         )
+
+    def test_public_skill_scope_is_source_code_repo_wide_with_a_stated_future_scope_boundary(self) -> None:
+        skill = read(PUBLIC_SKILL_PATH)
+        normalized = " ".join(skill.split())
+        self.assertIn(
+            "source, configuration, and build files are also in scope repo-wide, including their comments and code documentation",
+            normalized,
+        )
+        self.assertIn(
+            "Other non-published surfaces, such as private prose docs, remain future scope",
+            normalized,
+        )
+        self.assertIn(
+            "source, configuration, or build files, their comments, doc comments, and generated banners: [source-code.md](references/source-code.md)",
+            skill,
+        )
+
+    def test_public_skill_states_the_sibling_boundary(self) -> None:
+        skill = read(PUBLIC_SKILL_PATH)
+        normalized = " ".join(skill.split())
+        self.assertIn(
+            "Mechanical internal copy-paste duplication stays with `lean-audit`",
+            normalized,
+        )
+        self.assertIn("semantic DRY belongs to `software-design`", normalized)
+        self.assertIn("code-level security belongs to `devsecops-audit`", normalized)
 
     def test_public_skill_makes_high_risk_classification_boundaries_operational(self) -> None:
         skill = read(PUBLIC_SKILL_PATH)
