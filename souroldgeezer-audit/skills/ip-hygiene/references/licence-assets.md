@@ -33,12 +33,13 @@ actual operative text through [authority-index.md](authority-index.md).
   truncating a notice while refactoring is a distinct act from copying. Where a
   licence specifies the location or form of a notice, relocation must still
   satisfy that form. This criterion supplements `IP-LIC-1`, `IP-LIC-3`, and
-  `IP-LIC-4` and never replaces them: where the distributed artifact's notice
-  state is directly assessable, the finding is an identity and distribution
-  finding, and citing `IP-LIC-5` in their place discards the coverage and act
-  analysis. Reach for it when a transformation is what puts the obligation in
-  doubt — covered material moved and its notice must be traced to the new
-  location, or survival through a build cannot be confirmed.
+  `IP-LIC-4` and never replaces them; citing it in their place discards the
+  coverage and act analysis. Cite it when one of the transformations above is
+  what separated a notice from the covered material — including a vendored copy
+  whose per-file headers or licence file did not come across, and a build whose
+  output cannot be checked. Where no such transformation is in play and the
+  question is simply whether a required notice accompanies the distribution,
+  the finding belongs to identity and distribution.
 
 Never infer that a repository-wide licence covers third-party material. The
 repository licence ordinarily speaks for material its licensor controls; keep
