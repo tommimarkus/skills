@@ -89,15 +89,23 @@ running the same install command.
 `souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
 itself**. On first use the MCP launcher provisions the pinned, checksum-verified
 [Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.3`, support floor `2026.07.28`) into the host's own per-plugin writable
+(`2026.08.4`, support floor `2026.07.28`) into the host's own per-plugin writable
 data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
 above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
 executable for controlled validation.
 
-The `2026.08.3` pin adds machine-readable UML/XMI scope, coverage, and validation
-assurance to direct export results. Native package-build results still expose
-only export status, artifact, and diagnostics, so the skill discloses that
-evidence boundary instead of inferring assurance.
+The bundled runtime exposes machine-readable UML/XMI scope, coverage, and
+validation assurance to direct export results. Native package-build results
+still expose only export status, artifact, and diagnostics, so the skill
+discloses that evidence boundary instead of inferring assurance.
+
+Dediren `2026.08.4` downloads online export schemas with its bounded Java HTTP
+client; `curl` is no longer an export prerequisite. Offline schema overrides
+remain unchanged. Proxied schema downloads accept `HTTPS_PROXY`, `HTTP_PROXY`,
+or `ALL_PROXY` plus optional `NO_PROXY`; see the bundled runtime procedure for
+the precedence and fail-closed validation rules. `curl` or `wget` may still be
+used by the plugin launcher as a fallback for release downloads when Python TLS
+is unavailable.
 
 The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
 bundled JRE, so the plugin never downloads a Java runtime, and a missing or

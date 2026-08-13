@@ -34,7 +34,7 @@ pre-21 `java` reports itself instead of killing the launcher without a message.
 ## What the first run does
 
 Provisioning runs once per host, on the first `tools/list`, and installs the
-pinned release **2026.08.3**. The supported floor is **2026.07.28**: from that
+pinned release **2026.08.4**. The supported floor is **2026.07.28**: from that
 release the render lane takes each view's accessible name from its own
 `presentation`, which the skill's post-render step requires.
 
@@ -146,11 +146,15 @@ The reported version must be **2026.07.28 or newer**.
 
 ## Optional: offline and proxied export validation
 
-`curl` is needed on `PATH` only when export validation must fetch a standards
-schema — and as a download fallback when the host's Python has no usable TLS
-trust store. For offline hosts, supply the schemas locally through
-`DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`; behind a proxy, the usual
-`HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` variables are forwarded.
+Dediren fetches online export schemas with its bounded Java HTTP client; exports
+do not require an external downloader. For offline hosts, supply the schemas
+locally through `DEDIREN_OEF_SCHEMA_DIR` / `DEDIREN_XMI_SCHEMA_PATH`. Behind a
+proxy, set `HTTPS_PROXY`, `HTTP_PROXY`, or `ALL_PROXY`, plus optional `NO_PROXY`
+(lowercase forms are also accepted). For an HTTPS schema URL, precedence is
+`HTTPS_PROXY`, then `HTTP_PROXY`, then `ALL_PROXY`; lowercase wins within a
+name. An invalid selected proxy fails closed rather than falling back to a direct
+connection. The plugin's own provisioner may still use `curl` or `wget` as a
+fallback for release downloads when Python TLS is unavailable.
 
 ## Update and removal
 

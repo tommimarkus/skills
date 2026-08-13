@@ -1,4 +1,5 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
+import base64
 import json
 import os
 import re
@@ -224,6 +225,57 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         payload = envelope(result)
         self.assertEqual(payload["status"], "ok")
         return payload
+
+    def test_mcp_inline_import_negotiates_an_svg_image_without_losing_json(self) -> None:
+        """The 2026.08.4 MCP contract adds inline import and image negotiation.
+
+        The architecture adapter forwards the installed runtime's live schema and
+        result content unchanged, so pin both the advertised arguments and the
+        JSON-first response shape the router must preserve.
+        """
+        responses = mcp_session(
+            REPO_ROOT,
+            [
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "dediren_import",
+                        "arguments": {
+                            "content": "flowchart LR\n  client --> api",
+                            "plugin": "mermaid",
+                            "output": "image",
+                            "accepted_image_types": ["image/svg+xml"],
+                        },
+                    },
+                },
+            ],
+        )
+
+        tools = {tool["name"]: tool for tool in responses[2]["result"]["tools"]}
+        import_schema = tools["dediren_import"]["inputSchema"]
+        self.assertIn("content", import_schema["properties"])
+        self.assertEqual(
+            import_schema["properties"]["output"]["enum"],
+            ["data", "svg", "image"],
+        )
+        self.assertEqual(
+            import_schema["properties"]["accepted_image_types"]["items"]["enum"],
+            ["image/svg+xml", "image/png"],
+        )
+
+        result = responses[3]["result"]
+        self.assertFalse(result["isError"])
+        self.assertEqual(
+            [item["type"] for item in result["content"]], ["text", "image"]
+        )
+        imported = json.loads(result["content"][0]["text"])
+        self.assertEqual(imported["status"], "ok")
+        self.assertEqual(result["content"][1]["mimeType"], "image/svg+xml")
+        image = base64.b64decode(result["content"][1]["data"])
+        self.assertTrue(image.lstrip().startswith(b"<svg"))
 
     def _build_ok(self, out_dir: Path, *args: str | Path) -> dict:
         """Run `dediren build --out <out_dir> <args>` and assert it succeeds, returning

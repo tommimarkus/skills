@@ -1393,6 +1393,51 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertNotIn("dediren-release.sh", maintenance_guidance)
         self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
+    def test_dediren_operator_guidance_matches_the_adopted_schema_fetcher(self) -> None:
+        install_guidance = (
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "dediren-install.md"
+        ).read_text(encoding="utf-8")
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+        for surface in (install_guidance, readme):
+            with self.subTest():
+                normalized = " ".join(surface.split())
+                self.assertIn("Java HTTP client", normalized)
+                self.assertIn("ALL_PROXY", normalized)
+        normalized_install = " ".join(install_guidance.split())
+        self.assertIn("`curl` or `wget`", normalized_install)
+        self.assertIn("release downloads", normalized_install)
+
+    def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
+        pin = "2026.08.4"
+        expectations = {
+            REPO_ROOT / "AGENTS.md": f"pin `{pin}`",
+            REPO_ROOT / "CLAUDE.md": f"pin `{pin}`",
+            REPO_ROOT / "README.md": f"(`{pin}`, support floor",
+            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": f"(`{pin}`)",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md": f"`{pin}` release",
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "dediren-install.md": f"pinned release **{pin}**",
+        }
+
+        for surface, phrase in expectations.items():
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                self.assertIn(phrase, surface.read_text(encoding="utf-8"))
+
     def test_dediren_host_runtime_is_marked_upstream_owned(self) -> None:
         expectations = {
             # The don't-patch rule lives in the Dediren upstream compatibility
