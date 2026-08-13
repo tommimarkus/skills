@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, load_script_module
+from tests.surface_test_lib import REPO_ROOT, load_leanaudit_module
 
 MODULE = (
     REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit/hook_cost.py"
@@ -16,7 +16,7 @@ MODULE = (
 
 
 def load_hook_cost():
-    return load_script_module("lean_hook_cost", MODULE)
+    return load_leanaudit_module("lean_hook_cost", MODULE)
 
 
 class HookRegistrationTest(unittest.TestCase):

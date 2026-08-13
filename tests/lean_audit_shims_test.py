@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
-from tests.surface_test_lib import REPO_ROOT, load_script_module
+from tests.surface_test_lib import REPO_ROOT, load_leanaudit_module, load_script_module
 
 SCRIPTS = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/scripts"
 # lean_engine.py re-exports three package modules (engine + discovery + registry);
@@ -81,7 +81,7 @@ class ShimContractTest(unittest.TestCase):
             with self.subTest(shim=shim_name):
                 shim = _load_shim(shim_name)
                 for rel in mod_rels:
-                    mod = load_script_module(rel.replace("/", "_")[:-3], SCRIPTS / rel)
+                    mod = load_leanaudit_module(rel.replace("/", "_")[:-3], SCRIPTS / rel)
                     for name in mod.__all__:
                         self.assertTrue(hasattr(shim, name), f"{shim_name} missing {name}")
 
@@ -116,6 +116,67 @@ class AllCompletenessTest(unittest.TestCase):
                     missing,
                     f"{path.name}: public top-level names missing from __all__: "
                     f"{sorted(missing)}",
+                )
+
+
+# --- structural gate: no leanaudit/ package-internal load off the helper ---
+# lean_hook_cost_test.py once loaded a leanaudit/*.py module via the raw
+# load_script_module() helper, which does not put scripts/ on sys.path. It
+# passed only because another test module inserted the path first in unittest
+# discovery order — invisible in the full suite, ModuleNotFoundError
+# standalone. load_leanaudit_module() is now the one sanctioned way in, so the
+# rule is absolute rather than a search for a compensating safeguard: a cheap
+# AST scan over tests/*.py, far cheaper than running each module standalone.
+
+TESTS_DIR = REPO_ROOT / "tests"
+# The helper module itself defines load_leanaudit_module, so it is the one
+# place a raw load of a leanaudit/ path is correct.
+LOAD_PATH_SCAN_EXCLUDE = {"surface_test_lib.py"}
+
+
+def _leanaudit_package_loads(path: Path) -> list[str]:
+    """Every `load_script_module()` call in `path` whose module argument names a
+    leanaudit/ path, as 'lineno'. The path usually arrives through a module-level
+    constant (`MODULE = REPO_ROOT / ".../leanaudit/x.py"`), so resolve those names
+    first rather than only matching an inline literal."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    leanaudit_names = {
+        target.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign) and "leanaudit" in ast.unparse(node.value)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+
+    def names_leanaudit(arg: ast.expr) -> bool:
+        if isinstance(arg, ast.Name):
+            return arg.id in leanaudit_names
+        return "leanaudit" in ast.unparse(arg)
+
+    return [
+        str(call.lineno)
+        for call in ast.walk(tree)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
+        and call.func.id == "load_script_module"
+        and call.args
+        and names_leanaudit(call.args[-1])
+    ]
+
+
+class LeanAuditLoadPathHygieneTest(unittest.TestCase):
+    def test_no_unguarded_leanaudit_package_load(self) -> None:
+        for path in sorted(TESTS_DIR.glob("*.py")):
+            if path.name in LOAD_PATH_SCAN_EXCLUDE:
+                continue
+            with self.subTest(module=path.name):
+                violations = _leanaudit_package_loads(path)
+                self.assertFalse(
+                    violations,
+                    f"{path.name} line(s) {violations}: load_script_module() "
+                    "loads a leanaudit/ path, which leaves scripts/ off "
+                    "sys.path — the module then passes only while some other "
+                    "test happens to import first. Use load_leanaudit_module().",
                 )
 
 

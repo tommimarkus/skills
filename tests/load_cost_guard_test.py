@@ -2,16 +2,15 @@
 import contextlib, io, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
-from tests.surface_test_lib import load_script_module
+from tests.surface_test_lib import load_leanaudit_module
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = (
     REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts"
 )
-sys.path.insert(0, str(SCRIPTS))
 
 GUARD_LOAD_COST = SCRIPTS / "leanaudit" / "guard_load_cost.py"
-guard = load_script_module("leanaudit_guard_load_cost", GUARD_LOAD_COST)
+guard = load_leanaudit_module("leanaudit_guard_load_cost", GUARD_LOAD_COST)
 
 GUARD_SCRIPT = str(SCRIPTS / "load_cost_guard.py")
 

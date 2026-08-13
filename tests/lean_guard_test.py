@@ -9,19 +9,18 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, load_script_module
+from tests.surface_test_lib import REPO_ROOT, load_leanaudit_module
 
 SCRIPTS = (
     Path(__file__).resolve().parents[1]
     / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts"
 )
-sys.path.insert(0, str(SCRIPTS))
 
 GUARD_LEAN = SCRIPTS / "leanaudit" / "guard_lean.py"
 
 
 def load_guard():
-    return load_script_module("leanaudit_guard_lean", GUARD_LEAN)
+    return load_leanaudit_module("leanaudit_guard_lean", GUARD_LEAN)
 
 
 BIG = (
@@ -199,7 +198,7 @@ class MainSubprocess(unittest.TestCase):
 
 class FailOpenLoggingTest(unittest.TestCase):
     def test_swallowed_exception_writes_stderr_line(self):
-        guard_mod = load_script_module(
+        guard_mod = load_leanaudit_module(
             "leanaudit_guard_lean",
             REPO_ROOT
             / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit/guard_lean.py",

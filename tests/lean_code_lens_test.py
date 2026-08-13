@@ -10,6 +10,7 @@ from tests.surface_test_lib import (
     REPO_ROOT,
     assert_precision_recall_at_least,
     classify_tp_fp_fn,
+    load_leanaudit_module,
     load_script_module,
 )
 
@@ -23,8 +24,7 @@ def load_lens():
 
 
 def load_clones_mod():
-    load_lens()  # populates sys.path with scripts/ so `leanaudit.*` package imports resolve
-    return load_script_module("leanaudit_clones", CLONES)
+    return load_leanaudit_module("leanaudit_clones", CLONES)
 
 
 def run_lens(*args, stdin=None):

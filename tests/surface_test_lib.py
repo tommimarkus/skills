@@ -41,6 +41,28 @@ def load_script_module(name: str, path: Path):
     return module
 
 
+LEAN_AUDIT_SCRIPTS = (
+    REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts"
+)
+
+
+def load_leanaudit_module(name: str, path: Path):
+    """Load a module that lives *inside* the lean-audit `leanaudit/` package (as
+    opposed to one of the `references/scripts/*.py` shims). Every shim performs its
+    own `sys.path.insert(0, .../scripts)` before importing, which is what lets
+    `leanaudit`'s absolute `from leanaudit.X import Y` imports resolve — a package
+    module loaded on its own skips that and raises `ModuleNotFoundError: leanaudit`
+    unless some other test already happened to run first and leave the path
+    inserted. This ensures `scripts/` is on `sys.path` (idempotently) before
+    delegating to `load_script_module`, so callers are self-sufficient regardless of
+    unittest discovery order. Shared by the tests that load a `leanaudit/*.py`
+    module directly (lean_hook_cost, lean_guard, load_cost_guard, ...)."""
+    scripts = str(LEAN_AUDIT_SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    return load_script_module(name, path)
+
+
 def run_git(cwd, *args: str) -> None:
     """Run a git command in cwd, raising on failure. Shared by the tests that build
     throwaway git fixtures (version_stamp, lessons_issue, lean_engine,
