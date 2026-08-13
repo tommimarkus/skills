@@ -8,7 +8,7 @@ import importlib.util
 import shutil
 from pathlib import Path
 
-from tests.surface_test_lib import IP_CORPUS_SIZE, REPO_ROOT, load_script_module
+from tests.surface_test_lib import IP_CORPUS_SIZE, REPO_ROOT, load_script_module, read, read_jsonl
 
 
 BUILDER = (
@@ -186,6 +186,93 @@ class IpHygieneBundleAllowlistCoverageTest(unittest.TestCase):
                     f"{reference.name} is neither bundled nor listed in "
                     "DECLARED_EXCLUSIONS with a reason",
                 )
+
+    #: Parent-only scoring material. If any of these ever reaches ALLOWLIST,
+    #: every future blind run is silently invalidated: the evaluator would be
+    #: reading the answer key (or the method used to author it) instead of
+    #: producing an independent judgment.
+    PARENT_ONLY_MATERIAL = {
+        "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/expected.jsonl",
+        "souroldgeezer-audit/skills/ip-hygiene/references/scripts/score_ip_hygiene_eval.py",
+        "souroldgeezer-audit/skills/ip-hygiene/references/source-grounding.md",
+        "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/baseline.json",
+    }
+
+    def test_parent_only_scoring_material_never_reaches_the_evaluator(self) -> None:
+        allowlist = self._allowlist()
+        for relative in sorted(self.PARENT_ONLY_MATERIAL):
+            with self.subTest(path=relative):
+                self.assertNotIn(
+                    relative,
+                    allowlist,
+                    f"{relative} must never be added to ALLOWLIST: it is "
+                    "parent-only scoring/eval-authoring material, and bundling "
+                    "it would silently invalidate every future blind run by "
+                    "letting the evaluator read the answer key or the method "
+                    "used to author it",
+                )
+
+
+class IpHygieneGuidanceContaminationGuardTest(unittest.TestCase):
+    """Harness-injected repo guidance (CLAUDE.md, README.md, AGENTS.md) reaches
+    every subagent regardless of the blind bundle, and arrives before the
+    evaluator ever reads EVALUATOR_INSTRUCTIONS.md. This cannot be prevented
+    from inside the skill, so the guidance itself is gated instead: it must
+    carry no corpus case ID and no expected-outcome vocabulary that would bias
+    an evaluator before it starts.
+    """
+
+    GUIDANCE_FILES = ("CLAUDE.md", "README.md", "AGENTS.md")
+
+    #: Anchors shorter than this are generic English or technical terms —
+    #: "COPYRIGHT", "DO NOT EDIT", "14-row" — that legitimately appear in repo
+    #: guidance, so matching on them would block honest documentation without
+    #: catching a leak. The longer anchors are invented scenario material
+    #: ("EmberMetrics", "12,000 business locations"), which has no reason to
+    #: appear in guidance except by having leaked out of a case.
+    DISTINCTIVE_ANCHOR_LENGTH = 12
+
+    def test_guidance_files_carry_no_corpus_case_id(self) -> None:
+        case_ids = {f"case-{n:03d}" for n in range(1, IP_CORPUS_SIZE + 1)}
+        for name in self.GUIDANCE_FILES:
+            with self.subTest(file=name):
+                text = read(name)
+                found = {case_id for case_id in case_ids if case_id in text}
+                self.assertFalse(
+                    found,
+                    f"{name} contains corpus case ID(s) {sorted(found)}; "
+                    "harness-injected guidance reaches every blind evaluator "
+                    "before it reads EVALUATOR_INSTRUCTIONS.md, so a case ID "
+                    "here would silently invalidate every future blind run",
+                )
+
+    def test_guidance_files_carry_no_distinctive_case_material(self) -> None:
+        """A case ID is the obvious leak; quoted scenario material is the quiet
+        one. The corpus already curates a distinctive descriptor per case as its
+        evidence anchors, so derive the watch list from those rather than
+        hand-maintaining a second copy that drifts as cases are added."""
+        anchors = {
+            anchor
+            for record in read_jsonl(
+                "souroldgeezer-audit/skills/ip-hygiene/references/evals/"
+                "accuracy-corpus/expected.jsonl"
+            )
+            for anchor in record.get("evidence_anchors", [])
+            if len(anchor) >= self.DISTINCTIVE_ANCHOR_LENGTH
+        }
+        self.assertTrue(anchors, "no distinctive anchors parsed — the corpus shape changed")
+        for name in self.GUIDANCE_FILES:
+            with self.subTest(file=name):
+                text = read(name).casefold()
+                found = sorted(a for a in anchors if a.casefold() in text)
+                self.assertFalse(
+                    found,
+                    f"{name} quotes corpus case material {found}; "
+                    "harness-injected guidance reaches every blind evaluator "
+                    "before it reads EVALUATOR_INSTRUCTIONS.md, so this would "
+                    "silently bias every future blind run",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -54,3 +54,17 @@ external docs.
   and evaluator caches remain outside that bundle. The child validates output
   structure and exact assigned-case coverage only; the parent privately scores
   behavior and rejects unexpected case IDs even under a family filter.
+
+Residual limit: isolation is not a sandboxing guarantee. The harness injects
+this repo's own guidance (`CLAUDE.md`, `README.md`, `AGENTS.md`, plus agent
+memory) into every subagent regardless of the bundle, and that injected
+context reaches the evaluator before it ever reads
+`EVALUATOR_INSTRUCTIONS.md`. Nothing inside this skill can prevent that
+delivery order. Isolation instead rests on two things together: the
+instruction to read only the assigned bundle, and a deterministic gate
+(`tests/ip_hygiene_blind_bundle_test.py`) asserting the injected guidance
+files carry no corpus case ID and no distinctive case material, the latter
+derived from the corpus's own evidence anchors rather than a second list. That gate
+keeps today's injected context non-contaminating; it does not sandbox the
+evaluator, and a future edit to those guidance files could still contaminate
+a run if it slips past the gate.
