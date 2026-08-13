@@ -79,11 +79,15 @@ comment-stripping concern does not apply to a built binary. The mechanism
 that can drop a notice instead is **publishing**: `cargo package`/`cargo
 publish` includes only the files Cargo determines belong in the package,
 governed by the `include`/`exclude` fields in `Cargo.toml` (or, absent those,
-a default that follows version-control tracking). A licence text file
-present in the repository but not covered by `include` or excluded by
-`exclude` can be silently absent from the published crate on crates.io even
-though the `license`/`license-file` manifest field still names it; confirm
-the referenced file is actually packaged, not merely present in the
+a default that follows version-control tracking). A file named by
+`license-file` is always included regardless of those fields, but that
+guarantee is narrow and does not reach the notices most crates actually
+carry: the prevailing dual-licence layout declares the `license` SPDX
+expression and ships `LICENSE-APACHE` and `LICENSE-MIT` on disk with no
+`license-file` field at all, so both texts are governed by `include`/
+`exclude` like any other file. The same applies to a `NOTICE` file and to
+third-party licence texts under a vendored path. Confirm every notice the
+distribution actually requires is packaged, not merely present in the
 repository.
 
 ## Mark surfaces
