@@ -24,14 +24,17 @@ external docs.
   false-positive rate. Thirty-two cases cover each coded criterion family,
   ambiguity, all counsel-required stops, and clean controls. Expected records
   are withheld from blind evaluators. Every prompt instead gives distinct,
-  wholly fictional material, provenance, intended act/distribution, and the
-  scenario's ambiguity or counsel-trigger facts without naming an expected
-  code or decision. The deterministic scorer checks codes, severity,
+  wholly fictional material, provenance, intended act/distribution, the
+  explicitly requested lane, and the scenario's ambiguity or counsel-trigger
+  facts. Blind input uses opaque case IDs, omits family labels, and does not
+  name an expected code, authority class, or decision. The deterministic scorer
+  checks codes, severity,
   lane/verdict, authority, fact status, counsel, and clearance overclaim.
   Structural completeness is not evidence of model recall. No content is
   copied from a real source. Blind evaluators receive only the deterministic
   allowlisted bundle: raw cases, the public workflow, directly required local
-  references, instructions, and structural validator. Expected records,
+  references, instructions, and coverage-aware structural validator. Expected records,
   parent scoring, source grounding, repository tests/history, prior diagnoses,
   and evaluator caches remain outside that bundle. The child validates output
-  structure only; the parent privately scores behavior.
+  structure and exact assigned-case coverage only; the parent privately scores
+  behavior and rejects unexpected case IDs even under a family filter.

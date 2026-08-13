@@ -21,10 +21,37 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         self.assertEqual(len(prompts), len(set(prompts)))
         self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
         for case in cases:
+            self.assertEqual(set(case), {"case", "prompt", "synthetic"})
+            self.assertRegex(case["case"], r"^case-[0-9]{3}$")
             self.assertTrue(case["synthetic"], case["case"])
             for fact_heading in ("Material:", "Provenance:", "Act and distribution:", "Decision context:"):
                 self.assertIn(fact_heading, case["prompt"], case["case"])
+            self.assertRegex(
+                case["prompt"],
+                r"Requested lane: (limited-assurance triage|reasonable-hygiene in-depth review)\.",
+            )
             self.assertGreaterEqual(len(case["prompt"]), 420, case["case"])
+
+    def test_expected_records_encode_reviewed_authority_and_merits_boundaries(self) -> None:
+        expected = {
+            item["case"]: item
+            for item in map(json.loads, (CORPUS / "expected.jsonl").read_text().splitlines())
+        }
+        self.assertEqual(
+            set(expected["case-001"]["required_codes"]),
+            {"IP-MARK-2", "IP-MARK-3"},
+        )
+        self.assertEqual(
+            expected["case-002"]["allowed_classifications"]["IP-MARK-4"][0]["authority_class"],
+            "conservative repository policy",
+        )
+        self.assertEqual(expected["case-017"]["expect"], "stopped")
+        self.assertEqual(expected["case-017"]["outcome"], "not-evaluated")
+        self.assertIsNone(expected["case-017"]["designated_blocker_criterion"])
+        for case_id in ("case-005", "case-013", "case-014", "case-017", "case-018",
+                        "case-019", "case-024", "case-027", "case-028"):
+            for classifications in expected[case_id]["allowed_classifications"].values():
+                self.assertNotEqual(classifications[0]["authority_class"], "binding law", case_id)
 
     def test_readme_documents_blind_actual_result_schema_and_limits(self) -> None:
         text = read("souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/README.md")
@@ -47,10 +74,10 @@ class IpHygieneEvalContractTest(unittest.TestCase):
     def test_scorer_rejects_missing_required_unsupported_clean_and_clearance_findings(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         actual = [actual_from_expected(case) for case in expected]
-        next(case for case in actual if case["case"] == "c2-false-registration")["findings"] = []
-        next(case for case in actual if case["case"] == "c1-mark-led-name")["findings"].append({
+        next(case for case in actual if case["case"] == "case-002")["findings"] = []
+        next(case for case in actual if case["case"] == "case-001")["findings"].append({
             "code": "IP-MARK-5", "severity": "block", "authority_class": "binding law", "fact_status": "fact"})
-        next(case for case in actual if case["case"] == "c6-clean-control")["findings"] = [{
+        next(case for case in actual if case["case"] == "case-006")["findings"] = [{
             "code": "IP-COPY-1", "severity": "block", "authority_class": "binding law", "fact_status": "fact"}]
         actual[0]["legal_clearance"] = "approved"
         with tempfile.TemporaryDirectory() as directory:
@@ -75,8 +102,11 @@ class IpHygieneEvalContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             actual_path = Path(directory) / "actual.jsonl"
             actual_path.write_text(json.dumps(actual) + "\n", encoding="utf-8")
-            result = subprocess.run([sys.executable, str(VALIDATOR), str(actual_path)], text=True,
-                                    capture_output=True, check=False)
+            result = subprocess.run(
+                [sys.executable, str(VALIDATOR), "--cases", str(CORPUS / "cases.jsonl"),
+                 "--actual", str(actual_path)],
+                text=True, capture_output=True, check=False,
+            )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("undeclared field", result.stdout)
         self.assertIn("clearance alias", result.stdout)
@@ -105,6 +135,42 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 check=False,
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_validator_requires_coverage_aware_invocation_and_rejects_coverage_drift(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(case) + "\n" for case in actual), encoding="utf-8")
+            positional = subprocess.run(
+                [sys.executable, str(VALIDATOR), str(actual_path)], text=True,
+                capture_output=True, check=False,
+            )
+            actual.append({**actual[-1], "case": "case-999"})
+            actual_path.write_text("".join(json.dumps(case) + "\n" for case in actual), encoding="utf-8")
+            unexpected = subprocess.run(
+                [sys.executable, str(VALIDATOR), "--cases", str(CORPUS / "cases.jsonl"),
+                 "--actual", str(actual_path)], text=True, capture_output=True, check=False,
+            )
+        self.assertNotEqual(positional.returncode, 0)
+        self.assertIn("--cases", positional.stderr)
+        self.assertNotEqual(unexpected.returncode, 0)
+        self.assertIn("unexpected actual case: case-999", unexpected.stdout)
+
+    def test_scorer_rejects_unexpected_case_even_with_family_filter(self) -> None:
+        expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
+        actual = [actual_from_expected(case) for case in expected]
+        actual.append({**actual[0], "case": "case-999"})
+        with tempfile.TemporaryDirectory() as directory:
+            actual_path = Path(directory) / "actual.jsonl"
+            actual_path.write_text("".join(json.dumps(case) + "\n" for case in actual), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCORER), "--expected", str(CORPUS / "expected.jsonl"),
+                 "--actual", str(actual_path), "--families", "IP-MARK"],
+                text=True, capture_output=True, check=False,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unexpected actual case: case-999", result.stdout)
 
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]

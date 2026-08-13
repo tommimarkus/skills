@@ -60,6 +60,8 @@ def main() -> int:
     expected, errors = expected_records(args.expected)
     actual, actual_errors = validate_file(args.actual)
     errors.extend(f"actual {error}" for error in actual_errors)
+    for case in sorted(set(actual) - set(expected)):
+        errors.append(f"unexpected actual case: {case}")
     families = set(args.families.split(",")) if args.families else None
     for case, wanted in expected.items():
         if families and wanted["family"] not in families:

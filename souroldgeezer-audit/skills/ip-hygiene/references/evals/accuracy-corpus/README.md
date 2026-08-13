@@ -4,8 +4,11 @@ Thirty-two synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
 `IP-LIC`, and `IP-MARK`, including ambiguity, every counsel-required stop, and
 clean controls. All names and facts are repo-authored fictional material. Each
 blind prompt provides distinct material, source/provenance, intended act and
-distribution context, plus the ambiguity or counsel-trigger fact relevant to
-that scenario. It does not disclose its expected record or criterion code.
+distribution context, the explicitly requested lane, plus the ambiguity or
+counsel-trigger fact relevant to that scenario. Blind records use opaque
+`case-NNN` identifiers and omit scorer-only criterion-family labels. They do not
+disclose an expected record, criterion code, authority classification, or
+outcome.
 
 ## Blind evaluation
 
@@ -20,7 +23,10 @@ references, evaluator instructions, and the actual-record validator. It omits
 expected outcomes, the parent scorer, source grounding, repository tests, Git
 metadata/history, prior diagnoses, and evaluator caches. The evaluator writes
 one JSONL record per case in the validator's closed schema, and validates
-structure only. The actual result schema uses a per-case `findings` array whose
+structure and exact assigned-case coverage only. The required invocation is
+`validate_ip_hygiene_actual.py --cases cases.jsonl --actual <actual.jsonl>`;
+positional or coverage-free validation is rejected. The actual result schema
+uses a per-case `findings` array whose
 entries carry criterion code, severity, authority class, and fact status, plus
 the lane outcome, counsel outcome, and literal-false clearance disclosure. It
 must read only its assigned bundle: any outside read or
@@ -36,11 +42,12 @@ deterministically:
 python references/scripts/score_ip_hygiene_eval.py --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
 ```
 
-Parent-held expected records declare `required_codes`, explicit allowed codes,
+Parent-held expected records retain the family selector and declare
+`required_codes`, explicit allowed codes,
 per-code classifications, lane outcome, counsel outcome, and any substantiated
 designated blocker. The scorer fails for a missing required code, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
-outcome, or a legal-clearance overclaim. Structural validation is not model recall:
+outcome, an unexpected case ID, or a legal-clearance overclaim. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the
 parent scorer measures behavioral accuracy. The focused contract test also
 rejects duplicate, placeholder, or under-specified prompts; it checks fixture

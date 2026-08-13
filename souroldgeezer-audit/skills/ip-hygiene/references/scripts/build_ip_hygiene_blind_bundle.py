@@ -39,7 +39,10 @@ For each record in `cases.jsonl`,
 apply the bundled IP Hygiene workflow and its bundled references. Write one
 actual JSONL record per case using the result shape enforced by
 `validate_ip_hygiene_actual.py`.
-Run that validator on the completed actual records before returning them.
+Run `validate_ip_hygiene_actual.py --cases cases.jsonl --actual <actual.jsonl>`
+on the completed actual records before returning them. The coverage-aware form
+is mandatory: every assigned opaque case ID must occur exactly once and no
+unassigned ID may occur.
 
 This evaluator validates result structure only. Do not score behavioral accuracy,
 infer hidden expected outcomes, or claim recall. Parent-only evaluation privately

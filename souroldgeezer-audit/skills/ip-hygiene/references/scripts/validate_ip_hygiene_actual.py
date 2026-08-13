@@ -124,23 +124,16 @@ def case_ids(path: Path) -> tuple[set[str], list[str]]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("actual_path", nargs="?", type=Path)
-    parser.add_argument("--cases", type=Path)
-    parser.add_argument("--actual", type=Path)
+    parser.add_argument("--cases", type=Path, required=True)
+    parser.add_argument("--actual", type=Path, required=True)
     args = parser.parse_args(argv)
-    if args.actual_path is not None and args.actual is not None:
-        parser.error("use positional ACTUAL.jsonl or --actual, not both")
-    actual_path = args.actual or args.actual_path
-    if actual_path is None:
-        parser.error("an actual JSONL path is required")
-    actual, errors = validate_file(actual_path)
-    if args.cases is not None:
-        expected_cases, case_errors = case_ids(args.cases)
-        errors.extend(case_errors)
-        for case in sorted(expected_cases - set(actual)):
-            errors.append(f"missing actual case: {case}")
-        for case in sorted(set(actual) - expected_cases):
-            errors.append(f"unexpected actual case: {case}")
+    actual, errors = validate_file(args.actual)
+    expected_cases, case_errors = case_ids(args.cases)
+    errors.extend(case_errors)
+    for case in sorted(expected_cases - set(actual)):
+        errors.append(f"missing actual case: {case}")
+    for case in sorted(set(actual) - expected_cases):
+        errors.append(f"unexpected actual case: {case}")
     print("IP hygiene actual schema: " + ("PASS" if not errors else "FAIL"))
     for error in errors:
         print(error)

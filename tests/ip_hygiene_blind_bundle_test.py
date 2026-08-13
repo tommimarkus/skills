@@ -74,6 +74,19 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
             self.assertIn("only assigned bundle", instructions)
             self.assertIn("structure only", instructions)
             self.assertIn("Parent", instructions)
+            self.assertIn(
+                "validate_ip_hygiene_actual.py --cases cases.jsonl --actual <actual.jsonl>",
+                instructions,
+            )
+
+            cases = [
+                json.loads(line)
+                for line in (first / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 33)])
+            for case in cases:
+                self.assertEqual(set(case), {"case", "prompt", "synthetic"})
+                self.assertIn("Requested lane:", case["prompt"])
 
 
 if __name__ == "__main__":

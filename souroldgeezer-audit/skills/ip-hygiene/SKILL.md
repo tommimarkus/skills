@@ -50,7 +50,7 @@ In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
 for this loaded `SKILL.md`. The evaluator reads only its assigned bundle and
 must structurally validate its actual records with:
 
-`${CLAUDE_SKILL_DIR}/references/scripts/validate_ip_hygiene_actual.py <actual.jsonl>`
+`${CLAUDE_SKILL_DIR}/references/scripts/validate_ip_hygiene_actual.py --cases <bundle-dir>/cases.jsonl --actual <actual.jsonl>`
 
 In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
 for this loaded `SKILL.md`. An outside read or expected-outcome exposure is

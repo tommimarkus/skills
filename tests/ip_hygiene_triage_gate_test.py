@@ -36,21 +36,22 @@ class IpHygieneTriageGateTest(unittest.TestCase):
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
         cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text().splitlines()]
         by_case = {case["case"]: case for case in expected}
-        self.assertEqual({by_case[f"c{number}-{name}"]["outcome"] for number, name in (
-            (1, "mark-led-name"), (2, "false-registration"), (3, "dropped-notice"),
-            (5, "near-verbatim"),
-        )}, {"fail"})
-        self.assertEqual(by_case["c4-vendored-no-license"]["outcome"], "not-evaluated")
-        self.assertEqual(by_case["c6-clean-control"]["outcome"], "pass-limited")
-        self.assertEqual(by_case["c7-unclear-redistribution"]["outcome"], "not-evaluated")
-        self.assertEqual(by_case["c8-symbol-convention"]["outcome"], "pass-limited")
-        self.assertEqual(by_case["c11-drive-by-propagation"]["outcome"], "not-evaluated")
-        self.assertEqual(by_case["c14-close-paraphrase"]["outcome"], "not-evaluated")
+        self.assertEqual(
+            {by_case[case_id]["outcome"] for case_id in (
+                "case-001", "case-002", "case-003", "case-005"
+            )},
+            {"fail"},
+        )
+        self.assertEqual(by_case["case-004"]["outcome"], "not-evaluated")
+        self.assertEqual(by_case["case-006"]["outcome"], "pass-limited")
+        self.assertEqual(by_case["case-007"]["outcome"], "not-evaluated")
+        self.assertEqual(by_case["case-008"]["outcome"], "pass-limited")
+        self.assertEqual(by_case["case-011"]["outcome"], "not-evaluated")
+        self.assertEqual(by_case["case-014"]["outcome"], "not-evaluated")
         case_ids = {case["case"] for case in cases}
         self.assertEqual(case_ids, set(by_case))
-        for case in expected[:8]:
-            with self.subTest(case=case["case"]):
-                self.assertTrue((CORPUS / "cases" / case["case"]).is_dir())
+        fixture_dirs = [path for path in (CORPUS / "cases").iterdir() if path.is_dir()]
+        self.assertEqual(len(fixture_dirs), 8)
 
     def test_accuracy_corpus_has_complete_adversarial_contract_records(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
