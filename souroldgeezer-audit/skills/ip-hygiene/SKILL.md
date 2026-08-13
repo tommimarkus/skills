@@ -49,9 +49,15 @@ Load only the references selected by the evidence:
 - scope, remedy, or legal-policy boundary changes: [fence-posts.md](references/fence-posts.md)
 - an old link targeting the pre-split router: [ip-hygiene-reference.md](references/ip-hygiene-reference.md)
 
-When a language is detected in the reviewed files, also load the matching pack
-at `extensions/<lang>.md`, selected by the detection signals that pack states.
-Extensions add or carve out criteria; they never override core criteria.
+When a language is detected in the reviewed files, also load the matching pack,
+each selected by the detection signals it states:
+[python.md](extensions/python.md), [shell.md](extensions/shell.md),
+[javascript-typescript.md](extensions/javascript-typescript.md),
+[dotnet-csharp.md](extensions/dotnet-csharp.md), [java.md](extensions/java.md),
+[rust.md](extensions/rust.md). Extensions add or carve out criteria; they never
+override core criteria. Load
+[extension-authoring.md](references/procedures/extension-authoring.md) only when
+writing or changing a pack.
 
 When changing trigger, workflow, gates, source, or eval behavior, inspect
 `references/evals/`, its accuracy corpus, and
