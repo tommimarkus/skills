@@ -74,6 +74,12 @@ Required fields:
 - `source_kind`, `source_url`, `ip_handling`,
   `contains_third_party_text`: same meaning as trigger cases.
 
+For a stochastic evaluator, establish an observed noise envelope with at least
+two runs over unchanged pinned input before treating a score delta as evidence;
+movement inside that envelope is noise. Change only one variable per scored
+comparison, and match every other recorded condition between the baseline and
+the subject run.
+
 ## Model Pressure
 
 Path: `references/evals/model-pressure.md`.
