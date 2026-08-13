@@ -1,8 +1,10 @@
 # Accuracy Corpus (audit-of-the-audit)
 
-Thirty-two synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
+Thirty-six synthetic adversarial cases cover `IP-SRC`, `IP-COPY`, `IP-DB`,
 `IP-LIC`, and `IP-MARK`, including ambiguity, every counsel-required stop, and
-clean controls. All names and facts are repo-authored fictional material. Each
+clean controls. The four prospective cases cover every prospective-decision
+outcome; the remaining cases cover triage and in-depth lanes. All names and
+facts are repo-authored fictional material. Each
 blind prompt provides distinct material, source/provenance, intended act and
 distribution context, the explicitly requested lane, plus the ambiguity or
 counsel-trigger fact relevant to that scenario. Blind records use opaque

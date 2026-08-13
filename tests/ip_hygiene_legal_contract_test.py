@@ -8,6 +8,11 @@ REFS = "souroldgeezer-audit/skills/ip-hygiene/references"
 
 
 class IpHygieneLegalContractTest(unittest.TestCase):
+    def test_authority_index_uses_only_declared_authority_classes(self) -> None:
+        authority = read("souroldgeezer-audit/skills/ip-hygiene/references/authority-index.md")
+        self.assertIn("binding-law harmonization source", authority)
+        self.assertNotIn("binding international/national framework", authority)
+
     def assertContainsAll(self, text: str, fragments: tuple[str, ...]) -> None:
         for fragment in fragments:
             with self.subTest(fragment=fragment):

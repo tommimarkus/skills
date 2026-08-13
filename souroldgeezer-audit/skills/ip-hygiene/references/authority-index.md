@@ -10,6 +10,9 @@ current text, territorial scope, version, and facts before relying on an entry.
   directive's national implementation), or authoritative judicial
   interpretation. An EU directive is the harmonization source; it is not a
   substitute for checking the operative national provision when that matters.
+- **binding-law harmonization source** — an EU directive or other binding
+  harmonization instrument that frames national law but does not substitute for
+  checking the applicable implementing provision when that is load-bearing.
 - **operative licence term** — the actual licence/version, exception, or other
   permission covering the identified material and intended act.
 - **holder policy** — an official holder's naming, logo, attribution, or use
@@ -44,9 +47,11 @@ current text, territorial scope, version, and facts before relying on an entry.
 
 ## Copyright, Software, And Databases
 
-- **binding international/national framework — Berne Convention, especially
-  Arts 2, 9 and 10:** protected works, reproduction, and quotation baseline;
-  apply through the relevant law. <https://www.wipo.int/treaties/en/ip/berne/>
+- **binding law — Berne Convention, especially Arts 2, 9 and 10:**
+  international treaty baseline for protected works, reproduction, and
+  quotation; apply through the relevant national law and do not treat the
+  treaty citation alone as the operative national provision.
+  <https://www.wipo.int/treaties/en/ip/berne/>
 - **binding-law harmonization source — InfoSoc Directive 2001/29/EC, Arts 2 and
   5:** reproduction and optional quotation exception conditions; check national
   implementation. <https://eur-lex.europa.eu/eli/dir/2001/29/oj>

@@ -16,7 +16,7 @@ VALIDATOR = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/script
 class IpHygieneEvalContractTest(unittest.TestCase):
     def test_blind_cases_have_distinct_substantive_synthetic_facts(self) -> None:
         cases = [json.loads(line) for line in (CORPUS / "cases.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(len(cases), 32)
+        self.assertEqual(len(cases), 36)
         prompts = [case["prompt"] for case in cases]
         self.assertEqual(len(prompts), len(set(prompts)))
         self.assertNotIn("Synthetic FictionalCloud scenario; assess only the stated publication act.", prompts)
@@ -28,7 +28,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                 self.assertIn(fact_heading, case["prompt"], case["case"])
             self.assertRegex(
                 case["prompt"],
-                r"Requested lane: (limited-assurance triage|reasonable-hygiene in-depth review)\.",
+                r"Requested lane: (prospective decision|limited-assurance triage|reasonable-hygiene in-depth review)\.",
             )
             self.assertGreaterEqual(len(case["prompt"]), 420, case["case"])
 
@@ -62,6 +62,16 @@ class IpHygieneEvalContractTest(unittest.TestCase):
                         "case-027", "case-028"):
             for classifications in expected[case_id]["allowed_classifications"].values():
                 self.assertNotEqual(classifications[0]["authority_class"], "binding law", case_id)
+        self.assertEqual(expected["case-015"]["family"], "IP-LIC")
+        self.assertEqual(
+            expected["case-022"]["allowed_classifications"]["IP-LIC-4"][0]["authority_class"],
+            "conservative repository policy",
+        )
+        prospective = [case for case in expected.values() if case["lane"] == "prospective"]
+        self.assertEqual(
+            {case["outcome"] for case in prospective},
+            {"proceed-with-stated-controls", "do-not-proceed", "insufficient-evidence", "counsel-required"},
+        )
 
     def test_readme_documents_blind_actual_result_schema_and_limits(self) -> None:
         text = read("souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/README.md")
@@ -210,7 +220,7 @@ class IpHygieneEvalContractTest(unittest.TestCase):
 
     def test_expected_contract_has_per_code_classification_and_supported_authority(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]
-        self.assertEqual(len(expected), 32)
+        self.assertEqual(len(expected), 36)
         for case in expected:
             with self.subTest(case=case["case"]):
                 self.assertEqual(set(case), {

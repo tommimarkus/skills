@@ -85,10 +85,13 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
                 json.loads(line)
                 for line in (first / "cases.jsonl").read_text(encoding="utf-8").splitlines()
             ]
-            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 33)])
+            self.assertEqual([case["case"] for case in cases], [f"case-{n:03d}" for n in range(1, 37)])
             for case in cases:
                 self.assertEqual(set(case), {"case", "prompt", "synthetic"})
                 self.assertIn("Requested lane:", case["prompt"])
+            case_018 = next(case for case in cases if case["case"] == "case-018")
+            self.assertNotIn("harmonization source", case_018["prompt"])
+            self.assertNotIn("stop the merits decision", case_018["prompt"])
 
     def test_builder_rejects_allowlisted_symlink_even_when_target_is_a_file(self) -> None:
         spec = importlib.util.spec_from_file_location("ip_blind_builder", BUILDER)
