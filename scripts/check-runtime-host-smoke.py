@@ -431,7 +431,15 @@ def run_mcp_session(
             f"{label} Dediren adapter omitted JSON-RPC responses; "
             f"ids={sorted(responses)}, stderr={result.stderr[-2000:]}"
         )
-    tools = responses[2].get("result", {}).get("tools")
+    tools_response = responses[2]
+    tools_error = tools_response.get("error")
+    if isinstance(tools_error, dict):
+        code = tools_error.get("code", "unknown")
+        message = str(tools_error.get("message", "no message"))[-2000:]
+        raise SmokeFailure(
+            f"{label} Dediren tools/list JSON-RPC error ({code}): {message}"
+        )
+    tools = tools_response.get("result", {}).get("tools")
     if not isinstance(tools, list):
         raise SmokeFailure(f"{label} Dediren tools/list response has no tools[]")
     names: set[str] = set()
