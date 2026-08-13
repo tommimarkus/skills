@@ -603,7 +603,7 @@ managed install in the host's per-plugin writable data directory, then a
 `dediren` on `PATH` that reports at or above the floor, then the migration-only
 fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
-(`2026.08.2`) into that data directory. It discovers that installation's live
+(`2026.08.3`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead
@@ -902,10 +902,10 @@ Render-ready requires inspecting SVG for:
   and trust-boundary strokes meeting WCAG 2.2 SC 1.4.11 3:1 non-text contrast.
   The bundled `render-policy.json` fixtures are the reference policy: they carry
   a decorator and layer fill for every element type used and an edge style for
-  all eleven relationship families. Where the runtime has no dotted line style,
-  ArchiMate Access renders dashed and is not distinguished from Influence
-  (disambiguated only by Influence's `+`/`-` label); disclose that under
-  `Dediren tool issues`. Collapsed notation or a sub-3:1 boundary is `ARCH-R-*`;
+  all eleven relationship families. ArchiMate Access and Realization render
+  dotted, while Influence and Flow render dashed; verify the corresponding
+  endpoint markers from the reference policy as well. Collapsed notation or a
+  sub-3:1 boundary is `ARCH-R-*`;
 - density, fanout, route span, group balance, and viewpoint focus that are
   acceptable for the audience;
 - kind-specific structure that a clean `validate-layout` does not prove — for
@@ -967,6 +967,15 @@ OEF and XMI export policies also gain an optional per-view identity `views` map:
 OEF takes `view_identifier` / `view_name` / `viewpoint`, XMI takes
 `diagram_identifier` / `diagram_name`, so an exported view can carry a stable
 identifier and human name into the interchange document.
+
+On the pinned Dediren runtime, every successful direct UML/XMI export result is
+`export-result.schema.v2` and carries `.data.assurance`. Read its
+`artifact_scope`, exhaustive `kind_taxonomy`, `coverage` partitions, and
+`validation_evidence` before reporting export scope, omissions, represented
+content, or validation strength. Diagnostics remain complementary; filename or
+`status: ok` inference is not assurance evidence. The native package-build
+result does not surface assurance, so its default one-call path retains explicit
+artifact/source comparison and diagnostic disclosure.
 
 ## 11. Customization Profile
 

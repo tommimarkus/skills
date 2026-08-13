@@ -37,6 +37,12 @@ regression plus both validation counts.
 Export readiness never claims bare "ready": retain `XMI ready (<coverage>)` and
 qualify it with view/count, omissions, represented content, and validation level
 exactly one of `XMI envelope only`, `UML-content schema`, or `importer validated`.
+When a direct export result is available, derive those fields from
+`export-result.schema.v2` `.data.assurance`: `artifact_scope`, `coverage`,
+`kind_taxonomy`, and `validation_evidence`. Diagnostics add detail but do not
+replace that machine contract. The native package-build result does not carry
+assurance; disclose `assurance not surfaced by package build` and keep the
+artifact/source comparison plus export diagnostics explicit.
 Qualify coverage with views exported vs. total actual views, and content kinds exported vs. authored (per
 [external-validation-handoff](procedures/external-validation-handoff.md)
 required disclosures) — e.g. `OEF ready (1 of 2 views)`, `XMI ready (classes

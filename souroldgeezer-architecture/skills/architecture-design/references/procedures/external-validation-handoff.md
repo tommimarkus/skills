@@ -38,14 +38,21 @@ qualifier (see [output-format](../output-format.md)):
    candidate/confirmed distinction, when candidate or evidence-labeled content
    is exported disclose that the downstream tool shows it indistinguishably from
    confirmed architecture.
-3. **Content coverage (XMI).** Retain `XMI ready (<coverage>)`, but disclose
-   view/count, omissions, and represented content from the actual diagnostics.
-   On the pinned 2026.08.2 reproduction, class/data/activity emitted
-   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`, while
-   the other five selected view families did not. An `ok` envelope never erases
-   omissions. Per-view coverage therefore follows observed diagnostics, not a
-   blanket claim for a UML kind; model-scoped aggregate and provisional UMLDI
-   remain class/data family only.
+3. **Content coverage (XMI).** Retain `XMI ready (<coverage>)`. When a direct
+   export result is available, derive its view/count, omissions, and represented
+   content from the pinned runtime's `export-result.schema.v2` `.data.assurance`
+   object. Read `artifact_scope` for
+   the selected view kinds and the `coverage` partitions `represented`,
+   `omitted`, and `unrepresented_in_view`, including their element and
+   relationship totals and by-type counts. Read the exhaustive `kind_taxonomy`
+   instead of inferring whole-model or UMLDI scope from a filename: aggregate
+   model and provisional UMLDI support remain class/data family only. Keep
+   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED`
+   diagnostics as complementary detail. The native package-build-result does
+   not surface assurance; on the default package-build path, compare the
+   generated artifact against package source, read the export diagnostics, and
+   disclose `assurance not surfaced by package build`. An `ok` envelope never
+   erases omissions or in-view content the writer did not represent.
 4. **Schema validation.** Dediren runs its own OEF/XMI schema validation in-JVM
    — it no longer shells out to `xmllint` internally, so there is no
    `*_SCHEMA_VALIDATOR` override to configure; the `DEDIREN_OEF_SCHEMA_DIR` /
@@ -59,15 +66,17 @@ qualifier (see [output-format](../output-format.md)):
      `archimate3_Diagram.xsd`; its embedded `schemaLocation` names that diagram
      schema (dediren 2026.07.1+; earlier runtimes named the model-only
      `archimate3_Model.xsd`, which rejects `<views>`).
-   - *XMI (UML).* Dediren's `DEDIREN_EXPORT_SCHEMA_CONFORMANCE` validates only
-     the OMG XMI 2.5.1 envelope; it does not validate UML namespace content.
-     Report exactly one validation level: `XMI envelope only`, `UML-content
-     schema`, or `importer validated`. Do not describe envelope-only output as
-     conformant UML abstract syntax. [Dediren issue #71](https://github.com/tommimarkus/dediren/issues/71)
-     tracks the limitation.
-     A later release may broaden this promise only after independent verification
-     of that pinned release plus local regression coverage; issue closure alone
-     cannot broaden it. For deeper validation, supply a UML-content schema or
-     validate an import with a real UML tool, then report the level actually run.
+   - *XMI (UML).* When direct-result assurance is present, read
+     `.data.assurance.validation_evidence`, including the XMI schema status and
+     the UML metamodel/importer evidence arrays. Map its
+     `level` value `xmi-envelope-only`, `uml-content-schema-validated`, or
+     `importer-validated` to exactly one disclosure: `XMI envelope only`,
+     `UML-content schema`, or `importer validated`. Empty stronger-evidence
+     arrays never establish the stronger level, and `xmi-envelope-only` never
+     establishes conformant UML abstract syntax. [Dediren issue #71](https://github.com/tommimarkus/dediren/issues/71)
+     records the provenance of the machine assurance contract. For deeper
+     validation, supply a UML-content schema or validate an import with a real
+     UML tool, then report the level actually run. A package-build-only result
+     cannot upgrade validation strength from its diagnostic prose alone.
    In restricted environments pre-fetch XSDs and pass offline paths per
    [self-check](self-check.md) envelope/schema guidance.

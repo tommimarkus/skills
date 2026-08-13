@@ -51,7 +51,7 @@ Synthetic `uml-deployment` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.29"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.08.3"}],
   "nodes": [
     {"id": "node-app", "type": "Device", "label": "App Host", "properties": {"uml": {"kind": "device"}}},
     {"id": "env-jvm", "type": "ExecutionEnvironment", "label": "JVM", "properties": {"uml": {"node": "node-app"}}},
@@ -78,7 +78,9 @@ No `uml-deployment`-specific mapping claim is made beyond the shared contract.
 Report this local view's actual diagnostics, represented content, and one
 validation level (`XMI envelope only`, `UML-content schema`, or `importer
 validated`); envelope-only validation does not establish conformant UML abstract
-syntax. The earlier 2026.07.29 worked-example check is not a re-adoption gate.
+syntax. When a direct export result is available, use its assurance object for
+that scope and validation disclosure; package-build-only evidence keeps the
+shared assurance-limit disclosure.
 
 ## Findings
 

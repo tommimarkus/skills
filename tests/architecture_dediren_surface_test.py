@@ -1488,7 +1488,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("omissions", output)
         self.assertIn("represented content", output)
         self.assertIn("Dediren issue #71", source_grounding)
-        self.assertIn("issue closure alone cannot broaden", source_grounding)
+        self.assertIn("export-result.schema.v2", source_grounding)
+        self.assertIn(".data.assurance", source_grounding)
+        self.assertIn("kind_taxonomy", source_grounding)
+        self.assertIn("validation_evidence", source_grounding)
+        self.assertIn("independently verifies", source_grounding)
+        self.assertIn("package-build-result does not surface assurance", source_grounding)
         self.assertIn("active structure -> behavior", architecture)
         self.assertNotIn("or vice versa", architecture)
         self.assertIn(

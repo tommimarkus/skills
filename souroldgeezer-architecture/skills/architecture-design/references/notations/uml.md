@@ -19,17 +19,22 @@ only their deltas to it.
 - The SVG render path needs generated render metadata, which `dediren_build`
   produces (mapped to `generated/render-metadata/<view>.json`).
 - UML/XMI compatibility export (`uml-xmi`) runs only when requested. Per-view
-  XMI covers advertised kinds according to actual diagnostics — class, data,
-  activity, sequence, state-machine, use-case, component, and deployment — and
-  its validation level must be disclosed as `XMI envelope only`,
-  `UML-content schema`, or `importer validated`; envelope-only validation does
-  not establish conformant UML abstract syntax. When an exported view holds content
-  outside it, or in-view content the mapping cannot yet represent, the runtime
-  declares it — never dropped silently — with `info` diagnostics
+  XMI covers class, data, activity, sequence, state-machine, use-case, component,
+  and deployment. When a direct export result is available, read the runtime's
+  `export-result.schema.v2` `.data.assurance`: its `artifact_scope`, exhaustive `kind_taxonomy`,
+  `coverage`, and `validation_evidence`; map the reported validation level to
+  `XMI envelope only`, `UML-content schema`, or `importer validated`.
+  Envelope-only validation does not establish conformant UML abstract syntax.
+  When an exported view holds content outside it, or in-view content the mapping
+  cannot yet represent, the assurance coverage partitions declare it by type;
+  the runtime also emits complementary `info` diagnostics
   `DEDIREN_XMI_ELEMENTS_OMITTED` / `DEDIREN_XMI_RELATIONSHIPS_OMITTED` (the
   message states which case) while the envelope `status` stays `ok`; read
-  `.diagnostics[]` and qualify readiness from what they report per
+  both surfaces and qualify readiness from the assurance contract per
   [external-validation-handoff](../procedures/external-validation-handoff.md).
+  The native package-build result does not surface assurance; the default
+  package path keeps artifact/source comparison and diagnostics explicit and
+  discloses that evidence limit.
 - Beyond that per-view `uml-xmi` export, a build with an `xmi_policy` also emits
   one whole-model `model.uml.xml` interchange document (one `uml:Model` plus OMG
   UMLDI diagrams), complete across the built views. Its UMLDI diagram content is

@@ -4,7 +4,7 @@
 
 The notation-aware render policies under
 `skills/architecture-design/references/fixtures/dediren/` mirror the Dediren
-2026.07.29 `archimate-svg` and `uml-svg` reference policies.
+2026.08.3 `archimate-svg` and `uml-svg` reference policies.
 
 MIT License
 

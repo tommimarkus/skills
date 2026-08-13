@@ -54,7 +54,7 @@ shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
 call. Dediren itself is provisioned by the plugin: on first use the launcher
-installs the pinned, checksum-verified release (pin `2026.08.2`, support floor
+installs the pinned, checksum-verified release (pin `2026.08.3`, support floor
 `2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
 into the host's own per-plugin writable data directory. That directory resolves
 from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,
@@ -70,6 +70,11 @@ bundled procedure at
 [`souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md`](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)
 is the single place that documents what provisioning does, how to override it,
 how to run air-gapped, and how to diagnose a failure.
+
+Dediren 2026.08.3 adds `export-result.schema.v2` assurance to direct UML/XMI
+exports. Native package-build results do not surface it, so shared guidance
+preserves the artifact/source and diagnostic evidence path with an explicit
+assurance limit.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|

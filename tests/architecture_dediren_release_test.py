@@ -56,7 +56,7 @@ DEPLOYMENT_NOTATION_DOC = (
     / "uml"
     / "deployment.md"
 )
-COMPATIBILITY_BASELINE = "2026.07.29"
+COMPATIBILITY_BASELINE = "2026.08.3"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
 # ships one launcher and no plugin executables, manifests, or capability probes. The
@@ -433,6 +433,8 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             "schemas/layout-result.schema.json",
             "schemas/render-policy.schema.json",
             "schemas/render-metadata.schema.json",
+            "schemas/export-result.schema.json",
+            "schemas/uml-xmi-assurance.schema.json",
             "schemas/oef-export-policy.schema.json",
             "schemas/uml-xmi-export-policy.schema.json",
             "fixtures/export-policy/default-uml-xmi.json",
@@ -670,7 +672,45 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             )
             self.assertEqual(export_result.returncode, 0, export_result.stderr)
             exported = envelope(export_result)
+            self.assertEqual(
+                exported["data"]["export_result_schema_version"],
+                "export-result.schema.v2",
+            )
             self.assertEqual(exported["data"]["artifact_kind"], "uml-xmi+xml")
+            assurance = exported["data"]["assurance"]
+            self.assertEqual(
+                assurance["assurance_schema_version"],
+                "uml-xmi-assurance.schema.v1",
+            )
+            self.assertEqual(assurance["artifact_scope"]["scope"], "view")
+            self.assertEqual(
+                assurance["artifact_scope"]["selected_view_kinds"],
+                ["uml-sequence"],
+            )
+            taxonomy = {entry["kind"]: entry for entry in assurance["kind_taxonomy"]}
+            self.assertEqual(
+                taxonomy["uml-sequence"],
+                {
+                    "kind": "uml-sequence",
+                    "classification": "standard-uml-diagram-kind",
+                    "scope": {
+                        "xmi_abstract_syntax": "selected-view",
+                        "aggregate_model": "not-included",
+                        "uml_di": "none",
+                    },
+                },
+            )
+            validation = assurance["validation_evidence"]
+            self.assertEqual(validation["level"], "xmi-envelope-only")
+            self.assertIn(
+                validation["xmi_schema_evidence"]["status"],
+                {"validated", "not-validated"},
+            )
+            self.assertEqual(validation["uml_metamodel_evidence"], [])
+            self.assertEqual(validation["importer_evidence"], [])
+            represented = assurance["coverage"]["represented"]
+            self.assertGreater(represented["element_total"], 0)
+            self.assertGreater(represented["relationship_total"], 0)
             # #106: the sequence XMI emits its full abstract syntax — one uml:Interaction
             # packagedElement with nested <lifeline>/<message> children and
             # MessageOccurrenceSpecification fragments (plus CombinedFragment for the
@@ -1230,20 +1270,29 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertTrue(contents, by_id[3])
         self.assertTrue(contents[0]["text"].strip(), "diagnostics catalog resource is empty")
 
-    def test_release_guidance_keeps_xmi_assurance_at_the_observed_validation_level(self) -> None:
-        """A release test must not let an envelope-only observation become UML conformance."""
+    def test_release_guidance_reads_the_xmi_assurance_contract(self) -> None:
+        """Guidance must derive XMI claims from assurance without overstating them."""
         grounding = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md").read_text(encoding="utf-8")
         handoff = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "external-validation-handoff.md").read_text(encoding="utf-8")
         for text in (grounding, handoff):
             normalized = " ".join(text.split())
             with self.subTest(surface=text[:40]):
+                self.assertIn("export-result.schema.v2", normalized)
+                self.assertIn(".data.assurance", normalized)
+                self.assertIn("kind_taxonomy", normalized)
+                self.assertIn("validation_evidence", normalized)
+                self.assertIn("coverage", normalized)
                 self.assertIn("Dediren issue #71", normalized)
                 self.assertIn("XMI envelope only", normalized)
                 self.assertIn("UML-content schema", normalized)
                 self.assertIn("importer validated", normalized)
-                self.assertIn("issue closure alone cannot broaden", normalized)
-        self.assertIn("class/data/activity emitted XMI omission diagnostics", grounding)
-        self.assertIn("other five selected", grounding)
+        self.assertIn("independently verifies", grounding)
+        self.assertIn("class/data-only", grounding)
+        for text in (grounding, handoff):
+            self.assertIn(
+                "package-build-result does not surface assurance",
+                " ".join(text.split()),
+            )
         self.assertNotIn("conformant UML 2.5.1 abstract syntax for whatever view kind", grounding)
 
 

@@ -38,7 +38,7 @@ Synthetic `uml-component` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.07.29"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.08.3"}],
   "nodes": [
     {"id": "pkg-svc", "type": "Package", "label": "Services", "properties": {"uml": {"kind": "package"}}},
     {"id": "comp-loans", "type": "Component", "label": "Loans Service", "properties": {"uml": {"package": "pkg-svc"}}},
