@@ -29,9 +29,14 @@ external docs.
   explicitly requested lane, and the scenario's ambiguity or counsel-trigger
   facts. Blind input uses opaque case IDs, omits family labels, and does not
   name an expected code, authority class, or decision. The deterministic scorer
-  checks required alternative-code groups, allowed codes, severity, the distinction between harmonization sources and
-  operative binding law,
-  lane/verdict, authority, fact status, counsel, and clearance overclaim.
+  checks required alternative-code groups, correlated allowed codes, severity,
+  every authority class (including the distinction between harmonization
+  sources and operative binding law), lane/verdict, fact status, counsel, and
+  clearance overclaim. Parent-held evidence anchors require the evaluator's
+  bounded finding and lane evidence to identify facts from its assigned case;
+  generic placeholders fail. The scorer also validates the complete expected
+  schema and its exact identity match with the assigned case corpus before
+  behavioral scoring.
   Structural completeness is not evidence of model recall. No content is
   copied from a real source. Blind evaluators receive only the deterministic
   allowlisted bundle: raw cases, the public workflow, directly required local

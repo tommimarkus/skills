@@ -69,7 +69,7 @@ stop_hook_changed_since_main() {
 # do not point it here.
 stop_hook_filter_authoring_surfaces() {
   awk '
-    /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
+    /^souroldgeezer-[^/]+\/skills\/[^/]+\/(SKILL\.md$|assets\/|extensions\/|references\/|fixtures\/|templates\/|scripts\/)/ { print; next }
     /^souroldgeezer-[^/]+\/agents\/[^/]+\.md$/ { print; next }
     /^souroldgeezer-[^/]+\/docs\/[^/]+-reference\// { print; next }
     /^souroldgeezer-[^/]+\/\.claude-plugin\/plugin\.json$/ { print; next }
@@ -77,6 +77,7 @@ stop_hook_filter_authoring_surfaces() {
     /^souroldgeezer-[^/]+\/plugin\.json$/ { print; next }
     /^souroldgeezer-[^/]+\/mcp\.json$/ { print; next }
     /^souroldgeezer-[^/]+\/mcp\/[^/]+\.mcp\.json$/ { print; next }
+    /^souroldgeezer-[^/]+\/(LICENSE|COPYING|NOTICE)(\.[^/]*)?$/ { print; next }
     /^\.claude-plugin\/marketplace\.json$/ { print; next }
     /^\.agents\/plugins\/marketplace\.json$/ { print; next }
     /^internal-skills\/[^/]+\// { print; next }

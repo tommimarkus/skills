@@ -266,10 +266,12 @@ lean_cost_absent=$(cd "$skill_fixture" &&
 filter_input=$(cat <<'EOF'
 souroldgeezer-audit/skills/lean-audit/SKILL.md
 souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md
+souroldgeezer-audit/skills/lean-audit/assets/logo.svg
 souroldgeezer-design/agents/app-design.md
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
 souroldgeezer-audit/.claude-plugin/plugin.json
 souroldgeezer-audit/.codex-plugin/plugin.json
+souroldgeezer-audit/LICENSE
 souroldgeezer-architecture/plugin.json
 souroldgeezer-architecture/mcp.json
 souroldgeezer-architecture/mcp/copilot.mcp.json
@@ -286,6 +288,7 @@ README.md
 scripts/skill_architecture_report.py
 tests/lean_engine_test.py
 docs/skill-architecture.md
+souroldgeezer-audit/docs/LICENSE-notes.md
 EOF
 )
 filtered=$(source scripts/agent-hooks/stop-hook-lib.sh; printf '%s\n' "$filter_input" | stop_hook_filter_authoring_surfaces | LC_ALL=C sort -u)
@@ -306,8 +309,10 @@ souroldgeezer-architecture/mcp/copilot.mcp.json
 souroldgeezer-architecture/plugin.json
 souroldgeezer-audit/.claude-plugin/plugin.json
 souroldgeezer-audit/.codex-plugin/plugin.json
+souroldgeezer-audit/LICENSE
 souroldgeezer-audit/docs/quality-reference/unit-testing.md
 souroldgeezer-audit/skills/lean-audit/SKILL.md
+souroldgeezer-audit/skills/lean-audit/assets/logo.svg
 souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md
 souroldgeezer-design/agents/app-design.md
 EOF
@@ -322,12 +327,15 @@ echo "ok: authoring-surface filter parity"
 current_metadata_fixture="$tmp/current-metadata-repo"
 make_fixture "$current_metadata_fixture"
 mkdir -p "$current_metadata_fixture/souroldgeezer-design/mcp" \
+  "$current_metadata_fixture/souroldgeezer-design/skills/software-design/assets" \
   "$current_metadata_fixture/.claude" "$current_metadata_fixture/docs"
 printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/plugin.json"
 printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/mcp.json"
 printf '{}\n' >"$current_metadata_fixture/souroldgeezer-design/mcp/copilot.mcp.json"
 printf '{}\n' >"$current_metadata_fixture/.claude/settings.json"
 printf '# Architecture\n' >"$current_metadata_fixture/docs/skill-architecture.md"
+printf 'fixture licence\n' >"$current_metadata_fixture/souroldgeezer-design/LICENSE"
+printf 'asset\n' >"$current_metadata_fixture/souroldgeezer-design/skills/software-design/assets/logo.svg"
 current_metadata_output=$(hook_input "$current_metadata_fixture" "current-metadata" false |
   AGENT_HOOK_DEBUG=1 bash "$current_metadata_fixture/scripts/agent-hooks/stop-ip-hygiene.sh")
 assert_block "$current_metadata_output" 'souroldgeezer-design/plugin.json'
@@ -335,4 +343,10 @@ assert_block "$current_metadata_output" 'souroldgeezer-design/mcp.json'
 assert_block "$current_metadata_output" 'souroldgeezer-design/mcp/copilot.mcp.json'
 assert_block "$current_metadata_output" '.claude/settings.json'
 assert_block "$current_metadata_output" 'docs/skill-architecture.md'
-assert_block "$current_metadata_output" '[".claude/settings.json","docs/skill-architecture.md","souroldgeezer-design"]'
+assert_block "$current_metadata_output" 'souroldgeezer-design/LICENSE'
+assert_block "$current_metadata_output" 'souroldgeezer-design/skills/software-design/assets/logo.svg'
+assert_block "$current_metadata_output" '[".claude/settings.json","docs/skill-architecture.md","souroldgeezer-design","souroldgeezer-design/skills/software-design"]'
+assert_block "$current_metadata_output" 'in-depth for breaking or additive public-surface work'
+assert_block "$current_metadata_output" 'scoped triage for cosmetic work'
+assert_block "$current_metadata_output" 'recommendation and counsel outcome'
+assert_block "$current_metadata_output" '`remediated:` record'

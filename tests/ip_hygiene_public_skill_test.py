@@ -45,7 +45,7 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("General repo-wide IP hygiene is future scope", skill)
         self.assertIn("not legal advice", skill)
         self.assertIn("nothing to check", skill)
-        self.assertIn("checked: <bucket list>; no IP hygiene changes needed", skill)
+        self.assertIn("checked: <reviewed criterion codes and surfaces>; no IP hygiene changes needed", skill)
         self.assertIn("remediated:", skill)
         self.assertIn("counsel outcome", skill)
         self.assertIn(

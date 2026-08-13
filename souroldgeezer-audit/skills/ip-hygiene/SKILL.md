@@ -57,7 +57,7 @@ for this loaded `SKILL.md`. An outside read or expected-outcome exposure is
 `blocked:contaminated`, with no results produced or revised. The parent alone
 privately scores behavior after receiving actual records:
 
-`${CLAUDE_SKILL_DIR}/references/scripts/score_ip_hygiene_eval.py --expected ${CLAUDE_SKILL_DIR}/references/evals/accuracy-corpus/expected.jsonl --actual <actual.jsonl> --families <comma-separated-families>`
+`${CLAUDE_SKILL_DIR}/references/scripts/score_ip_hygiene_eval.py --cases ${CLAUDE_SKILL_DIR}/references/evals/accuracy-corpus/cases.jsonl --expected ${CLAUDE_SKILL_DIR}/references/evals/accuracy-corpus/expected.jsonl --actual <actual.jsonl> --families <comma-separated-families>`
 
 In Codex, replace `${CLAUDE_SKILL_DIR}` with the absolute `<skill-dir>` reported
 for this loaded `SKILL.md`. Structural corpus checks do not establish model
@@ -211,7 +211,7 @@ risk-management referral when the hygiene decision can be completed from the
 available evidence and no mandatory stop below applies. It does not change the
 finding severity, gate, verdict, or decision, and it is never a substitute for
 missing load-bearing evidence. Use `not-triggered` when neither that prudent
-referral nor a mandatory trigger is evidenced. A no-finding run emits `nothing to check` or `checked: <bucket list>; no IP hygiene changes needed`;
+referral nor a mandatory trigger is evidenced. A no-finding run emits `nothing to check` or `checked: <reviewed criterion codes and surfaces>; no IP hygiene changes needed`;
 neither is clearance.
 
 Only an explicit fix request authorizes repairs. Keep audit findings unchanged,

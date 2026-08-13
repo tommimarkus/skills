@@ -33,12 +33,14 @@ structure and exact assigned-case coverage only. The required invocation is
 `validate_ip_hygiene_actual.py --cases cases.jsonl --actual <actual.jsonl>`;
 positional or coverage-free validation is rejected. The actual result schema
 uses a per-case `findings` array whose
-entries carry criterion code, severity, authority class, and fact status, plus
-the lane outcome, counsel outcome, and literal-false clearance disclosure. It
-also requires prospective records to name nonempty decision controls, evidence,
-and limits, and in-depth records to name the reviewed surface, exclusions,
-evidence, and limits. These fields preserve the basis of a qualified outcome or
-controlled decision instead of treating the outcome label as clearance. It
+entries carry the bounded public finding basis: criterion/classification,
+condition/location, provenance, act, audience, applicability, confidence and
+evidence, cause, consequence, recommendation, risk tier, and counsel outcome.
+Every lane also records reviewed surface, exclusions, case-grounded evidence,
+limits, independence, exact assurance level, its outcome, and literal-false
+clearance disclosure; prospective records additionally name decision controls.
+These fields preserve the basis of a result instead of treating an outcome
+label as clearance. It
 must read only its assigned bundle: any outside read or
 expected-outcome exposure is `blocked:contaminated`, with no produced or revised
 results. Parent-only evaluation privately scores behavioral accuracy.
@@ -49,11 +51,11 @@ After receiving uncontaminated actual records, the parent scores results
 deterministically:
 
 ```text
-python references/scripts/score_ip_hygiene_eval.py --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
+python references/scripts/score_ip_hygiene_eval.py --cases references/evals/accuracy-corpus/cases.jsonl --expected references/evals/accuracy-corpus/expected.jsonl --actual /path/to/actual.jsonl --families IP-MARK,IP-COPY,IP-DB
 ```
 
 Parent-held expected records retain the family selector and declare
-`required_code_groups`, explicit allowed codes,
+`required_code_groups`, explicit allowed codes and case-grounding evidence anchors,
 per-code classifications, lane outcome, counsel outcome, and any substantiated
 designated blocker. Each group requires one supported code; codes within the
 same group are accepted alternatives for a condition that legitimately fits
@@ -61,7 +63,9 @@ more than one criterion. Authority classifications distinguish a directive or ot
 EU harmonization source from an operative national binding-law proposition. The
 scorer rejects unknown or zero-coverage family selectors and fails for a missing required code group, an unsupported
 extra code, a clean-control finding, a wrong classification or lane/counsel
-outcome, an unexpected case ID, or a legal-clearance overclaim. Structural validation is not model recall:
+outcome, a missing evidence anchor, an expected/assigned case mismatch, or a
+legal-clearance overclaim. Malformed or cross-field-incoherent expected records
+fail closed. Structural validation is not model recall:
 the child validator proves record shape and case coverage; only the
 parent scorer measures behavioral accuracy. The focused contract test also
 rejects duplicate, placeholder, or under-specified prompts; it checks fixture

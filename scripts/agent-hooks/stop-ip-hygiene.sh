@@ -47,6 +47,9 @@ targets=$(
     $1 ~ /^souroldgeezer-/ && ($2 == "plugin.json" || $2 == "mcp.json" || $2 == "mcp") {
       print $1
     }
+    $1 ~ /^souroldgeezer-/ && NF == 2 && $2 ~ /^(LICENSE|COPYING|NOTICE)(\.[^/]*)?$/ {
+      print $1
+    }
     $1 == ".codex" && $2 == "hooks.json" {
       print ".codex/hooks.json"
     }
@@ -67,5 +70,5 @@ stop_hook_mark_prompted
 
 stop_hook_emit_block \
   "IP hygiene scoped surfaces changed in this task." \
-  "Before finishing, run the IP hygiene triage in \`souroldgeezer-audit/skills/ip-hygiene/SKILL.md\` for these changed surfaces." \
-  "Report the resulting coded output contract: \`nothing to check\` or \`checked: ...\`; each finding's criterion, authority, severity, fact/inference, remediation or deferred observation, and counsel outcome; then exactly one \`triage gate:\` (triage) or \`in-depth verdict:\` (in-depth) line. Never report legal clearance."
+  "Before finishing, select the repository-required IP hygiene lane in \`souroldgeezer-audit/skills/ip-hygiene/SKILL.md\`: in-depth for breaking or additive public-surface work; scoped triage for cosmetic work." \
+  "Report the resulting coded output contract: \`nothing to check\` or \`checked: ...\`; each finding's criterion, authority, severity, fact/inference, recommendation and counsel outcome; any separately authorized \`remediated:\` record; then exactly one \`triage gate:\` (triage) or \`in-depth verdict:\` (in-depth) line. Never report legal clearance."
