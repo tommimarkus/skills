@@ -190,11 +190,14 @@ schemas, and the troubleshooting table — is bundled with the plugin at
 5. Review infrastructure or IaC topology with `infra-design`; existing IaC work uses project assimilation to classify reused assets, legacy debt, and migration moves.
 6. Check a skill/plugin publication-surface edit, or a source, configuration,
    or build file repo-wide (including code and doc comments), with
-   `ip-hygiene`. Its findings name a coded criterion and authority class,
-   distinguish fact from inference, state remediation and counsel outcome,
-   and end in the applicable triage gate or in-depth verdict; neither outcome
-   is legal clearance. Its synthetic accuracy corpus has deterministic
-   blind-result scoring.
+   `ip-hygiene`. It loads a per-language pack — Python®, shell,
+   JavaScript/TypeScript, C# / .NET™, Java™, Rust® — when it detects one,
+   supplying that ecosystem's comment syntax, header placement, vendoring
+   conventions, and notice-survival mechanics. Its findings name a coded
+   criterion and authority class, distinguish fact from inference, state
+   remediation and counsel outcome, and end in the applicable triage gate or
+   in-depth verdict; neither outcome is legal clearance. Its synthetic
+   accuracy corpus has deterministic blind-result scoring.
 7. Initialize repository git workflow governance with `git-workflow-policy`.
 8. Initialize declarative release governance with `release-policy`, for example
    `release-policy: calver YYYY.MM.build, git tagging`. Bare initialization
