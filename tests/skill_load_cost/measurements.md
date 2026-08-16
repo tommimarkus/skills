@@ -383,16 +383,82 @@ perturb nothing. Adding the two `IP-*` patterns also leaves every existing
 baseline's `codes` array **identical** — verified by regenerating all five against
 the new pattern set — so the patterns do not over-match.
 
-**Pre-existing section drift, found but not fixed here.** Regenerating the five
-existing baselines shows section-set drift against what is committed, present
-with the *old* pattern file too, so unrelated to this change. Most is additive
-(closures gained sections the committed floor predates). One is not:
-`architecture-design`'s committed baseline contains
-`"Visible Title Band Post-Render Step"`, which its current closure no longer
-produces — a floor item that has genuinely gone unreachable. The guard's Stop path
-only checks session-changed files, so nothing surfaced it. Recorded for a separate
-change rather than repaired here.
+**Pre-existing baseline staleness, found but not fixed here.** Regenerating the
+five existing baselines shows each closure now yields sections the committed floor
+does not record — present with the *old* pattern file too, so unrelated to this
+change. The floors stay valid; they are simply lower than achievable.
+
+> **Correction (same day).** This paragraph originally claimed
+> `architecture-design`'s floor had lost `"Visible Title Band Post-Render Step"`
+> to an unreachable section. **That was wrong**, and so is the sentence about it in
+> this change's commit message. The comparison used `jq -S`, which sorts object
+> *keys* but not array *elements*, so it diffed the `sections` arrays in file order
+> and reported pure reordering as add/remove pairs. Compared as sets, all five
+> baselines show `lost-from-floor=0`; the heading is alive at
+> `architecture.md:818` and does appear in the regenerated baseline. Nothing had
+> gone unreachable. Compare baseline arrays as **sets**, never with an ordered diff.
 
 **The standing cost.** A baseline is a freshness obligation: future edits inside
 those 47 closure files must keep it current. That recurring cost is the price of
 the protection.
+
+## Floor invariant + design-skill backfill — 2026-08
+
+Follow-up to the section above. Three things, in order of what actually matters.
+
+**1. The floor invariant is now enforced repo-wide.**
+`tests/skill_load_cost_floor_test.py` asserts `baseline ⊆ current closure` for
+every committed baseline, reusing the engine's own `diff_inventory` — the same
+function the guard uses. This closes the structural hole the guard cannot: its
+Stop path enumerates only the `.md` files changed *that session*, so a floor
+breach in an untouched skill stays invisible until someone happens to edit it.
+Exactly the reasoning `skill_load_cost_freshness_test.py` already gives for the
+cost snapshot; this is that move for fidelity.
+
+Deliberately a **subset** assertion, not equality. Equality would force a
+regeneration on every content addition, which fights the floor semantics — gaining
+sections never weakens protection. Staleness is a separate soft signal
+(`STALENESS_ALLOWANCE`, 24 sections) that says "refresh this", not "you broke it".
+
+Verified by positive control, not a green run: injecting a bogus code and a bogus
+section into `infra-design`'s baseline makes the test fail naming both, and it
+passes again once restored (baseline byte-identical to pre-probe).
+
+**2. Five stale floors refreshed; two skills backfilled.**
+
+| Skill | Before | After |
+|---|---|---|
+| `api-design` | 245 / 242 | 245 / 248 |
+| `architecture-design` | 35 / 127 | 35 / 133 |
+| `lean-audit` | 33 / 88 | 33 / 95 |
+| `software-design` | 69 / 59 | 69 / 65 |
+| `test-quality-audit` | 62 / 657 | 62 / 664 |
+| `app-design` | *(none)* | 77 / 78 |
+| `infra-design` | *(none)* | 45 / 53 |
+
+`infra-design` and `app-design` needed `code_patterns.json` entries first, the same
+two-step `ip-hygiene` needed: core `ID-[A-Z]+-n` / `APP-[A-Z]+-n` plus their
+namespaced extension forms, including `<ext>.POS-APP-n`. Verified not to
+over-match: no `ID-`/`APP-` code shape occurs in any of the other seven closures,
+and **every refreshed baseline's `codes` count is unchanged** (245→245, 35→35,
+33→33, 69→69, 62→62) — only sections moved.
+
+`infra-design` had no scenario at all; `infra-review-azure-bicep` measures 6364.
+
+Coverage is now 9 of 16 skills. The remaining 7 are `souroldgeezer-ops` and
+`souroldgeezer-policy`, which emit no finding codes, so a code floor would protect
+nothing. That exemption is asserted rather than assumed:
+`test_exempt_plugins_still_emit_no_codes` fails if one ever gains a namespace.
+
+**3. A stale test surfaced by the refresh.**
+`api_design_mode_slicing_test.py` approximated api-design's closure as the
+api-reference plus an rglob of the skill dir. That omits
+`docs/design-reference/architecture-pairing-core.md`, which api-design's Load Map
+cites and `resolve_closure` reaches. Raising the floor exposed the omission as a
+failure on `"Architecture Pairing Core"`. The baseline was right and the test's
+path set had drifted, so the path set gained the shared core.
+
+**Process note.** Refresh a skill's baseline in the same change that adds sections
+to its closure. Yesterday's `scaled-audit.md` entered four closures without one,
+which is how five floors ended up 6–7 sections low. That belongs beside the
+existing stamp obligation, not as separate discipline to remember.

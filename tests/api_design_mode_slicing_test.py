@@ -6,6 +6,12 @@ from tests.surface_test_lib import REPO_ROOT, load_script_module, read, read_jso
 
 API_SKILL = REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design"
 API_REFERENCE = REPO_ROOT / "souroldgeezer-design" / "docs" / "api-reference" / "api-design.md"
+# api-design's Load Map also cites the shared design core, which lives outside the
+# skill dir, so an rglob of the skill dir alone understates the real closure.
+PAIRING_CORE = (
+    REPO_ROOT / "souroldgeezer-design" / "docs" / "design-reference"
+    / "architecture-pairing-core.md"
+)
 LOAD_COST_SCRIPT = (
     REPO_ROOT
     / "souroldgeezer-audit"
@@ -101,7 +107,7 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
         slc = load_script_module("api_design_mode_slicing_load_cost", LOAD_COST_SCRIPT)
         patterns = json.loads(read("tests/skill_load_cost/code_patterns.json"))
         baseline = json.loads(read("tests/skill_load_cost/baselines/api-design.json"))
-        paths = [API_REFERENCE, *sorted(API_SKILL.rglob("*.md"))]
+        paths = [API_REFERENCE, PAIRING_CORE, *sorted(API_SKILL.rglob("*.md"))]
         current = slc.union_inventory(
             [slc.extract_inventory(path.read_text(encoding="utf-8"), patterns) for path in paths]
         )

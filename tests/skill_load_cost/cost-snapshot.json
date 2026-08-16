@@ -40,5 +40,6 @@
   "quick-devsecops-gha": 23926,
   "deep-devsecops-gha": 29124,
   "ip-triage-js": 11746,
-  "ip-indepth-python": 15318
+  "ip-indepth-python": 15318,
+  "infra-review-azure-bicep": 6364
 }

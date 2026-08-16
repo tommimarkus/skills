@@ -705,5 +705,16 @@
       "souroldgeezer-audit/skills/ip-hygiene/references/source-code.md",
       "souroldgeezer-audit/skills/ip-hygiene/extensions/python.md"
     ]
+  },
+  {
+    "id": "infra-review-azure-bicep",
+    "skill": "infra-design",
+    "files": [
+      "souroldgeezer-design/skills/infra-design/SKILL.md",
+      "souroldgeezer-design/docs/infra-reference/infra-design.md",
+      "souroldgeezer-design/skills/infra-design/references/procedures/project-assimilation.md",
+      "souroldgeezer-design/skills/infra-design/extensions/azure.md",
+      "souroldgeezer-design/skills/infra-design/extensions/bicep.md"
+    ]
   }
 ]
