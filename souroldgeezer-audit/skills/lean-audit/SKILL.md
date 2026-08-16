@@ -63,6 +63,9 @@ second mode; coverage still derives assurance.
 - Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier).
 - Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) only at repo scale when
   full enumeration exceeds budget.
+- Load [`../../docs/audit-reference/scaled-audit.md`](../../docs/audit-reference/scaled-audit.md) (delegation + evidence
+  durability) only at repo scale when per-finding evidence may not reach the rollup intact; §4 records that clone
+  detection is not divisible by file. If evidence starts outgrowing context mid-run, load it then rather than continuing.
 - Load [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) for the judgment-only `LA-STALE-2`,
   `LA-BLOAT-2`, and `LA-VERBOSE-2` checks (the engine does not emit these; `LA-VERBOSE-2` confirms or clears engine `LA-VERBOSE-1` nominations).
 - Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1` / `LA-VERBOSE-1`) per Workflow step 2.

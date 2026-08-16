@@ -270,7 +270,12 @@ conservative-policy finding; do not label the legal application as fact.
    questions per surface and all hit criteria.
 4. Corroborate source identity, actual file-level licence, holder policy, and
    jurisdiction/applicability. Mark static conclusions as inference. At scale,
-   sample and project under audit-craft section 6 and disclose the basis.
+   sample and project under audit-craft section 6 and disclose the basis. Before
+   sampling, when the surface is large enough that per-surface evidence may not
+   reach the verdict intact, load
+   [scaled-audit.md](../../docs/audit-reference/scaled-audit.md) (delegation +
+   evidence durability); if evidence starts outgrowing context mid-run, load it
+   then rather than continuing. Triage must not load it.
 5. Emit findings and exactly
    `in-depth verdict: <blocked | qualified | no-blocker-identified>`:
    - `blocked` — a substantiated blocking condition or mandatory counsel

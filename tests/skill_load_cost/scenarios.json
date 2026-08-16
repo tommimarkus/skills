@@ -627,5 +627,21 @@
       "souroldgeezer-architecture/skills/architecture-design/references/procedures/professional-readiness.md",
       "souroldgeezer-architecture/skills/architecture-design/references/output-format.md"
     ]
+  },
+  {
+    "id": "deep-dotnet-e2e-scaled",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/audit-reference/materiality.md",
+      "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
+      "souroldgeezer-audit/docs/audit-reference/scaled-audit.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
+      "souroldgeezer-audit/docs/quality-reference/e2e-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/dotnet/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/dotnet/e2e.md"
+    ]
   }
 ]

@@ -27,6 +27,7 @@ Apply the shared core before loading extensions:
 - Load [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) (discipline + output contract).
 - Load [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/materiality.md) (risk tier) — in all modes; Quick findings carry the SUT risk tier.
 - Load [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md) (scale) — in Deep mode only, when full enumeration exceeds budget; Quick must not load it.
+- Load [`../../docs/audit-reference/scaled-audit.md`](../../docs/audit-reference/scaled-audit.md) (delegation + evidence durability) — Deep only, when the subject is large enough that per-item evidence may not reach the rollup intact; Quick must not load it. If evidence starts outgrowing context mid-run, load it then rather than continuing.
 This skill adds the DevSecOps rubric and `DSO-*` namespace on top; it does not restate craft.
 
 Load [`extensions/github-actions.md`](extensions/github-actions.md) and [`../../docs/security-reference/devsecops-extensions/github-actions.md`](../../docs/security-reference/devsecops-extensions/github-actions.md) when workflows/actions match.

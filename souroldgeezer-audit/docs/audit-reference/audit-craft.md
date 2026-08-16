@@ -96,6 +96,13 @@ assimilation, etc.). Never remove footer fields.
 See sampling-projection.md. At scale, risk-target the sample, disclose size and
 basis, and project local findings to the population as inference.
 
+## §6a Scaled audits
+
+See scaled-audit.md — the rung before §6. Hold per-item evidence in bounded
+records, delegate divisible lanes when the host offers delegation while keeping
+population lanes with the parent, and disclose the rung used plus the coverage
+reconciliation.
+
 ## §7 Extension pattern
 
 Extensions ADD namespaced codes or CARVE OUT a core code for an exact idiomatic

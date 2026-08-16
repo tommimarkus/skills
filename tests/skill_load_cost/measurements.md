@@ -282,3 +282,56 @@ tool and hook exposure, log visibility, low/expected/high lanes, verification
 reserve, and metadata-only trace calibration. Those references are absent from
 ordinary prose/source audits. Fixed-file scenarios are conservative: executable
 scripts are invoked as tools and are not counted as prompt context.
+
+## Scaled-audit contract — 2026-08
+
+Adds the shared `docs/audit-reference/scaled-audit.md` (delegation protocol +
+evidence-durability floor + divisible/parent-only lane table) and routes all four
+audit skills to it. This section records the **cost** of that routing, because the
+change deliberately adds always-loaded tokens for the first time since the
+extension gating work above.
+
+The reference itself is **1110 tokens and strictly conditional** — it appears on no
+normal Quick/Deep path. Only the routing is always-loaded:
+
+| Always-loaded addition | Cost | Paid by |
+|---|---:|---|
+| `audit-craft.md` §6a pointer | **+54** | every audit (audit-craft loads in all modes) |
+| `test-quality-audit/SKILL.md` gating sentence | +85 | test-quality-audit |
+| `lean-audit/SKILL.md` gating sentence | +92 | lean-audit |
+| `devsecops-audit/SKILL.md` gating sentence | unmeasured | — no declared scenario exists |
+| `ip-hygiene/SKILL.md` gating sentence | unmeasured | — no declared scenario exists |
+
+Measured per scenario:
+
+| Scenario | Before | After | Delta |
+|---|---:|---:|---:|
+| `quick-python-unit` | 11578 | 11717 | +139 |
+| `deep-python-suite` | 17095 | 17234 | +139 |
+| `deep-dotnet-e2e` | 22691 | 22830 | +139 |
+| `quick-node-unit` | 23254 | 23393 | +139 |
+| `quick-node-e2e` | 24723 | 24862 | +139 |
+| `deep-nextjs-suite` | 49166 | 49305 | +139 |
+| `lean-audit-declared-composed-profile` | 5802 | 5894 | +92 |
+| `lean-audit-prose` / `-source-code` | 8224 | 8370 | +146 |
+| `lean-audit-skill-surface` | 11381 | 11527 | +146 |
+| `lean-audit-platform-redundancy` | 13036 | 13182 | +146 |
+| `lean-audit-run-viability` / `-trace-calibration` | 15595 | 15741 | +146 |
+| `lean-audit-minify` | 15108 | 15254 | +146 |
+| `deep-dotnet-e2e-scaled` (new) | n/a | 23940 | +1110 over `deep-dotnet-e2e` |
+
+The +139 / +146 / +92 figures decompose exactly into the table above and nothing
+else: `lean-audit-declared-composed-profile` loads `lean-audit/SKILL.md` without
+`audit-craft.md`, isolating the +92, which leaves §6a at +54 and the
+test-quality-audit sentence at +85. No path moved by anything near 1110, so the
+reference did not leak onto an unconditional load line.
+
+`deep-dotnet-e2e-scaled` was added *before* the content change so the conditional
+path is visible to the gate at all — repeating the lesson from the extension
+gating work above, that a gate only sees the paths someone declared.
+
+**Two coverage gaps this measurement cannot close.** `devsecops-audit` and
+`ip-hygiene` have no declared load-cost scenario of any kind, so their gating
+sentences are unmeasured and the guard cannot see either skill. That predates this
+change and is recorded here rather than fixed, since adding two skills' scenario
+coverage is its own piece of work.

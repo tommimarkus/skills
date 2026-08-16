@@ -29,7 +29,11 @@ and [`../../docs/audit-reference/materiality.md`](../../docs/audit-reference/mat
 in all modes (discipline, output contract, and grounded per-test risk tier).
 In Deep mode only, also load
 [`../../docs/audit-reference/sampling-projection.md`](../../docs/audit-reference/sampling-projection.md)
-for scale; Quick must not load it.
+for scale; Quick must not load it. Deep only, also load
+[`../../docs/audit-reference/scaled-audit.md`](../../docs/audit-reference/scaled-audit.md)
+(delegation + evidence durability) when the suite is large enough that per-test
+evidence may not reach the rollup intact; if evidence starts outgrowing context
+mid-run, load it then rather than continuing.
 This skill adds the test rubric and `HC-*/I-*/E-*/SH-*` namespace on top; it does not
 restate craft.
 
