@@ -15,5 +15,7 @@
   "\\bARCH-[A-Z]+-\\d+",
   "\\bLA-[A-Z][A-Z-]*-\\d+",
   "\\bSD-[A-Z]+-\\d+",
-  "[a-z][a-z0-9-]*\\.SD-[A-Z]+-\\d+"
+  "[a-z][a-z0-9-]*\\.SD-[A-Z]+-\\d+",
+  "\\bIP-(?:SRC|COPY|DB|LIC|MARK)-\\d+",
+  "[a-z][a-z0-9-]*\\.IP-[A-Z]+-\\d+"
 ]

@@ -335,3 +335,64 @@ gating work above, that a gate only sees the paths someone declared.
 sentences are unmeasured and the guard cannot see either skill. That predates this
 change and is recorded here rather than fixed, since adding two skills' scenario
 coverage is its own piece of work.
+
+## Audit-plugin fidelity floors — 2026-08
+
+Closes the coverage gap recorded at the end of the scaled-audit section above.
+The framing there was wrong and is corrected here: `load_cost_guard.py` is a
+**fidelity floor**, not a cost tracker. It soft-blocks an edit that makes a code,
+section, or Load-Map pointer unreachable, and it *always allows* on a missing
+baseline. So the consequence of the gap was not an unknown token count — it was
+that **nothing prevented a silent deletion of a finding code** from
+`devsecops-audit` or `ip-hygiene`. Cost growth is advisory in that engine and
+never blocks.
+
+Baselines added (generated from `resolve_closure`, no new machinery):
+
+| Skill | Closure files | Codes | Sections |
+|---|---:|---:|---:|
+| `devsecops-audit` | 27 | 84 | 274 |
+| `ip-hygiene` | 20 | 23 | 103 |
+
+`ip-hygiene` required two new `code_patterns.json` entries first. Before them it
+produced **0 codes / 103 sections** — a baseline that reads as coverage while
+protecting no finding code at all. It needs a *pair*, matching the existing
+`SD-*` precedent: core `IP-(SRC|COPY|DB|LIC|MARK)-n` (21 codes) plus namespaced
+extension codes (`js.IP-SRC-2`, `python.IP-LIC-1`).
+
+**Positive control, not a green run.** A guard that fails open and a guard that
+passes are indistinguishable from a clean suite, so both were probed directly by
+feeding the guard a PreToolUse edit deleting a code that occurs exactly once in
+the closure (a code appearing twice stays reachable, and allowing is then
+correct). Both returned `deny`:
+
+- `IP-COPY-4` in `references/copyright.md` → `deny` — "missing code (unreachable across skill)"
+- `DSO-HC-13` in `devsecops-smell-catalog.md` → `deny` — same
+
+Scenarios added, and the new-path costs:
+
+| Scenario | Tokens |
+|---|---:|
+| `ip-triage-js` | 11746 |
+| `ip-indepth-python` | 15318 |
+| `quick-devsecops-gha` | 23926 |
+| `deep-devsecops-gha` | 29124 |
+
+All 15 pre-existing scenarios re-measured **byte-identical**; the additions
+perturb nothing. Adding the two `IP-*` patterns also leaves every existing
+baseline's `codes` array **identical** — verified by regenerating all five against
+the new pattern set — so the patterns do not over-match.
+
+**Pre-existing section drift, found but not fixed here.** Regenerating the five
+existing baselines shows section-set drift against what is committed, present
+with the *old* pattern file too, so unrelated to this change. Most is additive
+(closures gained sections the committed floor predates). One is not:
+`architecture-design`'s committed baseline contains
+`"Visible Title Band Post-Render Step"`, which its current closure no longer
+produces — a floor item that has genuinely gone unreachable. The guard's Stop path
+only checks session-changed files, so nothing surfaced it. Recorded for a separate
+change rather than repaired here.
+
+**The standing cost.** A baseline is a freshness obligation: future edits inside
+those 47 closure files must keep it current. That recurring cost is the price of
+the protection.

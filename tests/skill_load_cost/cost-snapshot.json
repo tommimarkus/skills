@@ -36,5 +36,9 @@
   "arch-build-archimate": 25305,
   "arch-extract-dotnet": 26447,
   "arch-review-package": 26870,
-  "deep-dotnet-e2e-scaled": 23940
+  "deep-dotnet-e2e-scaled": 23940,
+  "quick-devsecops-gha": 23926,
+  "deep-devsecops-gha": 29124,
+  "ip-triage-js": 11746,
+  "ip-indepth-python": 15318
 }
