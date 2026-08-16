@@ -17,8 +17,13 @@ class RustExtensionSurfaceTest(unittest.TestCase):
         assert_stack_pack_grounding(self, "rust", "Rust")
 
     def test_rust_test_quality_guidance_is_grounded_in_authoritative_docs(self) -> None:
+        # Grounding is a property of the whole Rust pack: `core.md` keeps detection,
+        # routing and smells, while SUT enumeration / determinism / mutation moved to
+        # the Deep-only `deep.md`. Assert against both so the check follows the content.
         core = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/core.md")
+        deep = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/deep.md")
         unit = read("souroldgeezer-audit/skills/test-quality-audit/references/extensions/rust/unit.md")
+        pack = core + deep
 
         for source in (
             "doc.rust-lang.org/cargo/commands/cargo-test.html",
@@ -28,7 +33,7 @@ class RustExtensionSurfaceTest(unittest.TestCase):
             "mutants.out/outcomes.json",
             "unsafe` functions",
         ):
-            self.assertIn(source, core)
+            self.assertIn(source, pack)
         self.assertIn("features should be additive", compact(unit))
         self.assertIn("--no-default-features", unit)
 

@@ -1,8 +1,10 @@
 {
-  "quick-node-unit": 22667,
-  "deep-nextjs-suite": 48809,
-  "quick-python-unit": 11391,
-  "deep-python-suite": 16908,
+  "quick-node-unit": 23254,
+  "deep-nextjs-suite": 49166,
+  "quick-python-unit": 11578,
+  "deep-python-suite": 17095,
+  "quick-node-e2e": 24723,
+  "deep-dotnet-e2e": 22691,
   "lean-audit-prose": 8224,
   "lean-audit-source-code": 8224,
   "lean-audit-skill-surface": 11381,
@@ -31,7 +33,7 @@
   "sd-native-evidence-procedure": 719,
   "sd-fragility-final-reporting": 519,
   "arch-lookup-notation": 4283,
-  "arch-build-archimate": 25124,
-  "arch-extract-dotnet": 26266,
-  "arch-review-package": 26689
+  "arch-build-archimate": 25305,
+  "arch-extract-dotnet": 26447,
+  "arch-review-package": 26870
 }

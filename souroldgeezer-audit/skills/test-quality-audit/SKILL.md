@@ -57,12 +57,23 @@ the stack's `core.md` and the matching rubric addon for each loaded stack layer
 For each matched stack layer, resolve the selected addon beside that row's
 `core.md`: load only `unit.md` for the unit/component rubric,
 `integration.md` for the integration rubric, or `e2e.md` for the E2E rubric.
-For Next.js, apply that selection once in the Node.js directory and once in the
-Next.js directory. Do not enumerate or load a whole stack directory.
+Where the stack ships `unit-integration.md` (`dotnet`, `nodejs`), also load it
+when the selected rubric is unit **or** integration; never load it on the E2E
+path. For Next.js, apply that selection once in the Node.js directory and once
+in the Next.js directory. Do not enumerate or load a whole stack directory.
 
-Quick mode loads only the matched stack's `core.md` and one selected rubric
-addon. In Deep mode only, also load the matched stack's `deep.md` (SUT
-enumeration, determinism, mutation); Quick mode never loads it.
+Quick mode loads only the matched stack's `core.md`, `unit-integration.md` when
+the rubric selects it, and one selected rubric addon.
+In Deep mode only, also load the matched stack's `deep.md` (SUT enumeration,
+determinism, mutation); Quick mode never loads it. Every stack ships one.
+
+**Escalation cue.** These caps are scope, not a fidelity ceiling. If an E2E
+target shows a concern the E2E lane does not cover — an in-process mocking,
+test-double, fake-timer, or parameterised-input smell reached through a
+component or API-level test mixed into the E2E suite — load that stack's
+`unit-integration.md` before judging it and disclose the extra load in the
+footer. If a Quick target raises a SUT-enumeration, determinism, or mutation
+question, say so and ask for Deep rather than answering from the Quick load set.
 
 In every Deep audit, load
 [`references/procedures/deep-mode-output-format.md`](references/procedures/deep-mode-output-format.md)

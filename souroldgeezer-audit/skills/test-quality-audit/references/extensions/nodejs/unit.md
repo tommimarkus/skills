@@ -100,3 +100,13 @@ await user.click(btn);
 **Why positive:** it proves an Effect's lifecycle contract across replacement or unmount, catching stale updates and leaked subscriptions that initial-render assertions miss.
 
 **Rewrite (intent):** retain the rerender/unmount and late-completion path when refactoring the component; preserve assertions on the user-visible state or released resource.
+
+---
+
+### `nodejs.POS-7` — `@testing-library/react` accessible-name queries + `userEvent.setup()` (component testing idiom)
+
+**Applies to:** `unit`
+
+**Detection:** any of `screen.getByRole(...)`, `screen.getByLabelText(...)`, `screen.getByPlaceholderText(...)`, `screen.getByText(...)`, `screen.findByRole(...)` plus `import userEvent from '@testing-library/user-event'` with `const user = userEvent.setup()` per test (v14+ idiom).
+
+**Why positive:** accessible-name locators are the priority-1 queries per React Testing Library guidance — they read as user-observable behavior. `userEvent.setup()` per test provides a fresh interaction session with shared keyboard / pointer state across calls in the same test, and is the blessed v14+ pattern. Tests written this way specify what the user can do, not how the DOM is structured.

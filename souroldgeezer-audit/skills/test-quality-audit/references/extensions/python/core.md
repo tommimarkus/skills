@@ -58,7 +58,7 @@ Load the matching rubric addon after `SKILL.md` step 0b. Deep-mode procedures
   environment variable is a documented process boundary. They are smells when
   used to steer hidden module-global state.
 
-## Rubric-Neutral Smells
+## Shared Smells (unit + integration)
 
 ### `python.HC-1` — import-time SUT execution
 

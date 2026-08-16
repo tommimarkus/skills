@@ -29,11 +29,26 @@ Everything lives in `<stack>/core.md`. Use when the stack's smells and procedure
 
 ### Core + rubric addons
 
-One `<stack>/core.md` file shared across all rubrics plus up to three `<stack>/unit.md` / `<stack>/integration.md` / `<stack>/e2e.md` files carrying only the content that is exclusive to one rubric. Use when a stack has enough rubric-neutral content (smells marked `Applies to: unit, integration`, procedures that apply under multiple rubrics) that a strict by-rubric split would force duplicating content across files.
+One `<stack>/core.md` file shared across **all three** rubrics, plus rubric-scoped files carrying only the content that path needs:
+
+| File | Loaded when |
+|---|---|
+| `<stack>/core.md` | always, once the stack is detected |
+| `<stack>/unit.md` / `<stack>/integration.md` / `<stack>/e2e.md` | step 0b selects that rubric |
+| `<stack>/unit-integration.md` | step 0b selects the unit **or** integration rubric |
+| `<stack>/deep.md` | Deep mode only, for any rubric |
+
+`core.md` earns its always-loaded status by carrying only genuinely **rubric-neutral** content: detection signals, test-type detection signals, test-double classification, carve-outs, and smells marked `Applies to: unit, integration, e2e`. Anything narrower belongs in a rubric-scoped file.
+
+`<stack>/unit-integration.md` exists because a strict three-way split would duplicate the large shared unit+integration smell body across two files. It is the home for smells that apply to two rubrics but not the third — the common case. Putting them in `core.md` instead is the mistake this file prevents: `core.md` loads on the E2E path too, so E2E audits would pay for a smell body of which none applies.
+
+**Small-core exception.** Splitting is not free: a separate file costs a header and a load-map entry on the paths that *do* load it. Measured on the `nodejs` split, the unit path paid about +400 tokens to save about −3,500 on the E2E path. Below roughly 2,000 tokens of `unit, integration` smell body, that trade stops paying — keep those smells inline in `core.md` under a **`## Shared Smells (unit + integration)`** heading, which states the scope honestly without implying they are rubric-neutral. The `java`, `python`, and `rust` packs use this exception; `dotnet` and `nodejs` are over the threshold and split. Never label a two-rubric section "rubric-neutral".
 
 The shipped core + addon extensions use this shape:
 
-- `dotnet/core.md` — detection signals, test-type dispatch, test-double taxonomy, rubric-neutral smells (`dotnet.HC-*`, `dotnet.LC-*`, `dotnet.POS-*`), carve-outs, SUT surface enumeration, determinism verification, and the Stryker mutation tool declaration. Always loaded when .NET is detected.
+- `dotnet/core.md` — detection signals, test-type dispatch, test-double taxonomy, three-rubric smells, and carve-outs. Always loaded when .NET is detected.
+- `dotnet/unit-integration.md` — `Applies to: unit, integration` smells (`dotnet.HC-*`, `dotnet.LC-*`, `dotnet.POS-*`). Loaded when step 0b selects the unit or integration rubric; never on the E2E path.
+- `dotnet/deep.md` — SUT surface enumeration, determinism verification, and the Stryker mutation tool declaration. Deep mode only.
 - `dotnet/unit.md` — `Applies to: unit` smells only (`dotnet.HC-4`, `dotnet.LC-1`, `dotnet.LC-3`, `dotnet.LC-5`). Loaded when step 0b selects the unit rubric.
 - `dotnet/integration.md` — `dotnet.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration. Loaded when step 0b selects the integration rubric.
 - `dotnet/e2e.md` — E2E sub-lane refinements and `dotnet.E-*` smells / positive signals (Playwright idioms — accessible-name locators, web-first assertions, per-test `IBrowserContext`, axe-builder wiring, Web Vitals performance assertions; cloud-runner / bUnit routing notes). Loaded when step 0b selects the E2E rubric.
@@ -83,13 +98,21 @@ A finding from one layer should not force a fix that makes another layer fail on
 
 ### Applies-to field
 
-Every extension smell entry must declare an `Applies to:` field on its own line directly under the smell heading, before the detection / smell / example / rewrite blocks. The field takes one of three values:
+Every extension smell entry must declare an `Applies to:` field on its own line directly under the smell heading, before the detection / smell / example / rewrite blocks. Write it in the canonical form `**Applies to:** \`<value>\``; the plain `Applies to: <value>` form used by the `java`, `python`, and `rust` packs is accepted and equivalent, but new entries should use the canonical form so a single pattern finds every declaration.
 
-- `Applies to: unit` — applies only when step 0b selects the unit rubric.
-- `Applies to: integration` — applies only when step 0b selects the integration rubric. Typically used by `<ext>.I-*` codes.
-- `Applies to: unit, integration` — applies under both rubrics. Typical for framework-specific smells that are rubric-neutral (e.g. logger-content-as-contract, presence-check assertions).
+There are **three rubrics** — unit, integration, and E2E — so the field takes one of these values:
 
-Smells that omit the `Applies to:` field default to `unit` for backwards compatibility. Existing pre-integration-rubric extensions therefore continue to work unchanged.
+- `unit` — only when step 0b selects the unit rubric.
+- `integration` — only when step 0b selects the integration rubric. Typically used by `<ext>.I-*` codes.
+- `e2e` — only when step 0b selects the E2E rubric.
+- `unit, integration` — both, but **not** E2E. The most common value. These belong in `<stack>/unit-integration.md`, not `core.md`.
+- `unit, integration, e2e` — **genuinely rubric-neutral**: the smell is a real concern however the test is written. Only these belong in `core.md`'s smell sections.
+
+"Rubric-neutral" means all three rubrics, not "more than one". A `unit, integration` smell is rubric-*scoped*, and parking it in the always-loaded `core.md` charges every E2E audit for guidance that cannot fire.
+
+When deciding between `unit, integration` and `unit, integration, e2e`, ask whether the smell describes a defect a browser-driven or process-level test can actually commit. Async-lifecycle, clock, and detached-work smells usually can; module-mocking and test-double-shape smells usually cannot.
+
+Smells that omit the field entirely default to `unit`. That default is a backwards-compatibility fallback for pre-integration-rubric packs only — it is **not** a way to declare neutrality, and a section headed "rubric-neutral" whose entries omit the field is self-contradictory. Declare the field explicitly on every new entry.
 
 ## When to add a new extension
 
@@ -103,7 +126,8 @@ Add an extension when the audit agent's static analysis on a stack produces obvi
 
 A few hundred lines per file is the target. If an extension grows beyond that, split the file. Two split shapes are supported:
 
-- **By rubric (preferred when content is rubric-partitioned).** Extract `<stack>/core.md` for rubric-neutral content and create `<stack>/unit.md` / `<stack>/integration.md` / `<stack>/e2e.md` addons for rubric-exclusive content. See the `dotnet` extension for the current reference implementation. The skill loads only what the selected rubric needs.
+- **By rubric (preferred when content is rubric-partitioned).** Extract `<stack>/core.md` for three-rubric content, `<stack>/unit-integration.md` for the shared unit+integration smell body, and `<stack>/unit.md` / `<stack>/integration.md` / `<stack>/e2e.md` addons for rubric-exclusive content. See the `dotnet` extension for the current reference implementation. The skill loads only what the selected rubric needs.
+- **By mode.** Extract `<stack>/deep.md` for content only Deep mode reaches — SUT surface enumeration, determinism verification, and the mutation tool declaration. Quick audits never load it. Every core + addon extension should have one; leaving this content in `core.md` charges every Quick audit for it.
 - **By test framework (preferred when content is framework-partitioned).** For stacks whose smells cluster around specific frameworks with little shared content, split into `<stack>/<framework>.md` files, such as `dotnet/xunit.md` or `dotnet/bunit.md`. Each file stays focused on one framework's idioms.
 
 Pick the split that minimises duplication. If most of the stack's smells declare `Applies to: unit, integration` (rubric-neutral), the by-rubric split with a core file avoids duplicating those smells across addon files. If most of the stack's smells are framework-specific with little rubric overlap, the by-framework split is cleaner.

@@ -1,9 +1,10 @@
 # Extension: Node.js / TypeScript — core
 
-Shared core for the Node.js / TypeScript test-quality-audit extension. This file is loaded **whenever a Node.js project is detected in the audit target**, before step 0b (rubric selection). It owns everything that is not rubric-exclusive: detection signals, test-type dispatch, test-double classification, rubric-neutral smells, and carve-outs; deep-mode procedures (SUT surface enumeration, determinism verification, and the Stryker Mutator JS mutation tool declaration) live in [`deep.md`](deep.md).
+Shared core for the Node.js / TypeScript test-quality-audit extension. This file is loaded **whenever a Node.js project is detected in the audit target**, before step 0b (rubric selection). It owns only what all three rubrics need: detection signals, test-type dispatch, test-double classification, genuinely rubric-neutral smells (`Applies to: unit, integration, e2e`), and carve-outs; deep-mode procedures (SUT surface enumeration, determinism verification, and the Stryker Mutator JS mutation tool declaration) live in [`deep.md`](deep.md).
 
-Rubric-exclusive content lives in the rubric addons:
+Rubric-scoped content lives in the addons:
 
+- [`unit-integration.md`](unit-integration.md) — `Applies to: unit, integration` smells that need in-process access to the SUT (module mocking, test doubles, fake timers, parameterised input partitions). Loaded on the unit and integration paths only.
 - [`unit.md`](unit.md) — `Applies to: unit` smells (React Testing Library implementation-selectors, module-level mocking of owned collaborators, etc.).
 - [`integration.md`](integration.md) — `nodejs.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration (Prisma / Drizzle / TypeORM / Knex).
 - [`e2e.md`](e2e.md) — Playwright-primary E2E smells and positive signals; Cypress and WebdriverIO covered as carve-outs only.
@@ -152,52 +153,13 @@ Types named `Fake*`, `InMemory*`, or any custom class that implements the real i
 
 ## Framework-specific high-confidence smells (`nodejs.HC-*`)
 
-These smells apply under both the unit and integration rubrics (`Applies to: unit, integration`). Unit-only framework smells live in [`unit.md`](unit.md); integration-only framework smells live in [`integration.md`](integration.md).
+These apply under **all three** rubrics — each is a defect a browser-driven spec can commit too. Unit+integration smells live in [`unit-integration.md`](unit-integration.md), unit-only in [`unit.md`](unit.md), integration-only in [`integration.md`](integration.md).
 
-### `nodejs.HC-1` — `jest.mock('<relative-path>')` / `vi.mock('<relative-path>')` on an in-repo module in the SUT's same-layer scope
 
-**Applies to:** `unit, integration`
-
-**Detection:** `(jest|vi)\.mock\(['"](?P<path>\.{1,2}/[^'"]+)['"]` at module level of a test file. Resolve `path` against the test file's directory. The mock target is **same-layer** when it resolves under the SUT's own parent directory or a sibling `src/` path (i.e. the author's own code, not an external package).
-
-**Smell:** module-level mocking of the SUT's own collaborators pins the internal boundary. Refactors that move logic between the SUT and its collaborator break the test without changing observable behavior. The test is characterization of the current module graph.
-
-**Carve-out — platform boundaries:** do not flag when the mock target is `fetch`, `node:http`, `node:https`, `undici`, `node-fetch`, `axios`, `got`, an `@octokit/*` package, an AWS / Azure / GCP SDK, `nodemailer`, a database driver (`pg`, `mysql2`, `mongodb`, `redis`, `ioredis`), `fs` / `node:fs`, or any package resolved from `node_modules/`. These are process boundaries. Carved out here to share the rule across the whole Node stack.
-
-**Carve-out — Next.js platform modules** (when `nextjs` extension is loaded): do not flag when the mock target is `next/navigation`, `next/headers`, `next/cache`, `next/font/*`, `server-only`, or `client-only`.
-
-**Example (smell):**
-```ts
-// In OrderServiceTests.ts, SUT at ../services/OrderService.ts
-jest.mock('../services/pricing');
-import { OrderService } from '../services/OrderService';
-// OrderService imports ./pricing; the mock replaces the collaborator
-```
-
-**Rewrite (intent):** inject the collaborator as a constructor / function parameter rather than importing it. The test provides a `jest.fn()` at call time; the mock target is a parameter, not a module path.
-
----
-
-### `nodejs.HC-2` — Vacuous interaction assertion: `.toHaveBeenCalledWith(expect.anything())` or all `expect.any(*)` args
-
-**Applies to:** `unit, integration`
-
-**Detection:** a `.toHaveBeenCalledWith(...)` whose arguments are entirely `expect.anything()` / `expect.any(Function)` / `expect.any(Object)` without any concrete value assertion. Refines core `HC-6`.
-
-**Smell:** the test asserts that the collaborator was called *with something*, which is equivalent to asserting it was called at all. The expected-value information has been deleted. Any refactor changing the argument shape will still pass.
-
-**Example (smell):**
-```ts
-expect(repo.save).toHaveBeenCalledWith(expect.anything(), expect.any(Object));
-```
-
-**Rewrite (intent):** either assert on a specific field of the argument (`.toHaveBeenCalledWith(expect.objectContaining({ orderId: 'abc-123' }))`) or — preferably — replace the interaction assertion with an assertion on the SUT's return value or a published side effect.
-
----
 
 ### `nodejs.HC-3` — Floating promise in a test body
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** a call returning `Promise<T>` at the top level of a test body without `await`, `return`, or a `.then` / `.catch` chain. Heuristics: any method called `*Async`, any method whose resolved type is `Promise<T>`, any `fetch(...)`, any `supertest(...).get(...).send(...)` without a trailing `.expect(...)`. Also flag when the `async` test function body contains such a call on its own statement line and the test subsequently asserts without awaiting.
 
@@ -219,7 +181,7 @@ test('creates an order', async () => {
 
 ### `nodejs.HC-4` — Real-clock read in a test body without fake timers installed
 
-**Applies to:** `unit, integration` — refines core `HC-11` for the Node idiom.
+**Applies to:** `unit, integration, e2e` — refines core `HC-11` for the Node idiom.
 
 **Detection:** any of the following in a test body: `new Date()`, `Date.now()`, `performance.now()`, `process.hrtime()`, `process.hrtime.bigint()` — with **no** preceding `jest.useFakeTimers()` / `vi.useFakeTimers()` / `sinon.useFakeTimers(...)` / `t.mock.timers.enable(...)` in the same test or its `beforeEach`. The presence of the fake-timers install anywhere upstream in the current test's scope is sufficient to suppress the flag.
 
@@ -227,37 +189,15 @@ test('creates an order', async () => {
 
 **Carve-out:** if the test calls `Date.now()` / `new Date().toISOString()` solely to generate a unique identifier (e.g. `const id = \`test-${Date.now()}\``) and the value is not used in an assertion, do not flag. The canonical unique-id generation pattern is benign.
 
-**Rewrite (intent):** install fake timers and pin the clock — see `nodejs.POS-5`.
+**Rewrite (intent):** install fake timers and pin the clock. Under the unit and integration rubrics that is the Jest / Vitest / Sinon idiom — see `nodejs.POS-5` in [`unit-integration.md`](unit-integration.md). Under the E2E rubric the browser owns the clock, so pin it with Playwright's `page.clock.install({ time })` / `page.clock.setFixedTime(...)` before navigation rather than a runner-level fake-timer install.
 
 ---
 
-### `nodejs.HC-5` — Structural-only assertion on complex return: `.toEqual({...lots of expect.any(...)})`
 
-**Applies to:** `unit, integration` — refines core `LC-2`.
-
-**Detection:** a `.toEqual(...)` / `.toMatchObject(...)` whose expected object has **more than one** field and **every** field value is `expect.any(*)` / `expect.anything()` / `expect.stringMatching(/.*/)` / `expect.arrayContaining([])` with no concrete values.
-
-**Smell:** the test asserts the shape of the return but not its content. Any implementation that returns something with those field types passes, including broken ones that return default-constructed stand-ins.
-
-**Rewrite (intent):** either (a) assert the whole object against a spec-derived expected value, or (b) replace the structural assertion with targeted assertions on the fields whose values the SUT actually computes.
-
----
-
-### `nodejs.HC-6` — `spyOn(Math, 'random')` / env-var mock with a pasted-literal return
-
-**Applies to:** `unit, integration`
-
-**Detection:** `jest.spyOn(Math, 'random').mockReturnValue(\s*(?P<value>0?\.\d+)\s*)` or `Math.random = jest.fn(() => <literal>)` or `process.env.<NAME> = '<literal>'` in the test body where `<literal>` appears as a magic number / string with no named-constant declaration or linked spec comment. Also matches the Vitest / Sinon analogs.
-
-**Smell:** the test pins the SUT to a specific randomness / environment snapshot. The literal was almost certainly copied from a single observed run — characterization. Refactors that change how the seed or env value feeds the SUT break the test.
-
-**Rewrite (intent):** inject the randomness source or env reader as a dependency; the test provides a deterministic generator. For env vars, use a typed config object passed into the SUT constructor.
-
----
 
 ### `nodejs.HC-7` — `.resolves.*` / `.rejects.*` without `await`
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** `expect\((?P<promise>[^)]+)\)\.(resolves|rejects)\.` without a preceding `await` or `return` on the `expect(...)` call.
 
@@ -276,7 +216,7 @@ test('resolves to user', () => {
 
 ### `nodejs.HC-8` — Detached promise, timer, worker, or subtest with no observable completion or failure outcome
 
-**Applies to:** `unit, integration`.
+**Applies to:** `unit, integration, e2e`.
 
 **Detection:** a test starts asynchronous work (`void promise`, an unawaited `.then(...)`, `setTimeout` / `setInterval`, `new Worker(...)`, or `t.test(...)`) but does not await, return, join, clear, terminate, or otherwise observe its completion, failure, cancellation, or resulting public state. The API name alone is not evidence: inspect the test's asserted outcome and its teardown.
 
@@ -288,23 +228,12 @@ test('resolves to user', () => {
 
 ## Framework-specific low-confidence smells (`nodejs.LC-*`)
 
-These smells apply under both the unit and integration rubrics. Unit-only low-confidence smells live in [`unit.md`](unit.md).
+These apply under all three rubrics. See [`unit-integration.md`](unit-integration.md) and [`unit.md`](unit.md) for the narrower lanes.
 
-### `nodejs.LC-1` — Type coercion of a hand-built mock to the SUT's type (TS-only)
-
-**Applies to:** `unit, integration`
-
-**Detection:** (only when the TS flag is set) `as unknown as (?P<type>[A-Z]\w+)` in a test body, OR `as (?P<type>jest\.Mocked<\w+>|Mocked<\w+>)` applied to a hand-built object literal that was **not** produced by `jest.mocked(mod)` / `vi.mocked(mod)`.
-
-**Why low-confidence:** the test is lying to the type-checker about what it built. If the SUT's collaborator interface evolves — new methods, renamed fields, optional → required — the hand-built mock doesn't get the signal, and the test passes a type-check against the old shape.
-
-**Rewrite (intent):** use `jest.mocked(mod)` or `vi.mocked(mod)` after `jest.mock(...)` so the mock carries the real type; for partial hand-builts, use `Partial<T>` + `as T` only at the injection boundary with a comment explaining why.
-
----
 
 ### `nodejs.LC-2` — `@ts-expect-error` / `@ts-ignore` in test body
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** `// @ts-expect-error` or `// @ts-ignore` anywhere inside a test function body.
 
@@ -316,21 +245,21 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 ### `nodejs.LC-3` — `.only` / `fdescribe` / `fit` committed
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** `(it|test|describe)\.only\(` / `^\s*fdescribe\(` / `^\s*fit\(` / `^\s*ftest\(` in a test file.
 
 **Why low-confidence:** the author left a focused-run marker in. The suite still passes locally but runs only the focused test, suppressing everything else. On CI, some configurations fail closed (good); others silently run only the focused test (bad).
 
-**Rewrite (intent):** remove the `.only` / `f*` prefix before committing. Configure the test runner to fail on `.only` when present. Vitest defaults `allowOnly` to `false` under CI (auto-detected via `std-env`) and `true` locally — set `allowOnly: false` in `vitest.config` to fail everywhere, or use the `--allowOnly` CLI flag. Jest does not ship a first-party `.only`-forbidden flag; an ESLint rule (`jest/no-focused-tests` from `eslint-plugin-jest`) is the idiomatic enforcement.
+**Rewrite (intent):** remove the `.only` / `f*` prefix before committing. Configure the test runner to fail on `.only` when present. Vitest defaults `allowOnly` to `false` under CI (auto-detected via `std-env`) and `true` locally — set `allowOnly: false` in `vitest.config` to fail everywhere, or use the `--allowOnly` CLI flag. Jest does not ship a first-party `.only`-forbidden flag; an ESLint rule (`jest/no-focused-tests` from `eslint-plugin-jest`) is the idiomatic enforcement. Under the E2E rubric, `test.only` is the Playwright analog — set `forbidOnly` in `playwright.config` (the standard pattern is `forbidOnly: !!process.env.CI`) so a committed focus marker fails the run.
 
 ---
 
 ### `nodejs.LC-4` — `.skip` / `xit` / `.todo` with no linked issue
 
-**Applies to:** `unit, integration` — refines core `LC-9`.
+**Applies to:** `unit, integration, e2e` — refines core `LC-9`.
 
-**Detection:** `(it|test|describe)\.(skip|todo)\(` or `^\s*xit\(` / `^\s*xtest\(` where the test or an immediately-preceding comment contains no URL, issue reference (`#\d+`, `ISSUE-\d+`), ticket identifier, or flake history pointer.
+**Detection:** `(it|test|describe)\.(skip|todo)\(` or `^\s*xit\(` / `^\s*xtest\(` — plus `test.fixme(` under the E2E rubric, Playwright's idiom for a known-broken spec — where the test or an immediately-preceding comment contains no URL, issue reference (`#\d+`, `ISSUE-\d+`), ticket identifier, or flake history pointer.
 
 **Why low-confidence:** a skip without a documented reason becomes the permanent home for the flake. Refines `LC-9` for the Jest / Vitest / Mocha idiom.
 
@@ -340,7 +269,7 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 ### `nodejs.LC-5` — Custom matcher used with no reachable `expect.extend` declaration
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** a `.toBeXyz(...)` / `.matchXyz(...)` call whose matcher name is not one of the built-in Jest / Vitest / Chai matchers, with **no** `expect.extend({ toBeXyz: ... })` reachable from the test file's import graph (imports of `jest.setup.{js,ts}` / `vitest.setup.{js,ts}` / `globalSetup` resolve the declaration if present).
 
@@ -350,62 +279,14 @@ These smells apply under both the unit and integration rubrics. Unit-only low-co
 
 ---
 
-### `nodejs.LC-6` — `beforeEach` mutates `let`-bound SUT without `afterEach` reset
 
-**Applies to:** `unit, integration` — refines core `HC-8`.
-
-**Detection:** `let\s+(?P<name>\w+)` at describe / file scope followed by a `beforeEach` that mutates the binding (`<name> = new ...` / `<name>.push(...)` / `<name>.someProp = ...`), with **no** `afterEach` reset in the same describe block.
-
-**Why low-confidence:** shared mutable state is a flake source. The intent was usually "fresh SUT per test" but the test relies on `beforeEach` order rather than ownership. A parallel test runner (Vitest) or sharded CI can expose this as order-dependence.
-
-**Rewrite (intent):** `const sut = <factory>()` inside each test body, or `beforeEach(() => { sut = new ... })` paired with `afterEach(() => { sut = null! })`.
-
----
-
-### `nodejs.LC-7` — `it.each` / `test.each` missing contract-derived boundary rows
-
-**Applies to:** `unit, integration` — refines core `LC-11`.
-
-**Detection:** an `it.each(...)` / `test.each(...)` / `describe.each(...)` whose data has a numeric parameter (`number`, `bigint`), string parameter, collection parameter (`T[]`, `string[]`, `Set<T>`, `Map<K, V>`), parser input, enum/state value, or schema-validated field. Collect every row. First inspect the visible contract:
-
-- Zod / Yup / Joi / class-validator rules such as `.min(...)`, `.max(...)`, `.length(...)`, `.email()`, `.regex(...)`, `@MinLength`, `@MaxLength`, and custom `.refine(...)`.
-- Branch predicates and guard clauses around numeric, string, collection, date, or enum inputs.
-- Route params and request-body schemas.
-- TypeScript literal unions / enums when runtime code branches on them.
-
-Flag when no row covers the contract-derived boundary coverage items, or when rows cover only generic sentinels while richer edges are visible. Examples:
-
-- A schema `.min(6).max(15)` needs `5/6` and `15/16`; `''` alone is `sentinel-only`.
-- A quantity rule `1..10` needs `0/1` and `10/11`; `5` plus `[]` on an unrelated parameter is partial at best.
-- A `test.each` that repeats valid roles but never covers a forbidden role is positive-only for auth/authorization partitions.
-
-When no richer contract is visible, fall back to generic sentinel signals:
-
-- Numeric: `0`, `1`, `-1`, `Number.MAX_SAFE_INTEGER`, `Number.MIN_SAFE_INTEGER`, `Infinity`, `NaN` (scale to context — `NaN` / `Infinity` apply to `number` but not `bigint`).
-- String: `""` (empty), single-character literal, `null` / `undefined` (only where the signature allows it).
-- Collection: `[]`, `[singleItem]`, `null` / `undefined` (where the signature allows).
-
-**Why low-confidence:** boundary-value analysis is standard, but the test may be intentionally scoped to a narrow partition. Always report `Boundary evidence` as `contract-derived`, `partial`, `sentinel-only`, or `unknown`.
-
-**Rewrite (intent):** add rows or separate `test(...)` cases for each boundary the function is specified to handle.
-
----
 
 ## Framework-specific positive signals (`nodejs.POS-*`)
 
-### `nodejs.POS-1` — `jest.mocked(mod)` / `vi.mocked(mod)` typed auto-mock wrapper
-
-**Applies to:** `unit, integration`
-
-**Detection:** `import { ... }` from a module followed by `jest.mock('<path>')` (or `vi.mock('<path>')`) plus `const mocked = jest.mocked(<Import>)` (or `vi.mocked`) at the top of the test file. Assertions use `mocked.someExport.mockReturnValue(...)` with full type safety.
-
-**Why positive:** typed auto-mocks track the real module's exports through the TS checker. When the real module changes signature, the test's mocked call-site fails to compile — the drift is visible at commit time rather than at runtime on CI. Strictly better than hand-building a mock object and casting.
-
----
 
 ### `nodejs.POS-2` — `expect.extend(...)` with domain-invariant custom matchers
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** `expect.extend({ <matcherName>: ... })` registered in a setup file, where `<matcherName>` names a domain invariant (`toBeAValidIsbn`, `toBeMonotonicallyIncreasing`, `toContainAllRequiredFields`) rather than a structural shape.
 
@@ -413,59 +294,13 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ---
 
-### `nodejs.POS-3` — Property-based test harness (`fast-check`, `@fast-check/vitest`, `jsverify`)
 
-**Applies to:** `unit, integration` — refines core `POS-9`.
 
-**Detection:** `import fc from 'fast-check'` plus `fc.assert(fc.property(fc.integer(), ..., (a, b) => ...))`, OR `import { test } from '@fast-check/vitest'` with `test.prop(...)`, OR `import jsc from 'jsverify'` with `jsc.forall(...)`.
 
-**Why positive:** a property-based test expresses a domain invariant over a generated input space instead of pinning a finite set of examples. Correct implementations pass for the whole domain; characterization tests written from observed output cannot be phrased this way.
-
----
-
-### `nodejs.POS-4` — `it.each` / `test.each` with meaningfully varied expected values
-
-**Applies to:** `unit, integration` — refines core `POS-4`.
-
-**Detection:** an `it.each(...)` / `test.each(...)` whose rows produce distinct expected values (not all identical — that would be core `LC-8`) and map to named equivalence classes or contract-derived boundary values.
-
-**Why positive:** the parameterization is doing real work — each row is a different specification statement. When rows include contract-derived boundary values, this signals disciplined test design. Do not award this signal for arbitrary sentinel rows when a richer contract is visible.
-
----
-
-### `nodejs.POS-5` — Fake-timer install + `setSystemTime` pattern
-
-**Applies to:** `unit, integration`
-
-**Detection:** `jest.useFakeTimers()` (or `vi.useFakeTimers()` / `sinon.useFakeTimers({...})` / `t.mock.timers.enable({ apis: [...] })`) followed by `jest.setSystemTime(new Date('<ISO>'))` / `vi.setSystemTime(new Date('<ISO>'))` / `clock.tick(ms)` in Arrange.
-
-**Why positive:** the idiomatic way to make time-sensitive code deterministic in Node.js. Tests pin the "now" and advance time explicitly via `vi.advanceTimersByTime(ms)` / `jest.advanceTimersByTime(ms)` / `clock.tick(ms)`. Not an `HC-11` smell — this is the fix.
-
----
-
-### `nodejs.POS-6` — MSW at the process boundary instead of module-level HTTP mocking
-
-**Applies to:** `unit, integration`
-
-**Detection:** `import { setupServer } from 'msw/node'` plus `const server = setupServer(...handlers)` plus `beforeAll(() => server.listen())` / `afterAll(() => server.close())` / `afterEach(() => server.resetHandlers())`. Handlers use `http.get(...)` / `http.post(...)` from `msw` to define the contract.
-
-**Why positive:** MSW intercepts at the HTTP-request level — requests leave the SUT code path fully intact and are caught at the network boundary. No `jest.mock('axios')` / `jest.mock('node-fetch')` required. The contract the test declares is the real-world contract (status, body, headers) rather than a module's internal API.
-
----
-
-### `nodejs.POS-7` — `@testing-library/react` accessible-name queries + `userEvent.setup()` (component testing idiom)
-
-**Applies to:** `unit` — primarily a unit-rubric positive for React component tests.
-
-**Detection:** any of `screen.getByRole(...)`, `screen.getByLabelText(...)`, `screen.getByPlaceholderText(...)`, `screen.getByText(...)`, `screen.findByRole(...)` plus `import userEvent from '@testing-library/user-event'` with `const user = userEvent.setup()` per test (v14+ idiom).
-
-**Why positive:** accessible-name locators are the priority-1 queries per React Testing Library guidance — they read as user-observable behavior. `userEvent.setup()` per test provides a fresh interaction session with shared keyboard / pointer state across calls in the same test, and is the blessed v14+ pattern. Tests written this way specify what the user can do, not how the DOM is structured.
-
----
 
 ### `nodejs.POS-8` — Detached-work completion, failure, or cleanup is observed through the test contract
 
-**Applies to:** `unit, integration`.
+**Applies to:** `unit, integration, e2e`.
 
 **Detection:** a test keeps a promise, timer, worker, or `node:test` subtest handle and awaits/returns/joins it, clears or terminates it when applicable, then asserts an observable result, propagated failure, cancellation, or released resource. Do not award this signal for awaiting an API name without an observable outcome.
 

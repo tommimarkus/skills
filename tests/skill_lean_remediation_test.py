@@ -78,6 +78,9 @@ class SkillLeanRemediationTest(unittest.TestCase):
         dotnet_core = read(
             "souroldgeezer-audit/skills/test-quality-audit/references/extensions/dotnet/core.md"
         )
+        dotnet_deep = read(
+            "souroldgeezer-audit/skills/test-quality-audit/references/extensions/dotnet/deep.md"
+        )
         node_mutation = read(
             "souroldgeezer-audit/skills/test-quality-audit/references/procedures/mutation-nodejs.md"
         )
@@ -88,7 +91,10 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("mutation-nodejs.md", skill)
         self.assertIn("mutation-dotnet.md", skill)
         self.assertIn("../../procedures/mutation-nodejs.md", node_core)
-        self.assertIn("../../procedures/mutation-dotnet.md", dotnet_core)
+        # The .NET mutation-tool declaration lives in the Deep-only pack, so the
+        # procedure link is reached from there rather than from the always-loaded core.
+        self.assertIn("../../procedures/mutation-dotnet.md", dotnet_deep)
+        self.assertNotIn("../../procedures/mutation-dotnet.md", dotnet_core)
         self.assertNotIn("Stryker JS cannot mutate every", node_core)
         self.assertNotIn("Stryker.NET cannot mutate every", dotnet_core)
         self.assertIn("Stryker JS cannot mutate every", node_mutation)

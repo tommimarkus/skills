@@ -1,9 +1,10 @@
 # Extension: .NET — core
 
-Shared core for the .NET test-quality-audit extension. This file is loaded **whenever a .NET project is detected in the audit target**, before step 0b (rubric selection). It owns everything that is not rubric-exclusive: detection signals, test-type dispatch, test-double classification, rubric-neutral smells, carve-outs, SUT surface enumeration, determinism verification, and the Stryker mutation tool declaration.
+Shared core for the .NET test-quality-audit extension. This file is loaded **whenever a .NET project is detected in the audit target**, before step 0b (rubric selection). It owns only what all three rubrics need: detection signals, test-type dispatch, test-double classification, genuinely rubric-neutral smells (`Applies to: unit, integration, e2e`), and carve-outs. Deep-mode procedures (SUT surface enumeration, determinism verification, and the Stryker.NET mutation tool declaration) live in [`deep.md`](deep.md).
 
-Rubric-exclusive content lives in the rubric addons:
+Rubric-scoped content lives in the addons:
 
+- [`unit-integration.md`](unit-integration.md) — `Applies to: unit, integration` smells that need in-process access to the SUT (Moq verification, logger mocks, reflection construction, `TimeProvider` injection, `[Theory]` input partitions). Loaded on the unit and integration paths only.
 - [`unit.md`](unit.md) — `Applies to: unit` smells (mocking-owned-class, bUnit `MarkupMatches`, etc.)
 - [`integration.md`](integration.md) — `dotnet.I-*` smells, auth matrix enumeration, migration upgrade-path enumeration.
 - [`e2e.md`](e2e.md) — E2E sub-lane refinements (stub; no `dotnet.E-*` smells declared yet).
@@ -105,74 +106,11 @@ Types named `Fake*`, `InMemory*`, `TestLogger<T>`, `FakeLogger` / `FakeLogger<T>
 
 ## Framework-specific high-confidence smells (`dotnet.HC-*`)
 
-These smells apply under both the unit and integration rubrics (`Applies to: unit, integration`). Unit-only framework smells live in [`unit.md`](unit.md); integration-only framework smells live in [`integration.md`](integration.md).
-
-### `dotnet.HC-1` — Moq `.Verify(...)` with a specific `Times.Exactly(N)` matching loop count
-
-**Applies to:** `unit, integration`
-
-**Detection:** `\.Verify\(.*Times\.Exactly\(\s*\d+\s*\)\)` where N is a small integer that also appears as a literal collection size in the Arrange section.
-
-**Smell:** the test pins the number of calls to the collaborator to match the current implementation's loop structure. Refactoring the SUT to batch calls will break the test without changing observable behavior.
-
-**Example (smell):**
-```csharp
-var items = new[] { "a", "b", "c" };
-await sut.ProcessAsync(items);
-repoMock.Verify(r => r.SaveAsync(It.IsAny<Item>()), Times.Exactly(3));
-```
-
-**Rewrite (intent):**
-```csharp
-var items = new[] { "a", "b", "c" };
-await sut.ProcessAsync(items);
-var saved = await repo.GetAllAsync();
-saved.Select(s => s.Name).Should().BeEquivalentTo(items);
-```
-
----
-
-### `dotnet.HC-2` — Verifying `ILogger.Log(...)` string content as a contract
-
-**Applies to:** `unit, integration`
-
-**Detection:** `\.Verify\(.*ILogger|LoggerMessage|Log\(It\.Is<.*LogLevel` combined with matching on a string literal.
-
-**Smell:** the test asserts that a log line was emitted with a particular string. Unless the log is a *published contract* (audit event, metric, structured telemetry with a schema), the log message is a development aid, not a behavior. Pinning it blocks every refactor that touches the message.
-
-**Carve-out:** if the log call targets a structured audit-event helper (e.g. a `LoggerMessage`-generated method whose name indicates it is an audit event, or a log with a documented event-id contract), the assertion is on a published side effect — that is `POS-3`, not a smell.
-
-**Rewrite:** use a capture helper (a `TestLogger<T>`-style fake) to assert on structured properties by key, not on rendered strings.
-
----
-
-### `dotnet.HC-3` — `Assert.NotNull(x); Assert.Equal(y, x.Prop)` as the entire assertion
-
-**Applies to:** `unit, integration`
-
-**Detection:** an `Assert.NotNull(...)` or `.Should().NotBeNull()` followed by a single property-level assertion, with no further checks on an object whose contract is the whole shape.
-
-**Smell:** the method's observable behavior is the full returned object; the test only pins one field. Most of the contract is unverified.
-
-**Rewrite:** assert the whole object with `.Should().BeEquivalentTo(expected)` against a spec-derived expected value, or split into multiple tests each covering one property.
-
----
-
-### `dotnet.HC-5` — FluentAssertions chain with only `.Should().NotBeNull()` on a complex return
-
-**Applies to:** `unit, integration`
-
-**Detection:** `.Should().NotBeNull()` on a return value, with no further assertions on the object's contents, when the method returns a complex type.
-
-**Smell:** asserts only that the method didn't return `null`, ignoring the actual contract.
-
-**Rewrite:** assert on the returned object's properties, or on the full shape via `.BeEquivalentTo`.
-
----
+These apply under **all three** rubrics — each is a defect a browser-driven spec can commit too. Unit+integration smells live in [`unit-integration.md`](unit-integration.md), unit-only in [`unit.md`](unit.md), integration-only in [`integration.md`](integration.md).
 
 ### `dotnet.HC-7` — `DateTime.Now` / `DateTime.Today` / `DateTimeOffset.Now` in a test body
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** any test method body containing `DateTime\.(Now|Today|UtcNow)` or `DateTimeOffset\.(Now|UtcNow)` as a direct call (not through a `TimeProvider` abstraction). More specific than core `HC-11` — `dotnet.HC-7` covers the .NET idiom.
 
@@ -180,79 +118,15 @@ saved.Select(s => s.Name).Should().BeEquivalentTo(items);
 
 **Carve-out:** if the test calls `DateTime.UtcNow` solely to generate a unique identifier (e.g. `$"test-{DateTime.UtcNow.Ticks}"`) and does not use the value in an assertion, do not flag. The canonical unique-id generation pattern is benign.
 
-**Rewrite:** inject `TimeProvider` (.NET 8+) and use `FakeTimeProvider` with a pinned instant — see `dotnet.POS-6`.
-
----
-
-### `dotnet.HC-6` — Single-line `[Fact]` with structural-only assertion on a nullable method
-
-**Applies to:** `unit, integration`
-
-**Detection:** a `[Fact]`-decorated method whose body is `var result = sut.Method(); Assert.NotNull(result);` (or `.Should().NotBeNull()`), nothing more.
-
-**Smell:** the test is a presence check, not a behavior check. It passes for any implementation that returns non-null, including wrong ones.
-
-**Rewrite:** either remove (if the only behavior is "doesn't crash") or add assertions on the returned value.
+**Rewrite:** under the unit and integration rubrics, inject `TimeProvider` (.NET 8+) and use `FakeTimeProvider` with a pinned instant — see `dotnet.POS-6` in [`unit-integration.md`](unit-integration.md). Under the E2E rubric the app runs out of process, so the test cannot inject a clock: pin time at the browser with Playwright .NET's `Page.Clock.InstallAsync(...)`, or drive the deployed app's own test-time configuration hook, rather than reading the runner's clock.
 
 ---
 
 ## Framework-specific low-confidence smells (`dotnet.LC-*`)
 
-These smells apply under both the unit and integration rubrics. Unit-only low-confidence smells live in [`unit.md`](unit.md).
-
-### `dotnet.LC-2` — `[Theory]` with `[InlineData]` where all cases produce the same expected value
-
-**Applies to:** `unit, integration` — refines core `LC-8` / `I-LC-4`.
-
-**Detection:** multiple `[InlineData(...)]` on a `[Theory]` where inspection shows every case asserts the same expected literal.
-
-**Why low-confidence:** the parameterization isn't doing work. May indicate the author intended to cover equivalence classes but the assertion is too coarse.
-
----
-
-### `dotnet.LC-4` — SUT constructed via reflection or `Activator.CreateInstance`
-
-**Applies to:** `unit, integration`
-
-**Detection:** `Activator\.CreateInstance|typeof\(.*\)\.GetConstructor` in Arrange.
-
-**Why low-confidence:** usually means the SUT has inaccessible constructors or the test is reaching into internals.
-
----
-
-### `dotnet.LC-6` — `[Theory]` missing contract-derived boundary rows
-
-**Applies to:** `unit, integration` — refines core `LC-11`.
-
-**Detection:** a `[Theory]` method with a numeric parameter (`int`, `long`, `double`, `decimal`, `float`), string parameter, collection parameter (`T[]`, `IEnumerable<T>`, `List<T>`), enum/state parameter, or input DTO whose validation attributes expose a range or partition. Collect every `[InlineData(...)]` / `[MemberData(...)]` / `[ClassData(...)]` row feeding that parameter. First inspect the visible contract:
-
-- Data annotations: `[Range]`, `[StringLength]`, `[MinLength]`, `[MaxLength]`, `[Required]`, `[RegularExpression]`.
-- FluentValidation rules: `.MinimumLength(...)`, `.MaximumLength(...)`, `.InclusiveBetween(...)`, `.GreaterThan(...)`, `.LessThanOrEqualTo(...)`, `.Must(...)`.
-- Route constraints and model-binding constraints.
-- Enum / state-transition branches and guard clauses.
-- Persistence constraints that are asserted through request/response or DB state.
-
-Flag when no row covers the contract-derived boundary coverage items, or when rows cover only generic sentinels while richer edges are visible. Examples:
-
-- A login length contract `6..15` needs `5/6` and `15/16` for 2-value BVA; `0` alone is `sentinel-only`.
-- A `[Range(1, 10)]` quantity needs `0/1` and `10/11`; a single happy row `5` is interior-only.
-- A nullable `[Required]` field needs the missing/null case plus the valid case; a payload with the field present in every row is positive-only.
-
-When no richer contract is visible, fall back to generic sentinel signals:
-
-- Numeric: `0`, `1`, `-1`, `int.MaxValue`, `int.MinValue` (scale to the numeric type).
-- String: `""` (empty), single-character literal, `null`.
-- Collection: `new T[] {}`, `new T[] { x }`, `null`.
-
-**Why low-confidence:** the test may be intentionally scoped to a narrow equivalence class. Always report `Boundary evidence` as `contract-derived`, `partial`, `sentinel-only`, or `unknown` so the author can dismiss a narrow-by-design case with evidence.
-
-**Rewrite:** add boundary rows or separate `[Fact]` tests for each contract edge the function is specified to handle.
-
----
-
 ### `dotnet.LC-8` — `CultureInfo.CurrentCulture` / `CurrentUICulture` read in a test body without explicit set
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** `CultureInfo\.(CurrentCulture|CurrentUICulture)` read anywhere in the test body without a preceding `CultureInfo\.(CurrentCulture|CurrentUICulture)\s*=\s*new CultureInfo\(` assignment or a `using` block that scopes the culture.
 
@@ -264,7 +138,7 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ### `dotnet.LC-9` — Platform-specific path / line-ending / separator literal in a test body
 
-**Applies to:** `unit, integration`
+**Applies to:** `unit, integration, e2e`
 
 **Detection:** any of the following in a test body without a platform-abstracting call:
 
@@ -281,7 +155,7 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ### `dotnet.LC-7` — Positive-only test with no sibling negative test
 
-**Applies to:** `unit, integration` — refines core `LC-12`.
+**Applies to:** `unit, integration, e2e` — refines core `LC-12`.
 
 **Detection:** a `[Fact]` whose name ends in `_Returns_*`, `_Succeeds`, `_Persists_*`, `_Creates_*`, `_Updates_*`, `_Completes_*`, `_Is_*` on a method that has at least one `throw new *Exception` statement, a `Result.Fail` / `Error.*` return, or `[Required]` / `[Range]` / custom validator on its input type. The method must be detected via the test's SUT construction (`var sut = new Foo(...); sut.Bar(...)`). Flag when no sibling test method on the same class targets the same method with a name matching `_Throws_*`, `_Fails_*`, `_Rejects_*`, `_Returns_Error_*`, or `_Validates_*`.
 
@@ -293,69 +167,11 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ## Framework-specific positive signals (`dotnet.POS-*`)
 
-### `dotnet.POS-1` — `[Theory]` with `TheoryData<...>` or `MemberData` and *varied* expected values
-
-**Applies to:** `unit, integration`
-
-**Why positive:** the parameterization covers equivalence classes with meaningful variation, not just repetition.
-
----
-
-### `dotnet.POS-2` — `FluentAssertions` `.BeEquivalentTo(expected)` against a spec-derived expected object
-
-**Applies to:** `unit, integration`
-
-**Why positive:** asserts the full shape of the return value, not just a single field. When the expected object is built from a fixture or spec, the test is specification.
-
----
-
 ### `dotnet.POS-3` — xUnit `IClassFixture` / NUnit `[OneTimeSetUp]` used for expensive shared setup *without* mutable state
 
-**Applies to:** `unit, integration` — especially valuable under the integration rubric, where expensive fixtures like `WebApplicationFactory<T>` are the norm and shared immutable setup is the correct way to amortize them.
+**Applies to:** `unit, integration, e2e` — especially valuable under the integration rubric, where expensive fixtures like `WebApplicationFactory<T>` are the norm and shared immutable setup is the correct way to amortize them.
 
 **Why positive:** shared setup is unavoidable when the fixture is genuinely expensive (e.g., DI container, data protection provider). Without mutable state, it doesn't cause test interdependence.
-
----
-
-### `dotnet.POS-4` — Assertions on structured log properties by key, not rendered string
-
-**Applies to:** `unit, integration`
-
-**Why positive:** treats the log entry as a published contract (audit event, metric) with a stable schema. Pattern typically uses a capture-helper like `TestLogger<T>` rather than `Mock<ILogger<T>>`.
-
----
-
-### `dotnet.POS-5` — Capture helper (test double) instead of `Mock<ILogger<T>>`
-
-**Applies to:** `unit, integration`
-
-**Detection:** a `TestLogger<T>`, `CapturingLogger`, `FakeLogger` / `FakeLogger<T>` (namespace `Microsoft.Extensions.Logging.Testing`, package `Microsoft.Extensions.Diagnostics.Testing`), or similar capture-style helper in Arrange. Assertions typically enumerate `FakeLogCollector.GetSnapshot()` or iterate `FakeLogRecord` entries by key rather than matching on the rendered string.
-
-**Why positive:** a capture helper is a fake (real `ILogger<T>` behavior with recording), not a mock. Assertions on the captured entries test observable behavior, not interaction.
-
----
-
-### `dotnet.POS-6` — Use of `TimeProvider` (.NET 8+) with a fixed instant
-
-**Applies to:** `unit, integration`
-
-**Detection:** `using Microsoft.Extensions.Time.Testing;` plus `new FakeTimeProvider(...)` (optionally seeded via `new FakeTimeProvider(new DateTimeOffset(...))` or advanced via `.Advance(TimeSpan.FromMinutes(...))`), or an injected `TimeProvider` with a pinned `DateTimeOffset`. The `Microsoft.Extensions.TimeProvider.Testing` package ships `FakeTimeProvider` under the `Microsoft.Extensions.Time.Testing` namespace.
-
-**Why positive:** the idiomatic .NET 8+ way to make time-sensitive code deterministic. `FakeTimeProvider` extends `System.TimeProvider`, defaults to midnight 2000-01-01 UTC, and advances only when the test explicitly calls `Advance`. Not an `HC-11` smell.
-
----
-
-### `dotnet.POS-7` — Property-based test harness (FsCheck / CsCheck / Hedgehog)
-
-**Applies to:** `unit, integration` — refines core `POS-9`.
-
-**Detection:** any of:
-- `using FsCheck;` / `using FsCheck.Xunit;` plus a `[Property]` attribute on a test method.
-- `using CsCheck;` plus a `Gen.*` generator expression feeding `.Sample(...)`.
-- `using Hedgehog;` plus `Property.ForAll(...)`.
-- A `[Theory]` whose data source is a seeded RNG yielding values across a declared equivalence class.
-
-**Why positive:** a property-based test expresses a domain invariant over a generated input space instead of pinning a finite set of examples. Correct implementations pass for the whole domain; characterization tests written from observed output cannot be phrased this way. Reward under both unit and integration rubrics.
 
 ---
 
@@ -376,130 +192,3 @@ Patterns that look like core smells but are idiomatic in .NET and must not be fl
 - **Do not flag `dotnet.HC-2`** (logger content as contract) when the log call is via a source-generated `[LoggerMessage]` method whose name is namespaced as an audit event (e.g. `LogAuditUserDeleted`) — the event *is* the contract.
 
 ---
-
-## SUT surface enumeration
-
-Consumed by [SKILL.md § SUT surface enumeration](../../../SKILL.md) — step 2.5 of the deep-mode workflow. This section declares the .NET-specific grep patterns the audit agent uses to enumerate testable symbols in a SUT and cross-reference them against a test project. Applies under both the unit and integration rubrics; not run under the E2E rubric.
-
-### SUT identification
-
-For a given test project (`tests/Foo.Tests/Foo.Tests.csproj`):
-
-1. Parse the `<ItemGroup>` sections of the csproj and collect every `<ProjectReference Include="..." />` entry.
-2. For each referenced project, resolve the absolute path relative to the test csproj.
-3. Recurse: for each referenced project, parse its csproj and follow its own `<ProjectReference>` entries.
-4. Stop at projects whose SDK is **not** a production-code SDK (i.e. a test SDK like `Microsoft.NET.Sdk` + `xunit`/`bunit` references). The closure is the SUT.
-
-In this repo, for example:
-
-- `tests/Lfm.Api.Tests` → SUT closure: `api/Lfm.Api.csproj` + `shared/Lfm.Shared.csproj`.
-- `tests/Lfm.App.Core.Tests` → SUT closure: `app/Lfm.App.Core/Lfm.App.Core.csproj` + `shared/Lfm.Shared.csproj`.
-- `tests/Lfm.App.Tests` → SUT closure: `app/Lfm.App.csproj` (Blazor WASM) + `app/Lfm.App.Core/Lfm.App.Core.csproj` + `shared/Lfm.Shared.csproj`.
-
-### Grep patterns per gap class
-
-All patterns are case-sensitive ripgrep expressions applied to `.cs` files in the SUT. Each match returns a symbol identifier plus `file:line`.
-
-**`Gap-API` — public methods and types.** Multi-line aware. Detection patterns:
-
-- Public classes / records / structs / interfaces: `^\s*public\s+(sealed\s+|abstract\s+|static\s+|partial\s+)*(class|record|record\s+struct|struct|interface)\s+(?P<name>[A-Z][A-Za-z0-9_]*)`.
-- Public instance or static methods: `^\s*public\s+(static\s+|virtual\s+|override\s+|sealed\s+|async\s+|new\s+)*([A-Za-z0-9_<>?,\[\]\s]+)\s+(?P<name>[A-Z][A-Za-z0-9_]*)\s*\(` — then exclude matches where the captured name is a keyword, a constructor (same as the class name), or a C# operator. Ignore files under `obj/`, `bin/`, and generator-output paths.
-
-**`Gap-Route` — HTTP and Functions routes.** Detection patterns:
-
-- Azure Functions isolated: `\[Function\("(?P<name>[^"]+)"\)\]` — capture the function name and any adjacent `[HttpTrigger(...)]` route template.
-- HTTP trigger route: `\[HttpTrigger\([^)]*,\s*Route\s*=\s*"(?P<route>[^"]+)"\)\]`.
-- HTTP method + route in `HttpTrigger` args: `\[HttpTrigger\(AuthorizationLevel\.[A-Za-z]+,\s*"(?P<methods>[^"]+)"(?:,\s*Route\s*=\s*"(?P<route>[^"]+)")?`.
-- ASP.NET Core minimal API: `app\.Map(Get|Post|Put|Delete|Patch)\s*\(\s*"(?P<route>[^"]+)"`.
-- ASP.NET Core MVC attribute routing: `\[Route\("(?P<route>[^"]+)"\)\]` and `\[Http(Get|Post|Put|Delete|Patch)(\("(?P<route>[^"]+)"\))?\]`.
-
-**`Gap-Migration` — database migration classes.** Detection patterns:
-
-- Any class in `api/Migrations/` that inherits from or implements a migration base type: `:\s*(?:IAsync)?Migration\b` or `:\s*MigrationBase\b`.
-- Any file whose name matches `\d{4}_[a-z0-9_]+\.cs` under `api/Migrations/` — treat the class name declared at top-of-file as the migration identifier even if the base type is missing (documented repo convention).
-
-**`Gap-Throw` — exception throw sites.** Detection patterns:
-
-- `throw\s+new\s+(?P<type>[A-Z][A-Za-z0-9_]*Exception)\s*\(` — capture exception type.
-- Record the containing method via the nearest preceding `public|internal|private|protected` method declaration; the audit agent walks up from the match to the enclosing method name.
-- Exclude re-throws (`throw;` and `throw ex;`) — those are not new sites.
-
-**`Gap-Validate` — validation attributes on input types.** Detection patterns:
-
-- `\[(Required|StringLength|MaxLength|MinLength|Range|RegularExpression|EmailAddress|Url|CreditCard|Phone)(\([^)]*\))?\]` on a property declaration.
-- Capture the containing record / class (input type) and the property name — e.g. `CreateOrderRequest.CustomerId`.
-
-### Cross-reference matching
-
-For each enumerated symbol, the audit agent searches the test project tree (`tests/**/*.cs` except `obj/`, `bin/`, `TestResults/`, `StrykerOutput/`) for at least one of the matches below.
-
-When a test-artifact extension is also loaded, include its test files in the cross-reference if they exercise this .NET SUT's public boundary. For Robot Framework, also search `**/*.robot` and `**/*.resource` files, excluding generated outputs and vendored dependencies. A Robot test can satisfy a .NET gap when it calls the route, command, or public adapter and asserts the required contract. Count that as external contract coverage; do not require a C# test unless the gap is specifically source-level and not observable from Robot.
-
-- **`Gap-API`** — `covered-strong` only when the symbol name appears as an identifier and the same test asserts a return value, published side effect, error, state, or domain outcome. Word-boundary identifier presence by itself is `referenced-weak`. A constructor/import/setup-only mention is `referenced-incidental`.
-- **`Gap-Route`** — `covered-strong` only when the route template or Functions name appears and the test asserts the route's published contract: status plus body/header/auth/domain outcome, state change, validation error, or problem code. A test that only asserts `200`, `201`, URL reachability, or no exception is `referenced-weak`. In Robot tests, count RequestsLibrary / custom API-library calls only when they assert the same contract strength.
-- **`Gap-Migration`** — the migration class name appears as an identifier in any test body, or the migration file name appears as a path literal.
-- **`Gap-Throw`** — both the exception type (e.g. `InvalidOperationException`) *and* the containing method name appear in the same test method body, and the assertion checks the exception or public error contract. If either is missing, or the test only reaches the happy path, the throw site remains a probable gap. Robot tests may cover this only when they assert the public error contract produced by that throw site; they do not cover private throw-site details.
-- **`Gap-Validate`** — the input type's property name (e.g. `CustomerId`) appears in a test body that also references the input type and intentionally violates or omits the field (e.g. `new CreateOrderRequest { CustomerId = null }`) with an assertion on validation status / problem details. Payloads that include only valid values are `referenced-weak` for invalid-field coverage. In Robot API tests, count payloads only when they include or omit the field and assert the expected validation status / problem code.
-
-### Known indirect-coverage patterns (carve-outs)
-
-These patterns suppress a false-positive `Gap-API` entry:
-
-- A service method `Foo.BarAsync(...)` is covered indirectly when a Functions endpoint `Foo.BarFunction` that wraps it has a test, and the service type is registered in DI under the Functions project. Search DI registrations (`services.AddScoped<Foo>()` / `services.AddSingleton<Foo>()`) in the Functions project to establish wrapping; if a test exercises the wrapping endpoint and asserts the published contract, record as "indirectly covered via `FooFunction`" and suppress the `Gap-API` entry. If the endpoint test is status-only, keep the service as `referenced-weak`.
-- A Robot Framework API, CLI, or browser test can cover a route, function, validation rule, or public adapter when it exercises the .NET public boundary and asserts the relevant contract. Record as "externally covered via Robot `<suite>/<test>`" and suppress only the matching public-boundary gap. Do not suppress unit-seam, private throw-site, or mutation-target findings from Robot evidence alone. Robot happy-path-only rows are weak evidence for negative validation/auth/boundary gaps.
-- A `MigrationRunner.RunAsync` test in `tests/Lfm.Api.Tests/` that exercises the runner with seed data covers every migration transitively if the test explicitly asserts post-state for each migration class. Search for the pattern and suppress `Gap-Migration` entries for the covered classes.
-
-### Confidence annotations
-
-- `Gap-API`: **medium** — indirect coverage via controllers / Functions / facade methods is common in this repo.
-- `Gap-Route`, `Gap-Migration`, `Gap-Validate`: **high** — these are registered by string or class identity with few indirect-coverage paths.
-- `Gap-Throw`: **medium** — generic error-path tests often exercise the method without naming the exception type.
-
-### Recommended `--mutate` follow-up
-
-When the gap report lists a probable `Gap-API` finding on a SUT shape that Stryker.NET supports, the audit agent may suggest a targeted mutation run to confirm: `dotnet stryker --mutate "<path>.cs" --reporter cleartext` (fast — seconds).
-
----
-
-## Determinism verification
-
-Consumed by [SKILL.md § Determinism verification](../../../SKILL.md) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
-
-### Cheap-rerun command
-
-Run the non-E2E test project twice, each with structured output for diffing:
-
-```bash
-dotnet test tests/<Project>.Tests/<Project>.Tests.csproj \
-  --no-build -c Release \
-  --logger "trx;LogFileName=run1.trx" \
-  --results-directory ./.test-determinism/run1
-dotnet test tests/<Project>.Tests/<Project>.Tests.csproj \
-  --no-build -c Release \
-  --logger "trx;LogFileName=run2.trx" \
-  --results-directory ./.test-determinism/run2
-```
-
-Compare via `dotnet-trx` or a manual diff of the `<UnitTestResult outcome="Passed|Failed|Skipped">` attributes.
-
-### Gating
-
-- **Project size:** skip and recommend targeted rerun of top-N slowest tests when the test project has ≥ 500 test methods. Determine via `grep -c '\[Fact\|\[Theory' tests/<Project>.Tests/**/*.cs`.
-- **Total elapsed time from run 1:** if run 1 takes more than 60 seconds, warn the user before running run 2. Abort if an interactive audit and the user declines.
-- **E2E projects:** never run. E2E suites are expensive and browser-dominated; determinism verification there requires different tooling.
-
-### Recommended scope for this repo
-
-- `tests/Lfm.Api.Tests` — small, reruns cheaply.
-- `tests/Lfm.App.Core.Tests` — small, reruns cheaply.
-- `tests/Lfm.App.Tests` (bUnit) — small, reruns cheaply.
-- `tests/Lfm.E2E` — do **not** rerun. The E2E docker stack bringup makes a second full run prohibitive; the audit agent should recommend `--filter FullyQualifiedName~FlakeCandidate` reruns of specific tests identified by static smells instead.
-
----
-
-## Mutation testing
-
-Stryker.NET is the .NET mutation tool. Load
-[../../procedures/mutation-dotnet.md](../../procedures/mutation-dotnet.md) only
-in Deep mode when mutation evidence is requested or the Deep audit reaches the
-mutation section. Quick audits must not load or apply mutation setup guidance.

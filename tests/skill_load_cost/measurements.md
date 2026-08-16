@@ -40,6 +40,51 @@ diff: 0 regressions across all tasks — the `uv run python souroldgeezer-audit/
 gate exited 0 at every task where it was run, and the full
 `TestQualityAuditBaselineTest` suite passes at branch tip.
 
+## Extension applicability & load gating — 2026-08
+
+Root cause fixed: the `Applies to:` vocabulary in `references/extensions/authoring.md`
+documented only `unit` / `integration` / `unit, integration` and called the last
+"rubric-neutral". That predates the E2E lane, so every stack parked its two-rubric
+smell body in the always-loaded `core.md` — which E2E audits load in full, of which
+none applied. Separately, `deep.md` existed only for `nodejs` / `nextjs` / `python`,
+so `dotnet` / `java` / `rust` / `robotframework` charged every **Quick** audit for
+SUT enumeration, determinism, and mutation declarations.
+
+Two scenarios (`quick-node-e2e`, `deep-dotnet-e2e`) were added **first** — the E2E
+path had no declared scenario, so this waste was invisible to the gate.
+
+| Scenario | Before | After | Delta |
+|---|---|---|---|
+| `quick-node-unit` | 22667 | 23254 | +587 |
+| `quick-node-e2e` | 28044 | 24723 | **−3321** |
+| `deep-nextjs-suite` | 48809 | 49166 | +357 |
+| `quick-python-unit` | 11391 | 11578 | +187 |
+| `deep-python-suite` | 16908 | 17095 | +187 |
+| `deep-dotnet-e2e` | 27991 | 22691 | **−5300** |
+
+The wins are confined to the E2E paths (−8621 combined); the four other paths pay
++1318 combined. That cost is deliberate and mostly **earned content**, not overhead:
+the keepers that now declare `e2e` gained E2E-correct guidance they previously
+lacked (Playwright `page.clock` for the real-clock smells, `forbidOnly` for committed
+focus markers, `test.fixme` for skips), and `SKILL.md` gained the escalation cue that
+[docs/skill-architecture.md](../../docs/skill-architecture.md) § On-demand knowledge
+requires whenever a load map caps a mode. The `quick-python-unit` / `deep-python-suite`
++187 is exactly that always-on `SKILL.md` growth — Python's own files did not change
+structurally.
+
+Adjudication, not a mechanical move: all 42 two-rubric smells in `nodejs` and `dotnet`
+were re-judged against the E2E rubric. 10 of 23 Node and 5 of 19 .NET genuinely apply
+to browser-driven specs and **stayed** in `core.md` re-marked `unit, integration, e2e`;
+the rest moved to `<stack>/unit-integration.md`. Small cores (`java`, `python`, `rust`)
+keep their two-rubric smells inline under a `## Shared Smells (unit + integration)`
+heading — below roughly 2000 tokens of smell body the split stops paying, a threshold
+now documented in `authoring.md`.
+
+Fidelity: classified before/after inventory diff over the resolved closure showed
+**62 codes, 0 lost, 0 gained**. The only baseline section lost was the renamed
+`Rubric-Neutral Smells`; six gained entries are the new files' titles. Full suite
+990 tests OK; `skill-architecture-report.sh` clean; `load_cost_guard.py` exit 0.
+
 # api-design per-use load cost
 
 api-design's per-use weight is dominated by its stack extensions (27,745 tokens
