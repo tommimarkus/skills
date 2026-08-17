@@ -34,7 +34,7 @@ pre-21 `java` reports itself instead of killing the launcher without a message.
 ## What the first run does
 
 Provisioning runs once per host, on the first `tools/list`, and installs the
-pinned release **2026.08.4**. The supported floor is **2026.07.28**: from that
+pinned release **2026.08.5**. The supported floor is **2026.07.28**: from that
 release the render lane takes each view's accessible name from its own
 `presentation`, which the skill's post-render step requires.
 

@@ -54,7 +54,7 @@ shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
 call. Dediren itself is provisioned by the plugin: on first use the launcher
-installs the pinned, checksum-verified release (pin `2026.08.4`, support floor
+installs the pinned, checksum-verified release (pin `2026.08.5`, support floor
 `2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
 into the host's own per-plugin writable data directory. That directory resolves
 from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,

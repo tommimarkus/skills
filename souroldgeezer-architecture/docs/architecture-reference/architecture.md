@@ -603,7 +603,7 @@ managed install in the host's per-plugin writable data directory, then a
 `dediren` on `PATH` that reports at or above the floor, then the migration-only
 fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
-(`2026.08.4`) into that data directory. It discovers that installation's live
+(`2026.08.5`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead

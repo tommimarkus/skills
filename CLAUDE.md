@@ -38,7 +38,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is plugin-provisioned:
   on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.08.4`, support floor `2026.07.28`, overridable by a CalVer
+  (pin `2026.08.5`, support floor `2026.07.28`, overridable by a CalVer
   `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
   writable data directory — `DEDIREN_HOME` (absolute) first, else
   `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`

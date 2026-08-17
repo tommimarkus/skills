@@ -89,7 +89,7 @@ running the same install command.
 `souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
 itself**. On first use the MCP launcher provisions the pinned, checksum-verified
 [Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.4`, support floor `2026.07.28`) into the host's own per-plugin writable
+(`2026.08.5`, support floor `2026.07.28`) into the host's own per-plugin writable
 data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
 above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
 executable for controlled validation.

@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 DEDIREN_REPO_DEFAULT = "tommimarkus/dediren"
-DEDIREN_VERSION_DEFAULT = "2026.08.4"
+DEDIREN_VERSION_DEFAULT = "2026.08.5"
 # Oldest supported release. From 2026.07.28 the render lane takes each view's
 # <title>/<desc> from its own `presentation`, so each rendered view arrives
 # labelled and the repo-owned post-render step requires that native name rather

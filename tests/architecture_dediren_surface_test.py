@@ -1414,7 +1414,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("release downloads", normalized_install)
 
     def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
-        pin = "2026.08.4"
+        pin = "2026.08.5"
         expectations = {
             REPO_ROOT / "AGENTS.md": f"pin `{pin}`",
             REPO_ROOT / "CLAUDE.md": f"pin `{pin}`",
