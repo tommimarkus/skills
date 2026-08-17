@@ -285,6 +285,82 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
             self.assertIn("workspaceRoot", tool["inputSchema"]["properties"])
             self.assertIn("workspaceRoot", tool["inputSchema"]["required"])
 
+    def test_cacheable_results_carry_caching_hints_and_others_stay_untouched(self) -> None:
+        # MCP 2026-07-28 requires ttlMs + cacheScope on every resultType "complete"
+        # result from a cacheable operation. server/discover and tools/list are
+        # cacheable; tools/call is not, and a legacy client keeps the legacy shape.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            fake_backend = self._write_fake_backend(root)
+            modern_meta = {
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientInfo": {
+                        "name": "caching-test",
+                        "version": "1",
+                    },
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                }
+            }
+            result = run_router(
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": "discover",
+                        "method": "server/discover",
+                        "params": modern_meta,
+                    },
+                    {
+                        "jsonrpc": "2.0",
+                        "id": "modern-list",
+                        "method": "tools/list",
+                        "params": modern_meta,
+                    },
+                    {"jsonrpc": "2.0", "id": "legacy-list", "method": "tools/list", "params": {}},
+                    {
+                        "jsonrpc": "2.0",
+                        "id": "call",
+                        "method": "tools/call",
+                        "params": {
+                            **modern_meta,
+                            "name": "dediren_guide",
+                            "arguments": {"workspaceRoot": str(workspace)},
+                        },
+                    },
+                ],
+                env={
+                    **os.environ,
+                    "DEDIREN_MCP_LAUNCHER": str(fake_backend),
+                    "FAKE_MODERN": "1",
+                },
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+
+        for request_id in ("discover", "modern-list"):
+            cacheable = responses[request_id]["result"]
+            self.assertEqual(cacheable["resultType"], "complete", request_id)
+            ttl = cacheable.get("ttlMs")
+            self.assertIsInstance(ttl, int, f"{request_id} ttlMs must be an integer")
+            self.assertNotIsInstance(ttl, bool, f"{request_id} ttlMs must not be a bool")
+            self.assertGreaterEqual(ttl, 0, f"{request_id} ttlMs must be >= 0")
+            # The catalog is identical for every caller, so it is shareable.
+            self.assertEqual(cacheable["cacheScope"], "public", request_id)
+
+        # tools/call is not a cacheable operation, so it carries no hints.
+        called = responses["call"]["result"]
+        self.assertNotIn("ttlMs", called)
+        self.assertNotIn("cacheScope", called)
+
+        # A legacy client keeps the legacy shape: no modern-only fields at all.
+        legacy = responses["legacy-list"]["result"]
+        self.assertIn("tools", legacy)
+        for modern_only in ("resultType", "ttlMs", "cacheScope"):
+            self.assertNotIn(modern_only, legacy)
+
     def test_upstream_launcher_logs_only_resolved_command_and_arguments(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

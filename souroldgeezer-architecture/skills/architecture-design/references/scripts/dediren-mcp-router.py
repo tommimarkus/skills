@@ -21,6 +21,14 @@ SERVER_INFO = {"name": "dediren-workspace-router", "version": "1.0.0"}
 MODERN_PROTOCOL = "2026-07-28"
 LEGACY_PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 SERVER_META = {"io.modelcontextprotocol/serverInfo": SERVER_INFO}
+# Cacheable "complete" results must carry caching hints. Nothing the router
+# publishes is caller-specific, so every cached response is shareable.
+CACHE_SCOPE = "public"
+# Identity, supported versions, and capabilities are fixed for this process.
+DISCOVER_TTL_MS = 3_600_000
+# The catalog follows the resolved Dediren install, and the router advertises no
+# listChanged notification, so this interval is the only re-check clients get.
+TOOLS_TTL_MS = 300_000
 DEFAULT_STARTUP_TIMEOUT_SECONDS = 120.0
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 360.0
 STDERR_HEAD_BYTES = 4 * 1024
@@ -532,6 +540,8 @@ class Router:
                         "instructions": (
                             "Pass an absolute workspaceRoot on every Dediren tool call."
                         ),
+                        "ttlMs": DISCOVER_TTL_MS,
+                        "cacheScope": CACHE_SCOPE,
                         "_meta": SERVER_META,
                     },
                 )
@@ -540,7 +550,14 @@ class Router:
             if method == "tools/list":
                 result: dict[str, Any] = {"tools": self.load_tools()}
                 if self.modern(request):
-                    result.update({"resultType": "complete", "_meta": SERVER_META})
+                    result.update(
+                        {
+                            "resultType": "complete",
+                            "ttlMs": TOOLS_TTL_MS,
+                            "cacheScope": CACHE_SCOPE,
+                            "_meta": SERVER_META,
+                        }
+                    )
                 return result_response(request_id, result)
             if method == "tools/call":
                 params = request.get("params")
