@@ -21,7 +21,7 @@ Dediren must be executable in the MCP process sandbox, and the launcher gets it
 there itself: it resolves `DEDIREN_COMMAND`, its managed install under the
 plugin data directory, a `dediren` on `PATH` reporting at or above the floor, or
 the former verified release cache — and otherwise installs the pinned
-`2026.08.5` release, verified against `SHA256SUMS` before unpacking, on the first
+`2026.08.6` release, verified against `SHA256SUMS` before unpacking, on the first
 `tools/list`. It never installs Java, never downgrades, and never patches the
 runtime. When provisioning fails or must be overridden — no Java 21+, no plugin
 data directory (exit 78), a download or checksum failure, an air-gapped host, or
@@ -243,6 +243,12 @@ resolve or disclose it before claiming render-ready, but it is not a hard block 
 layout *validation error* — connector-through-node, invalid route, group-boundary —
 is the blocking case, `ARCH-L-2`). An `overlap_count` that superimposes two nodes in
 the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
+The non-failing `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning means the render
+succeeded and the SVG is still available for inspection, but an edge label
+could not be placed without obscuring content. Treat the affected view as
+`ARCH-R-3`, not visually clean or render-ready: inspect the SVG, then widen the
+layout, shorten the label, or reposition the affected nodes and rebuild. If it
+cannot be resolved within scope, disclose the warning with the artifact.
 
 ### Rendered SVG
 

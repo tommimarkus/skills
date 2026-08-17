@@ -89,7 +89,7 @@ running the same install command.
 `souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
 itself**. On first use the MCP launcher provisions the pinned, checksum-verified
 [Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.5`, support floor `2026.07.28`) into the host's own per-plugin writable
+(`2026.08.6`, support floor `2026.07.28`) into the host's own per-plugin writable
 data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
 above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
 executable for controlled validation.
@@ -106,6 +106,11 @@ or `ALL_PROXY` plus optional `NO_PROXY`; see the bundled runtime procedure for
 the precedence and fail-closed validation rules. `curl` or `wget` may still be
 used by the plugin launcher as a fallback for release downloads when Python TLS
 is unavailable.
+
+Dediren `2026.08.6` also reports
+`DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` as a non-failing render warning. The SVG is
+retained for inspection, while architecture review treats the affected view as
+`ARCH-R-3` until the label is visually clear or the limitation is disclosed.
 
 The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
 bundled JRE, so the plugin never downloads a Java runtime, and a missing or

@@ -38,7 +38,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is plugin-provisioned:
   on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.08.5`, support floor `2026.07.28`, overridable by a CalVer
+  (pin `2026.08.6`, support floor `2026.07.28`, overridable by a CalVer
   `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
   writable data directory — `DEDIREN_HOME` (absolute) first, else
   `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
@@ -67,6 +67,10 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   `curl` or `wget` as a fallback for release downloads. Its additive inline
   import and negotiated MCP image fields flow through the live discovered schema
   and unchanged tool result rather than a runtime-specific adapter fork.
+  Dediren 2026.08.6 adds the non-failing
+  `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning when the renderer cannot place an
+  edge label without occluding content. The SVG remains available, but the
+  affected view maps to `ARCH-R-3` until visually clear or explicitly disclosed.
 
   The architecture plugin's Dediren configuration is host-specific, while the
   shared launcher/router has no harness detection. Its maintained adapters are

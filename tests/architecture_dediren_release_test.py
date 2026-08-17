@@ -639,6 +639,90 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(export_result.returncode, 0, export_result.stderr)
         self.assertEqual(envelope(export_result)["data"]["artifact_kind"], "archimate-oef+xml")
 
+    def test_render_warning_retains_svg_when_an_edge_label_cannot_clear_a_node(self) -> None:
+        layout = {
+            "layout_result_schema_version": "layout-result.schema.v2",
+            "view_id": "crowded-integration",
+            "nodes": [
+                {
+                    "id": "gateway",
+                    "source_id": "gateway",
+                    "projection_id": "gateway",
+                    "x": 40.0,
+                    "y": 30.0,
+                    "width": 150.0,
+                    "height": 72.0,
+                    "label": "Gateway",
+                    "source_pointer": "/nodes/0",
+                },
+                {
+                    "id": "worker",
+                    "source_id": "worker",
+                    "projection_id": "worker",
+                    "x": 310.0,
+                    "y": 30.0,
+                    "width": 150.0,
+                    "height": 72.0,
+                    "label": "Worker",
+                    "source_pointer": "/nodes/1",
+                },
+                {
+                    "id": "shared-platform",
+                    "source_id": "shared-platform",
+                    "projection_id": "shared-platform",
+                    "x": -80.0,
+                    "y": -140.0,
+                    "width": 760.0,
+                    "height": 420.0,
+                    "label": "Shared Platform",
+                    "source_pointer": "/nodes/2",
+                },
+            ],
+            "edges": [
+                {
+                    "id": "gateway-dispatches-worker",
+                    "source": "gateway",
+                    "target": "worker",
+                    "source_id": "gateway-dispatches-worker",
+                    "projection_id": "gateway-dispatches-worker",
+                    "routing_hints": [],
+                    "points": [
+                        {"x": 190.0, "y": 66.0},
+                        {"x": 310.0, "y": 66.0},
+                    ],
+                    "label": "dispatches asynchronously",
+                    "source_pointer": "/relationships/0",
+                }
+            ],
+            "groups": [],
+            "warnings": [],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            layout_path = Path(temp_dir) / "crowded-layout.json"
+            layout_path.write_text(json.dumps(layout), encoding="utf-8")
+            result = run_dediren(
+                "render",
+                "--plugin",
+                STAGE_PLUGIN_RENDER,
+                "--policy",
+                runtime_bundle() / "fixtures" / "render-policy" / "default-svg.json",
+                "--input",
+                layout_path,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = envelope(result)
+        self.assertEqual(payload["status"], "warning")
+        diagnostic = next(
+            item
+            for item in payload["diagnostics"]
+            if item["code"] == "DEDIREN_RENDER_EDGE_LABEL_OCCLUDED"
+        )
+        self.assertEqual(diagnostic["severity"], "warning")
+        self.assertEqual(diagnostic["path"], "edges[gateway-dispatches-worker].label")
+        self.assertIn("<svg", svg_render_content(result))
+
     def test_release_uml_source_fixtures_are_schema_and_profile_valid(self) -> None:
         bundle = runtime_bundle()
         uml_fixtures = [

@@ -507,6 +507,11 @@ roughly one label height. A `validate-layout` envelope reporting
 under-report label-edge dissociation — so measure from the rendered SVG. When
 measured dissociation contradicts a zero label-space count, also record the
 silent metric under `Dediren tool issues` (§9); do not patch the host runtime.
+When Dediren emits the non-failing `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning,
+the render succeeded and its SVG remains evidence, but the affected view is
+`ARCH-R-3`, not visually clean or render-ready. Inspect that SVG and resolve the
+occlusion by widening the layout, shortening the label, or repositioning the
+affected nodes; otherwise disclose it explicitly.
 
 First separate a *layout* problem from a *concern* problem. Density, route
 congestion, long spans, extreme aspect ratio, framing, and label displacement
@@ -603,7 +608,7 @@ managed install in the host's per-plugin writable data directory, then a
 `dediren` on `PATH` that reports at or above the floor, then the migration-only
 fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
-(`2026.08.5`) into that data directory. It discovers that installation's live
+(`2026.08.6`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead

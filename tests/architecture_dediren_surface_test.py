@@ -983,6 +983,17 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "hub fanout",
                 "mixed concerns",
             ],
+            ARCH_PLUGIN
+            / "skills"
+            / "architecture-design"
+            / "references"
+            / "procedures"
+            / "self-check.md": [
+                "DEDIREN_RENDER_EDGE_LABEL_OCCLUDED",
+                "ARCH-R-3",
+                "render succeeded",
+                "SVG",
+            ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl": [
                 "layout-valid versus visually clean distinction",
                 "ARCH-L-3",
@@ -1414,7 +1425,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("release downloads", normalized_install)
 
     def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
-        pin = "2026.08.5"
+        pin = "2026.08.6"
         expectations = {
             REPO_ROOT / "AGENTS.md": f"pin `{pin}`",
             REPO_ROOT / "CLAUDE.md": f"pin `{pin}`",
