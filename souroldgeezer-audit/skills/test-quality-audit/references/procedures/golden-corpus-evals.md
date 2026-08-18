@@ -49,9 +49,12 @@ references that should not suppress a gap.
 
 For a case with `expected_suite_health_smells`, also supply its
 `deep_mode_context` and ask for the required Suite health block. Grade evidence
-sources/window/limitations, current facts versus trends, the four verdicts,
-`SH-*` codes, candidate class, and forbidden actions. Do not add missing
-history, parse an unfamiliar format, or infer effectiveness from coverage.
+sources/window/limitations, current facts versus trends, the five dimension
+dispositions, `SH-*` codes, candidate class, and forbidden actions. When the
+case declares lifecycle expectations, also grade `Cost attribution` and
+`Lifecycle safety` from the supplied setup/teardown evidence. Do not add
+missing history, parse an unfamiliar format, infer effectiveness from coverage,
+or request new lifecycle instrumentation.
 
 ## Scoring
 
@@ -70,6 +73,9 @@ Compare output with the corpus entry:
 - **Worklist-priority pass:** `expected_worklist_priority`, when present, matches.
 - **Suite-health pass:** expected `SH-*` smells/positives, evidence states,
   candidate action, and forbidden actions match when present.
+- **Lifecycle pass:** `expected_cost_attribution` and
+  `expected_lifecycle_safety` match when present; per-test teardown/isolation
+  codes remain per-test findings rather than duplicate `SH-*` findings.
 - **Verdict pass:** `expected_verdict`, `expected_severity`, and
   `expected_action` match.
 - **Mode/gate pass:** `mode` is explicit; Quick cases match `expected_gate`
@@ -112,7 +118,8 @@ Record results in the change discussion or closeout notes:
   worklist-priority behavior.
 - Suite-health cases may include `expected_suite_health_smells`,
   `expected_suite_health_positives`, `expected_trend_state`,
-  `expected_current_run_state`, and `forbidden_actions`.
+  `expected_current_run_state`, `expected_cost_attribution`,
+  `expected_lifecycle_safety`, and `forbidden_actions`.
 - Use `forbidden_smells` to pin known false-positive regressions.
 - When changing expected outcomes, state whether the change reflects a rubric
   improvement or a deliberate behavior change.

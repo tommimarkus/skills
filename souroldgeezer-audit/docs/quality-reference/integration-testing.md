@@ -62,7 +62,12 @@ A single named seam, a single named scope, a single named expected outcome. When
 No `Sleep`, no `WaitFor` with a wall-clock budget, no retry-until-green loops. Time is controlled. Randomness is seeded. Network is in-band (a real dependency, started by the test) or stubbed at the deployment boundary, never both.
 
 ### 2.7 Fast enough to run in CI on every commit
-Beck's *SlowTest* applies double here. A test that takes two minutes to spin up an environment will be skipped, and a skipped test catches nothing. Ship setup in the test, not around it; reuse environments where it does not compromise hermeticity; quarantine the slow ones into a separate lane and accept that they run less often.
+Beck's *SlowTest* applies double here. Judge setup cost against the project's
+declared lane budget and available phase/timing evidence, not a universal time
+limit. Ship lifecycle ownership with the suite; safely amortize immutable or
+resettable infrastructure without weakening per-test state isolation. In Deep
+mode, use `SH-HC-7` only for a measured, attributed budget breach, `SH-LC-7`
+for incomplete static cost evidence, and `SH-POS-6` for safe amortization.
 
 ### 2.8 Trustworthy, readable, maintainable
 <!-- lean-audit:sync-intentional -->
@@ -170,7 +175,11 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 2. **`I-LC-2`** — Test name ends in `_Works` or `_Integration` or `_EndToEnd` with no requirement in the name.
 3. **`I-LC-3`** — Expected values with no external provenance. May be fine; may be a paste from the SUT.
 4. **`I-LC-4`** — Parameterized test where every case asserts the same thing. The parameterization is doing no work.
-5. **`I-LC-5`** — Fixture rebuilt from scratch in every test. May be correct hygiene; may indicate the fixture is too ambitious and the test is reconstructing production state instead of isolating a slice.
+5. **`I-LC-5`** — Fixture rebuilt from scratch in every test. This is not a
+   smell by repetition alone: cheap deterministic setup can correctly protect
+   isolation across tests with distinct assertions. In Deep mode, evaluate an
+   expensive fixture through `SH-HC-7` or `SH-LC-7`; do not recommend sharing
+   without evidence that the resource is immutable or safely resettable.
 6. **`I-LC-6`** — Broad integration test where a narrow one would do. Seam conflation.
 
 ### 5.4 Positive signals (reward these)
@@ -182,6 +191,10 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 5. **Hermetic by construction.** Test runs offline, runs in parallel with itself, produces the same result twice in a row.
 6. **Asserts on a published contract** with a cited source — status code, error envelope, audit event schema, OpenAPI fragment.
 7. **Tests that express an invariant** — round-trip, idempotency, "publish only after commit" — rather than a single point.
+8. **Safe lifecycle amortization across the portfolio.** Expensive immutable or
+   safely resettable infrastructure is shared at the narrowest safe scope,
+   while mutable data and sessions remain per-test with failure-safe cleanup
+   (`SH-POS-6` in Deep mode).
 
 ---
 
@@ -213,13 +226,21 @@ Flake is the second-biggest failure mode after scope confusion, and the two are 
 
 - Each test owns its data. Per-test factories generate per-test keys. No two tests in the suite share a row by accident.
 - Cleanup runs on failure as well as success. The teardown path must be the same path the assertion path takes when it fails.
+- Amortize only immutable or safely resettable infrastructure. Keep mutable
+  data, users, sessions, and client/browser contexts owned per-test.
 - No test asserts wall-clock behavior without a controlled clock. Inject the clock at the seam.
 - Containers are reset between runs, or tests scope their data per-run with a unique prefix.
 - No test reads state another test wrote. If two tests need the same precondition, both must build it themselves.
 
 ### 7.3 Test data strategy
 
-Per-test factories beat shared seed data. Shared seed data starts as a convenience and ends as the suite's biggest source of incidents — every new test either inherits assumptions from the seed or invalidates it for its neighbors. Pay the per-test setup cost. The cost compounds linearly; the seed-data debt compounds quadratically with test count.
+Per-test factories beat shared seed data. Shared seed data starts as a
+convenience and ends as the suite's biggest source of incidents — every new
+test either inherits assumptions from the seed or invalidates it for its
+neighbors. Retain cheap deterministic setup when it makes ownership clear.
+Amortize expensive infrastructure only with a safe reset boundary and
+failure-safe cleanup. Do not consolidate tests merely because their setup text
+matches or their assertions differ.
 
 ---
 
@@ -249,7 +270,9 @@ Per-test factories beat shared seed data. Shared seed data starts as a convenien
 - **Historical failure attribution.** What did the test catch in the last N weeks? If the answer is "nothing," the test is a candidate for deletion.
 - **Contract drift alerts** from CDC tooling — Pact Broker, Spring Cloud Contract.
 
-Be explicit about the limits. Ask for runtime signals rather than guess.
+Be explicit about the limits. Use runtime signals already available rather than
+guess. Never request new instrumentation during an ordinary audit; unavailable
+evidence remains `unknown`.
 
 ---
 
@@ -282,12 +305,17 @@ Distilled from §2–§7, written as directives an audit agent can apply directl
 3. **Inside an integration test, a mock is a scope leak.** Justify it (process or deployment boundary, no contract available) or move the test.
 4. **At a service boundary, prefer a consumer-driven contract over a mock.** A contract subsumes the mock; the mock encodes the author's beliefs.
 5. **Hermetic by construction.** A test that depends on state it did not create depends on luck.
-6. **Test data is owned per-test.** Shared mutable fixtures are a smell.
+6. **Test data is owned per-test.** Shared mutable fixtures are a smell;
+   immutable or safely resettable infrastructure may be amortized without
+   sharing mutable state.
 7. **Log and trace assertions are valid only against published contracts.** Free-text logs are not contracts.
 8. **Snapshot equals characterization, amplified.** Snapshot tests at the integration layer drift faster than the code does.
 9. **Flake is a scope signal, not a quarantine problem.** Quarantining flakes hides the underlying scope confusion.
 10. **Coverage is a floor.** Mutation testing on the SUT path and historical failure attribution are the ceiling.
-11. **Be honest about what cannot be determined from source alone.** Ask for runtime signals, mutation runs, contract pacts, or environment history rather than inventing certainty.
+11. **Be honest about what cannot be determined from source alone.** Use
+    already-available runtime signals, mutation results, contract pacts, or
+    environment history; otherwise report `unknown` rather than inventing
+    certainty or requesting new instrumentation during an ordinary audit.
 
 ---
 

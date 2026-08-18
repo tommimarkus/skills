@@ -179,8 +179,10 @@ and Node/React lifecycle-test rules remain under test-quality-audit.
 Every Deep test-quality audit assesses suite health by establishing management
 evidence before sampling: feedback lanes, project-declared budgets, current
 results, runtime distribution, reliability, ownership, overlap, and retirement
-discipline. Quick remains per-test. Missing optional history or effectiveness
-evidence is `unknown`, not a prompt to build analytics.
+discipline. It also includes a bounded setup/teardown lifecycle assessment for
+cost attribution, safe infrastructure amortization, per-test mutable-state
+isolation, and failure-safe cleanup. Quick remains per-test. Missing optional
+history or effectiveness evidence is `unknown`, not a prompt to build analytics.
 
 When a shared workflow needs host behavior, state the capability and give a
 runtime mapping with a safe fallback. For example, Claude planning retains

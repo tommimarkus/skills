@@ -19,6 +19,7 @@ runtime, reliability, or effectiveness evidence.
 `SH-HC-4` — Quarantines, retries, skips, or flaky-test suppressions lack an owner, reason, exit criterion, or bounded review cadence.
 `SH-HC-5` — Retirement policy treats coverage overlap, test count, test-to-code ratio, or “never failed” history as sufficient deletion evidence.
 `SH-HC-6` — The configured current run fails, errors, or exits nonzero.
+`SH-HC-7` — Measured lifecycle evidence attributes a declared-budget breach to unnecessarily repeated initialization or teardown of an immutable or safely resettable resource.
 
 ### Low-confidence smells (`SH-LC-*`)
 
@@ -28,6 +29,7 @@ runtime, reliability, or effectiveness evidence.
 `SH-LC-4` — Observed cost is material to the intended cadence but lacks a project-declared budget or comparable baseline; identify whether cost is tail-concentrated or broadly distributed.
 `SH-LC-5` — The routine change path is one mixed full-suite lane with no faster lane or deliberately lower cadence.
 `SH-LC-6` — No visible portfolio owner, overlap/gardening review, or retirement cadence.
+`SH-LC-7` — Static lifecycle evidence suggests repeated expensive setup, but timing, baseline, budget, or safe-sharing evidence is incomplete.
 
 ### Positive signals (`SH-POS-*`)
 
@@ -36,6 +38,7 @@ runtime, reliability, or effectiveness evidence.
 `SH-POS-3` — Selective execution is validated against affected-test evidence and backed by periodic full-suite runs.
 `SH-POS-4` — Quarantine has owned exits, and the portfolio receives frequent bounded maintenance rather than rare large cleanup campaigns.
 `SH-POS-5` — Fast, full, and expensive lanes have distinct purposes and deliberate cadences.
+`SH-POS-6` — Expensive immutable or safely resettable infrastructure is safely amortized while mutable data, users, sessions, and browser contexts remain per-test with failure-safe cleanup.
 
 Retirement requires a distinct-contract review plus mutation, failure-attribution,
 or controlled-removal evidence. Coverage-only similarity can produce false

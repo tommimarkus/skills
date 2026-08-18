@@ -34,6 +34,11 @@ safe and what it can support; sampling cannot fill an absent current-run result
 or runtime distribution. If the target or runner cannot be established, stop
 the suite-health verdict at `not assessed` and say why.
 
+Also inventory lifecycle hooks at runner, suite, module/class, worker, and
+per-test scope from configuration, fixtures, factories, and helpers. For each
+material resource, record its current lifetime, mutability, reset mechanism,
+teardown path, and isolation obligation before judging setup cost or sharing.
+
 Run one project-configured full suite automatically when it is local,
 read-only, non-browser, non-external, and expected to finish within about ten
 minutes. Ask before longer, unknown, browser, external-service, rerun, or
@@ -140,6 +145,42 @@ Classify each portfolio candidate as `keep`, `strengthen`, `move down`,
 deletion from coverage similarity alone. A retirement candidate needs
 distinct-contract review plus mutation, failure-attribution, or
 controlled-removal evidence; absent that evidence, use `verify-then-retire`.
+
+### Setup/teardown lifecycle
+
+Every Deep report emits this bounded section:
+
+- **Cost attribution: measured | inferred | unknown**
+- **Lifecycle safety: supported-positive | substantiated-finding | unknown-evidence-gap**
+
+Show up to five material resources/hooks. If none are material, say so and
+still emit both dispositions.
+
+| Resource/hook | Current scope | Mutability/isolation need | Cost evidence | Cleanup evidence | Portfolio action |
+|---|---|---|---|---|---|
+| database container / suite fixture | suite | immutable infrastructure; per-test rows | <phase timing or static inference> | <reset and failure path> | <keep / strengthen / schedule later> |
+
+`Cost attribution` is `measured` only when direct phase/timing evidence
+attributes lifecycle work; `SH-HC-7` additionally requires that evidence to
+attribute a declared-budget breach to unnecessary repetition of an immutable
+or safely resettable resource. Use `inferred` with `SH-LC-7` when static
+lifecycle evidence suggests repeated expensive setup but timing, a comparable
+baseline, a declared budget, or safe-sharing evidence is incomplete. Use
+`unknown` when attribution is unsupported. Never request new instrumentation
+during an ordinary audit.
+
+Derive `Lifecycle safety` from isolation and teardown evidence. Summarize
+existing per-test findings such as `I-HC-A2`, `I-HC-A4`, `I-HC-A9`, and
+`I-HC-A11`; do not mint a duplicate suite finding. `SH-POS-6` requires evidence
+that expensive immutable or safely resettable infrastructure is safely
+amortized while mutable data, users, sessions, and browser contexts remain
+per-test with failure-safe cleanup.
+
+The optimization invariant is strict: amortize only immutable or safely
+resettable infrastructure; mutable data, users, sessions, and browser contexts
+remain per-test. Cheap deterministic setup may repeat when it protects clarity
+or isolation. Do not consolidate tests merely because their setup text matches
+or their assertions differ.
 
 ### Gap report
 

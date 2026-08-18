@@ -9,6 +9,7 @@ SKILL_ROOT = REPO_ROOT / "souroldgeezer-audit/skills/test-quality-audit"
 SKILL = SKILL_ROOT / "SKILL.md"
 OUTPUT = SKILL_ROOT / "references/procedures/deep-mode-output-format.md"
 CATALOG = SKILL_ROOT / "references/smell-catalog.md"
+INTEGRATION = REPO_ROOT / "souroldgeezer-audit/docs/quality-reference/integration-testing.md"
 GROUNDING = SKILL_ROOT / "references/source-grounding.md"
 BEHAVIORS = SKILL_ROOT / "references/evals/behavior-cases.jsonl"
 TRIGGERS = SKILL_ROOT / "references/evals/trigger-cases.jsonl"
@@ -43,6 +44,14 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             skill.index("3b. Deep only — mandatory suite-management pass"),
             skill.index("4. Apply core smells"),
         )
+        self.assertLess(
+            skill.index("3c. Deep only — mandatory setup/teardown lifecycle pass"),
+            skill.index("4. Apply core smells"),
+        )
+        self.assertIn("runner, suite, module/class, worker, and per-test", skill_compact)
+        self.assertIn("immutable or safely resettable infrastructure", skill_compact)
+        self.assertIn("mutable data and session ownership", skill_compact)
+        self.assertIn("Never request new instrumentation during an ordinary audit", skill)
 
         scenarios = {row["id"]: row for row in json.loads(read(SCENARIOS))}
         procedure = (
@@ -88,6 +97,14 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "supported-positive",
             "substantiated-finding",
             "unknown-evidence-gap",
+            "### setup/teardown lifecycle",
+            "cost attribution: measured | inferred | unknown",
+            "lifecycle safety: supported-positive | substantiated-finding | unknown-evidence-gap",
+            "up to five material resources/hooks",
+            "current scope",
+            "mutability/isolation need",
+            "cost evidence",
+            "cleanup evidence",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, output_lower)
@@ -110,6 +127,18 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         ):
             with self.subTest(required_execution_fact=required_execution_fact):
                 self.assertIn(required_execution_fact, output_compact)
+
+        for evidence_rule in (
+            "direct phase/timing evidence",
+            "declared-budget breach",
+            "static lifecycle evidence",
+            "never request new instrumentation",
+            "immutable or safely resettable infrastructure",
+            "mutable data, users, sessions, and browser contexts remain per-test",
+            "do not consolidate tests merely because their setup text matches",
+        ):
+            with self.subTest(evidence_rule=evidence_rule):
+                self.assertIn(evidence_rule, output_compact)
 
         self.assertIn(
             'python3 "${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
@@ -144,17 +173,20 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "SH-HC-4",
             "SH-HC-5",
             "SH-HC-6",
+            "SH-HC-7",
             "SH-LC-1",
             "SH-LC-2",
             "SH-LC-3",
             "SH-LC-4",
             "SH-LC-5",
             "SH-LC-6",
+            "SH-LC-7",
             "SH-POS-1",
             "SH-POS-2",
             "SH-POS-3",
             "SH-POS-4",
             "SH-POS-5",
+            "SH-POS-6",
         ):
             self.assertIn(f"`{code}`", catalog)
         self.assertIn("test-count growth alone is not a smell", " ".join(catalog.lower().split()))
@@ -185,6 +217,19 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "`SH-POS-5` — Fast, full, and expensive lanes have distinct purposes and deliberate cadences.",
             compact_catalog,
         )
+        self.assertIn("measured lifecycle evidence", compact_catalog.lower())
+        self.assertIn("static lifecycle evidence", compact_catalog.lower())
+        self.assertIn("safely amortized", compact_catalog.lower())
+
+        integration = " ".join(read(INTEGRATION).split())
+        self.assertIn("SH-HC-7", integration)
+        self.assertIn("SH-LC-7", integration)
+        self.assertIn("SH-POS-6", integration)
+        self.assertIn("cheap deterministic setup", integration)
+        self.assertIn("distinct assertions", integration)
+        self.assertIn("failure-safe cleanup", integration)
+        self.assertIn("do not consolidate tests merely because their setup text matches", integration.lower())
+        self.assertIn("never request new instrumentation during an ordinary audit", integration.lower())
 
     def test_behavior_and_golden_cases_pin_suite_health_boundaries(self) -> None:
         behaviors = read_jsonl(BEHAVIORS)
@@ -202,6 +247,11 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "test-quality-behavior-suite-broad-unbudgeted-cost",
             "test-quality-behavior-suite-missing-ownership",
             "test-quality-behavior-suite-count-only-neutrality",
+            "test-quality-behavior-lifecycle-measured-budget-breach",
+            "test-quality-behavior-lifecycle-static-repetition",
+            "test-quality-behavior-lifecycle-safe-amortization",
+            "test-quality-behavior-lifecycle-cheap-distinct-tests",
+            "test-quality-behavior-lifecycle-success-only-cleanup",
         }
         self.assertTrue(expected_behavior_ids.issubset(behaviors))
         for case_id in expected_behavior_ids:
@@ -226,6 +276,24 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("SH-LC-6", golden["TQA-GOLD-0050"]["expected_suite_health_smells"])
         self.assertEqual([], golden["TQA-GOLD-0051"]["expected_suite_health_smells"])
         self.assertIn("SH-POS-5", golden["TQA-GOLD-0051"]["expected_suite_health_positives"])
+
+        lifecycle_cases = {
+            "TQA-GOLD-0052": ("measured", "supported-positive", ["SH-HC-1", "SH-HC-7"], []),
+            "TQA-GOLD-0053": ("inferred", "unknown-evidence-gap", ["SH-LC-7"], []),
+            "TQA-GOLD-0054": ("measured", "supported-positive", [], ["SH-POS-6"]),
+            "TQA-GOLD-0055": ("measured", "supported-positive", [], []),
+            "TQA-GOLD-0056": ("unknown", "substantiated-finding", [], []),
+        }
+        for case_id, (attribution, safety, smells, positives) in lifecycle_cases.items():
+            with self.subTest(case_id=case_id):
+                case = golden[case_id]
+                self.assertEqual(attribution, case["expected_cost_attribution"])
+                self.assertEqual(safety, case["expected_lifecycle_safety"])
+                self.assertEqual(smells, case["expected_suite_health_smells"])
+                self.assertEqual(positives, case["expected_suite_health_positives"])
+        self.assertEqual(["I-HC-A9"], golden["TQA-GOLD-0056"]["expected_smells"])
+        self.assertIn("unsafe-sharing-recommendation", golden["TQA-GOLD-0053"]["forbidden_actions"])
+        self.assertIn("setup-text-consolidation", golden["TQA-GOLD-0055"]["forbidden_actions"])
 
     def test_triggers_wrappers_docs_and_sources_cover_the_public_contract(self) -> None:
         triggers = read_jsonl(TRIGGERS)
@@ -255,6 +323,7 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             with self.subTest(path=path.name):
                 text = read(path)
                 self.assertIn("suite health", text.lower())
+                self.assertIn("setup/teardown lifecycle", text.lower())
 
 
 if __name__ == "__main__":

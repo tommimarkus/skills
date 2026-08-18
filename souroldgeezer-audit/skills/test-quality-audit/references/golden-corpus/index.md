@@ -17,12 +17,17 @@ For suite-health work, cover healthy growth and managed lanes, costly
 cross-layer overlap, failed current runs, missing history, unreadable result
 formats, monolithic every-change execution, broad unbudgeted cost, ownership,
 selective-execution safety, quarantine ownership, count-only neutrality, and
-retirement evidence.
+retirement evidence. Lifecycle cases cover a measured repeated immutable setup
+budget breach, static repetition with incomplete attribution, safe
+amortization, cheap isolated repetition with distinct assertions, and
+success-only cleanup.
 
 Add minimal original examples with expected routing, smells, positives,
 boundary evidence, coverage strength, verdict, severity, and action;
 optionally risk tier and worklist priority.
 Suite-health cases may additionally declare `expected_suite_health_smells`,
 `expected_suite_health_positives`, current/trend evidence-state fields, and
-forbidden actions. Deep cases should make the five-dimension disposition and
+forbidden actions. Lifecycle cases additionally declare
+`expected_cost_attribution` and `expected_lifecycle_safety`. Deep cases should
+make the five-dimension disposition and
 deterministic verdict derivation inspectable without changing Quick cases.

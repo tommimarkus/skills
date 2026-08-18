@@ -136,12 +136,22 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
     non-browser, non-external, and expected to finish within about ten minutes;
     ask before longer, unknown, browser, external-service, rerun, or mutation
     work. Use readable artifacts when execution is not authorized or safe.
+3c. Deep only — mandatory setup/teardown lifecycle pass: inventory runner,
+    suite, module/class, worker, and per-test lifecycle hooks from configuration,
+    fixtures, factories, and helpers. For each material resource, map its
+    current lifetime, mutability, reset mechanism, teardown path, and isolation
+    obligation. Amortize only immutable or safely resettable infrastructure;
+    preserve per-test mutable data and session ownership. Attribute a budget
+    breach to repeated lifecycle work only from direct phase/timing evidence;
+    static repetition is inference, and unsupported attribution is unknown.
+    Never request new instrumentation during an ordinary audit.
 4. Apply core smells, extension smells filtered by `Applies to:`, and exact
    carve-outs. Emit one finding per test under one rubric; cite matched codes
    and use the highest applicable severity.
-5. Deep only: combine the suite-management pass with sampled per-test evidence;
-   close all five required dimensions, suite verdict, portfolio candidates,
-   gaps, determinism, mutation, and prioritized worklist. Use only
+5. Deep only: combine the suite-management and setup/teardown lifecycle passes
+   with sampled per-test evidence; close all five required dimensions, suite
+   verdict, lifecycle cost and safety dispositions, portfolio candidates, gaps,
+   determinism, mutation, and prioritized worklist. Use only
    project-configured commands and already-readable evidence; never build an
    ingestion layer. Never run suite checks in Quick mode.
 6. Report. Quick emits per-test findings, then `Quick gate: <status>`. Use the
@@ -150,8 +160,8 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
    else `pass-limited`. Warn/info do not fail, risk is orthogonal, and a
    remediated block needs a clean rerun. Quick remains per-test and never emits
    `Gap-*` findings or a remediation worklist. Deep adds rollup, suite
-   assessment, required Suite health block, gap report, determinism, mutation
-   section, and remediation worklist.
+   assessment, required Suite health and Setup/teardown lifecycle blocks, gap
+   report, determinism, mutation section, and remediation worklist.
 
 ## Rules and Stop Conditions
 
