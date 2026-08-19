@@ -54,7 +54,7 @@ shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
 call. Dediren itself is provisioned by the plugin: on first use the launcher
-installs the pinned, checksum-verified release (pin `2026.08.6`, support floor
+installs the pinned, checksum-verified release (pin `2026.08.7`, support floor
 `2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
 into the host's own per-plugin writable data directory. That directory resolves
 from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,
@@ -87,6 +87,16 @@ Dediren 2026.08.6 adds the non-failing
 edge label without occluding content. A render carrying it still returns its
 SVG, but architecture review maps the affected view to `ARCH-R-3` until the
 label is made visually clear or the limitation is disclosed.
+
+Dediren 2026.08.7 adds a draw.io® import lane: `dediren_import` accepts a third
+plugin id, `drawio`, beside `mermaid` and `dot`. An imported draw.io file always
+lands as `generic-graph` (`generic.node` / `generic.link`) rather than a promoted
+model, because draw.io carries relationship semantics only as arrowhead
+decoration, and the non-failing `DEDIREN_DRAWIO_HINT_IGNORED` warning names the
+geometry and presentation keys ELK re-lays out. The release's draw.io export
+engine is reachable from no build driver, so the tool set stays at eight and the
+skill's trigger boundary still excludes diagrams the user wants kept in that
+format.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|

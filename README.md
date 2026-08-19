@@ -89,7 +89,7 @@ running the same install command.
 `souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
 itself**. On first use the MCP launcher provisions the pinned, checksum-verified
 [Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.6`, support floor `2026.07.28`) into the host's own per-plugin writable
+(`2026.08.7`, support floor `2026.07.28`) into the host's own per-plugin writable
 data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
 above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
 executable for controlled validation.
@@ -111,6 +111,12 @@ Dediren `2026.08.6` also reports
 `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` as a non-failing render warning. The SVG is
 retained for inspection, while architecture review treats the affected view as
 `ARCH-R-3` until the label is visually clear or the limitation is disclosed.
+
+Dediren `2026.08.7` adds draw.io® import: `dediren_import` accepts `drawio`
+beside `mermaid` and `dot`. An imported draw.io file becomes a generic-graph
+model rather than a promoted ArchiMate® or UML® one, and a non-failing warning
+lists the geometry and presentation keys the layout engine replaces. Diagrams
+you want to keep in draw.io format still belong outside this plugin.
 
 The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
 bundled JRE, so the plugin never downloads a Java runtime, and a missing or

@@ -38,7 +38,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is plugin-provisioned:
   on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.08.6`, support floor `2026.07.28`, overridable by a CalVer
+  (pin `2026.08.7`, support floor `2026.07.28`, overridable by a CalVer
   `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
   writable data directory — `DEDIREN_HOME` (absolute) first, else
   `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
@@ -71,6 +71,15 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning when the renderer cannot place an
   edge label without occluding content. The SVG remains available, but the
   affected view maps to `ARCH-R-3` until visually clear or explicitly disclosed.
+  Dediren 2026.08.7 adds a draw.io® import lane: `dediren_import` accepts a
+  third plugin id, `drawio`, beside `mermaid` and `dot`. An imported draw.io
+  file always lands as `generic-graph` (`generic.node` / `generic.link`) and is
+  never promoted, because draw.io carries relationship semantics only as
+  arrowhead decoration; the non-failing `DEDIREN_DRAWIO_HINT_IGNORED` warning
+  names the geometry and presentation keys ELK re-lays out. The release's
+  draw.io export engine is selected by no build driver, so the tool set stays
+  at eight and the skill's trigger boundary still excludes diagrams the user
+  wants kept in draw.io format.
 
   The architecture plugin's Dediren configuration is host-specific, while the
   shared launcher/router has no harness detection. Its maintained adapters are
