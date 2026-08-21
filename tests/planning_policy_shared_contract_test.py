@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -17,7 +18,7 @@ LEDGER_CONTRACT = (
 LEDGER_COMPATIBILITY = LEDGER_CONTRACT.with_name("ledger-compatibility.md")
 TEMPLATE = (
     Path(__file__).parents[1]
-    / "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json"
+    / "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json"
 )
 SPEC = importlib.util.spec_from_file_location("plan_contract", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -63,11 +64,42 @@ def v3_plan(*leaves, work_units=None, **overrides):
     return plan
 
 
+def v4_plan(*leaves, work_units=None, **overrides):
+    plan = v3_plan(*leaves, work_units=work_units, **overrides)
+    plan["contract_version"] = 4
+    for item in plan["leaves"]:
+        item["capability_requirements"] = {
+            "baseline": "plan-step-base-v1",
+            "additional": [],
+        }
+    return plan
+
+
+def capability_binding(plan):
+    plan_sha256 = hashlib.sha256(
+        json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "schema": "planning-capability-binding-v1",
+        "plan_sha256": plan_sha256,
+        "bindings": [
+            {
+                "step_id": item["id"],
+                "host": "codex",
+                "executor": "gpt-5.6-terra",
+                "requirements": item["capability_requirements"],
+                "evidence": ["test fixture capability inventory"],
+            }
+            for item in plan["leaves"]
+        ],
+    }
+
+
 class SharedContractTest(unittest.TestCase):
-    def test_v3_template_is_canonical_blank_scaffold_and_populates_to_dispatch(self):
+    def test_v4_template_is_canonical_blank_scaffold_and_populates_to_dispatch(self):
         template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
         self.assertEqual("contract_version", next(iter(template)))
-        self.assertEqual(3, template["contract_version"])
+        self.assertEqual(4, template["contract_version"])
         self.assertNotIn("version", template)
         self.assertTrue(
             {
@@ -124,7 +156,10 @@ class SharedContractTest(unittest.TestCase):
         )
         populated = MODULE.validate(template)
         self.assertTrue(populated["valid"], populated["errors"])
-        self.assertTrue(populated["dispatch_ready"])
+        self.assertTrue(populated["approval_ready"])
+        self.assertFalse(populated["dispatch_ready"])
+        bound = MODULE.validate(template, capability_binding=capability_binding(template))
+        self.assertTrue(bound["dispatch_ready"])
 
     def test_accepts_weighted_medium_ready_plan(self):
         plan = {
@@ -273,12 +308,19 @@ class SharedContractTest(unittest.TestCase):
         self.assertTrue(result["valid"])
         self.assertEqual(result["standard_ready_ratio"], 1.0)
 
-    def test_accepts_dispatch_ready_version_three_plan(self):
-        result = MODULE.validate(v3_plan(leaf("one", "u1")))
+    def test_version_three_is_resume_only_and_bound_version_four_dispatches(self):
+        prior = MODULE.validate(v3_plan(leaf("one", "u1")))
+        self.assertTrue(prior["valid"])
+        self.assertEqual(prior["contract_version"], 3)
+        self.assertFalse(prior["dispatch_ready"])
+        self.assertTrue(prior["resume_ready"])
+        self.assertIn("blocked:contract_migration_required", prior["warnings"])
+
+        current = v4_plan(leaf("one", "u1"))
+        result = MODULE.validate(current, capability_binding=capability_binding(current))
         self.assertTrue(result["valid"])
-        self.assertEqual(result["contract_version"], 3)
+        self.assertEqual(result["contract_version"], 4)
         self.assertTrue(result["dispatch_ready"])
-        self.assertEqual(result["warnings"], [])
 
     def test_version_two_plan_is_resume_only(self):
         old = v3_plan(leaf("one", "u1"))

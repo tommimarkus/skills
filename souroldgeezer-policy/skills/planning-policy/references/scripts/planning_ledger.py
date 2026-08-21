@@ -17,7 +17,9 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-MAX_CHECKPOINT = 32 * 1024
+# A v4 checkpoint retains one bounded capability binding per step. Keep the
+# record bounded while leaving the established 40-step summary lane viable.
+MAX_CHECKPOINT = 64 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
 MAX_REMEDIATION = 4 * 1024
@@ -1965,7 +1967,7 @@ def remove_entry(entry):
     path = entry["_path"]
     if path.is_symlink() or not path.is_dir():
         raise Error("refusing changed purge target")
-    if entry["contract_version"] in {2, 3}:
+    if entry["contract_version"] in {2, 3, 4}:
         safe_run_contents(path)
         returns = path / "returns"
         if returns.exists() and any(
@@ -1980,7 +1982,7 @@ def remove_entry(entry):
             raise Error("refusing changed legacy purge target")
     parent_path = path.parent
     shutil.rmtree(path)
-    if entry["contract_version"] in {2, 3}:
+    if entry["contract_version"] in {2, 3, 4}:
         try:
             parent_path.rmdir()
         except OSError:
@@ -2239,8 +2241,8 @@ def usage_path(directory):
 def trace_run(args, require_usage=True, require_open=False):
     parent(args.actor)
     directory, data, plan, leafs = load2(args)
-    if data["schema"] != 3:
-        raise Error("tracing requires a contract version 3 run")
+    if data["schema"] not in {3, 4}:
+        raise Error("tracing requires a contract version 3 or 4 run")
     usage = usage_path(directory)
     if require_usage and not usage.exists():
         raise Error("trace-init is required")

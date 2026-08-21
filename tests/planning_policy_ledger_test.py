@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -67,6 +68,10 @@ class PlanningLedgerTest(unittest.TestCase):
                 "stop_conditions": ["missing_load_bearing_information"],
                 "work_unit_id": sid,
                 "max_attempts": max_attempts,
+                "capability_requirements": {
+                    "baseline": "plan-step-base-v1",
+                    "additional": [],
+                },
             }
             if portable_tier in {"analytical", "deep"}:
                 leaf["irreducible_unknown_or_risk"] = "retry behavior at the tier boundary"
@@ -74,7 +79,7 @@ class PlanningLedgerTest(unittest.TestCase):
             units.append({"id": sid, "original_size": "small"})
         path = self.root / "plan.json"
         plan = {
-            "contract_version": 3,
+            "contract_version": 4,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["decision"],
@@ -88,6 +93,73 @@ class PlanningLedgerTest(unittest.TestCase):
             }
         path.write_text(json.dumps(plan))
         return path
+
+    def capability_binding(self, plan_path, *, host_overrides=None, executor_overrides=None):
+        plan = json.loads(Path(plan_path).read_text())
+        host_overrides = host_overrides or {}
+        executor_overrides = executor_overrides or {}
+        plan_sha256 = hashlib.sha256(
+            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        path = self.root / "capability-binding.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema": "planning-capability-binding-v1",
+                    "plan_sha256": plan_sha256,
+                    "bindings": [
+                        {
+                            "step_id": leaf["id"],
+                            "host": host_overrides.get(leaf["id"], "codex"),
+                            "executor": executor_overrides.get(leaf["id"], "inherit"),
+                            "requirements": leaf["capability_requirements"],
+                            "evidence": ["test fixture capability inventory"],
+                        }
+                        for leaf in plan["leaves"]
+                    ],
+                }
+            )
+        )
+        return path
+
+    def downgrade_run_to_v2(self, run, *, policyless=False):
+        directory = self.root / "planning-policy/ledgers/plan" / run
+        plan_path = directory / "plan.json"
+        plan = json.loads(plan_path.read_text())
+        plan["contract_version"] = 2
+        for leaf in plan["leaves"]:
+            leaf.pop("capability_requirements")
+        plan_path.write_text(json.dumps(plan))
+
+        checkpoint_path = directory / "checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text())
+        checkpoint["schema"] = 2
+        checkpoint["plan_hash"] = ledger.digest(plan)
+        if policyless:
+            checkpoint.pop("retry_policy")
+        for step in checkpoint["steps"].values():
+            step.pop("capability_binding")
+            step.pop("capability_binding_sha256")
+            if policyless:
+                for field in (
+                    "current_tier",
+                    "same_tier_retry_used",
+                    "current_assignment",
+                    "retry_remediation_path",
+                    "retry_remediation_sha256",
+                ):
+                    step.pop(field)
+            else:
+                step["current_assignment"].pop("model_or_alias")
+        checkpoint_path.write_text(json.dumps(checkpoint))
+
+        events_path = directory / "events.jsonl"
+        events = [json.loads(line) for line in events_path.read_text().splitlines()]
+        for event in events:
+            event["action"] = event["action"].replace("-v4", "-v2")
+            if "plan_hash" in event:
+                event["plan_hash"] = checkpoint["plan_hash"]
+        events_path.write_text("".join(json.dumps(event) + "\n" for event in events))
 
     def assignments(self, count=2):
         path = self.root / "assign.json"
@@ -108,16 +180,19 @@ class PlanningLedgerTest(unittest.TestCase):
         return path
 
     def init2(self, count=2, max_attempts=2, plan_path=None, portable_tier="standard"):
+        selected_plan = plan_path or self.plan(count, max_attempts, portable_tier)
         code, data = self.call(
             *self.common,
-            "init-v3",
+            "init-v4",
             "--actor",
             "parent",
             "--approved",
             "--plan-file",
-            str(plan_path or self.plan(count, max_attempts, portable_tier)),
+            str(selected_plan),
             "--assignments-file",
             str(self.assignments(count)),
+            "--capability-binding-file",
+            str(self.capability_binding(selected_plan)),
         )
         self.assertEqual(0, code)
         return data["run_id"]
@@ -277,6 +352,22 @@ class PlanningLedgerTest(unittest.TestCase):
         ]
         if agent_id:
             arguments += ["--agent-id", agent_id]
+        checkpoint = self.checkpoint(run)
+        if checkpoint.get("schema") == 4:
+            sid = remediation["step_id"]
+            executor = checkpoint["steps"][sid]["current_assignment"]["model_or_alias"]
+            plan_path = self.root / "planning-policy/ledgers/plan" / run / "plan.json"
+            binding_path = self.capability_binding(
+                plan_path,
+                host_overrides={sid: remediation["next_harness"]},
+                executor_overrides={sid: executor},
+            )
+            arguments += [
+                "--model-or-alias",
+                executor,
+                "--capability-binding-file",
+                str(binding_path),
+            ]
         return self.call(*arguments)
 
     def test_new_v2_stamps_escalating_retry_state(self):
@@ -286,25 +377,18 @@ class PlanningLedgerTest(unittest.TestCase):
         step = checkpoint["steps"]["step0"]
         self.assertEqual("standard", step["current_tier"])
         self.assertFalse(step["same_tier_retry_used"])
-        self.assertEqual({"agent_id": "", "harness": "codex"}, step["current_assignment"])
+        self.assertEqual(
+            {"agent_id": "", "harness": "codex", "model_or_alias": "inherit"},
+            step["current_assignment"],
+        )
         self.assertEqual("", step["retry_remediation_path"])
         self.assertEqual("", step["retry_remediation_sha256"])
 
     def test_policyless_v2_keeps_legacy_retry_behavior_without_new_state(self):
         run = self.init2()
+        self.downgrade_run_to_v2(run, policyless=True)
         checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
         checkpoint = json.loads(checkpoint_path.read_text())
-        checkpoint.pop("retry_policy")
-        for step in checkpoint["steps"].values():
-            for field in (
-                "current_tier",
-                "same_tier_retry_used",
-                "current_assignment",
-                "retry_remediation_path",
-                "retry_remediation_sha256",
-            ):
-                step.pop(field)
-        checkpoint_path.write_text(json.dumps(checkpoint))
         before = checkpoint_path.read_bytes()
         self.assertEqual(0, self.call(*self.common, "show", "--run-id", run)[0])
         self.assertEqual(before, checkpoint_path.read_bytes())
@@ -359,7 +443,11 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("standard", state["current_tier"])
         self.assertTrue(state["same_tier_retry_used"])
         self.assertEqual(
-            {"agent_id": "fresh-agent", "harness": "claude-code"},
+            {
+                "agent_id": "fresh-agent",
+                "harness": "claude-code",
+                "model_or_alias": "inherit",
+            },
             state["current_assignment"],
         )
         self.assertEqual("fresh-agent", state["agent_id"])

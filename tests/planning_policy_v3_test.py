@@ -1,8 +1,9 @@
-"""Contract-v3 cost advisory and opt-in usage tracing regression tests."""
+"""Current-contract cost advisory and opt-in usage tracing regression tests."""
 
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -26,7 +27,7 @@ contract = load("planning_policy_v3_contract", POLICY / "validate_plan_contract.
 ledger = load("planning_policy_v3_ledger", POLICY / "planning_ledger.py")
 
 
-def plan(version: int = 3, cost: object = None, include_cost: bool = False) -> dict:
+def plan(version: int = 4, cost: object = None, include_cost: bool = False) -> dict:
     value = {
         "contract_version": version,
         "objective": "Ship one bounded change",
@@ -55,7 +56,36 @@ def plan(version: int = 3, cost: object = None, include_cost: bool = False) -> d
     }
     if include_cost:
         value["execution_cost"] = cost
+    if version == 4:
+        value["leaves"][0]["capability_requirements"] = {
+            "baseline": "plan-step-base-v1",
+            "additional": [],
+        }
     return value
+
+
+def binding(value: dict) -> dict:
+    plan_sha256 = hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "schema": "planning-capability-binding-v1",
+        "plan_sha256": plan_sha256,
+        "bindings": [
+            {
+                "step_id": leaf["id"],
+                "host": "codex",
+                "executor": "gpt-5.6-terra",
+                "requirements": leaf["capability_requirements"],
+                "evidence": ["test fixture capability inventory"],
+            }
+            for leaf in value["leaves"]
+        ],
+    }
+
+
+def validate_current(value: dict) -> dict:
+    return contract.validate(value, capability_binding=binding(value))
 
 
 def token_range(low: int, expected: int, high: int) -> dict[str, int]:
@@ -64,22 +94,29 @@ def token_range(low: int, expected: int, high: int) -> dict[str, int]:
 
 class PlanningPolicyV3ContractTest(unittest.TestCase):
     def test_missing_and_malformed_cost_profiles_never_change_dispatch(self) -> None:
-        missing = contract.validate(plan())
-        malformed = contract.validate(plan(cost={"schema": "wrong"}, include_cost=True))
+        missing_plan = plan()
+        malformed_plan = plan(cost={"schema": "wrong"}, include_cost=True)
+        missing = validate_current(missing_plan)
+        malformed = validate_current(malformed_plan)
         self.assertTrue(missing["valid"] and missing["dispatch_ready"])
         self.assertTrue(malformed["valid"] and malformed["dispatch_ready"])
         self.assertIn("PLANCOST-MISSING-PROFILE", missing["cost_advisory"]["codes"])
         self.assertIn("PLANCOST-INVALID-PROFILE", malformed["cost_advisory"]["codes"])
 
-    def test_v2_is_resume_only_and_v3_is_forward_dispatch_contract(self) -> None:
+    def test_v2_and_v3_are_resume_only_and_v4_is_forward_dispatch_contract(self) -> None:
         old = contract.validate(plan(version=2))
-        current = contract.validate(plan())
+        prior = contract.validate(plan(version=3))
+        current_plan = plan()
+        current = validate_current(current_plan)
         self.assertTrue(old["valid"])
         self.assertFalse(old["dispatch_ready"])
         self.assertTrue(old["resume_ready"])
         self.assertIn("blocked:contract_migration_required", old["warnings"])
+        self.assertTrue(prior["valid"])
+        self.assertFalse(prior["dispatch_ready"])
+        self.assertTrue(prior["resume_ready"])
         self.assertTrue(current["dispatch_ready"])
-        self.assertTrue(current["resume_ready"])
+        self.assertTrue(current["approval_ready"])
 
     def test_known_lanes_compute_expected_and_high_without_mixing_units(self) -> None:
         profile = {
@@ -126,7 +163,8 @@ class PlanningPolicyV3ContractTest(unittest.TestCase):
         self.assertLessEqual(contract.proxy_tokens(bounded), 600)
 
     def test_settled_leaf_tiered_standard_is_advisory_not_an_error(self) -> None:
-        over = contract.validate(plan())
+        current = plan()
+        over = validate_current(current)
         self.assertTrue(over["valid"] and over["dispatch_ready"])
         self.assertIn("PLANCOST-TIER-OVER-ASSIGNED", over["cost_advisory"]["codes"])
         self.assertEqual(1, over["cost_advisory"]["tier_mix"]["over_assigned"])
@@ -190,9 +228,12 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         return code, json.loads(stream.getvalue())
 
     def init3(self) -> str:
+        selected_plan = json.loads(self.plan_file.read_text(encoding="utf-8"))
+        binding_file = self.root / "capability-binding.json"
+        binding_file.write_text(json.dumps(binding(selected_plan)), encoding="utf-8")
         code, result = self.call(
             *self.common,
-            "init-v3",
+            "init-v4",
             "--actor",
             "parent",
             "--approved",
@@ -200,28 +241,31 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
             str(self.plan_file),
             "--assignments-file",
             str(self.assignments_file),
+            "--capability-binding-file",
+            str(binding_file),
         )
         self.assertEqual(0, code, result)
         return result["run_id"]
 
-    def test_v2_init_refuses_new_run_and_v3_has_no_trace_state_by_default(self) -> None:
-        code, result = self.call(
-            *self.common,
-            "init-v2",
-            "--actor",
-            "parent",
-            "--approved",
-            "--plan-file",
-            str(self.plan_file),
-            "--assignments-file",
-            str(self.assignments_file),
-        )
-        self.assertEqual(3, code)
-        self.assertEqual("blocked:contract_migration_required", result["error"])
+    def test_v2_and_v3_init_refuse_new_run_and_v4_has_no_trace_state_by_default(self) -> None:
+        for command in ("init-v2", "init-v3"):
+            code, result = self.call(
+                *self.common,
+                command,
+                "--actor",
+                "parent",
+                "--approved",
+                "--plan-file",
+                str(self.plan_file),
+                "--assignments-file",
+                str(self.assignments_file),
+            )
+            self.assertEqual(3, code)
+            self.assertEqual("blocked:contract_migration_required", result["error"])
         run_id = self.init3()
         run = self.root / "planning-policy/ledgers/plan" / run_id
         checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
-        self.assertEqual(3, checkpoint["schema"])
+        self.assertEqual(4, checkpoint["schema"])
         self.assertFalse((run / "usage").exists())
         show_code, shown = self.call(*self.common, "show", "--run-id", run_id)
         self.assertEqual(0, show_code)
@@ -295,9 +339,15 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         run = self.root / "planning-policy/ledgers/plan" / run_id
         old_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
         old_plan["contract_version"] = 2
+        for leaf in old_plan["leaves"]:
+            leaf.pop("capability_requirements")
         checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
         checkpoint["schema"] = 2
         checkpoint["plan_hash"] = ledger.digest(old_plan)
+        for step in checkpoint["steps"].values():
+            step.pop("capability_binding")
+            step.pop("capability_binding_sha256")
+            step["current_assignment"].pop("model_or_alias")
         event = json.loads((run / "events.jsonl").read_text(encoding="utf-8"))
         event["action"] = "init-v2"
         event["plan_hash"] = checkpoint["plan_hash"]
