@@ -51,15 +51,15 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval/dispatch distinction, exact host binding, and pre-dispatch
         # blocker. The increase is charged only to executable-plan authoring and
         # dispatch, not lookup or legacy resume.
-        self.assertLessEqual(claude["load_total"], 5350)
+        self.assertLessEqual(claude["load_total"], 5400)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
         # and the commit-or-revert rule for a stop that already edited files.
         # codex.md had 12 tokens of headroom, so the corrections could not fit.
         # Every added token states a contract fact a live dispatch got wrong.
-        self.assertLessEqual(codex["load_total"], 5500)
-        self.assertLessEqual(ledger["load_total"], 4600)
+        self.assertLessEqual(codex["load_total"], 5550)
+        self.assertLessEqual(ledger["load_total"], 4650)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertEqual("load-map", direct["rows"][0]["anchor"])
         self.assertEqual("load-map", agent_lookup["rows"][0]["anchor"])

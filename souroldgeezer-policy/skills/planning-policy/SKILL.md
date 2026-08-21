@@ -33,6 +33,8 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   host binding; it is dispatch-ready only after a complete exact
   `planning-capability-binding-v1` joins its digest, every leaf's
   `capability_requirements`, selected host/executor, and bounded evidence. For
+  that dispatch check, start the host result from the
+  [binding scaffold](references/templates/capability-binding-v1.json). For
   an approved plan with two or more
   delegated steps, read the [ledger contract](references/ledger-contract.md);
   the parent alone uses its `init-v4`, `transition`, `record-return`, `show`,
@@ -43,7 +45,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   mapped tier without changing the approved leaf contract.
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
-  resuming v1–v3 state, and [selective audit](references/selective-audit.md) only
+  resuming v1–v3 state; load the retained
+  [v3 scaffold](references/templates/plan-v3.json) only to interpret its plan
+  shape. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
 - **Usage tracing (explicit opt-in only):** only after the user explicitly asks
   to trace, measure, or calibrate one run, read
