@@ -64,13 +64,17 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-v3-cost-advisory",
             "planning-policy-behavior-v3-trace-opt-in",
             "planning-policy-behavior-v3-v2-resume-only",
-            "planning-policy-behavior-v3-canonical-scaffold",
+            "planning-policy-behavior-v4-canonical-scaffold",
+            "planning-policy-behavior-v4-claude-mechanical-skill-block",
         }
         self.assertTrue(required.issubset(self.behavior))
-        scaffold = self.behavior["planning-policy-behavior-v3-canonical-scaffold"]
-        self.assertIn("plan-v3.json", " ".join(scaffold["expected_artifacts"]))
+        scaffold = self.behavior["planning-policy-behavior-v4-canonical-scaffold"]
+        self.assertIn("plan-v4.json", " ".join(scaffold["expected_artifacts"]))
         self.assertIn("contract_version", " ".join(scaffold["required_checks"]))
         self.assertIn("version", " ".join(scaffold["forbidden_behaviors"]))
+        capability_block = self.behavior["planning-policy-behavior-v4-claude-mechanical-skill-block"]
+        self.assertIn("Claude mechanical wrapper lacks Skill", " ".join(capability_block["required_checks"]))
+        self.assertIn("blocked:capability_unavailable", " ".join(capability_block["expected_artifacts"]))
         for host in ("claude", "codex"):
             closeout = self.behavior[f"planning-policy-behavior-{host}-clean-closeout"]
             self.assertIn("routine cherry-pick", closeout["forbidden_behaviors"])

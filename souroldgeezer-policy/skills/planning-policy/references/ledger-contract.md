@@ -1,7 +1,7 @@
 # Parent Ledger Contract
 
-Read this only when a valid, approved version-3 plan has two or more delegated
-leaves, or when the parent is resuming an existing version-2 ledger. The
+Read this only when a valid, approved version-4 plan has two or more delegated
+leaves, or when the parent is resuming an existing v1–v3 ledger. The
 ledger records lifecycle facts; it does not approve a plan, select a model, or
 replace the executable-plan validator.
 
@@ -15,9 +15,12 @@ object to the parent and never mutates the ledger. Independent leaves may run co
 are already `cleaned` and they do not share a worktree or write path; each step
 has exactly one current attempt at a time.
 
-`init-v3` requires `--plan-id`, the approved version-3 plan, and
-the complete assignment set. It rejects a non-UUID4 run ID, a plan that is not
-`dispatch_ready`, or an existing `<plan-id>/<run-id>` directory. It joins every
+`init-v4` requires `--plan-id`, the approved version-4 plan, the complete
+assignment set, and an exact capability-binding file. It rejects a non-UUID4 run
+ID, a plan that is not `dispatch_ready`, an unavailable capability, or an existing
+`<plan-id>/<run-id>` directory. The binding is `planning-capability-binding-v1`:
+it joins the canonical plan digest, every leaf, its declared
+`capability_requirements`, selected host/executor, and bounded evidence. It joins every
 assignment to exactly one declared leaf by `step_id`: every leaf has exactly one
 assignment, no assignment names an unknown leaf, and duplicate `step_id` or
 `agent_id`/attempt collisions are rejected. An assignment records the stable
@@ -30,15 +33,18 @@ lowercase 64-hex-character SHA-256 hash. Every version-2/3 lifecycle command
 compares the supplied or stored plan hash with that copy before changing or
 trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
-Every new version-3 run also stamps `retry_policy: escalating_remediation_v1`.
-Policy-less existing version-2 checkpoints and all version-1 ledgers retain
+Every new version-4 run also stamps `retry_policy: escalating_remediation_v1`.
+It retains the resolved binding with each assigned step. An assignment change
+requires an exact re-binding before the step can become ready; otherwise stop
+`blocked:capability_unavailable`, never silently substitute or downgrade.
+Policy-less existing v2/v3 checkpoints and all version-1 ledgers retain
 their existing behavior. `init-v2` returns
 `blocked:contract_migration_required`; stored version-2 plans remain
 `resume_ready: true` and keep their original hashes and byte-compatible records.
 
-## Shared version-2/3 lifecycle
+## Shared lifecycle
 
-All lifecycle commands require the same `--run-id` after `init-v3` returns it:
+All lifecycle commands require the same `--run-id` after `init-v4` returns it:
 `transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
 `transition` names a `--step-id`, checks that exactly one attempt is current,
 and records a bounded reason plus an optional safe relative evidence path.
@@ -52,7 +58,7 @@ copy/hash, assignment join, dependency order, current-attempt uniqueness, and
 attempt limits before handoff. `validate --closeout` additionally fails while
 any successful step is only `completed` or `integrated`.
 
-Version-3 checkpoints contain no usage or trace field. Only an explicit request
+Version-4 checkpoints contain no usage or trace field. Only an explicit request
 loads the separate usage-tracing procedure and creates `usage/` metadata outside
 the checkpoint. It follows the same retention and purge safeguards; ordinary
 `show` remains trace-free unless tracing was initialized.
@@ -87,7 +93,7 @@ not assign or start an attempt. A dependency is ready-compatible only after it
 is `cleaned`.
 
 The step-wide attempt count starts at 1 and may never exceed the leaf's
-version-2/3 `max_attempts` (1 through 5). The parent assigns each attempt a
+version-2/3/4 `max_attempts` (1 through 5). The parent assigns each attempt a
 helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
 which the returned handoff echoes with the same `step_id` and `agent_id`; an
 agent cannot borrow another step's remaining attempts. Under
@@ -172,7 +178,7 @@ to inspect or migrate it.
 `list` scans either the bounded `--plan-id` scope or the ledger root and emits
 bounded run summaries plus counts. `gc [--dry-run]` reports bounded `kept`,
 `eligible`, `removed`, and `invalid` groups; mutation requires `--actor parent`.
-Active runs are always kept regardless of age. Closed version-2/3 runs retain
+Active runs are always kept regardless of age. Closed version-2/3/4 runs retain
 completed outcomes for 30 days, blocked outcomes for 90 days, and abandoned
 outcomes for 7 days. The boundary is exact: a run becomes eligible at
 `purge_after`, not one second earlier. Initialization and successful closure run

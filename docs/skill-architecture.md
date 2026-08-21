@@ -111,7 +111,13 @@ readiness gate from those declared units rather than leaf count, and require an
 explicit user-approved exception when analytical work legitimately dominates.
 The portable contract owns those fields and stop markers; a host overlay may add
 dispatch syntax but cannot rewrite them. New executable plans use
-`contract_version: 3`; version-2 plans are resume-only and new v2 initialization
+`contract_version: 4`; every leaf declares `capability_requirements` with the
+`plan-step-base-v1` baseline and bounded additions. A valid decision-complete
+plan is approval-ready without a host binding, but it is dispatch-ready only
+after an exact `planning-capability-binding-v1` joins plan digest, every leaf,
+selected host/executor, requirements, and bounded evidence. Missing or
+mismatched capability is `blocked:capability_unavailable`, never a silent
+substitution or downgrade. Version-3 plans are resume-only and new v3 initialization
 returns `blocked:contract_migration_required`. Unversioned version-1 plans remain
 inspection-readable only. The v3 advisory cost profile and validator advisory
 keep stable-proxy, declared-model-token, and provider-measured lanes separate;

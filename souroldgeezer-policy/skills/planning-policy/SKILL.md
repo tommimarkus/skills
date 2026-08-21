@@ -26,11 +26,16 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [§approval-and-output](references/core-workflow.md#approval-and-output).
 - **Executable plan, delegation, or returned handoff:** also read
   [plan contract](references/plan-contract.md), start new plan JSON from the
-  [canonical v3 scaffold](references/templates/plan-v3.json), and run the advertised
+  [canonical v4 scaffold](references/templates/plan-v4.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
-  command before approval or dispatch. For an approved plan with two or more
+  command before approval and again with the exact capability binding before
+  dispatch. A valid decision-complete v4 plan can be approval-ready without a
+  host binding; it is dispatch-ready only after a complete exact
+  `planning-capability-binding-v1` joins its digest, every leaf's
+  `capability_requirements`, selected host/executor, and bounded evidence. For
+  an approved plan with two or more
   delegated steps, read the [ledger contract](references/ledger-contract.md);
-  the parent alone uses its `init-v3`, `transition`, `record-return`, `show`,
+  the parent alone uses its `init-v4`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py). Lifecycle and
   retention commands do not replace approval or dispatch validation. The ledger
@@ -38,7 +43,7 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   mapped tier without changing the approved leaf contract.
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
-  resuming v2 state, and [selective audit](references/selective-audit.md) only
+  resuming v1–v3 state, and [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
 - **Usage tracing (explicit opt-in only):** only after the user explicitly asks
   to trace, measure, or calibrate one run, read

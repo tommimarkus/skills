@@ -19,12 +19,13 @@ and user approval before implementation.
 4. Groom after convergence. Name each step’s reads/writes and settled decisions;
    split multiple concerns/checks, merge identical boundaries/checks. A fresh
    agent must finish from the handoff. Start new plan JSON from the canonical
-   [references/templates/plan-v3.json](templates/plan-v3.json) scaffold; it
+   [references/templates/plan-v4.json](templates/plan-v4.json) scaffold; it
    starts with `contract_version`, and the authored plan keeps that discriminator
-   first. Load [plan contract](plan-contract.md),
+   first. Every leaf declares exact `capability_requirements`: baseline
+   `plan-step-base-v1` plus only bounded additional requirements. Load [plan contract](plan-contract.md),
    validate it using its Claude `${CLAUDE_SKILL_DIR}` or Codex absolute
-   `<skill-dir>` form, and re-cut any missing boundary, decision, or failed
-   command. Every leaf includes `missing_load_bearing_information`.
+   `<skill-dir>` form, and re-cut any missing boundary, decision, requirement, or
+   failed command. Every leaf includes `missing_load_bearing_information`.
 5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
    contract. Leave unavailable token ranges unknown; never infer them from a
    size, tier, model name, or stable-proxy count. Contract validation calculates
@@ -53,7 +54,19 @@ exception applies. The adapter maps tiers or returns its blocker.
 Present the groomed plan and stop: Claude uses `ExitPlanMode`; Codex uses native
 approval or asks explicitly and ends the turn. Non-interactive surfaces only
 return a proposal/open questions and say approval was not obtained. No spec,
-commit, implementation, or delegation happens before approval.
+commit, implementation, or delegation happens before approval. Approval-ready
+means only that the decision-complete v4 plan validates; it does not imply a
+host, executor, or worker capability has been selected.
+
+Dispatch is a separate host-resolution action. The active adapter resolves every
+leaf against its `capability_requirements`, then records the exact
+`planning-capability-binding-v1` plan digest, leaf join, selected host/executor,
+requirements, and bounded evidence. Only that complete binding makes the plan
+dispatch-ready. An unavailable or mismatched capability stops as
+`blocked:capability_unavailable`; do not substitute another capability, host, or
+executor silently. Claude's mechanical wrappers do not expose `Skill`, so a
+mechanical Claude worker cannot receive a leaf with an additional skill
+requirement.
 
 For two or more delegated steps, only the parent creates
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
@@ -62,7 +75,7 @@ evidence paths, and returns, never raw logs. Successful leaves close
 from the current parent tip. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
-For a new version-3 run, the parent uses the ledger's
+For a new version-4 run, the parent uses the ledger's
 `escalating_remediation_v1` retry policy. The ledger alone decides whether an
 eligible return gets one same-tier remediation attempt or a higher mapped tier;
 it preserves the leaf's task, boundary, read/write sets, and attempt identity

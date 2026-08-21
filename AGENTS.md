@@ -234,21 +234,26 @@ bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 ### Planning-policy execution contract (Codex)
 
 The shared `planning-policy` contract is runtime-neutral. New executable plans
-use `contract_version: 3`. Start them from
-[references/templates/plan-v3.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json);
-the discriminator is `contract_version`, never `version`. Version-2 plans are resume-only
-(`dispatch_ready: false`, `resume_ready: true`) and new v2 initialization stops
-as `blocked:contract_migration_required`; unversioned version-1 plans remain
-inspection-readable only.
+use `contract_version: 4`. Start them from
+[references/templates/plan-v4.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json);
+the discriminator is `contract_version`, never `version`. Versions 2 and 3 are
+resume-only (`dispatch_ready: false`, `resume_ready: true`) and new `init-v2` or
+`init-v3` stops as `blocked:contract_migration_required`; unversioned version-1
+plans remain inspection-readable only.
 Every executable leaf
 has decision-complete, stable fields: IDs/dependencies, task/boundary, named
 read/write sets, settled decisions, size, portable tier, worktree owner, one
 acceptance command, bounded return contract, stop conditions, and stable work
-unit ID. A missing load-bearing field stops as `blocked:missing_input`; do not
+unit ID, plus exact `capability_requirements`: baseline `plan-step-base-v1` and
+bounded additional requirements. A missing load-bearing field stops as `blocked:missing_input`; do not
 search for or invent it. Work units are weighted once from their original size
 (`small=1`, `medium=2`, `large=3`) and require `standard_ready_ratio >= 0.60`;
 only an explicitly user-approved, recorded analytical-heavy exception waives
-that gate. Each v3 plan carries an at-most-4-KiB advisory
+that gate. A valid decision-complete v4 plan is approval-ready without host
+binding; it is dispatch-ready only after `planning-capability-binding-v1` joins
+plan digest, every leaf, host/executor, requirements, and bounded evidence. An
+unavailable or mismatched join stops `blocked:capability_unavailable`; never
+silently substitute or downgrade. Each v4 plan carries an at-most-4-KiB advisory
 `planning-execution-cost-v1` block. The existing validator invocation emits an
 at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles,
 unknown ranges, shared-prefix repetition, retry multiplication, and verification

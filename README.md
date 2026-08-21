@@ -234,24 +234,30 @@ schemas, and the troubleshooting table — is bundled with the plugin at
    intended behavior.
 10. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals but do not prove lifecycle stalls or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
 11. Use `planning-policy` to turn an approved implementation approach into a
-    delegation-ready plan. New executable plans use `contract_version: 3`.
+    delegation-ready plan. New executable plans use `contract_version: 4`.
     Start from the canonical
-    [references/templates/plan-v3.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json)
+    [references/templates/plan-v4.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json)
     scaffold; its discriminator is `contract_version`, never `version`.
-    Version-2 plans are resume-only (`dispatch_ready: false`,
-    `resume_ready: true`) and `init-v2` rejects new runs with
+    Versions 2 and 3 are resume-only (`dispatch_ready: false`,
+    `resume_ready: true`) and `init-v2` or `init-v3` rejects new runs with
     `blocked:contract_migration_required`; version 1 remains inspection-only. Its shared,
     runtime-neutral contract gives every leaf
     stable IDs, dependencies, task/boundary, named reads and writes, settled
     decisions, size, portable tier, owner, one acceptance command, return shape,
-    stop conditions, and a stable work unit. Work units are weighted once
+    stop conditions, a stable work unit, and exact `capability_requirements`:
+    baseline `plan-step-base-v1` plus bounded additional requirements. Work units are weighted once
     (`small=1`, `medium=2`, `large=3`); at least 0.60 of that weight must be
     mechanical or standard ready unless the user explicitly approves and the
     plan records an analytical-heavy exception. Missing load-bearing input stops
     the leaf rather than inviting discovery or invention. The parent owns
     integration and end-to-end verification; selective audit routing remains an
     exceptional, bounded-evidence decision after targeted inspection or focused
-    tests cannot answer the question.
+    tests cannot answer the question. A valid decision-complete v4 plan is
+    approval-ready without any host binding. It is dispatch-ready only after an
+    exact `planning-capability-binding-v1` joins its digest, every leaf, selected
+    host/executor, requirements, and bounded evidence; unavailable or mismatched
+    capability stops `blocked:capability_unavailable`, never silent substitution
+    or downgrade.
 
     For an approved plan with two or more delegated steps, exactly one parent
     creates and writes the checkpoint ledger under the Git common directory at

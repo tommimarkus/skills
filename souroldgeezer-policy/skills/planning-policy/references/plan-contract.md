@@ -5,17 +5,19 @@ Runtime-neutral executable-plan fields; host adapters add syntax only.
 ## Plan JSON
 
 Start every new plan from the canonical
-[references/templates/plan-v3.json](templates/plan-v3.json) scaffold and fill
+[references/templates/plan-v4.json](templates/plan-v4.json) scaffold and fill
 its blank load-bearing values before approval. The first key is
 `contract_version`. Do not use `version`; the validator rejects that mistaken
 alias even when `contract_version` is also present.
 
-Version 3 requires `objective` (1–240 characters), `scope_summary` (1–480), and
+Version 4 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
 
-Version 2 is resume-only (`dispatch_ready: false`, `resume_ready: true`,
-`blocked:contract_migration_required`); `init-v2` refuses new runs. Version 1 is
-inspection-only. Other explicit versions are invalid.
+Versions 1–3 are resume-only or inspection-compatible: v3 is resume-only and
+new `init-v3` stops as `blocked:contract_migration_required`; v2 preserves its
+resume behavior; unversioned v1 stays inspection-only. Existing v1–v3 ledgers
+remain readable/mutable according to [ledger compatibility](ledger-compatibility.md).
+Other explicit versions are invalid.
 
 Each `leaves` entry has non-empty
 `id`, `dependencies`, `task`, `boundary`, `read_set`, `write_set`,
@@ -24,8 +26,14 @@ Each `leaves` entry has non-empty
 IDs/dependencies match `[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*` (maximum 64).
 Dependencies/read/write/stops are arrays; stops include
 `missing_load_bearing_information`. Sizes are small/medium/large and tiers are
-mechanical/standard/analytical/deep. Versions 2/3 require `max_attempts` 1–5 and
+mechanical/standard/analytical/deep. Versions 2–4 require `max_attempts` 1–5 and
 exact `bounded-step-return-v1`, never raw logs.
+
+Every v4 leaf also declares exact `capability_requirements`: `{ "baseline":
+"plan-step-base-v1", "additional": [...] }`. `additional` is bounded and each
+item names a supported requirement kind, name, and reason; it expresses what a
+fresh worker needs without resolving it to a host. The baseline is required even
+when `additional` is empty.
 
 Select only `portable_tier`; model/effort belong to the host adapter. Missing
 mapping or delegation returns its blocker without a silent tier change.
@@ -83,6 +91,18 @@ Ordinary design uses its owning design skill. When one unresolved bounded
 initial-inspection question may justify an audit route, load
 [selective audit routing](selective-audit.md) before adding `selective_audit`.
 
+## Approval and dispatch readiness
+
+For a valid v4 plan, `approval_ready` is true when all decision-complete plan
+fields, including every leaf's `capability_requirements`, validate. It may be
+approval-ready before any host is selected. `dispatch_ready` becomes true only
+when an exact `planning-capability-binding-v1` joins the canonical plan SHA-256,
+every leaf, the selected host and executor, identical requirements, and bounded
+capability evidence. Missing, stale, incomplete, or mismatched bindings yield
+`blocked:capability_unavailable`; never silently substitute or downgrade a
+capability or executor. Host adapters own capability resolution, while this
+shared contract owns the required join.
+
 ## Validator
 
 Run one of these forms before approval or dispatch:
@@ -90,11 +110,12 @@ Run one of these forms before approval or dispatch:
 ```text
 uv run python "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py" validate plan.json
 uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validate plan.json
+uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validate plan.json --capability-binding capability-binding.json
 ```
 
-Output includes validity/readiness, `contract_version`, `dispatch_ready`,
+Output includes validity/readiness, `contract_version`, `approval_ready`, `dispatch_ready`,
 `resume_ready`, `warnings`, and `cost_advisory`. Exit 0 is valid, 1 contract
-failure, 2 usage/JSON failure. Only v3 dispatches.
+failure, 2 usage/JSON failure. Only a v4 plan with its exact capability binding dispatches.
 
 ## Parent ledger helper
 
@@ -105,7 +126,7 @@ uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan
 uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
 ```
 
-The parent uses `init-v3`; `transition` for retry and `completed` → `integrated`
+The parent uses `init-v4`; `transition` for retry and `completed` → `integrated`
 → `cleaned`; `show`; and `validate --closeout` before terminal `close`. `reopen`
 is blocked-run only; `list`, `gc --dry-run`, and exact-target `purge` manage
 retention. Mutations require `--actor parent`. Keep bounded evidence, not raw

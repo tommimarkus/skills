@@ -22,7 +22,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "The parent owns\n    integration and end-to-end verification",
             "planning-policy/ledgers/<plan-id>",
             "bounded lifecycle returns",
-            "contract_version: 3", "planning-execution-cost-v1",
+            "contract_version: 4", "planning-execution-cost-v1",
             "planning-cost-advisory-v1", "Execution economics", "tracing: off",
             "resume_ready: true", "blocked:contract_migration_required",
             "trace-init", "trace-record", "trace-show", "trace-close",
@@ -55,7 +55,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "haiku`/`low", "sonnet`/`medium", "opus`/`high", "opus`/`xhigh",
             "not claims about a resolved version", "blocked:model_unavailable",
             "never silently downgrade", "Missing load-bearing information stops",
-            "contract_version: 3", "<plan-id>/<run-id>",
+            "contract_version: 4", "<plan-id>/<run-id>",
             "planning-execution-cost-v1", "planning-cost-advisory-v1",
             "Execution\neconomics", "tracing: off", "trace-init", "trace-close",
             "bounded-step-return-v1", "blocked:plan_tampered",
@@ -77,7 +77,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "gpt-5.6-sol`/`high", "gpt-5.6-sol`/`xhigh",
             "blocked:model_unavailable", "never silently downgrade",
             "only the parent may", "bounded checkpoint and lifecycle/retry returns",
-            "contract_version: 3", "<plan-id>/<run-id>",
+            "contract_version: 4", "<plan-id>/<run-id>",
             "planning-execution-cost-v1", "planning-cost-advisory-v1",
             "Execution economics", "tracing: off", "trace-init", "trace-close",
             "bounded-step-return-v1", "blocked:plan_tampered",
@@ -97,7 +97,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("user-approved exception", standard)
         self.assertIn("host overlay may add\ndispatch syntax but cannot rewrite them", standard)
         for phrase in (
-            "contract_version: 3", "<plan-id>/<run-id>", "lowercase UUID4",
+            "contract_version: 4", "<plan-id>/<run-id>", "lowercase UUID4",
             "blocked:contract_migration_required", "declared-model-token",
             "bounded-step-return-v1", "blocked:plan_tampered",
             "Version-1\nledgers remain readable and mutable",
@@ -118,7 +118,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("unresolved domain-design", entry)
         self.assertIn("Before approval, invoke the owning design skill", core)
 
-    def test_v3_authors_are_directed_to_the_canonical_scaffold(self) -> None:
+    def test_v4_authors_are_directed_to_the_canonical_scaffold(self) -> None:
         entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
         core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
         contract = self.text(
@@ -128,7 +128,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
         )
         for text in (entry, core, contract):
-            self.assertIn("references/templates/plan-v3.json", text)
+            self.assertIn("references/templates/plan-v4.json", text)
         self.assertIn("starts with `contract_version`", core)
         self.assertIn("Do not use `version`", contract)
         self.assertIn("recurring discriminator drift", grounding)
@@ -138,7 +138,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         for relative in ("README.md", "AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 text = self.text(relative)
-                self.assertIn("references/templates/plan-v3.json", text)
+                self.assertIn("references/templates/plan-v4.json", text)
                 self.assertIn("never `version`", text)
 
 

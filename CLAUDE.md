@@ -367,22 +367,28 @@ Two agent classes live under `<plugin>/agents/`.
 ### Planning-policy execution contract (Claude Code)
 
 The shared plan contract is runtime-neutral: new executable plans use
-`contract_version: 3`. Start them from
-[references/templates/plan-v3.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json);
-the discriminator is `contract_version`, never `version`. Version-2 plans are resume-only
-(`dispatch_ready: false`, `resume_ready: true`) and `init-v2` stops new runs as
-`blocked:contract_migration_required`; version-1 remains inspection-only.
+`contract_version: 4`. Start them from
+[references/templates/plan-v4.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json);
+the discriminator is `contract_version`, never `version`. Versions 2 and 3 are
+resume-only (`dispatch_ready: false`, `resume_ready: true`) and `init-v2` or
+`init-v3` stops new runs as `blocked:contract_migration_required`; version-1
+remains inspection-only.
 Each leaf has stable IDs and
 dependencies, task/boundary, named read/write sets, settled decisions, size,
 portable tier, worktree owner, one acceptance command, bounded return, stop
-conditions, and a stable work unit. Missing load-bearing information stops as
+conditions, a stable work unit, and exact `capability_requirements`: baseline
+`plan-step-base-v1` plus bounded additional requirements. Missing load-bearing information stops as
 `blocked:missing_input`; no agent fills it by searching or invention. Original
 work units carry one weight (`small=1`, `medium=2`, `large=3`) and the plan needs
 `standard_ready_ratio >= 0.60`, except for an analytical-heavy exception that
 the user explicitly approves and the plan records. Selective audit routing is
 exceptional: it needs one owner, a bounded question/evidence surface, and proof
 that targeted inspection or focused tests cannot resolve it. The parent owns
-integration and end-to-end verification.
+integration and end-to-end verification. A valid decision-complete v4 plan is
+approval-ready without host selection; it becomes dispatch-ready only with an
+exact `planning-capability-binding-v1` joining its digest, every leaf,
+host/executor, requirements, and bounded evidence. Missing/mismatched capability
+is `blocked:capability_unavailable`, never a silent substitution or downgrade.
 
 For approved plans with at least two delegated steps, exactly one parent writes
 the durable ledger at

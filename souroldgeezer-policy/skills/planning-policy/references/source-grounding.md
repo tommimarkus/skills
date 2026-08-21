@@ -1,5 +1,27 @@
 # Planning Policy Source Grounding
 
+## 2026-08-22 contract-v4 capability binding
+
+The v4 contract separates a plan being ready for human approval from being ready
+for host dispatch. Repository runs exposed that a decision-complete delegated
+plan could be approved before the selected host had established whether the
+fresh worker had every required capability. The repository-authored remedy keeps
+host resolution in the Claude and Codex adapters while every v4 leaf declares
+portable `capability_requirements`: the `plan-step-base-v1` baseline plus bounded
+additional requirements. A `planning-capability-binding-v1` then joins the
+canonical plan digest, every leaf, its exact requirements, selected host and
+executor, and bounded evidence. A missing or mismatched join is
+`blocked:capability_unavailable`, never an implicit substitute or downgrade.
+
+This division is deliberate: approval is a decision about the bounded work, not
+an assertion about transient host inventory. Dispatch is only permitted after
+the adapter produces the exact binding. The binding follows assignment changes,
+so a v4 retry or reassignment must re-bind before ready. The synthetic Claude
+mechanical-worker case records the non-negotiable edge: its wrapper lacks
+`Skill`, so it cannot dispatch a leaf whose additional requirement is a skill.
+Existing v1–v3 ledger behavior remains readable/mutable under compatibility;
+only new v4 ledgers own capability binding.
+
 ## 2026-08-13 canonical v3 authoring scaffold
 
 The canonical scaffold addresses recurring discriminator drift observed in
@@ -101,7 +123,7 @@ contracts are repository-authored from the same durable-ledger need; they do
 not derive from an external orchestration framework.
 
 Runtime-escalating remediation follows the same boundary: the ledger, not a
-leaf or host adapter, owns retries. A new version-3 run stamps
+leaf or host adapter, owns retries. A new version-4 run stamps
 `escalating_remediation_v1`, while policy-less existing version-2 checkpoints
 and version-1 ledgers retain prior behavior. It allows one same-tier retry only
 after exact `failed:acceptance`; `blocked:needs_higher_tier` immediately moves
