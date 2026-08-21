@@ -360,6 +360,47 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertEqual(2, shown["contract_version"])
         self.assertEqual(before, (run / "checkpoint.json").read_bytes())
 
+    def test_existing_v3_run_resumes_and_mutates_without_capability_binding(self) -> None:
+        run_id = self.init3()
+        run = self.root / "planning-policy/ledgers/plan" / run_id
+        prior_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
+        prior_plan["contract_version"] = 3
+        for leaf in prior_plan["leaves"]:
+            leaf.pop("capability_requirements")
+        checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
+        checkpoint["schema"] = 3
+        checkpoint["plan_hash"] = ledger.digest(prior_plan)
+        for step in checkpoint["steps"].values():
+            step.pop("capability_binding")
+            step.pop("capability_binding_sha256")
+            step["current_assignment"].pop("model_or_alias")
+        event = json.loads((run / "events.jsonl").read_text(encoding="utf-8"))
+        event["action"] = "init-v3"
+        event["plan_hash"] = checkpoint["plan_hash"]
+        ledger.write(run / "plan.json", prior_plan, 64 * 1024)
+        ledger.write(run / "checkpoint.json", checkpoint)
+        (run / "events.jsonl").write_bytes(ledger.canon(event) + b"\n")
+
+        code, result = self.call(
+            *self.common,
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--step-id",
+            "build",
+            "--to",
+            "ready",
+            "--agent-id",
+            "resumed-v3-worker",
+        )
+        self.assertEqual(0, code, result)
+        resumed = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
+        self.assertEqual(3, resumed["schema"])
+        self.assertEqual("ready", resumed["steps"]["build"]["status"])
+        self.assertNotIn("capability_binding", resumed["steps"]["build"])
+
     def test_trace_validates_stage_identity_and_follows_run_purge(self) -> None:
         run_id = self.init3()
         self.assertEqual(
