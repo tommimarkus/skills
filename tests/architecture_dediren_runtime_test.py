@@ -143,7 +143,7 @@ class DataHomeResolutionTest(unittest.TestCase):
 
 class VersionFloorTest(unittest.TestCase):
     def test_latest_adopted_release_is_the_shipped_default(self) -> None:
-        self.assertEqual(runtime.DEDIREN_VERSION_DEFAULT, "2026.08.7")
+        self.assertEqual(runtime.DEDIREN_VERSION_DEFAULT, "2026.08.9")
 
     def test_shipped_pin_satisfies_the_shipped_floor(self) -> None:
         self.assertTrue(runtime.meets_floor(runtime.DEDIREN_VERSION_DEFAULT))

@@ -40,7 +40,7 @@ Synthetic `uml-sequence` source with an `alt` fragment (auth domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.08.3"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.08.9"}],
   "nodes": [
     {"id": "ix-login", "type": "Interaction", "label": "Login", "properties": {"uml": {}}},
     {"id": "user", "type": "Lifeline", "label": "User", "properties": {"uml": {"interaction": "ix-login"}}},
@@ -70,7 +70,7 @@ source adds `uml:CombinedFragment` / `uml:InteractionConstraint` /
 `uml:OpaqueExpression`. The authored interaction is emitted whole with no
 `DEDIREN_XMI_*_OMITTED` diagnostic; sequence XMI is fully supported even though
 its assurance taxonomy correctly excludes sequence from aggregate-model and
-UMLDI scope. Verified on Dediren 2026.08.3 by
+UMLDI scope. Verified on Dediren 2026.08.9 by
 `test_release_uml_sequence_fragments_full_pipeline`.
 
 - SVG inspection (render-ready): confirm each `Lifeline` renders as its own

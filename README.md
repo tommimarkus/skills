@@ -89,7 +89,7 @@ running the same install command.
 `souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
 itself**. On first use the MCP launcher provisions the pinned, checksum-verified
 [Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.7`, support floor `2026.07.28`) into the host's own per-plugin writable
+(`2026.08.9`, support floor `2026.07.28`) into the host's own per-plugin writable
 data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
 above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
 executable for controlled validation.
@@ -117,6 +117,15 @@ beside `mermaid` and `dot`. An imported draw.io file becomes a generic-graph
 model rather than a promoted ArchiMate® or UML® one, and a non-failing warning
 lists the geometry and presentation keys the layout engine replaces. Diagrams
 you want to keep in draw.io format still belong outside this plugin.
+
+Dediren `2026.08.8` adds an `ascii` render engine: box-drawn text diagrams for
+terminals and plans, Unicode by default with a plain-ASCII option, and
+`dediren_import` gains a `text` output mode that returns the diagram inline
+beside the imported model. SVG stays the evidence of record — no package build
+selects the text lane. Render policies move to schema v4; a v3 policy is
+refused with a migration diagnostic naming the one field to update. Dediren
+`2026.08.9` renames render-result artifact kinds to the media-suffix form
+(`svg+xml`, `ascii+text`), which matters only if you read that field yourself.
 
 The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
 bundled JRE, so the plugin never downloads a Java runtime, and a missing or

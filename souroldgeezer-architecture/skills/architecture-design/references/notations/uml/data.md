@@ -32,7 +32,7 @@ Synthetic `uml-data` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.08.3"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.08.9"}],
   "nodes": [
     {"id": "dt-isbn", "type": "DataType", "label": "Isbn", "properties": {"uml": {"attributes": [{"name": "value", "type": "String", "visibility": "public", "multiplicity": "1"}]}}},
     {"id": "enum-loan-state", "type": "Enumeration", "label": "LoanState", "properties": {"uml": {"literals": ["Open", "Returned", "Overdue"]}}}

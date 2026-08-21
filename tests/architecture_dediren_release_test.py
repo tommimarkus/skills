@@ -57,7 +57,7 @@ DEPLOYMENT_NOTATION_DOC = (
     / "uml"
     / "deployment.md"
 )
-COMPATIBILITY_BASELINE = "2026.08.3"
+COMPATIBILITY_BASELINE = "2026.08.9"
 # Bundle schema v2 (dediren 2026.07.14+) deleted the process-plugin protocol: the five
 # first-party engines are in-process libraries behind a typed engine-api, so the bundle
 # ships one launcher and no plugin executables, manifests, or capability probes. The
@@ -182,11 +182,14 @@ def svg_render_content(result: subprocess.CompletedProcess[str]) -> str:
     # the artifacts[] shape and the svg artifact. v5 (Dediren 2026.07.26) narrowed
     # artifact_kind to `svg` only (dropping `html`) and encoding to `utf-8` only (dropping
     # `base64`) — the skill only ever consumes the svg/utf-8 artifact, so extraction is
-    # unchanged. Mirror the bundle's documented extraction:
-    # jq '.data.artifacts[] | select(.artifact_kind=="svg") | .content'.
+    # unchanged. v6 (Dediren 2026.08.8) admitted text artifacts beside svg for the new
+    # ascii render engine; v7 (Dediren 2026.08.9) converged artifact_kind onto the
+    # media-suffix form (`svg+xml`, `ascii+text`), matching export-result. Mirror the
+    # bundle's documented extraction:
+    # jq '.data.artifacts[] | select(.artifact_kind=="svg+xml") | .content'.
     data = envelope(result)["data"]
     for artifact in data["artifacts"]:
-        if artifact.get("artifact_kind") == "svg":
+        if artifact.get("artifact_kind") == "svg+xml":
             return artifact["content"]
     raise AssertionError(f"no svg artifact in render result: {data}")
 
@@ -259,7 +262,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertIn("content", import_schema["properties"])
         self.assertEqual(
             import_schema["properties"]["output"]["enum"],
-            ["data", "svg", "image"],
+            ["data", "svg", "image", "text"],
         )
         self.assertEqual(
             import_schema["properties"]["accepted_image_types"]["items"]["enum"],
@@ -276,6 +279,45 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertEqual(result["content"][1]["mimeType"], "image/svg+xml")
         image = base64.b64decode(result["content"][1]["data"])
         self.assertTrue(image.lstrip().startswith(b"<svg"))
+
+    def test_mcp_import_text_output_returns_an_inline_ascii_diagram(self) -> None:
+        """The 2026.08.8 MCP contract adds `output: "text"`, returning the imported
+        envelope plus a second text content holding an inline ascii-engine diagram."""
+        responses = mcp_session(
+            REPO_ROOT,
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "dediren_import",
+                        "arguments": {
+                            "content": "flowchart LR\n  client --> api",
+                            "plugin": "mermaid",
+                            "output": "text",
+                        },
+                    },
+                },
+            ],
+        )
+
+        result = responses[2]["result"]
+        self.assertFalse(result["isError"])
+        self.assertEqual(
+            [item["type"] for item in result["content"]], ["text", "text"]
+        )
+        imported = json.loads(result["content"][0]["text"])
+        self.assertEqual(imported["status"], "ok")
+        diagram = result["content"][1]["text"]
+        self.assertTrue(diagram.strip())
+        # A drawn diagram, not another JSON document: the ascii engine boxes each
+        # node with box-drawing borders and writes the node labels into them.
+        self.assertIn("┌", diagram)  # U+250C box-drawing corner
+        self.assertIn("client", diagram)
+        self.assertIn("api", diagram)
+        with self.assertRaises(json.JSONDecodeError):
+            json.loads(diagram)
 
     def _build_ok(self, out_dir: Path, *args: str | Path) -> dict:
         """Run `dediren build --out <out_dir> <args>` and assert it succeeds, returning
@@ -617,7 +659,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(render_result.returncode, 0, render_result.stderr)
             self.assertEqual(
                 envelope(render_result)["data"]["render_result_schema_version"],
-                "render-result.schema.v5",
+                "render-result.schema.v7",
             )
             svg = svg_render_content(render_result)
             self.assertIn("<svg", svg)

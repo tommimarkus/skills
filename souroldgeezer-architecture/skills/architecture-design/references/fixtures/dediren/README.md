@@ -1,7 +1,7 @@
 # Dediren Fixture Render Policies
 
 The five `render-policy*.json` files in `basic/`, `mixed/`, and `rendered/`
-mirror Dediren 2026.08.3's notation-aware reference resources exactly:
+mirror Dediren 2026.08.9's notation-aware reference resources exactly:
 
 - ArchiMate policies mirror
   `dediren://fixture/render-policy/archimate-svg.json`.

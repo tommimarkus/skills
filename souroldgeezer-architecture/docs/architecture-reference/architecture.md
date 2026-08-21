@@ -205,13 +205,20 @@ matches the render policy profile.
 
 The `render` plugin emits the SVG artifact that remains the canonical proof. It
 no longer produces PNG: Dediren dropped native raster rendering in 2026.07.13,
-retiring the `raster` render-policy block and the `png` `artifact_kind` so that
-only `svg` is returned. SVG stays the evidence of
-record. When a consumer needs a bitmap, generate it downstream as a separate
-step by running the emitted SVG through any general-purpose SVG converter —
-librsvg's `rsvg-convert`, `resvg`, ImageMagick, and Inkscape each handle this.
+retiring the `raster` render-policy block and the `png` render artifact kind.
+SVG stays the evidence of record. When a consumer needs a bitmap, generate it
+downstream as a separate step by running the emitted SVG through any
+general-purpose SVG converter — librsvg's `rsvg-convert`, `resvg`, ImageMagick,
+and Inkscape each handle this. Since 2026.08.8 a second render engine, `ascii`,
+turns the same layout into a box-drawn text diagram for terminals and inline
+previews (render-policy v4's optional `text.charset` selects `unicode` or plain
+`ascii`); it is reachable only from the standalone `render` stage and
+`dediren_import`'s `text` output mode — no build driver selects it, so it is
+never the evidence of record. Since render-result v7 (2026.08.9) the render
+envelope's `artifact_kind` uses the media-suffix form: `svg+xml` for SVG,
+`ascii+text` for text.
 
-Renders are static SVG only. Dediren retired the interactive render policy
+Renders are static. Dediren retired the interactive render policy
 (render-policy schema v3, 2026.07.18): the `interactive` field and the
 `style.interaction` block no longer exist, and there is no scripted-SVG or
 HTML-wrapper output. Still verify the mode from the emitted artifact, not the
@@ -608,7 +615,7 @@ managed install in the host's per-plugin writable data directory, then a
 `dediren` on `PATH` that reports at or above the floor, then the migration-only
 fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
-(`2026.08.7`) into that data directory. It discovers that installation's live
+(`2026.08.9`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead

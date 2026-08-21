@@ -54,7 +54,7 @@ shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
 call. Dediren itself is provisioned by the plugin: on first use the launcher
-installs the pinned, checksum-verified release (pin `2026.08.7`, support floor
+installs the pinned, checksum-verified release (pin `2026.08.9`, support floor
 `2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
 into the host's own per-plugin writable data directory. That directory resolves
 from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,
@@ -97,6 +97,19 @@ geometry and presentation keys ELK re-lays out. The release's draw.io export
 engine is reachable from no build driver, so the tool set stays at eight and the
 skill's trigger boundary still excludes diagrams the user wants kept in that
 format.
+
+Dediren 2026.08.8 adds an `ascii` render engine — box-drawn text diagrams from
+the same layout stages, Unicode by default with a plain-ASCII `text.charset`
+option — reachable only from the standalone `render` stage and a fourth
+`dediren_import` output mode, `text`, which returns an inline text diagram as a
+second text content beside the imported envelope. No build driver selects it,
+so the tool set stays at eight and SVG remains the evidence of record. Render
+policies move to `render-policy.schema.v4`: the runtime refuses a v3 policy
+with a single-operation `set_version` migration diagnostic, so checked-in
+packages migrate that one field. Dediren 2026.08.9 converges render-result
+`artifact_kind` onto the media-suffix form (v7): `svg` → `svg+xml` and text →
+`ascii+text`, breaking for consumers reading that field. The repo's fixture
+compatibility baseline moves to 2026.08.9; the support floor stays 2026.07.28.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|

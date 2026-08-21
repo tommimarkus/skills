@@ -51,7 +51,7 @@ Synthetic `uml-deployment` source (lending domain):
 ```json
 {
   "model_schema_version": "model.schema.v1",
-  "required_plugins": [{"id": "generic-graph", "version": "2026.08.3"}],
+  "required_plugins": [{"id": "generic-graph", "version": "2026.08.9"}],
   "nodes": [
     {"id": "node-app", "type": "Device", "label": "App Host", "properties": {"uml": {"kind": "device"}}},
     {"id": "env-jvm", "type": "ExecutionEnvironment", "label": "JVM", "properties": {"uml": {"node": "node-app"}}},

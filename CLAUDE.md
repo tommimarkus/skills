@@ -38,7 +38,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is plugin-provisioned:
   on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.08.7`, support floor `2026.07.28`, overridable by a CalVer
+  (pin `2026.08.9`, support floor `2026.07.28`, overridable by a CalVer
   `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
   writable data directory — `DEDIREN_HOME` (absolute) first, else
   `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
@@ -80,6 +80,19 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   draw.io export engine is selected by no build driver, so the tool set stays
   at eight and the skill's trigger boundary still excludes diagrams the user
   wants kept in draw.io format.
+  Dediren 2026.08.8 adds an `ascii` render engine — box-drawn text diagrams
+  from the same layout, Unicode by default with a plain-ASCII `text.charset`
+  option — reachable only from the standalone `render` stage and a fourth
+  `dediren_import` output mode, `text`, which returns an inline text diagram
+  beside the imported envelope. No build driver selects it, so the tool set
+  stays at eight and SVG remains the evidence of record. Render policies move
+  to `render-policy.schema.v4`; the runtime refuses a v3 policy with a
+  single-operation `set_version` migration diagnostic, so checked-in packages
+  migrate that one field. Dediren 2026.08.9 converges render-result
+  `artifact_kind` onto the media-suffix form (v7): `svg` → `svg+xml` and text
+  → `ascii+text`, breaking for consumers reading that field. The fixture
+  compatibility baseline moves to 2026.08.9; the support floor stays
+  2026.07.28.
 
   The architecture plugin's Dediren configuration is host-specific, while the
   shared launcher/router has no harness detection. Its maintained adapters are
