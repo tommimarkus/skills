@@ -408,6 +408,21 @@ def leaves_by_id(plan):
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
 
 
+def checkpoint_binding(data):
+    """Rehydrate the complete validator input from bounded per-step bindings."""
+    bindings = []
+    for step in data.get("steps", {}).values():
+        value = step.get("capability_binding") if isinstance(step, dict) else None
+        if not isinstance(value, dict) or not isinstance(value.get("bindings"), list):
+            return None
+        bindings.extend(value["bindings"])
+    return {
+        "schema": "planning-capability-binding-v1",
+        "plan_sha256": data.get("plan_hash"),
+        "bindings": bindings,
+    }
+
+
 def lifecycle(data):
     """Validate lifecycle fields, accepting old active v2 checkpoints in memory."""
     present = LIFECYCLE_FIELDS.intersection(data)
@@ -461,6 +476,9 @@ def validate_steps2(data, leafs):
             raise Error("blocked:plan_tampered")
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
             assignment = step.get("current_assignment")
+            assignment_fields = {"agent_id", "harness"}
+            if data.get("schema") == 4:
+                assignment_fields.add("model_or_alias")
             if (
                 not RETRY_STATE_FIELDS.issubset(step)
                 or step.get("current_tier") not in PORTABLE_TIERS
@@ -468,7 +486,7 @@ def validate_steps2(data, leafs):
                 < PORTABLE_TIERS.index(leafs[sid]["portable_tier"])
                 or not isinstance(step.get("same_tier_retry_used"), bool)
                 or not isinstance(assignment, dict)
-                or set(assignment) != {"agent_id", "harness"}
+                or set(assignment) != assignment_fields
                 or assignment.get("agent_id") != step.get("agent_id")
                 or not isinstance(assignment.get("harness"), str)
                 or not 1 <= len(assignment["harness"]) <= 160
@@ -478,6 +496,23 @@ def validate_steps2(data, leafs):
                 or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
             ):
                 raise Error("blocked:plan_tampered")
+            if data.get("schema") == 4:
+                binding = step.get("capability_binding")
+                if (
+                    not isinstance(assignment.get("model_or_alias"), str)
+                    or not 1 <= len(assignment["model_or_alias"]) <= 160
+                    or not assignment["model_or_alias"].strip()
+                    or not isinstance(binding, dict)
+                    or digest(binding) != step.get("capability_binding_sha256")
+                    or not valid_stored_binding(
+                        binding,
+                        data.get("plan_hash"),
+                        sid,
+                        leafs[sid],
+                        assignment,
+                    )
+                ):
+                    raise Error("blocked:plan_tampered")
             if step["retry_remediation_path"]:
                 rel(step["retry_remediation_path"], "retry remediation path")
                 require_sha256(
@@ -731,7 +766,7 @@ def plan_validator():
 def read_plan(path, contract_version=3):
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
-    ready_key = "dispatch_ready" if contract_version == 3 else "resume_ready"
+    ready_key = "approval_ready" if contract_version == 4 else "resume_ready"
     if (
         not result.get("valid")
         or not result.get(ready_key)
@@ -739,6 +774,59 @@ def read_plan(path, contract_version=3):
     ):
         raise Error("plan is not dispatch-ready")
     return data
+
+
+def capability_bindings(path, plan):
+    """Load one complete v4 binding and retain only the assigned step's evidence."""
+    value = read_json(path, "cannot read capability binding file")
+    result = plan_validator()(plan, capability_binding=value)
+    if not result.get("valid") or not result.get("dispatch_ready"):
+        raise Error("blocked:capability_unavailable")
+    return value
+
+
+def binding_for_step(binding, sid, assignment):
+    matches = [item for item in binding["bindings"] if item["step_id"] == sid]
+    if len(matches) != 1:
+        raise Error("blocked:capability_unavailable")
+    item = matches[0]
+    if (
+        item["host"] != assignment["harness"]
+        or item["executor"] != assignment["model_or_alias"]
+    ):
+        raise Error("blocked:capability_unavailable")
+    return {
+        "schema": binding["schema"],
+        "plan_sha256": binding["plan_sha256"],
+        "bindings": [item],
+    }
+
+
+def valid_stored_binding(value, plan_hash, sid, leaf, assignment):
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema", "plan_sha256", "bindings"}
+        or value.get("schema") != "planning-capability-binding-v1"
+        or value.get("plan_sha256") != plan_hash
+        or not isinstance(value.get("bindings"), list)
+        or len(value["bindings"]) != 1
+    ):
+        return False
+    item = value["bindings"][0]
+    return (
+        isinstance(item, dict)
+        and set(item) == {"step_id", "host", "executor", "requirements", "evidence"}
+        and item.get("step_id") == sid
+        and item.get("host") == assignment["harness"]
+        and item.get("executor") == assignment["model_or_alias"]
+        and item.get("requirements") == leaf["capability_requirements"]
+        and isinstance(item.get("evidence"), list)
+        and 1 <= len(item["evidence"]) <= 8
+        and all(
+            isinstance(evidence, str) and 1 <= len(evidence.strip()) <= 240
+            for evidence in item["evidence"]
+        )
+    )
 
 
 def assignments(path, plan):
@@ -775,9 +863,14 @@ def init2(args):
 
 
 def init3(args):
+    raise Error("blocked:contract_migration_required")
+
+
+def init4(args):
     approved_parent(args)
-    plan = read_plan(args.plan_file, 3)
+    plan = read_plan(args.plan_file, 4)
     assigned = assignments(args.assignments_file, plan)
+    bindings = capability_bindings(args.capability_binding_file, plan)
     ledger_root = root(args)
     collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
     directory = plan_dir(args)
@@ -785,15 +878,17 @@ def init3(args):
     if invalid:
         raise Error("target plan ledger directory is invalid")
     if any(entry["legacy"] for entry in existing):
-        raise Error("cannot add a v3 run inside a legacy ledger directory")
+        raise Error("cannot add a v4 run inside a legacy ledger directory")
     run_id = str(uuid.uuid4())
     run = directory / run_id
     if run.exists():
         raise Error("generated run already exists")
     leaves = leaves_by_id(plan)
     created_at = now()
-    steps = {
-        sid: {
+    steps = {}
+    for sid, leaf in leaves.items():
+        resolved_binding = binding_for_step(bindings, sid, assigned[sid])
+        steps[sid] = {
             "id": sid,
             "status": "pending",
             "attempt_count": 0,
@@ -813,15 +908,16 @@ def init3(args):
             "current_assignment": {
                 "agent_id": "",
                 "harness": assigned[sid]["harness"],
+                "model_or_alias": assigned[sid]["model_or_alias"],
             },
+            "capability_binding": resolved_binding,
+            "capability_binding_sha256": digest(resolved_binding),
             "retry_remediation_path": "",
             "retry_remediation_sha256": "",
             **CLOSEOUT_FIELDS,
         }
-        for sid, leaf in leaves.items()
-    }
     data = {
-        "schema": 3,
+        "schema": 4,
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": digest(plan),
@@ -844,14 +940,14 @@ def init3(args):
     initial_event(
         run,
         created_at,
-        "init-v3",
+        "init-v4",
         args.plan_id,
         run_id=run_id,
         plan_hash=data["plan_hash"],
     )
     return {
         "ok": True,
-        "action": "init-v3",
+        "action": "init-v4",
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": data["plan_hash"],
@@ -870,7 +966,7 @@ def load2(args):
     path = required_file(directory, "checkpoint.json", "unknown run id")
     data = read_json(path, "invalid v2 checkpoint")
     if (
-        data.get("schema") not in {2, 3}
+        data.get("schema") not in {2, 3, 4}
         or data.get("plan_id") != args.plan_id
         or data.get("run_id") != args.run_id
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
@@ -879,8 +975,8 @@ def load2(args):
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan)
-    ready_key = "dispatch_ready" if data["schema"] == 3 else "resume_ready"
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data))
+    ready_key = "dispatch_ready" if data["schema"] == 4 else "resume_ready"
     if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
         raise Error("blocked:plan_tampered")
     leafs = leaves_by_id(plan)
@@ -1047,7 +1143,10 @@ def validate_retry_artifacts(directory, data):
             raise Error("retry remediation artifact digest mismatch")
 
 
-def ready(args, directory, data, step):
+def ready(args, directory, data, plan, step):
+    for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
+        if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
+            raise Error(f"invalid {label}")
     if not isinstance(args.agent_id, str) or not 1 <= len(args.agent_id) <= 128:
         if step["status"] == "pending" or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
             raise Error("ready requires bounded --agent-id")
@@ -1069,13 +1168,18 @@ def ready(args, directory, data, step):
         raise Error("blocked:retry_exhausted")
     if retry_state:
         remediation, path, remediation_sha, same_tier = retry_state
+        current_assignment = {
+            "agent_id": remediation["next_agent_id"],
+            "harness": remediation["next_harness"],
+        }
+        if data.get("schema") == 4:
+            current_assignment["model_or_alias"] = (
+                args.model_or_alias or step["current_assignment"]["model_or_alias"]
+            )
         step.update(
             current_tier=remediation["target_portable_tier"],
             same_tier_retry_used=step["same_tier_retry_used"] or same_tier,
-            current_assignment={
-                "agent_id": remediation["next_agent_id"],
-                "harness": remediation["next_harness"],
-            },
+            current_assignment=current_assignment,
             retry_remediation_path=path,
             retry_remediation_sha256=remediation_sha,
         )
@@ -1085,10 +1189,35 @@ def ready(args, directory, data, step):
         next_agent_id = args.agent_id
         reason = args.summary or "ready"
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            step["current_assignment"] = {
+            current_assignment = {
                 "agent_id": next_agent_id,
-                "harness": step["assignment"]["harness"],
+                "harness": args.harness or step["assignment"]["harness"],
             }
+            if data.get("schema") == 4:
+                current_assignment["model_or_alias"] = (
+                    args.model_or_alias or step["assignment"]["model_or_alias"]
+                )
+            step["current_assignment"] = current_assignment
+    if data.get("schema") == 4:
+        current = step["current_assignment"]
+        stored = step["capability_binding"]["bindings"][0]
+        if (
+            stored["host"] != current["harness"]
+            or stored["executor"] != current["model_or_alias"]
+        ):
+            if not args.capability_binding_file:
+                raise Error("blocked:capability_unavailable")
+            replacement = capability_bindings(args.capability_binding_file, plan)
+            resolved = binding_for_step(
+                replacement,
+                step["id"],
+                {
+                    "harness": current["harness"],
+                    "model_or_alias": current["model_or_alias"],
+                },
+            )
+            step["capability_binding"] = resolved
+            step["capability_binding_sha256"] = digest(resolved)
     step["attempt_count"] += 1
     step["agent_id"] = next_agent_id
     step["attempt_id"] = str(uuid.uuid4())
@@ -1102,7 +1231,7 @@ def transition2(args):
     old = step["status"]
     new = args.to
     if new == "ready":
-        ready(args, directory, data, step)
+        ready(args, directory, data, plan, step)
     elif new == "in_progress":
         advance(step, old, "ready", new, args.summary or "in progress")
     elif new in {"integrated", "cleaned"}:
@@ -1671,7 +1800,7 @@ def classify_legacy(directory, current):
 def classify_v2(plan_id, directory, current):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
-    if checkpoint.get("schema") not in {2, 3}:
+    if checkpoint.get("schema") not in {2, 3, 4}:
         raise Error("unknown checkpoint schema")
     if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
         raise Error("v2 directory identity mismatch")
@@ -1682,8 +1811,8 @@ def classify_v2(plan_id, directory, current):
         checkpoint.get("plan_hash", "")
     ):
         raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan)
-    ready_key = "dispatch_ready" if checkpoint["schema"] == 3 else "resume_ready"
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
+    ready_key = "dispatch_ready" if checkpoint["schema"] == 4 else "resume_ready"
     if (
         not plan_result.get(ready_key)
         or plan_result.get("contract_version") != checkpoint["schema"]
@@ -2323,12 +2452,21 @@ def parse():
     init3_parser.add_argument("--approved", action="store_true")
     init3_parser.add_argument("--plan-file", required=True)
     init3_parser.add_argument("--assignments-file", required=True)
+    init4_parser = commands.add_parser("init-v4")
+    init4_parser.add_argument("--actor", required=True)
+    init4_parser.add_argument("--approved", action="store_true")
+    init4_parser.add_argument("--plan-file", required=True)
+    init4_parser.add_argument("--assignments-file", required=True)
+    init4_parser.add_argument("--capability-binding-file", required=True)
     trans = commands.add_parser("transition")
     trans.add_argument("--actor", required=True)
     trans.add_argument("--run-id")
     trans.add_argument("--step-id", required=True)
     trans.add_argument("--to", required=True)
     trans.add_argument("--agent-id", default="")
+    trans.add_argument("--harness", default="")
+    trans.add_argument("--model-or-alias", default="")
+    trans.add_argument("--capability-binding-file", default="")
     trans.add_argument("--summary", default="")
     trans.add_argument("--retry", action="store_true")
     trans.add_argument("--retry-remediation-file", default="")
@@ -2389,6 +2527,8 @@ def main(argv=None):
             value = init2(args)
         elif args.command == "init-v3":
             value = init3(args)
+        elif args.command == "init-v4":
+            value = init4(args)
         elif args.command == "transition":
             value = transition2(args) if args.run_id else transition1(args)
         elif args.command == "record-return":
