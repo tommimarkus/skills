@@ -63,7 +63,7 @@ def load_cases() -> list[dict[str, Any]]:
 
 def handoff_for(case: dict[str, Any]) -> dict[str, Any]:
     """Render the portable contract passed to each fresh host invocation."""
-    fields = ("id", "dependencies", "task", "boundary", "read_set", "write_set", "settled_decisions", "intentionally_missing_input", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions", "irreducible_unknown_or_risk", "retry_remediation")
+    fields = ("id", "dependencies", "task", "boundary", "read_set", "write_set", "settled_decisions", "intentionally_missing_input", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions", "irreducible_unknown_or_risk", "retry_remediation", "capability_requirements", "capability_binding")
     handoff = {field: case[field] for field in fields if field in case}
     handoff.setdefault("dependencies", [])
     return handoff

@@ -1,0 +1,16 @@
+{
+  "schema": "planning-capability-binding-v1",
+  "plan_sha256": "",
+  "bindings": [
+    {
+      "step_id": "",
+      "host": "",
+      "executor": "",
+      "requirements": {
+        "baseline": "plan-step-base-v1",
+        "additional": []
+      },
+      "evidence": []
+    }
+  ]
+}

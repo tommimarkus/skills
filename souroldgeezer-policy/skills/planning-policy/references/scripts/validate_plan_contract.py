@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -32,6 +33,9 @@ REQUIRED = (
 )
 V2_REQUIRED = ("contract_version", "objective", "scope_summary", "approved_decisions")
 V2_RETURN_CONTRACT = "bounded-step-return-v1"
+CAPABILITY_BASELINE = "plan-step-base-v1"
+CAPABILITY_BINDING_SCHEMA = "planning-capability-binding-v1"
+CAPABILITY_KINDS = {"tool", "skill", "service", "permission", "runtime"}
 COST_SCHEMA = "planning-execution-cost-v1"
 COST_LANES = (
     "parent_baseline",
@@ -296,11 +300,76 @@ def nonempty_string_in_range(value: Any, minimum: int, maximum: int) -> bool:
     return isinstance(value, str) and minimum <= len(value.strip()) <= maximum
 
 
+def canonical_plan_sha256(plan: Any) -> str:
+    """Return the stable digest a capability binding joins to exactly."""
+    encoded = json.dumps(plan, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def capability_requirements_valid(value: Any) -> bool:
+    if not isinstance(value, dict) or set(value) != {"baseline", "additional"}:
+        return False
+    if value.get("baseline") != CAPABILITY_BASELINE:
+        return False
+    additional = value.get("additional")
+    if not isinstance(additional, list) or len(additional) > 16:
+        return False
+    return all(
+        isinstance(item, dict)
+        and set(item) == {"kind", "name", "reason"}
+        and item.get("kind") in CAPABILITY_KINDS
+        and nonempty_string_in_range(item.get("name"), 1, 120)
+        and nonempty_string_in_range(item.get("reason"), 1, 240)
+        for item in additional
+    )
+
+
+def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]], binding: Any) -> bool:
+    """Require one exact resolved binding for every v4 leaf, without making it a plan error."""
+    if not isinstance(binding, dict) or set(binding) != {"schema", "plan_sha256", "bindings"}:
+        return False
+    if binding.get("schema") != CAPABILITY_BINDING_SCHEMA:
+        return False
+    if binding.get("plan_sha256") != canonical_plan_sha256(plan):
+        return False
+    bindings = binding.get("bindings")
+    if not isinstance(bindings, list) or len(bindings) != len(leaves):
+        return False
+    expected = {
+        leaf.get("id"): leaf.get("capability_requirements")
+        for leaf in leaves
+        if isinstance(leaf, dict) and stable_id(leaf.get("id"))
+    }
+    if len(expected) != len(leaves):
+        return False
+    observed: dict[str, Any] = {}
+    for item in bindings:
+        if not isinstance(item, dict) or set(item) != {"step_id", "host", "executor", "requirements", "evidence"}:
+            return False
+        step_id = item.get("step_id")
+        if step_id in observed or step_id not in expected:
+            return False
+        if not nonempty_string_in_range(item.get("host"), 1, 80):
+            return False
+        if not nonempty_string_in_range(item.get("executor"), 1, 120):
+            return False
+        evidence = item.get("evidence")
+        if not isinstance(evidence, list) or not 1 <= len(evidence) <= 8:
+            return False
+        if any(not nonempty_string_in_range(value, 1, 240) for value in evidence):
+            return False
+        if item.get("requirements") != expected[step_id]:
+            return False
+        observed[step_id] = item["requirements"]
+    return set(observed) == set(expected)
+
+
 def contract_result(
     contract_version: int | None,
     dispatch_ready: bool,
     warnings: list[str],
     errors: list[str],
+    approval_ready: bool = False,
     ratio: float = 0.0,
     ready_weight: int = 0,
     total_weight: int = 0,
@@ -310,6 +379,7 @@ def contract_result(
     return {
         "valid": not errors,
         "contract_version": contract_version,
+        "approval_ready": approval_ready and not errors,
         "dispatch_ready": dispatch_ready and not errors,
         "resume_ready": contract_version in {2, 3} and not errors,
         "warnings": warnings,
@@ -322,7 +392,7 @@ def contract_result(
     }
 
 
-def validate(plan: Any) -> dict[str, Any]:
+def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(plan, dict):
@@ -340,7 +410,7 @@ def validate(plan: Any) -> dict[str, Any]:
                 "unversioned plan is legacy contract version 1; "
                 "migrate to contract_version 3 before dispatch"
             )
-    elif raw_version in {2, 3} and isinstance(raw_version, int):
+    elif raw_version in {2, 3, 4} and isinstance(raw_version, int):
         contract_version = raw_version
         for field in V2_REQUIRED:
             if field not in plan:
@@ -358,7 +428,7 @@ def validate(plan: Any) -> dict[str, Any]:
             )
     else:
         contract_version = None
-        errors.append("contract_version must be 2 or 3 when specified")
+        errors.append("contract_version must be 2, 3, or 4 when specified")
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:
@@ -452,7 +522,7 @@ def validate(plan: Any) -> dict[str, Any]:
             errors.append(
                 f"{prefix}.acceptance_command must be exactly one non-empty command string"
             )
-        if contract_version in {2, 3}:
+        if contract_version in {2, 3, 4}:
             attempts = leaf.get("max_attempts")
             if (
                 not isinstance(attempts, int)
@@ -468,6 +538,13 @@ def validate(plan: Any) -> dict[str, Any]:
                     f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
                     f"for contract version {contract_version}"
                 )
+        if contract_version == 4 and not capability_requirements_valid(
+            leaf.get("capability_requirements")
+        ):
+            errors.append(
+                f"{prefix}.capability_requirements must be an exact {CAPABILITY_BASELINE} "
+                "requirements object"
+            )
         if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(
             leaf.get("irreducible_unknown_or_risk")
         ):
@@ -548,20 +625,26 @@ def validate(plan: Any) -> dict[str, Any]:
         errors.append(
             "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
         )
-    if contract_version == 2:
+    if contract_version in {2, 3}:
         warnings.append("blocked:contract_migration_required")
+    binding_matches = contract_version == 4 and capability_binding_matches(plan, leaves, capability_binding)
+    if contract_version == 4 and not binding_matches:
+        warnings.append("blocked:capability_unavailable")
     advisory = bounded_cost_advisory(cost_advisory(plan, leaves))
-    return contract_result(
+    result = contract_result(
         contract_version,
-        contract_version == 3,
+        binding_matches,
         warnings,
         errors,
+        contract_version == 4,
         ratio,
         ready_weight,
         total_weight,
         exception_valid,
         advisory,
     )
+    result["plan_sha256"] = canonical_plan_sha256(plan)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -569,9 +652,19 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     validate_parser = subparsers.add_parser("validate", help="validate a plan JSON file")
     validate_parser.add_argument("plan", type=Path)
+    validate_parser.add_argument(
+        "--capability-binding",
+        type=Path,
+        help="optional planning-capability-binding-v1 JSON for dispatch validation",
+    )
     args = parser.parse_args(argv)
     try:
         plan = json.loads(args.plan.read_text(encoding="utf-8"))
+        binding = (
+            json.loads(args.capability_binding.read_text(encoding="utf-8"))
+            if args.capability_binding is not None
+            else None
+        )
     except (OSError, json.JSONDecodeError) as error:
         print(
             json.dumps(
@@ -581,7 +674,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 2
-    result = validate(plan)
+    result = validate(plan, capability_binding=binding)
+    result["plan_sha256"] = canonical_plan_sha256(plan)
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     return 0 if result["valid"] else 1
 
