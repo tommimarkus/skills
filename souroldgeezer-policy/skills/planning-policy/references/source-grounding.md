@@ -3,9 +3,12 @@
 ## 2026-08-22 contract-v4 capability binding
 
 The v4 contract separates a plan being ready for human approval from being ready
-for host dispatch. Repository runs exposed that a decision-complete delegated
-plan could be approved before the selected host had established whether the
-fresh worker had every required capability. The repository-authored remedy keeps
+for host dispatch. The repository-authored regression in
+[`planning_policy_v4_capability_test.py`](../../../../tests/planning_policy_v4_capability_test.py)
+and synthetic cases in [`behavior-cases.jsonl`](evals/behavior-cases.jsonl)
+model the failure: a decision-complete delegated plan could be approved before
+the selected host had established whether the fresh worker had every required
+capability. The repository-authored remedy keeps
 host resolution in the Claude and Codex adapters while every v4 leaf declares
 portable `capability_requirements`: the `plan-step-base-v1` baseline plus bounded
 additional requirements. A `planning-capability-binding-v1` then joins the
