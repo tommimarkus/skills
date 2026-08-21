@@ -269,14 +269,14 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
-    Each v3 plan includes bounded advisory `planning-execution-cost-v1` data;
+    Each v4 plan includes bounded advisory `planning-execution-cost-v1` data;
     the same validator invocation emits `planning-cost-advisory-v1` within 600
     proxy tokens. Unknown token ranges remain indeterminate, execution control
     is invariant, and proxy, declared-model-token, and provider-measured lanes
     stay separate. The human plan includes compact **Execution economics** and
     `tracing: off`.
-    The ledger is the sole retry-policy owner: new v3 runs stamp
-    `retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve
+    The ledger is the sole retry-policy owner: new v4 runs stamp
+    `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve
     old behavior. `portable_tier` is initial only. Only `failed:acceptance` and
     `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
     `failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.
@@ -309,15 +309,15 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     bulk deletion. Invalid, ambiguous, and active state is preserved.
     Version-1 ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3-only.
+    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3/v4-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
-    plan as new work; new documentation uses `init-v3`. Remove legacy support
+    plan as new work; new documentation uses `init-v4`. Remove legacy support
     only in a later explicit breaking release after no version-1 ledger is
     nonterminal. The optional fresh-context comparison is
     `uv run python scripts/planning_policy_forward_eval.py --harness both
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
-    silent downgrade. Token tracing is separately opt-in for one v3 run through
+    silent downgrade. Token tracing is separately opt-in for one v3/v4 run through
     `trace-init`, `trace-record`, `trace-show`, and `trace-close`; ordinary use
     creates no usage state or telemetry calls. Counter/provenance-only records
     live outside the checkpoint and follow the run's retention and purge rules.

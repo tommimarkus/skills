@@ -398,14 +398,14 @@ opaque attempt ID. Concurrent agents require independent ready steps and
 separate worktrees/write paths. Finite `max_attempts` (1–5) stops unchanged
 progress as `blocked:no_progress`, exhaustion as terminal
 `blocked:retry_exhausted`, and boundary expansion as terminal `oversized`.
-Each v3 plan has bounded advisory `planning-execution-cost-v1` data, and the
+Each v4 plan has bounded advisory `planning-execution-cost-v1` data, and the
 same validator call emits `planning-cost-advisory-v1` within 600 proxy tokens.
 Unknown model-token estimates stay unknown; proxy, declared-model-token, and
 provider-measured lanes never mix. The human plan renders compact **Execution
 economics** with `tracing: off`; cost findings never govern execution.
 
-The ledger is the sole retry-policy owner. New v3 runs stamp
-`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+The ledger is the sole retry-policy owner. New v4 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior, and `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible: one same-tier retry follows only
 `failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately;
@@ -414,7 +414,7 @@ retry persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
 assignment checks. Terminal precedence is repeated result, ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
-Successful v2/v3 steps continue `completed` → `integrated` → `cleaned`.
+Successful v2/v3/v4 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
@@ -437,7 +437,7 @@ Version-1 ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
 Version-1 keeps its terminal `integrated` state and does not gain `cleaned`.
 Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v3`. Remove legacy support only
+plan as new work; new documentation uses `init-v4`. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.
 Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
 `opus`/`high`, `opus`/`xhigh` — for mechanical, standard, analytical, and deep
@@ -447,12 +447,12 @@ requested tier, alias, and effort; never silently downgrade. The fresh-context
 comparison is opt-in (`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`)
 and records bounded summaries only.
 
-Tracing is explicit per v3 run (`trace-init`, `trace-record`, `trace-show`,
+Tracing is explicit per v3/v4 run (`trace-init`, `trace-record`, `trace-show`,
 `trace-close`). Normal planning/execution writes no trace state and inspects no
 telemetry. Opt-in records store counters and harness/model provenance only,
 outside the checkpoint, and follow retention/purge safeguards.
 
-The parent closes a version-2/3 run with `completed`, `blocked`, or `abandoned`
+The parent closes a version-2/3/4 run with `completed`, `blocked`, or `abandoned`
 outcome, and reopens only a retained blocked run with retryable work. Use `list`
 for bounded discovery and `gc --dry-run` before retention cleanup: completed
 runs retain 30 days, blocked runs 90 days, abandoned runs 7 days. Active,

@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -61,12 +62,16 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                 "stop_conditions": ["missing_load_bearing_information"],
                 "work_unit_id": step_id,
                 "max_attempts": max_attempts,
+                "capability_requirements": {
+                    "baseline": "plan-step-base-v1",
+                    "additional": [],
+                },
             }
             if portable_tier in {"analytical", "deep"}:
                 leaf["irreducible_unknown_or_risk"] = "retry terminal precedence"
             leaves.append(leaf)
         plan = {
-            "contract_version": 3,
+            "contract_version": 4,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],
@@ -81,6 +86,32 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                 "user_approved_by": "test fixture",
             }
         path.write_text(json.dumps(plan))
+        return path
+
+    def capability_binding(self, plan_path):
+        plan = json.loads(Path(plan_path).read_text())
+        plan_sha256 = hashlib.sha256(
+            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        path = self.root / f"{plan_path.stem}-capability-binding.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema": "planning-capability-binding-v1",
+                    "plan_sha256": plan_sha256,
+                    "bindings": [
+                        {
+                            "step_id": leaf["id"],
+                            "host": "codex",
+                            "executor": "gpt-5.6-terra",
+                            "requirements": leaf["capability_requirements"],
+                            "evidence": ["test fixture capability inventory"],
+                        }
+                        for leaf in plan["leaves"]
+                    ],
+                }
+            )
+        )
         return path
 
     def assignments(self, plan_id="plan", count=2):
@@ -109,16 +140,19 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         max_attempts=2,
         portable_tier="standard",
     ):
+        selected_plan = self.plan(plan_id, count, dependent, max_attempts, portable_tier)
         code, result = self.call(
             *self.common(plan_id),
-            "init-v3",
+            "init-v4",
             "--actor",
             "parent",
             "--approved",
             "--plan-file",
-            str(self.plan(plan_id, count, dependent, max_attempts, portable_tier)),
+            str(selected_plan),
             "--assignments-file",
             str(self.assignments(plan_id, count)),
+            "--capability-binding-file",
+            str(self.capability_binding(selected_plan)),
         )
         self.assertEqual(0, code, result)
         return result["run_id"]
@@ -784,16 +818,19 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             {item["code"] for item in listed["invalid"]},
         )
         self.assertLessEqual(listed["summary_proxy_tokens"], 1200)
+        linked_plan = self.plan("linked")
         code, _ = self.call(
             *self.common("linked"),
-            "init-v3",
+            "init-v4",
             "--actor",
             "parent",
             "--approved",
             "--plan-file",
-            str(self.plan("linked")),
+            str(linked_plan),
             "--assignments-file",
             str(self.assignments("linked")),
+            "--capability-binding-file",
+            str(self.capability_binding(linked_plan)),
         )
         self.assertEqual(3, code)
         self.assertEqual("preserve", (unexpected / "note.txt").read_text())

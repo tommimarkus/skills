@@ -29,7 +29,7 @@ count (`1`), tier, and worktree; it cannot replace the plan's portable tier or
 worktree owner.
 
 At initialization the parent stores a canonical approved-plan copy and its
-lowercase 64-hex-character SHA-256 hash. Every version-2/3 lifecycle command
+lowercase 64-hex-character SHA-256 hash. Every version-2/3/4 lifecycle command
 compares the supplied or stored plan hash with that copy before changing or
 trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
@@ -76,7 +76,7 @@ A terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`fail
 committed partial slice or discard it, then remove worktree and branch without
 force. No terminal leaf is left undisposed.
 
-Every new version-3 checkpoint records `run_status: active`, with `outcome`,
+Every new version-4 checkpoint records `run_status: active`, with `outcome`,
 `closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
 --outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
 sets the other three fields. A completed close requires every step to be

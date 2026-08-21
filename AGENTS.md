@@ -273,8 +273,8 @@ independent ready steps with separate worktrees and write paths. A step has a
 finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 `blocked:no_progress`; an exhausted step is terminal `blocked:retry_exhausted`;
 and a boundary overrun is terminal `oversized`, never an expanded retry.
-The ledger is the sole retry-policy owner: new v3 runs stamp
-`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+The ledger is the sole retry-policy owner: new v4 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry is allowed only
 after `failed:acceptance`, while `blocked:needs_higher_tier` escalates
@@ -284,7 +284,7 @@ identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
-Successful v2/v3 steps continue `completed` → `integrated` → `cleaned`.
+Successful v2/v3/v4 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
@@ -303,13 +303,13 @@ run summary, not history. Version-1 ledgers remain readable and mutable in
 place with `retry_policy: legacy_unbounded` until every version-1 ledger is
 terminal. Version-1 keeps its terminal `integrated` state and does not gain
 `cleaned`. Current planning-policy cannot approve or dispatch an unversioned
-version-1 plan as new work; new documentation uses `init-v3`. Remove legacy
+version-1 plan as new work; new documentation uses `init-v4`. Remove legacy
 support only in a later explicit breaking release after no version-1 ledger is
 nonterminal. The parent owns integration and
 end-to-end verification; a delegated return covers only its assigned drafting
 and acceptance check.
 
-The parent closes a version-2/3 run with explicit `completed`, `blocked`, or
+The parent closes a version-2/3/4 run with explicit `completed`, `blocked`, or
 `abandoned` outcome, reopens only an eligible retained blocked run, and uses
 `list` for bounded discovery. `gc --dry-run` previews conservative retention:
 completed runs 30 days, blocked runs 90 days, abandoned runs 7 days; active,
@@ -317,7 +317,7 @@ invalid, and ambiguous records remain preserved. `purge --actor parent` targets
 one closed run only (and needs `--before-retention` plus reason before expiry);
 there is no bulk deletion.
 
-Runtime tracing is a separate explicit opt-in per v3 run. Ordinary planning and
+Runtime tracing is a separate explicit opt-in per v3/v4 run. Ordinary planning and
 execution create no usage directory, inspect no telemetry, install no hooks,
 and make no network or provider call. Only an explicit request to trace,
 measure, or calibrate loads the `trace-init`, `trace-record`, `trace-show`, and

@@ -408,7 +408,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
             contract_version = 1
             warnings.append(
                 "unversioned plan is legacy contract version 1; "
-                "migrate to contract_version 3 before dispatch"
+                "migrate to contract_version 4 before approval or dispatch"
             )
     elif raw_version in {2, 3, 4} and isinstance(raw_version, int):
         contract_version = raw_version

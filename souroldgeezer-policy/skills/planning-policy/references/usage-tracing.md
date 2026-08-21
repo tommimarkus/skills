@@ -5,7 +5,7 @@ measure one run, or calibrate its forecast. Ordinary planning and execution do
 not inspect telemetry, write usage state, install hooks, call a network, or
 contact a provider.
 
-For one active version-3 run, the parent uses the already-resolved ledger helper:
+For one active version-3 or version-4 run, the parent uses the already-resolved ledger helper:
 
 ```text
 ... --plan-id <plan-id> trace-init --actor parent --run-id <run-id>

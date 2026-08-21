@@ -30,7 +30,7 @@
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json", "predicate": "conditional:new-plan-authoring"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json", "predicate": "conditional:new-plan-authoring"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md", "predicate": "conditional:claude"}
     ]
   },
@@ -41,7 +41,7 @@
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v3.json", "predicate": "conditional:new-plan-authoring"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json", "predicate": "conditional:new-plan-authoring"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "conditional:codex"}
     ]
   },

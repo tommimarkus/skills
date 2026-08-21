@@ -132,7 +132,7 @@ unchanged progress is `blocked:no_progress`, exhaustion is terminal
 `oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
 `blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
 and its bounded `show` rehydrates one step or a truncated summary. Successful
-v2/v3 leaves continue `completed` → `integrated` → `cleaned`; bounded
+v2/v3/v4 leaves continue `completed` → `integrated` → `cleaned`; bounded
 `planning-worktree-result-v1` evidence ties returned and rebased commits to
 rebase/fast-forward integration and non-force cleanup. Partial cleanup retries
 revalidate recorded identity, remaining branch state, and target ancestry.
@@ -143,10 +143,10 @@ ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
 Their terminal `integrated` state remains unchanged.
 Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v3`. Remove legacy support only
+plan as new work; new documentation uses `init-v4`. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.
-The ledger is the sole retry-policy owner: new v3 runs stamp
-`retry_policy: escalating_remediation_v1`; policy-less v2 and v1 preserve old
+The ledger is the sole retry-policy owner: new v4 runs stamp
+`retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
 `failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.

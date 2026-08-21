@@ -765,7 +765,7 @@ def plan_validator():
     return module.validate
 
 
-def read_plan(path, contract_version=3):
+def read_plan(path, contract_version=4):
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
     ready_key = "approval_ready" if contract_version == 4 else "resume_ready"

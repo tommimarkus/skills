@@ -695,18 +695,21 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertTrue(all(len(x) == 36 for x in runs))
         bad = self.assignments()
         bad.write_text("[]")
+        selected_plan = self.plan()
         self.assertEqual(
             3,
             self.call(
                 *self.common,
-                "init-v3",
+                "init-v4",
                 "--actor",
                 "parent",
                 "--approved",
                 "--plan-file",
-                str(self.plan()),
+                str(selected_plan),
                 "--assignments-file",
                 str(bad),
+                "--capability-binding-file",
+                str(self.capability_binding(selected_plan)),
             )[0],
         )
 
@@ -1136,16 +1139,19 @@ class PlanningLedgerTest(unittest.TestCase):
         fixed = ledger.uuid.UUID("12345678-1234-4234-8234-123456789abc")
         with patch.object(ledger.uuid, "uuid4", return_value=fixed):
             self.init2()
+            selected_plan = self.plan()
             code, _ = self.call(
                 *self.common,
-                "init-v3",
+                "init-v4",
                 "--actor",
                 "parent",
                 "--approved",
                 "--plan-file",
-                str(self.plan()),
+                str(selected_plan),
                 "--assignments-file",
                 str(self.assignments()),
+                "--capability-binding-file",
+                str(self.capability_binding(selected_plan)),
             )
         self.assertEqual(3, code)
 

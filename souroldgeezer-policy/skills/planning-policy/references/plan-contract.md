@@ -39,7 +39,7 @@ Select only `portable_tier`; model/effort belong to the host adapter. Missing
 mapping or delegation returns its blocker without a silent tier change.
 
 Retries are ledger-owned, add no plan fields, and preserve the approved boundary
-and identity. New v3 uses `escalating_remediation_v1`; old policy-less state is
+and identity. New v4 uses `escalating_remediation_v1`; old policy-less state is
 unchanged.
 
 `work_units` declares `{id, original_size}` once; every nonempty unit owns at

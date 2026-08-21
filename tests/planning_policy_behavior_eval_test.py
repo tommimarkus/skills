@@ -61,9 +61,9 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-retry-immediate-escalation",
             "planning-policy-behavior-retry-terminal-precedence",
             "planning-policy-behavior-retry-legacy-compatibility",
-            "planning-policy-behavior-v3-cost-advisory",
-            "planning-policy-behavior-v3-trace-opt-in",
-            "planning-policy-behavior-v3-v2-resume-only",
+            "planning-policy-behavior-v4-cost-advisory",
+            "planning-policy-behavior-v4-trace-opt-in",
+            "planning-policy-behavior-v4-v3-resume-only",
             "planning-policy-behavior-v4-canonical-scaffold",
             "planning-policy-behavior-v4-claude-mechanical-skill-block",
         }
