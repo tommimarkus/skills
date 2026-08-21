@@ -8,6 +8,22 @@ Normal dispatch never enables or inspects usage tracing.
 Read this additive adapter after the shared execution shape when the approved
 plan will execute in Codex. It does not replace the portable handoff contract.
 
+## Capability resolution
+
+Before **every** initial or retry dispatch, resolve every leaf's
+`capability_requirements` against the active Codex host and selected executor.
+The baseline `plan-step-base-v1` and every additional `tool`, `skill`,
+`service`, `permission`, and `runtime` requirement need current host evidence.
+Create or use the exact `planning-capability-binding-v1` whose plan digest,
+step ID, executor, and requirements exactly join the approved plan; do not
+reuse a binding for a different executor or attempt assignment.
+
+If the baseline or any additional requirement cannot be evidenced, stop before
+dispatch with `blocked:capability_unavailable`; do not silently substitute,
+drop, defer, or probe for a replacement capability. This is distinct from
+`blocked:model_unavailable`, which applies only when the already selected
+model/effort mapping is unavailable.
+
 ## Dispatch and model mapping
 
 When the host exposes delegation, use `spawn_agent` for each ready, independent
@@ -53,6 +69,8 @@ Call the host mechanism with a prompt containing all of the following:
 
 - stable step ID and dependency IDs;
 - run ID, step ID, agent ID, and attempt ID;
+- the exact resolved binding, including its `planning-capability-binding-v1`
+  schema, plan digest, matching step requirements, and selected executor;
 - task and boundary;
 - named reads and writes;
 - settled decisions and constraints;
@@ -63,7 +81,12 @@ Call the host mechanism with a prompt containing all of the following:
 - any ledger-supplied bounded `retry-remediation-v1` material, without raw
   history; and
 - stop conditions: missing load-bearing data, scope exceeding the stated size,
-  unavailable mapped model, or a required decision outside the handoff.
+  unavailable mapped model, unavailable required capability, or a required
+  decision outside the handoff.
+
+The agent must receive the binding alongside the plan/step/attempt identity and
+must reject a missing or mismatched binding as
+`blocked:capability_unavailable` without probing for a replacement.
 
 For a missing load-bearing input, return `blocked:missing_input`; do not search
 for or invent it. If the work exceeds its stated size, stop and return the

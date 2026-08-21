@@ -9,6 +9,25 @@ Read this adapter when an approved `planning-policy` plan dispatches its steps
 through Claude Code. It adds host execution details to the portable tier roster;
 it does not replace the shared workflow.
 
+## Capability resolution
+
+Before **every** initial or retry Agent assignment, resolve every leaf's
+`capability_requirements` against the active Claude Code host, the selected
+alias/effort, and that Agent's granted tools. The baseline `plan-step-base-v1`
+and every additional `tool`, `skill`, `service`, `permission`, and `runtime`
+requirement need current host evidence. Create or use the exact
+`planning-capability-binding-v1` whose plan digest, step ID, executor, and
+requirements exactly join the approved plan; do not reuse a binding for a
+different executor or attempt assignment.
+
+Claude's `plan-step-mechanical` Agent intentionally lacks `Skill`. It cannot
+evidence an additional `skill` requirement: stop with
+`blocked:capability_unavailable` instead of granting a tool or changing Agent
+frontmatter. Apply the same evidence rule to every other missing capability;
+do not silently substitute, drop, defer, or probe for a replacement capability.
+This is distinct from `blocked:model_unavailable`, which applies only when the
+already selected alias/effort mapping is unavailable.
+
 Use the `Agent` tool once per decomposed step. Assign the cheapest tier that
 fits and preserve these portable Claude aliases and effort values exactly:
 
@@ -24,14 +43,17 @@ downgrade a requested tier. If Claude Code cannot provide the requested alias or
 effort, return `blocked:model_unavailable` with the requested tier, alias, and
 effort; the parent must reassign the step or execute it locally.
 
-Every Agent assignment includes: run, step, agent, and attempt identity; task
-and boundary; named inputs and prior decisions; one scoped acceptance check;
-size band; return contract; and the requested tier, alias, and effort. The
-parent keeps integration and the plan's final verification; an agent verifies
-only its own drafting. If the work exceeds its size band, the agent stops and
-asks the parent to re-cut it rather than expanding scope. If an assignment is
-missing a load-bearing field, return `blocked:missing_input` with the missing
-fields.
+Every Agent assignment includes: run, step, agent, and attempt identity; the
+exact resolved binding, including its `planning-capability-binding-v1` schema,
+plan digest, matching step requirements, and selected executor; task and
+boundary; named inputs and prior decisions; one scoped acceptance check; size
+band; return contract; and the requested tier, alias, and effort. The parent
+keeps integration and the plan's final verification; an agent verifies only its
+own drafting. If the work exceeds its size band, the agent stops and asks the
+parent to re-cut it rather than expanding scope. If an assignment is missing a
+load-bearing field, return `blocked:missing_input` with the missing fields. An
+agent rejects a missing or mismatched binding as
+`blocked:capability_unavailable` without probing for a replacement.
 
 ## Ledger-owned retry remediation
 
