@@ -374,6 +374,13 @@ when it is available, and run `claude plugin validate --strict` through the
 repository report path when the Claude CLI is installed. A test run that
 collects zero tests is a failed gate.
 
+Never let a pipeline stage or a `||` fallback own a gate's reported exit code —
+`cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's
+status, not the gate's, and can read green while the gate itself failed.
+Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and
+test the bare command, or run the gate unpiped; a status that provably came
+from a downstream stage is no evidence the gate ran or passed.
+
 The host smoke must keep both safety flags. It uses temporary `CODEX_HOME`,
 `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without
 replacing `HOME`, verifies installed plugin, skill, agent, and Dediren MCP

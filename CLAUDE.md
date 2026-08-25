@@ -207,6 +207,8 @@ git diff --check
 
 Run the whole suite with the repo's actual `*_test.py` pattern; bare `unittest discover` uses `test*.py`, silently collects zero, and reads as a pass — treat a run that collects 0 tests as a failed gate.
 
+When reading a gate's exit status, never let a pipeline stage or a `||` fallback own the reported code — `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's status, not the gate's, and can read green while the gate itself failed. Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and test the bare command, or run the gate unpiped; a status that provably came from a downstream stage is no evidence the gate ran or passed, the same way a 0-collected-tests run is treated as a failed gate.
+
 The cross-runtime host smoke installs supported surfaces into fresh temporary
 `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME`
 trees without substituting `HOME`. It checks Codex prompt-input discovery,
