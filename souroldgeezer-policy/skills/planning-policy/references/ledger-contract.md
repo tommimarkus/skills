@@ -8,16 +8,23 @@ replace the executable-plan validator.
 ## Runtime reference
 
 This part is the narrow surface a parent needs while actively driving a run:
-the isolation and authority model, the `bounded-step-return-v1` contract a
+the isolation and authority model, how to drive `transition` and `validate
+--closeout` for a version-2/3/4 run, the `bounded-step-return-v1` contract a
 leaf's return must satisfy before you record it, the worktree closeout
-procedure, and the listing/retention/deletion rules. Each ledger command's own
-JSON result states the facts that only make sense at the moment of use — its
-required arguments, why it rejected a call, which transitions are legal from
-the current state, and (for a step outcome) whether a retry is eligible and
-what the next command would be. Read the acting command's own result for
-those rather than a prose restatement of them; the full mechanical detail
-(including the state machine, retry-eligibility rules, and every command's
-argument/rejection contract) lives unabridged in "Authoring and audit
+procedure, and the listing/retention/deletion rules. Only two commands emit a
+bounded `next` block stating the live facts that only make sense at the moment
+of use: `init-v4`'s success result states the ready steps and the first legal
+command, and `record-return`'s result states retry eligibility, target tier,
+and terminal precedence for the step and outcome it just recorded. Prefer that
+live `next` block over this document's narrative for those two commands.
+Neither `transition` nor `validate --closeout` emits an equivalent block today
+— `transition`'s v2–v4 successor logic is enforced by dedicated per-status
+checks rather than a lookup table (hand-authoring one here would recreate the
+same restatement risk this document exists to avoid), and `validate
+--closeout`'s blocking case raises an error rather than returning a result —
+so this document remains the reference for driving those two commands. The
+full mechanical detail behind all of this, including exactly how the ledger
+enforces state legality in code, lives unabridged in "Authoring and audit
 reference" below for authors changing the ledger's own behavior and for
 auditors verifying it against the script.
 
@@ -51,6 +58,41 @@ Every new version-4 run also stamps `retry_policy: escalating_remediation_v1`.
 It retains the resolved binding with each assigned step. An assignment change
 requires an exact re-binding before the step can become ready; otherwise stop
 `blocked:capability_unavailable`, never silently substitute or downgrade.
+
+### Driving transitions and validate --closeout
+
+`init-v4` requires `--plan-id`, the approved version-4 plan, the complete
+assignment set, and an exact capability-binding file. It rejects a non-UUID4 run
+ID, a plan that is not `dispatch_ready`, an unavailable capability, or an existing
+`<plan-id>/<run-id>` directory. Its success result's `next` block states the
+ready steps and the first legal command; treat that live block, not this
+paragraph, as authoritative for what to run next.
+
+All lifecycle commands require the same `--run-id` after `init-v4` returns it:
+`transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
+`transition` names a `--step-id` and a `--to` target status; it checks that
+exactly one attempt is current and records a bounded reason plus an optional
+safe relative evidence path. A step may move to `ready` from `pending`,
+`blocked`, or `failed`, provided every dependency is already `cleaned`, the
+attempt limit is not exhausted, and — for a retry — the call passes `--retry`;
+any other starting status rejects the move. A step may move to `in_progress`
+only from `ready`. Moving to `integrated` or `cleaned` additionally requires a
+bounded `planning-worktree-result-v1` from the Git-policy helper matching the
+expected prior status (`completed` for `integrated`, `integrated` for
+`cleaned`); the ledger stores the returned commit, rebased/integrated commit,
+and bounded helper-result evidence without changing `bounded-step-return-v1`.
+Any other `--to` value is rejected. These per-status checks are dedicated,
+hardcoded logic in the script (not the legacy `TRANS` lookup table described
+under "State machine and legal transitions" below), so a `transition` call's
+own error or success result is the authoritative statement of whether a given
+move is legal right now.
+
+`validate` checks the plan copy/hash, assignment join, dependency order,
+current-attempt uniqueness, and attempt limits before handoff. `validate
+--closeout` additionally fails — by raising an error, not by returning a
+result with a `next` field — while any successful step is only `completed` or
+`integrated`; every successful step must reach `cleaned` before a closeout
+validation can pass.
 
 ### Bounded step return
 
@@ -146,30 +188,19 @@ for a rare edge case, or when resuming a legacy v1/v2 ledger.
 
 ### State machine and legal transitions
 
-Successful steps move `completed` → `integrated` → `cleaned`. The full set of
-legal per-status transitions (including `pending`, `ready`, `in_progress`,
-`blocked`, `failed`, `superseded`, and `discarded`) is defined once, in code,
-by the `TRANS` table in `references/scripts/planning_ledger.py`; that table is
-the single source of truth. A `transition` call's own result states which
-transitions are legal from a step's current status and, where applicable, the
-next command to run — do not hand-copy the table here, since a second copy is
-exactly the kind of restatement that silently drifts from the code.
+Successful steps move `completed` → `integrated` → `cleaned`. The `TRANS`
+table in `references/scripts/planning_ledger.py` is **not** the general state
+machine — its keys equal `V1_STATES` exactly, and it has exactly one call
+site, `transition1()`, reached only when `--run-id` is absent (the legacy
+version-1 path; version-1 also allows `superseded`, which the v2+ state set
+drops). For a version-2/3/4 run, `transition2()` never reads `TRANS`: it
+validates each move through dedicated hardcoded per-status checks (via
+`advance()`), and `V2_STATES` adds `cleaned` and `oversized` on top of the v1
+set. See "Driving transitions and validate --closeout" above for the v2–v4
+mechanics; a v1 `transition` call's own result is the authoritative statement
+of what `TRANS` permits from a given status.
 
-### Command mechanics
-
-`init-v4` requires `--plan-id`, the approved version-4 plan, the complete
-assignment set, and an exact capability-binding file. It rejects a non-UUID4 run
-ID, a plan that is not `dispatch_ready`, an unavailable capability, or an existing
-`<plan-id>/<run-id>` directory.
-
-All lifecycle commands require the same `--run-id` after `init-v4` returns it:
-`transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
-`transition` names a `--step-id`, checks that exactly one attempt is current,
-and records a bounded reason plus an optional safe relative evidence path.
-Both closeout transitions require a bounded `planning-worktree-result-v1` from
-the Git-policy helper; the ledger stores the returned commit,
-rebased/integrated commit, and bounded helper-result evidence without changing
-`bounded-step-return-v1`.
+### `show` output shape
 
 `show --run-id <uuid4> --step-id <id>` returns only that step; without
 `--step-id`, it returns the bounded run summary. It emits one machine-readable
@@ -179,11 +210,6 @@ progress fingerprint, and short reason. A summary field is at most 480
 characters. If records are omitted, it sets `truncated: true` and a
 non-negative `omitted_count`; it never substitutes raw event history for the
 omitted records.
-
-`validate` checks the plan copy/hash, assignment join, dependency order,
-current-attempt uniqueness, and attempt limits before handoff.
-`validate --closeout` additionally fails while any successful step is only
-`completed` or `integrated`.
 
 ### Retry policy, remediation, and terminal precedence
 
@@ -211,9 +237,10 @@ for the attempt, excluding volatile timestamps. The terminal precedence is repea
 result (`blocked:no_progress`), then ineligible outcome, exhaustion
 (`blocked:retry_exhausted`), then tier ceiling; none creates another attempt.
 
-A `transition` or `validate` result states retry eligibility and terminal
-precedence for the specific step and outcome it is looking at; treat that live
-result as authoritative over this narrative summary.
+`record-return`'s own result states retry eligibility, target tier, and
+terminal precedence for the specific step and outcome it just recorded; treat
+that live `next` block as authoritative over this narrative summary. No other
+command emits this.
 
 ### Run closure and reopening
 
