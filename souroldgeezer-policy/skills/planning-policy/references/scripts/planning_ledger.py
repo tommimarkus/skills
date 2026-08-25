@@ -26,6 +26,9 @@ MAX_REMEDIATION = 4 * 1024
 MAX_USAGE = 4 * 1024
 MAX_TOKENS = 1200
 MAX_USAGE_TOKENS = 600
+# A `next` block restates what the acting command just decided, so it stays far
+# smaller than a summary: enough for the state and one CLI hint, never a report.
+MAX_NEXT_TOKENS = 120
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
@@ -375,6 +378,26 @@ def require_sha256(value, message):
 def proxy_tokens(value):
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
     return len(PROXY_TOKEN_RE.findall(encoded))
+
+
+def bounded_next(value, droppable=(), trimmable=""):
+    """Bound a `next` block, shedding convenience before the state it reports.
+
+    The pre-formatted CLI hint goes first and a listed collection is trimmed
+    second, so the eligibility or status a caller acts on always survives.
+    """
+    for key in droppable:
+        if proxy_tokens(value) <= MAX_NEXT_TOKENS:
+            return value
+        value.pop(key, None)
+    while (
+        proxy_tokens(value) > MAX_NEXT_TOKENS
+        and trimmable
+        and len(value.get(trimmable, [])) > 1
+    ):
+        value[trimmable].pop()
+        value["truncated"] = True
+    return value
 
 
 def stop_step(step, status, reason, code, summary):
@@ -947,7 +970,7 @@ def init4(args):
         run_id=run_id,
         plan_hash=data["plan_hash"],
     )
-    return {
+    result = {
         "ok": True,
         "action": "init-v4",
         "plan_id": args.plan_id,
@@ -955,6 +978,23 @@ def init4(args):
         "plan_hash": data["plan_hash"],
         "retry_policy": data["retry_policy"],
     }
+    # `ready()` admits a pending step only once every dependency is `cleaned`,
+    # so at initialization exactly the dependency-free steps can start.
+    startable = [sid for sid in sorted(steps) if not steps[sid]["dependencies"]]
+    if startable:
+        result["next"] = bounded_next(
+            {
+                "ready_step_ids": startable,
+                "command": (
+                    f"--plan-id {args.plan_id} transition --actor parent "
+                    f"--run-id {run_id} --step-id {startable[0]} --to ready "
+                    "--agent-id <agent-id>"
+                ),
+            },
+            droppable=("command",),
+            trimmable="ready_step_ids",
+        )
+    return result
 
 
 def load2(args):
@@ -1540,6 +1580,34 @@ def valid_return(value, data, step, leaf):
     return value
 
 
+def next_after_return(args, sid, step, value, disposition):
+    """Report the retry decision `record` just made under the escalating policy."""
+    scope = f"--plan-id {args.plan_id} transition --actor parent --run-id {args.run_id}"
+    if disposition == "retry_eligible":
+        tier = step["current_tier"]
+        if needs_higher_tier(step, retry_outcome(value)):
+            tier = PORTABLE_TIERS[PORTABLE_TIERS.index(tier) + 1]
+        return bounded_next(
+            {
+                "retry_eligible": True,
+                "outcome": retry_outcome(value),
+                "next_tier": tier,
+                "command": (
+                    f"{scope} --step-id {sid} --to ready --retry "
+                    "--retry-remediation-file <retry-remediation-v1.json>"
+                ),
+            },
+            droppable=("command",),
+        )
+    block = {"retry_eligible": False, "outcome": disposition}
+    if disposition == "completed":
+        block["command"] = (
+            f"{scope} --step-id {sid} --to integrated "
+            "--worktree-result <planning-worktree-result-v1.json>"
+        )
+    return bounded_next(block, droppable=("command",))
+
+
 def record(args):
     directory, data, plan, leafs = mutating_run(args)
     raw = Path(args.return_file).read_bytes()
@@ -1601,8 +1669,11 @@ def record(args):
     previous = step["fingerprints"][-1] if step["fingerprints"] else ""
     step["fingerprints"].append(fingerprint)
     step["fingerprints"] = step["fingerprints"][-5:]
+    # `disposition` names the branch that actually fired, so a `next` block
+    # reports this decision instead of modelling the precedence a second time.
     if value["status"] in {"completed", "oversized"}:
         step.update(status=value["status"], retry_allowed=False)
+        disposition = value["status"]
     elif previous == fingerprint:
         stop_step(
             step,
@@ -1611,8 +1682,10 @@ def record(args):
             "blocked:no_progress",
             "repeated non-completed progress fingerprint",
         )
+        disposition = "blocked:no_progress"
     elif data.get("retry_policy") == ESCALATING_RETRY_POLICY and not retry_outcome(value):
         step.update(status=value["status"], retry_allowed=False)
+        disposition = "ineligible_outcome"
     elif step["attempt_count"] >= step["max_attempts"]:
         stop_step(
             step,
@@ -1621,6 +1694,7 @@ def record(args):
             "blocked:retry_exhausted",
             "attempt limit reached with differing progress fingerprint",
         )
+        disposition = "blocked:retry_exhausted"
     elif (
         data.get("retry_policy") == ESCALATING_RETRY_POLICY
         and needs_higher_tier(step, retry_outcome(value))
@@ -1633,8 +1707,10 @@ def record(args):
             "blocked:retry_ceiling_reached",
             "eligible retry requires a tier above deep",
         )
+        disposition = "blocked:retry_ceiling_reached"
     else:
         step["status"] = value["status"]
+        disposition = "retry_eligible"
     if step["reason"] not in {
         "blocked:no_progress",
         "blocked:retry_exhausted",
@@ -1650,7 +1726,12 @@ def record(args):
         attempt_id=step["attempt_id"],
         fingerprint=fingerprint,
     )
-    return result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
+    result = result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
+    # Only the escalating policy owns retries, so only it can state eligibility.
+    # A policy-less v2/v3 run keeps its original silent result.
+    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        result["next"] = next_after_return(args, sid, step, value, disposition)
+    return result
 
 
 def invalid_entry(base, path, code, summary):
