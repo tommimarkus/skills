@@ -11,22 +11,14 @@ This part is the narrow surface a parent needs while actively driving a run:
 the isolation and authority model, how to drive `transition` and `validate
 --closeout` for a version-2/3/4 run, the `bounded-step-return-v1` contract a
 leaf's return must satisfy before you record it, the worktree closeout
-procedure, and the listing/retention/deletion rules. Only two commands emit a
-bounded `next` block stating the live facts that only make sense at the moment
-of use: `init-v4`'s success result states the ready steps and the first legal
-command, and `record-return`'s result states retry eligibility, target tier,
-and terminal precedence for the step and outcome it just recorded. Prefer that
-live `next` block over this document's narrative for those two commands.
-Neither `transition` nor `validate --closeout` emits an equivalent block today
-— `transition`'s v2–v4 successor logic is enforced by dedicated per-status
-checks rather than a lookup table (hand-authoring one here would recreate the
-same restatement risk this document exists to avoid), and `validate
---closeout`'s blocking case raises an error rather than returning a result —
-so this document remains the reference for driving those two commands. The
-full mechanical detail behind all of this, including exactly how the ledger
-enforces state legality in code, lives unabridged in "Authoring and audit
-reference" below for authors changing the ledger's own behavior and for
-auditors verifying it against the script.
+procedure, how to `close` or `reopen` a run, and the listing/retention/deletion
+rules. `init-v4` and `record-return` state their own next legal action live in
+their result (ready steps and the first command; retry eligibility, tier, and
+terminal precedence) — prefer that over this document for those two commands
+only. Every other command here has no live equivalent; treat this section as
+authoritative for them. "Authoring and audit reference" below carries the
+unabridged mechanical detail, including how the ledger enforces state legality
+in code, for anyone changing or auditing `planning_ledger.py` itself.
 
 ### Isolation, authority, and initialization
 
@@ -152,6 +144,27 @@ A terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`fail
 committed partial slice or discard it, then remove worktree and branch without
 force. No terminal leaf is left undisposed.
 
+### Run closure and reopening
+
+Every new version-4 checkpoint records `run_status: active`, with `outcome`,
+`closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
+--outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
+sets the other three fields. A completed close requires every step to be
+`cleaned`. A blocked close requires a bounded obstruction reason and refuses
+`ready` or `in_progress` work. An abandoned close requires a bounded reason,
+refuses `in_progress` work, and changes pending or assigned-but-unstarted work
+to `discarded`. Closed runs refuse step transitions and returned handoffs.
+
+`reopen --actor parent --run-id <id> --reason <bounded-reason>` is limited to a
+blocked run whose retention period has not elapsed and which still has at least
+one retryable pending, blocked, or failed step below its attempt limit. Reopen
+clears the terminal lifecycle fields and returns the run to `active`; it does
+not assign or start an attempt. A dependency is ready-compatible only after it
+is `cleaned`.
+
+Neither `close` nor `reopen` emits a `next` block under the current scope;
+treat this section as authoritative for both until that changes.
+
 ### Listing, retention, and deletion
 
 `list` scans either the bounded `--plan-id` scope or the ledger root and emits
@@ -241,24 +254,6 @@ result (`blocked:no_progress`), then ineligible outcome, exhaustion
 terminal precedence for the specific step and outcome it just recorded; treat
 that live `next` block as authoritative over this narrative summary. No other
 command emits this.
-
-### Run closure and reopening
-
-Every new version-4 checkpoint records `run_status: active`, with `outcome`,
-`closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
---outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
-sets the other three fields. A completed close requires every step to be
-`cleaned`. A blocked close requires a bounded obstruction reason and refuses
-`ready` or `in_progress` work. An abandoned close requires a bounded reason,
-refuses `in_progress` work, and changes pending or assigned-but-unstarted work
-to `discarded`. Closed runs refuse step transitions and returned handoffs.
-
-`reopen --actor parent --run-id <id> --reason <bounded-reason>` is limited to a
-blocked run whose retention period has not elapsed and which still has at least
-one retryable pending, blocked, or failed step below its attempt limit. Reopen
-clears the terminal lifecycle fields and returns the run to `active`; it does
-not assign or start an attempt. A dependency is ready-compatible only after it
-is `cleaned`.
 
 ### Tracing
 

@@ -11,6 +11,7 @@ a live run.
 """
 
 import importlib.util
+import inspect
 import re
 import unittest
 from pathlib import Path
@@ -208,6 +209,75 @@ class BoundedCapParityTest(unittest.TestCase):
                     rf"\b{kib}\s*KiB",
                     f"{path.name} does not state the {kib} KiB return bound",
                 )
+
+
+class NextBlockScopeParityTest(unittest.TestCase):
+    """The doc's claim about which commands emit a live `next` block must match code.
+
+    This repo's own plan for the `next` feature assumed `TRANS` was the general
+    v2-v4 state machine and that `transition` could derive a legal-successor
+    block from it. It is not: `TRANS`'s keys equal `V1_STATES` exactly, it has
+    one call site (`transition1()`, the v1-only path), and using it for v2-v4
+    would misreport every stage and raise `KeyError` on the `cleaned`
+    transition. The doc was drafted once on that wrong premise before being
+    corrected. This gate derives the actual emitter set from
+    `planning_ledger.py`'s own source, so a future change that starts (or
+    stops) a command emitting `next` — or a doc edit that re-claims a command
+    the code does not cover — fails here instead of drifting back to the same
+    wrong claim in a live run.
+    """
+
+    NEXT_EMIT_CANDIDATES = {
+        "init4": "init-v4",
+        "record": "record-return",
+        "transition2": "transition",
+        "close2": "close",
+        "reopen2": "reopen",
+        "validate": "validate --closeout",
+    }
+
+    @staticmethod
+    def _emits_next(function_name):
+        source = inspect.getsource(getattr(ledger, function_name))
+        return "bounded_next(" in source or "next_after_return(" in source
+
+    def test_code_derived_emitters_are_exactly_init_v4_and_record_return(self):
+        """Pin the current, intentional scope so a silent expansion is visible."""
+        emitters = {
+            cli
+            for name, cli in self.NEXT_EMIT_CANDIDATES.items()
+            if self._emits_next(name)
+        }
+        self.assertEqual({"init-v4", "record-return"}, emitters)
+
+    def test_ledger_contract_names_every_code_derived_emitter(self):
+        text = normalized(REFERENCE)
+        for name, cli in self.NEXT_EMIT_CANDIDATES.items():
+            if self._emits_next(name):
+                with self.subTest(command=cli):
+                    self.assertIn(
+                        cli,
+                        text,
+                        f"ledger-contract.md never names {cli!r} as next-emitting, "
+                        "but planning_ledger.py's own source shows it is",
+                    )
+
+    def test_ledger_contract_does_not_claim_trans_governs_v2_plus(self):
+        # A plain char-count window, not `states_cap`'s `[^.]` window: the doc
+        # names `planning_ledger.py` near this claim, and that literal period
+        # would otherwise cut the window short before reaching `V1_STATES`.
+        text = normalized(REFERENCE)
+        self.assertRegex(
+            text,
+            r"TRANS.{0,200}?\bV1_STATES\b",
+            "ledger-contract.md must state TRANS's keys equal V1_STATES (v1-only)",
+        )
+        self.assertNotRegex(
+            text,
+            r"TRANS.{0,120}?\bsole source of truth\b",
+            "ledger-contract.md must not claim TRANS is authoritative for v2-v4 transitions "
+            "(it governs only the legacy v1 transition1() path)",
+        )
 
 
 if __name__ == "__main__":

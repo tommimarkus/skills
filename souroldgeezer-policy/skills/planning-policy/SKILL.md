@@ -36,10 +36,13 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   that dispatch check, start the host result from the
   [binding scaffold](references/templates/capability-binding-v1.json). For
   an approved plan with two or more
-  delegated steps, read the [ledger contract](references/ledger-contract.md);
+  delegated steps, read the
+  [ledger contract's runtime reference](references/ledger-contract.md#runtime-reference);
   the parent alone uses its `init-v4`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py). Lifecycle and
+  [`planning_ledger.py`](references/scripts/planning_ledger.py). `init-v4` and
+  `record-return` state legal next actions live in their own result; prefer
+  that over the document. Lifecycle and
   retention commands do not replace approval or dispatch validation. The ledger
   is the sole retry owner: it records bounded remediation and chooses the next
   mapped tier without changing the approved leaf contract.

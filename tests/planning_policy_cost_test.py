@@ -59,7 +59,18 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # codex.md had 12 tokens of headroom, so the corrections could not fit.
         # Every added token states a contract fact a live dispatch got wrong.
         self.assertLessEqual(codex["load_total"], 5550)
-        self.assertLessEqual(ledger["load_total"], 4650)
+        # Lowered from 4650: init-v4 and record-return now state their own legal
+        # next action live in their JSON result (ready steps/first command; retry
+        # eligibility/tier/terminal precedence), so this route loads only
+        # ledger-contract.md's anchored "Runtime reference" section instead of the
+        # whole file. transition/validate --closeout/close/reopen kept no live
+        # equivalent and stayed in that same section as prose: transition's v2-v4
+        # legality is dedicated hardcoded per-status checks, not a table, so a
+        # second hand-authored one would recreate the exact restatement risk this
+        # change exists to remove; validate --closeout's blocking case raises an
+        # error rather than returning a result to attach a field to. That's most
+        # of the section's remaining weight, so the drop is real but modest.
+        self.assertLessEqual(ledger["load_total"], 4500)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertEqual("load-map", direct["rows"][0]["anchor"])
         self.assertEqual("load-map", agent_lookup["rows"][0]["anchor"])
