@@ -36,13 +36,12 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   that dispatch check, start the host result from the
   [binding scaffold](references/templates/capability-binding-v1.json). For
   an approved plan with two or more
-  delegated steps, read the
-  [ledger contract's runtime reference](references/ledger-contract.md#runtime-reference);
-  the parent alone uses its `init-v4`, `transition`, `record-return`, `show`,
+  delegated steps, the parent alone uses `init-v4`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py). `init-v4` and
-  `record-return` state legal next actions live in their own result; prefer
-  that over the document. Lifecycle and
+  [`planning_ledger.py`](references/scripts/planning_ledger.py). Normal v4
+  execution follows live `next` results through the lifecycle; after a long
+  pause or context compaction, use `show --run-id <uuid4> --next-only` once to
+  recover the highest-priority action. Lifecycle and
   retention commands do not replace approval or dispatch validation. The ledger
   is the sole retry owner: it records bounded remediation and chooses the next
   mapped tier without changing the approved leaf contract.
@@ -50,7 +49,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
   resuming v1–v3 state; load the retained
   [v3 scaffold](references/templates/plan-v3.json) only to interpret its plan
-  shape. Read [selective audit](references/selective-audit.md) only
+  shape. Read the [ledger contract](references/ledger-contract.md) only for
+  errors, legacy resumption, diagnosis, retention operations, or ledger
+  authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
 - **Usage tracing (explicit opt-in only):** only after the user explicitly asks
   to trace, measure, or calibrate one run, read

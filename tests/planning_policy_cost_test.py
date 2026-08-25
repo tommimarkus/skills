@@ -35,7 +35,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         agent_lookup = self.measure("planning-policy-claude-agent-lookup")
         claude = self.measure("planning-policy-active-claude")
         codex = self.measure("planning-policy-active-codex")
-        ledger = self.measure("planning-policy-approved-multi-agent-ledger")
+        live_next = self.measure("planning-policy-approved-v4-live-next")
+        fallback = self.measure("planning-policy-ledger-diagnostic-fallback")
         self.assertLessEqual(lookup["load_total"], 900)
         self.assertLessEqual(direct["load_total"], 750)
         self.assertLessEqual(agent_lookup["total"], 900)
@@ -51,26 +52,27 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval/dispatch distinction, exact host binding, and pre-dispatch
         # blocker. The increase is charged only to executable-plan authoring and
         # dispatch, not lookup or legacy resume.
-        self.assertLessEqual(claude["load_total"], 5400)
+        # Live-next authoring adds the bounded lifecycle/restart contract to the
+        # shared plan surface and the host notification rule to each adapter.
+        # This is not the repeated execution route measured separately below.
+        self.assertLessEqual(claude["load_total"], 5700)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
         # and the commit-or-revert rule for a stop that already edited files.
         # codex.md had 12 tokens of headroom, so the corrections could not fit.
         # Every added token states a contract fact a live dispatch got wrong.
-        self.assertLessEqual(codex["load_total"], 5550)
-        # Lowered from 4650: init-v4 and record-return now state their own legal
-        # next action live in their JSON result (ready steps/first command; retry
-        # eligibility/tier/terminal precedence), so this route loads only
-        # ledger-contract.md's anchored "Runtime reference" section instead of the
-        # whole file. transition/validate --closeout/close/reopen kept no live
-        # equivalent and stayed in that same section as prose: transition's v2-v4
-        # legality is dedicated hardcoded per-status checks, not a table, so a
-        # second hand-authored one would recreate the exact restatement risk this
-        # change exists to remove; validate --closeout's blocking case raises an
-        # error rather than returning a result to attach a field to. That's most
-        # of the section's remaining weight, so the drop is real but modest.
-        self.assertLessEqual(ledger["load_total"], 4500)
+        self.assertLessEqual(codex["load_total"], 5850)
+        # Normal v4 execution now drives every lifecycle edge through live bounded
+        # results, so the 2,476-token runtime reference is exceptional rather than
+        # repeated context. The fallback remains separately measurable and routed.
+        self.assertLessEqual(live_next["load_total"], 2200)
+        self.assertFalse(
+            any(row["file"].endswith("ledger-contract.md") for row in live_next["rows"])
+        )
+        self.assertTrue(
+            any(row["file"].endswith("ledger-contract.md") for row in fallback["rows"])
+        )
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertEqual("load-map", direct["rows"][0]["anchor"])
         self.assertEqual("load-map", agent_lookup["rows"][0]["anchor"])

@@ -155,6 +155,13 @@ a bounded `retry-remediation-v1` artifact and checks identity, prior-return
 digest, worktree, boundary, and assignment. Terminal precedence is repeated
 result (`blocked:no_progress`), ineligible outcome, exhaustion
 (`blocked:retry_exhausted`), then tier ceiling.
+For v4, the parent drives that lifecycle through a bounded live-next chain:
+successful mutations state the next legal action, and read-only
+`show --next-only` deterministically rehydrates one highest-priority action
+after a long pause or context compaction. Keep each live `next` at most 120
+proxy tokens and the rehydration envelope at most 240; retain the full runtime
+reference as an exception-only diagnostic, legacy, retention, and authoring
+surface rather than normal execution context.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

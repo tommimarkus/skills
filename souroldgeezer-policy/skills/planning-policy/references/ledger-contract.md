@@ -1,24 +1,20 @@
 # Parent Ledger Contract
 
-Read this only when a valid, approved version-4 plan has two or more delegated
-leaves, or when the parent is resuming an existing v1–v3 ledger. The
+This is the exception-only reference for ledger errors, legacy resumption,
+diagnosis, retention operations, and ledger authoring or audit. Normal
+version-4 execution follows each command's bounded live `next` result and uses
+read-only `show --next-only` after a long pause or context compaction. The
 ledger records lifecycle facts; it does not approve a plan, select a model, or
 replace the executable-plan validator.
 
 ## Runtime reference
 
-This part is the narrow surface a parent needs while actively driving a run:
-the isolation and authority model, how to drive `transition` and `validate
---closeout` for a version-2/3/4 run, the `bounded-step-return-v1` contract a
-leaf's return must satisfy before you record it, the worktree closeout
-procedure, how to `close` or `reopen` a run, and the listing/retention/deletion
-rules. `init-v4` and `record-return` state their own next legal action live in
-their result (ready steps and the first command; retry eligibility, tier, and
-terminal precedence) — prefer that over this document for those two commands
-only. Every other command here has no live equivalent; treat this section as
-authoritative for them. "Authoring and audit reference" below carries the
-unabridged mechanical detail, including how the ledger enforces state legality
-in code, for anyone changing or auditing `planning_ledger.py` itself.
+This part reconstructs the runtime mechanics when a live result reports an
+error or full diagnosis is required. Successful v4 lifecycle commands state
+their next legal action from the post-command checkpoint. A fresh parent uses
+`show --run-id <uuid4> --next-only`, not this section, for low-cost normal
+rehydration. "Authoring and audit reference" below carries the unabridged
+mechanical detail, including how the ledger enforces state legality in code.
 
 ### Isolation, authority, and initialization
 
@@ -79,12 +75,20 @@ under "State machine and legal transitions" below), so a `transition` call's
 own error or success result is the authoritative statement of whether a given
 move is legal right now.
 
+For a version-4 run, successful transitions add bounded live guidance:
+`ready` names the `in_progress` command; `in_progress` names the agent and
+attempt to await; `integrated` names cleanup; and `cleaned` names newly
+unblocked pending steps plus the first ready command, or `validate --closeout`
+when every step is cleaned. These results are derived after the checkpoint is
+written and do not alter v1 or policy-less v2/v3 output.
+
 `validate` checks the plan copy/hash, assignment join, dependency order,
 current-attempt uniqueness, and attempt limits before handoff. `validate
 --closeout` additionally fails — by raising an error, not by returning a
 result with a `next` field — while any successful step is only `completed` or
 `integrated`; every successful step must reach `cleaned` before a closeout
-validation can pass.
+validation can pass. A successful v4 closeout validation names the completed
+run `close` command in its bounded `next` block.
 
 ### Bounded step return
 
@@ -160,10 +164,8 @@ blocked run whose retention period has not elapsed and which still has at least
 one retryable pending, blocked, or failed step below its attempt limit. Reopen
 clears the terminal lifecycle fields and returns the run to `active`; it does
 not assign or start an attempt. A dependency is ready-compatible only after it
-is `cleaned`.
-
-Neither `close` nor `reopen` emits a `next` block under the current scope;
-treat this section as authoritative for both until that changes.
+is `cleaned`. A successful v4 `reopen` result names its retryable step IDs and
+the first ready/remediation command. `close` is terminal and emits no `next`.
 
 ### Listing, retention, and deletion
 
@@ -191,9 +193,9 @@ validation wins over age.
 ## Authoring and audit reference
 
 Everything below remains true and unabridged; it is no longer required
-reading for a normal in-flight run because each ledger command's own JSON
-result states the same facts live, at the point where they apply, instead of
-this document restating them ahead of time — exactly the prose-drifts-from-code
+reading for a normal in-flight v4 run because lifecycle JSON results and
+`show --next-only` state the applicable action live instead of this document
+restating it ahead of time — exactly the prose-drifts-from-code
 risk `tests/planning_return_contract_parity_test.py`'s own docstring documents
 for the `bounded-step-return-v1` contract. Read this section when authoring or
 auditing `planning_ledger.py` itself, when reconstructing the full mechanics
@@ -223,6 +225,17 @@ progress fingerprint, and short reason. A summary field is at most 480
 characters. If records are omitted, it sets `truncated: true` and a
 non-negative `omitted_count`; it never substitutes raw event history for the
 omitted records.
+
+`show --run-id <uuid4> --next-only` is the read-only v4 rehydration lane. It
+returns one deterministic highest-priority category and first command, with a
+120-proxy-token `next` block and a 240-proxy-token whole envelope. Priority is:
+cleanup integrated work; integrate completed work; remediate eligible
+failures; ready unblocked pending work; dispatch ready work; await active
+returns; validate closeout; then report terminal blockage or closure. It uses
+the same dependency, attempt, and retry predicates as mutation. Full `show`
+remains unchanged as the at-most-1,200-token diagnostic fallback, especially
+when its wide summary reports truncation. Version 1 and policy-less v2/v3 reject
+`--next-only` without migration.
 
 ### Retry policy, remediation, and terminal precedence
 

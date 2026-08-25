@@ -126,8 +126,14 @@ uv run python "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" --plan
 uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <plan-id> --help
 ```
 
-The parent uses `init-v4`; `transition` for retry and `completed` → `integrated`
-→ `cleaned`; `show`; and `validate --closeout` before terminal `close`. `reopen`
-is blocked-run only; `list`, `gc --dry-run`, and exact-target `purge` manage
-retention. Mutations require `--actor parent`. Keep bounded evidence, not raw
-logs. Read [ledger contract](ledger-contract.md) before ledger work.
+The parent uses `init-v4`, then follows each successful v4 command's live
+`next` result through `transition`, `record-return`, cleanup,
+`validate --closeout`, and terminal `close`. After a pause or context
+compaction, `show --run-id <uuid4> --next-only` returns one deterministic highest-priority
+legal category and first command; its `next` block is at most
+120 proxy tokens and the whole result at most 240 proxy tokens. Full `show`
+remains the at-most-1,200-token diagnostic fallback. `reopen` is blocked-run
+only; `list`, `gc --dry-run`, and exact-target `purge` manage retention.
+Mutations require `--actor parent`. Keep bounded evidence, not raw logs. Read
+the [ledger contract](ledger-contract.md) only for errors, legacy resumption,
+diagnosis, retention operations, or ledger authoring/audit.

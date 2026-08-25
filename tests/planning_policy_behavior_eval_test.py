@@ -66,6 +66,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-v4-v3-resume-only",
             "planning-policy-behavior-v4-canonical-scaffold",
             "planning-policy-behavior-v4-claude-mechanical-skill-block",
+            "planning-policy-behavior-v4-live-next-rehydration",
         }
         self.assertTrue(required.issubset(self.behavior))
         scaffold = self.behavior["planning-policy-behavior-v4-canonical-scaffold"]
@@ -75,6 +76,10 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         capability_block = self.behavior["planning-policy-behavior-v4-claude-mechanical-skill-block"]
         self.assertIn("Claude mechanical wrapper lacks Skill", " ".join(capability_block["required_checks"]))
         self.assertIn("blocked:capability_unavailable", " ".join(capability_block["expected_artifacts"]))
+        live_next = self.behavior["planning-policy-behavior-v4-live-next-rehydration"]
+        self.assertIn("show --next-only", " ".join(live_next["expected_artifacts"]))
+        self.assertIn("busy polling", live_next["forbidden_behaviors"])
+        self.assertTrue(any("240 proxy tokens" in check for check in live_next["required_checks"]))
         for host in ("claude", "codex"):
             closeout = self.behavior[f"planning-policy-behavior-{host}-clean-closeout"]
             self.assertIn("routine cherry-pick", closeout["forbidden_behaviors"])

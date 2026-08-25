@@ -29,6 +29,7 @@ MAX_USAGE_TOKENS = 600
 # A `next` block restates what the acting command just decided, so it stays far
 # smaller than a summary: enough for the state and one CLI hint, never a report.
 MAX_NEXT_TOKENS = 120
+MAX_NEXT_ONLY_TOKENS = 240
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
@@ -400,6 +401,23 @@ def bounded_next(value, droppable=(), trimmable=""):
     return value
 
 
+def bounded_action_next(value, trimmable=""):
+    """Keep the first legal command while trimming a convenience collection."""
+    while (
+        proxy_tokens(value) > MAX_NEXT_TOKENS
+        and trimmable
+        and len(value.get(trimmable, [])) > 1
+    ):
+        value[trimmable].pop()
+        value["truncated"] = True
+    if proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable:
+        value.pop(trimmable, None)
+        value["truncated"] = True
+    if proxy_tokens(value) > MAX_NEXT_TOKENS:
+        raise Error("next block exceeds 120 proxy tokens")
+    return value
+
+
 def stop_step(step, status, reason, code, summary):
     step.update(
         status=status,
@@ -427,6 +445,26 @@ def result2(action, args, sid, step, **extra):
 
 def ordered_steps(steps):
     return sorted(steps.values(), key=lambda value: value["id"])
+
+
+def transition_scope(plan_id, run_id):
+    return f"--plan-id {plan_id} transition --actor parent --run-id {run_id}"
+
+
+def dependencies_clean(data, step):
+    return all(data["steps"][dep]["status"] == "cleaned" for dep in step["dependencies"])
+
+
+def attempt_available(step):
+    return step["attempt_count"] < step["max_attempts"]
+
+
+def ready_status_legal(step):
+    return step["status"] in {"pending", "blocked", "failed"} and step["retry_allowed"]
+
+
+def ready_candidate(data, step):
+    return ready_status_legal(step) and dependencies_clean(data, step) and attempt_available(step)
 
 
 def leaves_by_id(plan):
@@ -1192,7 +1230,7 @@ def ready(args, directory, data, plan, step):
     if not isinstance(args.agent_id, str) or not 1 <= len(args.agent_id) <= 128:
         if step["status"] == "pending" or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
             raise Error("ready requires bounded --agent-id")
-    if step["status"] not in {"pending", "blocked", "failed"} or not step["retry_allowed"]:
+    if not ready_status_legal(step):
         raise Error("step cannot be readied")
     retry_state = None
     if step["status"] != "pending":
@@ -1204,9 +1242,9 @@ def ready(args, directory, data, plan, step):
             raise Error("retry requires --retry and bounded --summary")
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
-    if any(data["steps"][dep]["status"] != "cleaned" for dep in step["dependencies"]):
+    if not dependencies_clean(data, step):
         raise Error("dependencies are not cleaned")
-    if step["attempt_count"] >= step["max_attempts"]:
+    if not attempt_available(step):
         raise Error("blocked:retry_exhausted")
     if retry_state:
         remediation, path, remediation_sha, same_tier = retry_state
@@ -1267,6 +1305,183 @@ def ready(args, directory, data, plan, step):
     step["reason"] = reason[:480]
 
 
+def retryable_steps(directory, data):
+    """Return retryable failures using the same stored return predicate as record()."""
+    result = []
+    for step in ordered_steps(data["steps"]):
+        if step["status"] not in {"blocked", "failed"} or not ready_candidate(data, step):
+            continue
+        try:
+            outcome = retry_outcome(current_return(directory, step))
+        except Error:
+            continue
+        if outcome:
+            result.append((step, outcome))
+    return result
+
+
+def retry_command(plan_id, run_id, step_id):
+    return (
+        f"{transition_scope(plan_id, run_id)} --step-id {step_id} --to ready --retry "
+        "--retry-remediation-file <retry-remediation-v1.json>"
+    )
+
+
+def checkpoint_next(directory, data):
+    """Select one highest-priority legal v4 action from the validated checkpoint."""
+    if data["run_status"] == "closed":
+        return bounded_action_next(
+            {"category": "terminal_closed", "outcome": data["outcome"]}
+        )
+
+    plan_id, run_id = data["plan_id"], data["run_id"]
+    steps = ordered_steps(data["steps"])
+    integrated = [step["id"] for step in steps if step["status"] == "integrated"]
+    if integrated:
+        return bounded_action_next(
+            {
+                "category": "cleanup_integrated",
+                "step_ids": integrated,
+                "command": (
+                    f"{transition_scope(plan_id, run_id)} --step-id {integrated[0]} "
+                    "--to cleaned --worktree-result <planning-worktree-result-v1.json>"
+                ),
+            },
+            "step_ids",
+        )
+
+    completed = [step["id"] for step in steps if step["status"] == "completed"]
+    if completed:
+        return bounded_action_next(
+            {
+                "category": "integrate_completed",
+                "step_ids": completed,
+                "command": (
+                    f"{transition_scope(plan_id, run_id)} --step-id {completed[0]} "
+                    "--to integrated --worktree-result <planning-worktree-result-v1.json>"
+                ),
+            },
+            "step_ids",
+        )
+
+    retryable = retryable_steps(directory, data)
+    if retryable:
+        ids = [step["id"] for step, _outcome in retryable]
+        return bounded_action_next(
+            {
+                "category": "remediate_failure",
+                "retryable_step_ids": ids,
+                "command": retry_command(plan_id, run_id, ids[0]),
+            },
+            "retryable_step_ids",
+        )
+
+    pending = [
+        step["id"] for step in steps if step["status"] == "pending" and ready_candidate(data, step)
+    ]
+    if pending:
+        return bounded_action_next(
+            {
+                "category": "ready_pending",
+                "ready_step_ids": pending,
+                "command": (
+                    f"{transition_scope(plan_id, run_id)} --step-id {pending[0]} --to ready "
+                    "--agent-id <agent-id>"
+                ),
+            },
+            "ready_step_ids",
+        )
+
+    ready_steps = [step["id"] for step in steps if step["status"] == "ready"]
+    if ready_steps:
+        return bounded_action_next(
+            {
+                "category": "dispatch_ready",
+                "ready_step_ids": ready_steps,
+                "command": (
+                    f"{transition_scope(plan_id, run_id)} --step-id {ready_steps[0]} "
+                    "--to in_progress"
+                ),
+            },
+            "ready_step_ids",
+        )
+
+    active = [step for step in steps if step["status"] == "in_progress"]
+    if active:
+        first = active[0]
+        return bounded_action_next(
+            {
+                "category": "await_return",
+                "await_step_id": first["id"],
+                "agent_id": first["agent_id"],
+                "attempt_id": first["attempt_id"],
+            }
+        )
+
+    if steps and all(step["status"] == "cleaned" for step in steps):
+        return bounded_action_next(
+            {
+                "category": "validate_closeout",
+                "command": f"--plan-id {plan_id} validate --run-id {run_id} --closeout",
+            }
+        )
+
+    blocked = [step["id"] for step in steps if step["status"] != "cleaned"]
+    return bounded_action_next(
+        {"category": "terminal_blocked", "blocked_step_ids": blocked},
+        "blocked_step_ids",
+    )
+
+
+def next_after_transition(args, directory, data, step):
+    scope = transition_scope(args.plan_id, args.run_id)
+    sid = step["id"]
+    if step["status"] == "ready":
+        return bounded_action_next(
+            {"command": f"{scope} --step-id {sid} --to in_progress"}
+        )
+    if step["status"] == "in_progress":
+        return bounded_action_next(
+            {
+                "await_step_id": sid,
+                "agent_id": step["agent_id"],
+                "attempt_id": step["attempt_id"],
+            }
+        )
+    if step["status"] == "integrated":
+        return bounded_action_next(
+            {
+                "command": (
+                    f"{scope} --step-id {sid} --to cleaned "
+                    "--worktree-result <planning-worktree-result-v1.json>"
+                )
+            }
+        )
+    newly_unblocked = [
+        candidate["id"]
+        for candidate in ordered_steps(data["steps"])
+        if candidate["status"] == "pending"
+        and sid in candidate["dependencies"]
+        and ready_candidate(data, candidate)
+    ]
+    if newly_unblocked:
+        return bounded_action_next(
+            {
+                "ready_step_ids": newly_unblocked,
+                "command": (
+                    f"{scope} --step-id {newly_unblocked[0]} --to ready "
+                    "--agent-id <agent-id>"
+                ),
+            },
+            "ready_step_ids",
+        )
+    if all(candidate["status"] == "cleaned" for candidate in data["steps"].values()):
+        return bounded_action_next(
+            {"command": f"--plan-id {args.plan_id} validate --run-id {args.run_id} --closeout"}
+        )
+    return checkpoint_next(directory, data)
+
+
 def transition2(args):
     directory, data, plan, leafs = mutating_run(args)
     sid, step = selected_step(data, args.step_id)
@@ -1304,7 +1519,10 @@ def transition2(args):
         to_status=step["status"],
         attempt_id=step["attempt_id"],
     )
-    return result2("transition", args, sid, step, attempt_id=step["attempt_id"])
+    result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
+    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        result["next"] = next_after_transition(args, directory, data, step)
+    return result
 
 
 def worktree_result(path, directory, sid, step, leaf, target):
@@ -1421,13 +1639,21 @@ def reopen2(args):
         raise Error("only a retained blocked run may reopen")
     if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
-    retryable = [
-        step
-        for step in data["steps"].values()
-        if step["status"] in {"pending", "blocked", "failed"}
-        and step["retry_allowed"]
-        and step["attempt_count"] < step["max_attempts"]
-    ]
+    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        pending = [
+            step
+            for step in ordered_steps(data["steps"])
+            if step["status"] == "pending" and ready_candidate(data, step)
+        ]
+        retryable = pending + [step for step, _outcome in retryable_steps(directory, data)]
+    else:
+        retryable = [
+            step
+            for step in data["steps"].values()
+            if step["status"] in {"pending", "blocked", "failed"}
+            and step["retry_allowed"]
+            and step["attempt_count"] < step["max_attempts"]
+        ]
     if not retryable:
         raise Error("blocked run has no retryable step")
     bounded_reason(args.reason, "reopen", required=True)
@@ -1446,7 +1672,7 @@ def reopen2(args):
         previous_outcome=previous_outcome,
         reason=args.reason,
     )
-    return {
+    result = {
         "ok": True,
         "action": "reopen",
         "plan_id": data["plan_id"],
@@ -1456,6 +1682,20 @@ def reopen2(args):
             step["id"] for step in ordered_steps(data["steps"]) if step in retryable
         ],
     }
+    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        ids = result["retryable_steps"]
+        first = data["steps"][ids[0]]
+        command = (
+            f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {first['id']} "
+            "--to ready --agent-id <agent-id>"
+            if first["status"] == "pending"
+            else retry_command(data["plan_id"], data["run_id"], first["id"])
+        )
+        result["next"] = bounded_action_next(
+            {"retryable_step_ids": ids, "command": command},
+            "retryable_step_ids",
+        )
+    return result
 
 
 def valid_return(value, data, step, leaf):
@@ -2215,6 +2455,25 @@ def bounded_step_summary(result):
 
 
 def show(args):
+    if args.next_only:
+        if not args.run_id:
+            raise Error("show --next-only requires a version-4 run")
+        if args.step_id:
+            raise Error("show --next-only does not accept --step-id")
+        directory, data, _plan, _leafs = load2(args)
+        if data.get("schema") != 4 or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
+            raise Error("show --next-only requires a version-4 run")
+        validate_events2(directory, data)
+        result = {
+            "ok": True,
+            "action": "show-next",
+            "plan_id": data["plan_id"],
+            "run_id": data["run_id"],
+            "next": checkpoint_next(directory, data),
+        }
+        if proxy_tokens(result) > MAX_NEXT_ONLY_TOKENS:
+            raise Error("show --next-only exceeds 240 proxy tokens")
+        return result
     if not args.run_id:
         data = load1(plan_dir(args))
         result = {
@@ -2496,7 +2755,7 @@ def validate(args):
         if unfinished:
             raise Error("closeout requires every successful step to be cleaned")
     validate_events2(directory, data)
-    return {
+    result = {
         "ok": True,
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
@@ -2513,6 +2772,22 @@ def validate(args):
         "errors": [],
         "closeout": bool(args.closeout),
     }
+    if (
+        args.closeout
+        and data.get("schema") == 4
+        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
+        and data["steps"]
+        and all(step["status"] == "cleaned" for step in data["steps"].values())
+    ):
+        result["next"] = bounded_action_next(
+            {
+                "command": (
+                    f"--plan-id {data['plan_id']} close --actor parent "
+                    f"--run-id {data['run_id']} --outcome completed"
+                )
+            }
+        )
+    return result
 
 
 def parse():
@@ -2563,6 +2838,7 @@ def parse():
     sh = commands.add_parser("show")
     sh.add_argument("--run-id")
     sh.add_argument("--step-id", default="")
+    sh.add_argument("--next-only", action="store_true")
     va = commands.add_parser("validate")
     va.add_argument("--run-id")
     va.add_argument("--closeout", action="store_true")

@@ -1,5 +1,24 @@
 # Planning Policy Source Grounding
 
+## 2026-08-25 complete live-next lifecycle
+
+The v4 live-next chain is grounded in the repository-authored cost and restart
+regressions in `tests/planning_policy_cost_test.py` and
+`tests/planning_ledger_next_block_test.py`. Before this change, normal parent
+execution loaded a 2,476-proxy-token runtime reference because only `init-v4`
+and `record-return` stated their next action. That repeated context dominated a
+4,487-proxy-token happy path and made recovery after a 24-hour pause or context
+compaction depend on re-reading narrative mechanics.
+
+The repository-authored remedy derives every new hint from the validated
+post-command checkpoint and the same dependency, attempt, and retry predicates
+that enforce legality. Successful v4 lifecycle results form the normal chain;
+read-only `show --next-only` selects one deterministic priority category when a
+fresh parent must resume. Full `show` and the runtime reference remain the
+diagnostic and authoring fallbacks. No external orchestration framework,
+workflow text, schema, or command design was copied; the action order and
+bounded result shapes are original synthetic fixtures for this repository.
+
 ## 2026-08-22 contract-v4 capability binding
 
 The v4 contract separates a plan being ready for human approval from being ready

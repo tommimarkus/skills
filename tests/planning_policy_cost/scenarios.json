@@ -46,14 +46,21 @@
     ]
   },
   {
-    "id": "planning-policy-approved-multi-agent-ledger",
-    "provenance": "Approved multi-agent execution loads the exact approval, contract, and parent-ledger closure.",
+    "id": "planning-policy-approved-v4-live-next",
+    "provenance": "Normal approved v4 execution follows bounded live next results and loads worktree closeout only when a successful leaf reaches integration.",
     "load_routes": [
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#approval-and-output", "predicate": "conditional:approved-multi-agent"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md#parent-ledger-helper", "predicate": "conditional:approved-multi-agent"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md#runtime-reference", "predicate": "conditional:approved-multi-agent"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/git-workflow-policy/references/planning-worktree-closeout.md", "predicate": "conditional:successful-leaf-closeout"}
+    ]
+  },
+  {
+    "id": "planning-policy-ledger-diagnostic-fallback",
+    "provenance": "Errors, legacy resumption, diagnosis, retention operations, and ledger authoring or audit load the discoverable ledger reference as an exceptional fallback.",
+    "load_routes": [
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md#authoring-and-audit-reference", "predicate": "conditional:ledger-diagnosis-or-authoring"}
     ]
   },
   {

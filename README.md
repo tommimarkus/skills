@@ -283,11 +283,14 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     Later retries use higher tiers through `deep`/`max_attempts`; each retry
     persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
     assignment checks. Terminal precedence is repeated result, ineligible
-    outcome, exhaustion, then tier ceiling. `init-v4` and `record-return` state
-    their own legal next action live in their result — ready steps and the
-    first command; retry eligibility, tier, and terminal precedence — so a
-    driving parent no longer needs the full ledger contract resident to act
-    on either.
+    outcome, exhaustion, then tier ceiling. Every successful v4 lifecycle
+    result carries a live `next` block of at most 120 proxy tokens, from
+    `init-v4` and dispatch through integration, cleanup, closeout validation,
+    and blocked-run reopening. After a long pause or context compaction,
+    read-only `show --next-only` returns one highest-priority action in an
+    at-most-240-proxy-token envelope. Full `show` remains the diagnostic
+    fallback; the runtime reference is reserved for errors, legacy resumption,
+    diagnosis, retention operations, and ledger authoring or audit.
 
     Successful leaves continue `completed` → `integrated` → `cleaned`.
     The parent ingests bounded `planning-worktree-result-v1` evidence from the

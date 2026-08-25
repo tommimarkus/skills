@@ -284,6 +284,14 @@ identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
+Every successful v4 lifecycle result carries a live `next` block of at most
+120 proxy tokens. After a long pause or context compaction, read-only
+`show --next-only` returns one highest-priority action in an at-most-240-token
+envelope. Full `show` remains the diagnostic fallback; load the ledger runtime
+reference only for errors, legacy resumption, diagnosis, retention operations,
+or ledger authoring/audit. Between active returns, wait for a host notification;
+never busy-poll or start an autonomous lifecycle loop.
+
 Successful v2/v3/v4 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,

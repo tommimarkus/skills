@@ -414,12 +414,14 @@ behavior, and `portable_tier` is initial only. Only `failed:acceptance` and
 later retries use higher mapped tiers through `deep` and `max_attempts`. Each
 retry persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
 assignment checks. Terminal precedence is repeated result, ineligible outcome,
-exhaustion (`blocked:retry_exhausted`), then tier ceiling. `init-v4`'s and
-`record-return`'s own results state their legal next action live — ready
-steps and the first command; retry eligibility, tier, and terminal precedence
-— so a driving parent no longer needs the full ledger contract resident to
-act on either; `transition` and `validate --closeout` still do, since neither
-has an equivalent live source to draw one from.
+exhaustion (`blocked:retry_exhausted`), then tier ceiling. Every successful v4
+lifecycle result carries a live `next` block of at most 120 proxy tokens. After
+a long pause or context compaction, read-only `show --next-only` returns one
+highest-priority action in an at-most-240-token envelope. Full `show` remains
+the diagnostic fallback; load the ledger runtime reference only for errors,
+legacy resumption, diagnosis, retention operations, or ledger authoring/audit.
+Between active returns, wait for a host notification; never busy-poll or start
+an autonomous lifecycle loop.
 
 Successful v2/v3/v4 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the

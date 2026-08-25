@@ -8,6 +8,16 @@ Normal dispatch never enables or inspects usage tracing.
 Read this additive adapter after the shared execution shape when the approved
 plan will execute in Codex. It does not replace the portable handoff contract.
 
+## Live lifecycle
+
+The parent consumes each successful v4 command's live `next` result and runs
+the stated command. After dispatch it waits for a host notification that the
+assigned return is available; it does not busy-poll, start an autonomous loop,
+or enable telemetry. After a 24-hour pause or context compaction, call
+`show --run-id <uuid4> --next-only` once and continue from that bounded result.
+Load the full ledger reference only for an error, legacy resumption, diagnosis,
+retention work, or ledger authoring/audit.
+
 ## Capability resolution
 
 Before **every** initial or retry dispatch, resolve every leaf's

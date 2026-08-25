@@ -11,6 +11,39 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
     def text(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
+    def test_live_next_chain_is_public_and_exception_routed(self) -> None:
+        entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
+        contract = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
+        )
+        ledger = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
+        )
+        grounding = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
+        )
+        standard = self.text("docs/skill-architecture.md")
+        for path in ("README.md", "CLAUDE.md", "AGENTS.md"):
+            public = self.text(path)
+            self.assertIn("show --next-only", public)
+            self.assertIn("120", public)
+        self.assertIn("live `next` results", entry)
+        self.assertIn("errors, legacy resumption, diagnosis, retention operations", entry)
+        self.assertIn("240 proxy tokens", contract)
+        self.assertIn("deterministic highest-priority", contract)
+        self.assertIn("exception-only", ledger)
+        self.assertIn("24-hour", grounding)
+        self.assertIn("live-next chain", standard)
+
+        for adapter in (
+            "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md",
+            "souroldgeezer-policy/skills/planning-policy/extensions/codex.md",
+        ):
+            text = self.text(adapter)
+            self.assertIn("live `next`", text)
+            self.assertIn("host notification", text)
+            self.assertIn("busy-poll", text)
+
     def test_runtime_neutral_contract_is_public(self) -> None:
         readme = self.text("README.md")
         for phrase in (

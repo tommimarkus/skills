@@ -9,6 +9,16 @@ Read this adapter when an approved `planning-policy` plan dispatches its steps
 through Claude Code. It adds host execution details to the portable tier roster;
 it does not replace the shared workflow.
 
+## Live lifecycle
+
+The parent consumes each successful v4 command's live `next` result and runs
+the stated command. After dispatch it waits for a host notification that the
+assigned return is available; it does not busy-poll, start an autonomous loop,
+or enable telemetry. After a 24-hour pause or context compaction, call
+`show --run-id <uuid4> --next-only` once and continue from that bounded result.
+Load the full ledger reference only for an error, legacy resumption, diagnosis,
+retention work, or ledger authoring/audit.
+
 ## Capability resolution
 
 Before **every** initial or retry Agent assignment, resolve every leaf's

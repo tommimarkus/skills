@@ -1,9 +1,8 @@
-"""Coverage for the bounded `next` block ledger results emit at the point of use.
+"""Coverage for the bounded live-next chain and restart rehydration.
 
-The block must be derived from state the module already owns. `TRANS` is the
-version-1 table and governs only `transition1()`, so no v2-v4 successor list is
-emitted here; these cases pin the two commands that can state their own outcome
-soundly, and pin the silence everywhere else.
+Guidance must be derived from the validated v4 checkpoint and the predicates
+that enforce lifecycle legality. `TRANS` remains version-1-only; these cases do
+not permit a second v2-v4 transition table.
 """
 
 from __future__ import annotations
@@ -247,6 +246,34 @@ class LedgerHarness(unittest.TestCase):
         code, result = self.transition(sid, "in_progress")
         self.assertEqual(0, code, result)
 
+    def worktree_transition(self, sid: str, target: str) -> dict:
+        action = "integrate" if target == "integrated" else "cleanup"
+        value = {
+            "schema": "planning-worktree-result-v1",
+            "ok": True,
+            "action": action,
+            "repo_root": str(self.root),
+            "target": "main",
+            "branch": f"task/{sid}",
+            "worktree": str(self.root / ".worktrees" / sid),
+            "source_commit": "a" * 40,
+            "rebased_commit": "b" * 40,
+            "parent_before": "c" * 40,
+            "parent_after": "b" * 40,
+        }
+        path = self.root / f"{sid}-{target}.json"
+        path.write_text(json.dumps(value), encoding="utf-8")
+        code, result = self.transition(
+            sid, target, "--worktree-result", str(path)
+        )
+        self.assertEqual(0, code, result)
+        return result
+
+    def show_next(self):
+        return self.call(
+            *self.common, "show", "--run-id", self.run_id, "--next-only"
+        )
+
     def assertBounded(self, block: dict) -> None:
         self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
 
@@ -276,23 +303,174 @@ class InitNextBlockTest(LedgerHarness):
         self.assertEqual("step00", block["ready_step_ids"][0])
 
 
-class TransitionSilenceTest(LedgerHarness):
-    def test_transition_results_carry_no_next_block(self):
+class LifecycleNextBlockTest(LedgerHarness):
+    def test_ready_names_the_dispatch_command_and_in_progress_names_await_identity(self):
         self.init()
         code, result = self.transition("build", "ready", "--agent-id", "agent-1")
         self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
+        block = result["next"]
+        self.assertIn("--step-id build", block["command"])
+        self.assertIn("--to in_progress", block["command"])
+        self.assertBounded(block)
+
         code, result = self.transition("build", "in_progress")
         self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
+        block = result["next"]
+        self.assertEqual("build", block["await_step_id"])
+        self.assertEqual("agent-1", block["agent_id"])
+        self.assertEqual(self.checkpoint()["steps"]["build"]["attempt_id"], block["attempt_id"])
+        self.assertBounded(block)
 
-    def test_validate_closeout_carries_no_next_block(self):
+    def test_integrated_names_cleanup_and_cleaned_names_newly_unblocked_work(self):
+        self.init([leaf("build", []), leaf("later", ["build"])])
+        self.start("build")
+        self.give("completed", sid="build")
+        integrated = self.worktree_transition("build", "integrated")["next"]
+        self.assertIn("--step-id build", integrated["command"])
+        self.assertIn("--to cleaned", integrated["command"])
+        self.assertBounded(integrated)
+
+        cleaned = self.worktree_transition("build", "cleaned")["next"]
+        self.assertEqual(["later"], cleaned["ready_step_ids"])
+        self.assertIn("--step-id later", cleaned["command"])
+        self.assertIn("--to ready", cleaned["command"])
+        self.assertBounded(cleaned)
+
+    def test_cleaning_the_last_step_names_closeout_validation(self):
         self.init()
+        self.start()
+        self.give("completed")
+        self.worktree_transition("build", "integrated")
+        block = self.worktree_transition("build", "cleaned")["next"]
+        self.assertIn("validate", block["command"])
+        self.assertIn("--closeout", block["command"])
+        self.assertBounded(block)
+
+    def test_validate_closeout_names_the_completed_run_close_command(self):
+        self.init()
+        self.start()
+        self.give("completed")
+        self.worktree_transition("build", "integrated")
+        self.worktree_transition("build", "cleaned")
         code, result = self.call(
             *self.common, "validate", "--run-id", self.run_id, "--closeout"
         )
         self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
+        block = result["next"]
+        self.assertIn("close --actor parent", block["command"])
+        self.assertIn("--outcome completed", block["command"])
+        self.assertBounded(block)
+
+    def test_reopen_names_retryable_steps_and_the_first_remediation_command(self):
+        self.init([leaf("alpha", []), leaf("beta", [])])
+        for sid in ("alpha", "beta"):
+            self.start(sid, f"agent-{sid}")
+            self.give("failed", FAIL, marker=sid, sid=sid)
+        code, closed = self.call(
+            *self.common,
+            "close", "--actor", "parent", "--run-id", self.run_id,
+            "--outcome", "blocked", "--reason", "retry after external recovery",
+        )
+        self.assertEqual(0, code, closed)
+        code, reopened = self.call(
+            *self.common,
+            "reopen", "--actor", "parent", "--run-id", self.run_id,
+            "--reason", "dependency is available",
+        )
+        self.assertEqual(0, code, reopened)
+        block = reopened["next"]
+        self.assertEqual(["alpha", "beta"], block["retryable_step_ids"])
+        self.assertIn("--step-id alpha", block["command"])
+        self.assertIn("--retry-remediation-file", block["command"])
+        self.assertBounded(block)
+
+
+class NextOnlyRehydrationTest(LedgerHarness):
+    def assertEnvelopeBounded(self, result: dict) -> None:
+        self.assertLessEqual(ledger.proxy_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
+        self.assertBounded(result["next"])
+
+    def assertCategory(self, expected: str) -> dict:
+        code, result = self.show_next()
+        self.assertEqual(0, code, result)
+        self.assertEqual(expected, result["next"]["category"])
+        self.assertEnvelopeBounded(result)
+        return result["next"]
+
+    def test_priority_and_commands_follow_the_live_checkpoint(self):
+        self.init([leaf("clean", []), leaf("integrate", []), leaf("retry", []),
+                   leaf("pending", []), leaf("ready", []), leaf("active", [])])
+        self.start("clean", "agent-clean")
+        self.give("completed", sid="clean")
+        self.worktree_transition("clean", "integrated")
+        self.start("integrate", "agent-integrate")
+        self.give("completed", sid="integrate")
+        self.start("retry", "agent-retry")
+        self.give("failed", FAIL, sid="retry")
+        code, _ = self.transition("ready", "ready", "--agent-id", "agent-ready")
+        self.assertEqual(0, code)
+        self.start("active", "agent-active")
+
+        block = self.assertCategory("cleanup_integrated")
+        self.assertIn("--step-id clean", block["command"])
+        self.worktree_transition("clean", "cleaned")
+        self.assertCategory("integrate_completed")
+        self.worktree_transition("integrate", "integrated")
+        self.worktree_transition("integrate", "cleaned")
+        self.assertCategory("remediate_failure")
+
+    def test_pending_dispatch_await_closeout_and_terminal_categories(self):
+        self.init()
+        self.assertCategory("ready_pending")
+        code, _ = self.transition("build", "ready", "--agent-id", "agent-1")
+        self.assertEqual(0, code)
+        self.assertCategory("dispatch_ready")
+        code, _ = self.transition("build", "in_progress")
+        self.assertEqual(0, code)
+        self.assertCategory("await_return")
+        self.give("completed")
+        self.worktree_transition("build", "integrated")
+        self.worktree_transition("build", "cleaned")
+        self.assertCategory("validate_closeout")
+        code, result = self.call(
+            *self.common, "close", "--actor", "parent", "--run-id", self.run_id,
+            "--outcome", "completed",
+        )
+        self.assertEqual(0, code, result)
+        terminal = self.assertCategory("terminal_closed")
+        self.assertEqual("completed", terminal["outcome"])
+        self.assertNotIn("command", terminal)
+
+    def test_terminal_blockage_is_reported_when_no_legal_action_remains(self):
+        self.init([leaf("build", [], attempts=1)])
+        self.start()
+        self.give("failed", FAIL)
+        block = self.assertCategory("terminal_blocked")
+        self.assertEqual(["build"], block["blocked_step_ids"])
+        self.assertNotIn("command", block)
+
+    def test_next_only_is_read_only_and_full_show_remains_the_diagnostic_fallback(self):
+        self.init([leaf(f"step{n:02d}", []) for n in range(40)])
+        directory = self.root / "planning-policy/ledgers" / self.plan_id / self.run_id
+        before = {
+            name: (directory / name).read_bytes()
+            for name in ("checkpoint.json", "events.jsonl", "plan.json")
+        }
+        code, result = self.show_next()
+        self.assertEqual(0, code, result)
+        self.assertEnvelopeBounded(result)
+        self.assertTrue(result["next"]["truncated"])
+        self.assertIn("command", result["next"])
+        self.assertEqual(
+            before,
+            {name: (directory / name).read_bytes() for name in before},
+        )
+
+        code, full = self.call(*self.common, "show", "--run-id", self.run_id)
+        self.assertEqual(0, code, full)
+        self.assertTrue(full["truncated"])
+        self.assertLessEqual(full["summary_proxy_tokens"], ledger.MAX_TOKENS)
+        self.assertNotIn("next", full)
 
 
 class RecordReturnNextBlockTest(LedgerHarness):
@@ -377,18 +555,18 @@ class RecordReturnNextBlockTest(LedgerHarness):
 
 
 class LegacySilenceTest(LedgerHarness):
-    def downgrade_to_policyless_v2(self) -> None:
+    def downgrade_to_policyless(self, version: int = 2) -> None:
         directory = self.root / "planning-policy/ledgers" / self.plan_id / self.run_id
         plan_path = directory / "plan.json"
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        plan["contract_version"] = 2
+        plan["contract_version"] = version
         for entry in plan["leaves"]:
             entry.pop("capability_requirements")
         plan_path.write_text(json.dumps(plan), encoding="utf-8")
 
         checkpoint_path = directory / "checkpoint.json"
         checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
-        checkpoint["schema"] = 2
+        checkpoint["schema"] = version
         checkpoint["plan_hash"] = ledger.digest(plan)
         checkpoint.pop("retry_policy")
         for step in checkpoint["steps"].values():
@@ -407,20 +585,35 @@ class LegacySilenceTest(LedgerHarness):
         events_path = directory / "events.jsonl"
         events = [json.loads(line) for line in events_path.read_text().splitlines()]
         for entry in events:
-            entry["action"] = entry["action"].replace("-v4", "-v2")
+            entry["action"] = entry["action"].replace("-v4", f"-v{version}")
             if "plan_hash" in entry:
                 entry["plan_hash"] = checkpoint["plan_hash"]
         events_path.write_text(
             "".join(json.dumps(entry) + "\n" for entry in events), encoding="utf-8"
         )
 
-    def test_a_policyless_v2_run_records_a_return_without_a_next_block(self):
-        self.init([leaf("build", []), leaf("later", ["build"])])
-        self.downgrade_to_policyless_v2()
-        self.start()
-        result = self.give("blocked", OTHER, marker="a")
-        self.assertNotIn("next", result)
-        self.assertNotIn("retry_policy", self.checkpoint())
+    def test_policyless_v2_and_v3_runs_stay_silent_and_reject_next_only(self):
+        for version in (2, 3):
+            with self.subTest(version=version):
+                self.init([leaf("build", []), leaf("later", ["build"])])
+                self.downgrade_to_policyless(version)
+                code, ready = self.transition(
+                    "build", "ready", "--agent-id", "agent-1"
+                )
+                self.assertEqual(0, code, ready)
+                self.assertNotIn("next", ready)
+                code, active = self.transition("build", "in_progress")
+                self.assertEqual(0, code, active)
+                self.assertNotIn("next", active)
+                result = self.give("blocked", OTHER, marker="a")
+                self.assertNotIn("next", result)
+                self.assertNotIn("retry_policy", self.checkpoint())
+
+                code, rejected = self.show_next()
+                self.assertEqual(3, code, rejected)
+                self.assertEqual(
+                    "show --next-only requires a version-4 run", rejected["error"]
+                )
 
     def test_a_version_one_ledger_stays_silent(self):
         steps = json.dumps(
@@ -450,6 +643,10 @@ class LegacySilenceTest(LedgerHarness):
         )
         self.assertEqual(0, code, result)
         self.assertNotIn("next", result)
+
+        code, rejected = self.call(*legacy, "show", "--next-only")
+        self.assertEqual(3, code, rejected)
+        self.assertEqual("show --next-only requires a version-4 run", rejected["error"])
 
 
 if __name__ == "__main__":
