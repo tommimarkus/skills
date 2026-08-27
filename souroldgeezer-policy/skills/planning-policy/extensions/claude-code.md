@@ -48,6 +48,10 @@ fits and preserve these portable Claude aliases and effort values exactly:
 | `plan-step-analytical` | `opus` | `high` |
 | `plan-step-deep` | `opus` | `xhigh` |
 
+Pass `subagent_type` as `souroldgeezer-policy:<tier>` — Claude Code registers
+plugin agents under this scoped identifier, and the bare tier name alone
+returns `Agent type '<tier>' not found`.
+
 Never substitute a versioned model identifier for an alias and never silently
 downgrade a requested tier. If Claude Code cannot provide the requested alias or
 effort, return `blocked:model_unavailable` with the requested tier, alias, and
