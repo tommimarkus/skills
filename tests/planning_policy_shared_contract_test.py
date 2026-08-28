@@ -387,6 +387,102 @@ class SharedContractTest(unittest.TestCase):
         self.assertIsNone(result["contract_version"])
         self.assertFalse(result["dispatch_ready"])
 
+    def test_batch_of_two_same_tier_and_owner_passes(self):
+        first = leaf("one", "u1", "standard")
+        second = leaf("two", "u1", "standard", dependencies=["one"])
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_singleton_batch_fails(self):
+        solo = leaf("one", "u1", "standard")
+        solo["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "small"}], "leaves": [solo]}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("2 to 8 members" in error for error in result["errors"]))
+
+    def test_nine_member_batch_fails(self):
+        members = [leaf(f"m{index}", "u1", "standard") for index in range(9)]
+        for member in members:
+            member["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "large"}], "leaves": members}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("2 to 8 members" in error for error in result["errors"]))
+
+    def test_batch_member_with_analytical_tier_fails(self):
+        first = leaf("one", "u1", "standard")
+        second = leaf("two", "u1", "analytical", dependencies=["one"])
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("mechanical or standard" in error for error in result["errors"]))
+
+    def test_batch_members_must_share_worktree_owner(self):
+        first = leaf("one", "u1", "standard")
+        second = leaf("two", "u1", "standard", dependencies=["one"])
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        second["worktree_owner"] = "task/other"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("worktree_owner" in error for error in result["errors"]))
+
+    def test_batch_dependency_on_later_listed_member_fails(self):
+        first = leaf("one", "u1", "standard", dependencies=["two"])
+        second = leaf("two", "u1", "standard")
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("later-listed batch member" in error for error in result["errors"]))
+
+    def test_batch_member_external_dependency_is_unrestricted(self):
+        outside = leaf("outside", "u1", "standard")
+        first = leaf("one", "u1", "standard", dependencies=["outside"])
+        second = leaf("two", "u1", "standard", dependencies=["one", "outside"])
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        result = MODULE.validate(
+            {
+                "work_units": [{"id": "u1", "original_size": "large"}],
+                "leaves": [outside, first, second],
+            }
+        )
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_invalid_batch_id_format_fails(self):
+        malformed = leaf("one", "u1", "standard")
+        malformed["batch"] = "Not Stable!"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "small"}], "leaves": [malformed]}
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("batch must be a stable bounded identifier" in error for error in result["errors"])
+        )
+
+    def test_plan_without_batch_field_is_unaffected(self):
+        plan = {
+            "work_units": [{"id": "u1", "original_size": "medium"}],
+            "leaves": [leaf("one", "u1"), leaf("two", "u1", dependencies=["one"])],
+        }
+        result = MODULE.validate(plan)
+        self.assertTrue(result["valid"], result["errors"])
+
     def test_ledger_contract_has_required_v2_lifecycle_and_return_anchors(self):
         contract = LEDGER_CONTRACT.read_text(encoding="utf-8") + LEDGER_COMPATIBILITY.read_text(
             encoding="utf-8"

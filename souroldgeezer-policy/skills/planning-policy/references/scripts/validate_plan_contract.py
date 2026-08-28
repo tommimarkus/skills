@@ -13,6 +13,7 @@ from typing import Any
 
 SIZES = {"small": 1, "medium": 2, "large": 3}
 TIERS = {"mechanical", "standard", "analytical", "deep"}
+BATCHABLE_TIERS = {"mechanical", "standard"}
 AUDIT_OWNERS = {"devsecops-audit", "test-quality-audit", "ip-hygiene", "lean-audit"}
 STABLE_ID = re.compile(r"^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$")
 REQUIRED = (
@@ -457,6 +458,8 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
     leaf_ids: set[str] = set()
     unit_leaves: dict[str, list[dict[str, Any]]] = {key: [] for key in unit_sizes}
     dependencies: dict[str, list[str]] = {}
+    leaf_records: dict[str, tuple[int, dict[str, Any]]] = {}
+    batches: dict[str, list[str]] = {}
     audit_routes = 0
     for index, leaf in enumerate(leaves):
         prefix = f"leaves[{index}]"
@@ -483,6 +486,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
                 errors.append(f"duplicate leaf id: {leaf_id}")
             leaf_ids.add(leaf_id)
             dependencies[leaf_id] = []
+            leaf_records[leaf_id] = (index, leaf)
         else:
             errors.append(f"{prefix}.id must be a stable bounded identifier")
         if not isinstance(leaf.get("dependencies"), list):
@@ -496,6 +500,12 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
                     )
                 else:
                     dependencies[leaf_id].append(dependency)
+        batch = leaf.get("batch")
+        if batch is not None:
+            if not stable_id(batch):
+                errors.append(f"{prefix}.batch must be a stable bounded identifier")
+            elif stable_id(leaf_id):
+                batches.setdefault(batch, []).append(leaf_id)
         for field in ("read_set", "write_set", "stop_conditions"):
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
@@ -581,6 +591,30 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
                     errors.append(f"{prefix}.selective_audit.question must be bounded")
     if audit_routes > 1:
         errors.append("a plan may route initial inspection to exactly one owning audit")
+
+    for batch_id, members in batches.items():
+        if not 2 <= len(members) <= 8:
+            errors.append(
+                f"batch {batch_id} has {len(members)} members; batches must have 2 to 8 members"
+            )
+        for member in members:
+            if leaf_records[member][1].get("portable_tier") not in BATCHABLE_TIERS:
+                errors.append(
+                    f"batch {batch_id} member {member} must have portable_tier mechanical "
+                    "or standard"
+                )
+        owners = {leaf_records[member][1].get("worktree_owner") for member in members}
+        if len(owners) > 1:
+            errors.append(f"batch {batch_id} members must share one worktree_owner")
+        member_positions = {member: leaf_records[member][0] for member in members}
+        member_set = set(members)
+        for member in members:
+            for dependency in dependencies.get(member, []):
+                if dependency in member_set and member_positions[dependency] >= member_positions[member]:
+                    errors.append(
+                        f"batch {batch_id} member {member} depends on later-listed batch "
+                        f"member {dependency}"
+                    )
 
     for leaf_id, deps in dependencies.items():
         for dep in deps:
