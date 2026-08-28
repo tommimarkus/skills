@@ -32,6 +32,7 @@ MAX_NEXT_TOKENS = 120
 MAX_NEXT_ONLY_TOKENS = 240
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
+SHA40 = re.compile(r"^[0-9a-f]{40}$")
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 V1_STATES = {
@@ -95,6 +96,15 @@ WORKTREE_RESULT_FIELDS = {
     "parent_before",
     "parent_after",
 }
+# The Git-policy helper always emits `rebased_tree_changed` and adds
+# `batch_source_commits` only for a batch integrate, so both stay optional here:
+# a result recorded before either existed still validates.
+WORKTREE_RESULT_OPTIONAL = {"rebased_tree_changed", "batch_source_commits"}
+# A batch is one dispatch in one shared worktree, so a member's dependency on an
+# earlier member is satisfied by progress rather than by that member's cleanup.
+BATCH_DEPENDENCY_STATES = {"ready", "in_progress", "completed", "cleaned"}
+BATCH_STOPPED_STATES = {"blocked", "failed", "oversized"}
+BATCH_ACTIVE_STATES = {"pending", "ready", "in_progress"}
 CLOSEOUT_FIELDS = {
     "returned_commit": "",
     "integrated_commit": "",
@@ -451,8 +461,13 @@ def transition_scope(plan_id, run_id):
     return f"--plan-id {plan_id} transition --actor parent --run-id {run_id}"
 
 
-def dependencies_clean(data, step):
-    return all(data["steps"][dep]["status"] == "cleaned" for dep in step["dependencies"])
+def dependencies_clean(data, step, batches):
+    members = batches.get(step["id"], ())
+    return all(
+        data["steps"][dep]["status"]
+        in (BATCH_DEPENDENCY_STATES if dep in members else {"cleaned"})
+        for dep in step["dependencies"]
+    )
 
 
 def attempt_available(step):
@@ -463,12 +478,37 @@ def ready_status_legal(step):
     return step["status"] in {"pending", "blocked", "failed"} and step["retry_allowed"]
 
 
-def ready_candidate(data, step):
-    return ready_status_legal(step) and dependencies_clean(data, step) and attempt_available(step)
+def ready_candidate(data, step, batches):
+    return (
+        ready_status_legal(step)
+        and dependencies_clean(data, step, batches)
+        and attempt_available(step)
+    )
 
 
 def leaves_by_id(plan):
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
+
+
+def step_batches(plan):
+    """Derive each batched leaf's member list from the stored canonical plan."""
+    groups = {}
+    for leaf in plan["leaves"]:
+        if leaf.get("batch"):
+            groups.setdefault(leaf["batch"], []).append(leaf["id"])
+    return {sid: members for members in groups.values() for sid in members}
+
+
+def batch_settled(data, batches, step_id):
+    """True once no member of the step's batch can still commit to its worktree."""
+    return not any(
+        data["steps"][member]["status"] in BATCH_ACTIVE_STATES
+        or (
+            data["steps"][member]["status"] in {"blocked", "failed"}
+            and data["steps"][member]["retry_allowed"]
+        )
+        for member in batches.get(step_id, ())
+    )
 
 
 def checkpoint_binding(data):
@@ -1223,7 +1263,7 @@ def validate_retry_artifacts(directory, data):
             raise Error("retry remediation artifact digest mismatch")
 
 
-def ready(args, directory, data, plan, step):
+def ready(args, directory, data, plan, batches, step):
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
         if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
             raise Error(f"invalid {label}")
@@ -1242,7 +1282,7 @@ def ready(args, directory, data, plan, step):
             raise Error("retry requires --retry and bounded --summary")
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
-    if not dependencies_clean(data, step):
+    if not dependencies_clean(data, step, batches):
         raise Error("dependencies are not cleaned")
     if not attempt_available(step):
         raise Error("blocked:retry_exhausted")
@@ -1305,11 +1345,11 @@ def ready(args, directory, data, plan, step):
     step["reason"] = reason[:480]
 
 
-def retryable_steps(directory, data):
+def retryable_steps(directory, data, batches):
     """Return retryable failures using the same stored return predicate as record()."""
     result = []
     for step in ordered_steps(data["steps"]):
-        if step["status"] not in {"blocked", "failed"} or not ready_candidate(data, step):
+        if step["status"] not in {"blocked", "failed"} or not ready_candidate(data, step, batches):
             continue
         try:
             outcome = retry_outcome(current_return(directory, step))
@@ -1327,7 +1367,7 @@ def retry_command(plan_id, run_id, step_id):
     )
 
 
-def checkpoint_next(directory, data):
+def checkpoint_next(directory, data, batches):
     """Select one highest-priority legal v4 action from the validated checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next(
@@ -1350,7 +1390,13 @@ def checkpoint_next(directory, data):
             "step_ids",
         )
 
-    completed = [step["id"] for step in steps if step["status"] == "completed"]
+    # A batch shares one worktree and integrates its tip once, so a completed
+    # member waits until no sibling can still commit to that worktree.
+    completed = [
+        step["id"]
+        for step in steps
+        if step["status"] == "completed" and batch_settled(data, batches, step["id"])
+    ]
     if completed:
         return bounded_action_next(
             {
@@ -1364,7 +1410,7 @@ def checkpoint_next(directory, data):
             "step_ids",
         )
 
-    retryable = retryable_steps(directory, data)
+    retryable = retryable_steps(directory, data, batches)
     if retryable:
         ids = [step["id"] for step, _outcome in retryable]
         return bounded_action_next(
@@ -1377,7 +1423,9 @@ def checkpoint_next(directory, data):
         )
 
     pending = [
-        step["id"] for step in steps if step["status"] == "pending" and ready_candidate(data, step)
+        step["id"]
+        for step in steps
+        if step["status"] == "pending" and ready_candidate(data, step, batches)
     ]
     if pending:
         return bounded_action_next(
@@ -1433,7 +1481,7 @@ def checkpoint_next(directory, data):
     )
 
 
-def next_after_transition(args, directory, data, step):
+def next_after_transition(args, directory, data, batches, step):
     scope = transition_scope(args.plan_id, args.run_id)
     sid = step["id"]
     if step["status"] == "ready":
@@ -1462,7 +1510,7 @@ def next_after_transition(args, directory, data, step):
         for candidate in ordered_steps(data["steps"])
         if candidate["status"] == "pending"
         and sid in candidate["dependencies"]
-        and ready_candidate(data, candidate)
+        and ready_candidate(data, candidate, batches)
     ]
     if newly_unblocked:
         return bounded_action_next(
@@ -1479,22 +1527,49 @@ def next_after_transition(args, directory, data, step):
         return bounded_action_next(
             {"command": f"--plan-id {args.plan_id} validate --run-id {args.run_id} --closeout"}
         )
-    return checkpoint_next(directory, data)
+    return checkpoint_next(directory, data, batches)
+
+
+def unwind(args, data, batches, sid, step):
+    """Return a never-run batch member to pending after a sibling stopped the batch.
+
+    The member never ran, so it must neither burn its attempt nor keep the
+    identity a later redispatch will mint again.
+    """
+    if step["status"] != "in_progress":
+        raise Error("only in_progress steps can become pending")
+    members = batches.get(sid, ())
+    if not members:
+        raise Error("only a batch member can become pending")
+    if not any(data["steps"][member]["status"] in BATCH_STOPPED_STATES for member in members):
+        raise Error("pending unwind requires a stopped batch member")
+    step.update(
+        status="pending",
+        reason=(args.summary or "unwound")[:480],
+        attempt_count=step["attempt_count"] - 1,
+        agent_id="",
+        attempt_id="",
+    )
+    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        step["current_assignment"]["agent_id"] = ""
 
 
 def transition2(args):
     directory, data, plan, leafs = mutating_run(args)
+    batches = step_batches(plan)
     sid, step = selected_step(data, args.step_id)
     old = step["status"]
     new = args.to
     if new == "ready":
-        ready(args, directory, data, plan, step)
+        ready(args, directory, data, plan, batches, step)
     elif new == "in_progress":
         advance(step, old, "ready", new, args.summary or "in progress")
+    elif new == "pending":
+        unwind(args, data, batches, sid, step)
     elif new in {"integrated", "cleaned"}:
         expected = "completed" if new == "integrated" else "integrated"
         value, result_path, result_sha = worktree_result(
-            args.worktree_result, directory, sid, step, leafs[sid], new
+            args.worktree_result, directory, sid, step, leafs[sid], new, batches
         )
         advance(step, old, expected, new, args.summary or new)
         if new == "integrated":
@@ -1509,7 +1584,7 @@ def transition2(args):
                 cleanup_result_sha256=result_sha,
             )
     else:
-        raise Error("v2 transition only permits ready, in_progress, integrated, or cleaned")
+        raise Error("v2 transition permits pending, ready, in_progress, integrated, or cleaned")
     event(
         directory,
         data,
@@ -1521,11 +1596,30 @@ def transition2(args):
     )
     result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
     if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        result["next"] = next_after_transition(args, directory, data, step)
+        result["next"] = next_after_transition(args, directory, data, batches, step)
     return result
 
 
-def worktree_result(path, directory, sid, step, leaf, target):
+def batch_source_commits(value):
+    batch = value.get("batch_source_commits")
+    if batch is None:
+        return {}
+    if (
+        not isinstance(batch, dict)
+        or not batch
+        or any(
+            not isinstance(step_id, str)
+            or not step_id
+            or not isinstance(sha, str)
+            or not SHA40.fullmatch(sha)
+            for step_id, sha in batch.items()
+        )
+    ):
+        raise Error("invalid planning worktree batch source commits")
+    return batch
+
+
+def worktree_result(path, directory, sid, step, leaf, target, batches):
     if not path:
         raise Error(f"{target} transition requires --worktree-result")
     source = Path(path)
@@ -1534,16 +1628,11 @@ def worktree_result(path, directory, sid, step, leaf, target):
         value = json.loads(raw)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise Error("invalid planning-worktree-result-v1") from exc
-    allowed = WORKTREE_RESULT_FIELDS | ({"parent_commit"} if target == "cleaned" else set())
+    optional = WORKTREE_RESULT_OPTIONAL | ({"parent_commit"} if target == "cleaned" else set())
     if (
         len(raw) > 4096
         or not isinstance(value, dict)
-        or set(value)
-        not in (
-            {frozenset(WORKTREE_RESULT_FIELDS), frozenset(allowed)}
-            if target == "cleaned"
-            else {frozenset(allowed)}
-        )
+        or set(value) - optional != WORKTREE_RESULT_FIELDS
         or value.get("schema") != "planning-worktree-result-v1"
         or value.get("ok") is not True
         or value.get("action") != ("integrate" if target == "integrated" else "cleanup")
@@ -1556,6 +1645,9 @@ def worktree_result(path, directory, sid, step, leaf, target):
         not isinstance(value["parent_commit"], str) or not COMMIT.fullmatch(value["parent_commit"])
     ):
         raise Error("invalid cleanup parent commit identity")
+    if "rebased_tree_changed" in value and not isinstance(value["rebased_tree_changed"], bool):
+        raise Error("invalid planning worktree tree-change flag")
+    member_commits = batch_source_commits(value)
     assigned_worktree = Path(step["assignment"]["worktree"])
     if not assigned_worktree.is_absolute():
         assigned_worktree = Path(value["repo_root"]) / assigned_worktree
@@ -1565,7 +1657,12 @@ def worktree_result(path, directory, sid, step, leaf, target):
     ):
         raise Error("planning worktree result does not match assigned owner")
     if target == "integrated":
-        if step["returned_commit"] and value["source_commit"] != step["returned_commit"]:
+        # A batch integrates its shared tip once, so a member either owns that
+        # tip or is named in the artifact's proven per-member commit map.
+        matched = value["source_commit"] == step["returned_commit"] or (
+            sid in batches and member_commits.get(sid) == step["returned_commit"]
+        )
+        if step["returned_commit"] and not matched:
             raise Error("integrated source does not match returned commit")
         if value["rebased_commit"] != value["parent_after"]:
             raise Error("integrated commit does not match parent commit")
@@ -1640,12 +1737,13 @@ def reopen2(args):
     if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
     if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+        batches = step_batches(plan)
         pending = [
             step
             for step in ordered_steps(data["steps"])
-            if step["status"] == "pending" and ready_candidate(data, step)
+            if step["status"] == "pending" and ready_candidate(data, step, batches)
         ]
-        retryable = pending + [step for step, _outcome in retryable_steps(directory, data)]
+        retryable = pending + [s for s, _outcome in retryable_steps(directory, data, batches)]
     else:
         retryable = [
             step
@@ -1820,9 +1918,11 @@ def valid_return(value, data, step, leaf):
     return value
 
 
-def next_after_return(args, sid, step, value, disposition):
+def next_after_return(args, directory, data, batches, sid, step, value, disposition):
     """Report the retry decision `record` just made under the escalating policy."""
     scope = f"--plan-id {args.plan_id} transition --actor parent --run-id {args.run_id}"
+    if disposition == "completed" and not batch_settled(data, batches, sid):
+        return checkpoint_next(directory, data, batches)
     if disposition == "retry_eligible":
         tier = step["current_tier"]
         if needs_higher_tier(step, retry_outcome(value)):
@@ -1970,7 +2070,9 @@ def record(args):
     # Only the escalating policy owns retries, so only it can state eligibility.
     # A policy-less v2/v3 run keeps its original silent result.
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        result["next"] = next_after_return(args, sid, step, value, disposition)
+        result["next"] = next_after_return(
+            args, directory, data, step_batches(plan), sid, step, value, disposition
+        )
     return result
 
 
@@ -2380,7 +2482,7 @@ def purge(args):
     }
 
 
-def summary(data):
+def summary(data, batches):
     steps = data["steps"]
     rows = [
         {
@@ -2408,9 +2510,7 @@ def summary(data):
     actions = [
         f"ready:{s['id']}"
         for s in ordered_steps(steps)
-        if s["status"] in {"pending", "blocked", "failed"}
-        and s["retry_allowed"]
-        and all(steps[d]["status"] == "cleaned" for d in s["dependencies"])
+        if ready_status_legal(s) and dependencies_clean(data, s, batches)
     ]
     result = {
         "ok": True,
@@ -2460,7 +2560,7 @@ def show(args):
             raise Error("show --next-only requires a version-4 run")
         if args.step_id:
             raise Error("show --next-only does not accept --step-id")
-        directory, data, _plan, _leafs = load2(args)
+        directory, data, plan, _leafs = load2(args)
         if data.get("schema") != 4 or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
             raise Error("show --next-only requires a version-4 run")
         validate_events2(directory, data)
@@ -2469,7 +2569,7 @@ def show(args):
             "action": "show-next",
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
-            "next": checkpoint_next(directory, data),
+            "next": checkpoint_next(directory, data, step_batches(plan)),
         }
         if proxy_tokens(result) > MAX_NEXT_ONLY_TOKENS:
             raise Error("show --next-only exceeds 240 proxy tokens")
@@ -2545,7 +2645,7 @@ def show(args):
             result["omitted_blockers"] += 1
         result["summary_proxy_tokens"] = proxy_tokens(result)
         return result
-    result = summary(data)
+    result = summary(data, step_batches(plan))
     if (directory / "usage").exists():
         result["trace"] = {"initialized": True}
         return bounded_step_summary(result)

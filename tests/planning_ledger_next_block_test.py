@@ -72,6 +72,15 @@ def leaf(sid: str, dependencies: list[str], attempts: int = 3) -> dict:
     }
 
 
+def batch_leaf(sid: str, dependencies: list[str], attempts: int = 3) -> dict:
+    """A batchable leaf: one shared worktree owner, one batch id."""
+    return {
+        **leaf(sid, dependencies, attempts),
+        "batch": "edits",
+        "worktree_owner": "task/batch",
+    }
+
+
 def make_plan(leaves: list[dict]) -> dict:
     return {
         "contract_version": 4,
@@ -552,6 +561,53 @@ class RecordReturnNextBlockTest(LedgerHarness):
         block = self.give("blocked", HIGHER, marker="c")["next"]
         self.assertFalse(block["retry_eligible"])
         self.assertEqual("blocked:retry_ceiling_reached", block["outcome"])
+
+
+class BatchNextBlockTest(LedgerHarness):
+    """A batch integrates its shared tip once, so a completed member waits.
+
+    Suggesting the integrate while a sibling still holds the shared worktree
+    would rebase a tip the batch has not finished writing, and the cleanup that
+    follows would remove the worktree the sibling is still working in.
+    """
+
+    def dispatch(self, *ids: str) -> None:
+        for sid in ids:
+            self.start(sid, "batch-worker")
+
+    def test_a_completed_member_waits_for_a_sibling_that_can_still_commit(self):
+        self.init([batch_leaf("b0", []), batch_leaf("b1", ["b0"])])
+        self.dispatch("b0", "b1")
+        block = self.give("completed", sid="b0")["next"]
+        self.assertEqual("await_return", block["category"])
+        self.assertEqual("b1", block["await_step_id"])
+        self.assertNotIn("command", block)
+        self.assertBounded(block)
+
+        code, held = self.show_next()
+        self.assertEqual(0, code, held)
+        self.assertEqual("await_return", held["next"]["category"])
+
+        settled = self.give("completed", sid="b1")["next"]
+        self.assertFalse(settled["retry_eligible"])
+        self.assertEqual("completed", settled["outcome"])
+        self.assertIn("--to integrated", settled["command"])
+        self.assertBounded(settled)
+
+        code, ready_to_integrate = self.show_next()
+        self.assertEqual(0, code, ready_to_integrate)
+        self.assertEqual("integrate_completed", ready_to_integrate["next"]["category"])
+        self.assertEqual(["b0", "b1"], ready_to_integrate["next"]["step_ids"])
+
+    def test_an_unwound_follower_still_holds_back_the_shared_integrate(self):
+        self.init([batch_leaf("b0", []), batch_leaf("b1", ["b0"]), batch_leaf("b2", ["b1"])])
+        self.dispatch("b0", "b1", "b2")
+        self.give("completed", sid="b0")
+        self.give("failed", FAIL, sid="b1")
+        code, unwound = self.transition("b2", "pending")
+        self.assertEqual(0, code, unwound)
+        # `b1` is retryable and `b2` will be redispatched, so `b0` keeps waiting.
+        self.assertEqual("remediate_failure", self.show_next()[1]["next"]["category"])
 
 
 class LegacySilenceTest(LedgerHarness):

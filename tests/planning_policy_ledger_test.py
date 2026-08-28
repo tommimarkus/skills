@@ -1224,5 +1224,89 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("blocked:retry_exhausted", state["blockers"][0]["code"])
 
 
+class WorktreeResultBatchArtifactTest(unittest.TestCase):
+    """`worktree_result` admits the Git-policy helper's optional batch fields.
+
+    One integrate artifact serves every member of a batch, so a non-final
+    member proves its own commit through `batch_source_commits` while the
+    final member still owns the source tip.
+    """
+
+    members = {"b0": ["b0", "b1"], "b1": ["b0", "b1"]}
+    commits = {"b0": "1" * 40, "b1": "3" * 40}
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.directory = Path(self.temp.name)
+
+    def artifact(self, **overrides):
+        value = {
+            "schema": "planning-worktree-result-v1",
+            "ok": True,
+            "action": "integrate",
+            "repo_root": str(self.directory),
+            "target": "main",
+            "branch": "batch/owner",
+            "worktree": str(self.directory / ".worktrees/batch"),
+            "source_commit": self.commits["b1"],
+            "rebased_commit": "9" * 40,
+            "parent_before": "c" * 40,
+            "parent_after": "9" * 40,
+        }
+        value.update(overrides)
+        path = self.directory / "artifact.json"
+        path.write_text(json.dumps(value))
+        return str(path)
+
+    def integrate(self, path, sid="b0", batches=None):
+        return ledger.worktree_result(
+            path,
+            self.directory,
+            sid,
+            {
+                "id": sid,
+                "assignment": {"worktree": ".worktrees/batch"},
+                "returned_commit": self.commits[sid],
+            },
+            {"worktree_owner": "batch/owner"},
+            "integrated",
+            self.members if batches is None else batches,
+        )
+
+    def test_a_member_integrates_on_its_proven_commit_from_the_batch_map(self):
+        path = self.artifact(rebased_tree_changed=True, batch_source_commits=self.commits)
+        value, _stored, _sha = self.integrate(path)
+        self.assertTrue(value["rebased_tree_changed"])
+        self.assertEqual(self.commits, value["batch_source_commits"])
+        # The final member still integrates on the plain source-tip equality.
+        self.assertEqual(value, self.integrate(path, "b1")[0])
+
+    def test_a_map_entry_that_contradicts_the_returned_commit_is_refused(self):
+        path = self.artifact(batch_source_commits={"b0": "4" * 40, "b1": self.commits["b1"]})
+        with self.assertRaises(ledger.Error):
+            self.integrate(path)
+
+    def test_a_non_member_keeps_the_source_commit_equality(self):
+        path = self.artifact(batch_source_commits=self.commits)
+        with self.assertRaises(ledger.Error):
+            self.integrate(path, batches={})
+
+    def test_malformed_batch_source_commits_are_refused(self):
+        for commits in ({}, {"b0": "z" * 40}, {"": self.commits["b0"]}, ["b0"], {"b0": 1}):
+            with self.subTest(commits=commits):
+                with self.assertRaises(ledger.Error):
+                    self.integrate(self.artifact(batch_source_commits=commits))
+
+    def test_a_non_boolean_tree_change_flag_is_refused(self):
+        with self.assertRaises(ledger.Error):
+            self.integrate(self.artifact(rebased_tree_changed="false"))
+
+    def test_an_oversize_artifact_is_still_refused(self):
+        path = self.artifact(batch_source_commits={"x" * 4200: self.commits["b0"]})
+        with self.assertRaises(ledger.Error):
+            self.integrate(path)
+
+
 if __name__ == "__main__":
     unittest.main()

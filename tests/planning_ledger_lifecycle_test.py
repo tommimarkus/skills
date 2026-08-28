@@ -845,5 +845,347 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         )
 
 
+MEMBER_COMMITS = {"b0": "1" * 40, "b1": "2" * 40, "b2": "3" * 40}
+BATCH_TIP = MEMBER_COMMITS["b2"]
+BATCH_INTEGRATED = "9" * 40
+
+
+class PlanningLedgerBatchTest(unittest.TestCase):
+    """A batch is one dispatch in one worktree that integrates its tip once."""
+
+    members = ("b0", "b1", "b2")
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def common(self, plan_id):
+        return ["--ledger-root", str(self.root), "--plan-id", plan_id]
+
+    def call(self, *arguments):
+        with contextlib.redirect_stdout(io.StringIO()) as stream:
+            code = ledger.main(arguments)
+        return code, json.loads(stream.getvalue())
+
+    def leaf(self, sid, dependencies, batched, max_attempts):
+        value = {
+            "id": sid,
+            "dependencies": dependencies,
+            "task": "task",
+            "boundary": "boundary",
+            "read_set": ["src"],
+            "write_set": ["src"],
+            "settled_decisions": "settled",
+            "size": "small",
+            "portable_tier": "standard",
+            "worktree_owner": "batch/owner" if batched else f"solo/{sid}",
+            "acceptance_command": "uv run test",
+            "return_contract": "bounded-step-return-v1",
+            "stop_conditions": ["missing_load_bearing_information"],
+            "work_unit_id": sid,
+            "max_attempts": max_attempts,
+            "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
+        }
+        if batched:
+            value["batch"] = "edits"
+        return value
+
+    def plan(self, plan_id, ids, batched, max_attempts):
+        leaves = [
+            self.leaf(sid, [ids[index - 1]] if index else [], batched, max_attempts)
+            for index, sid in enumerate(ids)
+        ]
+        path = self.root / f"{plan_id}-plan.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "contract_version": 4,
+                    "objective": "objective",
+                    "scope_summary": "scope",
+                    "approved_decisions": ["settled"],
+                    "leaves": leaves,
+                    "work_units": [{"id": sid, "original_size": "small"} for sid in ids],
+                }
+            )
+        )
+        return path
+
+    def capability_binding(self, plan_path):
+        plan = json.loads(Path(plan_path).read_text())
+        path = self.root / f"{plan_path.stem}-binding.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema": "planning-capability-binding-v1",
+                    "plan_sha256": hashlib.sha256(
+                        json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest(),
+                    "bindings": [
+                        {
+                            "step_id": leaf["id"],
+                            "host": "codex",
+                            "executor": "gpt-5.6-terra",
+                            "requirements": leaf["capability_requirements"],
+                            "evidence": ["test fixture capability inventory"],
+                        }
+                        for leaf in plan["leaves"]
+                    ],
+                }
+            )
+        )
+        return path
+
+    def assignments(self, plan_id, ids, batched):
+        path = self.root / f"{plan_id}-assignments.json"
+        path.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": sid,
+                        "harness": "codex",
+                        "model_or_alias": "gpt-5.6-terra",
+                        "effort": "medium",
+                        "worktree": ".worktrees/batch" if batched else f".worktrees/{sid}",
+                    }
+                    for sid in ids
+                ]
+            )
+        )
+        return path
+
+    def init(self, plan_id, ids, batched=True, max_attempts=2):
+        selected = self.plan(plan_id, ids, batched, max_attempts)
+        code, result = self.call(
+            *self.common(plan_id),
+            "init-v4",
+            "--actor",
+            "parent",
+            "--approved",
+            "--plan-file",
+            str(selected),
+            "--assignments-file",
+            str(self.assignments(plan_id, ids, batched)),
+            "--capability-binding-file",
+            str(self.capability_binding(selected)),
+        )
+        self.assertEqual(0, code, result)
+        return result["run_id"]
+
+    def checkpoint(self, plan_id, run_id):
+        return json.loads(
+            (
+                self.root / "planning-policy/ledgers" / plan_id / run_id / "checkpoint.json"
+            ).read_text()
+        )
+
+    def transition(self, plan_id, run_id, sid, target, *extra):
+        return self.call(
+            *self.common(plan_id),
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--step-id",
+            sid,
+            "--to",
+            target,
+            *extra,
+        )
+
+    def start(self, plan_id, run_id, sid, agent="batch-worker"):
+        code, result = self.transition(plan_id, run_id, sid, "ready", "--agent-id", agent)
+        self.assertEqual(0, code, result)
+        code, result = self.transition(plan_id, run_id, sid, "in_progress")
+        self.assertEqual(0, code, result)
+        return self.checkpoint(plan_id, run_id)["steps"][sid]
+
+    def returned(self, step, status="completed", blocker=""):
+        sid = step["id"]
+        return {
+            "schema": "bounded-step-return-v1",
+            "step_id": sid,
+            "attempt_id": step["attempt_id"],
+            "agent_id": step["agent_id"],
+            "status": status,
+            "changed_paths": [f"src/{sid}.py"],
+            "acceptance": {
+                "command": "uv run test",
+                "exit_code": 0 if status == "completed" else 1,
+                "summary": blocker or status,
+            },
+            "blockers": [] if status == "completed" else [{"code": blocker, "summary": blocker}],
+            "notes": [],
+            "unstarted_remainder": [],
+            "commit_hash": MEMBER_COMMITS[sid],
+        }
+
+    def record(self, plan_id, run_id, value):
+        path = self.root / f"{plan_id}-{value['step_id']}-return.json"
+        path.write_text(json.dumps(value))
+        return self.call(
+            *self.common(plan_id),
+            "record-return",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--return-file",
+            str(path),
+        )
+
+    def complete(self, plan_id, run_id, sid):
+        step = self.checkpoint(plan_id, run_id)["steps"][sid]
+        code, result = self.record(plan_id, run_id, self.returned(step))
+        self.assertEqual(0, code, result)
+        return result
+
+    def retry(self, plan_id, run_id, step):
+        path = self.root / f"{plan_id}-remediation.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema": "retry-remediation-v1",
+                    "step_id": step["id"],
+                    "prior_attempt_id": step["attempt_id"],
+                    "prior_return_sha256": step["return_sha256"],
+                    "diagnosis": "acceptance failed inside the shared batch worktree",
+                    "remediation_action": "rerun the member alone in the same worktree",
+                    "executor_mode": "fresh",
+                    "next_agent_id": "remediation-worker",
+                    "next_harness": "codex",
+                    "target_portable_tier": "standard",
+                }
+            )
+        )
+        return self.transition(
+            plan_id, run_id, step["id"], "ready", "--retry", "--retry-remediation-file", str(path)
+        )
+
+    def artifact(self, plan_id, action="integrate", commits=None, source=BATCH_TIP):
+        value = {
+            "schema": "planning-worktree-result-v1",
+            "ok": True,
+            "action": action,
+            "repo_root": str(self.root),
+            "target": "main",
+            "branch": "batch/owner",
+            "worktree": str(self.root / ".worktrees/batch"),
+            "source_commit": source,
+            "rebased_commit": BATCH_INTEGRATED,
+            "parent_before": "c" * 40,
+            "parent_after": BATCH_INTEGRATED,
+            "rebased_tree_changed": False,
+        }
+        if commits:
+            value["batch_source_commits"] = commits
+        if action == "cleanup":
+            value["parent_commit"] = BATCH_INTEGRATED
+        path = self.root / f"{plan_id}-{action}.json"
+        path.write_text(json.dumps(value))
+        return str(path)
+
+    def close_out_batch(self, plan_id, run_id):
+        """One integrate artifact and one cleanup artifact serve every member."""
+        integrate = self.artifact(plan_id, commits=MEMBER_COMMITS)
+        for sid in self.members:
+            code, result = self.transition(
+                plan_id, run_id, sid, "integrated", "--worktree-result", integrate
+            )
+            self.assertEqual(0, code, result)
+        cleanup = self.artifact(plan_id, action="cleanup", commits=MEMBER_COMMITS)
+        for sid in self.members:
+            code, result = self.transition(
+                plan_id, run_id, sid, "cleaned", "--worktree-result", cleanup
+            )
+            self.assertEqual(0, code, result)
+
+    def test_a_batch_dispatches_in_order_and_integrates_its_shared_tip_once(self):
+        run = self.init("batch", self.members)
+        steps = self.checkpoint("batch", run)["steps"]
+        self.assertEqual(
+            {".worktrees/batch"}, {step["assignment"]["worktree"] for step in steps.values()}
+        )
+        for sid in self.members:
+            self.start("batch", run, sid)
+        self.assertEqual(
+            {"in_progress"},
+            {self.checkpoint("batch", run)["steps"][sid]["status"] for sid in self.members},
+        )
+        for sid in self.members[:-1]:
+            self.assertEqual("await_return", self.complete("batch", run, sid)["next"]["category"])
+        self.assertIn("--to integrated", self.complete("batch", run, "b2")["next"]["command"])
+
+        self.close_out_batch("batch", run)
+        state = self.checkpoint("batch", run)["steps"]
+        self.assertEqual({"cleaned"}, {step["status"] for step in state.values()})
+        self.assertEqual(
+            {BATCH_INTEGRATED}, {step["integrated_commit"] for step in state.values()}
+        )
+        self.assertEqual(1, len({step["integration_result_sha256"] for step in state.values()}))
+        self.assertEqual(1, len({step["cleanup_result_sha256"] for step in state.values()}))
+        code, validated = self.call(
+            *self.common("batch"), "validate", "--run-id", run, "--closeout"
+        )
+        self.assertEqual(0, code, validated)
+
+    def test_a_stopped_member_unwinds_its_followers_before_one_shared_integrate(self):
+        run = self.init("unwind", self.members)
+        for sid in self.members:
+            self.start("unwind", run, sid)
+        self.complete("unwind", run, "b0")
+        running = self.checkpoint("unwind", run)["steps"]["b1"]
+        code, result = self.record(
+            "unwind", run, self.returned(running, "failed", "failed:acceptance")
+        )
+        self.assertEqual(0, code, result)
+
+        code, unwound = self.transition("unwind", run, "b2", "pending")
+        self.assertEqual(0, code, unwound)
+        follower = self.checkpoint("unwind", run)["steps"]["b2"]
+        self.assertEqual("pending", follower["status"])
+        self.assertEqual(0, follower["attempt_count"])
+        self.assertEqual("", follower["agent_id"])
+        self.assertEqual("", follower["attempt_id"])
+        self.assertEqual("", follower["current_assignment"]["agent_id"])
+
+        stopped = self.checkpoint("unwind", run)["steps"]["b1"]
+        code, retried = self.retry("unwind", run, stopped)
+        self.assertEqual(0, code, retried)
+        code, result = self.transition("unwind", run, "b1", "in_progress")
+        self.assertEqual(0, code, result)
+        self.complete("unwind", run, "b1")
+        remediated = self.checkpoint("unwind", run)["steps"]["b1"]
+        self.assertEqual("standard", remediated["current_tier"])
+        self.assertEqual(".worktrees/batch", remediated["assignment"]["worktree"])
+
+        self.start("unwind", run, "b2", agent="redispatched-worker")
+        self.complete("unwind", run, "b2")
+        self.close_out_batch("unwind", run)
+        code, validated = self.call(
+            *self.common("unwind"), "validate", "--run-id", run, "--closeout"
+        )
+        self.assertEqual(0, code, validated)
+
+    def test_pending_unwind_is_refused_outside_a_stopped_batch(self):
+        early = self.init("early", self.members)
+        code, result = self.transition("early", early, "b0", "ready", "--agent-id", "worker")
+        self.assertEqual(0, code, result)
+        self.assertEqual(3, self.transition("early", early, "b0", "pending")[0])
+
+        solo = self.init("solo", ("b0", "b1"), batched=False)
+        self.start("solo", solo, "b0")
+        self.assertEqual(3, self.transition("solo", solo, "b0", "pending")[0])
+
+        running = self.init("running", self.members)
+        self.start("running", running, "b0")
+        self.start("running", running, "b1")
+        self.assertEqual(3, self.transition("running", running, "b1", "pending")[0])
+        self.assertEqual(
+            "in_progress", self.checkpoint("running", running)["steps"]["b1"]["status"]
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
