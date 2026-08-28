@@ -1,5 +1,65 @@
 # Planning Policy Source Grounding
 
+## 2026-08-29 batch dispatch, advisory-fed grooming, and verification economy
+
+The batch lane and the two new cost-advisory codes are grounded in a
+repository-observed overhead pattern, not a hypothetical one. Dispatching one
+delegated leaf at a time charged a fixed per-dispatch overhead on every leaf
+regardless of size, so that overhead scaled with leaf count even when several
+leaves shared one worktree owner and ran one after another with nothing else
+in between. Grooming's incentive ran one way only: a step could always be
+split smaller to keep it readable, but nothing pushed the other direction once
+a chain of small, dependency-consecutive leaves made that per-dispatch
+overhead the dominant cost of the plan. Integration then serialized on top of
+that: each returned leaf rebased, merged, and cleaned up on its own before the
+next dependent leaf's worktree could even start. And the cost advisory itself,
+once it existed, stayed purely descriptive — it could already report a shape
+like an unbatched chain or an oversized plan in the rendered economics, but
+nothing in grooming read the finding back before the plan was presented for
+approval, so the computation ran and its result went unused. The
+repository-authored regressions in
+[`tests/planning_policy_shared_contract_test.py`](../../../../tests/planning_policy_shared_contract_test.py)
+(`test_batched_dispatch_lowers_prefix_multiplication_while_handoff_total_matches`,
+`test_unbatched_chain_fires_between_mechanical_leaves_even_without_profile`,
+`test_plan_scale_fires_over_twelve_leaves_and_not_at_twelve`),
+[`tests/planning_ledger_lifecycle_test.py`](../../../../tests/planning_ledger_lifecycle_test.py),
+and [`tests/planning_worktree_helper_test.py`](../../../../tests/planning_worktree_helper_test.py)
+model each part of that diagnosis directly.
+
+The response keeps every vocabulary choice tied back to that same diagnosis.
+A "batch" groups chained, same-owner mechanical or standard leaves — never
+analytical or deep work, where holding the unknown alone is the reason to keep
+a step by itself — into one dispatch that a worker executes member by member
+in the one shared worktree, committing and returning each member on its own so
+the fixed per-dispatch cost is paid once for the chain instead of once per
+member. When a member stops, the batch "unwinds" the never-run followers
+behind it back to pending — refunding the attempt already minted for each one
+and clearing its identity — rather than leaving them stranded in-progress for
+work they never started. "Advisory-fed grooming" is the fix
+for the unread finding: grooming now acts on `PLANCOST-UNBATCHED-CHAIN` and
+`PLANCOST-PLAN-SCALE` before the plan is presented for approval — batching the
+flagged chain, re-tiering it, or recording the stated reason not to — instead
+of only rendering them in the economics footer afterward. "Slice" names the
+`PLANCOST-PLAN-SCALE` advice for a plan that has grown past twelve leaves or
+twenty declared unit weight: split it into successive plans rather than
+carrying one oversized plan forward, the same plain word this file already
+uses for splitting an oversized migration by group. Both codes stay advisory;
+neither changes a plan's validity, readiness, or dispatch eligibility, which
+preserves the boundary the "2026-08-10 contract-v3 execution economics"
+section below already drew between cost data and execution legality.
+
+The verification-economy rule — trusting a leaf's recorded acceptance evidence
+when a rebase left its tree unchanged, re-running only a leaf whose tree
+actually moved, and running the full suite exactly once at closeout — promotes
+this maintainer's own
+working practice of not re-verifying output a gate already proved unchanged
+into the published contract. It is the same avoid-redundant-verification habit
+this repository already applies to its own gates (skip re-checking a
+fast-forward integration, scope suites to changed inputs), now expressed
+through the worktree helper's `rebased_tree_changed` comparison rather than
+left as an unstated maintainer preference. See "IP provenance" below for how
+this generalization is recorded alongside the earlier execution-shape default.
+
 ## 2026-08-25 complete live-next lifecycle
 
 The v4 live-next chain is grounded in the repository-authored cost and restart
@@ -166,6 +226,9 @@ brainstorming or planning skill; only the general concept informed it. The
 execution-shape default likewise generalizes this maintainer's own working
 practice — delegate decomposable steps, keep integration and verification in the
 parent session — and not any third-party delegation or orchestration skill. The
+verification-economy rule likewise generalizes this maintainer's own
+working practice — skip re-verifying output a gate already proved unchanged —
+and not any third-party build-caching or continuous-integration tool. The
 grooming pass was likewise described independently for this repository, from the
 observed context-exhaustion failure mode described above, not from any
 third-party source. It deliberately uses the plain-English terms "groom",
