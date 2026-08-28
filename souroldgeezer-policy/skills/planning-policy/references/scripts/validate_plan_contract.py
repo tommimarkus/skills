@@ -46,6 +46,8 @@ COST_LANES = (
 )
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 GLOB_CHARS = ("*", "?", "[")
+PLAN_SCALE_LEAF_LIMIT = 12
+PLAN_SCALE_WEIGHT_LIMIT = 20
 
 
 def proxy_tokens(value: Any) -> int:
@@ -113,19 +115,80 @@ def tier_mix(leaves: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def dispatch_groups(leaves: list[dict[str, Any]]) -> list[list[str]]:
+    """Group leaf ids into dispatches: batch members share one dispatch, leaf order preserved."""
+    groups: list[list[str]] = []
+    index: dict[tuple[str, str], int] = {}
+    for entry in leaves:
+        if not isinstance(entry, dict) or not stable_id(entry.get("id")):
+            continue
+        leaf_id = entry["id"]
+        batch = entry.get("batch")
+        key = ("batch", batch) if stable_id(batch) else ("leaf", leaf_id)
+        if key not in index:
+            index[key] = len(groups)
+            groups.append([])
+        groups[index[key]].append(leaf_id)
+    return groups
+
+
+def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
+    """Report a dependency-consecutive same-owner batchable pair left out of a shared batch."""
+    by_id = {
+        entry["id"]: entry
+        for entry in leaves
+        if isinstance(entry, dict) and stable_id(entry.get("id"))
+    }
+    for entry in leaves:
+        if not isinstance(entry, dict) or entry.get("portable_tier") not in BATCHABLE_TIERS:
+            continue
+        dependencies = entry.get("dependencies")
+        if not isinstance(dependencies, list):
+            continue
+        batch = entry.get("batch")
+        owner = entry.get("worktree_owner")
+        for dependency in dependencies:
+            parent = by_id.get(dependency) if isinstance(dependency, str) else None
+            if not isinstance(parent, dict) or parent.get("portable_tier") not in BATCHABLE_TIERS:
+                continue
+            if parent.get("worktree_owner") != owner:
+                continue
+            if stable_id(batch) and batch == parent.get("batch"):
+                continue
+            return True
+    return False
+
+
+def total_declared_weight(plan: dict[str, Any]) -> int:
+    units = plan.get("work_units")
+    if not isinstance(units, list):
+        return 0
+    return sum(
+        SIZES.get(unit.get("original_size"), 0) for unit in units if isinstance(unit, dict)
+    )
+
+
 def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[str, Any]:
     """Return bounded cost guidance without contributing contract errors."""
     codes: list[str] = []
     profile = plan.get("execution_cost")
     canonical_plan_tokens = proxy_tokens(plan)
-    handoffs = [
-        proxy_tokens({key: leaf.get(key) for key in REQUIRED if key in leaf})
-        for leaf in leaves
-        if isinstance(leaf, dict)
-    ]
+    handoffs: list[int] = []
+    handoff_by_id: dict[str, int] = {}
+    for leaf in leaves:
+        if not isinstance(leaf, dict):
+            continue
+        handoff = proxy_tokens({key: leaf.get(key) for key in REQUIRED if key in leaf})
+        handoffs.append(handoff)
+        if stable_id(leaf.get("id")):
+            handoff_by_id[leaf["id"]] = handoff
+    groups = dispatch_groups(leaves)
+    dispatch_handoffs = [sum(handoff_by_id[member] for member in group) for group in groups]
     stable = {
         "canonical_plan": canonical_plan_tokens,
-        "largest_handoff": max(handoffs, default=0),
+        "largest_handoff": max(dispatch_handoffs, default=0),
+        "leaf_count": len(handoffs),
+        "handoff_total": sum(handoffs),
     }
     attempts = {
         str(leaf.get("id")): {
@@ -155,6 +218,13 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
     }
     if result["tier_mix"]["over_assigned"]:
         codes.append("PLANCOST-TIER-OVER-ASSIGNED")
+    if has_unbatched_chain(leaves):
+        codes.append("PLANCOST-UNBATCHED-CHAIN")
+    if (
+        stable["leaf_count"] > PLAN_SCALE_LEAF_LIMIT
+        or total_declared_weight(plan) > PLAN_SCALE_WEIGHT_LIMIT
+    ):
+        codes.append("PLANCOST-PLAN-SCALE")
     if profile is None:
         codes.extend(
             (
@@ -222,7 +292,10 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         result["retry_multiplication"] = attempt_multiplication(attempts)
         return result
     result["retry_multiplication"] = attempt_multiplication(attempts)
-    repeated_attempts = max(0, result["retry_multiplication"]["expected"] - len(attempts))
+    dispatch_expected_total = sum(
+        max(attempts[member]["expected"] for member in group) for group in groups
+    )
+    repeated_attempts = max(0, dispatch_expected_total - len(groups))
     result["repeated_shared_prefix_proxy"] = canonical_plan_tokens * repeated_attempts
     if repeated_attempts:
         codes.append("PLANCOST-RETRY-MULTIPLICATION")

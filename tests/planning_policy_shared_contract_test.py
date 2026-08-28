@@ -483,6 +483,121 @@ class SharedContractTest(unittest.TestCase):
         result = MODULE.validate(plan)
         self.assertTrue(result["valid"], result["errors"])
 
+    def test_stable_proxy_reports_leaf_count_and_handoff_total(self):
+        plan = {
+            "work_units": [{"id": "u1", "original_size": "medium"}],
+            "leaves": [leaf("one", "u1"), leaf("two", "u1", dependencies=["one"])],
+        }
+        advisory = MODULE.validate(plan)["cost_advisory"]
+        stable = advisory["stable_proxy"]
+        self.assertEqual(2, stable["leaf_count"])
+        expected_total = sum(
+            MODULE.proxy_tokens({key: item.get(key) for key in MODULE.REQUIRED if key in item})
+            for item in plan["leaves"]
+        )
+        self.assertEqual(expected_total, stable["handoff_total"])
+        self.assertGreater(stable["handoff_total"], 0)
+
+    def test_batched_dispatch_lowers_prefix_multiplication_while_handoff_total_matches(self):
+        def build(batched):
+            first = leaf("one", "u1", "mechanical")
+            second = leaf("two", "u1", "mechanical", dependencies=["one"])
+            first["max_attempts"] = 3
+            second["max_attempts"] = 3
+            if batched:
+                first["batch"] = "batch-a"
+                second["batch"] = "batch-a"
+            plan = {
+                "work_units": [{"id": "u1", "original_size": "medium"}],
+                "leaves": [first, second],
+                "execution_cost": {
+                    "schema": "planning-execution-cost-v1",
+                    "mode": "advisory",
+                    "expected_attempts": 1,
+                    "leaf_attempt_overrides": {"one": 2, "two": 2},
+                    "final_verification_commands": ["uv run python -m unittest tests.example"],
+                    "assumptions": [],
+                    "unknowns": [],
+                },
+            }
+            return MODULE.validate(plan)["cost_advisory"]
+
+        unbatched = build(False)
+        batched = build(True)
+        self.assertEqual(
+            unbatched["stable_proxy"]["handoff_total"], batched["stable_proxy"]["handoff_total"]
+        )
+        self.assertEqual(unbatched["stable_proxy"]["leaf_count"], batched["stable_proxy"]["leaf_count"])
+        self.assertLess(
+            batched["repeated_shared_prefix_proxy"], unbatched["repeated_shared_prefix_proxy"]
+        )
+
+    def test_unbatched_chain_fires_between_mechanical_leaves_even_without_profile(self):
+        first = leaf("one", "u1", "mechanical")
+        second = leaf("two", "u1", "mechanical", dependencies=["one"])
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
+        self.assertIn("PLANCOST-MISSING-PROFILE", result["cost_advisory"]["codes"])
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_unbatched_chain_silenced_by_shared_batch(self):
+        first = leaf("one", "u1", "mechanical")
+        second = leaf("two", "u1", "mechanical", dependencies=["one"])
+        first["batch"] = "batch-a"
+        second["batch"] = "batch-a"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_unbatched_chain_not_flagged_for_analytical_tiers(self):
+        first = leaf("one", "u1", "analytical")
+        second = leaf("two", "u1", "analytical", dependencies=["one"])
+        result = MODULE.validate(
+            {
+                "work_units": [{"id": "u1", "original_size": "medium"}],
+                "leaves": [first, second],
+                "analytical_heavy_exception": {
+                    "rationale": "Both steps need investigation",
+                    "user_approved_by": "user",
+                },
+            }
+        )
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
+
+    def test_unbatched_chain_not_flagged_across_worktree_owners(self):
+        first = leaf("one", "u1", "mechanical")
+        second = leaf("two", "u1", "mechanical", dependencies=["one"])
+        second["worktree_owner"] = "task/other"
+        result = MODULE.validate(
+            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
+        )
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
+
+    def test_plan_scale_fires_over_twelve_leaves_and_not_at_twelve(self):
+        def build(count):
+            leaves = [leaf(f"leaf{index}", f"u{index}") for index in range(count)]
+            units = [{"id": f"u{index}", "original_size": "small"} for index in range(count)]
+            return MODULE.validate({"work_units": units, "leaves": leaves})
+
+        over = build(13)
+        at_limit = build(12)
+        self.assertIn("PLANCOST-PLAN-SCALE", over["cost_advisory"]["codes"])
+        self.assertTrue(over["valid"], over["errors"])
+        self.assertNotIn("PLANCOST-PLAN-SCALE", at_limit["cost_advisory"]["codes"])
+
+    def test_plan_scale_fires_on_declared_weight_over_twenty_with_few_leaves(self):
+        leaves = [leaf(f"leaf{index}", f"u{index}") for index in range(7)]
+        units = [{"id": f"u{index}", "original_size": "large"} for index in range(7)]
+        result = MODULE.validate({"work_units": units, "leaves": leaves})
+        self.assertLessEqual(len(leaves), 12)
+        self.assertIn("PLANCOST-PLAN-SCALE", result["cost_advisory"]["codes"])
+        self.assertIn("PLANCOST-MISSING-PROFILE", result["cost_advisory"]["codes"])
+        self.assertTrue(result["valid"], result["errors"])
+
     def test_ledger_contract_has_required_v2_lifecycle_and_return_anchors(self):
         contract = LEDGER_CONTRACT.read_text(encoding="utf-8") + LEDGER_COMPATIBILITY.read_text(
             encoding="utf-8"
