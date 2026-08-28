@@ -55,14 +55,29 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # Live-next authoring adds the bounded lifecycle/restart contract to the
         # shared plan surface and the host notification rule to each adapter.
         # This is not the repeated execution route measured separately below.
-        self.assertLessEqual(claude["load_total"], 5700)
+        # claude and codex were re-baselined again, from 5700/5850, to carry the
+        # batch dispatch lane: core-workflow.md's advisory-fed grooming (act on
+        # PLANCOST-UNBATCHED-CHAIN/-TIER-OVER-ASSIGNED/-PLAN-SCALE before
+        # approval), its fifth inline-departure case (dispatch overhead
+        # evidenced by the cost advisory), its batch/acceptance-scoping
+        # grooming rule, and its verification-economy paragraph
+        # (rebased_tree_changed decides whether a leaf's scoped acceptance
+        # re-runs); plan-contract.md's `batch` leaf field and its
+        # PLANCOST-UNBATCHED-CHAIN/PLANCOST-PLAN-SCALE advisory coverage; and
+        # each adapter's one-dispatch-per-batch paragraph. Every added
+        # sentence states a contract fact steps 1-4 already implemented and
+        # validated in the batch-aware validator, ledger, and worktree helper.
+        self.assertLessEqual(claude["load_total"], 6250)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
         # and the commit-or-revert rule for a stop that already edited files.
         # codex.md had 12 tokens of headroom, so the corrections could not fit.
         # Every added token states a contract fact a live dispatch got wrong.
-        self.assertLessEqual(codex["load_total"], 5850)
+        # codex.md was re-baselined again, from 5850, to carry its matching
+        # one-dispatch-per-batch paragraph alongside the same shared
+        # core-workflow.md/plan-contract.md batch additions as claude above.
+        self.assertLessEqual(codex["load_total"], 6350)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.

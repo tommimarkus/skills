@@ -53,6 +53,16 @@ Use this settled mapping:
 
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
+A declared `batch` dispatches once: call `spawn_agent` a single time with the
+ordered member handoffs, not once per member. Per member in listed order,
+`transition --to ready` then `--to in_progress` mints its attempt identity
+before it runs; the worker commits each member, runs its own acceptance
+command, and returns one `bounded-step-return-v1` per member, stopping the
+batch at a member's stop. The parent unwinds un-run followers with
+`transition --to pending`, remediates a stopped member in its same worktree,
+redispatches followers as singles, and integrates once via the helper's
+`--batch-commit` entries once no member can still progress.
+
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
 availability evidence; the parent reassigns the step or executes it locally.

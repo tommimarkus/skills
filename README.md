@@ -273,8 +273,30 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     the same validator invocation emits `planning-cost-advisory-v1` within 600
     proxy tokens. Unknown token ranges remain indeterminate, execution control
     is invariant, and proxy, declared-model-token, and provider-measured lanes
-    stay separate. The human plan includes compact **Execution economics** and
+    stay separate. Two stable codes flag batching signals:
+    `PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
+    mechanical/standard pair) and `PLANCOST-PLAN-SCALE` (more than 12 leaves or
+    20 declared work-unit weight — slice into successive plans); grooming acts
+    on both before approval, never as a validity gate. The human plan includes
+    compact **Execution economics** and
     `tracing: off`.
+
+    A leaf's `acceptance_command` is scoped to its own write set; a
+    whole-suite run belongs only to the parent's final verification, run once
+    at closeout, never per integration cycle. A leaf may also declare a
+    `batch`: 2 to 8 chained mechanical/standard leaves sharing one worktree
+    owner dispatch once, in leaves-array order, in that one shared worktree,
+    with one bounded return per member. An in-batch dependency on an
+    earlier-listed member satisfies readiness at
+    `ready`/`in_progress`/`completed`; an external dependency still needs
+    `cleaned`. When a member stops, `transition --to pending` unwinds its
+    never-run followers — refunding the attempt and clearing agent/attempt
+    identity — the stopped member remediates in the same worktree, and
+    unwound followers redispatch as singles. The batch integrates once, via
+    the helper's `--batch-commit` entries, only once every member is
+    `completed` or terminal. A per-integration `rebased_tree_changed: false`
+    keeps a leaf's recorded acceptance; `true` re-runs only that leaf's scoped
+    acceptance.
     The ledger is the sole retry-policy owner: new v4 runs stamp
     `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve
     old behavior. `portable_tier` is initial only. Only `failed:acceptance` and

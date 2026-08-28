@@ -377,7 +377,8 @@ resume-only (`dispatch_ready: false`, `resume_ready: true`) and `init-v2` or
 remains inspection-only.
 Each leaf has stable IDs and
 dependencies, task/boundary, named read/write sets, settled decisions, size,
-portable tier, worktree owner, one acceptance command, bounded return, stop
+portable tier, worktree owner, one acceptance command scoped to its write set,
+bounded return, stop
 conditions, a stable work unit, and exact `capability_requirements`: baseline
 `plan-step-base-v1` plus bounded additional requirements. Missing load-bearing information stops as
 `blocked:missing_input`; no agent fills it by searching or invention. Original
@@ -403,8 +404,23 @@ progress as `blocked:no_progress`, exhaustion as terminal
 Each v4 plan has bounded advisory `planning-execution-cost-v1` data, and the
 same validator call emits `planning-cost-advisory-v1` within 600 proxy tokens.
 Unknown model-token estimates stay unknown; proxy, declared-model-token, and
-provider-measured lanes never mix. The human plan renders compact **Execution
+provider-measured lanes never mix. Two stable codes flag batching signals:
+`PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
+mechanical/standard pair) and `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20
+declared work-unit weight — slice into successive plans); grooming acts on
+both before approval, never as a validity gate. The human plan renders compact **Execution
 economics** with `tracing: off`; cost findings never govern execution.
+
+A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
+one worktree owner dispatch once, in leaves-array order, in that one shared
+worktree, with one bounded return per member. An in-batch dependency on an
+earlier-listed member satisfies readiness at `ready`/`in_progress`/`completed`;
+an external dependency still needs `cleaned`. When a member stops, `transition
+--to pending` unwinds its never-run followers — refunding the attempt and
+clearing agent/attempt identity — the stopped member remediates in the same
+worktree, and unwound followers redispatch as singles. The batch integrates
+once, via the helper's `--batch-commit` entries, only once every member is
+`completed` or terminal.
 
 The ledger is the sole retry-policy owner. New v4 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
@@ -434,7 +450,10 @@ worktrees start at the then-current parent tip. `validate --closeout` requires
 every successful step to be cleaned. A terminal non-completed leaf — `oversized`,
 or an unretryable `blocked`/`failed` — still owns a worktree and is disposed in
 the same closeout: its committed partial work is integrated or discarded, never
-left uncommitted.
+left uncommitted. Final verification runs once, at closeout, never per
+integration cycle; a per-integration `rebased_tree_changed: false` keeps a
+leaf's recorded acceptance, while `true` re-runs only that leaf's scoped
+acceptance, never the full suite.
 
 Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
 logs. Every delegated handoff is one at-most-8-KiB

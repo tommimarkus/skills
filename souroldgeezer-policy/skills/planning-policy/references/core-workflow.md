@@ -17,7 +17,11 @@ and user approval before implementation.
    Before approval, invoke the owning design skill if an unresolved domain-design
    choice materially affects implementation; bring its settled choice back here.
 4. Groom after convergence. Name each step’s reads/writes and settled decisions;
-   split multiple concerns/checks, merge identical boundaries/checks. A fresh
+   split multiple concerns/checks, merge identical boundaries/checks, and batch
+   chained small same-tier leaves: 2–8 mechanical/standard leaves sharing a
+   worktree owner may share one `batch` id. Scope each leaf's
+   `acceptance_command` to its write set; a whole-suite run belongs to the
+   parent's final verification. A fresh
    agent must finish from the handoff. Start new plan JSON from the canonical
    [references/templates/plan-v4.json](templates/plan-v4.json) scaffold; it
    starts with `contract_version`, and the authored plan keeps that discriminator
@@ -29,14 +33,19 @@ and user approval before implementation.
 5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
    contract. Leave unavailable token ranges unknown; never infer them from a
    size, tier, model name, or stable-proxy count. Contract validation calculates
-   the advisory in the same invocation.
+   the advisory in the same invocation. Act on its codes before approval:
+   re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN`, re-tier
+   for `PLANCOST-TIER-OVER-ASSIGNED`, or slice the plan for
+   `PLANCOST-PLAN-SCALE`; otherwise record the stated reason in the plan.
 
 When guidance initializes `scope-policy`, the plan records its level and
 escalation mode in `settled_decisions`; each leaf's `boundary`/`write_set`
 materializes them, adding no plan field. `scope-policy` owns the semantics.
 
 Delegate unless the plan records one case: indivisible/trivial, needs user
-mid-flight, context cannot travel, or each result redefines the next. Overlap
+mid-flight, context cannot travel, each result redefines the next, or dispatch
+overhead exceeds the work — a case valid only when it cites the cost-advisory
+finding as its evidence. Overlap
 is a sequencing/isolation issue, not an inline exception. Select an owning
 audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
@@ -48,6 +57,13 @@ irreducible risk; a leaf with no open implementation choice is `mechanical`. Sta
 `large=3`); medium-ready units contain only mechanical/standard leaves and
 need ratio `>=0.60`, unless the recorded user-approved analytical-heavy
 exception applies. The adapter maps tiers or returns its blocker.
+
+Final verification runs once, at closeout, never per integration cycle;
+per-integration checks are the helper's ancestry and fast-forward proofs, not
+test re-runs. Acceptance evidence survives a tree-identical rebase: the
+helper's `rebased_tree_changed: false` means a leaf's recorded acceptance
+stands, and `true` means re-run only that leaf's scoped acceptance, never the
+full suite.
 
 ## Approval and output
 

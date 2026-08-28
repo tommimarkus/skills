@@ -258,11 +258,31 @@ silently substitute or downgrade. Each v4 plan carries an at-most-4-KiB advisory
 at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles,
 unknown ranges, shared-prefix repetition, retry multiplication, and verification
 reserve never affect validity, readiness, dispatch, retry, or lifecycle. Keep
-stable-proxy, declared-model-token, and provider-measured lanes separate. The
+stable-proxy, declared-model-token, and provider-measured lanes separate. Two
+stable codes flag batching signals: `PLANCOST-UNBATCHED-CHAIN` (an unbatched
+dependency-consecutive same-owner mechanical/standard pair) and
+`PLANCOST-PLAN-SCALE` (more than 12 leaves or 20 declared work-unit weight —
+slice into successive plans); grooming acts on both before approval, never as
+a validity gate. The
 human plan has one compact `Execution economics` summary and `tracing: off`.
 Route an initial inspection to at most one owning audit only when
 its bounded question and evidence surface remain unresolved by targeted
 inspection or focused tests; ordinary design is not an audit route.
+
+A leaf's acceptance command is scoped to its own write set; a whole-suite run
+belongs only to the parent's final verification, run once at closeout, never
+per integration cycle. A leaf may also declare a `batch`: 2 to 8 chained
+mechanical/standard leaves sharing one worktree owner dispatch once, in
+leaves-array order, in that one shared worktree, with one bounded return per
+member. An in-batch dependency on an earlier-listed member satisfies readiness
+at `ready`/`in_progress`/`completed`; an external dependency still needs
+`cleaned`. When a member stops, `transition --to pending` unwinds its
+never-run followers — refunding the attempt and clearing agent/attempt
+identity — the stopped member remediates in the same worktree, and unwound
+followers redispatch as singles. The batch integrates once, via the helper's
+`--batch-commit` entries, only once every member is `completed` or terminal. A
+per-integration `rebased_tree_changed: false` keeps a leaf's recorded
+acceptance; `true` re-runs only that leaf's scoped acceptance.
 
 For an approved plan with at least two delegated steps, only the parent may
 activate and write a run at

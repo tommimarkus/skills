@@ -23,7 +23,10 @@ Only one parent writes a run. Its isolated ledger directory is
 is the stable approved-plan identifier and `run-id` is the contractually
 canonical lowercase UUID4. A delegated leaf returns one `bounded-step-return-v1`
 object to the parent and never mutates the ledger. Independent leaves may run concurrently only when their dependencies
-are already `cleaned` and they do not share a worktree or write path; each step
+are already `cleaned` and they do not share a worktree or write path — except
+that an in-batch dependency on an earlier-listed same-batch member satisfies
+readiness at `ready`, `in_progress`, or `completed`, since a batch shares one
+worktree; an external dependency still requires `cleaned`. Each step
 has exactly one current attempt at a time.
 
 The binding a parent must construct before calling `init-v4` is
@@ -31,8 +34,10 @@ The binding a parent must construct before calling `init-v4` is
 leaf, its declared `capability_requirements`, selected host/executor, and
 bounded evidence. It joins every assignment to exactly one declared leaf by
 `step_id`: every leaf has exactly one assignment, no assignment names an
-unknown leaf, and duplicate `step_id` or `agent_id`/attempt collisions are
-rejected. An assignment records the stable `agent_id`, a helper-generated
+unknown leaf, and a duplicate `step_id` is rejected; a returned
+`agent_id`/`attempt_id` pair is checked against that one step's own current
+identity, not for uniqueness across assignments — a shared batch-worker
+`agent_id` across member assignments is legal. An assignment records the stable `agent_id`, a helper-generated
 bounded opaque `attempt_id`, its first attempt count (`1`), tier, and
 worktree; it cannot replace the plan's portable tier or worktree owner.
 
@@ -61,10 +66,22 @@ All lifecycle commands require the same `--run-id` after `init-v4` returns it:
 `transition` names a `--step-id` and a `--to` target status; it checks that
 exactly one attempt is current and records a bounded reason plus an optional
 safe relative evidence path. A step may move to `ready` from `pending`,
-`blocked`, or `failed`, provided every dependency is already `cleaned`, the
+`blocked`, or `failed`, provided every dependency is already `cleaned` (an
+in-batch dependency on an earlier-listed same-batch member instead needs only
+`ready`, `in_progress`, or `completed`), the
 attempt limit is not exhausted, and — for a retry — the call passes `--retry`;
 any other starting status rejects the move. A step may move to `in_progress`
-only from `ready`. Moving to `integrated` or `cleaned` additionally requires a
+only from `ready`. A step may also move to `pending` from `in_progress`: this
+is the batch unwind, legal only for a batch member, and only when a
+same-batch member has already stopped at `blocked`, `failed`, or `oversized`.
+It refunds the member's attempt count and clears its `agent_id` and
+`attempt_id`, since the member never ran; the stopped member itself
+remediates through the normal retry path in its same assigned worktree,
+because that shared worktree still holds the completed prefix its dependents
+need, and an unwound follower later redispatches as an ordinary single step in
+that same worktree. Before a `blocked` or `abandoned` close, unwind any
+in-progress, un-returned batch members this way first — `close` itself is
+unchanged and still refuses `in_progress` work. Moving to `integrated` or `cleaned` additionally requires a
 bounded `planning-worktree-result-v1` from the Git-policy helper matching the
 expected prior status (`completed` for `integrated`, `integrated` for
 `cleaned`); the ledger stores the returned commit, rebased/integrated commit,
@@ -74,6 +91,22 @@ hardcoded logic in the script (not the legacy `TRANS` lookup table described
 under "State machine and legal transitions" below), so a `transition` call's
 own error or success result is the authoritative statement of whether a given
 move is legal right now.
+
+A completed batch member becomes eligible to integrate only once no sibling
+member can still commit to their shared worktree — none is still active, and
+no `blocked`/`failed` sibling retains a retry — because a batch integrates its
+one shared tip once. The parent passes the same `--worktree-result` artifact to
+each member's `--to integrated` and `--to cleaned` call; a member's
+`integrated` check accepts either the plain returned-commit match, or a
+`batch_source_commits` entry mapping that member's `step_id` to its
+`returned_commit`, when the artifact carries one. One integrate artifact and one cleanup artifact — both
+carrying `batch_source_commits` for a batch — validate every member this way,
+so the closeout order is: integrate every member, then clean every member. The
+artifact's optional `rebased_tree_changed` flag states whether the rebase
+changed the tree: `false` means a leaf's already-recorded acceptance evidence
+stands; `true` means the parent re-runs only that leaf's own scoped acceptance
+— never the plan's full final verification, which still runs exactly once, at
+closeout.
 
 For a version-4 run, successful transitions add bounded live guidance:
 `ready` names the `in_progress` command; `in_progress` names the agent and

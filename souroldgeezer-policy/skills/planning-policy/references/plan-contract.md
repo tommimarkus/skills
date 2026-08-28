@@ -29,6 +29,13 @@ Dependencies/read/write/stops are arrays; stops include
 mechanical/standard/analytical/deep. Versions 2–4 require `max_attempts` 1–5 and
 exact `bounded-step-return-v1`, never raw logs.
 
+An optional `batch` field names a shared-dispatch group using `id`'s stable
+identifier form: 2 to 8 members, each `mechanical` or `standard`, sharing one
+`worktree_owner`. An in-batch dependency may name only an earlier-listed
+member of the same batch — leaves-array order is the batch's execution order;
+external dependencies are unrestricted. A batch dispatches once, in one shared
+worktree, with one `bounded-step-return-v1` return per member.
+
 Every v4 leaf also declares exact `capability_requirements`: `{ "baseline":
 "plan-step-base-v1", "additional": [...] }`. `additional` is bounded and each
 item names a supported requirement kind, name, and reason; it expresses what a
@@ -68,8 +75,11 @@ The same validator call emits an at-most-600-proxy-token
 `planning-cost-advisory-v1`: plan/handoff proxy size, retry and shared-prefix
 multiplication, complete declared totals/retained context, and verification
 reserve. Stable codes cover missing/invalid/unknown data, dominant prefix,
-retries, unbounded verification, comparable observed drift, and tier
-over-assignment; `tier_mix` reports per-tier counts, mechanical share, and
+retries, unbounded verification, comparable observed drift, tier
+over-assignment, an unbatched chained same-owner mechanical/standard pair
+(`PLANCOST-UNBATCHED-CHAIN`), and plan scale (`PLANCOST-PLAN-SCALE`: more than
+12 leaves or 20 declared work-unit weight — slice into successive plans,
+advisory only); `tier_mix` reports per-tier counts, mechanical share, and
 over-assigned count. Every finding
 is advisory; execution control is invariant.
 

@@ -44,6 +44,13 @@ If the actual work exceeds its size band, stop and ask the parent to re-cut the
 step. Report what you completed and how the remaining work splits; do not expand
 the scope.
 
+You may be assigned an ordered batch of members to run in one shared worktree.
+Execute them in listed order; commit each member's work separately; run each
+member's own acceptance command; return one bounded return per member, echoing
+that member's own identities. If a member stops (`blocked`, `failed`, or
+`oversized`), stop the batch there: return the stopped member's and the
+already-completed members' returns, and do not start later members.
+
 Run the acceptance check and report its raw output. Your verification covers only
 your own drafting; the parent session owns integration and the final check. Say
 plainly what you did not check.
