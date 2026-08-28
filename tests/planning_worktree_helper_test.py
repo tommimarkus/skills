@@ -320,6 +320,7 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
             "rebased_commit": source,
             "parent_before": git(self.root, "rev-parse", "main").stdout.strip(),
             "parent_after": source,
+            "rebased_tree_changed": False,
         }
         result, value = self.cleanup("ordered", leaf, fake)
         self.assertNotEqual(0, result.returncode)
@@ -331,6 +332,152 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         self.assertNotIn('branch", "-D', helper)
         self.assertNotIn("--force", helper)
         self.assertNotIn("cherry-pick", helper)
+
+    def test_batch_commit_ancestry_records_all_members(self) -> None:
+        leaf = self.add_worktree("batch-happy")
+        first = self.commit(leaf, "m1.txt", "m1\n")
+        second = self.commit(leaf, "m2.txt", "m2\n")
+        third = self.commit(leaf, "m3.txt", "m3\n")
+
+        result, integrated = self.integrate(
+            "batch-happy",
+            leaf,
+            third,
+            "--batch-commit",
+            f"step-one={first}",
+            "--batch-commit",
+            f"step-two={second}",
+            "--batch-commit",
+            f"step-three={third}",
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"step-one": first, "step-two": second, "step-three": third},
+            integrated["batch_source_commits"],
+        )
+        self.assertIn("rebased_tree_changed", integrated)
+        self.assertIsInstance(integrated["rebased_tree_changed"], bool)
+
+    def test_batch_commit_non_ancestor_fails_before_rebase(self) -> None:
+        leaf = self.add_worktree("batch-bad")
+        source = self.commit(leaf, "bad.txt", "bad\n")
+        other = self.add_worktree("batch-unrelated")
+        unrelated = self.commit(other, "unrelated.txt", "unrelated\n")
+        before = git(self.root, "rev-parse", "main").stdout.strip()
+
+        result, value = self.integrate(
+            "batch-bad", leaf, source, "--batch-commit", f"stepX={unrelated}"
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("not an ancestor", value["error"])
+        self.assertIn("stepX", value["error"])
+        self.assertEqual(source, git(leaf, "rev-parse", "HEAD").stdout.strip())
+        self.assertFalse((leaf / ".git" / "rebase-merge").exists())
+        self.assertEqual(before, git(self.root, "rev-parse", "main").stdout.strip())
+        self.assertEqual(source, git(self.root, "rev-parse", "task/batch-bad").stdout.strip())
+
+    def test_batch_commit_survives_member_emptied_by_rebase(self) -> None:
+        leaf = self.add_worktree("batch-emptied")
+        emptied = self.commit(leaf, "shared.txt", "shared\n")
+        final = self.commit(leaf, "final.txt", "final\n")
+        self.write(self.root / "shared.txt", "shared\n")
+        git(self.root, "add", "shared.txt")
+        git(self.root, "commit", "-m", "parent already has the shared change")
+
+        result, integrated = self.integrate(
+            "batch-emptied",
+            leaf,
+            final,
+            "--batch-commit",
+            f"step-emptied={emptied}",
+            "--batch-commit",
+            f"step-final={final}",
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"step-emptied": emptied, "step-final": final},
+            integrated["batch_source_commits"],
+        )
+
+    def test_batch_commit_malformed_values_fail_cleanly(self) -> None:
+        leaf = self.add_worktree("batch-malformed")
+        source = self.commit(leaf, "work.txt", "work\n")
+
+        result, value = self.integrate(
+            "batch-malformed", leaf, source, "--batch-commit", "no-equals-sign"
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("invalid --batch-commit value", value["error"])
+
+        result, value = self.integrate(
+            "batch-malformed", leaf, source, "--batch-commit", "step1=short"
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("invalid --batch-commit value", value["error"])
+
+        filler = "a" * 40
+        result, value = self.integrate(
+            "batch-malformed",
+            leaf,
+            source,
+            "--batch-commit",
+            f"dup={filler}",
+            "--batch-commit",
+            f"dup={filler}",
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("duplicate --batch-commit step id", value["error"])
+
+    def test_rebased_tree_changed_false_when_parent_untouched(self) -> None:
+        leaf = self.add_worktree("tree-unchanged")
+        source = self.commit(leaf, "unchanged.txt", "unchanged\n")
+
+        result, integrated = self.integrate("tree-unchanged", leaf, source)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertFalse(integrated["rebased_tree_changed"])
+        self.assertNotIn("batch_source_commits", integrated)
+
+    def test_rebased_tree_changed_true_when_parent_moved(self) -> None:
+        leaf = self.add_worktree("tree-changed")
+        source = self.commit(leaf, "leaf-only.txt", "leaf\n")
+        self.write(self.root / "parent-only.txt", "parent\n")
+        git(self.root, "add", "parent-only.txt")
+        git(self.root, "commit", "-m", "parent moved")
+
+        result, integrated = self.integrate("tree-changed", leaf, source)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(integrated["rebased_tree_changed"])
+
+    def test_no_batch_commit_omits_batch_source_commits_key(self) -> None:
+        leaf = self.add_worktree("no-batch")
+        source = self.commit(leaf, "solo.txt", "solo\n")
+
+        result, integrated = self.integrate("no-batch", leaf, source)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertNotIn("batch_source_commits", integrated)
+        self.assertEqual(
+            {
+                "schema",
+                "ok",
+                "action",
+                "repo_root",
+                "target",
+                "branch",
+                "worktree",
+                "source_commit",
+                "rebased_commit",
+                "parent_before",
+                "parent_after",
+                "rebased_tree_changed",
+            },
+            set(integrated),
+        )
 
 
 if __name__ == "__main__":

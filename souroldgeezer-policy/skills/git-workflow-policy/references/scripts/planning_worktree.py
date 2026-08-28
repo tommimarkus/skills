@@ -14,6 +14,8 @@ from pathlib import Path
 SCHEMA = "planning-worktree-result-v1"
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 BRANCH = re.compile(r"^(?!-)(?!.*\.\.)(?!.*(?:^|/)\.)(?!.*[~^:?*\\\[])[^\s]+$")
+SHA40 = re.compile(r"^[0-9a-f]{40}$")
+MAX_BATCH_COMMITS = 8
 
 
 class Error(Exception):
@@ -137,6 +139,27 @@ def require_no_upstream(repo: Path, branch: str) -> None:
         raise Error("delegated branch must not have an upstream")
 
 
+def parse_batch_commits(values: list[str]) -> dict[str, str]:
+    if len(values) > MAX_BATCH_COMMITS:
+        raise Error(f"--batch-commit may not appear more than {MAX_BATCH_COMMITS} times")
+    commits: dict[str, str] = {}
+    for value in values:
+        step_id, sep, sha = value.partition("=")
+        if not sep or not step_id or not SHA40.fullmatch(sha):
+            raise Error(f"invalid --batch-commit value: {value}")
+        if step_id in commits:
+            raise Error(f"duplicate --batch-commit step id: {step_id}")
+        commits[step_id] = sha
+    return commits
+
+
+def check_batch_ancestry(leaf: Path, source: str, commits: dict[str, str]) -> None:
+    for step_id, sha in commits.items():
+        ancestor = run(leaf, "merge-base", "--is-ancestor", sha, source, check=False)
+        if ancestor.returncode:
+            raise Error(f"batch commit for step {step_id} is not an ancestor of the source commit")
+
+
 def result_fields(
     repo: Path,
     leaf: Path,
@@ -146,8 +169,10 @@ def result_fields(
     rebased: str,
     parent_before: str,
     parent_after: str,
+    rebased_tree_changed: bool,
+    batch_source_commits: dict[str, str] | None,
 ) -> dict[str, object]:
-    return {
+    fields: dict[str, object] = {
         "schema": SCHEMA,
         "ok": True,
         "repo_root": str(repo),
@@ -158,14 +183,21 @@ def result_fields(
         "rebased_commit": rebased,
         "parent_before": parent_before,
         "parent_after": parent_after,
+        "rebased_tree_changed": rebased_tree_changed,
     }
+    if batch_source_commits:
+        fields["batch_source_commits"] = batch_source_commits
+    return fields
 
 
 def integrate(args: argparse.Namespace) -> dict[str, object]:
+    batch_commits = parse_batch_commits(args.batch_commit)
     repo, leaf, branch, target = base(args)
     source = resolve_commit(leaf, args.source_commit)
     if resolve_commit(leaf, "HEAD") != source or resolve_commit(repo, branch) != source:
         raise Error("returned source commit is not the exact branch tip")
+    if batch_commits:
+        check_batch_ancestry(leaf, source, batch_commits)
     parent_before = resolve_commit(repo, target)
     if args.require_patch_equivalent:
         cherry = run(repo, "cherry", target, branch).stdout.splitlines()
@@ -189,8 +221,21 @@ def integrate(args: argparse.Namespace) -> dict[str, object]:
     parent_after = resolve_commit(repo, target)
     if parent_after != rebased:
         raise Error("fast-forward target does not equal rebased branch")
+    source_tree = run(leaf, "rev-parse", f"{source}^{{tree}}").stdout.strip()
+    rebased_tree = run(leaf, "rev-parse", f"{rebased}^{{tree}}").stdout.strip()
     return {
-        **result_fields(repo, leaf, branch, target, source, rebased, parent_before, parent_after),
+        **result_fields(
+            repo,
+            leaf,
+            branch,
+            target,
+            source,
+            rebased,
+            parent_before,
+            parent_after,
+            source_tree != rebased_tree,
+            batch_commits,
+        ),
         "action": "integrate",
     }
 
@@ -212,10 +257,12 @@ def read_integrated(path: str) -> dict[str, object]:
         "rebased_commit",
         "parent_before",
         "parent_after",
+        "rebased_tree_changed",
     }
+    optional = {"batch_source_commits"}
     if (
         not isinstance(value, dict)
-        or set(value) != required
+        or set(value) - optional != required
         or value.get("schema") != SCHEMA
         or value.get("ok") is not True
         or value.get("action") != "integrate"
@@ -226,6 +273,15 @@ def read_integrated(path: str) -> dict[str, object]:
         for key in ("source_commit", "rebased_commit", "parent_before", "parent_after")
     ):
         raise Error("invalid integrated commit identities")
+    if not isinstance(value.get("rebased_tree_changed"), bool):
+        raise Error("invalid integrated tree-change flag")
+    if "batch_source_commits" in value:
+        batch = value["batch_source_commits"]
+        if not isinstance(batch, dict) or not batch or any(
+            not isinstance(step_id, str) or not step_id or not SHA40.fullmatch(str(sha))
+            for step_id, sha in batch.items()
+        ):
+            raise Error("invalid integrated batch source commits")
     return value
 
 
@@ -322,6 +378,7 @@ def parser() -> argparse.ArgumentParser:
     integration = commands.choices["integrate"]
     integration.add_argument("--source-commit", required=True)
     integration.add_argument("--require-patch-equivalent", action="store_true")
+    integration.add_argument("--batch-commit", action="append", default=[])
     commands.choices["cleanup"].add_argument("--integrated-result", required=True)
     return result
 
