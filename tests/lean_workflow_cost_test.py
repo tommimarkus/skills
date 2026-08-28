@@ -562,6 +562,26 @@ class TraceAdapterTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "trace must contain JSON objects"):
                 mod.read_trace_file(path)
 
+    def test_jsonl_trace_reader_streams_records(self) -> None:
+        mod = load_workflow_cost()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "trace.jsonl"
+            path.write_text(
+                "\n".join(
+                    json.dumps({"usage": {"input_tokens": value, "output_tokens": 1}})
+                    for value in (3, 5)
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = mod.read_trace_file(path)
+
+            self.assertNotIsInstance(rows, list)
+            self.assertEqual(
+                [row["usage"]["input_tokens"] for row in rows],
+                [3, 5],
+            )
+
     def test_provider_and_otel_shapes_normalize(self) -> None:
         mod = load_workflow_cost()
         records = [
@@ -631,6 +651,239 @@ class TraceAdapterTest(unittest.TestCase):
         self.assertEqual([event.adapter for event in events], ["codex", "claude-code"])
         self.assertEqual(sum(event.total_tokens for event in events), 68)
         self.assertEqual(events[1].tool_result_tokens, 12)
+
+    def test_native_codex_rollout_uses_last_usage_not_cumulative_usage(self) -> None:
+        mod = load_workflow_cost()
+        records = [
+            {
+                "ordinal": "10",
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": {
+                        "last_token_usage": {
+                            "input_tokens": 10,
+                            "cached_input_tokens": 4,
+                            "cache_write_input_tokens": 2,
+                            "output_tokens": 3,
+                            "reasoning_output_tokens": 1,
+                            "total_tokens": 13,
+                        },
+                        "total_token_usage": {
+                            "input_tokens": 1000,
+                            "cached_input_tokens": 400,
+                            "cache_write_input_tokens": 200,
+                            "output_tokens": 300,
+                            "reasoning_output_tokens": 100,
+                            "total_tokens": 1300,
+                        },
+                    },
+                },
+            },
+            {
+                "ordinal": "11",
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": {
+                        "last_token_usage": {
+                            "input_tokens": 20,
+                            "cached_input_tokens": 8,
+                            "cache_write_input_tokens": 0,
+                            "output_tokens": 5,
+                            "reasoning_output_tokens": 2,
+                            "total_tokens": 25,
+                        },
+                        "total_token_usage": {
+                            "input_tokens": 1020,
+                            "cached_input_tokens": 408,
+                            "cache_write_input_tokens": 200,
+                            "output_tokens": 305,
+                            "reasoning_output_tokens": 102,
+                            "total_tokens": 1325,
+                        },
+                    },
+                },
+            },
+        ]
+
+        summary = mod.summarize_trace_records(iter(records))
+
+        self.assertEqual(summary["input_tokens"], 30)
+        self.assertEqual(summary["output_tokens"], 8)
+        self.assertEqual(summary["cached_input_tokens"], 12)
+        self.assertEqual(summary["cache_write_tokens"], 2)
+        self.assertEqual(summary["reasoning_tokens"], 3)
+        self.assertEqual(summary["total_tokens"], 38)
+        self.assertEqual(summary["by_adapter"], {"codex": 38})
+        self.assertEqual(
+            summary["coverage"],
+            {
+                "source_records": 2,
+                "recognized_usage_events": 2,
+                "unsupported_usage_records": 0,
+                "calibration_eligible": True,
+                "limit_codes": [],
+            },
+        )
+
+    def test_native_codex_rollout_reports_bounded_lifecycle_counters_only(self) -> None:
+        mod = load_workflow_cost()
+        secret = "DO-NOT-ECHO-CODEX-ROLLOUT-CONTENT"
+        records = [
+            {"type": "compacted", "payload": {"summary": secret}},
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call",
+                    "name": "exec",
+                    "call_id": "exec-1",
+                    "input": secret,
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call_output",
+                    "call_id": "exec-1",
+                    "output": "é",
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "wait_agent",
+                    "call_id": "wait-1",
+                    "arguments": json.dumps({"timeout_ms": 60_000, "message": secret}),
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "wait-1",
+                    "output": "done",
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "wait_agent",
+                    "call_id": "wait-2",
+                    "arguments": json.dumps({"timeout_ms": 90_000}),
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "wait_agent",
+                    "call_id": "wait-3",
+                    "arguments": "{}",
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "list_agents",
+                    "call_id": "list-1",
+                    "arguments": "{}",
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "list-1",
+                    "output": secret,
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "spawn_agent",
+                    "call_id": "spawn-1",
+                    "arguments": json.dumps({"message": secret}),
+                },
+            },
+        ]
+
+        summary = mod.summarize_trace_records(iter(records))
+        rollout = summary["codex_rollout"]
+
+        self.assertEqual(rollout["compaction_count"], 1)
+        self.assertEqual(
+            rollout["collaboration_calls"],
+            {
+                "spawn_agent": 1,
+                "send_message": 0,
+                "followup_task": 0,
+                "wait_agent": 3,
+                "list_agents": 1,
+                "interrupt_agent": 0,
+            },
+        )
+        self.assertEqual(
+            rollout["waits"],
+            {
+                "count": 3,
+                "declared_timeout_ms_total": 150_000,
+                "at_or_below_60000_ms": 1,
+                "unknown_timeouts": 1,
+            },
+        )
+        self.assertEqual(
+            rollout["tool_output_utf8_bytes"],
+            {
+                "exec": {"count": 1, "total": 2, "maximum": 2},
+                "wait_agent": {"count": 1, "total": 4, "maximum": 4},
+                "list_agents": {
+                    "count": 1,
+                    "total": len(secret.encode("utf-8")),
+                    "maximum": len(secret.encode("utf-8")),
+                },
+            },
+        )
+        self.assertNotIn(secret, json.dumps(summary))
+
+    def test_missing_and_partial_usage_are_not_calibration_eligible(self) -> None:
+        mod = load_workflow_cost()
+        empty = mod.summarize_trace_records(iter(()))
+        self.assertEqual(empty["total_tokens"], 0)
+        self.assertFalse(empty["coverage"]["calibration_eligible"])
+        self.assertIn("TRACE-USAGE-MISSING", empty["coverage"]["limit_codes"])
+
+        partial = mod.summarize_trace_records(
+            iter(
+                [
+                    {
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "info": {
+                                "last_token_usage": {
+                                    "input_tokens": 1000,
+                                    "output_tokens": 200,
+                                }
+                            },
+                        },
+                    }
+                ]
+            )
+        )
+        self.assertEqual(partial["coverage"]["recognized_usage_events"], 0)
+        self.assertEqual(partial["coverage"]["unsupported_usage_records"], 1)
+        self.assertFalse(partial["coverage"]["calibration_eligible"])
+        self.assertIn("TRACE-USAGE-INCOMPLETE", partial["coverage"]["limit_codes"])
+
+        unsupported = mod.summarize_trace_records(iter([{"usage": {"vendor_units": 9}}]))
+        self.assertEqual(unsupported["coverage"]["unsupported_usage_records"], 1)
+        self.assertFalse(unsupported["coverage"]["calibration_eligible"])
+        self.assertIn("TRACE-USAGE-UNSUPPORTED", unsupported["coverage"]["limit_codes"])
 
     def test_trace_report_is_metadata_only(self) -> None:
         mod = load_workflow_cost()
@@ -813,6 +1066,71 @@ class CliTest(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertIn("LA-RUN-5", {row["code"] for row in json.loads(proc.stdout)["findings"]})
+
+    def test_incomplete_trace_cannot_emit_calibration_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scenario = root / "scenario.json"
+            scenario.write_text(
+                json.dumps(
+                    {
+                        "id": "calibration",
+                        "context_window": 5000,
+                        "verification_reserve": 500,
+                        "calibration_tolerance": 0.1,
+                        "orchestrator": {"base_tokens": 100},
+                        "stages": [
+                            {
+                                "id": "verify",
+                                "role": "verify",
+                                "prompt_tokens": 100,
+                                "output_tokens": 20,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            trace = root / "trace.jsonl"
+            trace.write_text(
+                json.dumps(
+                    {
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "token_count",
+                            "info": {
+                                "last_token_usage": {
+                                    "input_tokens": 1000,
+                                    "output_tokens": 200,
+                                }
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(root),
+                    "--scenario",
+                    str(scenario),
+                    "--trace",
+                    str(trace),
+                    "--format",
+                    "json",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertNotIn("LA-RUN-5", {row["code"] for row in payload["findings"]})
+        self.assertFalse(payload["trace"]["coverage"]["calibration_eligible"])
 
 
 if __name__ == "__main__":

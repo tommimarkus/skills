@@ -201,8 +201,10 @@ and source clones become `LA-MIN-3` referrals.
 - Run viability: never name a run `feasible` without a declared context window,
   stage ranges, and verification reserve. Treat missing bounds as `indeterminate`;
   do not substitute a model-name guess. Keep out-of-band telemetry out of model-
-  visible cost, never coerce unknown values to zero, and never echo raw trace
-  content.
+  visible cost, never coerce unknown, partial, or unsupported usage to observed
+  zero, and never echo raw trace content. Calibration findings require the
+  trace summary's explicit `calibration_eligible: true`; bounded native rollout
+  counters are evidence, not automatic causal findings or proof of livelock.
 - When the requested scope, the in-scope path set, or whether edits are wanted is unclear, ask before running — do not guess (audit-craft §2).
 - Platform-redundancy lens (opt-in): never assert "native" from the pattern catalog
   alone — the catalog only nominates; a cited live `claude-code-guide` answer

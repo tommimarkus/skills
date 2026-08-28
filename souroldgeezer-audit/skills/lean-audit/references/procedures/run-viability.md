@@ -295,7 +295,18 @@ subtract cache reads from the peak-context calculation.
 Supply existing JSON/JSONL traces with repeatable `--trace` flags. The analyzer
 normalizes common metadata shapes from OpenAI Responses, Anthropic Messages,
 Codex/Claude host telemetry, and generic OpenTelemetry GenAI records. It accepts
-aggregate usage even when component attribution is unavailable.
+aggregate usage even when component attribution is unavailable. JSONL input is
+streamed one record at a time; JSON object/list input retains the existing
+compatibility path.
+
+Native Codex rollouts use `event_msg` / `token_count` envelopes. Sum each
+complete `info.last_token_usage` record; `info.total_token_usage` is cumulative
+and must never be summed. The adapter also emits only bounded, content-free
+rollout counters: compactions; a fixed collaboration-call inventory; wait count,
+declared timeout total, waits at or below 60 seconds, and unknown timeouts; and
+tool-output UTF-8 byte count/total/maximum for the fixed `exec`, `wait_agent`,
+and `list_agents` categories. These counters are evidence for later judgment,
+not automatic causal findings, completion evidence, or proof of livelock.
 
 Trace handling is metadata-only:
 
@@ -304,6 +315,15 @@ Trace handling is metadata-only:
   unknown rather than model-visible or free;
 - count reasoning, cache reads/writes, and tool-result observations separately;
 - retain event ID, stage, actor, and adapter only for correlation.
+
+Every trace summary includes `coverage`: source-record count, recognized usage
+events, unsupported usage records, `calibration_eligible`, and stable
+`TRACE-USAGE-*` limit codes. No recognized usage yields
+`TRACE-USAGE-MISSING`; partial native or generic usage yields
+`TRACE-USAGE-INCOMPLETE`; an unknown usage shape yields
+`TRACE-USAGE-UNSUPPORTED`. Missing, partial, or unsupported usage is not an
+observed zero. A trace is calibration-eligible only when at least one complete
+usage event was recognized and no usage-shaped record was unsupported.
 
 If a scenario declares `calibration_tolerance`, emit `LA-RUN-5` when observed
 total tokens exceed the expected forecast by more than that fraction. Do not
@@ -314,11 +334,12 @@ capture: same synthetic workload, one exposure changed, repeated enough to show
 a stable delta. Do not execute a paid/live experiment, change host logging, or
 call a plugin tool from this read-only skill without separate authorization.
 
-The current trace lane calibrates usage totals only. It does not reconstruct
-raw lifecycle events, repeated unchanged hypotheses, TDD state transitions, or
-specification churn. Do not claim an observed livelock, retry plateau, or
-retrieval plateau from `--trace`; the corresponding source findings below audit
-declared controls, not historical behavior.
+The trace lane calibrates usage totals and reports the bounded native-rollout
+counters above. It does not reconstruct raw lifecycle events, repeated unchanged
+hypotheses, TDD state transitions, or specification churn. Do not claim an
+observed livelock, retry plateau, or retrieval plateau from `--trace`; the
+corresponding source findings below audit declared controls, not historical
+behavior.
 
 ## Finding rules
 
@@ -416,7 +437,9 @@ Emit:
    multiplication, unsupported rows, and every unknown;
 9. findings with 5 C's, evidence layer, projected saving, fidelity class, and
    break-even;
-10. trace adapters/content policy when traces were supplied;
+10. trace adapters/content policy, coverage/calibration eligibility, stable
+    limits, and any bounded native-Codex rollout counters when traces were
+    supplied;
 11. limits and the main skill's disclosure footer, plus candidates/confidence ·
     profile source · verdict · peak/total ranges · earliest overflow · reserve ·
     trace adapters and metadata-only policy.

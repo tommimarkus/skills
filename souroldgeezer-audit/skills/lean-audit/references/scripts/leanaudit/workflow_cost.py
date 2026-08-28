@@ -7,6 +7,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass, replace
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from leanaudit.context_trace import (
     normalize_trace_records,
     read_trace_file,
     summarize_trace,
+    summarize_trace_records,
 )
 from leanaudit.discovery import repo_paths
 from leanaudit.hook_cost import (
@@ -39,6 +41,7 @@ __all__ = [
     "read_hook_fixture_file",
     "read_workflow_sources",
     "summarize_trace",
+    "summarize_trace_records",
 ]
 
 
@@ -1050,6 +1053,9 @@ def _calibration_finding(
 ) -> dict[str, Any] | None:
     if scenario.calibration_tolerance is None:
         return None
+    coverage = trace.get("coverage")
+    if not isinstance(coverage, dict) or coverage.get("calibration_eligible") is not True:
+        return None
     expected = int(forecast["total_run_tokens"]["expected"])
     observed = int(trace["total_tokens"])
     if expected == 0 or observed <= expected * (1 + scenario.calibration_tolerance):
@@ -1142,10 +1148,13 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("--verification-reserve must be non-negative")
                 scenario = replace(scenario, verification_reserve=args.verification_reserve)
             forecast = forecast_scenario(scenario)
-        trace_events: list[UsageEvent] = []
-        for trace_path in args.trace:
-            trace_events.extend(normalize_trace_records(read_trace_file(Path(trace_path))))
-        trace = summarize_trace(trace_events) if args.trace else None
+        trace = (
+            summarize_trace_records(
+                chain.from_iterable(read_trace_file(Path(trace_path)) for trace_path in args.trace)
+            )
+            if args.trace
+            else None
+        )
         findings = list(static["findings"])
         if forecast is not None:
             findings.extend(forecast["findings"])

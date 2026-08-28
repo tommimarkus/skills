@@ -45,17 +45,23 @@ schemas, or code are copied into this skill.
   three-lane budget simulator, fixed/per-item output forecast, retry/progress/
   unresolved-scope/checkpoint checks, evidence hierarchy, findings, and
   fixtures are repo-authored from user-reported staged-workflow and bounded-loop
-  failure modes. The current trace lane measures usage metadata only; raw
-  lifecycle reconstruction, TDD-loop detection, and unchanged-hypothesis
-  history remain deferred and are not claimed. Trace adapters map field names
+  failure modes. Native Codex rollout recognition, coverage/eligibility limits,
+  fixed collaboration/wait counters, and fixed-category tool-output byte
+  summaries were derived from a privately supplied local rollout without
+  bundling it; regression fixtures contain only original synthetic metadata.
+  The trace lane measures usage metadata and bounded lifecycle counters only;
+  raw lifecycle reconstruction, TDD-loop detection, causal attribution, and
+  unchanged-hypothesis history remain deferred and are not claimed. Trace
+  adapters map field names
   documented by the
   [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create),
   [Anthropic tool-use overview](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview),
   [Claude Code monitoring guide](https://code.claude.com/docs/en/monitoring-usage),
   [Codex manual](https://developers.openai.com/codex/codex-manual.md), and
   [OpenTelemetry GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes-gen-ai/).
-  No vendor prose, schemas, raw traces, or third-party fixtures are bundled;
-  trace fixtures and evals are synthetic and metadata-only.
+  No vendor prose, schemas, raw traces, prompts, arguments, results, or
+  third-party fixtures are bundled; trace fixtures and evals are synthetic and
+  metadata-only.
 - Workflow catalog declarations: the exact
   `<!-- lean-audit:workflow-intentional — rationale -->` marker and its
   outside-fenced-code recognition rule are repo-authored to prevent the local

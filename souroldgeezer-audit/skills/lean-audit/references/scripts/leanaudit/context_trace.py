@@ -4,6 +4,8 @@ from __future__ import annotations
 
 # Import/export scaffolding intentionally follows sibling metadata leaves.
 # lean-audit:dup-intentional:begin
+import json
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,8 +17,33 @@ __all__ = [
     "normalize_trace_records",
     "read_trace_file",
     "summarize_trace",
+    "summarize_trace_records",
 ]
 # lean-audit:dup-intentional:end
+
+
+_CODEX_USAGE_FIELDS = (
+    "input_tokens",
+    "cached_input_tokens",
+    "cache_write_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+    "total_tokens",
+)
+_COLLABORATION_CALLS = (
+    "spawn_agent",
+    "send_message",
+    "followup_task",
+    "wait_agent",
+    "list_agents",
+    "interrupt_agent",
+)
+_TOOL_OUTPUT_CATEGORIES = ("exec", "wait_agent", "list_agents")
+_LIMIT_MESSAGES = {
+    "TRACE-USAGE-MISSING": "no complete usage record was recognized",
+    "TRACE-USAGE-INCOMPLETE": "a usage record omitted required numeric fields",
+    "TRACE-USAGE-UNSUPPORTED": "a usage-shaped record used an unsupported field shape",
+}
 
 
 @dataclass(frozen=True)
@@ -94,9 +121,72 @@ def _attributes(record: dict[str, Any]) -> dict[str, Any]:
     return attrs if isinstance(attrs, dict) else {}
 
 
+def _is_number(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float))
+
+
+def _native_codex_usage(record: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Classify one native rollout token-count envelope without using its cumulative total."""
+    payload = record.get("payload")
+    if (
+        record.get("type") != "event_msg"
+        or not isinstance(payload, dict)
+        or payload.get("type") != "token_count"
+    ):
+        return "not-applicable", {}
+    info = payload.get("info")
+    if not isinstance(info, dict):
+        return "incomplete", {}
+    usage = info.get("last_token_usage")
+    if not isinstance(usage, dict):
+        return "incomplete", {}
+    if not all(_is_number(usage.get(field)) for field in _CODEX_USAGE_FIELDS):
+        return "incomplete", usage
+    return "recognized", usage
+
+
+def _generic_usage_status(
+    record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any]
+) -> str:
+    """Return whether a non-rollout record carries complete, partial, or unknown usage."""
+    usage_container = _find_mapping(record, ("usage", "token_usage", "tokenUsage"))
+    attr_usage = any(str(key).startswith(("gen_ai.usage.", "llm.token_count.")) for key in attrs)
+    if not usage_container and not attr_usage:
+        return "not-applicable"
+
+    total_present = any(_is_number(usage.get(key)) for key in ("total_tokens", "totalTokens"))
+    input_present = any(
+        _is_number(usage.get(key))
+        for key in ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens")
+    ) or any(
+        _is_number(attrs.get(key))
+        for key in ("gen_ai.usage.input_tokens", "llm.token_count.prompt")
+    )
+    output_present = any(
+        _is_number(usage.get(key))
+        for key in ("output_tokens", "outputTokens", "completion_tokens", "completionTokens")
+    ) or any(
+        _is_number(attrs.get(key))
+        for key in ("gen_ai.usage.output_tokens", "llm.token_count.completion")
+    )
+    if total_present or (input_present and output_present):
+        return "recognized"
+    if input_present or output_present:
+        return "incomplete"
+    return "unsupported"
+
+
 # Adapter and visibility classifiers deliberately share a typed classifier signature.
 # lean-audit:dup-intentional:begin
-def _adapter(record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any]) -> str:
+def _adapter(
+    record: dict[str, Any],
+    usage: dict[str, Any],
+    attrs: dict[str, Any],
+    *,
+    native_codex: bool = False,
+) -> str:
+    if native_codex:
+        return "codex"
     attr_keys = " ".join(str(key) for key in attrs)
     event_name = " ".join(
         str(record.get(key, "")) for key in ("name", "event", "method", "source")
@@ -144,7 +234,14 @@ def _usage_or_attr(
 
 def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
     attrs = _attributes(record)
-    usage = _find_mapping(record, ("usage", "token_usage", "tokenUsage"))
+    native_status, native_usage = _native_codex_usage(record)
+    usage = (
+        native_usage
+        if native_status == "recognized"
+        else _find_mapping(record, ("usage", "token_usage", "tokenUsage"))
+    )
+    if native_status == "incomplete":
+        return None
 
     input_tokens = _usage_or_attr(
         usage,
@@ -175,6 +272,7 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
         _int_value(
             usage,
             "cache_write_tokens",
+            "cache_write_input_tokens",
             "cache_creation_input_tokens",
             "cacheCreationInputTokens",
         )
@@ -182,7 +280,7 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
         or _int_value(attrs, "gen_ai.usage.cache_write.input_tokens")
     )
     reasoning = (
-        _int_value(usage, "reasoning_tokens", "reasoningTokens")
+        _int_value(usage, "reasoning_tokens", "reasoningTokens", "reasoning_output_tokens")
         or _int_value(output_details, "reasoning_tokens", "reasoningTokens")
         or _int_value(attrs, "gen_ai.usage.reasoning_tokens")
     )
@@ -209,10 +307,15 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
             "subagent.id",
             default="unknown",
         )
-    event_id = _text_value(record, "id", "event_id", "span_id", default=str(index))
+    event_id = _text_value(record, "id", "event_id", "span_id", "ordinal", default=str(index))
     return UsageEvent(
         event_id=event_id,
-        adapter=_adapter(record, usage, attrs),
+        adapter=_adapter(
+            record,
+            usage,
+            attrs,
+            native_codex=native_status == "recognized",
+        ),
         stage=stage,
         actor=actor,
         visibility=_visibility(record, attrs),
@@ -226,7 +329,7 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
     )
 
 
-def normalize_trace_records(records: list[dict[str, Any]]) -> list[UsageEvent]:
+def normalize_trace_records(records: Iterable[dict[str, Any]]) -> list[UsageEvent]:
     """Normalize records to metadata-only events; ignore records without usage."""
     events = []
     for index, record in enumerate(records):
@@ -236,10 +339,24 @@ def normalize_trace_records(records: list[dict[str, Any]]) -> list[UsageEvent]:
     return events
 
 
+def _iter_jsonl(path: Path) -> Iterator[dict[str, Any]]:
+    """Yield JSONL objects one line at a time so large rollout files stay bounded."""
+    with path.open("r", encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if not isinstance(row, dict):
+                raise ValueError(f"{path}:{line_number}: every trace record must be an object")
+            yield row
+
+
 # Evidence-specific readers intentionally remain thin wrappers over json_rows.
 # lean-audit:dup-intentional:begin
-def read_trace_file(path: Path) -> list[dict[str, Any]]:
-    """Read a JSON object/list or JSONL trace without interpreting content fields."""
+def read_trace_file(path: Path) -> Iterable[dict[str, Any]]:
+    """Read JSON input, streaming `.jsonl` records without retaining their content."""
+    if path.suffix.lower() == ".jsonl":
+        return _iter_jsonl(path)
     return read_json_rows(
         path,
         nested_list_key="events",
@@ -251,7 +368,125 @@ def read_trace_file(path: Path) -> list[dict[str, Any]]:
 # lean-audit:dup-intentional:end
 
 
-def summarize_trace(events: list[UsageEvent]) -> dict[str, Any]:
+def _empty_codex_rollout() -> dict[str, Any]:
+    return {
+        "compaction_count": 0,
+        "collaboration_calls": {name: 0 for name in _COLLABORATION_CALLS},
+        "waits": {
+            "count": 0,
+            "declared_timeout_ms_total": 0,
+            "at_or_below_60000_ms": 0,
+            "unknown_timeouts": 0,
+        },
+        "tool_output_utf8_bytes": {
+            name: {"count": 0, "total": 0, "maximum": 0} for name in _TOOL_OUTPUT_CATEGORIES
+        },
+    }
+
+
+def _json_object(value: Any) -> dict[str, Any] | None:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _output_bytes(value: Any) -> int:
+    if isinstance(value, str):
+        rendered = value
+    else:
+        rendered = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return len(rendered.encode("utf-8"))
+
+
+def _rollout_lifecycle(
+    record: dict[str, Any],
+    rollout: dict[str, Any],
+    call_categories: dict[str, str],
+) -> bool:
+    """Update fixed content-free native rollout counters and return envelope recognition."""
+    record_type = record.get("type")
+    payload = record.get("payload")
+    if record_type == "compacted":
+        rollout["compaction_count"] += 1
+        return True
+    if not isinstance(payload, dict) or record_type not in {"response_item", "event_msg"}:
+        return record_type in {
+            "session_meta",
+            "turn_context",
+            "world_state",
+            "inter_agent_communication_metadata",
+        }
+
+    payload_type = payload.get("type")
+    if payload_type in {"function_call", "custom_tool_call"}:
+        name = payload.get("name")
+        call_id = payload.get("call_id")
+        if isinstance(name, str) and isinstance(call_id, str) and name in _TOOL_OUTPUT_CATEGORIES:
+            call_categories[call_id] = name
+        if isinstance(name, str) and name in _COLLABORATION_CALLS:
+            rollout["collaboration_calls"][name] += 1
+            if name == "wait_agent":
+                waits = rollout["waits"]
+                waits["count"] += 1
+                arguments = _json_object(payload.get("arguments"))
+                timeout = None if arguments is None else arguments.get("timeout_ms")
+                if (
+                    isinstance(timeout, bool)
+                    or not isinstance(timeout, (int, float))
+                    or timeout < 0
+                ):
+                    waits["unknown_timeouts"] += 1
+                else:
+                    timeout_ms = int(timeout)
+                    waits["declared_timeout_ms_total"] += timeout_ms
+                    if timeout_ms <= 60_000:
+                        waits["at_or_below_60000_ms"] += 1
+        return True
+
+    if payload_type in {"function_call_output", "custom_tool_call_output"}:
+        call_id = payload.get("call_id")
+        category = call_categories.pop(call_id, None) if isinstance(call_id, str) else None
+        if category is not None:
+            byte_count = _output_bytes(payload.get("output"))
+            bucket = rollout["tool_output_utf8_bytes"][category]
+            bucket["count"] += 1
+            bucket["total"] += byte_count
+            bucket["maximum"] = max(bucket["maximum"], byte_count)
+        return True
+    return record_type in {"response_item", "event_msg"}
+
+
+def _coverage(
+    *,
+    source_records: int,
+    recognized_usage_events: int,
+    unsupported_usage_records: int,
+    limit_codes: set[str],
+) -> dict[str, Any]:
+    if recognized_usage_events == 0:
+        limit_codes.add("TRACE-USAGE-MISSING")
+    eligible = recognized_usage_events > 0 and unsupported_usage_records == 0
+    return {
+        "source_records": source_records,
+        "recognized_usage_events": recognized_usage_events,
+        "unsupported_usage_records": unsupported_usage_records,
+        "calibration_eligible": eligible,
+        "limit_codes": sorted(limit_codes),
+    }
+
+
+def summarize_trace(
+    events: list[UsageEvent],
+    *,
+    coverage: dict[str, Any] | None = None,
+    codex_rollout: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Aggregate normalized metadata. Raw prompts and tool output never enter it."""
     totals: dict[str, Any] = {
         "event_count": len(events),
@@ -282,4 +517,68 @@ def summarize_trace(events: list[UsageEvent]) -> dict[str, Any]:
     totals["by_adapter"] = dict(sorted(by_adapter.items()))
     totals["by_stage"] = dict(sorted(by_stage.items()))
     totals["content_policy"] = "metadata-only"
+    trace_coverage = coverage or _coverage(
+        source_records=len(events),
+        recognized_usage_events=len(events),
+        unsupported_usage_records=0,
+        limit_codes=set(),
+    )
+    totals["coverage"] = trace_coverage
+    totals["limits"] = [
+        {"code": code, "detail": _LIMIT_MESSAGES[code]} for code in trace_coverage["limit_codes"]
+    ]
+    if codex_rollout is not None:
+        totals["codex_rollout"] = codex_rollout
     return totals
+
+
+def summarize_trace_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Stream trace records into usage coverage and bounded native-rollout counters."""
+    events: list[UsageEvent] = []
+    source_records = 0
+    unsupported_usage_records = 0
+    limit_codes: set[str] = set()
+    rollout = _empty_codex_rollout()
+    call_categories: dict[str, str] = {}
+    codex_rollout_seen = False
+
+    for index, record in enumerate(records):
+        source_records += 1
+        codex_rollout_seen = (
+            _rollout_lifecycle(record, rollout, call_categories) or codex_rollout_seen
+        )
+        native_status, _ = _native_codex_usage(record)
+        if native_status == "incomplete":
+            unsupported_usage_records += 1
+            limit_codes.add("TRACE-USAGE-INCOMPLETE")
+            continue
+
+        event = _one_event(record, index)
+        if native_status == "recognized":
+            if event is not None:
+                events.append(event)
+            continue
+
+        usage = _find_mapping(record, ("usage", "token_usage", "tokenUsage"))
+        generic_status = _generic_usage_status(record, usage, _attributes(record))
+        if generic_status == "recognized" and event is not None:
+            events.append(event)
+        elif generic_status in {"incomplete", "unsupported"}:
+            unsupported_usage_records += 1
+            limit_codes.add(
+                "TRACE-USAGE-INCOMPLETE"
+                if generic_status == "incomplete"
+                else "TRACE-USAGE-UNSUPPORTED"
+            )
+
+    trace_coverage = _coverage(
+        source_records=source_records,
+        recognized_usage_events=len(events),
+        unsupported_usage_records=unsupported_usage_records,
+        limit_codes=limit_codes,
+    )
+    return summarize_trace(
+        events,
+        coverage=trace_coverage,
+        codex_rollout=rollout if codex_rollout_seen else None,
+    )

@@ -98,7 +98,7 @@ they exist to single-source contracts shared by sibling modules.
 | [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
-| [`context_trace.py`](leanaudit/context_trace.py) | leaf | Normalize provider/host usage metadata, split model-visible/out-of-band tool results, and aggregate without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`. | stdlib |
+| [`context_trace.py`](leanaudit/context_trace.py) | leaf | Stream JSONL; normalize provider/host usage metadata; report coverage/calibration eligibility; and aggregate bounded native-Codex lifecycle/output-byte counters without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`, `summarize_trace_records`. | stdlib |
 | [`json_rows.py`](leanaudit/json_rows.py) | leaf | Read JSON object/list or JSONL evidence rows, including one optional nested-list key, while requiring every returned row to be an object. Public: `read_json_rows`. | stdlib |
 | [`hook_cost.py`](leanaudit/hook_cost.py) | leaf | Inventory recognized Claude/Codex hook registrations without returning or executing opaque commands; join optional content-free fixture metadata; multiply only evidenced enabled, model-visible frequency × proxy-token rows. Unknown and unsupported values remain explicit. Public: `analyze_hook_registrations`, `is_hook_config_path`, `read_hook_fixture_file`. | stdlib |
 | [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
@@ -132,8 +132,12 @@ this guide does not redefine them.
   nominations plus optional scenario-forecast `LA-RUN-*` / `LA-ORCH-*` findings.
   Flags: `--scenario`, repeatable `--trace` and `--hook-fixture`, `--context-window`,
   `--verification-reserve`, `--format {text,json}`. Exit 1 only when a block
-  forecast exists; exit 2 on invalid input. Traces and hook fixtures are
-  metadata-only; hook commands are never executed or emitted.
+  forecast exists; exit 2 on invalid input. `.jsonl` traces stream record by
+  record. Native Codex usage sums complete `last_token_usage`, never cumulative
+  `total_token_usage`; coverage limits suppress calibration drift for missing or
+  partial usage. Optional native rollout counters remain fixed, bounded, and
+  content-free. Traces and hook fixtures are metadata-only; hook commands are
+  never executed or emitted.
 
 Workflow catalog/example markdown may carry the exact file-wide
 `<!-- lean-audit:workflow-intentional — rationale -->` HTML comment. Recognition
