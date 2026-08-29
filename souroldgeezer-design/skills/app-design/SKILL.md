@@ -1,7 +1,7 @@
 ---
 name: app-design
 description: >-
-  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, components, state/data flow, rendering, forms, navigation, browser behavior, responsive/a11y/i18n/performance, Vite, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
+  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, components, state/data flow, rendering, forms, navigation, screen composition, browser behavior, responsive/a11y/i18n/performance, Vite, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
 ---
 
 # App Design
@@ -15,8 +15,8 @@ behavior, and baseline layers. Use
 ## Contract
 
 Own Build, Extract, Review, and Lookup for frontend workflows, routes/screens,
-components, state/data, forms, navigation, rendering, browser runtime,
-interaction states, and responsive/a11y/i18n/performance.
+components, state/data, forms, navigation, screen composition, rendering,
+browser runtime, interaction states, and responsive/a11y/i18n/performance.
 
 Delegate engineering/API/infra/ArchiMate/security/test-quality to
 `software-design`, `api-design`, `infra-design`, `architecture-design`,
@@ -71,9 +71,9 @@ synthetic/paraphrased.
 1. Select mode, scope, app type, workflow, route/screen boundary, and question.
 2. Prefer `rg`; inspect inputs, detect runtime, load and announce extensions.
 3. Assimilate routes, layouts, screens, components, state/data, forms, storage,
-   navigation, baseline primitives, build config, observability; apply project
-   assimilation before generating, reviewing, migrating, or extending app
-   structure.
+   navigation, screen composition, baseline primitives, build config,
+   observability; apply project assimilation before generating, reviewing,
+   migrating, or extending app structure.
 4. Check for a paired `docs/architecture/<feature>.dediren/` package when app
    route, screen, or workflow changes may affect architecture views.
 5. Separate fact from inference, choose the smallest move, include available
@@ -82,7 +82,7 @@ synthetic/paraphrased.
 ## Mode Outputs
 
 - Build: workflow, routes/screens, components, state/data, rendering/browser,
-  interaction states, baselines, validation, delegations.
+  interaction states, screen composition, baselines, validation, delegations.
 - Extract: signals, route/screen map, ownership, rendering, baselines, debt,
   next move.
 - Review: actionable findings only; `block` unusable/inaccessible/unresponsive
