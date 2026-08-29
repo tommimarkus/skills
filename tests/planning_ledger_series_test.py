@@ -299,6 +299,404 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         code, result = self.show("plan", run_id)
         self.assertNotEqual(0, code, result)
 
+    # -- close-path helpers -------------------------------------------------
+
+    def final_series(self):
+        return {**self.default_series(), "final": True}
+
+    def content(self, **overrides):
+        value = {
+            "landed": ["slice 1 shipped the close path"],
+            "decisions": ["identity is composed by the ledger"],
+            "assumptions_to_revalidate": ["event replay stays tolerant"],
+            "remaining_scope": ["slice 2 wires the successor"],
+        }
+        value.update(overrides)
+        return value
+
+    def content_file(self, name, value):
+        # Canonical bytes, so a size boundary is decided by the payload rather
+        # than by incidental separator whitespace.
+        path = self.root / f"{name}-content.json"
+        path.write_bytes(ledger.canon(value))
+        return str(path)
+
+    def close(self, plan_id, run_id, outcome, handoff_file=None, reason="reason"):
+        arguments = [
+            *self.common(plan_id),
+            "close",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--outcome",
+            outcome,
+            "--reason",
+            reason,
+        ]
+        if handoff_file is not None:
+            arguments += ["--series-handoff-file", handoff_file]
+        return self.call(*arguments)
+
+    def reopen(self, plan_id, run_id, reason="more work"):
+        return self.call(
+            *self.common(plan_id),
+            "reopen",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--reason",
+            reason,
+        )
+
+    def validate(self, plan_id, run_id):
+        return self.call(*self.common(plan_id), "validate", "--run-id", run_id)
+
+    def artifact_path(self, plan_id, run_id):
+        return self.run_dir(plan_id, run_id) / "series-handoff.json"
+
+    def events(self, plan_id, run_id):
+        path = self.run_dir(plan_id, run_id) / "events.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()]
+
+    def snapshot(self, plan_id, run_id):
+        """Every byte a close could mutate: checkpoint, event log, artifact."""
+        directory = self.run_dir(plan_id, run_id)
+        artifact = directory / "series-handoff.json"
+        return (
+            (directory / "checkpoint.json").read_bytes(),
+            (directory / "events.jsonl").read_bytes(),
+            artifact.read_bytes() if artifact.exists() else None,
+        )
+
+    def assert_rejected_intact(self, plan_id, run_id, before, code, result):
+        """A refused close changes nothing and leaves the run loadable/active."""
+        self.assertNotEqual(0, code, result)
+        self.assertEqual(before, self.snapshot(plan_id, run_id))
+        self.assertEqual("active", self.checkpoint(plan_id, run_id)["run_status"])
+        self.assertEqual(0, self.show(plan_id, run_id)[0])
+        self.assertEqual(0, self.validate(plan_id, run_id)[0])
+
+    def drive_to_cleaned(self, plan_id, run_id, step_id="step0"):
+        for target in ("ready", "in_progress"):
+            arguments = [
+                *self.common(plan_id),
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run_id,
+                "--step-id",
+                step_id,
+                "--to",
+                target,
+            ]
+            if target == "ready":
+                arguments += ["--agent-id", f"agent-{step_id}"]
+            self.assertEqual(0, self.call(*arguments)[0])
+        step = self.checkpoint(plan_id, run_id)["steps"][step_id]
+        returned = {
+            "schema": "bounded-step-return-v1",
+            "step_id": step_id,
+            "attempt_id": step["attempt_id"],
+            "agent_id": step["agent_id"],
+            "status": "completed",
+            "changed_paths": [],
+            "acceptance": {"command": "uv run test", "exit_code": 0, "summary": "ok"},
+            "blockers": [],
+            "notes": [],
+            "unstarted_remainder": [],
+            "commit_hash": "",
+        }
+        return_path = self.root / f"{plan_id}-{step_id}-return.json"
+        return_path.write_text(json.dumps(returned))
+        self.assertEqual(
+            0,
+            self.call(
+                *self.common(plan_id),
+                "record-return",
+                "--actor",
+                "parent",
+                "--run-id",
+                run_id,
+                "--return-file",
+                str(return_path),
+            )[0],
+        )
+        integrated = "b" * 40
+        for target, action in (("integrated", "integrate"), ("cleaned", "cleanup")):
+            value = {
+                "schema": "planning-worktree-result-v1",
+                "ok": True,
+                "action": action,
+                "repo_root": str(self.root),
+                "target": "main",
+                "branch": "owner",
+                "worktree": str(self.root / f".worktrees/{plan_id}-0"),
+                "source_commit": "a" * 40,
+                "rebased_commit": integrated,
+                "parent_before": "c" * 40,
+                "parent_after": integrated,
+            }
+            if action == "cleanup":
+                value["parent_commit"] = integrated
+            path = self.root / f"{plan_id}-{step_id}-{action}.json"
+            path.write_text(json.dumps(value))
+            self.assertEqual(
+                0,
+                self.call(
+                    *self.common(plan_id),
+                    "transition",
+                    "--actor",
+                    "parent",
+                    "--run-id",
+                    run_id,
+                    "--step-id",
+                    step_id,
+                    "--to",
+                    target,
+                    "--worktree-result",
+                    str(path),
+                )[0],
+            )
+
+    # -- close reject matrix ------------------------------------------------
+
+    def test_completed_close_without_flag_names_the_missing_flag(self):
+        run_id = self.init4(series=self.default_series())
+        self.drive_to_cleaned("plan", run_id)
+        before = self.snapshot("plan", run_id)
+        code, result = self.close("plan", run_id, "completed")
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        self.assertIn("--series-handoff-file", json.dumps(result))
+        # The run is still closable once the operator supplies the handoff.
+        accepted = self.close(
+            "plan", run_id, "completed", self.content_file("late", self.content())
+        )
+        self.assertEqual(0, accepted[0], accepted[1])
+
+    def test_flag_on_a_non_series_run_is_rejected(self):
+        run_id = self.init4(series=None)
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("stray", self.content())
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        self.assertIsNone(self.snapshot("plan", run_id)[2])
+        self.assertEqual(0, self.close("plan", run_id, "blocked")[0])
+
+    def test_flag_on_a_final_slice_is_rejected(self):
+        run_id = self.init4(series=self.final_series())
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("final", self.content())
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        self.assertEqual(0, self.close("plan", run_id, "blocked")[0])
+
+    def test_final_slice_completes_without_a_handoff(self):
+        run_id = self.init4(series=self.final_series())
+        self.drive_to_cleaned("plan", run_id)
+        code, result = self.close("plan", run_id, "completed")
+        self.assertEqual(0, code, result)
+        self.assertFalse(self.artifact_path("plan", run_id).exists())
+
+    def test_blocked_and_abandoned_treat_the_flag_as_optional(self):
+        for outcome in ("blocked", "abandoned"):
+            with self.subTest(outcome=outcome, flag=False):
+                run_id = self.init4(plan_id=f"bare-{outcome}", series=self.default_series())
+                code, result = self.close(f"bare-{outcome}", run_id, outcome)
+                self.assertEqual(0, code, result)
+                self.assertFalse(self.artifact_path(f"bare-{outcome}", run_id).exists())
+            with self.subTest(outcome=outcome, flag=True):
+                plan_id = f"flagged-{outcome}"
+                run_id = self.init4(plan_id=plan_id, series=self.default_series())
+                code, result = self.close(
+                    plan_id,
+                    run_id,
+                    outcome,
+                    self.content_file(plan_id, self.content()),
+                )
+                self.assertEqual(0, code, result)
+                self.assertTrue(self.artifact_path(plan_id, run_id).exists())
+                self.assertEqual(0, self.show(plan_id, run_id)[0])
+
+    def test_missing_content_file_leaves_the_run_active(self):
+        run_id = self.init4(series=self.default_series())
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", str(self.root / "absent-content.json")
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+
+    def test_unparseable_content_file_leaves_the_run_active(self):
+        run_id = self.init4(series=self.default_series())
+        path = self.root / "broken-content.json"
+        path.write_text("{not json")
+        before = self.snapshot("plan", run_id)
+        code, result = self.close("plan", run_id, "blocked", str(path))
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+
+    def test_content_file_cannot_supply_identity(self):
+        run_id = self.init4(series=self.default_series())
+        for extra in ("plan_id", "run_id", "series_id", "slice", "schema"):
+            with self.subTest(field=extra):
+                payload = self.content()
+                payload[extra] = "smuggled" if extra != "slice" else 9
+                before = self.snapshot("plan", run_id)
+                code, result = self.close(
+                    "plan", run_id, "blocked", self.content_file(f"id-{extra}", payload)
+                )
+                self.assert_rejected_intact("plan", run_id, before, code, result)
+
+    def test_content_file_missing_a_content_field_is_rejected(self):
+        run_id = self.init4(series=self.default_series())
+        payload = self.content()
+        payload.pop("remaining_scope")
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("short", payload)
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+
+    def test_oversized_content_file_leaves_the_run_active(self):
+        run_id = self.init4(series=self.default_series())
+        payload = self.content(
+            **{field: ["x" * 480] * 16 for field in ledger.SERIES_HANDOFF_LIST_FIELDS}
+        )
+        self.assertGreater(len(ledger.canon(payload)), ledger.MAX_SERIES_HANDOFF)
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("oversized", payload)
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        self.assertIn("content file exceeds", result["error"])
+
+    def test_content_under_the_cap_whose_composed_artifact_exceeds_it_is_rejected(self):
+        run_id = self.init4(series=self.default_series())
+        payload = self.content(landed=["x" * 480] * 16, decisions=[])
+        for length in range(1, 481):
+            candidate = dict(payload, decisions=["x" * length])
+            if len(ledger.canon(candidate)) > ledger.MAX_SERIES_HANDOFF:
+                break
+            payload = candidate
+        self.assertLessEqual(len(ledger.canon(payload)), ledger.MAX_SERIES_HANDOFF)
+        full = {
+            "schema": "planning-series-handoff-v1",
+            "plan_id": "plan",
+            "run_id": run_id,
+            "series_id": "plan-series",
+            "slice": 1,
+            **payload,
+        }
+        self.assertGreater(len(ledger.canon(full)), ledger.MAX_SERIES_HANDOFF)
+        before = self.snapshot("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("near-cap", payload)
+        )
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        # The composed artifact is what the cap governs, not the supplied file.
+        self.assertIn("planning-series-handoff-v1 exceeds", result["error"])
+
+    # -- accepted close path ------------------------------------------------
+
+    def test_accepted_close_writes_artifact_stamp_and_event_digest(self):
+        run_id = self.init4(series=self.default_series())
+        self.drive_to_cleaned("plan", run_id)
+        code, result = self.close(
+            "plan", run_id, "completed", self.content_file("ok", self.content())
+        )
+        self.assertEqual(0, code, result)
+        artifact = json.loads(self.artifact_path("plan", run_id).read_text())
+        checkpoint = self.checkpoint("plan", run_id)
+        self.assertEqual("series-handoff.json", checkpoint["series_handoff_path"])
+        self.assertEqual(ledger.digest(artifact), checkpoint["series_handoff_sha256"])
+        self.assertEqual(self.content(), {k: artifact[k] for k in self.content()})
+        closes = [e for e in self.events("plan", run_id) if e["action"] == "close-v4"]
+        self.assertEqual(1, len(closes))
+        self.assertEqual(checkpoint["series_handoff_sha256"], closes[0]["series_handoff_sha256"])
+        self.assertEqual("plan-series", closes[0]["series_id"])
+        self.assertEqual(1, closes[0]["series_slice"])
+        self.assertEqual(0, self.show("plan", run_id)[0])
+        self.assertEqual(0, self.validate("plan", run_id)[0])
+
+    def successor_series(self, slice_number=3):
+        return {
+            **self.default_series(),
+            "slice": slice_number,
+            "predecessor": {
+                "plan_id": "plan",
+                "plan_sha256": "a" * 64,
+                "run_id": "11111111-1111-4111-8111-111111111111",
+                "outcome": "completed",
+                "handoff_sha256": "b" * 64,
+            },
+        }
+
+    def test_identity_is_composed_from_the_closing_run(self):
+        run_id = self.init4(series=self.successor_series())
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("identity", self.content())
+        )
+        self.assertEqual(0, code, result)
+        artifact = json.loads(self.artifact_path("plan", run_id).read_text())
+        self.assertEqual("planning-series-handoff-v1", artifact["schema"])
+        self.assertEqual("plan", artifact["plan_id"])
+        self.assertEqual(run_id, artifact["run_id"])
+        self.assertEqual("plan-series", artifact["series_id"])
+        self.assertEqual(3, artifact["slice"])
+
+    # -- reopen and supersede ----------------------------------------------
+
+    def test_reopen_retains_the_artifact_and_reclose_supersedes_with_lineage(self):
+        run_id = self.init4(series=self.default_series())
+        first = self.content(landed=["first close"])
+        self.assertEqual(
+            0, self.close("plan", run_id, "blocked", self.content_file("first", first))[0]
+        )
+        original = self.snapshot("plan", run_id)[2]
+        first_digest = self.checkpoint("plan", run_id)["series_handoff_sha256"]
+
+        self.assertEqual(0, self.reopen("plan", run_id)[0])
+        retained = self.checkpoint("plan", run_id)
+        self.assertEqual("active", retained["run_status"])
+        self.assertEqual(original, self.snapshot("plan", run_id)[2])
+        self.assertEqual(first_digest, retained["series_handoff_sha256"])
+        self.assertEqual("series-handoff.json", retained["series_handoff_path"])
+        self.assertEqual(0, self.show("plan", run_id)[0])
+
+        second = self.content(landed=["second close supersedes"])
+        self.assertEqual(
+            0, self.close("plan", run_id, "blocked", self.content_file("second", second))[0]
+        )
+        artifact = json.loads(self.artifact_path("plan", run_id).read_text())
+        self.assertEqual(["second close supersedes"], artifact["landed"])
+        second_digest = self.checkpoint("plan", run_id)["series_handoff_sha256"]
+        self.assertNotEqual(first_digest, second_digest)
+        self.assertEqual(ledger.digest(artifact), second_digest)
+
+        digests = [
+            e["series_handoff_sha256"]
+            for e in self.events("plan", run_id)
+            if e["action"] == "close-v4"
+        ]
+        self.assertEqual([first_digest, second_digest], digests)
+        self.assertEqual(0, self.validate("plan", run_id)[0])
+        self.assertEqual(0, self.show("plan", run_id)[0])
+
+    def test_reclose_after_reopen_still_requires_the_flag(self):
+        run_id = self.init4(series=self.default_series())
+        self.assertEqual(
+            0, self.close("plan", run_id, "blocked", self.content_file("one", self.content()))[0]
+        )
+        self.assertEqual(0, self.reopen("plan", run_id)[0])
+        self.drive_to_cleaned("plan", run_id)
+        before = self.snapshot("plan", run_id)
+        code, result = self.close("plan", run_id, "completed")
+        self.assert_rejected_intact("plan", run_id, before, code, result)
+        self.assertIn("--series-handoff-file", json.dumps(result))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1292,6 +1292,64 @@ def read_series_handoff(path):
     return valid_series_handoff(value)
 
 
+def read_series_handoff_content(path):
+    """Read the parent-supplied content file for a series close.
+
+    The caller supplies exactly the four bounded content fields. Identity is
+    never caller-supplied, so a previous slice's artifact cannot be pasted into
+    this close; `composed_series_handoff` binds it from the closing run.
+    """
+    try:
+        raw = Path(path).read_bytes()
+        value = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid series handoff content file") from exc
+    if len(raw) > MAX_SERIES_HANDOFF:
+        raise Error("series handoff content file exceeds 8 KiB")
+    if not isinstance(value, dict) or set(value) != set(SERIES_HANDOFF_LIST_FIELDS):
+        raise Error("series handoff content file must carry exactly the four content fields")
+    return value
+
+
+def composed_series_handoff(path, data, series):
+    return valid_series_handoff(
+        {
+            "schema": SERIES_HANDOFF_SCHEMA,
+            "plan_id": data["plan_id"],
+            "run_id": data["run_id"],
+            "series_id": series.get("series_id"),
+            "slice": series.get("slice"),
+            **read_series_handoff_content(path),
+        }
+    )
+
+
+def series_close_handoff(args, data, plan):
+    """Resolve the series close matrix before `close2` mutates anything.
+
+    Returns the composed artifact, or None when this close stamps no handoff.
+    Every rejection raises here, ahead of the first lifecycle mutation, so a
+    refused close leaves the run exactly as it was found.
+    """
+    series = plan.get("series")
+    supplied = getattr(args, "series_handoff_file", "")
+    if series is None:
+        if supplied:
+            raise Error("--series-handoff-file requires a plan with a series block")
+        return None
+    if series.get("final"):
+        if supplied:
+            raise Error("a final series slice hands nothing on and takes no --series-handoff-file")
+        return None
+    if not supplied:
+        if args.outcome == "completed":
+            raise Error(
+                "completed close of a non-final series slice requires --series-handoff-file"
+            )
+        return None
+    return composed_series_handoff(supplied, data, series)
+
+
 def validate_series_handoff(directory, data, plan):
     """Sibling of validate_retry_artifacts: re-verify a stamped handoff artifact.
 
@@ -1770,6 +1828,9 @@ def close2(args):
     directory, data, plan, leafs = load2(args)
     validate_events2(directory, data)
     active_run(data)
+    # Resolved before every mutation below, so a refused series close leaves the
+    # run active with no event, no stamp, and no artifact written.
+    handoff = series_close_handoff(args, data, plan)
     statuses = {step["status"] for step in data["steps"].values()}
     if args.outcome == "completed" and statuses != {"cleaned"}:
         raise Error("completed close requires every step cleaned")
@@ -1792,6 +1853,21 @@ def close2(args):
         purge_after=retained_until(closed_at, args.outcome),
         close_reason=bounded_reason(args.reason, "close"),
     )
+    facts = {}
+    if handoff is not None:
+        data["series_handoff_path"] = "series-handoff.json"
+        data["series_handoff_sha256"] = digest(handoff)
+        # Size the stamped checkpoint before the artifact lands, so the only
+        # remaining ordering exposure is the same one every ledger event has.
+        if len(canon(data) + b"\n") > MAX_CHECKPOINT:
+            raise Error("bounded record exceeds limit")
+        write(directory / "series-handoff.json", handoff, MAX_SERIES_HANDOFF)
+        facts = {
+            "series_handoff_path": data["series_handoff_path"],
+            "series_handoff_sha256": data["series_handoff_sha256"],
+            "series_id": handoff["series_id"],
+            "series_slice": handoff["slice"],
+        }
     event(
         directory,
         data,
@@ -1799,6 +1875,7 @@ def close2(args):
         outcome=args.outcome,
         purge_after=data["purge_after"],
         reason=data["close_reason"],
+        **facts,
     )
     gc_result = collect_ledgers(root(args), None, timestamp(now()), remove=True)
     return {
@@ -3040,6 +3117,7 @@ def parse():
     close.add_argument("--run-id", required=True)
     close.add_argument("--outcome", choices=("completed", "blocked", "abandoned"), required=True)
     close.add_argument("--reason", default="")
+    close.add_argument("--series-handoff-file", default="")
     reopen = commands.add_parser("reopen")
     reopen.add_argument("--actor", required=True)
     reopen.add_argument("--run-id", required=True)
