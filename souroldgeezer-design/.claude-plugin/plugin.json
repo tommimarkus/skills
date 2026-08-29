@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-design",
-  "version": "2026.08.7",
+  "version": "2026.08.8",
   "description": "Reference-driven design skills for sustainable software, web frontend application design, HTTP API endpoints and architecture, and infrastructure. Covers code/module/script boundaries, software design principles/patterns, API portfolio cohesion, fragmentation, sprawl, consolidation, overlap, and consumer chattiness, plus app routes/screens/component architecture/state/data/rendering/responsive/accessibility/performance, with shared Build, Extract, Review, and Lookup workflows. Supports modern .NET™, Java™, Rust®, TypeScript, shell, Python®, React, Next.js, Blazor™ WebAssembly, Azure® Functions™, Node.js®, hosted Next.js™, Python® ASGI/WSGI, Azure® Cosmos DB™, Azure® Blob Storage™, Azure, Terraform™, and Bicep™ extensions.",
   "author": {
     "name": "Sour Old Geezer",
