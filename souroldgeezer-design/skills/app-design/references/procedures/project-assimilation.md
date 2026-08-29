@@ -43,6 +43,7 @@ Loaded extensions own deeper framework-specific discovery and carve-outs.
 | State/data pattern | Names owner, invalidation, rollback, retry, and reset behavior | Browser storage acts as event bus or API retry/cache policy is hidden in leaves |
 | Rendering boundary | Has serialization contract and avoids avoidable hydration shift/flicker | Broad client boundary, duplicate fetches, or unverified runtime claims |
 | Form workflow | Handles validation, duplicate submit, server errors, focus recovery, dirty state, and success navigation | Field components own submission policy or failures have no recovery path |
+| Screen/form composition | Order and grouping follow a user task sequence with a clear primary action | Layout mirrors API schema order, ungrouped field dumps, or uniform width/emphasis |
 
 ## Conflict Handling
 

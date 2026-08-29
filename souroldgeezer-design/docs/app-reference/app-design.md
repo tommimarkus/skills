@@ -33,7 +33,9 @@ App design owns the user-facing browser application surface:
 
 Start from the user workflow and route/screen boundary. A component split that
 looks tidy but hides the workflow state, validation path, or recovery path is
-not a good app design.
+not a good app design. Rendered order, grouping, and emphasis follow the
+user's task sequence; a screen that mirrors its data model's declaration
+order instead has not applied this principle.
 
 ### 2.2 Ownership is explicit
 
@@ -182,6 +184,31 @@ retention semantics, offline or degraded-network behavior is explicit, and
 Save-Data / reduced-motion / forced-colors preferences are honored where the
 platform exposes them.
 
+### 3.15 Screen composition and information order
+
+Default: order, group, and weight screen content by the user's task, not by
+the shape of the underlying data model.
+
+- Order: fields, sections, and actions follow user task and decision order,
+  never schema or declaration order. A screen that renders fields in the
+  order they appear in an API payload or database record has not made this
+  decision.
+- Grouping: related inputs sit in labeled regions (`fieldset`/`legend` or
+  headings). Grouping is required above a handful of fields; group order
+  follows task order, and spacing separates groups more clearly than it
+  separates items within a group.
+- Width semantics: input width signals expected content length, bounded per
+  the `ch` unit guidance in §3.10. Short bounded inputs (date, postal code,
+  quantity) do not default to full width. Uniform full-width inputs are a
+  deliberate single-column form choice, not an unexamined default.
+- Emphasis: one visually primary action per screen or region, placed at the
+  end of the task flow. Secondary and destructive actions are distinct from
+  it in weight and placement.
+- Disclosure: rarely-used or advanced options sit behind progressive
+  disclosure rather than a flat, exhaustive dump of every field at once.
+- Aesthetic direction — brand, typography, and art direction — stays out of
+  scope; see section 8.
+
 ## 4. Primitives
 
 - **Route map:** URL, screen owner, layout shell, data owner, auth state, and
@@ -297,6 +324,11 @@ generic toast-only feedback.
 - **APP-PERF-1:** LCP/CLS/INP posture is asserted without runtime evidence.
 - **APP-BROWSER-1:** browser storage, network, or capability behavior has no
   ownership or fallback.
+- **APP-COMP-1:** screen/form mirrors data-model declaration order or renders
+  an ungrouped flat field dump instead of task-ordered grouped composition.
+- **APP-COMP-2:** uniform input widths or action emphasis erase content-length
+  and priority cues (every input full width regardless of expected content;
+  competing equal-weight actions).
 
 Legacy alias: older review output may have used `RD-*` for responsive-only
 findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
@@ -315,6 +347,8 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
   surfaces and known hydration risks.
 - `[static]` Responsive layer uses fluid sizing, logical properties,
   content-derived breakpoints, touch-safe targets, and text-expansion room.
+- `[static]` Composition follows task order with grouped regions, width and
+  emphasis cues, and progressive disclosure.
 - `[dom]` Landmarks, headings, form associations, dialog/popover structure, and
   live regions exist in the rendered DOM.
 - `[behaviour]` Keyboard flow, focus restoration, modal trapping, unsaved
@@ -337,3 +371,4 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
 - Hosting topology, environment promotion, IaC, and deployment operations.
 - Architecture-model authoring, drift review, and rendered architecture diagrams.
 - Security posture review and test-quality classification.
+- Visual brand identity, typography scales, and aesthetic art direction.
