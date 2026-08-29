@@ -60,3 +60,14 @@ documentation.
   original and limited to app-design implications for render modes, component
   contracts, state/JS interop, forms/navigation, globalization/localization, and
   responsive/accessibility/i18n/performance posture.
+- Source: W3C WAI Web Accessibility Tutorials forms grouping guidance,
+  `https://www.w3.org/WAI/tutorials/forms/grouping/`; GOV.UK Service Manual
+  form-structure guidance, `https://www.gov.uk/service-manual/design/form-structure`;
+  and Nielsen Norman Group's visual-hierarchy,
+  `https://www.nngroup.com/articles/visual-hierarchy-ux-definition/`, and
+  progressive-disclosure, `https://www.nngroup.com/articles/progressive-disclosure/`,
+  articles.
+  Handling: linked as source anchors for screen composition (§3.15); wording is
+  original and limited to app-design implications for task-ordered field/section
+  grouping, width-as-length signaling, single-primary-action emphasis, and
+  progressive disclosure of advanced options.
