@@ -48,6 +48,13 @@ PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 GLOB_CHARS = ("*", "?", "[")
 PLAN_SCALE_LEAF_LIMIT = 12
 PLAN_SCALE_WEIGHT_LIMIT = 20
+SERIES_KEYS = {"series_id", "slice", "final", "end_verification_commands", "predecessor"}
+PREDECESSOR_KEYS = {"plan_id", "plan_sha256", "run_id", "outcome", "handoff_sha256"}
+SERIES_OUTCOMES = {"completed", "blocked", "abandoned"}
+SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+UUID4_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
 
 
 def proxy_tokens(value: Any) -> int:
@@ -438,6 +445,71 @@ def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]
     return set(observed) == set(expected)
 
 
+def predecessor_errors(predecessor: Any) -> list[str]:
+    prefix = "series.predecessor"
+    if not isinstance(predecessor, dict):
+        return [f"{prefix} must be an object"]
+    errors: list[str] = []
+    if set(predecessor) != PREDECESSOR_KEYS:
+        errors.append(f"{prefix} must have exactly the keys {sorted(PREDECESSOR_KEYS)}")
+    if not stable_id(predecessor.get("plan_id")):
+        errors.append(f"{prefix}.plan_id must be a stable bounded identifier")
+    plan_sha256 = predecessor.get("plan_sha256")
+    if not isinstance(plan_sha256, str) or not SHA256_HEX.fullmatch(plan_sha256):
+        errors.append(f"{prefix}.plan_sha256 must be 64 lowercase hex characters")
+    run_id = predecessor.get("run_id")
+    if not isinstance(run_id, str) or not UUID4_RE.fullmatch(run_id):
+        errors.append(f"{prefix}.run_id must be a canonical lowercase UUID4")
+    if predecessor.get("outcome") not in SERIES_OUTCOMES:
+        errors.append(f"{prefix}.outcome must be one of {sorted(SERIES_OUTCOMES)}")
+    handoff_sha256 = predecessor.get("handoff_sha256")
+    if handoff_sha256 != "" and (
+        not isinstance(handoff_sha256, str) or not SHA256_HEX.fullmatch(handoff_sha256)
+    ):
+        errors.append(
+            f"{prefix}.handoff_sha256 must be 64 lowercase hex characters or an empty string"
+        )
+    return errors
+
+
+def series_errors(series: Any) -> list[str]:
+    """Validate the optional top-level `series` block, present-only like the analytical exception."""
+    prefix = "series"
+    if not isinstance(series, dict):
+        return [f"{prefix} must be an object"]
+    errors: list[str] = []
+    if set(series) - SERIES_KEYS:
+        errors.append(f"{prefix} has unknown keys: {sorted(set(series) - SERIES_KEYS)}")
+    if not stable_id(series.get("series_id")):
+        errors.append(f"{prefix}.series_id must be a stable bounded identifier")
+    slice_value = series.get("slice")
+    valid_slice = (
+        isinstance(slice_value, int) and not isinstance(slice_value, bool) and slice_value >= 1
+    )
+    if not valid_slice:
+        errors.append(f"{prefix}.slice must be an integer >= 1")
+    if not isinstance(series.get("final"), bool):
+        errors.append(f"{prefix}.final must be a boolean")
+    commands = series.get("end_verification_commands")
+    if (
+        not isinstance(commands, list)
+        or not 1 <= len(commands) <= 4
+        or not all(nonempty_string_in_range(command, 1, 480) for command in commands)
+    ):
+        errors.append(
+            f"{prefix}.end_verification_commands must be an array of 1 to 4 non-empty "
+            "strings from 1 to 480 characters"
+        )
+    has_predecessor = "predecessor" in series
+    if valid_slice and slice_value == 1 and has_predecessor:
+        errors.append(f"{prefix}.predecessor is forbidden at slice 1")
+    elif valid_slice and slice_value > 1 and not has_predecessor:
+        errors.append(f"{prefix}.predecessor is required when slice > 1")
+    if has_predecessor:
+        errors.extend(predecessor_errors(series["predecessor"]))
+    return errors
+
+
 def contract_result(
     contract_version: int | None,
     dispatch_ready: bool,
@@ -732,6 +804,9 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
         errors.append(
             "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
         )
+    series = plan.get("series")
+    if series is not None:
+        errors.extend(series_errors(series))
     if contract_version in {2, 3}:
         warnings.append("blocked:contract_migration_required")
     binding_matches = contract_version == 4 and capability_binding_matches(plan, leaves, capability_binding)

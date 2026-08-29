@@ -664,5 +664,185 @@ class SharedContractTest(unittest.TestCase):
                 self.assertIn(anchor, contract)
 
 
+def series_plan(series):
+    plan = {
+        "work_units": [{"id": "u1", "original_size": "medium"}],
+        "leaves": [leaf("one", "u1")],
+    }
+    if series is not None:
+        plan["series"] = series
+    return plan
+
+
+def slice_one_series(**overrides):
+    series = {
+        "series_id": "plan-series",
+        "slice": 1,
+        "final": False,
+        "end_verification_commands": ["uv run python -m unittest tests.example"],
+    }
+    series.update(overrides)
+    return series
+
+
+def predecessor_block(**overrides):
+    predecessor = {
+        "plan_id": "plan-series",
+        "plan_sha256": "a" * 64,
+        "run_id": "11111111-1111-4111-8111-111111111111",
+        "outcome": "completed",
+        "handoff_sha256": "b" * 64,
+    }
+    predecessor.update(overrides)
+    return predecessor
+
+
+def slice_two_series(**overrides):
+    series = slice_one_series(slice=2, predecessor=predecessor_block())
+    series.update(overrides)
+    return series
+
+
+class SeriesContractTest(unittest.TestCase):
+    def test_absent_series_leaves_result_unchanged(self):
+        plan = series_plan(None)
+        self.assertNotIn("series", plan)
+        result = MODULE.validate(plan)
+        self.assertEqual(result, MODULE.validate(dict(plan)))
+        self.assertTrue(result["valid"])
+        self.assertFalse(any("series" in error for error in result["errors"]))
+
+    def test_valid_slice_one_series_without_final(self):
+        result = MODULE.validate(series_plan(slice_one_series()))
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_valid_slice_one_series_with_final_true(self):
+        result = MODULE.validate(series_plan(slice_one_series(final=True)))
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_valid_slice_two_series_with_predecessor(self):
+        result = MODULE.validate(series_plan(slice_two_series()))
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_predecessor_handoff_sha256_empty_string_accepted(self):
+        series = slice_two_series(predecessor=predecessor_block(handoff_sha256=""))
+        result = MODULE.validate(series_plan(series))
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_rejects_bad_series_id(self):
+        result = MODULE.validate(series_plan(slice_one_series(series_id="Not-Stable")))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("series.series_id" in error for error in result["errors"]))
+
+    def test_rejects_slice_zero(self):
+        result = MODULE.validate(series_plan(slice_one_series(slice=0)))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("series.slice" in error for error in result["errors"]))
+
+    def test_rejects_bool_slice(self):
+        result = MODULE.validate(series_plan(slice_one_series(slice=True)))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("series.slice" in error for error in result["errors"]))
+
+    def test_rejects_non_bool_final(self):
+        result = MODULE.validate(series_plan(slice_one_series(final="no")))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("series.final" in error for error in result["errors"]))
+
+    def test_rejects_empty_end_verification_commands(self):
+        result = MODULE.validate(series_plan(slice_one_series(end_verification_commands=[])))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.end_verification_commands" in error for error in result["errors"])
+        )
+
+    def test_rejects_oversized_end_verification_command_string(self):
+        series = slice_one_series(end_verification_commands=["x" * 481])
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.end_verification_commands" in error for error in result["errors"])
+        )
+
+    def test_rejects_five_end_verification_commands(self):
+        series = slice_one_series(end_verification_commands=["uv run x"] * 5)
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.end_verification_commands" in error for error in result["errors"])
+        )
+
+    def test_rejects_missing_predecessor_at_slice_two(self):
+        series = slice_one_series(slice=2)
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("predecessor is required" in error for error in result["errors"])
+        )
+
+    def test_rejects_predecessor_present_at_slice_one(self):
+        series = slice_one_series(predecessor=predecessor_block())
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("predecessor is forbidden" in error for error in result["errors"])
+        )
+
+    def test_rejects_malformed_predecessor_plan_id(self):
+        series = slice_two_series(predecessor=predecessor_block(plan_id="Not Stable"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor.plan_id" in error for error in result["errors"])
+        )
+
+    def test_rejects_malformed_predecessor_plan_sha256(self):
+        series = slice_two_series(predecessor=predecessor_block(plan_sha256="not-hex"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor.plan_sha256" in error for error in result["errors"])
+        )
+
+    def test_rejects_malformed_predecessor_run_id(self):
+        series = slice_two_series(predecessor=predecessor_block(run_id="not-a-uuid"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor.run_id" in error for error in result["errors"])
+        )
+
+    def test_rejects_predecessor_outcome_outside_set(self):
+        series = slice_two_series(predecessor=predecessor_block(outcome="cancelled"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor.outcome" in error for error in result["errors"])
+        )
+
+    def test_rejects_malformed_predecessor_handoff_sha256(self):
+        series = slice_two_series(predecessor=predecessor_block(handoff_sha256="short"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor.handoff_sha256" in error for error in result["errors"])
+        )
+
+    def test_rejects_unknown_key_in_series(self):
+        series = slice_one_series()
+        series["extra"] = "nope"
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("series has unknown keys" in error for error in result["errors"]))
+
+    def test_rejects_unknown_key_in_predecessor(self):
+        series = slice_two_series(predecessor=predecessor_block(extra="nope"))
+        result = MODULE.validate(series_plan(series))
+        self.assertFalse(result["valid"])
+        self.assertTrue(
+            any("series.predecessor must have exactly the keys" in error for error in result["errors"])
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
