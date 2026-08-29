@@ -366,6 +366,22 @@ evidence; never silently downgrade. The opt-in fresh-context evidence command is
 `uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`;
 it writes bounded comparison summaries only.
 
+A v4 plan may carry an optional top-level `series` block that slices an
+oversized plan into successive plans: `series_id`, `slice`, `final`,
+`end_verification_commands` declared once at slice 1 and copied verbatim
+forward, and, at slice > 1, a required copied-evidence `predecessor` block.
+`close --series-handoff-file <path>` is required on a completed close of a
+non-final slice, forbidden on a non-series plan and on the final slice, and
+optional at `blocked`/`abandoned`; the ledger composes the bounded handoff
+artifact from the closing run's own identity, never caller-supplied. A
+slice > 1 `init-v4` splices one `series_predecessor` disclosure — `matched`,
+a `mismatch:<field>`, or `unresolvable` — and a purged or unreadable
+predecessor never fails the successor's own init. A series-final plan's
+closeout carries the compact `series_end: true` marker in place of inlined
+commands; the parent still runs `end_verification_commands` itself, exactly
+like final verification today. Absent `series`, behavior is byte-identical
+to today's.
+
 ## Version and release policy
 
 The Claude manifest and README use CalVer `YYYY.0M.MICRO` as the release

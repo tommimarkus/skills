@@ -488,6 +488,21 @@ invalid, and ambiguous records remain preserved. `purge --actor parent` removes
 one exact closed target only; before retention expires it also requires
 `--before-retention` and a bounded reason. There is no bulk deletion.
 
+A v4 plan may carry an optional top-level `series` block for slicing an
+oversized plan into successive plans: `series_id`, `slice`, `final`,
+`end_verification_commands` declared once at slice 1 and copied verbatim
+forward, and, at slice > 1, required copied-evidence `predecessor` identity.
+`close --series-handoff-file <path>` is required on a completed close of a
+non-final slice, forbidden on a non-series plan and on the final slice, and
+optional at `blocked`/`abandoned`; the ledger composes the bounded handoff
+artifact from its own run identity. `init-v4` for a slice > 1 successor
+splices a `series_predecessor` disclosure (`matched`, a `mismatch:<field>`,
+or `unresolvable`) without ever failing the successor's own init on the
+predecessor's account. A series-final plan's closeout carries the compact
+`series_end: true` marker; the parent still runs `end_verification_commands`
+itself, exactly like final verification today. Absent `series`, behavior is
+byte-identical to today's.
+
 ## Published skills index
 
 One row per published skill. **Each skill's own `SKILL.md` is its binding contract** — modes, owns/delegates, finding namespaces, extension set — so read it before creating, editing, reviewing, or planning that skill; this table and the delegation map below are orientation only, deliberately not a second copy of those contracts. Internal skills are in § "Repo-internal skills".

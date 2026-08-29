@@ -145,6 +145,20 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, standard)
 
+    def test_series_summary_is_public_and_orientation_named(self) -> None:
+        claude = self.text("CLAUDE.md")
+        agents = self.text("AGENTS.md")
+        standard = self.text("docs/skill-architecture.md")
+        for text in (claude, agents):
+            self.assertIn("series_id", text)
+            self.assertIn("copied verbatim", text)
+            self.assertIn("series_predecessor", text)
+            self.assertIn("unresolvable", text)
+            self.assertIn("series_end: true", text)
+            self.assertIn("byte-identical", text)
+        self.assertIn("plan-series", standard)
+        self.assertIn("plan-to-plan continuity", standard)
+
     def test_unresolved_domain_design_routes_before_approval(self) -> None:
         entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
         core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")

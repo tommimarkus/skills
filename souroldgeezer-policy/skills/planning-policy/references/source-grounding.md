@@ -60,6 +60,38 @@ through the worktree helper's `rebased_tree_changed` comparison rather than
 left as an unstated maintainer preference. See "IP provenance" below for how
 this generalization is recorded alongside the earlier execution-shape default.
 
+## 2026-08-29 successive-plan series
+
+The series contract addresses a gap `PLANCOST-PLAN-SCALE` only diagnosed:
+once an oversized plan is sliced into successive plans, nothing carried the
+predecessor's settled decisions, its close outcome, or its declared end
+criterion forward, so each successor either re-derived facts the predecessor
+already settled or silently drifted from them. The repository-authored
+regressions in
+[`tests/planning_ledger_series_test.py`](../../../../tests/planning_ledger_series_test.py)
+and the validator's `series_errors`/`predecessor_errors` cases in
+[`tests/planning_policy_shared_contract_test.py`](../../../../tests/planning_policy_shared_contract_test.py)
+model each part: the optional `series` block and its required `predecessor`
+evidence at slice > 1, the bounded `close --series-handoff-file` reject
+matrix, the composed `planning-series-handoff-v1` artifact and its
+both-or-neither checkpoint stamp, and the init-v4 predecessor cross-check's
+ordered disclosure states.
+
+The idea generalizes this maintainer's own working practice of slicing an
+oversized plan into successive plans while carrying its settled decisions and
+close evidence forward by hand; no prose, schema, or vocabulary was copied
+from any third-party planning, program-management, or portfolio tool. It
+deliberately uses the plain-English terms "series" and "slice" rather than
+any agile or Scrum framework vocabulary, ceremony name, or capitalized
+framework term — it does not adopt "epic," "release train," "program
+increment," or any other framework-specific concept, and no third-party
+program-increment or release-train framework prose was consulted or copied.
+The three new synthetic behavior cases (a refused completed close missing the
+handoff flag, an unresolvable gc'd predecessor that still lets init proceed,
+and a final-slice closeout that runs `end_verification_commands` parent-side
+rather than inlining them) are original prompts written directly against the
+implemented reject matrix, disclosure states, and closeout overlay.
+
 ## 2026-08-25 complete live-next lifecycle
 
 The v4 live-next chain is grounded in the repository-authored cost and restart

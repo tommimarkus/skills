@@ -161,7 +161,12 @@ successful mutations state the next legal action, and read-only
 after a long pause or context compaction. Keep each live `next` at most 120
 proxy tokens and the rehydration envelope at most 240; retain the full runtime
 reference as an exception-only diagnostic, legacy, retention, and authoring
-surface rather than normal execution context.
+surface rather than normal execution context. An oversized plan slices into a
+successive series through an on-demand
+[plan-series](../souroldgeezer-policy/skills/planning-policy/references/plan-series.md)
+reference, with the ledger composing and cross-checking the handoff between
+slices — the same read-derives/write-consumes loop as the size band above,
+scoped to plan-to-plan continuity rather than a single run.
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving

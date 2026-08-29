@@ -67,6 +67,9 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-v4-canonical-scaffold",
             "planning-policy-behavior-v4-claude-mechanical-skill-block",
             "planning-policy-behavior-v4-live-next-rehydration",
+            "planning-policy-behavior-series-close-requires-flag",
+            "planning-policy-behavior-series-successor-gcd-predecessor",
+            "planning-policy-behavior-series-final-end-verification",
         }
         self.assertTrue(required.issubset(self.behavior))
         scaffold = self.behavior["planning-policy-behavior-v4-canonical-scaffold"]
