@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -696,6 +697,141 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         code, result = self.close("plan", run_id, "completed")
         self.assert_rejected_intact("plan", run_id, before, code, result)
         self.assertIn("--series-handoff-file", json.dumps(result))
+
+    # -- init-v4 predecessor cross-check ------------------------------------
+
+    def init4_full(self, plan_id="plan", count=1, series=None):
+        """Like `init4`, but returns the full result instead of just run_id."""
+        selected_plan = self.plan(plan_id, count, series)
+        return self.call(
+            *self.common(plan_id),
+            "init-v4",
+            "--actor",
+            "parent",
+            "--approved",
+            "--plan-file",
+            str(selected_plan),
+            "--assignments-file",
+            str(self.assignments(plan_id, count)),
+            "--capability-binding-file",
+            str(self.capability_binding(selected_plan)),
+        )
+
+    def build_predecessor(self, plan_id="pred", outcome="completed", **series_overrides):
+        """Init, drive, and close a real predecessor run, returning its digests."""
+        series = {**self.default_series(), **series_overrides}
+        run_id = self.init4(plan_id=plan_id, series=series)
+        if outcome == "completed":
+            self.drive_to_cleaned(plan_id, run_id)
+        code, close_result = self.close(
+            plan_id, run_id, outcome, self.content_file(f"{plan_id}-handoff", self.content())
+        )
+        self.assertEqual(0, code, close_result)
+        checkpoint = self.checkpoint(plan_id, run_id)
+        return {
+            "plan_id": plan_id,
+            "plan_sha256": checkpoint["plan_hash"],
+            "run_id": run_id,
+            "outcome": checkpoint["outcome"],
+            "handoff_sha256": checkpoint["series_handoff_sha256"],
+        }
+
+    def successor_series_from(self, predecessor, slice_number=2, **predecessor_overrides):
+        return {
+            **self.default_series(),
+            "slice": slice_number,
+            "predecessor": {**predecessor, **predecessor_overrides},
+        }
+
+    def test_predecessor_matched_disclosure(self):
+        predecessor = self.build_predecessor()
+        code, result = self.init4_full(
+            "succ", series=self.successor_series_from(predecessor)
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual("matched", result["series_predecessor"])
+
+    def test_predecessor_plan_digest_drift_is_mismatch(self):
+        predecessor = self.build_predecessor()
+        series = self.successor_series_from(predecessor, plan_sha256="c" * 64)
+        code, result = self.init4_full("succ", series=series)
+        self.assertEqual(0, code, result)
+        self.assertEqual("mismatch:plan_digest", result["series_predecessor"])
+
+    def test_predecessor_outcome_drift_is_mismatch(self):
+        predecessor = self.build_predecessor()
+        series = self.successor_series_from(predecessor, outcome="blocked")
+        code, result = self.init4_full("succ", series=series)
+        self.assertEqual(0, code, result)
+        self.assertEqual("mismatch:outcome", result["series_predecessor"])
+
+    def test_predecessor_handoff_digest_drift_is_mismatch(self):
+        predecessor = self.build_predecessor()
+        series = self.successor_series_from(predecessor, handoff_sha256="d" * 64)
+        code, result = self.init4_full("succ", series=series)
+        self.assertEqual(0, code, result)
+        self.assertEqual("mismatch:handoff_digest", result["series_predecessor"])
+
+    def test_predecessor_end_command_drift_is_mismatch(self):
+        predecessor = self.build_predecessor()
+        series = self.successor_series_from(predecessor)
+        series["end_verification_commands"] = ["uv run python -m unittest tests.other"]
+        code, result = self.init4_full("succ", series=series)
+        self.assertEqual(0, code, result)
+        self.assertEqual("mismatch:end_commands", result["series_predecessor"])
+
+    def test_gcd_predecessor_is_unresolvable(self):
+        predecessor = self.build_predecessor()
+        shutil.rmtree(self.run_dir(predecessor["plan_id"], predecessor["run_id"]))
+        code, result = self.init4_full(
+            "succ", series=self.successor_series_from(predecessor)
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual("unresolvable", result["series_predecessor"])
+
+    def test_abandoned_predecessor_without_handoff_matches_empty_sentinel(self):
+        series = self.default_series()
+        run_id = self.init4(plan_id="pred-abandon", series=series)
+        code, close_result = self.close("pred-abandon", run_id, "abandoned")
+        self.assertEqual(0, code, close_result)
+        checkpoint = self.checkpoint("pred-abandon", run_id)
+        self.assertNotIn("series_handoff_sha256", checkpoint)
+        predecessor = {
+            "plan_id": "pred-abandon",
+            "plan_sha256": checkpoint["plan_hash"],
+            "run_id": run_id,
+            "outcome": "abandoned",
+            "handoff_sha256": "",
+        }
+        code, result = self.init4_full(
+            "succ", series=self.successor_series_from(predecessor)
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual("matched", result["series_predecessor"])
+
+    def test_tampered_predecessor_checkpoint_is_unresolvable(self):
+        predecessor = self.build_predecessor()
+        checkpoint_path = self.checkpoint_path(predecessor["plan_id"], predecessor["run_id"])
+        corrupted = self.checkpoint(predecessor["plan_id"], predecessor["run_id"])
+        corrupted["plan_hash"] = "e" * 64
+        checkpoint_path.write_text(
+            json.dumps(corrupted, sort_keys=True, separators=(",", ":")) + "\n"
+        )
+        code, result = self.init4_full(
+            "succ", series=self.successor_series_from(predecessor)
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual("unresolvable", result["series_predecessor"])
+
+    def test_non_series_init_carries_no_series_predecessor_key(self):
+        code, result = self.init4_full("plain", series=None)
+        self.assertEqual(0, code, result)
+        self.assertNotIn("series_predecessor", result)
+
+    def test_slice_one_init_carries_no_series_predecessor_key(self):
+        code, result = self.init4_full("slice-one", series=self.default_series())
+        self.assertEqual(0, code, result)
+        self.assertNotIn("series_predecessor", result)
 
 
 if __name__ == "__main__":

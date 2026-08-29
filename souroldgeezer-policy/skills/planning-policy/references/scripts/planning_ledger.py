@@ -988,6 +988,69 @@ def init3(args):
     raise Error("blocked:contract_migration_required")
 
 
+def load_predecessor_run(ledger_root, plan_id, run_id):
+    """Load and fully re-validate a predecessor run's checkpoint and plan.
+
+    Mirrors `load2`'s validation depth without depending on `args`, since a
+    predecessor's plan_id/run_id differ from the successor's. Any failure here
+    is the predecessor's fault, never the successor's, so every caller treats
+    this raising as "unresolvable" rather than propagating the error.
+    """
+    directory = ledger_root / plan_id / run_id
+    if directory.is_symlink() or not directory.is_dir():
+        raise Error("unresolvable predecessor run")
+    safe_run_contents(directory)
+    checkpoint = read_json(directory / "checkpoint.json", "unresolvable predecessor checkpoint")
+    if (
+        checkpoint.get("schema") not in {2, 3, 4}
+        or checkpoint.get("plan_id") != plan_id
+        or checkpoint.get("run_id") != run_id
+    ):
+        raise Error("unresolvable predecessor checkpoint")
+    plan = read_json(directory / "plan.json", "unresolvable predecessor plan")
+    if digest(plan) != checkpoint.get("plan_hash") or not SHA.fullmatch(
+        checkpoint.get("plan_hash", "")
+    ):
+        raise Error("unresolvable predecessor plan")
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
+    ready_key = "dispatch_ready" if checkpoint["schema"] == 4 else "resume_ready"
+    if not plan_result.get(ready_key) or plan_result.get("contract_version") != checkpoint["schema"]:
+        raise Error("unresolvable predecessor plan")
+    validate_steps2(checkpoint, leaves_by_id(plan))
+    validate_retry_artifacts(directory, checkpoint)
+    validate_series_handoff(directory, checkpoint, plan)
+    lifecycle(checkpoint)
+    validate_events2(directory, checkpoint)
+    return checkpoint, plan
+
+
+def series_predecessor_disclosure(ledger_root, series):
+    """Compute the init-v4 predecessor cross-check for a slice > 1 successor.
+
+    Never raises: a gc'd, purged, unreadable, or tampered predecessor is
+    disclosed as "unresolvable" rather than failing the successor's init.
+    """
+    predecessor = series.get("predecessor")
+    try:
+        plan_id = ident(predecessor["plan_id"], "predecessor plan id")
+        run_id = uuid4(predecessor["run_id"], "predecessor run id")
+        checkpoint, predecessor_plan = load_predecessor_run(ledger_root, plan_id, run_id)
+    except (Error, OSError, json.JSONDecodeError, TypeError, KeyError):
+        return "unresolvable"
+    if checkpoint["plan_hash"] != predecessor["plan_sha256"]:
+        return "mismatch:plan_digest"
+    if checkpoint["outcome"] != predecessor["outcome"]:
+        return "mismatch:outcome"
+    if (checkpoint.get("series_handoff_sha256") or "") != predecessor["handoff_sha256"]:
+        return "mismatch:handoff_digest"
+    predecessor_series = predecessor_plan.get("series") or {}
+    if predecessor_series.get("end_verification_commands") != series.get(
+        "end_verification_commands"
+    ):
+        return "mismatch:end_commands"
+    return "matched"
+
+
 def init4(args):
     approved_parent(args)
     plan = read_plan(args.plan_file, 4)
@@ -995,6 +1058,12 @@ def init4(args):
     bindings = capability_bindings(args.capability_binding_file, plan)
     ledger_root = root(args)
     collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
+    series = plan.get("series")
+    series_predecessor = (
+        series_predecessor_disclosure(ledger_root, series)
+        if series and series.get("slice", 1) > 1
+        else None
+    )
     directory = plan_dir(args)
     existing, invalid = scan_ledgers(ledger_root, args.plan_id, timestamp(now()))
     if invalid:
@@ -1091,6 +1160,8 @@ def init4(args):
             droppable=("command",),
             trimmable="ready_step_ids",
         )
+    if series_predecessor is not None:
+        result["series_predecessor"] = series_predecessor
     return result
 
 
