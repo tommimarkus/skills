@@ -1583,7 +1583,31 @@ def retry_command(plan_id, run_id, step_id):
     )
 
 
-def checkpoint_next(directory, data, batches):
+def series_non_final(plan):
+    """True for a plan whose series slice hands work on (needs a close handoff)."""
+    series = plan.get("series")
+    return bool(series) and not series.get("final")
+
+
+def series_final(plan):
+    """True for a plan whose series slice is the last (needs end verification)."""
+    series = plan.get("series")
+    return bool(series) and bool(series.get("final"))
+
+
+def series_closeout_overlay(plan, block):
+    """Splice the series-final marker into a closeout-adjacent next block.
+
+    Never inlines `end_verification_commands` — a single 480-char command would
+    blow the 120-proxy-token next bound alone, so this stays a compact flag the
+    parent resolves against the plan it already holds.
+    """
+    if series_final(plan):
+        block["series_end"] = True
+    return block
+
+
+def checkpoint_next(directory, data, batches, plan):
     """Select one highest-priority legal v4 action from the validated checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next(
@@ -1684,10 +1708,13 @@ def checkpoint_next(directory, data, batches):
 
     if steps and all(step["status"] == "cleaned" for step in steps):
         return bounded_action_next(
-            {
-                "category": "validate_closeout",
-                "command": f"--plan-id {plan_id} validate --run-id {run_id} --closeout",
-            }
+            series_closeout_overlay(
+                plan,
+                {
+                    "category": "validate_closeout",
+                    "command": f"--plan-id {plan_id} validate --run-id {run_id} --closeout",
+                },
+            )
         )
 
     blocked = [step["id"] for step in steps if step["status"] != "cleaned"]
@@ -1697,7 +1724,7 @@ def checkpoint_next(directory, data, batches):
     )
 
 
-def next_after_transition(args, directory, data, batches, step):
+def next_after_transition(args, directory, data, batches, step, plan):
     scope = transition_scope(args.plan_id, args.run_id)
     sid = step["id"]
     if step["status"] == "ready":
@@ -1741,9 +1768,12 @@ def next_after_transition(args, directory, data, batches, step):
         )
     if all(candidate["status"] == "cleaned" for candidate in data["steps"].values()):
         return bounded_action_next(
-            {"command": f"--plan-id {args.plan_id} validate --run-id {args.run_id} --closeout"}
+            series_closeout_overlay(
+                plan,
+                {"command": f"--plan-id {args.plan_id} validate --run-id {args.run_id} --closeout"},
+            )
         )
-    return checkpoint_next(directory, data, batches)
+    return checkpoint_next(directory, data, batches, plan)
 
 
 def unwind(args, data, batches, sid, step):
@@ -1812,7 +1842,7 @@ def transition2(args):
     )
     result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
     if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        result["next"] = next_after_transition(args, directory, data, batches, step)
+        result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
 
@@ -2153,11 +2183,11 @@ def valid_return(value, data, step, leaf):
     return value
 
 
-def next_after_return(args, directory, data, batches, sid, step, value, disposition):
+def next_after_return(args, directory, data, batches, sid, step, value, disposition, plan):
     """Report the retry decision `record` just made under the escalating policy."""
     scope = f"--plan-id {args.plan_id} transition --actor parent --run-id {args.run_id}"
     if disposition == "completed" and not batch_settled(data, batches, sid):
-        return checkpoint_next(directory, data, batches)
+        return checkpoint_next(directory, data, batches, plan)
     if disposition == "retry_eligible":
         tier = step["current_tier"]
         if needs_higher_tier(step, retry_outcome(value)):
@@ -2306,7 +2336,7 @@ def record(args):
     # A policy-less v2/v3 run keeps its original silent result.
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         result["next"] = next_after_return(
-            args, directory, data, step_batches(plan), sid, step, value, disposition
+            args, directory, data, step_batches(plan), sid, step, value, disposition, plan
         )
     return result
 
@@ -2510,6 +2540,11 @@ def classify_v2(plan_id, directory, current):
         "_path": directory,
         "_step_ids": sorted(checkpoint["steps"]),
     }
+    series = plan.get("series")
+    if series:
+        entry["series_id"] = series["series_id"]
+        entry["series_slice"] = series["slice"]
+        entry["series_final"] = series["final"]
     if checkpoint["run_status"] == "active":
         entry["retention_state"] = "active"
     else:
@@ -2809,7 +2844,7 @@ def show(args):
             "action": "show-next",
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
-            "next": checkpoint_next(directory, data, step_batches(plan)),
+            "next": checkpoint_next(directory, data, step_batches(plan), plan),
         }
         if proxy_tokens(result) > MAX_NEXT_ONLY_TOKENS:
             raise Error("show --next-only exceeds 240 proxy tokens")
@@ -3119,13 +3154,17 @@ def validate(args):
         and data["steps"]
         and all(step["status"] == "cleaned" for step in data["steps"].values())
     ):
+        command = (
+            f"--plan-id {data['plan_id']} close --actor parent "
+            f"--run-id {data['run_id']} --outcome completed"
+        )
+        # A final series slice hands nothing on and takes no handoff file; a
+        # non-final slice's completed close always requires one (see
+        # `series_close_handoff`), so the hinted command names it up front.
+        if series_non_final(plan):
+            command += " --series-handoff-file <path>"
         result["next"] = bounded_action_next(
-            {
-                "command": (
-                    f"--plan-id {data['plan_id']} close --actor parent "
-                    f"--run-id {data['run_id']} --outcome completed"
-                )
-            }
+            series_closeout_overlay(plan, {"command": command})
         )
     return result
 

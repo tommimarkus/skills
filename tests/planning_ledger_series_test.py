@@ -833,6 +833,65 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         self.assertEqual(0, code, result)
         self.assertNotIn("series_predecessor", result)
 
+    # -- list splice and series-end next marker ------------------------------
+
+    def list_runs(self, plan_id="plan"):
+        return self.call(*self.common(plan_id), "list")
+
+    def validate_closeout(self, plan_id, run_id):
+        return self.call(
+            *self.common(plan_id), "validate", "--run-id", run_id, "--closeout"
+        )
+
+    def list_entry(self, plan_id, run_id):
+        code, result = self.list_runs(plan_id)
+        self.assertEqual(0, code, result)
+        matches = [
+            entry
+            for entry in result["runs"]
+            if entry["plan_id"] == plan_id and entry["run_id"] == run_id
+        ]
+        self.assertEqual(1, len(matches), result)
+        return matches[0]
+
+    def test_list_splice_carries_series_fields_for_a_series_run(self):
+        run_id = self.init4(plan_id="listed", series=self.final_series())
+        entry = self.list_entry("listed", run_id)
+        self.assertEqual("plan-series", entry["series_id"])
+        self.assertEqual(1, entry["series_slice"])
+        self.assertTrue(entry["series_final"])
+
+    def test_list_entries_for_a_non_series_run_are_byte_identical(self):
+        run_id = self.init4(plan_id="plain-listed", series=None)
+        entry = self.list_entry("plain-listed", run_id)
+        self.assertNotIn("series_id", entry)
+        self.assertNotIn("series_slice", entry)
+        self.assertNotIn("series_final", entry)
+
+    def test_final_series_closeout_carries_the_series_end_marker(self):
+        run_id = self.init4(plan_id="final-close", series=self.final_series())
+        self.drive_to_cleaned("final-close", run_id)
+        code, result = self.validate_closeout("final-close", run_id)
+        self.assertEqual(0, code, result)
+        self.assertTrue(result["next"]["series_end"])
+        self.assertNotIn("--series-handoff-file", result["next"]["command"])
+
+    def test_non_final_series_closeout_carries_the_handoff_hint_not_the_marker(self):
+        run_id = self.init4(plan_id="nonfinal-close", series=self.default_series())
+        self.drive_to_cleaned("nonfinal-close", run_id)
+        code, result = self.validate_closeout("nonfinal-close", run_id)
+        self.assertEqual(0, code, result)
+        self.assertNotIn("series_end", result["next"])
+        self.assertIn("--series-handoff-file", result["next"]["command"])
+
+    def test_non_series_closeout_carries_neither_marker_nor_hint(self):
+        run_id = self.init4(plan_id="plain-close", series=None)
+        self.drive_to_cleaned("plain-close", run_id)
+        code, result = self.validate_closeout("plain-close", run_id)
+        self.assertEqual(0, code, result)
+        self.assertNotIn("series_end", result["next"])
+        self.assertNotIn("--series-handoff-file", result["next"]["command"])
+
 
 if __name__ == "__main__":
     unittest.main()

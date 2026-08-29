@@ -81,14 +81,26 @@ def batch_leaf(sid: str, dependencies: list[str], attempts: int = 3) -> dict:
     }
 
 
-def make_plan(leaves: list[dict]) -> dict:
-    return {
+def make_plan(leaves: list[dict], series: dict | None = None) -> dict:
+    plan = {
         "contract_version": 4,
         "objective": "Emit a bounded next block at the point of use",
         "scope_summary": "Only the declared steps are in scope.",
         "approved_decisions": ["The ledger states its own next action."],
         "work_units": [{"id": x["id"], "original_size": "small"} for x in leaves],
         "leaves": leaves,
+    }
+    if series is not None:
+        plan["series"] = series
+    return plan
+
+
+def series_block(final: bool = False, commands: list[str] | None = None) -> dict:
+    return {
+        "series_id": "next-series",
+        "slice": 1,
+        "final": final,
+        "end_verification_commands": commands or ["uv run python -m unittest tests.example"],
     }
 
 
@@ -101,8 +113,8 @@ class LedgerHarness(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.common = ["--ledger-root", str(self.root), "--plan-id", self.plan_id]
 
-    def build(self, leaves: list[dict]) -> None:
-        self.plan = make_plan(leaves)
+    def build(self, leaves: list[dict], series: dict | None = None) -> None:
+        self.plan = make_plan(leaves, series)
         (self.root / "plan.json").write_text(json.dumps(self.plan), encoding="utf-8")
         (self.root / "binding.json").write_text(
             json.dumps(
@@ -147,8 +159,8 @@ class LedgerHarness(unittest.TestCase):
             code = ledger.main(args)
         return code, json.loads(stream.getvalue())
 
-    def init(self, leaves: list[dict] | None = None) -> dict:
-        self.build(leaves or [leaf("build", [])])
+    def init(self, leaves: list[dict] | None = None, series: dict | None = None) -> dict:
+        self.build(leaves or [leaf("build", [])], series)
         code, result = self.call(
             *self.common,
             "init-v4",
@@ -703,6 +715,62 @@ class LegacySilenceTest(LedgerHarness):
         code, rejected = self.call(*legacy, "show", "--next-only")
         self.assertEqual(3, code, rejected)
         self.assertEqual("show --next-only requires a version-4 run", rejected["error"])
+
+
+class SeriesOverlayNextBlockTest(LedgerHarness):
+    """The series overlay never inlines end_verification_commands, so a
+    worst-case series still fits the same bounds a plain run does.
+    """
+
+    def drive_to_cleaned(self) -> dict:
+        self.start()
+        self.give("completed")
+        self.worktree_transition("build", "integrated")
+        return self.worktree_transition("build", "cleaned")
+
+    def closeout_validate(self) -> dict:
+        code, result = self.call(*self.common, "validate", "--run-id", self.run_id, "--closeout")
+        self.assertEqual(0, code, result)
+        return result
+
+    def test_final_series_closeout_marker_stays_bounded_at_worst_case(self):
+        commands = ["x" * 480] * 4
+        self.init(series=series_block(final=True, commands=commands))
+        cleaned = self.drive_to_cleaned()
+        block = cleaned["next"]
+        self.assertIn("--closeout", block["command"])
+        self.assertTrue(block["series_end"])
+        self.assertBounded(block)
+
+        code, next_only = self.show_next()
+        self.assertEqual(0, code, next_only)
+        self.assertTrue(next_only["next"]["series_end"])
+        self.assertBounded(next_only["next"])
+        self.assertLessEqual(ledger.proxy_tokens(next_only), ledger.MAX_NEXT_ONLY_TOKENS)
+
+    def test_final_series_close_command_carries_the_marker_not_the_flag(self):
+        self.init(series=series_block(final=True))
+        self.drive_to_cleaned()
+        block = self.closeout_validate()["next"]
+        self.assertTrue(block["series_end"])
+        self.assertNotIn("--series-handoff-file", block["command"])
+        self.assertBounded(block)
+
+    def test_non_final_series_close_command_carries_the_handoff_hint(self):
+        self.init(series=series_block(final=False))
+        self.drive_to_cleaned()
+        block = self.closeout_validate()["next"]
+        self.assertNotIn("series_end", block)
+        self.assertIn("--series-handoff-file", block["command"])
+        self.assertBounded(block)
+
+    def test_non_series_close_command_carries_neither_flag_nor_marker(self):
+        self.init()
+        self.drive_to_cleaned()
+        block = self.closeout_validate()["next"]
+        self.assertNotIn("series_end", block)
+        self.assertNotIn("--series-handoff-file", block["command"])
+        self.assertBounded(block)
 
 
 if __name__ == "__main__":
