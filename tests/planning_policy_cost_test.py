@@ -67,7 +67,15 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # each adapter's one-dispatch-per-batch paragraph. Every added
         # sentence states a contract fact steps 1-4 already implemented and
         # validated in the batch-aware validator, ledger, and worktree helper.
-        self.assertLessEqual(claude["load_total"], 6250)
+        # claude and codex were re-baselined once more, from 6250/6350, to carry
+        # the plan-series pointers: core-workflow.md's PLANCOST-PLAN-SCALE
+        # remediation sentence and plan-contract.md's advisory-cost sentence
+        # each now point at the new on-demand references/plan-series.md, which
+        # documents series fields, grooming inheritance, close/handoff
+        # mechanics, the init-v4 predecessor cross-check, and the parent's
+        # series-end obligation already implemented and tested in
+        # planning_ledger.py. Neither adapter loads plan-series.md itself.
+        self.assertLessEqual(claude["load_total"], 6280)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -77,7 +85,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # codex.md was re-baselined again, from 5850, to carry its matching
         # one-dispatch-per-batch paragraph alongside the same shared
         # core-workflow.md/plan-contract.md batch additions as claude above.
-        self.assertLessEqual(codex["load_total"], 6350)
+        # codex was re-baselined once more, from 6350, alongside claude above
+        # for the same shared plan-series pointers.
+        self.assertLessEqual(codex["load_total"], 6380)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -98,6 +108,29 @@ class PlanningPolicyCostTest(unittest.TestCase):
             self.assertTrue(any(file.endswith("plan-contract.md") for file in files))
             self.assertTrue(any(file.endswith("templates/plan-v4.json") for file in files))
             self.assertEqual(1, sum(file.endswith(adapter) for file in files))
+
+    def test_series_successor_scenario_is_bounded_and_isolated(self):
+        # Slicing an oversized plan into a series loads the new on-demand
+        # references/plan-series.md alongside the same enforcement/executable-plan
+        # surface as active-claude/active-codex, minus any host adapter (the
+        # series contract is runtime-neutral). Measured at 6,377 tokens.
+        series = self.measure("planning-policy-series-successor")
+        self.assertLessEqual(series["load_total"], 6450)
+        files = [row["file"] for row in series["rows"]]
+        self.assertTrue(any(file.endswith("plan-series.md") for file in files))
+        self.assertTrue(any(file.endswith("SKILL.md") for file in files))
+        self.assertTrue(any(file.endswith("core-workflow.md") for file in files))
+        self.assertTrue(any(file.endswith("plan-contract.md") for file in files))
+        self.assertFalse(any(file.endswith("claude-code.md") for file in files))
+        self.assertFalse(any(file.endswith("codex.md") for file in files))
+        for scenario_id in self.scenarios:
+            if scenario_id == "planning-policy-series-successor":
+                continue
+            other = self.measure(scenario_id)
+            self.assertFalse(
+                any(row["file"].endswith("plan-series.md") for row in other["rows"]),
+                f"{scenario_id} must not load plan-series.md",
+            )
 
     def test_unknown_predicate_is_charged_and_scenario_has_provenance(self):
         unknown = self.measure("planning-policy-unknown-host")

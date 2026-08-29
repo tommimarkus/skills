@@ -81,7 +81,8 @@ over-assignment, an unbatched chained same-owner mechanical/standard pair
 12 leaves or 20 declared work-unit weight — slice into successive plans,
 advisory only); `tier_mix` reports per-tier counts, mechanical share, and
 over-assigned count. Every finding
-is advisory; execution control is invariant.
+is advisory; execution control is invariant. Successive-plan composition and
+handoff live in [plan series](plan-series.md).
 
 ## Readiness gate
 

@@ -200,6 +200,15 @@ not assign or start an attempt. A dependency is ready-compatible only after it
 is `cleaned`. A successful v4 `reopen` result names its retryable step IDs and
 the first ready/remediation command. `close` is terminal and emits no `next`.
 
+`close --series-handoff-file <path>` exists only on a plan carrying a
+`series` block: it is required on a `completed` close of a non-final slice
+(the error names the flag), optional on a `blocked`/`abandoned` close of a
+non-final slice, and forbidden — as is the flag itself — on the final slice
+or on a plan with no `series` block. The ledger composes the run-level
+`planning-series-handoff-v1` artifact from the parent-supplied content file
+plus the closing run's own identity; see [plan series](plan-series.md) for
+the full close/handoff mechanics and the init-v4 predecessor cross-check.
+
 ### Listing, retention, and deletion
 
 `list` scans either the bounded `--plan-id` scope or the ledger root and emits
@@ -209,7 +218,10 @@ Active runs are always kept regardless of age. Closed version-2/3/4 runs retain
 completed outcomes for 30 days, blocked outcomes for 90 days, and abandoned
 outcomes for 7 days. The boundary is exact: a run becomes eligible at
 `purge_after`, not one second earlier. Initialization and successful closure run
-garbage collection after validating candidate directories.
+garbage collection after validating candidate directories. A stamped series
+handoff survives `reopen` unchanged; a later `close --series-handoff-file`
+overwrites it atomically, so the latest close's artifact is the one retention
+and `gc` see, while prior digests stay in the preserved event log.
 
 `purge --actor parent` deletes exactly one closed target: use `--plan-id` plus
 `--run-id` for version 2, or `--plan-id` plus `--legacy` for one terminal

@@ -64,6 +64,17 @@
     ]
   },
   {
+    "id": "planning-policy-series-successor",
+    "provenance": "SKILL.md Load map: enforcement, executable plan scaffold, and plan series for a successor-plan authoring/grooming session; no host adapter (the series contract is runtime-neutral).",
+    "load_routes": [
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json", "predicate": "conditional:new-plan-authoring"},
+      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-series.md", "predicate": "conditional:series-plan"}
+    ]
+  },
+  {
     "id": "planning-policy-unknown-host",
     "provenance": "Unknown host selection is conservative and still loads the declared adapter.",
     "load_routes": [

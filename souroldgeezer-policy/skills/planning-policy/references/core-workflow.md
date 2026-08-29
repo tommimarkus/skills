@@ -36,7 +36,9 @@ and user approval before implementation.
    the advisory in the same invocation. Act on its codes before approval:
    re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN`, re-tier
    for `PLANCOST-TIER-OVER-ASSIGNED`, or slice the plan for
-   `PLANCOST-PLAN-SCALE`; otherwise record the stated reason in the plan.
+   `PLANCOST-PLAN-SCALE`; otherwise record the stated reason in the plan. A plan
+   sliced into successive plans composes and hands off per
+   [plan series](plan-series.md).
 
 When guidance initializes `scope-policy`, the plan records its level and
 escalation mode in `settled_decisions`; each leaf's `boundary`/`write_set`

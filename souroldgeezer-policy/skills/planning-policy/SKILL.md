@@ -44,7 +44,8 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   recover the highest-priority action. Lifecycle and
   retention commands do not replace approval or dispatch validation. The ledger
   is the sole retry owner: it records bounded remediation and chooses the next
-  mapped tier without changing the approved leaf contract.
+  mapped tier without changing the approved leaf contract. Slicing an oversized
+  plan into a successive series loads [plan series](references/plan-series.md).
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
   resuming v1–v3 state; load the retained
