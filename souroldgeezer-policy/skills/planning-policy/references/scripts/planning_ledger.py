@@ -23,6 +23,7 @@ MAX_CHECKPOINT = 64 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
 MAX_REMEDIATION = 4 * 1024
+MAX_SERIES_HANDOFF = 8 * 1024
 MAX_USAGE = 4 * 1024
 MAX_TOKENS = 1200
 MAX_USAGE_TOKENS = 600
@@ -142,6 +143,24 @@ REMEDIATION_FIELDS = {
     "next_harness",
     "target_portable_tier",
 }
+SERIES_HANDOFF_SCHEMA = "planning-series-handoff-v1"
+SERIES_HANDOFF_FIELDS = {
+    "schema",
+    "plan_id",
+    "run_id",
+    "series_id",
+    "slice",
+    "landed",
+    "decisions",
+    "assumptions_to_revalidate",
+    "remaining_scope",
+}
+SERIES_HANDOFF_LIST_FIELDS = (
+    "landed",
+    "decisions",
+    "assumptions_to_revalidate",
+    "remaining_scope",
+)
 USAGE_FIELDS = {
     "schema",
     "run_id",
@@ -1107,6 +1126,7 @@ def load2(args):
             step.setdefault(field, default)
     validate_steps2(data, leafs)
     validate_retry_artifacts(directory, data)
+    validate_series_handoff(directory, data, plan)
     lifecycle(data)
     return directory, data, plan, leafs
 
@@ -1238,6 +1258,73 @@ def store_remediation(args, directory, step):
     destination = directory / "retry-remediations" / step["id"] / f"{step['attempt_id']}.json"
     write(destination, value, MAX_REMEDIATION)
     return value, str(destination.relative_to(directory)), digest(value), target == current
+
+
+def valid_series_handoff(value):
+    if not isinstance(value, dict) or len(canon(value)) > MAX_SERIES_HANDOFF:
+        raise Error("planning-series-handoff-v1 exceeds 8 KiB")
+    if set(value) != SERIES_HANDOFF_FIELDS or value.get("schema") != SERIES_HANDOFF_SCHEMA:
+        raise Error("invalid planning-series-handoff-v1 schema")
+    ident(value["plan_id"], "series handoff plan id")
+    uuid4(value["run_id"], "series handoff run id")
+    ident(value["series_id"], "series handoff series id")
+    slice_value = value["slice"]
+    if not isinstance(slice_value, int) or isinstance(slice_value, bool) or slice_value < 1:
+        raise Error("series handoff slice must be an integer >= 1")
+    for field in SERIES_HANDOFF_LIST_FIELDS:
+        items = value[field]
+        if not isinstance(items, list) or len(items) > 16:
+            raise Error(f"series handoff {field} must be a bounded array")
+        for item in items:
+            if not isinstance(item, str) or not 1 <= len(item) <= 480:
+                raise Error(f"series handoff {field} entries must be bounded non-empty strings")
+    return value
+
+
+def read_series_handoff(path):
+    try:
+        raw = Path(path).read_bytes()
+        value = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid planning-series-handoff-v1") from exc
+    if len(raw) > MAX_SERIES_HANDOFF:
+        raise Error("planning-series-handoff-v1 exceeds 8 KiB")
+    return valid_series_handoff(value)
+
+
+def validate_series_handoff(directory, data, plan):
+    """Sibling of validate_retry_artifacts: re-verify a stamped handoff artifact.
+
+    `load2` calls this but not `validate_events2`, so a plain event-fact record
+    of the stamp alone would skip tamper detection; the file's own bytes are
+    hashed and re-checked against the checkpoint stamp every load.
+    """
+    path = data.get("series_handoff_path", "")
+    sha256 = data.get("series_handoff_sha256", "")
+    if bool(path) != bool(sha256):
+        raise Error("series handoff stamp requires both path and sha256")
+    artifact = directory / "series-handoff.json"
+    file_exists = artifact.is_file() and not artifact.is_symlink()
+    if file_exists and not path:
+        raise Error("series handoff artifact present without a checkpoint stamp")
+    if path and not file_exists:
+        raise Error("series handoff checkpoint stamp has no artifact")
+    if not path:
+        return
+    if path != "series-handoff.json":
+        raise Error("series handoff path must name the run-level artifact")
+    series = plan.get("series")
+    if series is None:
+        raise Error("series handoff stamp present on a run whose plan has no series block")
+    value = read_series_handoff(artifact)
+    if (
+        digest(value) != sha256
+        or value["plan_id"] != data["plan_id"]
+        or value["run_id"] != data["run_id"]
+        or value["series_id"] != series.get("series_id")
+        or value["slice"] != series.get("slice")
+    ):
+        raise Error("series handoff artifact digest or identity mismatch")
 
 
 def validate_retry_artifacts(directory, data):
@@ -2097,6 +2184,7 @@ def safe_run_contents(directory):
         "retry-remediations",
         "worktree-results",
         "usage",
+        "series-handoff.json",
     }
     children = list(directory.iterdir())
     if any(child.is_symlink() for child in children):
@@ -2109,6 +2197,9 @@ def safe_run_contents(directory):
     for name in ("checkpoint.json", "events.jsonl", "plan.json"):
         if not (directory / name).is_file():
             raise Error("unexpected v2 contents")
+    handoff = directory / "series-handoff.json"
+    if handoff.exists() and (handoff.is_symlink() or not handoff.is_file()):
+        raise Error("unexpected series-handoff.json contents")
     returns = directory / "returns"
     if returns.exists():
         if returns.is_symlink() or not returns.is_dir():
@@ -2245,6 +2336,7 @@ def classify_v2(plan_id, directory, current):
         raise Error("blocked:plan_tampered")
     validate_steps2(checkpoint, leaves_by_id(plan))
     validate_retry_artifacts(directory, checkpoint)
+    validate_series_handoff(directory, checkpoint, plan)
     returns = directory / "returns"
     if returns.exists() and any(
         step_dir.name not in checkpoint["steps"] for step_dir in returns.iterdir()
