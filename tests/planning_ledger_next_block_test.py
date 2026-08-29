@@ -734,7 +734,11 @@ class SeriesOverlayNextBlockTest(LedgerHarness):
         return result
 
     def test_final_series_closeout_marker_stays_bounded_at_worst_case(self):
-        commands = ["x" * 480] * 4
+        # Token-dense worst case: a long run of one word character is a single
+        # proxy token, so an "x" * 480 command could be inlined without moving
+        # the measured bound at all. Realistic command text is what blows it.
+        commands = [("uv run python -m unittest tests.suite -k case " * 11)[:480]] * 4
+        self.assertGreater(ledger.proxy_tokens(commands), ledger.MAX_NEXT_ONLY_TOKENS)
         self.init(series=series_block(final=True, commands=commands))
         cleaned = self.drive_to_cleaned()
         block = cleaned["next"]
