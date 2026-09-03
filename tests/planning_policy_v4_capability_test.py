@@ -388,12 +388,12 @@ class CapabilityAdapterTest(unittest.TestCase):
 
 
 class CapabilityDocumentationTest(unittest.TestCase):
-    def test_public_runtime_neutral_guidance_has_v4_capability_parity(self) -> None:
+    def test_public_runtime_neutral_guidance_has_v5_capability_parity(self) -> None:
         for relative in ("README.md", "AGENTS.md", "CLAUDE.md", "docs/skill-architecture.md"):
             text = (ROOT / relative).read_text(encoding="utf-8")
             with self.subTest(document=relative):
                 for phrase in (
-                    "contract_version: 4",
+                    "contract_version: 5",
                     "capability_requirements",
                     "plan-step-base-v1",
                     "planning-capability-binding-v1",
