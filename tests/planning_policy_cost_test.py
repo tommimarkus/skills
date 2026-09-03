@@ -35,7 +35,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         agent_lookup = self.measure("planning-policy-claude-agent-lookup")
         claude = self.measure("planning-policy-active-claude")
         codex = self.measure("planning-policy-active-codex")
-        live_next = self.measure("planning-policy-approved-v4-live-next")
+        live_next = self.measure("planning-policy-approved-v5-live-next")
         fallback = self.measure("planning-policy-ledger-diagnostic-fallback")
         self.assertLessEqual(lookup["load_total"], 900)
         self.assertLessEqual(direct["load_total"], 750)
@@ -75,7 +75,11 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # mechanics, the init-v4 predecessor cross-check, and the parent's
         # series-end obligation already implemented and tested in
         # planning_ledger.py. Neither adapter loads plan-series.md itself.
-        self.assertLessEqual(claude["load_total"], 6280)
+        # V5 is re-baselined from 6,280/6,380 to carry outcome-first grooming,
+        # exact single/parallel/checkpointed evidence, the microleaf-risk
+        # disposition, v1-v4 resume-only guidance, and the larger v5 scaffold.
+        # The lookup and repeated live-next paths retain their existing bounds.
+        self.assertLessEqual(claude["load_total"], 6850)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -87,7 +91,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # core-workflow.md/plan-contract.md batch additions as claude above.
         # codex was re-baselined once more, from 6350, alongside claude above
         # for the same shared plan-series pointers.
-        self.assertLessEqual(codex["load_total"], 6380)
+        self.assertLessEqual(codex["load_total"], 6950)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -106,16 +110,17 @@ class PlanningPolicyCostTest(unittest.TestCase):
             self.assertTrue(any(file.endswith("SKILL.md") for file in files))
             self.assertTrue(any(file.endswith("core-workflow.md") for file in files))
             self.assertTrue(any(file.endswith("plan-contract.md") for file in files))
-            self.assertTrue(any(file.endswith("templates/plan-v4.json") for file in files))
+            self.assertTrue(any(file.endswith("templates/plan-v5.json") for file in files))
             self.assertEqual(1, sum(file.endswith(adapter) for file in files))
 
     def test_series_successor_scenario_is_bounded_and_isolated(self):
         # Slicing an oversized plan into a series loads the new on-demand
         # references/plan-series.md alongside the same enforcement/executable-plan
         # surface as active-claude/active-codex, minus any host adapter (the
-        # series contract is runtime-neutral). Measured at 6,377 tokens.
+        # series contract is runtime-neutral). V5 adds the same outcome-first
+        # contract and scaffold charged above; measured at 6,840 tokens.
         series = self.measure("planning-policy-series-successor")
-        self.assertLessEqual(series["load_total"], 6450)
+        self.assertLessEqual(series["load_total"], 6875)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -139,12 +144,12 @@ class PlanningPolicyCostTest(unittest.TestCase):
         self.assertEqual([{"entry": "planning-policy", "predicate": "unknown"}], adapter["routes"])
         self.assertTrue(all(item.get("provenance") for item in self.scenarios.values()))
 
-    def test_v5_scaffold_remains_outside_declared_load_routes(self):
+    def test_legacy_v4_scaffold_remains_outside_declared_load_routes(self):
         for scenario_id in self.scenarios:
             measured = self.measure(scenario_id)
             self.assertFalse(
-                any(row["file"].endswith("templates/plan-v5.json") for row in measured["rows"]),
-                f"{scenario_id} must retain its declared v4 route until v5 guidance is loaded",
+                any(row["file"].endswith("templates/plan-v4.json") for row in measured["rows"]),
+                f"{scenario_id} must not load the legacy v4 scaffold for new authoring",
             )
 
     def test_representative_delegated_checkpoint_is_bounded_and_rehydratable(self):

@@ -27,7 +27,7 @@ contract = load("planning_policy_v3_contract", POLICY / "validate_plan_contract.
 ledger = load("planning_policy_v3_ledger", POLICY / "planning_ledger.py")
 
 
-def plan(version: int = 4, cost: object = None, include_cost: bool = False) -> dict:
+def plan(version: int = 5, cost: object = None, include_cost: bool = False) -> dict:
     value = {
         "contract_version": version,
         "objective": "Ship one bounded change",
@@ -56,7 +56,12 @@ def plan(version: int = 4, cost: object = None, include_cost: bool = False) -> d
     }
     if include_cost:
         value["execution_cost"] = cost
-    if version == 4:
+    if version == 5:
+        value["work_units"][0].update(
+            cohesive_outcome="Ship the bounded change",
+            decomposition={"shape": "single"},
+        )
+    if version in {4, 5}:
         value["leaves"][0]["capability_requirements"] = {
             "baseline": "plan-step-base-v1",
             "additional": [],
@@ -103,9 +108,10 @@ class PlanningPolicyV3ContractTest(unittest.TestCase):
         self.assertIn("PLANCOST-MISSING-PROFILE", missing["cost_advisory"]["codes"])
         self.assertIn("PLANCOST-INVALID-PROFILE", malformed["cost_advisory"]["codes"])
 
-    def test_v2_and_v3_are_resume_only_and_v4_is_forward_dispatch_contract(self) -> None:
+    def test_v2_v3_and_v4_are_resume_only_and_v5_is_forward_dispatch_contract(self) -> None:
         old = contract.validate(plan(version=2))
         prior = contract.validate(plan(version=3))
+        legacy = contract.validate(plan(version=4))
         current_plan = plan()
         current = validate_current(current_plan)
         self.assertTrue(old["valid"])
@@ -115,6 +121,10 @@ class PlanningPolicyV3ContractTest(unittest.TestCase):
         self.assertTrue(prior["valid"])
         self.assertFalse(prior["dispatch_ready"])
         self.assertTrue(prior["resume_ready"])
+        self.assertTrue(legacy["valid"])
+        self.assertFalse(legacy["approval_ready"])
+        self.assertTrue(legacy["resume_ready"])
+        self.assertIn("blocked:contract_migration_required", legacy["warnings"])
         self.assertTrue(current["dispatch_ready"])
         self.assertTrue(current["approval_ready"])
 
@@ -227,13 +237,13 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
             code = ledger.main(args)
         return code, json.loads(stream.getvalue())
 
-    def init3(self) -> str:
+    def init5(self) -> str:
         selected_plan = json.loads(self.plan_file.read_text(encoding="utf-8"))
         binding_file = self.root / "capability-binding.json"
         binding_file.write_text(json.dumps(binding(selected_plan)), encoding="utf-8")
         code, result = self.call(
             *self.common,
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -247,7 +257,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertEqual(0, code, result)
         return result["run_id"]
 
-    def test_v2_and_v3_init_refuse_new_run_and_v4_has_no_trace_state_by_default(self) -> None:
+    def test_v2_v3_and_v4_init_refuse_new_run_and_v5_has_no_trace_state_by_default(self) -> None:
         for command in ("init-v2", "init-v3"):
             code, result = self.call(
                 *self.common,
@@ -262,17 +272,17 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
             )
             self.assertEqual(3, code)
             self.assertEqual("blocked:contract_migration_required", result["error"])
-        run_id = self.init3()
+        run_id = self.init5()
         run = self.root / "planning-policy/ledgers/plan" / run_id
         checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
-        self.assertEqual(4, checkpoint["schema"])
+        self.assertEqual(5, checkpoint["schema"])
         self.assertFalse((run / "usage").exists())
         show_code, shown = self.call(*self.common, "show", "--run-id", run_id)
         self.assertEqual(0, show_code)
         self.assertNotIn("trace", shown)
 
     def test_trace_is_explicit_rejects_raw_content_and_bounds_summary(self) -> None:
-        run_id = self.init3()
+        run_id = self.init5()
         code, initialized = self.call(
             *self.common, "trace-init", "--actor", "parent", "--run-id", run_id
         )
@@ -335,7 +345,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertEqual(0, code, closed)
 
     def test_existing_v2_run_resumes_without_rewriting_checkpoint(self) -> None:
-        run_id = self.init3()
+        run_id = self.init5()
         run = self.root / "planning-policy/ledgers/plan" / run_id
         old_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
         old_plan["contract_version"] = 2
@@ -361,7 +371,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertEqual(before, (run / "checkpoint.json").read_bytes())
 
     def test_existing_v3_run_resumes_and_mutates_without_capability_binding(self) -> None:
-        run_id = self.init3()
+        run_id = self.init5()
         run = self.root / "planning-policy/ledgers/plan" / run_id
         prior_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
         prior_plan["contract_version"] = 3
@@ -402,7 +412,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertNotIn("capability_binding", resumed["steps"]["build"])
 
     def test_trace_validates_stage_identity_and_follows_run_purge(self) -> None:
-        run_id = self.init3()
+        run_id = self.init5()
         self.assertEqual(
             0,
             self.call(*self.common, "trace-init", "--actor", "parent", "--run-id", run_id)[0],
@@ -488,7 +498,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
             include_cost=True,
         )
         self.plan_file.write_text(json.dumps(value), encoding="utf-8")
-        run_id = self.init3()
+        run_id = self.init5()
         for target in ("ready", "in_progress"):
             args = [
                 *self.common,

@@ -215,7 +215,7 @@ class NextBlockScopeParityTest(unittest.TestCase):
     """The doc's claim about which commands emit a live `next` block must match code.
 
     This repo's own plan for the `next` feature assumed `TRANS` was the general
-    v2-v4 state machine and that `transition` could derive a legal-successor
+    v2-v5 state machine and that `transition` could derive a legal-successor
     block from it. It is not: `TRANS`'s keys equal `V1_STATES` exactly, it has
     one call site (`transition1()`, the v1-only path), and using it for v2-v4
     would misreport every stage and raise `KeyError` on the `cleaned`
@@ -228,7 +228,7 @@ class NextBlockScopeParityTest(unittest.TestCase):
     """
 
     NEXT_EMIT_CANDIDATES = {
-        "init4": "init-v4",
+        "init5": "init-v5",
         "record": "record-return",
         "transition2": "transition",
         "close2": "close",
@@ -241,14 +241,14 @@ class NextBlockScopeParityTest(unittest.TestCase):
         source = inspect.getsource(getattr(ledger, function_name))
         return "bounded_next(" in source or "next_after_return(" in source
 
-    def test_code_derived_emitters_are_exactly_init_v4_and_record_return(self):
+    def test_code_derived_emitters_are_exactly_init_v5_and_record_return(self):
         """Pin the current, intentional scope so a silent expansion is visible."""
         emitters = {
             cli
             for name, cli in self.NEXT_EMIT_CANDIDATES.items()
             if self._emits_next(name)
         }
-        self.assertEqual({"init-v4", "record-return"}, emitters)
+        self.assertEqual({"init-v5", "record-return"}, emitters)
 
     def test_ledger_contract_names_every_code_derived_emitter(self):
         text = normalized(REFERENCE)

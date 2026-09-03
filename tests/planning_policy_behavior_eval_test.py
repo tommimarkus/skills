@@ -61,25 +61,25 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-retry-immediate-escalation",
             "planning-policy-behavior-retry-terminal-precedence",
             "planning-policy-behavior-retry-legacy-compatibility",
-            "planning-policy-behavior-v4-cost-advisory",
-            "planning-policy-behavior-v4-trace-opt-in",
-            "planning-policy-behavior-v4-v3-resume-only",
-            "planning-policy-behavior-v4-canonical-scaffold",
-            "planning-policy-behavior-v4-claude-mechanical-skill-block",
-            "planning-policy-behavior-v4-live-next-rehydration",
+            "planning-policy-behavior-v5-cost-advisory",
+            "planning-policy-behavior-v5-trace-opt-in",
+            "planning-policy-behavior-v5-v4-resume-only",
+            "planning-policy-behavior-v5-canonical-scaffold",
+            "planning-policy-behavior-v5-claude-mechanical-skill-block",
+            "planning-policy-behavior-v5-live-next-rehydration",
             "planning-policy-behavior-series-close-requires-flag",
             "planning-policy-behavior-series-successor-gcd-predecessor",
             "planning-policy-behavior-series-final-end-verification",
         }
         self.assertTrue(required.issubset(self.behavior))
-        scaffold = self.behavior["planning-policy-behavior-v4-canonical-scaffold"]
-        self.assertIn("plan-v4.json", " ".join(scaffold["expected_artifacts"]))
+        scaffold = self.behavior["planning-policy-behavior-v5-canonical-scaffold"]
+        self.assertIn("plan-v5.json", " ".join(scaffold["expected_artifacts"]))
         self.assertIn("contract_version", " ".join(scaffold["required_checks"]))
         self.assertIn("version", " ".join(scaffold["forbidden_behaviors"]))
-        capability_block = self.behavior["planning-policy-behavior-v4-claude-mechanical-skill-block"]
+        capability_block = self.behavior["planning-policy-behavior-v5-claude-mechanical-skill-block"]
         self.assertIn("Claude mechanical wrapper lacks Skill", " ".join(capability_block["required_checks"]))
         self.assertIn("blocked:capability_unavailable", " ".join(capability_block["expected_artifacts"]))
-        live_next = self.behavior["planning-policy-behavior-v4-live-next-rehydration"]
+        live_next = self.behavior["planning-policy-behavior-v5-live-next-rehydration"]
         self.assertIn("show --next-only", " ".join(live_next["expected_artifacts"]))
         self.assertIn("busy polling", live_next["forbidden_behaviors"])
         self.assertTrue(any("240 proxy tokens" in check for check in live_next["required_checks"]))

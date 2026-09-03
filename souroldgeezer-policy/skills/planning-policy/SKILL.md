@@ -48,8 +48,9 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   plan into a successive series loads [plan series](references/plan-series.md).
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
-  resuming v1–v4 state; load a retained legacy scaffold only to interpret its plan
-  shape. Read the [ledger contract](references/ledger-contract.md) only for
+  resuming v1–v4 state; load the retained [v3 scaffold](references/templates/plan-v3.json)
+  or [v4 scaffold](references/templates/plan-v4.json) only to interpret that
+  legacy plan shape. Read the [ledger contract](references/ledger-contract.md) only for
   errors, legacy resumption, diagnosis, retention operations, or ledger
   authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
