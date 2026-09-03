@@ -1,4 +1,4 @@
-"""Red regressions for the planning-policy v4 capability binding contract."""
+"""Regressions for v5 capability binding and resumable v4 checkpoints."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "souroldgeezer-policy/skills/planning-policy"
@@ -35,8 +34,8 @@ def canonical_sha256(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def plan(version: int = 4) -> dict:
-    return {
+def plan(version: int = 5) -> dict:
+    value = {
         "contract_version": version,
         "objective": "Dispatch one capability-bound delegated step",
         "scope_summary": "Only the named worker and focused validation are in scope.",
@@ -72,6 +71,12 @@ def plan(version: int = 4) -> dict:
             }
         ],
     }
+    if version == 5:
+        value["work_units"][0].update(
+            cohesive_outcome="Complete the capability-bound delegated step",
+            decomposition={"shape": "single"},
+        )
+    return value
 
 
 def binding(value: dict, *, executor: str = "gpt-5.6-terra") -> dict:
@@ -109,7 +114,7 @@ def validate(value: dict, capability_binding: dict | None = None) -> dict:
 
 
 class CapabilityPlanContractTest(unittest.TestCase):
-    def test_v4_requires_a_structured_baseline_and_additional_requirements(self) -> None:
+    def test_v5_requires_a_structured_baseline_and_additional_requirements(self) -> None:
         valid = validate(plan())
         self.assertTrue(valid["valid"], valid["errors"])
         self.assertTrue(valid["approval_ready"])
@@ -130,7 +135,7 @@ class CapabilityPlanContractTest(unittest.TestCase):
                 self.assertFalse(result["valid"])
                 self.assertFalse(result["approval_ready"])
 
-    def test_v4_dispatch_requires_a_complete_binding_joined_to_plan_and_leaves(self) -> None:
+    def test_v5_dispatch_requires_a_complete_binding_joined_to_plan_and_leaves(self) -> None:
         candidate = plan()
         resolved = binding(candidate)
         approved = validate(candidate, capability_binding=resolved)
@@ -143,7 +148,15 @@ class CapabilityPlanContractTest(unittest.TestCase):
             {**resolved, "bindings": []},
             {
                 **resolved,
-                "bindings": [{**resolved["bindings"][0], "requirements": {"baseline": "plan-step-base-v1", "additional": []}}],
+                "bindings": [
+                    {
+                        **resolved["bindings"][0],
+                        "requirements": {
+                            "baseline": "plan-step-base-v1",
+                            "additional": [],
+                        },
+                    }
+                ],
             },
         ):
             result = validate(candidate, capability_binding=changed)
@@ -153,9 +166,8 @@ class CapabilityPlanContractTest(unittest.TestCase):
                 self.assertFalse(result["dispatch_ready"])
                 self.assertIn("blocked:capability_unavailable", result["warnings"])
 
-    def test_v3_is_resume_only_when_v4_becomes_the_forward_contract(self) -> None:
-        legacy = plan(version=3)
-        legacy["leaves"][0].pop("capability_requirements")
+    def test_v4_is_resume_only_when_v5_becomes_the_forward_contract(self) -> None:
+        legacy = plan(version=4)
         result = validate(legacy)
         self.assertTrue(result["valid"], result["errors"])
         self.assertTrue(result["resume_ready"])
@@ -201,13 +213,13 @@ class CapabilityLedgerTest(unittest.TestCase):
             try:
                 code = ledger.main(args)
             except SystemExit as error:
-                return error.code, {"error": "init-v4 is unavailable"}
+                return error.code, {"error": "ledger command is unavailable"}
         return code, json.loads(stream.getvalue())
 
-    def init4(self) -> str:
+    def init5(self) -> str:
         code, result = self.call(
             *self.common,
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -219,23 +231,24 @@ class CapabilityLedgerTest(unittest.TestCase):
             str(self.binding_file),
         )
         self.assertEqual(0, code, result)
+        self.assertEqual("init-v5", result["action"])
         return result["run_id"]
 
     def checkpoint(self, run_id: str) -> dict:
         path = self.root / "planning-policy/ledgers/capability-plan" / run_id / "checkpoint.json"
         return json.loads(path.read_text(encoding="utf-8"))
 
-    def test_init_v4_retains_binding_with_the_assignment(self) -> None:
-        run_id = self.init4()
+    def test_init_v5_retains_binding_with_the_assignment(self) -> None:
+        run_id = self.init5()
         checkpoint = self.checkpoint(run_id)
         step = checkpoint["steps"]["build"]
-        self.assertEqual(4, checkpoint["schema"])
+        self.assertEqual(5, checkpoint["schema"])
         self.assertEqual("planning-capability-binding-v1", step["capability_binding"]["schema"])
         self.assertEqual(canonical_sha256(self.plan), step["capability_binding"]["plan_sha256"])
         self.assertEqual("gpt-5.6-terra", step["capability_binding"]["bindings"][0]["executor"])
 
     def test_retry_assignment_change_requires_a_matching_rebinding_before_ready(self) -> None:
-        run_id = self.init4()
+        run_id = self.init5()
         code, blocked = self.call(
             *self.common,
             "transition",
@@ -281,6 +294,85 @@ class CapabilityLedgerTest(unittest.TestCase):
             "gpt-5.6-sol",
             self.checkpoint(run_id)["steps"]["build"]["capability_binding"]["bindings"][0]["executor"],
         )
+
+    def test_init_v4_requires_contract_migration(self) -> None:
+        legacy_plan = plan(version=4)
+        self.plan_file.write_text(json.dumps(legacy_plan), encoding="utf-8")
+        self.binding_file.write_text(json.dumps(binding(legacy_plan)), encoding="utf-8")
+        code, result = self.call(
+            *self.common,
+            "init-v4",
+            "--actor",
+            "parent",
+            "--approved",
+            "--plan-file",
+            str(self.plan_file),
+            "--assignments-file",
+            str(self.assignments_file),
+            "--capability-binding-file",
+            str(self.binding_file),
+        )
+        self.assertEqual(3, code)
+        self.assertEqual("blocked:contract_migration_required", result["error"])
+
+    def test_existing_v4_checkpoint_resumes_without_serialized_shape_change(self) -> None:
+        run_id = self.init5()
+        run = self.root / "planning-policy/ledgers/capability-plan" / run_id
+        legacy_plan = plan(version=4)
+        legacy_hash = canonical_sha256(legacy_plan)
+        checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
+        checkpoint["schema"] = 4
+        checkpoint["plan_hash"] = legacy_hash
+        stored = checkpoint["steps"]["build"]["capability_binding"]
+        stored["plan_sha256"] = legacy_hash
+        checkpoint["steps"]["build"]["capability_binding_sha256"] = canonical_sha256(stored)
+        (run / "plan.json").write_text(json.dumps(legacy_plan), encoding="utf-8")
+        (run / "checkpoint.json").write_text(json.dumps(checkpoint), encoding="utf-8")
+        events = [json.loads(line) for line in (run / "events.jsonl").read_text().splitlines()]
+        events[0]["action"] = "init-v4"
+        (run / "events.jsonl").write_text(
+            "".join(
+                json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n"
+                for event in events
+            ),
+            encoding="utf-8",
+        )
+        checkpoint_path = run / "checkpoint.json"
+        before = checkpoint_path.read_bytes()
+
+        code, result = self.call(*self.common, "show", "--run-id", run_id)
+
+        self.assertEqual(0, code, result)
+        self.assertEqual(4, result["contract_version"])
+        self.assertEqual(before, checkpoint_path.read_bytes())
+
+        code, next_result = self.call(
+            *self.common, "show", "--run-id", run_id, "--next-only"
+        )
+        self.assertEqual(0, code, next_result)
+        self.assertEqual("ready_pending", next_result["next"]["category"])
+
+        code, ready = self.call(
+            *self.common,
+            "transition",
+            "--actor",
+            "parent",
+            "--run-id",
+            run_id,
+            "--step-id",
+            "build",
+            "--to",
+            "ready",
+            "--agent-id",
+            "legacy-v4-agent",
+        )
+        self.assertEqual(0, code, ready)
+        self.assertIn("next", ready)
+
+        code, listed = self.call(*self.common, "list")
+        self.assertEqual(0, code, listed)
+        [entry] = listed["runs"]
+        self.assertEqual(4, entry["contract_version"])
 
 
 class CapabilityAdapterTest(unittest.TestCase):

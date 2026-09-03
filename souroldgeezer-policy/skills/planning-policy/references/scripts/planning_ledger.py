@@ -17,7 +17,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-# A v4 checkpoint retains one bounded capability binding per step. Keep the
+# A v4/v5 checkpoint retains one bounded capability binding per step. Keep the
 # record bounded while leaving the established 40-step summary lane viable.
 MAX_CHECKPOINT = 64 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
@@ -123,6 +123,10 @@ RETENTION_DAYS = {
 }
 LIFECYCLE_FIELDS = {"run_status", "outcome", "closed_at", "purge_after"}
 ESCALATING_RETRY_POLICY = "escalating_remediation_v1"
+RUN_SCHEMAS = {2, 3, 4, 5}
+CAPABILITY_SCHEMAS = {4, 5}
+LIVE_NEXT_SCHEMAS = {4, 5}
+FORWARD_SCHEMA = 5
 PORTABLE_TIERS = ("mechanical", "standard", "analytical", "deep")
 RETRY_STATE_FIELDS = {
     "current_tier",
@@ -599,7 +603,7 @@ def validate_steps2(data, leafs):
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
             assignment = step.get("current_assignment")
             assignment_fields = {"agent_id", "harness"}
-            if data.get("schema") == 4:
+            if data.get("schema") in CAPABILITY_SCHEMAS:
                 assignment_fields.add("model_or_alias")
             if (
                 not RETRY_STATE_FIELDS.issubset(step)
@@ -618,7 +622,7 @@ def validate_steps2(data, leafs):
                 or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
             ):
                 raise Error("blocked:plan_tampered")
-            if data.get("schema") == 4:
+            if data.get("schema") in CAPABILITY_SCHEMAS:
                 binding = step.get("capability_binding")
                 if (
                     not isinstance(assignment.get("model_or_alias"), str)
@@ -885,10 +889,10 @@ def plan_validator():
     return module.validate
 
 
-def read_plan(path, contract_version=4):
+def read_plan(path, contract_version=FORWARD_SCHEMA):
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
-    ready_key = "approval_ready" if contract_version == 4 else "resume_ready"
+    ready_key = "approval_ready" if contract_version == FORWARD_SCHEMA else "resume_ready"
     if (
         not result.get("valid")
         or not result.get(ready_key)
@@ -899,7 +903,7 @@ def read_plan(path, contract_version=4):
 
 
 def capability_bindings(path, plan):
-    """Load one complete v4 binding and retain only the assigned step's evidence."""
+    """Load one complete v4/v5 binding and retain assigned-step evidence."""
     value = read_json(path, "cannot read capability binding file")
     result = plan_validator()(plan, capability_binding=value)
     if not result.get("valid") or not result.get("dispatch_ready"):
@@ -988,6 +992,10 @@ def init3(args):
     raise Error("blocked:contract_migration_required")
 
 
+def init4(args):
+    raise Error("blocked:contract_migration_required")
+
+
 def load_predecessor_run(ledger_root, plan_id, run_id):
     """Load and fully re-validate a predecessor run's checkpoint and plan.
 
@@ -1002,7 +1010,7 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "unresolvable predecessor checkpoint")
     if (
-        checkpoint.get("schema") not in {2, 3, 4}
+        checkpoint.get("schema") not in RUN_SCHEMAS
         or checkpoint.get("plan_id") != plan_id
         or checkpoint.get("run_id") != run_id
     ):
@@ -1013,8 +1021,11 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
     ):
         raise Error("unresolvable predecessor plan")
     plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
-    ready_key = "dispatch_ready" if checkpoint["schema"] == 4 else "resume_ready"
-    if not plan_result.get(ready_key) or plan_result.get("contract_version") != checkpoint["schema"]:
+    ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
+    if (
+        not plan_result.get(ready_key)
+        or plan_result.get("contract_version") != checkpoint["schema"]
+    ):
         raise Error("unresolvable predecessor plan")
     validate_steps2(checkpoint, leaves_by_id(plan))
     validate_retry_artifacts(directory, checkpoint)
@@ -1025,7 +1036,7 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
 
 
 def series_predecessor_disclosure(ledger_root, series):
-    """Compute the init-v4 predecessor cross-check for a slice > 1 successor.
+    """Compute the init-v5 predecessor cross-check for a slice > 1 successor.
 
     Never raises: a gc'd, purged, unreadable, or tampered predecessor is
     disclosed as "unresolvable" rather than failing the successor's init.
@@ -1051,9 +1062,9 @@ def series_predecessor_disclosure(ledger_root, series):
     return "matched"
 
 
-def init4(args):
+def init5(args):
     approved_parent(args)
-    plan = read_plan(args.plan_file, 4)
+    plan = read_plan(args.plan_file, FORWARD_SCHEMA)
     assigned = assignments(args.assignments_file, plan)
     bindings = capability_bindings(args.capability_binding_file, plan)
     ledger_root = root(args)
@@ -1069,7 +1080,7 @@ def init4(args):
     if invalid:
         raise Error("target plan ledger directory is invalid")
     if any(entry["legacy"] for entry in existing):
-        raise Error("cannot add a v4 run inside a legacy ledger directory")
+        raise Error("cannot add a v5 run inside a legacy ledger directory")
     run_id = str(uuid.uuid4())
     run = directory / run_id
     if run.exists():
@@ -1108,7 +1119,7 @@ def init4(args):
             **CLOSEOUT_FIELDS,
         }
     data = {
-        "schema": 4,
+        "schema": FORWARD_SCHEMA,
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": digest(plan),
@@ -1131,14 +1142,14 @@ def init4(args):
     initial_event(
         run,
         created_at,
-        "init-v4",
+        "init-v5",
         args.plan_id,
         run_id=run_id,
         plan_hash=data["plan_hash"],
     )
     result = {
         "ok": True,
-        "action": "init-v4",
+        "action": "init-v5",
         "plan_id": args.plan_id,
         "run_id": run_id,
         "plan_hash": data["plan_hash"],
@@ -1176,7 +1187,7 @@ def load2(args):
     path = required_file(directory, "checkpoint.json", "unknown run id")
     data = read_json(path, "invalid v2 checkpoint")
     if (
-        data.get("schema") not in {2, 3, 4}
+        data.get("schema") not in RUN_SCHEMAS
         or data.get("plan_id") != args.plan_id
         or data.get("run_id") != args.run_id
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
@@ -1186,7 +1197,7 @@ def load2(args):
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
     plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data))
-    ready_key = "dispatch_ready" if data["schema"] == 4 else "resume_ready"
+    ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
     if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
         raise Error("blocked:plan_tampered")
     leafs = leaves_by_id(plan)
@@ -1508,7 +1519,7 @@ def ready(args, directory, data, plan, batches, step):
             "agent_id": remediation["next_agent_id"],
             "harness": remediation["next_harness"],
         }
-        if data.get("schema") == 4:
+        if data.get("schema") in CAPABILITY_SCHEMAS:
             current_assignment["model_or_alias"] = (
                 args.model_or_alias or step["current_assignment"]["model_or_alias"]
             )
@@ -1529,12 +1540,12 @@ def ready(args, directory, data, plan, batches, step):
                 "agent_id": next_agent_id,
                 "harness": args.harness or step["assignment"]["harness"],
             }
-            if data.get("schema") == 4:
+            if data.get("schema") in CAPABILITY_SCHEMAS:
                 current_assignment["model_or_alias"] = (
                     args.model_or_alias or step["assignment"]["model_or_alias"]
                 )
             step["current_assignment"] = current_assignment
-    if data.get("schema") == 4:
+    if data.get("schema") in CAPABILITY_SCHEMAS:
         current = step["current_assignment"]
         stored = step["capability_binding"]["bindings"][0]
         if (
@@ -1608,7 +1619,7 @@ def series_closeout_overlay(plan, block):
 
 
 def checkpoint_next(directory, data, batches, plan):
-    """Select one highest-priority legal v4 action from the validated checkpoint."""
+    """Select one highest-priority legal v4/v5 action from the checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next(
             {"category": "terminal_closed", "outcome": data["outcome"]}
@@ -1841,7 +1852,10 @@ def transition2(args):
         attempt_id=step["attempt_id"],
     )
     result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
-    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+    if (
+        data.get("schema") in LIVE_NEXT_SCHEMAS
+        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
+    ):
         result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
@@ -2001,7 +2015,10 @@ def reopen2(args):
         raise Error("only a retained blocked run may reopen")
     if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
-    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+    if (
+        data.get("schema") in LIVE_NEXT_SCHEMAS
+        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
+    ):
         batches = step_batches(plan)
         pending = [
             step
@@ -2045,7 +2062,10 @@ def reopen2(args):
             step["id"] for step in ordered_steps(data["steps"]) if step in retryable
         ],
     }
-    if data.get("schema") == 4 and data.get("retry_policy") == ESCALATING_RETRY_POLICY:
+    if (
+        data.get("schema") in LIVE_NEXT_SCHEMAS
+        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
+    ):
         ids = result["retryable_steps"]
         first = data["steps"][ids[0]]
         command = (
@@ -2494,7 +2514,7 @@ def classify_legacy(directory, current):
 def classify_v2(plan_id, directory, current):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
-    if checkpoint.get("schema") not in {2, 3, 4}:
+    if checkpoint.get("schema") not in RUN_SCHEMAS:
         raise Error("unknown checkpoint schema")
     if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
         raise Error("v2 directory identity mismatch")
@@ -2506,7 +2526,7 @@ def classify_v2(plan_id, directory, current):
     ):
         raise Error("blocked:plan_tampered")
     plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
-    ready_key = "dispatch_ready" if checkpoint["schema"] == 4 else "resume_ready"
+    ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
     if (
         not plan_result.get(ready_key)
         or plan_result.get("contract_version") != checkpoint["schema"]
@@ -2665,7 +2685,7 @@ def remove_entry(entry):
     path = entry["_path"]
     if path.is_symlink() or not path.is_dir():
         raise Error("refusing changed purge target")
-    if entry["contract_version"] in {2, 3, 4}:
+    if entry["contract_version"] in RUN_SCHEMAS:
         safe_run_contents(path)
         returns = path / "returns"
         if returns.exists() and any(
@@ -2680,7 +2700,7 @@ def remove_entry(entry):
             raise Error("refusing changed legacy purge target")
     parent_path = path.parent
     shutil.rmtree(path)
-    if entry["contract_version"] in {2, 3, 4}:
+    if entry["contract_version"] in RUN_SCHEMAS:
         try:
             parent_path.rmdir()
         except OSError:
@@ -2832,12 +2852,15 @@ def bounded_step_summary(result):
 def show(args):
     if args.next_only:
         if not args.run_id:
-            raise Error("show --next-only requires a version-4 run")
+            raise Error("show --next-only requires a version-4 or version-5 run")
         if args.step_id:
             raise Error("show --next-only does not accept --step-id")
         directory, data, plan, _leafs = load2(args)
-        if data.get("schema") != 4 or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
-            raise Error("show --next-only requires a version-4 run")
+        if (
+            data.get("schema") not in LIVE_NEXT_SCHEMAS
+            or data.get("retry_policy") != ESCALATING_RETRY_POLICY
+        ):
+            raise Error("show --next-only requires a version-4 or version-5 run")
         validate_events2(directory, data)
         result = {
             "ok": True,
@@ -2956,8 +2979,8 @@ def usage_path(directory):
 def trace_run(args, require_usage=True, require_open=False):
     parent(args.actor)
     directory, data, plan, leafs = load2(args)
-    if data["schema"] not in {3, 4}:
-        raise Error("tracing requires a contract version 3 or 4 run")
+    if data["schema"] != 3 and data["schema"] not in LIVE_NEXT_SCHEMAS:
+        raise Error("tracing requires a contract version 3, 4, or 5 run")
     usage = usage_path(directory)
     if require_usage and not usage.exists():
         raise Error("trace-init is required")
@@ -3149,7 +3172,7 @@ def validate(args):
     }
     if (
         args.closeout
-        and data.get("schema") == 4
+        and data.get("schema") in LIVE_NEXT_SCHEMAS
         and data.get("retry_policy") == ESCALATING_RETRY_POLICY
         and data["steps"]
         and all(step["status"] == "cleaned" for step in data["steps"].values())
@@ -3195,6 +3218,12 @@ def parse():
     init4_parser.add_argument("--plan-file", required=True)
     init4_parser.add_argument("--assignments-file", required=True)
     init4_parser.add_argument("--capability-binding-file", required=True)
+    init5_parser = commands.add_parser("init-v5")
+    init5_parser.add_argument("--actor", required=True)
+    init5_parser.add_argument("--approved", action="store_true")
+    init5_parser.add_argument("--plan-file", required=True)
+    init5_parser.add_argument("--assignments-file", required=True)
+    init5_parser.add_argument("--capability-binding-file", required=True)
     trans = commands.add_parser("transition")
     trans.add_argument("--actor", required=True)
     trans.add_argument("--run-id")
@@ -3268,6 +3297,8 @@ def main(argv=None):
             value = init3(args)
         elif args.command == "init-v4":
             value = init4(args)
+        elif args.command == "init-v5":
+            value = init5(args)
         elif args.command == "transition":
             value = transition2(args) if args.run_id else transition1(args)
         elif args.command == "record-return":

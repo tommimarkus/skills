@@ -1,8 +1,8 @@
 """Coverage for the bounded live-next chain and restart rehydration.
 
-Guidance must be derived from the validated v4 checkpoint and the predicates
+Guidance must be derived from the validated forward checkpoint and the predicates
 that enforce lifecycle legality. `TRANS` remains version-1-only; these cases do
-not permit a second v2-v4 transition table.
+not permit a second v2-v5 transition table.
 """
 
 from __future__ import annotations
@@ -83,11 +83,19 @@ def batch_leaf(sid: str, dependencies: list[str], attempts: int = 3) -> dict:
 
 def make_plan(leaves: list[dict], series: dict | None = None) -> dict:
     plan = {
-        "contract_version": 4,
+        "contract_version": 5,
         "objective": "Emit a bounded next block at the point of use",
         "scope_summary": "Only the declared steps are in scope.",
         "approved_decisions": ["The ledger states its own next action."],
-        "work_units": [{"id": x["id"], "original_size": "small"} for x in leaves],
+        "work_units": [
+            {
+                "id": x["id"],
+                "original_size": "small",
+                "cohesive_outcome": f"Complete {x['id']}",
+                "decomposition": {"shape": "single"},
+            }
+            for x in leaves
+        ],
         "leaves": leaves,
     }
     if series is not None:
@@ -163,7 +171,7 @@ class LedgerHarness(unittest.TestCase):
         self.build(leaves or [leaf("build", [])], series)
         code, result = self.call(
             *self.common,
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -653,7 +661,7 @@ class LegacySilenceTest(LedgerHarness):
         events_path = directory / "events.jsonl"
         events = [json.loads(line) for line in events_path.read_text().splitlines()]
         for entry in events:
-            entry["action"] = entry["action"].replace("-v4", f"-v{version}")
+            entry["action"] = entry["action"].replace("-v5", f"-v{version}")
             if "plan_hash" in entry:
                 entry["plan_hash"] = checkpoint["plan_hash"]
         events_path.write_text(
@@ -680,7 +688,7 @@ class LegacySilenceTest(LedgerHarness):
                 code, rejected = self.show_next()
                 self.assertEqual(3, code, rejected)
                 self.assertEqual(
-                    "show --next-only requires a version-4 run", rejected["error"]
+                    "show --next-only requires a version-4 or version-5 run", rejected["error"]
                 )
 
     def test_a_version_one_ledger_stays_silent(self):
@@ -714,7 +722,9 @@ class LegacySilenceTest(LedgerHarness):
 
         code, rejected = self.call(*legacy, "show", "--next-only")
         self.assertEqual(3, code, rejected)
-        self.assertEqual("show --next-only requires a version-4 run", rejected["error"])
+        self.assertEqual(
+            "show --next-only requires a version-4 or version-5 run", rejected["error"]
+        )
 
 
 class SeriesOverlayNextBlockTest(LedgerHarness):

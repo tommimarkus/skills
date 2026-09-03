@@ -71,13 +71,19 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                 leaf["irreducible_unknown_or_risk"] = "retry terminal precedence"
             leaves.append(leaf)
         plan = {
-            "contract_version": 4,
+            "contract_version": 5,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],
             "leaves": leaves,
             "work_units": [
-                {"id": f"step{number}", "original_size": "small"} for number in range(count)
+                {
+                    "id": f"step{number}",
+                    "original_size": "small",
+                    "cohesive_outcome": f"Complete step{number}",
+                    "decomposition": {"shape": "single"},
+                }
+                for number in range(count)
             ],
         }
         if portable_tier in {"analytical", "deep"}:
@@ -143,7 +149,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         selected_plan = self.plan(plan_id, count, dependent, max_attempts, portable_tier)
         code, result = self.call(
             *self.common(plan_id),
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -821,7 +827,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         linked_plan = self.plan("linked")
         code, _ = self.call(
             *self.common("linked"),
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -900,12 +906,20 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         path.write_text(
             json.dumps(
                 {
-                    "contract_version": 4,
+                    "contract_version": 5,
                     "objective": "objective",
                     "scope_summary": "scope",
                     "approved_decisions": ["settled"],
                     "leaves": leaves,
-                    "work_units": [{"id": sid, "original_size": "small"} for sid in ids],
+                    "work_units": [
+                        {
+                            "id": sid,
+                            "original_size": "small",
+                            "cohesive_outcome": f"Complete {sid}",
+                            "decomposition": {"shape": "single"},
+                        }
+                        for sid in ids
+                    ],
                 }
             )
         )
@@ -958,7 +972,7 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         selected = self.plan(plan_id, ids, batched, max_attempts)
         code, result = self.call(
             *self.common(plan_id),
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",

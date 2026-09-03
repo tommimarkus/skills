@@ -76,10 +76,17 @@ class PlanningLedgerTest(unittest.TestCase):
             if portable_tier in {"analytical", "deep"}:
                 leaf["irreducible_unknown_or_risk"] = "retry behavior at the tier boundary"
             leaves.append(leaf)
-            units.append({"id": sid, "original_size": "small"})
+            units.append(
+                {
+                    "id": sid,
+                    "original_size": "small",
+                    "cohesive_outcome": f"Complete {sid}",
+                    "decomposition": {"shape": "single"},
+                }
+            )
         path = self.root / "plan.json"
         plan = {
-            "contract_version": 4,
+            "contract_version": 5,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["decision"],
@@ -156,7 +163,7 @@ class PlanningLedgerTest(unittest.TestCase):
         events_path = directory / "events.jsonl"
         events = [json.loads(line) for line in events_path.read_text().splitlines()]
         for event in events:
-            event["action"] = event["action"].replace("-v4", "-v2")
+            event["action"] = event["action"].replace("-v5", "-v2")
             if "plan_hash" in event:
                 event["plan_hash"] = checkpoint["plan_hash"]
         events_path.write_text("".join(json.dumps(event) + "\n" for event in events))
@@ -183,7 +190,7 @@ class PlanningLedgerTest(unittest.TestCase):
         selected_plan = plan_path or self.plan(count, max_attempts, portable_tier)
         code, data = self.call(
             *self.common,
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -353,7 +360,7 @@ class PlanningLedgerTest(unittest.TestCase):
         if agent_id:
             arguments += ["--agent-id", agent_id]
         checkpoint = self.checkpoint(run)
-        if checkpoint.get("schema") == 4:
+        if checkpoint.get("schema") in {4, 5}:
             sid = remediation["step_id"]
             executor = checkpoint["steps"][sid]["current_assignment"]["model_or_alias"]
             plan_path = self.root / "planning-policy/ledgers/plan" / run / "plan.json"
@@ -384,11 +391,38 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("", step["retry_remediation_path"])
         self.assertEqual("", step["retry_remediation_sha256"])
 
+    def test_v5_trace_init_is_available_but_v2_stays_rejected(self):
+        run = self.init2()
+        code, initialized = self.call(
+            *self.common,
+            "trace-init",
+            "--actor",
+            "parent",
+            "--run-id",
+            run,
+        )
+        self.assertEqual(0, code, initialized)
+        self.assertEqual("trace-init", initialized["action"])
+
+        legacy_run = self.init2()
+        self.downgrade_run_to_v2(legacy_run, policyless=True)
+        code, rejected = self.call(
+            *self.common,
+            "trace-init",
+            "--actor",
+            "parent",
+            "--run-id",
+            legacy_run,
+        )
+        self.assertEqual(3, code, rejected)
+        self.assertEqual(
+            "tracing requires a contract version 3, 4, or 5 run", rejected["error"]
+        )
+
     def test_policyless_v2_keeps_legacy_retry_behavior_without_new_state(self):
         run = self.init2()
         self.downgrade_run_to_v2(run, policyless=True)
         checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
-        checkpoint = json.loads(checkpoint_path.read_text())
         before = checkpoint_path.read_bytes()
         self.assertEqual(0, self.call(*self.common, "show", "--run-id", run)[0])
         self.assertEqual(before, checkpoint_path.read_bytes())
@@ -700,7 +734,7 @@ class PlanningLedgerTest(unittest.TestCase):
             3,
             self.call(
                 *self.common,
-                "init-v4",
+                "init-v5",
                 "--actor",
                 "parent",
                 "--approved",
@@ -1142,7 +1176,7 @@ class PlanningLedgerTest(unittest.TestCase):
             selected_plan = self.plan()
             code, _ = self.call(
                 *self.common,
-                "init-v4",
+                "init-v5",
                 "--actor",
                 "parent",
                 "--approved",

@@ -63,13 +63,19 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
                 }
             )
         plan = {
-            "contract_version": 4,
+            "contract_version": 5,
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],
             "leaves": leaves,
             "work_units": [
-                {"id": f"step{number}", "original_size": "small"} for number in range(count)
+                {
+                    "id": f"step{number}",
+                    "original_size": "small",
+                    "cohesive_outcome": f"Complete step{number}",
+                    "decomposition": {"shape": "single"},
+                }
+                for number in range(count)
             ],
         }
         if series is not None:
@@ -125,7 +131,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         selected_plan = self.plan(plan_id, count, series)
         code, result = self.call(
             *self.common(plan_id),
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
@@ -614,7 +620,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         self.assertEqual("series-handoff.json", checkpoint["series_handoff_path"])
         self.assertEqual(ledger.digest(artifact), checkpoint["series_handoff_sha256"])
         self.assertEqual(self.content(), {k: artifact[k] for k in self.content()})
-        closes = [e for e in self.events("plan", run_id) if e["action"] == "close-v4"]
+        closes = [e for e in self.events("plan", run_id) if e["action"] == "close-v5"]
         self.assertEqual(1, len(closes))
         self.assertEqual(checkpoint["series_handoff_sha256"], closes[0]["series_handoff_sha256"])
         self.assertEqual("plan-series", closes[0]["series_id"])
@@ -680,7 +686,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         digests = [
             e["series_handoff_sha256"]
             for e in self.events("plan", run_id)
-            if e["action"] == "close-v4"
+            if e["action"] == "close-v5"
         ]
         self.assertEqual([first_digest, second_digest], digests)
         self.assertEqual(0, self.validate("plan", run_id)[0])
@@ -698,14 +704,14 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         self.assert_rejected_intact("plan", run_id, before, code, result)
         self.assertIn("--series-handoff-file", json.dumps(result))
 
-    # -- init-v4 predecessor cross-check ------------------------------------
+    # -- init-v5 predecessor cross-check ------------------------------------
 
     def init4_full(self, plan_id="plan", count=1, series=None):
         """Like `init4`, but returns the full result instead of just run_id."""
         selected_plan = self.plan(plan_id, count, series)
         return self.call(
             *self.common(plan_id),
-            "init-v4",
+            "init-v5",
             "--actor",
             "parent",
             "--approved",
