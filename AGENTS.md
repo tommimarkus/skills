@@ -204,6 +204,9 @@ before React for Vite + React, retains React before Next.js, and permits Vite
 alone. JavaScript/TypeScript software guidance remains the existing
 `typescript.md` lane; security uses its separate evidence-gated `jsts.*` pack,
 and Node/React lifecycle-test rules remain under test-quality-audit.
+App-design also owns user-flow mapping and adaptive screen layout through a
+framework-neutral on-demand procedure; routine component/state work and settled
+layout directions do not load that procedure.
 Every Deep test-quality audit assesses suite health by establishing management
 evidence before sampling: feedback lanes, project-declared budgets, current
 results, runtime distribution, reliability, ownership, overlap, and retirement

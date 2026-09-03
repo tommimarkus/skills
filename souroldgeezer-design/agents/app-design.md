@@ -2,10 +2,11 @@
 name: app-design
 description: >-
   Use when building, extracting, reviewing, or looking up frontend app design:
-  routes/screens, components, state/data flow, rendering, forms, navigation,
-  screen composition, browser behavior, responsive/a11y/i18n/performance,
-  Vite, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra,
-  architecture, security, and test-quality work.
+  routes/screens, user-flow mapping, adaptive screen layout, components,
+  state/data flow, rendering, forms, navigation, browser behavior,
+  responsive/a11y/i18n/performance, Vite, React, Next.js, and Blazor™
+  WebAssembly. Defer software, API, infra, architecture, security, and
+  test-quality work.
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

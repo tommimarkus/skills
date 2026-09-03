@@ -1,9 +1,10 @@
 # App Design Reference
 
-This reference covers web frontend application design: routes, screens,
-component architecture, state and data ownership, rendering boundaries, form
-flows, navigation, browser runtime behavior, responsive layout, accessibility,
-internationalization, and Core Web Vitals posture.
+This reference covers web frontend application design: user-flow mapping,
+routes, screens, adaptive screen layout, component architecture, state and data
+ownership, rendering boundaries, form flows, navigation, browser runtime
+behavior, responsive layout, accessibility, internationalization, and Core Web
+Vitals posture.
 
 Responsive design remains a mandatory layer of app design rather than a
 standalone public skill.
@@ -16,6 +17,8 @@ layer, and a smallest useful correction.
 
 App design owns the user-facing browser application surface:
 
+- user goals and end-to-end flows, including entry, completion, branches,
+  recovery, resumption, and external touchpoints;
 - route trees, app shells, layouts, screens, navigation, and history behavior;
 - component roles, composition boundaries, props/events/contracts, and reuse;
 - local UI state, shared app state, server cache, browser storage, optimistic
@@ -209,8 +212,28 @@ the shape of the underlying data model.
 - Aesthetic direction — brand, typography, and art direction — stays out of
   scope; see section 8.
 
+### 3.16 Flow and layout traceability
+
+Default: derive screens and regions from the complete user flow, then preserve
+traceability from each stable flow-step ID through its route/screen, state,
+layout region, DOM order, reading order, and focus order. Map current and target
+journeys separately. A material unsettled layout direction stays unapproved
+until the user selects or combines rough alternatives; narrow fixes and settled
+directions may skip alternatives with the reason disclosed.
+
+Wide and narrow layouts may reflow, reveal, reposition, or change presentation,
+but the transformation must retain essential content, recovery paths, and
+meaning. Supporting content remains subordinate to the primary task.
+
 ## 4. Primitives
 
+- **User-flow map:** actor, goal, entry, preconditions, and observable completion.
+- **Flow-step contract:** stable ID, route/screen, user action, system
+  feedback/state, next paths, and recovery.
+- **Layout contract:** region priority, wide placement, narrow order, adaptive
+  operation, DOM/reading/focus order, and size constraints.
+- **Screen-state matrix:** default, loading, empty, error, offline,
+  unauthorized, success, and destructive-confirmation behavior.
 - **Route map:** URL, screen owner, layout shell, data owner, auth state, and
   recovery path.
 - **Screen contract:** workflow goal, loading/error/empty/offline states,
@@ -329,6 +352,14 @@ generic toast-only feedback.
 - **APP-COMP-2:** uniform input widths or action emphasis erase content-length
   and priority cues (every input full width regardless of expected content;
   competing equal-weight actions).
+- **APP-FLOW-1:** flow lacks a user goal, entry, or observable completion, or
+  exposes implementation structure instead of user intent.
+- **APP-FLOW-2:** a branch, error, cancellation, back/reload, resumption, or
+  support path creates an unexplained dead end.
+- **APP-LAYOUT-1:** supporting content competes with or displaces the primary
+  task.
+- **APP-LAYOUT-2:** adaptive transformation loses essential content or
+  introduces a meaning-changing mismatch between visual, DOM, and focus order.
 
 Legacy alias: older review output may have used `RD-*` for responsive-only
 findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
@@ -336,6 +367,10 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
 
 ## 7. Checklist
 
+- `[static]` User-flow maps name actor, goal, entry, preconditions, observable
+  completion, stable steps, branches, and recovery or resumption.
+- `[static]` Flow-step IDs trace to route/screen, user action, system state,
+  next paths, layout regions, and screen-state variants.
 - `[static]` Route/screen ownership is named and recoverable from navigation.
 - `[static]` Component roles separate orchestration, state, workflow, and
   presentational leaves unless the feature is intentionally tiny.
@@ -351,10 +386,13 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
   emphasis cues, and progressive disclosure.
 - `[dom]` Landmarks, headings, form associations, dialog/popover structure, and
   live regions exist in the rendered DOM.
-- `[behaviour]` Keyboard flow, focus restoration, modal trapping, unsaved
-  changes, navigation history, and offline/error recovery work in a browser.
+- `[behaviour]` Main paths, branches, cancellation, back/reload, resumption,
+  keyboard flow, focus restoration, modal trapping, unsaved changes, navigation
+  history, and offline/error/authentication recovery work in a browser.
 - `[visual]` Layout works at 320 CSS px, 400% zoom, RTL, long text, dark mode,
-  forced colors, reduced motion, and representative narrow/wide containers.
+  forced colors, reduced motion, and representative narrow/wide containers;
+  supporting content stays subordinate and adaptive visual order preserves DOM,
+  reading, and focus meaning.
 - `[a11y-tool]` Text contrast, non-text contrast, accessible names, ARIA
   validity, and common WCAG automation checks pass with the selected tool.
 - `[runtime]` LCP, CLS, INP, bundle cost, lazy loading, frontend telemetry, and

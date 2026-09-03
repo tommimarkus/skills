@@ -71,3 +71,24 @@ documentation.
   original and limited to app-design implications for task-ordered field/section
   grouping, width-as-length signaling, single-primary-action emphasis, and
   progressive disclosure of advanced options.
+- Source: W3C WCAG 2.2 Understanding documents for
+  [Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html),
+  [Meaningful Sequence](https://www.w3.org/WAI/WCAG22/Understanding/meaningful-sequence.html),
+  and [Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html).
+  Handling: linked primary accessibility anchors; the layout contract is an
+  original paraphrase of the need to preserve content and meaning through
+  narrow reflow, magnification, reading order, and sequential focus. No W3C
+  examples or source prose are bundled.
+- Source: GOV.UK Service Manual guidance to
+  [map a user's whole problem](https://www.gov.uk/service-manual/design/map-a-users-whole-problem)
+  and the [GOV.UK Design System pattern index](https://design-system.service.gov.uk/patterns/).
+  Handling: linked public-sector design anchors; the flow procedure uses an
+  original paraphrase of goal-first journey mapping, cross-channel touchpoints,
+  dead-end discovery, and context-selected recovery patterns. No GOV.UK
+  examples, layouts, or source prose are copied.
+- Source: Android Developers
+  [canonical adaptive layouts](https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts).
+  Handling: idea-only source for the framework-neutral distinctions among
+  list-detail, supporting-pane, and feed relationships. They remain optional
+  starting points rather than Android or Material templates. Across these new
+  anchors, no examples, layouts, or source prose are copied.

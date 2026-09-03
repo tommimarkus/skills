@@ -1,22 +1,23 @@
 ---
 name: app-design
 description: >-
-  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, components, state/data flow, rendering, forms, navigation, screen composition, browser behavior, responsive/a11y/i18n/performance, Vite, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
+  Use when building, extracting, reviewing, or looking up frontend app design: routes/screens, user-flow mapping, adaptive screen layout, components, state/data flow, rendering, forms, navigation, browser behavior, responsive/a11y/i18n/performance, Vite, React, Next.js, and Blazor™ WebAssembly. Defer software, API, infra, architecture, security, and test-quality work.
 ---
 
 # App Design
 
 ## Purpose
 
-Shape frontend app workflows, routes, components, state/data, rendering, browser
-behavior, and baseline layers. Use
+Shape frontend app user flows, routes, adaptive screen layouts, components,
+state/data, rendering, browser behavior, and baseline layers. Use
 [../../docs/app-reference/app-design.md](../../docs/app-reference/app-design.md).
 
 ## Contract
 
-Own Build, Extract, Review, and Lookup for frontend workflows, routes/screens,
-components, state/data, forms, navigation, screen composition, rendering,
-browser runtime, interaction states, and responsive/a11y/i18n/performance.
+Own Build, Extract, Review, and Lookup for frontend user-flow mapping,
+routes/screens, adaptive screen layout, components, state/data, forms,
+navigation, screen composition, rendering, browser runtime, interaction states,
+and responsive/a11y/i18n/performance.
 
 Delegate engineering/API/infra/ArchiMate/security/test-quality to
 `software-design`, `api-design`, `infra-design`, `architecture-design`,
@@ -40,6 +41,12 @@ Load what applies: core reference principles/defaults/checklist;
 when existing routes, screens, layouts, components, design tokens, state/data
 patterns, forms, browser storage, rendering boundaries, navigation shell,
 runtime evidence, or diffs are in scope;
+[references/procedures/layout-and-flow.md](references/procedures/layout-and-flow.md)
+for Build, Extract, or Review involving a multi-screen flow, material layout
+redesign, dashboard/workspace composition, or unresolved layout direction; in
+Lookup only when the question explicitly concerns layout or flow mechanics. Do
+not load it for routine component/state work or when the layout direction is
+already settled;
 [extensions/vite.md](extensions/vite.md) for `vite.config.*`, `vite` scripts,
 `import.meta.env`, Vite entry/build/SSR/worker signals, and load it before the React extension;
 [extensions/react.md](extensions/react.md) for React component, hook, state,
@@ -68,26 +75,33 @@ synthetic/paraphrased.
 
 ## Workflow
 
-1. Select mode, scope, app type, workflow, route/screen boundary, and question.
+1. Select mode, scope, actor outcome, app type, workflow, route/screen boundary,
+   and question.
 2. Prefer `rg`; inspect inputs, detect runtime, load and announce extensions.
-3. Assimilate routes, layouts, screens, components, state/data, forms, storage,
-   navigation, screen composition, baseline primitives, build config,
-   observability; apply project assimilation before generating, reviewing,
-   migrating, or extending app structure.
-4. Check for a paired `docs/architecture/<feature>.dediren/` package when app
+3. Assimilate user flows, routes, layouts, screens, components, state/data,
+   forms, storage, navigation, screen composition, baseline primitives, build
+   config, and observability; apply project assimilation before generating,
+   reviewing, migrating, or extending app structure.
+4. When the layout-and-flow route matches, derive screens from the complete
+   flow, explore unsettled directions before selection, and keep flow-step,
+   route, state, layout-region, DOM, reading, and focus-order traceability.
+5. Check for a paired `docs/architecture/<feature>.dediren/` package when app
    route, screen, or workflow changes may affect architecture views.
-5. Separate fact from inference, choose the smallest move, include available
+6. Separate fact from inference, choose the smallest move, include available
    validation, then emit contract/footer.
 
 ## Mode Outputs
 
-- Build: workflow, routes/screens, components, state/data, rendering/browser,
-  interaction states, screen composition, baselines, validation, delegations.
-- Extract: signals, route/screen map, ownership, rendering, baselines, debt,
-  next move.
+- Build: workflow, target flow map, routes/screens, components, state/data,
+  rendering/browser, interaction states, screen composition, rough alternatives
+  when required, selected layout contract, responsive transformation, baselines,
+  validation, delegations.
+- Extract: signals, current flow, entry/exit points, dead ends, recovery and
+  resumption, route/screen map, ownership, rendering, baselines, debt, next move.
 - Review: actionable findings only; `block` unusable/inaccessible/unresponsive
   flow, broken route/component ownership, state/data ambiguity, unsafe rendering,
-  or unvalidated runtime behavior.
+  or unvalidated runtime behavior. Tie layout-and-flow findings to flow-step IDs
+  or layout regions.
 - Lookup: default, tradeoff, citation, delegation, one-line footer.
 
 Every final answer reports mode, extensions, reference path, verification layer
