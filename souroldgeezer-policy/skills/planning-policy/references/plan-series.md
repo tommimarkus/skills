@@ -8,13 +8,14 @@ changes it.
 
 ## What a series is
 
-A series is a finite chain of plans that slices genuinely oversized work
+A series is a finite chain of plans that slices genuinely oversized work only
+after outcome-first grooming merges microleaf candidates
 (`PLANCOST-PLAN-SCALE`) into successive, separately approved plans that carry
 settled decisions forward. It has a stable `series_id`, an integer `slice`
 starting at 1, a `final` boolean, and `end_verification_commands` (1 to 4
 bounded strings, 1–480 characters) declared once at slice 1 and copied
 verbatim by every successor. Changing those commands mid-series is never a
-validator error; it is a flagged re-decision the init-v4 predecessor
+validator error; it is a flagged re-decision the init-v5 predecessor
 cross-check discloses (see below). A series is not a living backlog, roadmap,
 or value ordering — it stops at its declared final slice, not when new work
 occurs to someone.
@@ -24,7 +25,7 @@ self-contained evidence: `plan_id`, `plan_sha256`, `run_id`, `outcome` (one of
 `completed`, `blocked`, `abandoned`), and `handoff_sha256` (64 lowercase hex,
 or `""` for a predecessor closed with no handoff). Slice 1 forbids
 `predecessor`. This evidence is copied at authoring time, not resolved live;
-the init-v4 cross-check below is what actually re-verifies it.
+the init-v5 cross-check below is what actually re-verifies it.
 
 ## Grooming a successor plan
 
@@ -76,7 +77,7 @@ the parent's side:
   `planning-series-handoff-v1` object as run-level `series-handoff.json`,
   capped at 8 KiB (`MAX_SERIES_HANDOFF`), atomically, with a both-or-neither
   checkpoint stamp (`series_handoff_path`, `series_handoff_sha256`); the
-  digest facts also splice into the single `close-v4` event. A missing
+  digest facts also splice into the single `close-v5` event. A missing
   content file, an unparseable one, one carrying the wrong key set, or one
   whose composed artifact would exceed the cap all leave the run untouched
   and `active` — the close is refused before any lifecycle mutation happens,
@@ -91,9 +92,9 @@ the parent's side:
   substituted artifact, or a stamp with no matching file, is caught rather
   than silently trusted.
 
-## Init-v4 predecessor cross-check
+## Init-v5 predecessor cross-check
 
-For an incoming `slice > 1` plan, `init-v4` resolves
+For an incoming `slice > 1` plan, `init-v5` resolves
 `<ledger-root>/<predecessor.plan_id>/<predecessor.run_id>` (after its normal
 auto-gc) and splices exactly one disclosure key, `series_predecessor`, into
 the init result. It never raises on the predecessor's account — a missing,

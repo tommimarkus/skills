@@ -117,6 +117,19 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertIn("legacy_unbounded", " ".join(legacy["required_checks"]))
         self.assertIn("policy-less", " ".join(legacy["required_checks"]))
 
+    def test_v5_outcome_first_cases_cover_rejections_and_permitted_controls(self):
+        rejected = self.behavior["planning-policy-behavior-v5-reject-microleaf-shapes"]
+        self.assertIn("cohesive outcome", " ".join(rejected["required_checks"]))
+        self.assertIn("tier gaming", " ".join(rejected["required_checks"]))
+        self.assertIn("batch", " ".join(rejected["forbidden_behaviors"]))
+        parallel = self.behavior["planning-policy-behavior-v5-parallel-control"]
+        self.assertIn("one cohesive outcome", " ".join(parallel["expected_artifacts"]))
+        self.assertIn("basis: parallel_independence", " ".join(parallel["expected_artifacts"]))
+        self.assertIn("independent acceptance", " ".join(parallel["required_checks"]))
+        checkpointed = self.behavior["planning-policy-behavior-v5-checkpointed-control"]
+        self.assertIn("checkpointed decomposition with shape, basis, and rationale", " ".join(checkpointed["expected_artifacts"]))
+        self.assertIn("intermediate_states", " ".join(checkpointed["forbidden_behaviors"]))
+
     def test_forward_matrix_uses_identical_fixtures_and_exact_mappings(self):
         by_id = {case["id"]: case for case in self.forward}
         self.assertEqual(by_id["standard-implementation"]["attempts"], 2)

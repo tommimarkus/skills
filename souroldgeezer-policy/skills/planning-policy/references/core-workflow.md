@@ -16,14 +16,24 @@ and user approval before implementation.
    the parent retains decomposition, integration, and final verification.
    Before approval, invoke the owning design skill if an unresolved domain-design
    choice materially affects implementation; bring its settled choice back here.
-4. Groom after convergence. Name each step’s reads/writes and settled decisions;
-   split multiple concerns/checks, merge identical boundaries/checks, and batch
-   chained small same-tier leaves: 2–8 mechanical/standard leaves sharing a
-   worktree owner may share one `batch` id. Scope each leaf's
+4. Groom after convergence by deriving cohesive outcomes before leaves. Default
+   to one leaf per outcome; merge a file-per-leaf, code-vs-test, preparatory
+   helper, tier-gaming, or plan-size-gaming split back into its outcome. A v5
+   work unit records `cohesive_outcome` and `decomposition`. Its `shape` is
+   `single`, `parallel`, or `checkpointed`; `parallel` has
+   `basis: parallel_independence` plus a rationale, while `checkpointed` has
+   `basis: failure_isolation` or `rollback_boundary` plus a rationale. Its
+   represented intermediate work must be independently accepted, but that
+   acceptance remains in the work-unit/leaf contract rather than an invented
+   decomposition field. Parallel keeps multiple independently acceptable
+   leaves or outputs inside one cohesive outcome; genuinely separate cohesive
+   outcomes normally remain separate single work units. Batch is operational only
+   and never justifies a split. Name each leaf’s reads/writes and settled
+   decisions. Scope each leaf's
    `acceptance_command` to its write set; a whole-suite run belongs to the
    parent's final verification. A fresh
    agent must finish from the handoff. Start new plan JSON from the canonical
-   [references/templates/plan-v4.json](templates/plan-v4.json) scaffold; it
+   [plan-v5.json](templates/plan-v5.json) scaffold; it
    starts with `contract_version`, and the authored plan keeps that discriminator
    first. Every leaf declares exact `capability_requirements`: baseline
    `plan-step-base-v1` plus only bounded additional requirements. Load [plan contract](plan-contract.md),
@@ -36,8 +46,11 @@ and user approval before implementation.
    the advisory in the same invocation. Act on its codes before approval:
    re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN`, re-tier
    for `PLANCOST-TIER-OVER-ASSIGNED`, or slice the plan for
-   `PLANCOST-PLAN-SCALE`; otherwise record the stated reason in the plan. A plan
-   sliced into successive plans composes and hands off per
+   `PLANCOST-MICROLEAF-RISK`, merge the candidates unless the permitted
+   evidence-backed decomposition rationale applies. Before responding to
+   `PLANCOST-PLAN-SCALE` with a series, merge microleaf candidates; after an
+   oversized return, re-cut from cohesive outcomes rather than remainder items.
+   A plan sliced into successive plans composes and hands off per
    [plan series](plan-series.md).
 
 When guidance initializes `scope-policy`, the plan records its level and
@@ -53,7 +66,7 @@ audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
 otherwise use the owning design skill.
 
-Portable tier is selected once per leaf: `mechanical`, `standard`,
+Portable tier is selected once per outcome leaf: `mechanical`, `standard`,
 `analytical`, or `deep`; no per-leaf runtime tuning. Analytical/deep names its
 irreducible risk; a leaf with no open implementation choice is `mechanical`. Stable work units are weighted once (`small=1`, `medium=2`,
 `large=3`); medium-ready units contain only mechanical/standard leaves and
@@ -73,7 +86,7 @@ Present the groomed plan and stop: Claude uses `ExitPlanMode`; Codex uses native
 approval or asks explicitly and ends the turn. Non-interactive surfaces only
 return a proposal/open questions and say approval was not obtained. No spec,
 commit, implementation, or delegation happens before approval. Approval-ready
-means only that the decision-complete v4 plan validates; it does not imply a
+means only that the decision-complete v5 plan validates; it does not imply a
 host, executor, or worker capability has been selected.
 
 Dispatch is a separate host-resolution action. The active adapter resolves every
@@ -93,7 +106,7 @@ evidence paths, and returns, never raw logs. Successful leaves close
 from the current parent tip. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
-For a new version-4 run, the parent uses the ledger's
+For a new version-5 run, the parent uses the ledger's
 `escalating_remediation_v1` retry policy. The ledger alone decides whether an
 eligible return gets one same-tier remediation attempt or a higher mapped tier;
 it preserves the leaf's task, boundary, read/write sets, and attempt identity

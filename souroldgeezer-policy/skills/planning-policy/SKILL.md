@@ -25,20 +25,20 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [core workflow §enforcement](references/core-workflow.md#enforcement) and
   [§approval-and-output](references/core-workflow.md#approval-and-output).
 - **Executable plan, delegation, or returned handoff:** also read
-  [plan contract](references/plan-contract.md), start new plan JSON from the
-  [canonical v4 scaffold](references/templates/plan-v4.json), and run the advertised
+  [plan contract](references/plan-contract.md), start new plan JSON from
+  [plan-v5.json](references/templates/plan-v5.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
   command before approval and again with the exact capability binding before
-  dispatch. A valid decision-complete v4 plan can be approval-ready without a
+  dispatch. A valid decision-complete v5 plan can be approval-ready without a
   host binding; it is dispatch-ready only after a complete exact
   `planning-capability-binding-v1` joins its digest, every leaf's
   `capability_requirements`, selected host/executor, and bounded evidence. For
   that dispatch check, start the host result from the
   [binding scaffold](references/templates/capability-binding-v1.json). For
   an approved plan with two or more
-  delegated steps, the parent alone uses `init-v4`, `transition`, `record-return`, `show`,
+  delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py). Normal v4
+  [`planning_ledger.py`](references/scripts/planning_ledger.py). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to
   recover the highest-priority action. Lifecycle and
@@ -48,8 +48,7 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   plan into a successive series loads [plan series](references/plan-series.md).
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
-  resuming v1–v3 state; load the retained
-  [v3 scaffold](references/templates/plan-v3.json) only to interpret its plan
+  resuming v1–v4 state; load a retained legacy scaffold only to interpret its plan
   shape. Read the [ledger contract](references/ledger-contract.md) only for
   errors, legacy resumption, diagnosis, retention operations, or ledger
   authoring/audit. Read [selective audit](references/selective-audit.md) only

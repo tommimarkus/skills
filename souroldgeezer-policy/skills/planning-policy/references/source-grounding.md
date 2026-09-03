@@ -1,5 +1,37 @@
 # Planning Policy Source Grounding
 
+## 2026-09-03 outcome-first v5 decomposition
+
+Version 5 responds to repository-authored plan reviews where a technically
+splittable task was treated as several delegated leaves even though it still
+had one user-visible outcome. The resulting file-per-leaf, code-vs-test, and
+preparatory-helper splits increased handoff and integration cost while hiding
+the actual acceptance boundary. Counting leaves also invited tier and
+plan-scale gaming: a concern could be divided until a readiness or scale
+signal looked preferable without making the work more independently
+executable.
+
+The v5 remedy derives cohesive outcomes before leaves and makes one leaf per
+outcome the default. A departure belongs to the work unit and must state its
+evidence: multiple independently acceptable leaves or outputs within one
+cohesive outcome may be `parallel` only with
+`basis: parallel_independence` and a rationale; a risky transition may be
+`checkpointed` only with `basis: failure_isolation` or `rollback_boundary` and
+a rationale. The ordinary leaf acceptance contract, rather than an invented
+decomposition field, proves independently accepted intermediate work. Truly
+separate cohesive outcomes normally stay separate single work units. A batch remains a dispatch
+optimization, not evidence that an outcome has been split well. The new
+synthetic behavior cases exercise rejected microleaf shapes and accepted
+parallel/checkpointed controls. They are original prompts written for this
+repository; no external planning, project-management, or orchestration prose
+was consulted or copied.
+
+`PLANCOST-MICROLEAF-RISK` therefore asks for a merge unless one of those
+evidence-backed rationales is present. Before using `PLANCOST-PLAN-SCALE` to
+slice a series, grooming merges microleaf candidates first. An oversized
+return similarly re-cuts from cohesive outcomes rather than treating the
+unstarted remainder as its own decomposition authority.
+
 ## 2026-08-29 batch dispatch, advisory-fed grooming, and verification economy
 
 The batch lane and the two new cost-advisory codes are grounded in a

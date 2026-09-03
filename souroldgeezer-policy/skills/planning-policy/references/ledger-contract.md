@@ -2,7 +2,7 @@
 
 This is the exception-only reference for ledger errors, legacy resumption,
 diagnosis, retention operations, and ledger authoring or audit. Normal
-version-4 execution follows each command's bounded live `next` result and uses
+version-5 execution follows each command's bounded live `next` result and uses
 read-only `show --next-only` after a long pause or context compaction. The
 ledger records lifecycle facts; it does not approve a plan, select a model, or
 replace the executable-plan validator.
@@ -10,7 +10,7 @@ replace the executable-plan validator.
 ## Runtime reference
 
 This part reconstructs the runtime mechanics when a live result reports an
-error or full diagnosis is required. Successful v4 lifecycle commands state
+error or full diagnosis is required. Successful v5 lifecycle commands state
 their next legal action from the post-command checkpoint. A fresh parent uses
 `show --run-id <uuid4> --next-only`, not this section, for low-cost normal
 rehydration. "Authoring and audit reference" below carries the unabridged
@@ -29,7 +29,7 @@ readiness at `ready`, `in_progress`, or `completed`, since a batch shares one
 worktree; an external dependency still requires `cleaned`. Each step
 has exactly one current attempt at a time.
 
-The binding a parent must construct before calling `init-v4` is
+The binding a parent must construct before calling `init-v5` is
 `planning-capability-binding-v1`: it joins the canonical plan digest, every
 leaf, its declared `capability_requirements`, selected host/executor, and
 bounded evidence. It joins every assignment to exactly one declared leaf by
@@ -42,26 +42,26 @@ bounded opaque `attempt_id`, its first attempt count (`1`), tier, and
 worktree; it cannot replace the plan's portable tier or worktree owner.
 
 At initialization the parent stores a canonical approved-plan copy and its
-lowercase 64-hex-character SHA-256 hash. Every version-2/3/4 lifecycle command
+lowercase 64-hex-character SHA-256 hash. Every version-2/3/4/5 lifecycle command
 compares the supplied or stored plan hash with that copy before changing or
 trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
 
-Every new version-4 run also stamps `retry_policy: escalating_remediation_v1`.
+Every new version-5 run also stamps `retry_policy: escalating_remediation_v1`.
 It retains the resolved binding with each assigned step. An assignment change
 requires an exact re-binding before the step can become ready; otherwise stop
 `blocked:capability_unavailable`, never silently substitute or downgrade.
 
 ### Driving transitions and validate --closeout
 
-`init-v4` requires `--plan-id`, the approved version-4 plan, the complete
+`init-v5` requires `--plan-id`, the approved version-5 plan, the complete
 assignment set, and an exact capability-binding file. It rejects a non-UUID4 run
 ID, a plan that is not `dispatch_ready`, an unavailable capability, or an existing
 `<plan-id>/<run-id>` directory. Its success result's `next` block states the
 ready steps and the first legal command; treat that live block, not this
 paragraph, as authoritative for what to run next.
 
-All lifecycle commands require the same `--run-id` after `init-v4` returns it:
+All lifecycle commands require the same `--run-id` after `init-v5` returns it:
 `transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
 `transition` names a `--step-id` and a `--to` target status; it checks that
 exactly one attempt is current and records a bounded reason plus an optional
@@ -108,7 +108,7 @@ stands; `true` means the parent re-runs only that leaf's own scoped acceptance
 — never the plan's full final verification, which still runs exactly once, at
 closeout.
 
-For a version-4 run, successful transitions add bounded live guidance:
+For a version-5 run, successful transitions add bounded live guidance:
 `ready` names the `in_progress` command; `in_progress` names the agent and
 attempt to await; `integrated` names cleanup; and `cleaned` names newly
 unblocked pending steps plus the first ready command, or `validate --closeout`
@@ -120,7 +120,7 @@ current-attempt uniqueness, and attempt limits before handoff. `validate
 --closeout` additionally fails — by raising an error, not by returning a
 result with a `next` field — while any successful step is only `completed` or
 `integrated`; every successful step must reach `cleaned` before a closeout
-validation can pass. A successful v4 closeout validation names the completed
+validation can pass. A successful v5 closeout validation names the completed
 run `close` command in its bounded `next` block.
 
 ### Bounded step return
@@ -183,7 +183,7 @@ force. No terminal leaf is left undisposed.
 
 ### Run closure and reopening
 
-Every new version-4 checkpoint records `run_status: active`, with `outcome`,
+Every new version-5 checkpoint records `run_status: active`, with `outcome`,
 `closed_at`, and `purge_after` null. `close --actor parent --run-id <id>
 --outcome <completed|blocked|abandoned>` changes it to `run_status: closed` and
 sets the other three fields. A completed close requires every step to be
@@ -197,7 +197,7 @@ blocked run whose retention period has not elapsed and which still has at least
 one retryable pending, blocked, or failed step below its attempt limit. Reopen
 clears the terminal lifecycle fields and returns the run to `active`; it does
 not assign or start an attempt. A dependency is ready-compatible only after it
-is `cleaned`. A successful v4 `reopen` result names its retryable step IDs and
+is `cleaned`. A successful v5 `reopen` result names its retryable step IDs and
 the first ready/remediation command. `close` is terminal and emits no `next`.
 
 `close --series-handoff-file <path>` exists only on a plan carrying a
@@ -207,7 +207,7 @@ non-final slice, and forbidden — as is the flag itself — on the final slice
 or on a plan with no `series` block. The ledger composes the run-level
 `planning-series-handoff-v1` artifact from the parent-supplied content file
 plus the closing run's own identity; see [plan series](plan-series.md) for
-the full close/handoff mechanics and the init-v4 predecessor cross-check.
+the full close/handoff mechanics and the init-v5 predecessor cross-check.
 
 ### Listing, retention, and deletion
 
@@ -238,7 +238,7 @@ validation wins over age.
 ## Authoring and audit reference
 
 Everything below remains true and unabridged; it is no longer required
-reading for a normal in-flight v4 run because lifecycle JSON results and
+reading for a normal in-flight v5 run because lifecycle JSON results and
 `show --next-only` state the applicable action live instead of this document
 restating it ahead of time — exactly the prose-drifts-from-code
 risk `tests/planning_return_contract_parity_test.py`'s own docstring documents
@@ -256,7 +256,7 @@ version-1 path; version-1 also allows `superseded`, which the v2+ state set
 drops). For a version-2/3/4 run, `transition2()` never reads `TRANS`: it
 validates each move through dedicated hardcoded per-status checks (via
 `advance()`), and `V2_STATES` adds `cleaned` and `oversized` on top of the v1
-set. See "Driving transitions and validate --closeout" above for the v2–v4
+set. See "Driving transitions and validate --closeout" above for the v2–v5
 mechanics; a v1 `transition` call's own result is the authoritative statement
 of what `TRANS` permits from a given status.
 
@@ -271,7 +271,7 @@ characters. If records are omitted, it sets `truncated: true` and a
 non-negative `omitted_count`; it never substitutes raw event history for the
 omitted records.
 
-`show --run-id <uuid4> --next-only` is the read-only v4 rehydration lane. It
+`show --run-id <uuid4> --next-only` is the read-only v5 rehydration lane. It
 returns one deterministic highest-priority category and first command, with a
 120-proxy-token `next` block and a 240-proxy-token whole envelope. Priority is:
 cleanup integrated work; integrate completed work; remediate eligible
