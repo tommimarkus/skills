@@ -20,6 +20,7 @@ TEMPLATE = (
     Path(__file__).parents[1]
     / "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json"
 )
+V5_TEMPLATE = TEMPLATE.with_name("plan-v5.json")
 SPEC = importlib.util.spec_from_file_location("plan_contract", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -72,6 +73,15 @@ def v4_plan(*leaves, work_units=None, **overrides):
             "baseline": "plan-step-base-v1",
             "additional": [],
         }
+    return plan
+
+
+def v5_plan(*leaves, work_units=None, **overrides):
+    plan = v4_plan(*leaves, work_units=work_units, **overrides)
+    plan["contract_version"] = 5
+    for unit in plan["work_units"]:
+        unit.setdefault("cohesive_outcome", f"Deliver {unit['id']} as one reviewable outcome")
+        unit.setdefault("decomposition", {"shape": "single"})
     return plan
 
 
@@ -156,10 +166,36 @@ class SharedContractTest(unittest.TestCase):
         )
         populated = MODULE.validate(template)
         self.assertTrue(populated["valid"], populated["errors"])
-        self.assertTrue(populated["approval_ready"])
+        self.assertFalse(populated["approval_ready"])
         self.assertFalse(populated["dispatch_ready"])
         bound = MODULE.validate(template, capability_binding=capability_binding(template))
         self.assertTrue(bound["dispatch_ready"])
+
+    def test_v5_template_is_canonical_blank_scaffold_and_populates_to_dispatch(self):
+        template = json.loads(V5_TEMPLATE.read_text(encoding="utf-8"))
+        self.assertEqual(5, template["contract_version"])
+        self.assertEqual({"id", "original_size", "cohesive_outcome", "decomposition"}, set(template["work_units"][0]))
+        self.assertEqual({"shape": "single"}, template["work_units"][0]["decomposition"])
+        self.assertFalse(MODULE.validate(template)["valid"])
+
+        template["objective"] = "Implement one approved bounded change"
+        template["scope_summary"] = "Edit only the named source and focused test."
+        template["approved_decisions"] = ["Use the settled contract shape."]
+        template["work_units"][0].update(
+            id="build", original_size="small", cohesive_outcome="Deliver the bounded change"
+        )
+        template["leaves"][0].update(
+            id="build", task="Implement the approved change", boundary="Do not edit adjacent modules",
+            read_set=["src/input.py"], write_set=["src/input.py"],
+            settled_decisions={"shape": "settled"}, size="small", portable_tier="mechanical",
+            worktree_owner="task/build", acceptance_command="uv run python -m unittest tests.input_test",
+            work_unit_id="build", max_attempts=2,
+        )
+        result = MODULE.validate(template)
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertTrue(result["approval_ready"])
+        self.assertFalse(result["dispatch_ready"])
+        self.assertTrue(MODULE.validate(template, capability_binding=capability_binding(template))["dispatch_ready"])
 
     def test_accepts_weighted_medium_ready_plan(self):
         plan = {
@@ -320,7 +356,82 @@ class SharedContractTest(unittest.TestCase):
         result = MODULE.validate(current, capability_binding=capability_binding(current))
         self.assertTrue(result["valid"])
         self.assertEqual(result["contract_version"], 4)
+        self.assertFalse(result["approval_ready"])
+        self.assertTrue(result["resume_ready"])
+        self.assertIn("blocked:contract_migration_required", result["warnings"])
         self.assertTrue(result["dispatch_ready"])
+
+    def test_v5_accepts_parallel_and_checkpointed_cohesive_decompositions(self):
+        first = leaf("first", "parallel")
+        second = leaf("second", "parallel")
+        second["worktree_owner"] = "task/second"
+        second["write_set"] = ["second.py"]
+        third = leaf("third", "checkpointed")
+        fourth = leaf("fourth", "checkpointed", dependencies=["third"])
+        units = [
+            {"id": "parallel", "original_size": "medium", "cohesive_outcome": "Deliver independent interfaces", "decomposition": {"shape": "parallel", "basis": "parallel_independence", "rationale": "The interfaces have disjoint writes."}},
+            {"id": "checkpointed", "original_size": "medium", "cohesive_outcome": "Deliver a recoverable migration", "decomposition": {"shape": "checkpointed", "basis": "rollback_boundary", "rationale": "Each stage isolates rollback."}},
+        ]
+        result = MODULE.validate(v5_plan(first, second, third, fourth, work_units=units))
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_v5_rejects_duplicate_outcomes_and_invalid_decomposition_claims(self):
+        first = leaf("first", "parallel")
+        second = leaf("second", "parallel", dependencies=["first"])
+        units = [
+            {"id": "parallel", "original_size": "medium", "cohesive_outcome": "  Deliver Shared Result ", "decomposition": {"shape": "parallel", "basis": "parallel_independence", "rationale": "Incorrectly claimed."}},
+            {"id": "unused", "original_size": "small", "cohesive_outcome": "deliver shared result", "decomposition": {"shape": "single"}},
+        ]
+        result = MODULE.validate(v5_plan(first, second, work_units=units))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("duplicate normalized cohesive_outcome" in error for error in result["errors"]))
+        self.assertTrue(any("no intra-unit dependencies" in error for error in result["errors"]))
+
+    def test_v5_checkpointed_requires_linear_ordered_chain(self):
+        first = leaf("first", "checkpointed")
+        second = leaf("second", "checkpointed")
+        units = [{"id": "checkpointed", "original_size": "medium", "cohesive_outcome": "Deliver isolated stages", "decomposition": {"shape": "checkpointed", "basis": "failure_isolation", "rationale": "Each stage is independently recoverable."}}]
+        result = MODULE.validate(v5_plan(first, second, work_units=units))
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("linear ordered dependency chain" in error for error in result["errors"]))
+
+    def test_v5_parallel_rejects_unsafe_or_non_exact_write_paths(self):
+        def result_for(path):
+            first = leaf("first", "parallel")
+            second = leaf("second", "parallel")
+            second.update(worktree_owner="task/second", write_set=[path])
+            units = [{"id": "parallel", "original_size": "medium", "cohesive_outcome": "Deliver independent interfaces", "decomposition": {"shape": "parallel", "basis": "parallel_independence", "rationale": "The interfaces are independent."}}]
+            return MODULE.validate(v5_plan(first, second, work_units=units))
+
+        for path in ("/absolute.py", "src/../escape.py", "src/*.py"):
+            with self.subTest(path=path):
+                result = result_for(path)
+                self.assertFalse(result["valid"])
+                self.assertTrue(any("exact safe write_set paths" in error for error in result["errors"]))
+
+    def test_microleaf_risk_advisory_is_bounded_and_evidence_backed(self):
+        leaves = []
+        for index in range(10):
+            item = leaf(f"small{index}", f"u{index}", dependencies=[f"small{index - 1}"] if index else [])
+            item.update(size="small", acceptance_command="uv run python -m unittest tests.shared")
+            leaves.append(item)
+        units = [{"id": f"u{index}", "original_size": "small"} for index in range(10)]
+        advisory = MODULE.validate({"work_units": units, "leaves": leaves})["cost_advisory"]
+        self.assertIn("PLANCOST-MICROLEAF-RISK", advisory["codes"])
+        self.assertLessEqual(len(advisory["microleaf_candidates"]), 8)
+        self.assertTrue(all({"leaf_ids", "signals"} == set(item) for item in advisory["microleaf_candidates"]))
+
+    def test_microleaf_risk_does_not_require_matching_acceptance_for_writes_or_same_tier_dependency(self):
+        first = leaf("first", "u1", dependencies=[])
+        second = leaf("second", "u2", dependencies=["first"])
+        first.update(size="small", write_set=["shared.py"], acceptance_command="uv run one")
+        second.update(size="small", write_set=["shared.py"], acceptance_command="uv run two")
+        units = [{"id": "u1", "original_size": "small"}, {"id": "u2", "original_size": "small"}]
+        advisory = MODULE.validate({"work_units": units, "leaves": [first, second]})["cost_advisory"]
+        self.assertIn("PLANCOST-MICROLEAF-RISK", advisory["codes"])
+        self.assertEqual(["first", "second"], advisory["microleaf_candidates"][0]["leaf_ids"])
+        self.assertIn("overlapping_writes", advisory["microleaf_candidates"][0]["signals"])
+        self.assertIn("same_owner_same_tier_dependency", advisory["microleaf_candidates"][0]["signals"])
 
     def test_version_two_plan_is_resume_only(self):
         old = v3_plan(leaf("one", "u1"))

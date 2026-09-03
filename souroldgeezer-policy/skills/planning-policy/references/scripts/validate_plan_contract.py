@@ -48,6 +48,7 @@ PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 GLOB_CHARS = ("*", "?", "[")
 PLAN_SCALE_LEAF_LIMIT = 12
 PLAN_SCALE_WEIGHT_LIMIT = 20
+MICROLEAF_CANDIDATE_LIMIT = 8
 SERIES_KEYS = {"series_id", "slice", "final", "end_verification_commands", "predecessor"}
 PREDECESSOR_KEYS = {"plan_id", "plan_sha256", "run_id", "outcome", "handoff_sha256"}
 SERIES_OUTCOMES = {"completed", "blocked", "abandoned"}
@@ -175,6 +176,84 @@ def total_declared_weight(plan: dict[str, Any]) -> int:
     )
 
 
+def normalized_outcome(value: Any) -> str | None:
+    if not nonempty_string_in_range(value, 1, 240):
+        return None
+    return re.sub(r"\s+", " ", value.strip().lower())
+
+
+def normalized_writes(leaf: dict[str, Any]) -> set[str]:
+    writes = leaf.get("write_set")
+    if not isinstance(writes, list):
+        return set()
+    return {path.strip() for path in writes if isinstance(path, str) and path.strip()}
+
+
+def safe_exact_write_set(leaf: dict[str, Any]) -> bool:
+    writes = leaf.get("write_set")
+    if not isinstance(writes, list) or not writes:
+        return False
+    normalized = normalized_writes(leaf)
+    return (
+        len(normalized) == len(writes)
+        and all(
+            not path.startswith("/")
+            and ".." not in path.split("/")
+            and not any(character in path for character in GLOB_CHARS)
+            for path in normalized
+        )
+    )
+
+
+def direct_dependency(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    first_id, second_id = first.get("id"), second.get("id")
+    return (
+        isinstance(first_id, str)
+        and isinstance(second_id, str)
+        and (
+            first_id in second.get("dependencies", [])
+            or second_id in first.get("dependencies", [])
+        )
+    )
+
+
+def microleaf_candidates(leaves: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return at most eight bounded, advisory-only small-leaf merge signals."""
+    candidates: list[dict[str, Any]] = []
+    for index, first in enumerate(leaves):
+        if not isinstance(first, dict) or first.get("size") != "small":
+            continue
+        for second in leaves[index + 1 :]:
+            if not isinstance(second, dict) or second.get("size") != "small":
+                continue
+            dependent = direct_dependency(first, second)
+            same_owner = first.get("worktree_owner") == second.get("worktree_owner")
+            same_acceptance = first.get("acceptance_command") == second.get("acceptance_command")
+            overlapping_writes = bool(normalized_writes(first) & normalized_writes(second))
+            same_owner_tier_dependency = (
+                same_owner and dependent and first.get("portable_tier") == second.get("portable_tier")
+            )
+            signals: list[str] = []
+            if same_acceptance and same_owner:
+                signals.append("same_acceptance_same_owner")
+            if same_acceptance and dependent:
+                signals.append("same_acceptance_direct_dependency")
+            if overlapping_writes:
+                signals.append("overlapping_writes")
+            if same_owner_tier_dependency:
+                signals.append("same_owner_same_tier_dependency")
+            if signals:
+                candidates.append(
+                    {
+                        "leaf_ids": [first.get("id"), second.get("id")],
+                        "signals": signals,
+                    }
+                )
+                if len(candidates) == MICROLEAF_CANDIDATE_LIMIT:
+                    return candidates
+    return candidates
+
+
 def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[str, Any]:
     """Return bounded cost guidance without contributing contract errors."""
     codes: list[str] = []
@@ -223,6 +302,10 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         "tracing": "off",
         "tier_mix": tier_mix(leaves),
     }
+    candidates = microleaf_candidates(leaves)
+    if candidates:
+        codes.append("PLANCOST-MICROLEAF-RISK")
+        result["microleaf_candidates"] = candidates
     if result["tier_mix"]["over_assigned"]:
         codes.append("PLANCOST-TIER-OVER-ASSIGNED")
     if has_unbatched_chain(leaves):
@@ -348,9 +431,13 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
 
 def bounded_cost_advisory(value: dict[str, Any]) -> dict[str, Any]:
     value["attempts_omitted"] = 0
+    value["microleaf_candidates_omitted"] = 0
     while proxy_tokens(value) > 600 and value.get("attempts"):
         value["attempts"].pop(next(reversed(value["attempts"])))
         value["attempts_omitted"] += 1
+    while proxy_tokens(value) > 600 and value.get("microleaf_candidates"):
+        value["microleaf_candidates"].pop()
+        value["microleaf_candidates_omitted"] += 1
     if proxy_tokens(value) > 600:
         value["codes"] = value["codes"][:8]
     return value
@@ -527,7 +614,7 @@ def contract_result(
         "contract_version": contract_version,
         "approval_ready": approval_ready and not errors,
         "dispatch_ready": dispatch_ready and not errors,
-        "resume_ready": contract_version in {2, 3} and not errors,
+        "resume_ready": contract_version in {2, 3, 4} and not errors,
         "warnings": warnings,
         "standard_ready_ratio": ratio,
         "ready_weight": ready_weight,
@@ -554,9 +641,9 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
             contract_version = 1
             warnings.append(
                 "unversioned plan is legacy contract version 1; "
-                "migrate to contract_version 4 before approval or dispatch"
+                "migrate to contract_version 5 before approval or dispatch"
             )
-    elif raw_version in {2, 3, 4} and isinstance(raw_version, int):
+    elif raw_version in {2, 3, 4, 5} and isinstance(raw_version, int):
         contract_version = raw_version
         for field in V2_REQUIRED:
             if field not in plan:
@@ -574,7 +661,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
             )
     else:
         contract_version = None
-        errors.append("contract_version must be 2, 3, or 4 when specified")
+        errors.append("contract_version must be 2, 3, 4, or 5 when specified")
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:
@@ -585,6 +672,8 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
         units = []
 
     unit_sizes: dict[str, int] = {}
+    unit_records: dict[str, tuple[int, dict[str, Any]]] = {}
+    cohesive_outcomes: set[str] = set()
     for index, unit in enumerate(units):
         prefix = f"work_units[{index}]"
         if not isinstance(unit, dict):
@@ -599,6 +688,17 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
             errors.append(f"{prefix}.original_size must be small, medium, or large")
         else:
             unit_sizes[unit_id] = SIZES[size]
+            unit_records[unit_id] = (index, unit)
+        if contract_version == 5:
+            outcome = normalized_outcome(unit.get("cohesive_outcome"))
+            if outcome is None:
+                errors.append(f"{prefix}.cohesive_outcome must be a non-empty string from 1 to 240 characters")
+            elif outcome in cohesive_outcomes:
+                errors.append(f"duplicate normalized cohesive_outcome: {outcome}")
+            else:
+                cohesive_outcomes.add(outcome)
+            if not isinstance(unit.get("decomposition"), dict):
+                errors.append(f"{prefix}.decomposition must be an object")
 
     leaf_ids: set[str] = set()
     unit_leaves: dict[str, list[dict[str, Any]]] = {key: [] for key in unit_sizes}
@@ -677,7 +777,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
             errors.append(
                 f"{prefix}.acceptance_command must be exactly one non-empty command string"
             )
-        if contract_version in {2, 3, 4}:
+        if contract_version in {2, 3, 4, 5}:
             attempts = leaf.get("max_attempts")
             if (
                 not isinstance(attempts, int)
@@ -693,7 +793,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
                     f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
                     f"for contract version {contract_version}"
                 )
-        if contract_version == 4 and not capability_requirements_valid(
+        if contract_version in {4, 5} and not capability_requirements_valid(
             leaf.get("capability_requirements")
         ):
             errors.append(
@@ -784,6 +884,62 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
     for leaf_id in dependencies:
         visit(leaf_id)
 
+    if contract_version == 5:
+        for unit_id, members in unit_leaves.items():
+            unit_index, unit = unit_records[unit_id]
+            prefix = f"work_units[{unit_index}].decomposition"
+            decomposition = unit.get("decomposition")
+            if not isinstance(decomposition, dict):
+                continue
+            shape = decomposition.get("shape")
+            if shape not in {"single", "parallel", "checkpointed"}:
+                errors.append(f"{prefix}.shape must be single, parallel, or checkpointed")
+                continue
+            if shape == "single":
+                if set(decomposition) != {"shape"}:
+                    errors.append(f"{prefix} for single must have exactly the key shape")
+                if len(members) != 1:
+                    errors.append(f"work unit {unit_id} single decomposition must map exactly one leaf")
+                continue
+            if shape == "parallel":
+                if set(decomposition) != {"shape", "basis", "rationale"}:
+                    errors.append(f"{prefix} for parallel must have exactly shape, basis, and rationale")
+                if decomposition.get("basis") != "parallel_independence":
+                    errors.append(f"{prefix}.basis must be parallel_independence for parallel")
+                if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
+                    errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
+                if len(members) < 2:
+                    errors.append(f"work unit {unit_id} parallel decomposition must map at least two leaves")
+                member_ids = {member.get("id") for member in members}
+                if any(set(dependencies.get(member.get("id"), [])) & member_ids for member in members):
+                    errors.append(f"work unit {unit_id} parallel leaves must have no intra-unit dependencies")
+                if len({member.get("worktree_owner") for member in members}) != len(members):
+                    errors.append(f"work unit {unit_id} parallel leaves must have distinct worktree_owner values")
+                for member_index, member in enumerate(members):
+                    if not safe_exact_write_set(member):
+                        errors.append(f"work unit {unit_id} parallel leaves must have exact safe write_set paths")
+                    for other in members[member_index + 1 :]:
+                        if normalized_writes(member) & normalized_writes(other):
+                            errors.append(f"work unit {unit_id} parallel leaves must have pairwise-disjoint write_set values")
+                batches_in_unit = [member.get("batch") for member in members if stable_id(member.get("batch"))]
+                if len(batches_in_unit) != len(set(batches_in_unit)):
+                    errors.append(f"work unit {unit_id} parallel leaves must not share a batch")
+                continue
+            if set(decomposition) != {"shape", "basis", "rationale"}:
+                errors.append(f"{prefix} for checkpointed must have exactly shape, basis, and rationale")
+            if decomposition.get("basis") not in {"failure_isolation", "rollback_boundary"}:
+                errors.append(f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed")
+            if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
+                errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
+            if len(members) < 2:
+                errors.append(f"work unit {unit_id} checkpointed decomposition must map at least two leaves")
+            for member_index, member in enumerate(members):
+                intra = [dep for dep in dependencies.get(member.get("id"), []) if dep in {item.get("id") for item in members}]
+                expected = [] if member_index == 0 else [members[member_index - 1].get("id")]
+                if intra != expected:
+                    errors.append(f"work unit {unit_id} checkpointed leaves must form one linear ordered dependency chain")
+                    break
+
     ready_weight = 0
     total_weight = sum(unit_sizes.values())
     for unit_id, weight in unit_sizes.items():
@@ -807,10 +963,10 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
     series = plan.get("series")
     if series is not None:
         errors.extend(series_errors(series))
-    if contract_version in {2, 3}:
+    if contract_version in {2, 3, 4}:
         warnings.append("blocked:contract_migration_required")
-    binding_matches = contract_version == 4 and capability_binding_matches(plan, leaves, capability_binding)
-    if contract_version == 4 and not binding_matches:
+    binding_matches = contract_version in {4, 5} and capability_binding_matches(plan, leaves, capability_binding)
+    if contract_version in {4, 5} and not binding_matches:
         warnings.append("blocked:capability_unavailable")
     advisory = bounded_cost_advisory(cost_advisory(plan, leaves))
     result = contract_result(
@@ -818,7 +974,7 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
         binding_matches,
         warnings,
         errors,
-        contract_version == 4,
+        contract_version == 5,
         ratio,
         ready_weight,
         total_weight,

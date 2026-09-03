@@ -1,0 +1,57 @@
+{
+  "contract_version": 5,
+  "objective": "",
+  "scope_summary": "",
+  "approved_decisions": [],
+  "work_units": [
+    {
+      "id": "",
+      "original_size": "",
+      "cohesive_outcome": "",
+      "decomposition": {
+        "shape": "single"
+      }
+    }
+  ],
+  "leaves": [
+    {
+      "id": "",
+      "dependencies": [],
+      "task": "",
+      "boundary": "",
+      "read_set": [],
+      "write_set": [],
+      "settled_decisions": {},
+      "size": "",
+      "portable_tier": "",
+      "worktree_owner": "",
+      "acceptance_command": "",
+      "return_contract": "bounded-step-return-v1",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "work_unit_id": "",
+      "max_attempts": null,
+      "capability_requirements": {
+        "baseline": "plan-step-base-v1",
+        "additional": []
+      }
+    }
+  ],
+  "execution_cost": {
+    "schema": "planning-execution-cost-v1",
+    "mode": "advisory",
+    "expected_attempts": 1,
+    "leaf_attempt_overrides": {},
+    "declared_model_tokens": {
+      "parent_baseline": null,
+      "worker_attempts": {},
+      "parent_turns": null,
+      "retained_return_context": null,
+      "final_verification": null
+    },
+    "final_verification_commands": [],
+    "assumptions": [],
+    "unknowns": []
+  }
+}

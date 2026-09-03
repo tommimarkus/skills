@@ -139,6 +139,14 @@ class PlanningPolicyCostTest(unittest.TestCase):
         self.assertEqual([{"entry": "planning-policy", "predicate": "unknown"}], adapter["routes"])
         self.assertTrue(all(item.get("provenance") for item in self.scenarios.values()))
 
+    def test_v5_scaffold_remains_outside_declared_load_routes(self):
+        for scenario_id in self.scenarios:
+            measured = self.measure(scenario_id)
+            self.assertFalse(
+                any(row["file"].endswith("templates/plan-v5.json") for row in measured["rows"]),
+                f"{scenario_id} must retain its declared v4 route until v5 guidance is loaded",
+            )
+
     def test_representative_delegated_checkpoint_is_bounded_and_rehydratable(self):
         assignment = {"harness": "codex", "tier": "standard", "model_or_alias": "gpt-5.6-terra", "effort": "medium", "worktree": ".worktrees/cost-run"}
         steps = json.dumps([
