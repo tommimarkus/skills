@@ -72,11 +72,25 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn("`retry-remediation-v1`", content)
             self.assertIn("`blocked:needs_higher_tier`", content)
             self.assertIn("ledger", content)
+            self.assertIn("`cohesive_outcome`", content)
+            self.assertIn("`decomposition` context", content)
+            self.assertIn("assigned work unit", content)
+            self.assertIn("v1–v4 handoff", content)
 
     def test_standard_agent_does_not_allow_load_bearing_assumptions(self):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")
 
         self.assertNotIn("ask for it or state the assumption", standard)
+
+    def test_claude_adapter_uses_v5_for_new_work_and_keeps_legacy_resume_only(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("init-v5", adapter)
+        self.assertIn("init-v4", adapter)
+        self.assertIn("blocked:contract_migration_required", adapter)
+        self.assertIn("existing v4 records remain\nresumable and mutable", adapter)
+        self.assertIn("Version 1–4 plans and ledger state are resume-compatible only", adapter)
+        self.assertIn("`cohesive_outcome`", adapter)
+        self.assertIn("assigned work unit's `cohesive_outcome`", adapter)
 
     def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
         documents = [ADAPTER.read_text(encoding="utf-8")]

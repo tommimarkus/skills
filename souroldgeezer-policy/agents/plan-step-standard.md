@@ -17,10 +17,13 @@ identity. If it is missing or does not exactly match, return
 `blocked:capability_unavailable`; do not probe for, substitute, drop, or defer a
 replacement capability.
 
-Before work, require the step's task and boundary, size band, named inputs and
+Before work, require the step's task and boundary, its assigned work unit's
+`cohesive_outcome` and `decomposition` context, size band, named inputs and
 prior decisions, acceptance check, and return shape. If any load-bearing input
 is missing, stop and return `blocked:missing_input` with the missing fields;
-do not proceed under an assumption.
+do not proceed under an assumption. New assignments use the v5 handoff; accept
+a v1–v4 handoff only when the ledger explicitly resumes its compatible legacy
+plan or run.
 
 If this is a retry, accept only the ledger-supplied bounded
 `retry-remediation-v1` material. The ledger alone chose this target tier and

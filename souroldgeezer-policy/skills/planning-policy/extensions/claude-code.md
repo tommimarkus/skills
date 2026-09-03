@@ -11,13 +11,18 @@ it does not replace the shared workflow.
 
 ## Live lifecycle
 
-The parent consumes each successful v4 command's live `next` result and runs
+For new work, the parent uses `init-v5` and consumes each successful v5 command's live `next` result and runs
 the stated command. After dispatch it waits for a host notification that the
 assigned return is available; it does not busy-poll, start an autonomous loop,
 or enable telemetry. After a 24-hour pause or context compaction, call
 `show --run-id <uuid4> --next-only` once and continue from that bounded result.
 Load the full ledger reference only for an error, legacy resumption, diagnosis,
 retention work, or ledger authoring/audit.
+
+Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
+is refused as `blocked:contract_migration_required`; existing v4 records remain
+resumable and mutable. Do not initialize new work from them or translate their
+handoffs into a new v5 plan assignment.
 
 ## Capability resolution
 
@@ -70,8 +75,11 @@ effort; the parent must reassign the step or execute it locally.
 Every Agent assignment includes: run, step, agent, and attempt identity; the
 exact resolved binding, including its `planning-capability-binding-v1` schema,
 plan digest, matching step requirements, and selected executor; task and
-boundary; named inputs and prior decisions; one scoped acceptance check; size
-band; return contract; and the requested tier, alias, and effort. The parent
+boundary; its assigned work unit's `cohesive_outcome` and `decomposition`
+context (`shape: single` only, or the required `basis` and `rationale` for
+`parallel`/`checkpointed`); named inputs and prior decisions; one scoped
+acceptance check; size band; return contract;
+and the requested tier, alias, and effort. The parent
 keeps integration and the plan's final verification; an agent verifies only its
 own drafting. If the work exceeds its size band, the agent stops and asks the
 parent to re-cut it rather than expanding scope. If an assignment is missing a

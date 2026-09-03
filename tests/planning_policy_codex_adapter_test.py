@@ -43,12 +43,21 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             "portable tier",
             "worktree owner",
             "one acceptance command",
+            "cohesive outcome",
+            "`decomposition` context",
+            "assigned work unit",
             "run ID, step ID, agent ID, and attempt ID",
             "`bounded-step-return-v1` profile below",
             "`blocked:missing_input`",
             "status `oversized`",
             "`blocked:model_unavailable`",
             "do not silently downgrade",
+            "init-v5",
+            "Version 1–4 plans and ledger state are resume-compatible only",
+            "init-v4",
+            "blocked:contract_migration_required",
+            "existing v4 records remain\nresumable and mutable",
+            "`shape: single` only",
         ):
             self.assertIn(marker, self.text)
         # `oversized` is a bounded-step-return-v1 status, never a `blocked:` code.

@@ -239,26 +239,31 @@ bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 ### Planning-policy execution contract (Codex)
 
 The shared `planning-policy` contract is runtime-neutral. New executable plans
-use `contract_version: 4`. Start them from
-[references/templates/plan-v4.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json);
-the discriminator is `contract_version`, never `version`. Versions 2 and 3 are
-resume-only (`dispatch_ready: false`, `resume_ready: true`) and new `init-v2` or
-`init-v3` stops as `blocked:contract_migration_required`; unversioned version-1
-plans remain inspection-readable only.
+use `contract_version: 5`. Start them from
+[references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
+the discriminator is `contract_version`, never `version`. Versions 1–4 are
+resume-compatible only: new `init-v4` is refused as
+`blocked:contract_migration_required`, while existing v4 records remain
+resumable and mutable; do not initialize new work from a legacy plan or run.
 Every executable leaf
 has decision-complete, stable fields: IDs/dependencies, task/boundary, named
 read/write sets, settled decisions, size, portable tier, worktree owner, one
 acceptance command, bounded return contract, stop conditions, and stable work
-unit ID, plus exact `capability_requirements`: baseline `plan-step-base-v1` and
-bounded additional requirements. A missing load-bearing field stops as `blocked:missing_input`; do not
-search for or invent it. Work units are weighted once from their original size
+unit ID, plus exact
+`capability_requirements`: baseline `plan-step-base-v1` and
+bounded additional requirements. Its assigned work unit owns the
+`cohesive_outcome` and `decomposition` evidence: `shape: single` has only
+`shape`; `parallel` has `basis: parallel_independence` plus `rationale`; and
+`checkpointed` has `basis: failure_isolation` or `rollback_boundary` plus
+`rationale`. A missing load-bearing field stops as `blocked:missing_input`; do
+not search for or invent it. Work units are weighted once from their original size
 (`small=1`, `medium=2`, `large=3`) and require `standard_ready_ratio >= 0.60`;
 only an explicitly user-approved, recorded analytical-heavy exception waives
-that gate. A valid decision-complete v4 plan is approval-ready without host
+that gate. A valid decision-complete v5 plan is approval-ready without host
 binding; it is dispatch-ready only after `planning-capability-binding-v1` joins
 plan digest, every leaf, host/executor, requirements, and bounded evidence. An
 unavailable or mismatched join stops `blocked:capability_unavailable`; never
-silently substitute or downgrade. Each v4 plan carries an at-most-4-KiB advisory
+silently substitute or downgrade. Each v5 plan carries an at-most-4-KiB advisory
 `planning-execution-cost-v1` block. The existing validator invocation emits an
 at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles,
 unknown ranges, shared-prefix repetition, retry multiplication, and verification
@@ -268,7 +273,9 @@ stable codes flag batching signals: `PLANCOST-UNBATCHED-CHAIN` (an unbatched
 dependency-consecutive same-owner mechanical/standard pair) and
 `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20 declared work-unit weight —
 slice into successive plans); grooming acts on both before approval, never as
-a validity gate. The
+a validity gate. `PLANCOST-MICROLEAF-RISK` requires merging candidates back
+into their work unit's cohesive outcome unless its v5 decomposition evidence
+justifies the split. The
 human plan has one compact `Execution economics` summary and `tracing: off`.
 Route an initial inspection to at most one owning audit only when
 its bounded question and evidence surface remain unresolved by targeted
@@ -298,7 +305,7 @@ independent ready steps with separate worktrees and write paths. A step has a
 finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 `blocked:no_progress`; an exhausted step is terminal `blocked:retry_exhausted`;
 and a boundary overrun is terminal `oversized`, never an expanded retry.
-The ledger is the sole retry-policy owner: new v4 runs stamp
+The ledger is the sole retry-policy owner: new v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry is allowed only
@@ -309,7 +316,7 @@ identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
-Every successful v4 lifecycle result carries a live `next` block of at most
+Every successful v5 lifecycle result carries a live `next` block of at most
 120 proxy tokens. After a long pause or context compaction, read-only
 `show --next-only` returns one highest-priority action in an at-most-240-token
 envelope. Full `show` remains the diagnostic fallback; load the ledger runtime
@@ -317,7 +324,7 @@ reference only for errors, legacy resumption, diagnosis, retention operations,
 or ledger authoring/audit. Between active returns, wait for a host notification;
 never busy-poll or start an autonomous lifecycle loop.
 
-Successful v2/v3/v4 steps continue `completed` → `integrated` → `cleaned`.
+Successful v2/v3/v4/v5 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
@@ -336,13 +343,14 @@ run summary, not history. Version-1 ledgers remain readable and mutable in
 place with `retry_policy: legacy_unbounded` until every version-1 ledger is
 terminal. Version-1 keeps its terminal `integrated` state and does not gain
 `cleaned`. Current planning-policy cannot approve or dispatch an unversioned
-version-1 plan as new work; new documentation uses `init-v4`. Remove legacy
+version-1 plan as new work; new documentation uses `init-v5`. Versions 1–4
+remain resume-compatible only. Remove legacy
 support only in a later explicit breaking release after no version-1 ledger is
 nonterminal. The parent owns integration and
 end-to-end verification; a delegated return covers only its assigned drafting
 and acceptance check.
 
-The parent closes a version-2/3/4 run with explicit `completed`, `blocked`, or
+The parent closes a version-2/3/4/5 run with explicit `completed`, `blocked`, or
 `abandoned` outcome, reopens only an eligible retained blocked run, and uses
 `list` for bounded discovery. `gc --dry-run` previews conservative retention:
 completed runs 30 days, blocked runs 90 days, abandoned runs 7 days; active,
@@ -350,7 +358,7 @@ invalid, and ambiguous records remain preserved. `purge --actor parent` targets
 one closed run only (and needs `--before-retention` plus reason before expiry);
 there is no bulk deletion.
 
-Runtime tracing is a separate explicit opt-in per v3/v4 run. Ordinary planning and
+Runtime tracing is a separate explicit opt-in per v3/v4/v5 run. Ordinary planning and
 execution create no usage directory, inspect no telemetry, install no hooks,
 and make no network or provider call. Only an explicit request to trace,
 measure, or calibrate loads the `trace-init`, `trace-record`, `trace-show`, and
@@ -366,7 +374,7 @@ evidence; never silently downgrade. The opt-in fresh-context evidence command is
 `uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`;
 it writes bounded comparison summaries only.
 
-A v4 plan may carry an optional top-level `series` block that slices an
+A v5 plan may carry an optional top-level `series` block that slices an
 oversized plan into successive plans: `series_id`, `slice`, `final`,
 `end_verification_commands` declared once at slice 1 and copied verbatim
 forward, and, at slice > 1, a required copied-evidence `predecessor` block.
@@ -374,7 +382,7 @@ forward, and, at slice > 1, a required copied-evidence `predecessor` block.
 non-final slice, forbidden on a non-series plan and on the final slice, and
 optional at `blocked`/`abandoned`; the ledger composes the bounded handoff
 artifact from the closing run's own identity, never caller-supplied. A
-slice > 1 `init-v4` splices one `series_predecessor` disclosure — `matched`,
+slice > 1 `init-v5` splices one `series_predecessor` disclosure — `matched`,
 a `mismatch:<field>`, or `unresolvable` — and a purged or unreadable
 predecessor never fails the successor's own init. A series-final plan's
 closeout carries the compact `series_end: true` marker in place of inlined

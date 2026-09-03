@@ -234,25 +234,29 @@ schemas, and the troubleshooting table — is bundled with the plugin at
    intended behavior.
 10. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals; large Codex rollout JSONL streams record by record and adds explicit usage coverage plus bounded compaction, collaboration, wait, and fixed-category tool-output byte counters. Missing or partial usage is calibration-ineligible, and lifecycle counters do not prove causation, stalls, or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
 11. Use `planning-policy` to turn an approved implementation approach into a
-    delegation-ready plan. New executable plans use `contract_version: 4`.
+    delegation-ready plan. New executable plans use `contract_version: 5`.
     Start from the canonical
-    [references/templates/plan-v4.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v4.json)
+    [references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json)
     scaffold; its discriminator is `contract_version`, never `version`.
-    Versions 2 and 3 are resume-only (`dispatch_ready: false`,
-    `resume_ready: true`) and `init-v2` or `init-v3` rejects new runs with
-    `blocked:contract_migration_required`; version 1 remains inspection-only. Its shared,
+    Versions 1–4 are resume-compatible only: new `init-v4` is refused as
+    `blocked:contract_migration_required`, while existing v4 records remain
+    resumable and mutable; they cannot initialize new work. Its shared,
     runtime-neutral contract gives every leaf
     stable IDs, dependencies, task/boundary, named reads and writes, settled
     decisions, size, portable tier, owner, one acceptance command, return shape,
     stop conditions, a stable work unit, and exact `capability_requirements`:
-    baseline `plan-step-base-v1` plus bounded additional requirements. Work units are weighted once
+    baseline `plan-step-base-v1` plus bounded additional requirements. The
+    assigned work unit owns its `cohesive_outcome` and `decomposition` evidence:
+    `shape: single` has only `shape`; `parallel` has
+    `basis: parallel_independence` plus `rationale`; and `checkpointed` has
+    `basis: failure_isolation` or `rollback_boundary` plus `rationale`. Work units are weighted once
     (`small=1`, `medium=2`, `large=3`); at least 0.60 of that weight must be
     mechanical or standard ready unless the user explicitly approves and the
     plan records an analytical-heavy exception. Missing load-bearing input stops
     the leaf rather than inviting discovery or invention. The parent owns
     integration and end-to-end verification; selective audit routing remains an
     exceptional, bounded-evidence decision after targeted inspection or focused
-    tests cannot answer the question. A valid decision-complete v4 plan is
+    tests cannot answer the question. A valid decision-complete v5 plan is
     approval-ready without any host binding. It is dispatch-ready only after an
     exact `planning-capability-binding-v1` joins its digest, every leaf, selected
     host/executor, requirements, and bounded evidence; unavailable or mismatched
@@ -269,15 +273,17 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
     an exceeded task/boundary/read/write set is terminal `oversized` rather than
     a silently broadened retry.
-    Each v4 plan includes bounded advisory `planning-execution-cost-v1` data;
+    Each v5 plan includes bounded advisory `planning-execution-cost-v1` data;
     the same validator invocation emits `planning-cost-advisory-v1` within 600
     proxy tokens. Unknown token ranges remain indeterminate, execution control
     is invariant, and proxy, declared-model-token, and provider-measured lanes
     stay separate. Two stable codes flag batching signals:
     `PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
-    mechanical/standard pair) and `PLANCOST-PLAN-SCALE` (more than 12 leaves or
-    20 declared work-unit weight — slice into successive plans); grooming acts
-    on both before approval, never as a validity gate. The human plan includes
+    mechanical/standard pair), `PLANCOST-PLAN-SCALE` (more than 12 leaves or
+    20 declared work-unit weight — slice into successive plans), and
+    `PLANCOST-MICROLEAF-RISK` (merge candidates into their work unit's cohesive
+    outcome unless its v5 decomposition evidence justifies the split); grooming acts
+    on all before approval, never as a validity gate. The human plan includes
     compact **Execution economics** and
     `tracing: off`.
 
@@ -297,7 +303,7 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     `completed` or terminal. A per-integration `rebased_tree_changed: false`
     keeps a leaf's recorded acceptance; `true` re-runs only that leaf's scoped
     acceptance.
-    The ledger is the sole retry-policy owner: new v4 runs stamp
+    The ledger is the sole retry-policy owner: new v5 runs stamp
     `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve
     old behavior. `portable_tier` is initial only. Only `failed:acceptance` and
     `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
@@ -305,9 +311,9 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     Later retries use higher tiers through `deep`/`max_attempts`; each retry
     persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
     assignment checks. Terminal precedence is repeated result, ineligible
-    outcome, exhaustion, then tier ceiling. Every successful v4 lifecycle
+    outcome, exhaustion, then tier ceiling. Every successful v5 lifecycle
     result carries a live `next` block of at most 120 proxy tokens, from
-    `init-v4` and dispatch through integration, cleanup, closeout validation,
+    `init-v5` and dispatch through integration, cleanup, closeout validation,
     and blocked-run reopening. After a long pause or context compaction,
     read-only `show --next-only` returns one highest-priority action in an
     at-most-240-proxy-token envelope. Full `show` remains the diagnostic
@@ -338,15 +344,16 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     bulk deletion. Invalid, ambiguous, and active state is preserved.
     Version-1 ledgers remain readable and mutable in place with
     `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3/v4-only.
+    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3/v4/v5-only.
     Current planning-policy cannot approve or dispatch an unversioned version-1
-    plan as new work; new documentation uses `init-v4`. Remove legacy support
+    plan as new work; new documentation uses `init-v5`. Versions 1–4 remain
+    resume-compatible only. Remove legacy support
     only in a later explicit breaking release after no version-1 ledger is
     nonterminal. The optional fresh-context comparison is
     `uv run python scripts/planning_policy_forward_eval.py --harness both
     --output-dir /secure/path --execute`; it stores bounded summaries and reports
     an unavailable mapped model as `blocked:model_unavailable`, never as a
-    silent downgrade. Token tracing is separately opt-in for one v3/v4 run through
+    silent downgrade. Token tracing is separately opt-in for one v3/v4/v5 run through
     `trace-init`, `trace-record`, `trace-show`, and `trace-close`; ordinary use
     creates no usage state or telemetry calls. Counter/provenance-only records
     live outside the checkpoint and follow the run's retention and purge rules.

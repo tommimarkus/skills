@@ -106,20 +106,26 @@ as `severity × risk tier`;
 derives a delegated step's size band from its read-set and acceptance check, then
 hands the band to the subagent as the referent it checks its real scope against.
 For a declared multi-leaf plan, the same loop continues through a stable
-top-level work unit: weight that unit once from its original size, calculate the
-readiness gate from those declared units rather than leaf count, and require an
-explicit user-approved exception when analytical work legitimately dominates.
+top-level work unit: derive its cohesive outcome before splitting it, record
+`decomposition` evidence for an allowed split, weight that unit once from
+its original size, calculate the readiness gate from those declared units rather
+than leaf count, and require an explicit user-approved exception when analytical
+work legitimately dominates.
 The portable contract owns those fields and stop markers; a host overlay may add
 dispatch syntax but cannot rewrite them. New executable plans use
-`contract_version: 4`; every leaf declares `capability_requirements` with the
+`contract_version: 5`; every leaf declares `capability_requirements` with the
 `plan-step-base-v1` baseline and bounded additions. A valid decision-complete
 plan is approval-ready without a host binding, but it is dispatch-ready only
 after an exact `planning-capability-binding-v1` joins plan digest, every leaf,
 selected host/executor, requirements, and bounded evidence. Missing or
 mismatched capability is `blocked:capability_unavailable`, never a silent
-substitution or downgrade. Version-3 plans are resume-only and new v3 initialization
-returns `blocked:contract_migration_required`. Unversioned version-1 plans remain
-inspection-readable only. The v3 advisory cost profile and validator advisory
+substitution or downgrade. The work unit owns `cohesive_outcome` and
+`decomposition`: `shape: single` has only `shape`; `parallel` has
+`basis: parallel_independence` plus `rationale`; and `checkpointed` has
+`basis: failure_isolation` or `rollback_boundary` plus `rationale`. Versions 1–4 are resume-compatible only; new work
+uses `init-v5`; new `init-v4` is refused as
+`blocked:contract_migration_required`, while existing v4 records remain
+resumable and mutable. The v5 advisory cost profile and validator advisory
 keep stable-proxy, declared-model-token, and provider-measured lanes separate;
 missing or invalid cost data never changes execution control. Once an
 approved multi-step delegation needs persistence, exactly one parent owns the
@@ -132,7 +138,7 @@ unchanged progress is `blocked:no_progress`, exhaustion is terminal
 `oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
 `blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
 and its bounded `show` rehydrates one step or a truncated summary. Successful
-v2/v3/v4 leaves continue `completed` → `integrated` → `cleaned`; bounded
+v2/v3/v4/v5 leaves continue `completed` → `integrated` → `cleaned`; bounded
 `planning-worktree-result-v1` evidence ties returned and rebased commits to
 rebase/fast-forward integration and non-force cleanup. Partial cleanup retries
 revalidate recorded identity, remaining branch state, and target ancestry.
@@ -143,9 +149,10 @@ ledgers remain readable and mutable in place with
 `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
 Their terminal `integrated` state remains unchanged.
 Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v4`. Remove legacy support only
+plan as new work; new documentation uses `init-v5`. Versions 1–4 remain
+resume-compatible only. Remove legacy support only
 in a later explicit breaking release after no version-1 ledger is nonterminal.
-The ledger is the sole retry-policy owner: new v4 runs stamp
+The ledger is the sole retry-policy owner: new v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior. `portable_tier` is initial only. Only `failed:acceptance` and
 `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
@@ -155,7 +162,7 @@ a bounded `retry-remediation-v1` artifact and checks identity, prior-return
 digest, worktree, boundary, and assignment. Terminal precedence is repeated
 result (`blocked:no_progress`), ineligible outcome, exhaustion
 (`blocked:retry_exhausted`), then tier ceiling.
-For v4, the parent drives that lifecycle through a bounded live-next chain:
+For v5, the parent drives that lifecycle through a bounded live-next chain:
 successful mutations state the next legal action, and read-only
 `show --next-only` deterministically rehydrates one highest-priority action
 after a long pause or context compaction. Keep each live `next` at most 120

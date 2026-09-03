@@ -10,13 +10,18 @@ plan will execute in Codex. It does not replace the portable handoff contract.
 
 ## Live lifecycle
 
-The parent consumes each successful v4 command's live `next` result and runs
+For new work, the parent uses `init-v5` and consumes each successful v5 command's live `next` result and runs
 the stated command. After dispatch it waits for a host notification that the
 assigned return is available; it does not busy-poll, start an autonomous loop,
 or enable telemetry. After a 24-hour pause or context compaction, call
 `show --run-id <uuid4> --next-only` once and continue from that bounded result.
 Load the full ledger reference only for an error, legacy resumption, diagnosis,
 retention work, or ledger authoring/audit.
+
+Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
+is refused as `blocked:contract_migration_required`; existing v4 records remain
+resumable and mutable. Do not initialize new work from them or translate their
+handoffs into a new v5 plan assignment.
 
 ## Capability resolution
 
@@ -92,6 +97,9 @@ Call the host mechanism with a prompt containing all of the following:
 - the exact resolved binding, including its `planning-capability-binding-v1`
   schema, plan digest, matching step requirements, and selected executor;
 - task and boundary;
+- the assigned work unit's cohesive outcome and `decomposition` context:
+  `shape: single` only, or the required `basis` and `rationale` for
+  `parallel`/`checkpointed`;
 - named reads and writes;
 - settled decisions and constraints;
 - `size: <small|medium|large>` and portable tier;
