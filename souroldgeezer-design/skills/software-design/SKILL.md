@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
+  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, library compatibility/versioning, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -28,14 +28,11 @@ edit needing no code/module design or sibling decision. Load only
 [references/procedures/file-edit-lane.md](references/procedures/file-edit-lane.md),
 validate, report its narrow result, and return without normal design references,
 extensions, procedures, or Outputs.
-When cache state is relevant, execute the helper without loading its source;
-use its `--help` plus `list`, `gc --dry-run`, and the selected bounded command.
-Resolve the loaded skill directory once, then target the consumer repository
-with `--repo-root` while remaining in that repository: Claude uses
-`python3 "${CLAUDE_SKILL_DIR}/references/scripts/tool_state.py" --repo-root
-"<consumer-repository>"`; Codex uses `python3
-"<absolute-loaded-skill-dir>/references/scripts/tool_state.py" --repo-root
-"<consumer-repository>"`. Do not change into the installed skill directory.
+When cache matters, run `--help`, `list`, `gc --dry-run`, and command without
+loading source. From consumer repository, Claude uses
+`python3 "${CLAUDE_SKILL_DIR}/references/scripts/tool_state.py" --repo-root "<consumer-repository>"`;
+Codex uses `python3 "<absolute-loaded-skill-dir>/references/scripts/tool_state.py" --repo-root "<consumer-repository>"`.
+Carry it into raw procedures; never enter the installed skill directory.
 
 For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).

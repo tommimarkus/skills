@@ -3,6 +3,8 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+import re
+import shlex
 
 from tests.surface_test_lib import compact, read
 
@@ -66,6 +68,8 @@ class SoftwareDesignToolDecisionGitTest(unittest.TestCase):
         import importlib.util
 
         script = Path("souroldgeezer-design/skills/software-design/references/scripts/tool_state.py")
+        procedure = read(PROCEDURE)
+        template = re.search(rf"git config --local {re.escape(KEY)} (defer-until:<date>)", procedure).group(1)
         spec = importlib.util.spec_from_file_location("tool_state_decision", script)
         assert spec and spec.loader
         module = importlib.util.module_from_spec(spec)
@@ -81,9 +85,10 @@ class SoftwareDesignToolDecisionGitTest(unittest.TestCase):
                 "2028-02-01": "2028-03-02",
             }.items():
                 with self.subTest(decision_text=decision_text):
-                    rendered = f"defer-until:{(date.fromisoformat(decision_text) + timedelta(days=30)).isoformat()}"
+                    rendered = template.replace("<date>", (date.fromisoformat(decision_text) + timedelta(days=30)).isoformat())
                     self.assertEqual(f"defer-until:{expected_date}", rendered)
-                    git(repo, "config", "--local", KEY, rendered)
+                    command = shlex.split(f"git config --local {KEY} {rendered}")
+                    subprocess.run(command, cwd=repo, check=True)
                     self.assertEqual(rendered, git(repo, "config", "--local", "--get", KEY).stdout.strip())
                     expiry = date.fromisoformat(expected_date)
                     self.assertEqual("deferred", module.decision_summary(KEY, [rendered], expiry - timedelta(days=1))["status"])
