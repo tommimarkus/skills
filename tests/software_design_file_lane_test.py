@@ -112,6 +112,13 @@ class FileLaneStateBoundaryTest(unittest.TestCase):
                 check=True,
             )
             expected = {"consumer": "unchanged", "skill": "unchanged"}
+            for repo, capability in ((consumer, "consumer-only"), (installed, "skill-only")):
+                subprocess.run(
+                    ["git", "-C", str(repo), "config", "--local",
+                     f"softwaredesign.tool-decision-{capability}", "defer-until:2099-01-01"],
+                    check=True,
+                )
+            original_configs = [(repo / ".git/config").read_bytes() for repo in (consumer, installed)]
             for host, documented in commands.items():
                 rendered = documented.replace("${CLAUDE_SKILL_DIR}", str(installed)).replace(
                     "<absolute-loaded-skill-dir>", str(installed)
@@ -122,7 +129,11 @@ class FileLaneStateBoundaryTest(unittest.TestCase):
                         result = subprocess.run(command + list(args), cwd=consumer, capture_output=True, text=True)
                         self.assertEqual(0, result.returncode, result.stderr)
                 listed = subprocess.run(command + ["list"], cwd=consumer, check=True, capture_output=True, text=True)
-                self.assertEqual([], json.loads(listed.stdout)["decisions"])
+                self.assertEqual(
+                    [{"capability": "consumer-only", "status": "deferred"}],
+                    json.loads(listed.stdout)["decisions"],
+                )
+                self.assertEqual(original_configs, [(repo / ".git/config").read_bytes() for repo in (consumer, installed)])
                 observed = {
                     "consumer": subprocess.run(["git", "-C", str(consumer), "config", "--local", "--get", "sentinel.consumer"], check=True, capture_output=True, text=True).stdout.strip(),
                     "skill": subprocess.run(["git", "-C", str(installed), "config", "--local", "--get", "sentinel.skill"], check=True, capture_output=True, text=True).stdout.strip(),
