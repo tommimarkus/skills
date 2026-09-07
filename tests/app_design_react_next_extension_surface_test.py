@@ -71,6 +71,9 @@ class AppDesignReactNextExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("api-design", nextjs)
         self.assertIn("Route Handlers", nextjs)
         self.assertIn("Server Actions", nextjs)
+        self.assertIn("use server", nextjs)
+        self.assertIn("Ordinary", nextjs)
+        self.assertIn("functions or closures", nextjs)
         for code in (
             "nextjs.APP-ROUTE-1",
             "nextjs.APP-RENDER-1",

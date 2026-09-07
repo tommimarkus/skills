@@ -177,6 +177,10 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "app-design-behavior-branching-flow-recovery",
             "app-design-behavior-supporting-pane-narrow-flow",
             "app-design-behavior-decline-screenshot-flow-verdict",
+            "app-design-behavior-modal-and-popover-semantics",
+            "app-design-behavior-server-function-props",
+            "app-design-behavior-settled-layout-flow-routing",
+            "app-design-behavior-layout-alternatives-two-or-three",
         ):
             self.assertIn(case_id, behaviors)
 
