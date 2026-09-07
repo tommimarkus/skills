@@ -91,7 +91,6 @@ Default: state the force and the local tactic. Do not pretend one design optimiz
 For data paths, ground structure in operation/size/semantics; measure gains,
 caches, and tuning.
 
-
 ### 3.7 Socio-Technical Fit
 
 Boundaries are not only technical. Ownership, cognitive load, and coordination cost are design signals. A boundary that repeatedly forces unrelated teams to coordinate is suspect.

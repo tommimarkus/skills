@@ -22,6 +22,10 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
     def test_accuracy_corpus_is_contiguous_and_calibrated(self) -> None:
         cases = read_jsonl("souroldgeezer-design/skills/software-design/references/evals/accuracy-corpus/expected.jsonl")
         self.assertEqual([f"sd-acc-{number:03d}" for number in range(1, 120)], [case["id"] for case in cases])
+        by_id = {case["id"]: case for case in cases}
+        fragility = [by_id[f"sd-acc-{number}"] for number in range(112, 116)]
+        self.assertEqual(["positive", "positive", "fp-bait", "clean"], [case["kind"] for case in fragility])
+        self.assertEqual(["SD-E-6"] * 4, [case["target"] for case in fragility])
         self.assertEqual(["positive", "positive", "fp-bait", "clean"], [case["kind"] for case in cases[-4:]])
         self.assertEqual(["SD-Q-5"] * 4, [case["target"] for case in cases[-4:]])
         self.assertEqual({"positive": 66, "fp-bait": 41, "clean": 12}, {kind: sum(case["kind"] == kind for case in cases) for kind in ("positive", "fp-bait", "clean")})

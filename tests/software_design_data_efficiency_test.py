@@ -1,6 +1,6 @@
 import json
+import re
 import unittest
-from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT, compact, load_script_module, read, read_jsonl
 
@@ -24,6 +24,8 @@ class SoftwareDesignDataEfficiencyTest(unittest.TestCase):
         card_rows = read_jsonl(f"{ROOT}/references/smell-cards.jsonl")
         card_ids = [row["id"] for row in card_rows]
         self.assertEqual(len(card_ids), len(set(card_ids)))
+        for code in card_ids:
+            self.assertRegex(code, r"^SD-[A-Z]-\d+$")
         cards = {row["id"]: row for row in card_rows}
         self.assertEqual("Workload-mismatched data path", cards["SD-Q-5"]["title"])
         self.assertIn("warn", cards["SD-Q-5"]["default_severity"])
@@ -40,6 +42,8 @@ class SoftwareDesignDataEfficiencyTest(unittest.TestCase):
         ):
             self.assertIn(identifier, behaviors)
             required_text.extend(behaviors[identifier]["required_checks"])
+            references = set(re.findall(r"(?<![\w.])SD-[A-Z]-\d+\b", json.dumps(behaviors[identifier])))
+            self.assertLessEqual(references, set(card_ids), identifier)
         self.assertIn("SD-Q-5", " ".join(required_text))
         self.assertIn("data-efficiency.md", " ".join(required_text))
         cases = read_jsonl(f"{ROOT}/references/evals/accuracy-corpus/expected.jsonl")
@@ -75,12 +79,15 @@ class SoftwareDesignDataEfficiencyTest(unittest.TestCase):
         self.assertNotIn(procedure, by_id["sd-file-edit-data-excluded"]["files"])
         self.assertNotIn(procedure, by_id["sd-lookup-principle"]["files"])
         snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
-        for scenario_id in by_id:
+        for scenario_id, scenario in by_id.items():
+            if scenario["skill"] != "software-design":
+                continue
             self.assertEqual(snapshot[scenario_id], slc.measure_scenario(by_id[scenario_id], REPO_ROOT)["total"])
-        baseline = {"sd-lookup-principle": 2228, "sd-build-csharp": 8083, "sd-review-typescript": 11420}
+        # Exact committed counts at 40a7be15237fc190d6ed611593fb84cedb04268d.
+        baseline = {"sd-lookup-principle": 2228, "sd-build-csharp": 8083, "sd-review-typescript": 11420, "sd-review-fragility": 10448}
         for scenario_id, before in baseline.items():
             self.assertLessEqual(snapshot[scenario_id] - before, 250)
-        self.assertLessEqual(len(read(procedure).split()), 1400)
+        self.assertLessEqual(slc.estimate_tokens(read(procedure)), 1400)
 
     def test_stack_extensions_keep_core_rules_and_csharp_adds_ef_cues(self) -> None:
         for extension in ("python", "typescript"):

@@ -41,9 +41,8 @@ Defaults:
   cancels, closes, and joins promises, timers, streams, listeners, and tasks.
   Give each boundary one error contract owner for translation, retry, timeout,
   fallback, and cleanup (`SD-S-5`, `SD-Q-4`, `SD-C-6`).
-- Ground structure in operation/size/semantics; measure gains/caches/tuning.
-- For collections, storage, batches, streams, caches, or repeated data paths,
-  apply [data-efficiency](../../../docs/design-reference/data-efficiency.md).
+- Apply [data-efficiency](../../../docs/design-reference/data-efficiency.md)
+  for structural collection/storage choices and measured performance claims.
 
 Validate with project typecheck/`tsc`, build/declarations, public-type diff, and
 entrypoint smoke. Request `devsecops-audit` Quick for security-sensitive changes.

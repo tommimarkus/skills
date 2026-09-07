@@ -198,15 +198,25 @@ sentence)" so the instruction reads correctly for the pattern/NFR catalogs
 
 ## Data-efficiency procedure — 2026-09
 
-The shared conditional procedure adds collection and storage reasoning only to
-declared data routes. Against baseline `40a7be1`, existing `sd-lookup-principle`,
-`sd-build-csharp`, and `sd-review-typescript` remain within the fixed +250 proxy
-token allowance; the new build/review/Lookup routes include the procedure while
-File Edit and unrelated principle Lookup exclude it. The snapshot and the
-`SoftwareDesignDataEfficiencyTest` remeasure all declared routes, compare the
-three existing routes to their pinned before values, and cap the procedure at
-1400 proxy tokens. The procedure is 184 words; this is measured route evidence,
-not a claimed runtime performance gain.
+Baseline is `40a7be15237fc190d6ed611593fb84cedb04268d`. The existing affected
+software routes are checked against a fixed +250 stable-proxy allowance. The
+shared procedure measures 576 stable-proxy tokens against its 1,400 cap.
+Relevant Build/Review/Lookup scenarios include it; File Edit and unrelated
+principle Lookup exclude it. The software test remeasures its declared routes;
+the repository freshness test owns all-route freshness. These declared load
+sets do not prove model routing or runtime gains; fresh behavioral groups are
+separate parent evidence.
+
+| Software route | Before | After | Delta |
+|---|---:|---:|---:|
+| sd-lookup-principle | 2228 | 2291 | +63 |
+| sd-build-csharp | 8083 | 8291 | +208 |
+| sd-review-typescript | 11420 | 11652 | +232 |
+| sd-review-fragility | 10448 | 10664 | +216 |
+
+New declared routes: Build 7251, Review 10721, matched data Lookup 2428,
+and File Edit exclusion 797. Generic data routes have no language extension;
+existing C#/TypeScript routes retain their original non-data load sets.
 
 # architecture-design per-use load cost
 
