@@ -33,7 +33,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("deterministic highest-priority", contract)
         self.assertIn("exception-only", ledger)
         self.assertIn("24-hour", grounding)
-        self.assertIn("live-next chain", standard)
+        self.assertIn(
+            "](../souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md)",
+            standard,
+        )
+        self.assertIn("execution diagnosis", standard)
+        self.assertIn("successful transitions add bounded live guidance", ledger)
 
         for adapter in (
             "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md",
@@ -137,24 +142,41 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
 
     def test_craft_standard_preserves_declared_value_consumer_loop(self) -> None:
         standard = self.text("docs/skill-architecture.md")
-        self.assertIn("stable\ntop-level work unit", standard)
-        self.assertIn("user-approved exception", standard)
-        self.assertIn("host overlay may add\ndispatch syntax but cannot rewrite them", standard)
-        for phrase in (
-            "contract_version: 5", "<plan-id>/<run-id>", "lowercase UUID4",
-            "Versions 1–4 are resume-compatible only", "declared-model-token",
-            "bounded-step-return-v1", "blocked:plan_tampered",
-            "Version-1\nledgers remain readable and mutable",
-            "retry_policy: legacy_unbounded", "blocked:retry_exhausted",
-            "blocked:no_progress", "terminal\n`oversized`",
-            "`completed` → `integrated` → `cleaned`",
-            "planning-worktree-result-v1", "validate --closeout",
-            "terminal `integrated` state remains unchanged",
-            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
-            "retry-remediation-v1", "blocked:needs_higher_tier",
+        standard = " ".join(standard.split())
+        for principle in (
+            "the derivation it comes from", "the consumer that reads it",
+            "size band from its read-set and acceptance check",
+            "host overlay may add dispatch syntax but cannot rewrite",
         ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, standard)
+            self.assertIn(principle, standard)
+        for destination, condition in (
+            ("core-workflow.md", "When authoring an executable plan"),
+            ("plan-contract.md", "When authoring an executable plan"),
+            ("ledger-contract.md", "For execution diagnosis"),
+        ):
+            with self.subTest(destination=destination):
+                self.assertIn(
+                    f"](../souroldgeezer-policy/skills/planning-policy/references/{destination})",
+                    standard,
+                )
+                self.assertIn(condition, standard)
+        self.assertNotIn("Dependencies wait for `cleaned`", standard)
+        ledger = " ".join(self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
+        ).split())
+        for fact in (
+            "an external dependency still requires `cleaned`",
+            "an in-batch dependency on an earlier-listed same-batch member",
+            "readiness at `ready`, `in_progress`, or `completed`",
+        ):
+            self.assertIn(fact, ledger)
+        for principle in (
+            "optional expensive lens", "explicit opt-in",
+            "zero extra agent or network calls for that lens",
+            "Calls required by the requested core workflow",
+            "existing task authority and applicable policy",
+        ):
+            self.assertIn(principle, standard)
 
     def test_series_summary_is_public_and_orientation_named(self) -> None:
         claude = self.text("CLAUDE.md")
@@ -167,7 +189,16 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn("unresolvable", text)
             self.assertIn("series_end: true", text)
             self.assertIn("byte-identical", text)
-        self.assertIn("plan-series", standard)
+        self.assertIn(
+            "](../souroldgeezer-policy/skills/planning-policy/references/plan-series.md)",
+            standard,
+        )
+        self.assertIn("When slicing work into successive plans", standard)
+        series = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/plan-series.md"
+        )
+        for fact in ("series_predecessor", "unresolvable", "end_verification_commands"):
+            self.assertIn(fact, series)
         self.assertIn("plan-to-plan continuity", standard)
 
     def test_unresolved_domain_design_routes_before_approval(self) -> None:
@@ -189,7 +220,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 self.assertIn("never `version`", text)
 
     def test_v5_handoffs_carry_cohesive_outcome_and_decomposition_evidence(self) -> None:
-        for relative in ("AGENTS.md", "CLAUDE.md", "docs/skill-architecture.md"):
+        for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 text = self.text(relative)
                 self.assertIn("cohesive_outcome", text)
@@ -201,6 +232,15 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 self.assertIn("blocked:contract_migration_required", text)
                 self.assertIn("existing v4 records remain", text)
                 self.assertNotIn("intermediate_states", text)
+        contract = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
+        )
+        for fact in (
+            "cohesive_outcome", "decomposition", "work_units",
+            "Versions 1–4 are resume-only", "init-v4",
+            "blocked:contract_migration_required", "Existing v1–v4 ledgers",
+        ):
+            self.assertIn(fact, contract)
 
 
 if __name__ == "__main__":

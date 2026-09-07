@@ -109,75 +109,23 @@ as `severity × risk tier`;
 [planning-policy](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
 derives a delegated step's size band from its read-set and acceptance check, then
 hands the band to the subagent as the referent it checks its real scope against.
-For a declared multi-leaf plan, the same loop continues through a stable
-top-level work unit: derive its cohesive outcome before splitting it, record
-`decomposition` evidence for an allowed split, weight that unit once from
-its original size, calculate the readiness gate from those declared units rather
-than leaf count, and require an explicit user-approved exception when analytical
-work legitimately dominates.
-The portable contract owns those fields and stop markers; a host overlay may add
-dispatch syntax but cannot rewrite them. New executable plans use
-`contract_version: 5`; every leaf declares `capability_requirements` with the
-`plan-step-base-v1` baseline and bounded additions. A valid decision-complete
-plan is approval-ready without a host binding, but it is dispatch-ready only
-after an exact `planning-capability-binding-v1` joins plan digest, every leaf,
-selected host/executor, requirements, and bounded evidence. Missing or
-mismatched capability is `blocked:capability_unavailable`, never a silent
-substitution or downgrade. The work unit owns `cohesive_outcome` and
-`decomposition`: `shape: single` has only `shape`; `parallel` has
-`basis: parallel_independence` plus `rationale`; and `checkpointed` has
-`basis: failure_isolation` or `rollback_boundary` plus `rationale`. Versions 1–4 are resume-compatible only; new work
-uses `init-v5`; new `init-v4` is refused as
-`blocked:contract_migration_required`, while existing v4 records remain
-resumable and mutable. The v5 advisory cost profile and validator advisory
-keep stable-proxy, declared-model-token, and provider-measured lanes separate;
-missing or invalid cost data never changes execution control. Once an
-approved multi-step delegation needs persistence, exactly one parent owns the
-checkpoint ledger at `<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`,
-using a lowercase UUID4 run ID. It assigns each declared step one current,
-opaque attempt identity; concurrent agents require independent ready steps and
-separate worktrees/write paths. Finite `max_attempts` converges retries:
-unchanged progress is `blocked:no_progress`, exhaustion is terminal
-`blocked:retry_exhausted`, and an exceeded bounded assignment is terminal
-`oversized`. The ledger preserves a canonical approved-plan hash; a mismatch is
-`blocked:plan_tampered`. It stores only `bounded-step-return-v1` results rather than raw logs,
-and its bounded `show` rehydrates one step or a truncated summary. Successful
-v2/v3/v4/v5 leaves continue `completed` → `integrated` → `cleaned`; bounded
-`planning-worktree-result-v1` evidence ties returned and rebased commits to
-rebase/fast-forward integration and non-force cleanup. Partial cleanup retries
-revalidate recorded identity, remaining branch state, and target ancestry.
-Dependencies wait for `cleaned`, start from the current parent tip, and
-`validate --closeout` requires
-every successful leaf to be cleaned. Version-1
-ledgers remain readable and mutable in place with
-`retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-Their terminal `integrated` state remains unchanged.
-Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v5`. Versions 1–4 remain
-resume-compatible only. Remove legacy support only
-in a later explicit breaking release after no version-1 ledger is nonterminal.
-The ledger is the sole retry-policy owner: new v5 runs stamp
-`retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
-behavior. `portable_tier` is initial only. Only `failed:acceptance` and
-`blocked:needs_higher_tier` are eligible; one same-tier retry follows only
-`failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.
-Later retries use higher tiers through `deep`/`max_attempts`. Each retry writes
-a bounded `retry-remediation-v1` artifact and checks identity, prior-return
-digest, worktree, boundary, and assignment. Terminal precedence is repeated
-result (`blocked:no_progress`), ineligible outcome, exhaustion
-(`blocked:retry_exhausted`), then tier ceiling.
-For v5, the parent drives that lifecycle through a bounded live-next chain:
-successful mutations state the next legal action, and read-only
-`show --next-only` deterministically rehydrates one highest-priority action
-after a long pause or context compaction. Keep each live `next` at most 120
-proxy tokens and the rehydration envelope at most 240; retain the full runtime
-reference as an exception-only diagnostic, legacy, retention, and authoring
-surface rather than normal execution context. An oversized plan slices into a
-successive series through an on-demand
-[plan-series](../souroldgeezer-policy/skills/planning-policy/references/plan-series.md)
-reference, with the ledger composing and cross-checking the handoff between
-slices — the same read-derives/write-consumes loop as the size band above,
-scoped to plan-to-plan continuity rather than a single run.
+The portable contract owns planning fields and stop conditions; a host overlay
+may add dispatch syntax but cannot rewrite them. Load the canonical authority
+for the task at hand:
+
+- When authoring an executable plan, read the
+  [core workflow](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
+  and [plan contract](../souroldgeezer-policy/skills/planning-policy/references/plan-contract.md)
+  for derivation, readiness, and capability requirements.
+- For execution diagnosis, errors, legacy resumption, retention operations, or
+  ledger authoring/audit, read the
+  [ledger contract](../souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md).
+  It owns dependency states and batch exceptions, retries, integration, and
+  cleanup; keep those mechanics out of this authoring standard.
+- When slicing work into successive plans, read
+  [plan series](../souroldgeezer-policy/skills/planning-policy/references/plan-series.md)
+  for plan-to-plan continuity and the derivation/consumer loop across handoffs.
+
 Pure disclosure fields are the bounded exception — their reader is the output's
 audience — but they still owe the derivation half, as
 [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) does by deriving
@@ -264,11 +212,11 @@ For extension overlays, `SKILL.md` owns selection:
   extension or matched section, not the whole detected set), the same gating
   text must name an escalation cue to a fuller mode or an explicit ask for the
   cases the cap excludes; otherwise the cap is a silent fidelity-floor violation.
-- If a mode or lens is expensive and only occasionally needed (live network or
-  subagent calls, long runtime), default it to explicit opt-in that fires only
-  on an explicit request, not surface-gated auto-firing. A routine invocation of
-  the host skill must stay cheap and make zero agent or network calls unless the
-  user asked for the expensive path.
+- An optional expensive lens (live network or subagent calls, long runtime)
+  requires explicit opt-in, not surface-gated auto-firing. Without that request,
+  make zero extra agent or network calls for that lens. Calls required by the
+  requested core workflow remain governed by existing task authority and
+  applicable policy; this distinction grants no new authority.
 
 This is a runtime contract, not just documentation style. Claude Code keeps
 skill names and descriptions available for selection, then loads the full skill
