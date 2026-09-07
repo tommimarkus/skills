@@ -26,6 +26,14 @@ export files can be recreated from the package. SVG render output is the primary
 visual proof for review. OEF export is optional compatibility output for
 conformant tools and is not the source of truth.
 
+In Review, the supplied source, policies, generated artifacts, and gallery remain
+the evidence of record. Inspect and classify their validity, freshness,
+accessibility, and visual quality before any reproduction attempt. When a build is
+needed to test reproducibility, use the isolated Review procedure: prepare one
+persistent byte-accounted copy, build only that copy, and report its result
+separately. A successful copy build does not clear stale or missing original
+evidence and never authorizes refreshing the original.
+
 This plugin is an ArchiMate-aware modeling skill and package workflow. It is
 not a certified or complete conforming ArchiMate tool. Its quality levels are
 workflow evidence claims about the package, views, render output, and optional
@@ -386,7 +394,7 @@ interface. Name services for the exposed behavior or capability, not for the
 transport surface, unless the source label is quoted as evidence and the
 architecture label resolves the role.
 
-Endpoint legality belongs to `dediren_validate {workspaceRoot, profile: "archimate"}`, not local
+Endpoint legality belongs to `dediren_validate {workspaceRoot, source, profile: "archimate"}`, not local
 guesswork. If validation accepts Application Component to
 Application Interface Realization, do not report it as endpoint-illegal. Prefer
 Composition or Aggregation for component-interface ownership when the
@@ -671,7 +679,8 @@ Evidence gates (all via the MCP adapter and an absolute `workspaceRoot`):
 - Source semantics: `dediren_validate {workspaceRoot, source, profile: "archimate"}` (or `"uml"`)
 - View projection, layout, layout validation, and SVG render: `dediren_build` — one
   call walks a view through all of them; the layout-validation verdict is on the
-  build-result `.views[].status` / `.views[].diagnostics[]`, the mapped
+  package result's `.data.views[].status` / `.data.views[].diagnostics[]`, or the
+  single-model result's top-level `.views[].status` / `.views[].diagnostics[]`; the mapped
   `generated/layout/<view>.json` carries the layout geometry, and
   `generated/render-metadata/<view>.json` the render metadata
 - Optional OEF/XMI export: `dediren_build` with an `oef_policy` / `xmi_policy`
@@ -681,9 +690,12 @@ Evidence gates (all via the MCP adapter and an absolute `workspaceRoot`):
 - Workspace freshness index (non-gating): `dediren_status {workspaceRoot, dir}` — a read-only
   index of the models and artifacts under a directory (below)
 
-Each tool returns an envelope (`dediren_build`'s is the unwrapped build-result
-document; see `self-check.md` § Reading tool results). Error envelopes are findings
-and cap the quality level at the highest stage already proven. `dediren_validate`
+Each tool call first requires a non-error MCP result and a non-error command
+envelope. Package `dediren_build` puts `package-build-result` under `.data`; read
+its rollup plus every `.data.views[]` and `.data.exports[]` lane. Single-model
+`dediren_build` returns the unwrapped build-result; read its top-level rollup plus
+every `.views[]` lane. Error envelopes are findings and cap the quality level at
+the highest stage already proven. `dediren_validate`
 without a `profile` is schema validation only; pass `profile` before claiming
 semantic source validity. Layout, render, and optional export remain downstream
 evidence gates inside the build.
@@ -692,12 +704,14 @@ evidence gates inside the build.
 
 Beyond `dediren_validate` / `dediren_build` / `dediren_guide`, the server exposes
 four read-only tools that answer model questions and verify build freshness
-without mutating source or regenerating output. They belong to the read-only tool
-subset — launching the server `dediren mcp --read-only` withholds only
-`dediren_build` and keeps these plus `dediren_validate` / `dediren_guide` (six
-tools), so Extract, Review, and Lookup need only the read-only subset. The plugin
-adapter stays full because Build needs `dediren_build`; the skill never passes
-`--read-only`.
+without mutating source or regenerating output. Launching `dediren mcp
+--read-only` withholds only `dediren_build`; it keeps `dediren_import`,
+`dediren_validate`, `dediren_guide`, and these four tools (seven total). Lookup
+and Review without reproduction need only that subset. Extract needs
+`dediren_build` whenever it generates artifacts; Build and a Review
+reproducibility build also need it, with the isolated procedure permitting the
+same resolved CLI fallback. The plugin adapter stays full and the skill never
+passes `--read-only`.
 
 - **`dediren_diff {workspaceRoot, old, new}`** compares two revisions of one package's source
   model — two source paths sharing the same schema id — and returns a
@@ -765,11 +779,16 @@ mismatch as a package or policy defect until proven otherwise. Check
 `plugins.generic-graph.semantic_profile`, the generated metadata
 `semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
+The repair and rebuild instructions in this layout section apply to Build and
+Extract. Review reports defects in original evidence without tuning it; its
+optional isolated copy receives one package build and no repair loop.
+
 Layout runs inside each `dediren_build` call; there is no separate layout command
-to parallelize. If a view's build reports an `ARCH-L-1` layout failure, rebuild
-that single view on its own to isolate it, and
+to parallelize. In Build or Extract, if a view's build reports an `ARCH-L-1`
+layout failure, rebuild that single view on its own to isolate it, and
 disclose a reproducible layout-engine failure under `Dediren tool issues` with the
-build-result `.views[].diagnostics[]` counts and the mapped
+package result's `.data.views[].diagnostics[]` or single-model result's
+`.views[].diagnostics[]` counts and the mapped
 `generated/layout/<view-id>.json` geometry.
 
 A view carries an optional `layout_preferences` object (set on the view in the
@@ -925,8 +944,8 @@ Render-ready requires inspecting SVG for:
   spanning its two lifelines (per the UML sequence notation reference).
   Superimposed participants are an `ARCH-R-*` defect; inspect the SVG structure
   independently, in addition to the self-check § Layout quality verdict (a
-  `warning` status on the `dediren_build` view entry and the gate counts in its
-  `.views[].diagnostics[]`).
+  `warning` status and gate counts on the package result's `.data.views[]` entry
+  or the single-model result's top-level `.views[]` entry).
 
 ### Relationship Connectors And Junctions
 
@@ -1017,25 +1036,29 @@ Do not claim `review-ready` while any blocking finding remains.
 
 For each package:
 
-1. Confirm `package.json` points to existing source, policies, metadata, and
+1. Treat original source, policies, generated artifacts, and gallery as the
+   evidence of record; record missing or stale evidence before any reproduction.
+2. Confirm `package.json` points to existing source, policies, metadata, and
    actual views.
-2. Confirm every view has a clear architecture question.
-3. Validate `model.json`.
-4. Build the package through the MCP adapter (one `dediren_build` call with
-   absolute `workspaceRoot` and relative `package`), which projects, lays out, layout-validates,
-   renders, and — when requested — exports every actual view in that one call,
-   writing each artifact to its declared path; verify each
-   `generated/render-metadata/<view>.json` `semantic_profile` matches its render
-   policy. Read the `package-build-result` per-view and per-export entries to
-   isolate a failing lane.
-5. Run the accessible-name post-render step (§9) on each rendered view.
-6. Inspect SVG for nonblank, marker-rich, accessible-named, visually readable
+3. Confirm every view has a clear architecture question.
+4. Validate each original model's schema and semantic profile without writing.
+5. Run `dediren_verify`, accessible-name/visual checks, and gallery freshness
+   checks against the original evidence. Preserve `ARCH-R-2` / `ARCH-E-4` and
+   other original findings even if later reproduction succeeds.
+6. Only when reproducibility evidence is required, follow
+   `references/procedures/isolated-review.md`: prepare one persistent copy, validate
+   every copied model, and make at most one native package build in that copy.
+   Read the package envelope `.data.status`, every `.data.views[]`, and every
+   `.data.exports[]`; stop on a failed or uncertain writing result. Apply title
+   and gallery post-render steps only inside the copy, then verify the original
+   snapshot is unchanged.
+7. Inspect the original SVG for nonblank, marker-rich, accessible-named, visually readable
    output.
-7. Include the optional OEF/XMI export lane (`oef_policy` / `xmi_policy`) only
+8. Include the optional OEF/XMI export lane (`oef_policy` / `xmi_policy`) only
    when requested.
-8. Run drift detection only when source comparison is requested.
-9. Report quality level, export readiness, evidence, missing diagram kinds,
-   and findings.
+9. Run source drift detection only when source comparison is requested.
+10. Report original readiness/findings, isolated build/copy/manifest/integrity
+    evidence, quality level, export readiness, missing diagram kinds, and findings.
 
 ## 14. Modeling Pitfalls
 

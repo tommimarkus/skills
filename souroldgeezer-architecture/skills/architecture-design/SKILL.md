@@ -91,9 +91,12 @@ Build.
    to every tool call. Drive it through its tools — `dediren_validate`,
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
    `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
-   mode above) — prefer MCP over the CLI. Extract, Review, and Lookup need only the
-   read-only tool subset; Build, and Extract when it generates artifacts, need
-   `dediren_build`. When the `dediren_*`
+   mode above) — prefer MCP over the CLI. Lookup and a Review that does not
+   reproduce the package need only the read-only tool subset. Build, Extract
+   whenever it generates artifacts, and a Review reproducibility build need
+   `dediren_build`; the isolated Review procedure permits the same resolved CLI
+   fallback when MCP has no build capability. A non-generating Extract may use
+   the read-only subset. When the `dediren_*`
    tools are absent, an internal CLI fallback may drive the same resolved
    executable; self-check § Server availability owns the availability check and
    exact `source-valid` cap condition. Provisioning is the launcher's job: never

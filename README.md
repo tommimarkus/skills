@@ -87,6 +87,8 @@ For local development, add the clone path as the marketplace source before runni
 
 `architecture-design` provisions its pinned, checksum-verified Dediren bundle when the host first lists its tools. Java™ 21+ is the normal prerequisite. The [Dediren runtime guide](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md) covers air-gapped hosts, overrides, and failures.
 
+Architecture Review preserves original source and artifacts as review evidence. When a build is needed, it uses one retained isolated copy; a successful rebuild does not clear stale or missing originals.
+
 ## Local development
 
 Use the [contributor guide](docs/contributing.md) for a persistent task worktree, validation, and release boundaries. Its [maintenance procedures](docs/maintenance-procedures.md) cover rare runtime operations.

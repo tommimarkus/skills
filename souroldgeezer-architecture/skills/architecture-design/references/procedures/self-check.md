@@ -75,12 +75,15 @@ Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
 `2026.07.28` or newer before rendering; that floor is the resolve gate for a
 host-supplied executable, while the plugin's own install is pinned above it.
 
-`dediren_validate` / `dediren_guide` plus the four read-only tools (`dediren_diff` /
-`dediren_query` / `dediren_verify` / `dediren_status`) are the read-only subset that
-a `dediren mcp --read-only` server keeps — only `dediren_build` is withheld — so
-Extract, Review, and Lookup work against a read-only server. The plugin adapter
-runs full because Build needs `dediren_build`; the launcher never passes
-`--read-only` (architecture §9).
+`dediren_import`, `dediren_validate`, `dediren_guide`, and the four read-only
+tools (`dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status`)
+are the seven-tool surface that `dediren mcp --read-only` keeps; only
+`dediren_build` is withheld. Lookup and Review without reproduction work against
+that surface. Extract requires build capability whenever it generates artifacts;
+Build and a Review reproducibility build also require it. For isolated Review,
+the same resolved CLI is the fallback when MCP has no build capability. The
+plugin adapter runs full; the launcher never passes `--read-only` (architecture
+§9).
 
 When the MCP tools are absent, use the **internal CLI lane** only if the same
 resolved executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
@@ -113,10 +116,18 @@ validation envelope; `dediren_validate` without a `profile` proves schema only. 
 to `archimate` or `uml` in the source, and add `archimate-oef` only when OEF export
 is requested, `uml-xmi` only when XMI export is requested.
 
-When the MCP server is unavailable, run the same validation through the internal CLI
-lane (§ Server availability): set `DEDIREN="${DEDIREN_COMMAND:-dediren}"`, require
-that command to exist, then run `"$DEDIREN" validate --input <pkg>/model.json` for schema and
-`"$DEDIREN" validate --input <pkg>/model.json --plugin generic-graph --profile archimate` (or `uml`) for the
+When the MCP server is unavailable, run the same validation through the internal
+CLI lane (§ Server availability): set `DEDIREN="${DEDIREN_COMMAND:-dediren}"`,
+require that command to exist, and use the complete notation-specific pairs:
+
+```bash
+"$DEDIREN" validate --input <pkg>/model.json
+"$DEDIREN" validate --input <pkg>/model.json --plugin generic-graph --profile archimate
+"$DEDIREN" validate --input <pkg>/model-uml.json
+"$DEDIREN" validate --input <pkg>/model-uml.json --plugin generic-graph --profile uml
+```
+
+Each first command proves schema validity and each second command adds the
 semantic gate. This is the same evidence, obtained without the server.
 
 ## Migrating an outdated input
@@ -195,9 +206,11 @@ step below remains required, and a re-render still means a stale gallery
 
 ## Reading tool results
 
-MCP tool results carry the same envelope JSON the CLI printed, so the guide's
-Command Handoff rules apply unchanged. Check `isError` on the tool result and the
-envelope `status` before trusting output.
+MCP tool results carry the same command JSON the CLI printed, so the guide's
+Command Handoff rules apply unchanged. For MCP, first check outer `isError`; for
+either lane, then check the command `status` before trusting output. A known
+validation or freshness error becomes a finding. A failed or uncertain
+artifact-writing result stops the run without retry or fallback.
 
 - `dediren_validate` returns a generic envelope: read `.status` and `.diagnostics[]`.
 - A single-model `dediren_build` returns the unwrapped build-result document.
@@ -229,8 +242,9 @@ envelope `status` before trusting output.
 
 `dediren_build` runs `validate-layout` inside the build; its verdict lands on the
 build-result document, not in the mapped layout file. Read the `dediren_build`
-view entry as the authoritative source: `.views[].status` (`ok` / `warning` /
-`error`) and the gate counts carried by its `.views[].diagnostics[]`. A layout
+view entry as the authoritative source: `.data.views[].status` /
+`.data.views[].diagnostics[]` for a package result, or top-level `.views[].status`
+/ `.views[].diagnostics[]` for a single-model result. A layout
 quality problem surfaces as a `warning` on the view entry with a
 `DEDIREN_LAYOUT_QUALITY_WARNING` diagnostic that names the offending count (for
 example `overlap_count`, `route_detour_count`, or `edge_label_dissociation_count`;
@@ -248,8 +262,10 @@ the rendered SVG is a render defect (`ARCH-R-3`), not merely hard to scan.
 The non-failing `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning means the render
 succeeded and the SVG is still available for inspection, but an edge label
 could not be placed without obscuring content. Treat the affected view as
-`ARCH-R-3`, not visually clean or render-ready: inspect the SVG, then widen the
-layout, shorten the label, or reposition the affected nodes and rebuild. If it
+`ARCH-R-3`, not visually clean or render-ready. In Build or Extract, inspect the
+SVG, then widen the layout, shorten the label, or reposition the affected nodes
+and rebuild. In Review, preserve the finding without tuning the original or the
+one-build reproduction copy. If it
 cannot be resolved within scope, disclose the warning with the artifact.
 
 ### Rendered SVG
@@ -265,10 +281,11 @@ ${CLAUDE_SKILL_DIR}/references/scripts/svg-accessible-name.py --title "<view lab
 # Codex: replace ${CLAUDE_SKILL_DIR} with the resolved absolute <skill-dir>.
 ```
 
-To steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
+In Build or Extract, to steer placement, set `layout_preferences` (`mode` / `direction` / `density` /
 `wrapping` / `routing`, plus the ELK Layered tuning knobs and per-node placement
 hints; enums and guidance in `architecture.md` §9) on the view in the source model,
-then rebuild. Renders are static SVG (the runtime retired the interactive render
+then rebuild. Review reports the original placement and does not tune or rebuild
+it. Renders are static SVG (the runtime retired the interactive render
 policy, §3). After every render, verify the artifact is static before disclosing
 it — `grep -c '<script' <svg>` must be `0` — and report that verified static
 mode, never the policy intent, in the footer `Layout/render options` line. A

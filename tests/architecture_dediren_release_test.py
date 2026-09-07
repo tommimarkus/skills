@@ -1477,37 +1477,145 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 class ArchitectureReviewContractRuntimeTest(unittest.TestCase):
     """Exercise the documented isolated Review contract on the adopted runtime."""
 
-    def test_isolated_copy_validates_both_profiles_and_keeps_original_bytes(self) -> None:
+    @staticmethod
+    def _inventory(root: Path) -> dict[str, bytes]:
+        return {
+            path.relative_to(root).as_posix(): path.read_bytes()
+            for path in root.rglob("*") if path.is_file()
+        }
+
+    def _prepare(self, fixture: Path, root: Path) -> tuple[Path, Path, Path, dict[str, bytes]]:
         copy_helper = SCRIPT_DIR / "review-copy.py"
+        workspace = root / "workspace"
+        shutil.copytree(fixture, workspace / "pkg")
+        original = self._inventory(workspace)
+        copy_root = root / "review-copy"
+        prepared = subprocess.run(
+            ["python3", str(copy_helper), "prepare", "--workspace-root", str(workspace),
+             "--package", "pkg/package.json", "--destination", str(copy_root)],
+            check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        return workspace, copy_root, Path(json.loads(prepared.stdout)["manifest"]), original
+
+    def _assert_source_valid(self, copy_root: Path, source: str, profile: str) -> None:
+        for extra in ((), ("--plugin", "generic-graph", "--profile", profile)):
+            result = subprocess.run(
+                [dediren_executable(), "validate", "--input", source, *extra],
+                cwd=copy_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            validated = envelope(result)
+            self.assertEqual(validated["status"], "ok", validated)
+            self.assertEqual(validated["diagnostics"], [], validated)
+
+    def _assert_original_unchanged(
+        self, workspace: Path, manifest: Path, original: dict[str, bytes]
+    ) -> None:
+        verified = subprocess.run(
+            ["python3", str(SCRIPT_DIR / "review-copy.py"), "verify-original", "--manifest", manifest],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertEqual(verified.returncode, 0, verified.stderr)
+        self.assertEqual(json.loads(verified.stdout)["status"], "unchanged")
+        self.assertEqual(original, self._inventory(workspace))
+
+    def test_isolated_single_model_package_build_keeps_missing_originals_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            workspace = root / "workspace"
-            shutil.copytree(MIXED_FIXTURE, workspace / "pkg")
-            original = {
-                path.relative_to(workspace).as_posix(): path.read_bytes()
-                for path in (workspace / "pkg").rglob("*") if path.is_file()
-            }
-            copy_root = root / "review-copy"
-            prepared = subprocess.run(
-                ["python3", str(copy_helper), "prepare", "--workspace-root", str(workspace),
-                 "--package", "pkg/package.json", "--destination", str(copy_root)],
-                check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            workspace, copy_root, manifest, original = self._prepare(FIXTURE, root)
+            self._assert_source_valid(copy_root, "pkg/model.json", "archimate")
+            package = json.loads((copy_root / "pkg/package.json").read_text(encoding="utf-8"))
+            for view in package["views"]:
+                for path in view["outputs"].values():
+                    self.assertFalse((workspace / "pkg" / path).exists())
+
+            build = subprocess.run(
+                [dediren_executable(), "build", "--package", "pkg/package.json"],
+                cwd=copy_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
-            manifest = json.loads(prepared.stdout)["manifest"]
-            for source, profile in (("pkg/model.json", "archimate"), ("pkg/model-uml.json", "uml")):
-                result = subprocess.run(
-                    [dediren_executable(), "validate", "--input", source, "--plugin", "generic-graph", "--profile", profile],
-                    cwd=copy_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                )
-                self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(build.returncode, 0, build.stderr)
+            outer = envelope(build)
+            self.assertEqual(outer["status"], "ok", outer)
+            package_result = outer["data"]
+            self.assertEqual(package_result["status"], "ok", package_result)
+            self.assertEqual(len(package_result["views"]), len(package["views"]))
+            self.assertEqual(len(package_result["exports"]), len(package["exports"]))
+            self.assertNotIn("views", outer)
+            self.assertTrue(all(entry["status"] == "ok" for entry in package_result["views"]))
+            self.assertTrue(all(entry["status"] == "ok" for entry in package_result["exports"]))
+            self._assert_original_unchanged(workspace, manifest, original)
+
+    def test_isolated_mixed_package_validates_both_profiles_and_rolls_up_all_lanes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace, copy_root, manifest, original = self._prepare(MIXED_FIXTURE, root)
+            for source, profile in (
+                ("pkg/model.json", "archimate"),
+                ("pkg/model-uml.json", "uml"),
+            ):
+                self._assert_source_valid(copy_root, source, profile)
             build = subprocess.run(
                 [dediren_executable(), "build", "--package", "pkg/package.json"], cwd=copy_root,
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
             self.assertEqual(build.returncode, 0, build.stderr)
-            verified = subprocess.run(["python3", str(copy_helper), "verify-original", "--manifest", manifest], text=True, stdout=subprocess.PIPE)
-            self.assertEqual((verified.returncode, json.loads(verified.stdout)["status"]), (0, "unchanged"))
-            self.assertEqual(original, {path.relative_to(workspace).as_posix(): path.read_bytes() for path in (workspace / "pkg").rglob("*") if path.is_file()})
+            outer = envelope(build)
+            package_result = outer["data"]
+            self.assertEqual((outer["status"], package_result["status"]), ("ok", "ok"))
+            self.assertEqual(len(package_result["views"]), 2)
+            self.assertEqual(len(package_result["exports"]), 2)
+            for lane in [*package_result["views"], *package_result["exports"]]:
+                self.assertEqual(lane["status"], "ok", lane)
+                self.assertIsInstance(lane.get("diagnostics", []), list)
+            self.assertTrue(all("assurance" not in lane for lane in package_result["exports"]))
+            self._assert_original_unchanged(workspace, manifest, original)
+
+    def test_single_model_build_result_is_unwrapped_and_all_views_are_read(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace, copy_root, manifest, original = self._prepare(FIXTURE, root)
+            self._assert_source_valid(copy_root, "pkg/model.json", "archimate")
+            build = subprocess.run(
+                [dediren_executable(), "build", "--input", "pkg/model.json",
+                 "--out", "single-output", "--render-policy", "pkg/render-policy.json"],
+                cwd=copy_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            self.assertEqual(build.returncode, 0, build.stderr)
+            result = json.loads(build.stdout)
+            self.assertEqual(result["status"], "ok", result)
+            self.assertNotIn("data", result)
+            self.assertGreaterEqual(len(result["views"]), 1)
+            self.assertTrue(all(view["status"] == "ok" for view in result["views"]))
+            self._assert_original_unchanged(workspace, manifest, original)
+
+    def test_failed_isolated_build_preserves_copy_and_original_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace, copy_root, manifest, original = self._prepare(FIXTURE, root)
+            self._assert_source_valid(copy_root, "pkg/model.json", "archimate")
+            (copy_root / "pkg/render-policy.json").write_text("not json", encoding="utf-8")
+            build = subprocess.run(
+                [dediren_executable(), "build", "--package", "pkg/package.json"], cwd=copy_root,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            self.assertNotEqual(build.returncode, 0)
+            failed = envelope(build)
+            self.assertEqual(failed["status"], "error", failed)
+            self.assertTrue(copy_root.is_dir())
+            self.assertTrue(manifest.is_file())
+            self._assert_original_unchanged(workspace, manifest, original)
+
+    def test_mcp_outer_error_and_envelope_error_are_both_observable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _, copy_root, _, _ = self._prepare(FIXTURE, root)
+            by_id = mcp_session(copy_root, [{
+                "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                "params": {"name": "dediren_build", "arguments": {"package": "missing/package.json"}},
+            }])
+            response = by_id[2]
+            self.assertTrue(response["result"]["isError"], response)
+            self.assertEqual(tool_envelope(response)["status"], "error")
 
 
 if __name__ == "__main__":

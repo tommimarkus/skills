@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -18,8 +19,7 @@ from typing import Any
 
 SCHEMA = "architecture-review-copy-v1"
 MANIFEST = ".architecture-review-copy.json"
-PATH_KEYS = {"source", "policy", "render_policy", "export_policy", "theme", "gallery"}
-OUTPUT_KEYS = {"output", "diagram", "layout", "render_metadata", "gallery"}
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 class CopyError(Exception):
@@ -34,15 +34,47 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_bytes(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def read_json_snapshot(path: Path, rel: Path, label: str) -> tuple[Any, str]:
+    try:
+        content = path.read_bytes()
+        return json.loads(content), sha256_bytes(content)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise CopyError(f"invalid {label} JSON: {rel.as_posix()}") from exc
+
+
 def emit(value: dict[str, Any], code: int = 0) -> int:
     print(json.dumps(value, sort_keys=True))
     return code
 
 
-def relative_path(root: Path, raw: str, label: str, base: Path | None = None) -> Path:
+def relative_path(
+    root: Path,
+    raw: str,
+    label: str,
+    base: Path | None = None,
+    *,
+    reject_symlinks: bool = True,
+) -> Path:
     path = Path(raw)
     if path.is_absolute():
         raise CopyError(f"{label} must be workspace-relative: {raw}")
+    cursor = base or root
+    for part in path.parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            parent = cursor.parent
+            if parent != root and root not in parent.parents:
+                raise CopyError(f"{label} escapes workspace: {raw}")
+            cursor = parent
+            continue
+        cursor /= part
+        if reject_symlinks and cursor.is_symlink():
+            raise CopyError(f"{label} traverses a symlink: {raw}")
     candidate = Path(os.path.normpath(str((base or root) / path)))
     # Check lexical containment before resolving so an in-root symlink cannot
     # disappear into its target before the caller checks every ancestor.
@@ -50,6 +82,26 @@ def relative_path(root: Path, raw: str, label: str, base: Path | None = None) ->
         return candidate.relative_to(root)
     except ValueError as exc:
         raise CopyError(f"{label} escapes workspace: {raw}") from exc
+
+
+def absolute_path(raw: Path, label: str, *, require_directory: bool = False) -> Path:
+    """Validate an absolute path without following a symlinked identity."""
+    if not raw.is_absolute():
+        raise CopyError(f"{label} must be absolute")
+    lexical = Path(os.path.abspath(raw))
+    cursor = Path(lexical.anchor)
+    for part in lexical.parts[1:]:
+        cursor /= part
+        if cursor.is_symlink():
+            raise CopyError(f"{label} has a symlink component: {cursor}")
+        if not cursor.exists():
+            break
+    if require_directory:
+        if not lexical.exists():
+            raise CopyError(f"{label} does not exist: {lexical}")
+        if not lexical.is_dir():
+            raise CopyError(f"{label} is not a directory: {lexical}")
+    return lexical
 
 
 def ensure_regular(root: Path, rel: Path, required: bool = True) -> Path | None:
@@ -69,22 +121,76 @@ def ensure_regular(root: Path, rel: Path, required: bool = True) -> Path | None:
     return path
 
 
-def package_files(root: Path, package_rel: Path, package_data: dict[str, Any]) -> tuple[set[Path], set[Path], set[Path]]:
-    package_dir = package_rel.parent
-    copied: set[Path] = set()
-    inputs: set[Path] = set()
-    outputs: set[Path] = set()
-    # The complete package tree is copied so local gallery/theme assets and
-    # declared generated evidence retain their original byte state.
-    directory = root / package_dir
+def current_path_state(root: Path, rel: Path) -> tuple[str, str | None]:
+    """Return a verification state without following symlinked ancestors."""
+    cursor = root
+    for part in rel.parts:
+        cursor /= part
+        if cursor.is_symlink():
+            return "unsafe", None
+        if not cursor.exists():
+            return "missing", None
+        if cursor != root / rel and not cursor.is_dir():
+            return "unsafe", None
+    if cursor.is_file():
+        return "regular", sha256(cursor)
+    return "unsafe", None
+
+
+def require_path_field(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise CopyError(f"{label} must be a non-empty path string")
+    return value
+
+
+def package_tree_files(root: Path, package_dir: Path) -> set[Path]:
+    directory = ensure_regular_directory(root, package_dir)
+    files: set[Path] = set()
     for entry in directory.rglob("*"):
         rel = entry.relative_to(root)
         if entry.is_symlink():
             raise CopyError(f"symlink is not permitted: {rel.as_posix()}")
         if entry.is_file():
-            copied.add(rel)
+            files.add(rel)
         elif not entry.is_dir():
             raise CopyError(f"nonregular input: {rel.as_posix()}")
+    return files
+
+
+def ensure_regular_directory(root: Path, rel: Path) -> Path:
+    path = root / rel
+    cursor = root
+    for part in rel.parts:
+        cursor /= part
+        if cursor.is_symlink():
+            raise CopyError(f"symlink is not permitted: {rel.as_posix()}")
+    if not path.exists() or not path.is_dir():
+        raise CopyError(f"missing package directory: {rel.as_posix()}")
+    return path
+
+
+def package_files(
+    root: Path,
+    package_rel: Path,
+    package_data: dict[str, Any],
+    parsed_hashes: dict[Path, str],
+) -> tuple[set[Path], set[Path], set[Path]]:
+    package_dir = package_rel.parent
+    copied: set[Path] = set()
+    inputs: set[Path] = set()
+    outputs: set[Path] = set()
+
+    def declare_output(rel: Path) -> None:
+        for existing in outputs:
+            if rel == existing or rel in existing.parents or existing in rel.parents:
+                raise CopyError(
+                    f"declared output path collision: {existing.as_posix()} and {rel.as_posix()}"
+                )
+        outputs.add(rel)
+
+    # The complete package tree is copied so local gallery/theme assets and
+    # declared generated evidence retain their original byte state.
+    copied.update(package_tree_files(root, package_dir))
     copied.add(package_rel)
     inputs.add(package_rel)
     # package.schema.v1 paths are relative to package.json, except a permitted
@@ -92,31 +198,33 @@ def package_files(root: Path, package_rel: Path, package_data: dict[str, Any]) -
     if not isinstance(package_data.get("models"), list):
         raise CopyError("package models must be a list")
     for model in package_data["models"]:
-        if not isinstance(model, dict) or not isinstance(model.get("source"), str):
+        if not isinstance(model, dict):
             raise CopyError("package model lacks source")
-        inputs.add(relative_path(root, model["source"], "source", root / package_dir))
+        source = require_path_field(model.get("source"), "package model source")
+        inputs.add(relative_path(root, source, "source", root / package_dir))
     if not isinstance(package_data.get("views"), list):
         raise CopyError("package views must be a list")
     for view in package_data["views"]:
         if not isinstance(view, dict):
             raise CopyError("invalid package view")
-        if isinstance(view.get("render_policy"), str):
-            inputs.add(relative_path(root, view["render_policy"], "render_policy", root / package_dir))
+        render_policy = require_path_field(view.get("render_policy"), "view render_policy")
+        inputs.add(relative_path(root, render_policy, "render_policy", root / package_dir))
         declared = view.get("outputs", {})
         if not isinstance(declared, dict):
             raise CopyError("invalid view outputs")
         for key in ("diagram", "layout", "render_metadata"):
-            if isinstance(declared.get(key), str):
-                outputs.add(relative_path(root, declared[key], key, root / package_dir))
+            if key == "diagram" or key in declared:
+                raw_output = require_path_field(declared.get(key), f"view output {key}")
+                declare_output(relative_path(root, raw_output, key, root / package_dir))
     if not isinstance(package_data.get("exports", []), list):
         raise CopyError("package exports must be a list")
     for export in package_data.get("exports", []):
         if not isinstance(export, dict):
             raise CopyError("invalid package export")
-        if isinstance(export.get("policy"), str):
-            inputs.add(relative_path(root, export["policy"], "policy", root / package_dir))
-        if isinstance(export.get("output"), str):
-            outputs.add(relative_path(root, export["output"], "output", root / package_dir))
+        policy = require_path_field(export.get("policy"), "export policy")
+        output = require_path_field(export.get("output"), "export output")
+        inputs.add(relative_path(root, policy, "policy", root / package_dir))
+        declare_output(relative_path(root, output, "output", root / package_dir))
     # Fragments are source inputs, not a recursive package mechanism. Reject a
     # fragment object that itself declares fragments: that shape cannot be
     # snapshot safely without widening the reviewed package graph.
@@ -125,10 +233,9 @@ def package_files(root: Path, package_rel: Path, package_data: dict[str, Any]) -
         if isinstance(source, str):
             rel = relative_path(root, source, "source", root / package_dir)
             source_path = ensure_regular(root, rel)
-            try:
-                model_data = json.loads(source_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError as exc:
-                raise CopyError(f"invalid model JSON: {rel.as_posix()}") from exc
+            model_data, parsed_hashes[rel] = read_json_snapshot(source_path, rel, "model")
+            if not isinstance(model_data, dict):
+                raise CopyError(f"model JSON must be an object: {rel.as_posix()}")
             fragments = model_data.get("fragments", [])
             if not isinstance(fragments, list):
                 raise CopyError(f"invalid fragments list: {rel.as_posix()}")
@@ -137,16 +244,17 @@ def package_files(root: Path, package_rel: Path, package_data: dict[str, Any]) -
                     raise CopyError(f"invalid fragment path: {rel.as_posix()}")
                 fragment_rel = relative_path(root, fragment, "fragment", source_path.parent)
                 fragment_path = ensure_regular(root, fragment_rel)
-                try:
-                    fragment_data = json.loads(fragment_path.read_text(encoding="utf-8"))
-                except json.JSONDecodeError as exc:
-                    raise CopyError(f"invalid fragment JSON: {fragment_rel.as_posix()}") from exc
+                fragment_data, parsed_hashes[fragment_rel] = read_json_snapshot(
+                    fragment_path, fragment_rel, "fragment"
+                )
+                if not isinstance(fragment_data, dict):
+                    raise CopyError(f"fragment JSON must be an object: {fragment_rel.as_posix()}")
                 if "fragments" in fragment_data:
                     raise CopyError(f"nested fragments are not supported: {fragment_rel.as_posix()}")
                 inputs.add(fragment_rel)
     # A gallery is a declared review surface even when the package has not yet
     # generated it; preserve its absence in the snapshot.
-    outputs.add(package_dir / "gallery.html")
+    declare_output(package_dir / "gallery.html")
     for output in outputs:
         existing = root / output
         if existing.exists() or existing.is_symlink():
@@ -157,30 +265,25 @@ def package_files(root: Path, package_rel: Path, package_data: dict[str, Any]) -
 
 
 def prepare(workspace_root: Path, package: str, destination: Path) -> dict[str, Any]:
-    root = workspace_root.resolve(strict=True)
+    root = absolute_path(workspace_root, "workspace-root", require_directory=True)
     package_rel = relative_path(root, package, "package")
     package_path = ensure_regular(root, package_rel)
     if package_path.name != "package.json":
         raise CopyError("package must name package.json")
-    try:
-        package_data = json.loads(package_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise CopyError(f"invalid package JSON: {package_rel.as_posix()}") from exc
+    package_data, package_hash = read_json_snapshot(package_path, package_rel, "package")
     if not isinstance(package_data, dict):
         raise CopyError("package JSON must be an object")
-    raw_destination = destination.absolute()
-    for ancestor in (raw_destination, *raw_destination.parents):
-        if ancestor.exists() and ancestor.is_symlink():
-            raise CopyError(f"destination has a symlink ancestor: {ancestor}")
-    destination = raw_destination.resolve(strict=False)
-    if destination.exists():
+    destination = absolute_path(destination, "destination")
+    if destination.exists() or destination.is_symlink():
         raise CopyError(f"destination already exists: {destination}")
     if destination == root or root in destination.parents or destination in root.parents:
         raise CopyError("destination overlaps workspace root")
-    paths, inputs, outputs = package_files(root, package_rel, package_data)
+    parsed_hashes = {package_rel: package_hash}
+    paths, inputs, outputs = package_files(root, package_rel, package_data, parsed_hashes)
     reserved = Path(MANIFEST)
-    if reserved in paths or reserved in outputs:
-        raise CopyError(f"reserved manifest path collision: {MANIFEST}")
+    for rel in paths | outputs:
+        if rel == reserved or reserved in rel.parents or rel in reserved.parents:
+            raise CopyError(f"reserved manifest path collision: {rel.as_posix()}")
     for rel in paths:
         ensure_regular(root, rel)
     for output in outputs:
@@ -189,21 +292,61 @@ def prepare(workspace_root: Path, package: str, destination: Path) -> dict[str, 
                 raise CopyError(
                     f"input/output path collision: {input_path.as_posix()} and {output.as_posix()}"
                 )
+        for copied_path in paths:
+            if copied_path != output and (
+                copied_path in output.parents or output in copied_path.parents
+            ):
+                raise CopyError(
+                    f"copied file/output path collision: {copied_path.as_posix()} and {output.as_posix()}"
+                )
     # Destination root acts as the copied workspace root, preserving every
     # workspace-relative path used by package.json, including ../ references.
+    package_inventory = package_tree_files(root, package_rel.parent)
+    planned_package_inventory = {
+        rel for rel in paths
+        if package_rel.parent == Path(".") or package_rel.parent in rel.parents
+    }
+    if package_inventory != planned_package_inventory:
+        raise CopyError("package file inventory changed before copy")
     preflight_hashes = {rel: sha256(root / rel) for rel in paths}
-    destination.mkdir(parents=True)
+    for rel, parsed_hash in parsed_hashes.items():
+        if preflight_hashes.get(rel) != parsed_hash:
+            raise CopyError(f"parsed input changed before copy: {rel.as_posix()}")
+    output_states: dict[Path, str | None] = {}
+    for rel in outputs:
+        state, actual = current_path_state(root, rel)
+        if state == "unsafe":
+            raise CopyError(f"nonregular input: {rel.as_posix()}")
+        expected = preflight_hashes.get(rel) if rel in paths else None
+        if (state == "regular" and actual != expected) or (
+            state == "missing" and expected is not None
+        ):
+            raise CopyError(f"original changed before copy: {rel.as_posix()}")
+        output_states[rel] = actual
+    destination.mkdir(parents=True, exist_ok=False)
     mapping: dict[str, str | None] = {}
     for rel in sorted(paths):
         source = root / rel
         target = destination / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
+        ensure_regular(root, rel)
         if sha256(source) != preflight_hashes[rel] or sha256(target) != preflight_hashes[rel]:
             raise CopyError(f"original changed during copy: {rel.as_posix()}")
         mapping[rel.as_posix()] = preflight_hashes[rel]
-    for rel in sorted(outputs):
-        mapping.setdefault(rel.as_posix(), sha256(root / rel) if (root / rel).is_file() else None)
+    if package_tree_files(root, package_rel.parent) != package_inventory:
+        raise CopyError("package file inventory changed during copy")
+    for rel, expected in preflight_hashes.items():
+        state, actual = current_path_state(root, rel)
+        if state != "regular" or actual != expected:
+            raise CopyError(f"original changed during copy: {rel.as_posix()}")
+    for rel, expected in output_states.items():
+        state, actual = current_path_state(root, rel)
+        if (expected is None and state != "missing") or (
+            expected is not None and (state != "regular" or actual != expected)
+        ):
+            raise CopyError(f"original changed during copy: {rel.as_posix()}")
+        mapping.setdefault(rel.as_posix(), expected)
     manifest = {
         "schema": SCHEMA,
         "original_workspace_root": str(root),
@@ -215,30 +358,85 @@ def prepare(workspace_root: Path, package: str, destination: Path) -> dict[str, 
     return {"status": "ok", "manifest": str(destination / MANIFEST), "workspace_root": str(destination), "package": package_rel.as_posix()}
 
 
+def changed_result(changes: set[str]) -> tuple[dict[str, Any], int]:
+    ordered = sorted(changes)
+    return {
+        "status": "unchanged" if not ordered else "changed",
+        "changed_count": len(ordered),
+        "changed_paths": ordered[:20],
+    }, 0 if not ordered else 1
+
+
 def verify_original(manifest_path: Path) -> tuple[dict[str, Any], int]:
+    manifest_path = absolute_path(manifest_path, "manifest")
+    if not manifest_path.exists() or not manifest_path.is_file():
+        raise CopyError(f"manifest is not a regular file: {manifest_path}")
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise CopyError("manifest JSON must be an object")
     if data.get("schema") != SCHEMA:
         raise CopyError("unsupported manifest schema")
     required = {"original_workspace_root", "workspace_root", "package", "files"}
     if not required <= set(data) or not isinstance(data["files"], dict):
         raise CopyError("invalid manifest")
+    for field in ("original_workspace_root", "workspace_root", "package"):
+        if not isinstance(data[field], str) or not data[field]:
+            raise CopyError(f"invalid manifest {field}")
     root = Path(data["original_workspace_root"])
-    changes = []
-    for raw, expected in data.get("files", {}).items():
-        rel = relative_path(root.resolve(strict=True), raw, "manifest file")
-        path = root / rel
-        actual = sha256(path) if path.is_file() and not path.is_symlink() else None
-        if actual != expected:
-            changes.append(raw)
-    package_rel = relative_path(root.resolve(strict=True), data["package"], "package")
-    package_path = ensure_regular(root, package_rel)
-    package_data = json.loads(package_path.read_text(encoding="utf-8"))
-    inventory, _, _ = package_files(root, package_rel, package_data)
-    recorded = set(data["files"])
-    for path in sorted(inventory, key=lambda item: item.as_posix()):
-        if path.as_posix() not in recorded:
-            changes.append(path.as_posix())
-    return {"status": "unchanged" if not changes else "changed", "changed_count": len(changes), "changed_paths": changes[:20]}, 0 if not changes else 1
+    copied_root = Path(data["workspace_root"])
+    if not root.is_absolute() or not copied_root.is_absolute():
+        raise CopyError("manifest workspace roots must be absolute")
+    if manifest_path != copied_root / MANIFEST:
+        raise CopyError("manifest path does not match its copied workspace root")
+    changes: set[str] = set()
+    root_safe = True
+    try:
+        root = absolute_path(root, "original workspace root", require_directory=True)
+    except CopyError:
+        root_safe = False
+    validated_files: dict[Path, str | None] = {}
+    for raw, expected in data["files"].items():
+        if not isinstance(raw, str) or not raw or (expected is not None and (
+            not isinstance(expected, str) or not SHA256_RE.fullmatch(expected)
+        )):
+            raise CopyError("invalid manifest files mapping")
+        lexical_root = Path(os.path.abspath(root))
+        rel = relative_path(lexical_root, raw, "manifest file", reject_symlinks=False)
+        if rel.as_posix() != raw:
+            raise CopyError(f"manifest file is not canonical: {raw}")
+        validated_files[rel] = expected
+    package_rel = relative_path(
+        Path(os.path.abspath(root)), data["package"], "package", reject_symlinks=False
+    )
+    if package_rel.as_posix() != data["package"] or package_rel.name != "package.json":
+        raise CopyError("invalid manifest package")
+    if not root_safe:
+        changes.update(path.as_posix() for path in validated_files)
+        changes.add(package_rel.as_posix())
+        return changed_result(changes)
+    for rel, expected in validated_files.items():
+        state, actual = current_path_state(root, rel)
+        if (expected is None and state != "missing") or (
+            expected is not None and (state != "regular" or actual != expected)
+        ):
+            changes.add(rel.as_posix())
+    package_expected = validated_files.get(package_rel)
+    package_state, package_actual = current_path_state(root, package_rel)
+    if package_expected is None or package_state != "regular" or package_actual != package_expected:
+        changes.add(package_rel.as_posix())
+        return changed_result(changes)
+    package_dir = package_rel.parent
+    recorded_package_files = {
+        rel for rel, expected in validated_files.items()
+        if expected is not None and (package_dir == Path(".") or package_dir in rel.parents)
+    }
+    try:
+        current_package_files = package_tree_files(root, package_dir)
+    except CopyError:
+        changes.add(package_dir.as_posix())
+        return changed_result(changes)
+    changes.update(path.as_posix() for path in current_package_files ^ recorded_package_files)
+    return changed_result(changes)
 
 
 def main() -> int:
@@ -256,9 +454,11 @@ def main() -> int:
             if not Path(args.workspace_root).is_absolute() or not Path(args.destination).is_absolute():
                 raise CopyError("workspace-root and destination must be absolute")
             return emit(prepare(Path(args.workspace_root), args.package, Path(args.destination)))
+        if not Path(args.manifest).is_absolute():
+            raise CopyError("manifest must be absolute")
         value, code = verify_original(Path(args.manifest))
         return emit(value, code)
-    except (CopyError, OSError, json.JSONDecodeError) as exc:
+    except (CopyError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         print(f"review-copy: {exc}", file=sys.stderr)
         return 2
 

@@ -27,7 +27,9 @@ Three read-only Dediren tools complement the source-drift `ARCH-X-*` checks abov
   machine check that a package's generated output is still a pure function of its
   source. A `stale` rendered SVG or gallery is `ARCH-R-2`; a `stale` OEF/XMI export
   is `ARCH-E-4`. An `unstamped` artifact — e.g. committed evidence predating
-  provenance stamping — is disclosable, not a finding.
+  provenance stamping — is disclosable, not a finding. In Review, run this gate
+  against the original before preparing any reproducibility copy. Preserve its
+  finding even when an isolated copy later builds current artifacts.
 - **Workspace freshness index (`dediren_status {workspaceRoot, dir?}`).** A read-only index of the
   models and artifacts under a directory; use it to spot which packages may have
   drifted before running `dediren_verify`. Non-gating — `dediren_verify` is the

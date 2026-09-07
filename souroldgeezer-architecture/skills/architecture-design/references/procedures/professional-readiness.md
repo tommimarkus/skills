@@ -33,10 +33,12 @@ Valid layout can still be hard to read. Emit `ARCH-L-3`, `ARCH-R-3`, or
 `ARCH-Q-2` when a view is dense, hub-heavy, label-obscured, label-dissociated,
 route-congested, too wide/tall, group-imbalanced, or mixes concerns from
 multiple audiences.
-For density, routing, or framing problems, tune the dediren layout
-(`architecture.md` §9 `layout_preferences`) and re-validate before reporting;
+In Build or Extract, for density, routing, or framing problems, tune the dediren
+layout (`architecture.md` §9 `layout_preferences`) and re-validate before reporting;
 reserve splitting the concern (§7) for genuinely mixed audiences, an inventory
 view, or a view that layout tuning cannot make scannable.
+In Review, report the defect against the original evidence without tuning or a
+repair build.
 
 ## Valid But Not Useful
 

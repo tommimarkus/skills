@@ -765,7 +765,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
                 "ArchiMate and UML are supported `generic-graph` semantic profiles",
-                'dediren_validate {workspaceRoot, profile: "uml"}',
+                'dediren_validate {workspaceRoot, source, profile: "uml"}',
                 "uml-xmi",
                 "uml-sequence",
             ],
@@ -1571,6 +1571,62 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("legacy Copilot lane explicitly sets `DEDIREN_HOME`", self_check)
         self.assertIn("package.json declares bindings and paths", architecture)
         self.assertIn("runtime owns projection, layout, rendering, and export execution", architecture)
+
+    def test_review_isolation_contract_is_complete_and_consistent(self) -> None:
+        skill = compact_file(ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md")
+        architecture = compact_file(ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md")
+        self_check = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md"
+        )
+        isolated = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "isolated-review.md"
+        )
+        drift = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "drift-detection.md"
+        )
+        output = compact_file(
+            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
+        )
+        readme = compact_file(REPO_ROOT / "README.md")
+
+        for content in (skill, architecture, isolated, drift, output, readme):
+            with self.subTest(surface=content[:60]):
+                self.assertIn("original", content.lower())
+        for phrase in (
+            '"$DEDIREN" validate --input <pkg>/model.json',
+            '"$DEDIREN" validate --input <pkg>/model.json --plugin generic-graph --profile archimate',
+            '"$DEDIREN" validate --input <pkg>/model-uml.json',
+            '"$DEDIREN" validate --input <pkg>/model-uml.json --plugin generic-graph --profile uml',
+        ):
+            self.assertIn(phrase, self_check)
+        self.assertIn("outer `isError`", self_check)
+        self.assertIn("`.data.views[]`", self_check)
+        self.assertIn("`.data.exports[]`", self_check)
+        self.assertIn("unqualified top-level `views`", self_check)
+        self.assertIn("seven-tool surface", self_check)
+        self.assertIn("`dediren_import`", self_check)
+        self.assertIn("stops the run without retry or fallback", self_check)
+        self.assertIn("Single-model `dediren_build` returns the unwrapped build-result", architecture)
+        self.assertIn("Package `dediren_build` puts `package-build-result` under `.data`", architecture)
+        self.assertIn("successful copy build does not clear stale or missing original evidence", architecture)
+        self.assertIn("at most one native package build", isolated)
+        self.assertIn("never promotes or removes a copy", isolated)
+        self.assertIn("Copy success never upgrades the original quality level", output)
+
+        cases = {
+            json.loads(line)["id"]: json.loads(line)
+            for line in (
+                ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        self.assertTrue({
+            "architecture-design-behavior-isolated-review-stale-original",
+            "architecture-design-behavior-isolated-review-read-only-server",
+            "architecture-design-behavior-isolated-review-build-failure",
+            "architecture-design-behavior-review-runtime-unavailable",
+            "architecture-design-behavior-build-result-shapes",
+        } <= cases.keys())
 
     def test_old_runtime_files_are_removed(self) -> None:
         retired_paths = [
