@@ -7,6 +7,8 @@ operational changes.
 
 ## Checklist
 
+### Check packaging and versions
+
 - Confirm the shared Claude marketplace still points at existing plugin paths.
 - Confirm each plugin retains its Claude `.claude-plugin/plugin.json` manifest
   and the Claude marketplace entry keeps the same `name` and `description`.
@@ -18,6 +20,11 @@ operational changes.
   with Codex. Neither marketplace may carry a `version` key.
 - Validate every Codex plugin with the current first-party plugin validator when
   the installed CLI exposes one.
+
+### Verify the candidate
+
+- Run the complete [contributor validation](contributing.md#validate-the-change)
+  from the clean task worktree, preserving each gate's exit status.
 - Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
   with all three CLIs available; require all five Claude/Codex isolated installs,
   all 16 shared public skills, the isolated Copilot architecture install, Claude
@@ -26,7 +33,6 @@ operational changes.
   Codex validator as a skip.
 - Confirm the plugin docs still link every shipped skill.
 - Confirm `README.md` still acts as the product map.
-- Run the validation commands listed in `README.md`.
 - Inspect `git diff --check` for whitespace errors.
 - Review the README and the relevant contributor guide when the release changes
   the documented public surface.

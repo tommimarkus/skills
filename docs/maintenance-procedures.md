@@ -1,9 +1,15 @@
 # Repo maintenance procedures
 
-Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
-is loaded on demand via the pointer at its original site. Start with the
-[contributor guide](contributing.md) for normal repository work, and use the
-[release checklist](release-checklist.md) for release preparation.
+Use this guide for infrequent maintenance. For everyday setup and validation,
+start with the [contributor guide](contributing.md); for version stamping and
+publication preparation, use the [release checklist](release-checklist.md).
+
+- [Adopt a Dediren release](#dediren-upstream-release-adoption): verify the
+  candidate before changing the provisioned pin or support floor.
+- [Remove runtime or tool support](#removing-a-runtimes-or-tools-support):
+  retire the marketplace adapter without deleting downstream conventions.
+- [Migrate an architecture installation](#architecture-design-plugin-migration):
+  install the plugin that now owns the skill.
 
 ## Dediren upstream release adoption
 
@@ -97,8 +103,25 @@ bundle in place; report Dediren defects upstream.
 
 ## Removing a runtime's or tool's support
 
-Scope the cut to the marketplace's **own** surfaces — per-runtime manifests/wrappers/metadata, runtime-parity tooling and finding fields, install docs, and version-cell sets. Do **not** scrub (a) general agent-guidance conventions a downstream *target* repo uses (e.g. `AGENTS.md` in the policy / `ip-hygiene` skills); (b) optional external-plugin handoffs; (c) vendor-named security/detection patterns (e.g. an `openai-key` secret regex). Confirm no regression with a same-engine before/after report diff, and re-run the gold ledger so the ≥500-case / ≥90%-recall floor still holds after pruning rule families and regenerating it.
+Scope the removal to the marketplace's own manifests, wrappers, metadata,
+runtime-parity tooling, finding fields, installation docs, and version cells.
+Preserve these distinct uses of the same runtime or tool name:
+
+- conventions used by a downstream target repository, such as `AGENTS.md`
+  references in policy or IP-hygiene guidance;
+- optional external-plugin handoffs;
+- vendor-named security detectors, such as an `openai-key` secret pattern.
+
+Compare before and after reports from the same engine. After pruning rule
+families and regenerating the gold ledger, rerun it and confirm that the
+≥500-case / ≥90%-recall floor still holds.
 
 ## architecture-design plugin migration
 
-`architecture-design` moved from `souroldgeezer-design` to `souroldgeezer-architecture`; users who installed `souroldgeezer-design` for architecture work must install `souroldgeezer-architecture@souroldgeezer`. Canonical handoff is the dediren package directory `docs/architecture/<feature>.dediren/`.
+`architecture-design` now belongs to `souroldgeezer-architecture`. If you
+installed `souroldgeezer-design` for architecture work, install
+`souroldgeezer-architecture@souroldgeezer` using your host's
+[installation command](../README.md#install).
+
+The canonical handoff remains the Dediren package directory
+`docs/architecture/<feature>.dediren/`.
