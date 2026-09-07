@@ -152,3 +152,20 @@ while retaining the pure-logic control against ceremony. Retest behavior cases
 clock control. Merge-back condition: shorten this wording if fresh reviews
 consistently separate all three compatibility dimensions and preserve both the
 real-boundary exception and pure-logic false-positive resistance without it.
+
+2026-09 File Edit discoverability and local-helper repair: the early-return
+lane was present in workflow text but omitted from the matching activation
+descriptions, and its helper could be invoked from an installed skill path
+without an explicit consumer target. The accepted rule names bounded non-code
+text/data edits needing no design decision in both descriptions, retains the
+ordinary design and sibling exclusions, resolves a host-specific loaded skill
+path, and always passes `--repo-root` for the consumer repository. Quiet-decision
+writes now use a literal `defer-until:<date>` template rendered from the UTC
+decision date plus 30 calendar days; reads never slide it and renewal is
+explicit. Retest `software-design-trigger-file-edit-bounded-text-data`,
+`software-design-behavior-file-edit-rejection`,
+`software-design-behavior-file-edit-dispatch`, and
+`software-design-behavior-native-evidence-quieting` with a consumer fixture
+whose path contains spaces. Merge back condition: simplify only if fresh
+agents retain correct trigger selection, consumer-scoped helper execution, and
+date-correct quieting without this wording.

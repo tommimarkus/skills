@@ -24,6 +24,9 @@ class SoftwareDesignFileLaneEvalTest(unittest.TestCase):
                 self.assertTrue(cases[case_id]["expected_activation"])
                 self.assertIn("Normal", cases[case_id]["reason"])
                 self.assertIn("not select File Edit", cases[case_id]["reason"])
+        bounded = cases["software-design-trigger-file-edit-bounded-text-data"]
+        self.assertTrue(bounded["expected_activation"])
+        self.assertIn("text/data", bounded["reason"])
 
     def test_behavior_cases_cover_dispatch_selection_lifecycle_and_fidelity(self):
         cases = {row["id"]: row for row in read_jsonl(str(BEHAVIORS))}
@@ -41,6 +44,13 @@ class SoftwareDesignFileLaneEvalTest(unittest.TestCase):
                 self.assertTrue(case["expected_artifacts"])
                 self.assertIn(markers[0], checks)
                 self.assertIn(markers[1], checks + forbidden)
+
+        rejected = cases["software-design-behavior-file-edit-rejection"]
+        rejected_checks = " ".join(rejected["required_checks"])
+        rejected_forbidden = " ".join(rejected["forbidden_behaviors"])
+        for marker in ("embedded executable code", "API/schema redesign", "Terraform IaC", "ambiguous destructive"):
+            self.assertIn(marker, rejected_checks)
+        self.assertIn("non-activation", rejected_forbidden)
 
     def test_eval_files_are_jsonl_and_ids_are_unique(self):
         for path in (TRIGGERS, BEHAVIORS):
@@ -78,6 +88,38 @@ class FileLaneStateBoundaryTest(unittest.TestCase):
                 stale = dict(record, state="stale", **{"stale-on":(base+timedelta(days=60)).isoformat(), "purge-after":(base+timedelta(days=67)).isoformat()})
                 self.assertEqual("stale", module.assess("json", {k:[v] for k,v in stale.items()}, base+timedelta(days=66))[0])
                 self.assertEqual("expired", module.assess("json", {k:[v] for k,v in stale.items()}, base+timedelta(days=67))[0])
+
+    def test_helper_runs_from_consumer_directory_with_spaces_and_never_targets_the_skill(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            consumer = Path(directory) / "consumer repository"
+            consumer.mkdir()
+            subprocess.run(["git", "init", "-q", str(consumer)], check=True)
+            subprocess.run(
+                ["git", "-C", str(consumer), "config", "--local", "softwaredesign.tool-decision-format", "defer-until:2099-01-01"],
+                check=True,
+            )
+            skill_repo = self.script.parents[4]
+            before = subprocess.run(
+                ["git", "-C", str(skill_repo), "config", "--local", "--get-regexp", "^softwaredesign\\."],
+                capture_output=True,
+                text=True,
+            )
+            command = ["python3", str(self.script.resolve()), "--repo-root", str(consumer)]
+            for args in (("--help",), ("list",), ("gc", "--dry-run")):
+                with self.subTest(args=args):
+                    result = subprocess.run(command + list(args), cwd=consumer, capture_output=True, text=True)
+                    self.assertEqual(0, result.returncode, result.stderr)
+            listed = subprocess.run(command + ["list"], cwd=consumer, check=True, capture_output=True, text=True)
+            self.assertEqual([{"capability": "format", "status": "deferred"}], json.loads(listed.stdout)["decisions"])
+            after = subprocess.run(
+                ["git", "-C", str(skill_repo), "config", "--local", "--get-regexp", "^softwaredesign\\."],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(before.returncode, after.returncode)
+            self.assertEqual(before.stdout, after.stdout)
 
 
 if __name__ == "__main__":

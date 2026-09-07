@@ -30,9 +30,11 @@ Persist only an explicit `no`, `not now`, or `defer`. At that moment say:
 
 > I’ll remember only this optional tool suggestion in this clone until `<date>` so it is not repeatedly offered. Fragility findings remain active.
 
-Set `<date>` to 30 UTC calendar days after the explicit decision. The record is
-active before that date. The suggestion is eligible again on its stored UTC
-date.
+Before executing the write, replace the literal `<date>` in
+`defer-until:<date>` with the UTC decision date plus 30 calendar days. The
+record is active before that date. The suggestion is eligible again on its
+stored UTC date. Reading never changes it; renewal requires a new explicit
+decision and a newly rendered date.
 
 Use Git's local configuration, which is clone-local and shared across linked
 worktrees; do not use Git's worktree-specific configuration. Git documents the
@@ -40,7 +42,13 @@ local configuration scope in its [configuration manual](https://git-scm.com/docs
 and distinguishes it from per-worktree configuration in its
 [worktree manual](https://git-scm.com/docs/git-worktree.html).
 
-For the TypeScript unchecked-index evidence gap, the exact write is:
+For the TypeScript unchecked-index evidence gap, the write template is:
+
+```sh
+git config --local softwaredesign.tool-decision-typescript-unchecked-index-evidence defer-until:<date>
+```
+
+For example, an explicit decision on 2026-08-09 renders the fixed command:
 
 ```sh
 git config --local softwaredesign.tool-decision-typescript-unchecked-index-evidence defer-until:2026-09-08
@@ -53,8 +61,8 @@ git config --local --get softwaredesign.tool-decision-typescript-unchecked-index
 ```
 
 An active record means total silence: no suggestion and no suppression reminder.
-Reading never slides the deadline. Renew it only after a new explicit `no`,
-`not now`, or `defer`.
+Renew it only after a new explicit `no`, `not now`, or `defer`; do not slide a
+stored deadline on read.
 
 List and clear decisions exactly with:
 

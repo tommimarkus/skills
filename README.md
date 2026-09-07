@@ -8,6 +8,11 @@ Install the plugin that owns the task, then describe the work in ordinary langua
 
 The repo currently ships five plugins:
 
+`software-design` includes a narrow File Edit lane for bounded non-code text or
+data changes that need no code/module, API/schema, IaC, security, test, or
+other sibling-owned decision. It validates the named content operation directly
+and returns before loading normal design guidance.
+
 | Plugin | Version | Skills | Docs |
 |---|---:|---|---|
 | `souroldgeezer-audit` | `2026.09.0` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md), [lean-audit](souroldgeezer-audit/skills/lean-audit/SKILL.md) | [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md), [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |
