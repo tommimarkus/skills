@@ -165,19 +165,22 @@ class VersionProbeTest(unittest.TestCase):
         result.stdout = output
         return result
 
-    def test_version_output_combines_stdout_and_stderr_and_preserves_option(self) -> None:
-        with mock.patch.object(
-            runtime.subprocess,
-            "run",
-            return_value=self.completed(b'openjdk version "21.0.2"\n'),
-        ) as run:
-            self.assertEqual(runtime._version_output("java", "-version"), 'openjdk version "21.0.2"\n')
-        run.assert_called_once_with(
-            ["java", "-version"],
-            stdout=runtime.subprocess.PIPE,
-            stderr=runtime.subprocess.STDOUT,
-            timeout=120,
-        )
+    def test_public_probes_preserve_process_options_and_parse_versions(self) -> None:
+        for probe, command, option, output, expected in (
+            (runtime.reported_version, "dediren", "--version", b"dediren 2026.08.9\n", "2026.08.9"),
+            (runtime.java_major_version, "java", "-version", b'openjdk version "21.0.2"\n', 21),
+            (runtime.java_major_version, "java", "-version", b'java version "1.8.0_402"\n', 8),
+        ):
+            with self.subTest(output=output), mock.patch.object(
+                runtime.subprocess, "run", return_value=self.completed(output)
+            ) as run:
+                self.assertEqual(probe(command), expected)
+                run.assert_called_once_with(
+                    [command, option],
+                    stdout=runtime.subprocess.PIPE,
+                    stderr=runtime.subprocess.STDOUT,
+                    timeout=120,
+                )
 
     def test_nonzero_exit_is_none_for_both_public_callers(self) -> None:
         with mock.patch.object(
@@ -201,6 +204,12 @@ class VersionProbeTest(unittest.TestCase):
             return_value=self.completed(b"dediren 2026.08.9 \xff"),
         ):
             self.assertEqual(runtime.reported_version("dediren"), "2026.08.9")
+        with mock.patch.object(
+            runtime.subprocess,
+            "run",
+            return_value=self.completed(b'openjdk version "21.0.2" \xff'),
+        ):
+            self.assertEqual(runtime.java_major_version("java"), 21)
         with mock.patch.object(
             runtime.subprocess,
             "run",
