@@ -66,7 +66,7 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
         self.assertIn("load the layout-and-flow procedure", str(substantial["required_checks"]))
         narrow = cases["app-design-behavior-narrow-approved-layout"]
         self.assertIn("skip the whole procedure", str(narrow["required_checks"]))
-        for path in ("AGENTS.md", "CLAUDE.md", "README.md"):
+        for path in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(path=path):
                 guidance = compact(read(path))
                 self.assertIn("Approved direction skips alternatives", guidance)
@@ -166,7 +166,6 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "souroldgeezer-design/.claude-plugin/plugin.json",
             "souroldgeezer-design/.codex-plugin/plugin.json",
             ".claude-plugin/marketplace.json",
-            "README.md",
             "CLAUDE.md",
             "AGENTS.md",
         )

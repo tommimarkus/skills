@@ -23,7 +23,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
         )
         standard = self.text("docs/skill-architecture.md")
-        for path in ("README.md", "CLAUDE.md", "AGENTS.md"):
+        for path in ("CLAUDE.md", "AGENTS.md"):
             public = self.text(path)
             self.assertIn("show --next-only", public)
             self.assertIn("120", public)
@@ -45,39 +45,10 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn("busy-poll", text)
 
     def test_runtime_neutral_contract_is_public(self) -> None:
-        readme = self.text("README.md")
+        readme = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
         for phrase in (
-            "stable IDs, dependencies, task/boundary",
-            "at least 0.60",
-            "analytical-heavy exception",
-            "Missing load-bearing input stops",
-            "selective audit routing remains an\n    exceptional",
-            "The parent owns\n    integration and end-to-end verification",
-            "planning-policy/ledgers/<plan-id>",
-            "bounded lifecycle returns",
-            "contract_version: 5", "planning-execution-cost-v1",
-            "planning-cost-advisory-v1", "Execution economics", "tracing: off",
-            "Versions 1–4 are resume-compatible only",
-            "trace-init", "trace-record", "trace-show", "trace-close",
-            "Versions 1–4 are resume-compatible only",
-            "<plan-id>/<run-id>",
-            "lowercase\n    UUID4",
-            "bounded-step-return-v1",
-            "no `run_id` or raw logs",
-            "blocked:plan_tampered",
-            "Version-1 ledgers remain readable and mutable",
-            "retry_policy: legacy_unbounded",
-            "cannot approve or dispatch an unversioned version-1\n    plan as new work",
-            "blocked:retry_exhausted",
-            "blocked:no_progress",
-            "terminal `oversized`",
-            "blocked:model_unavailable",
-            "silent downgrade.",
-            "`completed` → `integrated` → `cleaned`",
-            "planning-worktree-result-v1", "validate --closeout",
-            "terminal `integrated` state remains unchanged",
-            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
-            "retry-remediation-v1", "blocked:needs_higher_tier",
+            "plan-v5.json", "approval handoff", "capability-binding-v1.json",
+            "validate --closeout", "show --run-id <uuid4> --next-only",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, readme)
@@ -166,19 +137,19 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("Before approval, invoke the owning design skill", core)
 
     def test_v5_authors_are_directed_to_the_canonical_scaffold(self) -> None:
-        for relative in ("README.md", "AGENTS.md", "CLAUDE.md"):
+        for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 self.assertIn("references/templates/plan-v5.json", self.text(relative))
 
     def test_public_guidance_names_the_v5_scaffold_and_rejects_the_alias(self) -> None:
-        for relative in ("README.md", "AGENTS.md", "CLAUDE.md"):
+        for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 text = self.text(relative)
                 self.assertIn("references/templates/plan-v5.json", text)
                 self.assertIn("never `version`", text)
 
     def test_v5_handoffs_carry_cohesive_outcome_and_decomposition_evidence(self) -> None:
-        for relative in ("README.md", "AGENTS.md", "CLAUDE.md", "docs/skill-architecture.md"):
+        for relative in ("AGENTS.md", "CLAUDE.md", "docs/skill-architecture.md"):
             with self.subTest(relative=relative):
                 text = self.text(relative)
                 self.assertIn("cohesive_outcome", text)

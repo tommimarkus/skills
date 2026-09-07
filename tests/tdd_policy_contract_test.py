@@ -64,7 +64,7 @@ class TddPolicyContractTest(unittest.TestCase):
         self.assertIn("clarity or regression coverage", grounding)
 
     def test_public_guidance_summarizes_existing_test_inspection(self) -> None:
-        for relative in ("AGENTS.md", "CLAUDE.md", "README.md"):
+        for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 guidance = self.text(relative)
                 self.assertIn("Inspect existing tests before selecting the RED test", guidance)

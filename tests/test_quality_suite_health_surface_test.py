@@ -319,7 +319,7 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         ):
             self.assertIn(source, grounding)
 
-        for path in (REPO_ROOT / "README.md", REPO_ROOT / "CLAUDE.md", REPO_ROOT / "AGENTS.md"):
+        for path in (REPO_ROOT / "docs/using-skills.md", REPO_ROOT / "CLAUDE.md", REPO_ROOT / "AGENTS.md"):
             with self.subTest(path=path.name):
                 text = read(path)
                 self.assertIn("suite health", text.lower())

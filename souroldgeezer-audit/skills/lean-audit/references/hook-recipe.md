@@ -7,6 +7,10 @@ edit which would introduce a **new block-severity duplication** into guarded
 markdown. It ships **off** — installing the plugin does not enable enforcement.
 Enable it deliberately, per this recipe.
 
+Use this only after the plugin is installed and its script path is known in the
+consumer project. A hook is local project configuration: enabling one neither
+changes the plugin nor grants it access beyond the host’s normal hook payload.
+
 ## What it does
 
 On Claude `Edit` / `Write` / `MultiEdit` or Codex `apply_patch` to a guarded markdown surface (`CLAUDE.md`,

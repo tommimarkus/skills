@@ -38,7 +38,7 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
         self.assertIn("https://git-scm.com/docs/git-worktree.html", grounding)
         self.assertIn("URL-only, paraphrased grounding", grounding)
         self.assertIn("fragility/native-evidence evals are repo-authored", grounding)
-        self.assertIn("additive fragility check", read("README.md"))
+        self.assertIn("fragility", read("souroldgeezer-design/skills/software-design/SKILL.md"))
         scenarios = {item["id"] for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
         self.assertTrue({"sd-review-fragility", "sd-native-evidence-procedure", "sd-fragility-final-reporting"} <= scenarios)
         snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))

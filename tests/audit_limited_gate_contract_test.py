@@ -5,7 +5,7 @@ from tests.surface_test_lib import REPO_ROOT
 
 
 AUDIT_CRAFT = REPO_ROOT / "souroldgeezer-audit/docs/audit-reference/audit-craft.md"
-PUBLIC_DOCS = (REPO_ROOT / "AGENTS.md", REPO_ROOT / "CLAUDE.md", REPO_ROOT / "README.md")
+PUBLIC_DOCS = (REPO_ROOT / "AGENTS.md", REPO_ROOT / "CLAUDE.md")
 
 
 def read(path: Path) -> str:

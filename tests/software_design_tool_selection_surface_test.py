@@ -86,12 +86,12 @@ class SoftwareDesignToolSelectionSurfaceTest(unittest.TestCase):
                 self.assertIn(required, checks)
                 self.assertIn(forbidden, forbidden_behaviors)
 
-    def test_readme_explains_optional_context7_path(self) -> None:
-        readme = compact(read("README.md"))
+    def test_skill_explains_optional_context7_path(self) -> None:
+        readme = compact(read(f"{SOFTWARE_SKILL}/SKILL.md"))
 
-        self.assertIn("capability-based tool selection", readme)
+        self.assertIn("bounded discovery", readme)
         self.assertIn("Context7 MCP is already exposed", readme)
-        self.assertIn("does not install or configure Context7", readme)
+        self.assertIn("Do not install Context7", readme)
 
 
 if __name__ == "__main__":

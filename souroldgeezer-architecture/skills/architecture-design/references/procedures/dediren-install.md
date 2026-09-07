@@ -66,8 +66,9 @@ order:
 | `COPILOT_PLUGIN_DATA` | `<value>/dediren` |
 | `PLUGIN_DATA` | `<value>/dediren` |
 
-Each host manifest also sets `DEDIREN_HOME` explicitly from its own substitution
-token, so the path is visible in the manifest rather than inferred. There is
+Claude’s adapter sets `DEDIREN_HOME` from its plugin-data token. The current
+Codex and Copilot root `mcp.json` deliberately declares no environment: those
+hosts export plugin-data variables for the resolver instead. There is
 deliberately **no invented fallback**: a guessed location is worse than none,
 because the MCP launcher runs as a host process with the real `HOME` while the
 same scripts run from an agent's shell tool may be sandboxed, and a guess can

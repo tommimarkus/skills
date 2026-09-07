@@ -1,10 +1,10 @@
 # souroldgeezer
 
-Cross-runtime plugin marketplace by Sour Old Geezer. Claude Code™, Codex, and
-GitHub™ Copilot CLI publish the same shared skill workflows through additive
-host adapters.
+Cross-runtime plugin marketplace by Sour Old Geezer. Claude Code™, Codex, and GitHub™ Copilot CLI publish the same shared skill workflows through additive host adapters.
 
 ## What this is
+
+Install the plugin that owns the task, then describe the work in ordinary language. Start with [using skills](docs/using-skills.md) for task examples and boundaries, or use [runtime support](docs/runtime-support.md) for host behaviour.
 
 The repo currently ships five plugins:
 
@@ -13,14 +13,12 @@ The repo currently ships five plugins:
 | `souroldgeezer-audit` | `2026.08.19` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md), [lean-audit](souroldgeezer-audit/skills/lean-audit/SKILL.md) | [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md), [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |
 | `souroldgeezer-design` | `2026.09.1` | [software-design](souroldgeezer-design/skills/software-design/SKILL.md), [app-design](souroldgeezer-design/skills/app-design/SKILL.md), [api-design](souroldgeezer-design/skills/api-design/SKILL.md), [infra-design](souroldgeezer-design/skills/infra-design/SKILL.md) | [software](souroldgeezer-design/docs/software-reference/software-design.md), [app](souroldgeezer-design/docs/app-reference/app-design.md), [api](souroldgeezer-design/docs/api-reference/api-design.md), [infra](souroldgeezer-design/docs/infra-reference/infra-design.md) |
 | `souroldgeezer-architecture` | `2026.08.21` | [architecture-design](souroldgeezer-architecture/skills/architecture-design/SKILL.md) | [architecture](souroldgeezer-architecture/docs/architecture-reference/architecture.md) |
-| `souroldgeezer-policy` | `2026.09.1` | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope-policy](souroldgeezer-policy/skills/scope-policy/SKILL.md) | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope-policy](souroldgeezer-policy/skills/scope-policy/SKILL.md) |
+| `souroldgeezer-policy` | `2026.09.1` | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope-policy](souroldgeezer-policy/skills/scope-policy/SKILL.md) | [git workflow](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release](souroldgeezer-policy/skills/release-policy/SKILL.md), [TDD](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope](souroldgeezer-policy/skills/scope-policy/SKILL.md) |
 | `souroldgeezer-ops` | `2026.08.0` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
 ## Install
 
 ### Claude Code
-
-Add the shared marketplace, then install the plugins you want:
 
 ```text
 /plugin marketplace add tommimarkus/skills
@@ -36,24 +34,12 @@ For local development, point Claude at the clone instead:
 ```json
 // ~/.claude/settings.json
 {
-  "extraKnownMarketplaces": {
-    "souroldgeezer": {
-      "source": { "source": "directory", "path": "/absolute/path/to/skills" }
-    }
-  },
-  "enabledPlugins": {
-    "souroldgeezer-audit@souroldgeezer": true,
-    "souroldgeezer-design@souroldgeezer": true,
-    "souroldgeezer-architecture@souroldgeezer": true,
-    "souroldgeezer-policy@souroldgeezer": true,
-    "souroldgeezer-ops@souroldgeezer": true
-  }
+  "extraKnownMarketplaces": {"souroldgeezer": {"source": {"source": "directory", "path": "/absolute/path/to/skills"}}},
+  "enabledPlugins": {"souroldgeezer-audit@souroldgeezer": true, "souroldgeezer-design@souroldgeezer": true, "souroldgeezer-architecture@souroldgeezer": true, "souroldgeezer-policy@souroldgeezer": true, "souroldgeezer-ops@souroldgeezer": true}
 }
 ```
 
 ### Codex
-
-Add the Codex marketplace mirror, then install the plugins you want:
 
 ```bash
 codex plugin marketplace add tommimarkus/skills
@@ -73,402 +59,40 @@ codex plugin add souroldgeezer-audit@souroldgeezer
 
 ### GitHub™ Copilot CLI
 
-Copilot CLI currently consumes the native root `plugin.json` only for the
-MCP-equipped architecture plugin:
+Copilot CLI currently consumes the native root `plugin.json` only for the MCP-equipped architecture plugin:
 
 ```bash
 copilot plugin marketplace add tommimarkus/skills
 copilot plugin install souroldgeezer-architecture@souroldgeezer
 ```
 
-For local development, add the clone path as the marketplace source before
-running the same install command.
+For local development, add the clone path as the marketplace source before running the same install command. See [runtime support](docs/runtime-support.md) for adapter boundaries.
 
 ### Dediren runtime (architecture plugin only)
 
-`souroldgeezer-architecture` drives a Dediren CLI that the plugin **installs
-itself**. On first use the MCP launcher provisions the pinned, checksum-verified
-[Dediren agent bundle](https://github.com/tommimarkus/dediren/releases)
-(`2026.08.9`, support floor `2026.07.28`) into the host's own per-plugin writable
-data directory, on Linux, macOS, and WSL. An existing `dediren` on `PATH` at or
-above the floor is used as-is, and `DEDIREN_COMMAND` still pins one explicit
-executable for controlled validation.
-
-The bundled runtime exposes machine-readable UML/XMI scope, coverage, and
-validation assurance to direct export results. Native package-build results
-still expose only export status, artifact, and diagnostics, so the skill
-discloses that evidence boundary instead of inferring assurance.
-
-Dediren `2026.08.4` downloads online export schemas with its bounded Java HTTP
-client; `curl` is no longer an export prerequisite. Offline schema overrides
-remain unchanged. Proxied schema downloads accept `HTTPS_PROXY`, `HTTP_PROXY`,
-or `ALL_PROXY` plus optional `NO_PROXY`; see the bundled runtime procedure for
-the precedence and fail-closed validation rules. `curl` or `wget` may still be
-used by the plugin launcher as a fallback for release downloads when Python TLS
-is unavailable.
-
-Dediren `2026.08.6` also reports
-`DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` as a non-failing render warning. The SVG is
-retained for inspection, while architecture review treats the affected view as
-`ARCH-R-3` until the label is visually clear or the limitation is disclosed.
-
-Dediren `2026.08.7` adds draw.io® import: `dediren_import` accepts `drawio`
-beside `mermaid` and `dot`. An imported draw.io file becomes a generic-graph
-model rather than a promoted ArchiMate® or UML® one, and a non-failing warning
-lists the geometry and presentation keys the layout engine replaces. Diagrams
-you want to keep in draw.io format still belong outside this plugin.
-
-Dediren `2026.08.8` adds an `ascii` render engine: box-drawn text diagrams for
-terminals and plans, Unicode by default with a plain-ASCII option, and
-`dediren_import` gains a `text` output mode that returns the diagram inline
-beside the imported model. SVG stays the evidence of record — no package build
-selects the text lane. Render policies move to schema v4; a v3 policy is
-refused with a migration diagnostic naming the one field to update. Dediren
-`2026.08.9` renames render-result artifact kinds to the media-suffix form
-(`svg+xml`, `ascii+text`), which matters only if you read that field yourself.
-
-The one prerequisite left to you is **Java™ 21+**: the release ships jars with no
-bundled JRE, so the plugin never downloads a Java runtime, and a missing or
-too-old `java` is reported by name.
-
-Full procedure — what provisioning does, the `DEDIREN_HOME` / `DEDIREN_VERSION`
-overrides, air-gapped operation with `DEDIREN_AUTO_INSTALL=0`, offline export
-schemas, and the troubleshooting table — is bundled with the plugin at
-[dediren-install.md](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md).
+`architecture-design` provisions its pinned, checksum-verified Dediren bundle when the host first lists its tools. Java™ 21+ is the normal prerequisite. The [Dediren runtime guide](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md) covers air-gapped hosts, overrides, and failures.
 
 ## Local development
 
-- Keep task worktrees in the primary checkout's persistent, gitignored
-  `.worktrees/<task-name>/` directory. Never use `/tmp`, `$TMPDIR`, tmpfs, or
-  other ephemeral storage for a worktree or uncommitted task work.
-- Keep `.claude-plugin/marketplace.json` as the shared Claude Code marketplace.
-- Keep each plugin's `.claude-plugin/plugin.json` manifest synchronized with its
-  Claude marketplace entry on `name` and `description`. `version` lives only in
-  the Claude `plugin.json` as the release authority — Claude Code always resolves
-  it over a marketplace-entry copy without warning, so marketplace entries never
-  carry a `version` key.
-- Keep the additive `.agents/plugins/marketplace.json` Codex catalog aligned on
-  plugin set, order, and paths, and mirror each plugin through
-  `.codex-plugin/plugin.json`. Codex requires strict SemVer, so its version is the
-  normalized form of the Claude CalVer authority (`YYYY.0M.MICRO` →
-  `YYYY.M.MICRO`).
-- The MCP-equipped architecture plugin also has a root `plugin.json` — the Agent
-  Plugins 1.0.0 manifest Codex now reads, with its MCP configuration in the root
-  `mcp.json`, and the same file serves as the native Copilot manifest through
-  `mcp/copilot.mcp.json`. The `.codex-plugin` + `mcp/codex.mcp.json` pair is
-  retained as the legacy Codex fallback. Keep the root manifest's identity and
-  strict-SemVer version aligned with it.
-- `architecture-design` drives Dediren through three
-  MCP adapters and a shared compatibility router. The launcher provisions the
-  pinned, checksum-verified release into the host's per-plugin writable data
-  directory when nothing else serves; `DEDIREN_HOME` overrides that directory
-  and `DEDIREN_COMMAND` still selects an explicit executable for controlled
-  validation — see "Dediren runtime" under "Install" for the procedure. To
-  avoid stranding pre-multi-harness installs, the MCP launcher also still reuses
-  the newest executable already present in the former verified release cache;
-  it never populates that cache. Each
-  operation carries an absolute `workspaceRoot`, preserving the selected
-  project as Dediren's path boundary and child-process working directory, so a
-  replaced host plugin cache cannot strand later calls in a deleted directory.
-  Backend stderr remains visible in host logs; bounded command, cwd, exit, and
-  stderr context is also returned with adapter failures.
-- Dediren configuration is host-specific, while the shared launcher/router has
-  no harness detection. The maintained adapters are Claude Code, Codex, and
-  Copilot CLI:
-
-  | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
-  |---|---|---|---|---|
-  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` inline; `DEDIREN_HOME` from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router uses `workspaceRoot` for the upstream child | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values: seconds |
-  | Codex | Agent Plugins `mcp.json` (only `type` / `command`); Codex exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child. The legacy `mcp/codex.mcp.json` lane stays literal (plugin-relative command, `cwd: "."`, no plugin data root) | Plugin root for the launcher; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` everywhere | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; legacy `startup_timeout_sec`: seconds |
-  | Copilot CLI | Reads the same root `mcp.json` once the root manifest declares the Agent Plugins `$schema`, ignoring `mcp/copilot.mcp.json`; it interpolates nothing there and exports `PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `CLAUDE_PLUGIN_DATA` into the child | Host launch cwd; router uses `workspaceRoot` for the upstream child | Same three `DEDIREN_*` overrides | `timeout`: milliseconds (legacy lane only) |
-
-  That shared file declares no `env` and no `cwd`, because a token there would
-  reach Codex expanded and Copilot verbatim.
-
-  The 30s Codex default is safe because the router answers `initialize` itself
-  without touching Dediren; provisioning happens on the first `tools/list`.
-
-  Generic local-client compatibility is limited to a local stdio process launch
-  with Bash, Python, and Java 21+, an absolute `DEDIREN_HOME` when the client
-  offers no plugin data directory (or an explicit `DEDIREN_COMMAND` instead), and
-  an absolute `workspaceRoot` per tool call; it does not promise support for
-  another
-  harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
-  is future work only for an explicit remote/shared multi-client service: it
-  introduces authentication, origin validation, port/service lifecycle, session
-  isolation, and workspace authorization requirements. See the MCP
-  [transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
-- Use the repo-local `uv` tooling for the skill architecture report.
-- Use the validation script before asking for review.
+Use the [contributor guide](docs/contributing.md) for a persistent task worktree, validation, and release boundaries. Its [maintenance procedures](docs/maintenance-procedures.md) cover rare runtime operations.
 
 ## Examples
 
-1. Audit a workflow, Dockerfile, or .NET™ logging path with `devsecops-audit`. All four audit skills (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, `lean-audit`) disclose auditor independence and assurance level and weight findings by subject materiality via the shared [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md). Its bounded-lane gate reports `Quick gate: <status>` for test-quality / DevSecOps, `triage gate: <status>` for IP, or `limited-scope gate: <status>` for bounded Lean: `fail` for a substantiated in-scope block, otherwise `not-evaluated` when evidence or machinery cannot rule out blockers, otherwise `pass-limited`; it is not a Deep/in-depth/full-repo rollup or reasonable-assurance verdict. Every Deep `test-quality-audit` establishes management evidence before sampling and reports suite health from project-declared budgets plus available static, current-run, runtime-distribution, historical, and effectiveness evidence. It also includes a bounded setup/teardown lifecycle assessment that separates measured cost attribution from inference and checks safe resource amortization, per-test isolation, and failure-safe cleanup; Quick mode remains per-test.
-2. Review an API surface or architecture, extract an existing contract, or build against a brownfield API baseline with `api-design`; it also covers portfolio cohesion, fragmentation, sprawl, consolidation, overlap, and consumer chattiness. Its stack packs load a compact core plus only the requested build or review lane, including Python® ASGI/WSGI and serverless API routing.
-3. Design or review a frontend app route, screen, or component set with `app-design`, including user-flow mapping and adaptive screen layout across standalone Vite, Vite + React, React + Next.js, and Blazor WebAssembly surfaces; Vite owns development/build/deployment mechanics while React owns component lifecycle and state. It also reviews screen composition — task-ordered, grouped, and weighted layout rather than schema-ordered field dumps. Modal semantics are distinct from nonmodal popovers and portal placement; Next.js `'use server'` Server Function references are allowed across the Server/Client prop boundary while ordinary closures and secrets remain prohibited. Approved direction skips alternatives; substantial multi-screen, dashboard, and material-layout work retains flow analysis. Only routine component/state work and narrow approved-layout changes skip the whole procedure. Unsettled direction needs two or three meaningful alternatives with tradeoffs and a selection checkpoint.
-4. Review or extract a dediren ArchiMate® or UML® architecture/design package, including UML® sequence views or Java™ source evidence, with `architecture-design`.
-5. Review infrastructure or IaC topology with `infra-design`; existing IaC work uses project assimilation to classify reused assets, legacy debt, and migration moves.
-6. Check a skill/plugin publication-surface edit, or a source, configuration,
-   or build file repo-wide (including code and doc comments), with
-   `ip-hygiene`. It loads a per-language pack — Python®, shell,
-   JavaScript/TypeScript, C# / .NET™, Java™, Rust® — when it detects one,
-   supplying that ecosystem's comment syntax, header placement, vendoring
-   conventions, and notice-survival mechanics. Its findings name a coded
-   criterion and authority class, distinguish fact from inference, state
-   remediation and counsel outcome, and end in the applicable triage gate or
-   in-depth verdict; neither outcome is legal clearance. Its synthetic
-   accuracy corpus has deterministic blind-result scoring.
-7. Initialize repository git workflow governance with `git-workflow-policy`.
-8. Initialize declarative release governance with `release-policy`, for example
-   `release-policy: calver YYYY.MM.build, git tagging`. Bare initialization
-   applies the default profiles: conservative git workflow and SemVer
-   `v<version>` release tags. Once a target repo adds either policy to root
-   guidance such as `AGENTS.md`, matching git or release actions must run that
-   policy before changing state. Adopt mode consolidates existing related
-   guidance into the initialization/options and removes competing policy prose.
-9. Use `tdd-policy` for standing or on-demand test-first enforcement.
-   Inspect existing tests before selecting the RED test: extend a suitable
-   cohesive scenario without weakening coverage; create a new test when the
-   scenario is distinct or reuse would weaken clarity or regression coverage.
-   A pre-existing failure counts as RED only when it precisely represents the
-   intended behavior.
-10. Audit a repo, file, or diff for duplication and waste with `lean-audit` (read-only; deterministic engines plus judgment). Skill/command/agent scopes gain per-use findings (`LA-PUC-*`) from legacy file sets or declared multi-entry load routes with predicates, heading anchors, and separately measured selection metadata. Staged, iterative, delegated, or retrying plugin workflows also gain an offline pre-run forecast and orchestrator-survivability findings (`LA-RUN-*`, `LA-ORCH-*`): peak coordinator context stays separate from total usage, verification capacity is reserved, fixed/per-item output can be forecast, and retry, no-progress, unresolved-scope, and bounded-checkpoint contracts are checked statically. The analyzer inventories recognized hook registrations without executing or emitting commands; optional content-free fixtures evidence enabled/model-visible frequency multiplication. Unknown values remain unknown rather than zero. Metadata-only provider/host traces calibrate usage totals; large Codex rollout JSONL streams record by record and adds explicit usage coverage plus bounded compaction, collaboration, wait, and fixed-category tool-output byte counters. Missing or partial usage is calibration-ineligible, and lifecycle counters do not prove causation, stalls, or TDD loops. Opt-in hooks guard new duplication and fidelity; see [hook-recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md). Explicit requests can additionally run live-verified platform redundancy (`LA-NAT-*`) or propose-only minify (`LA-MIN-*`), which never applies edits.
-11. Use `planning-policy` to turn an approved implementation approach into a
-    delegation-ready plan. New executable plans use `contract_version: 5`.
-    Start from the canonical
-    [references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json)
-    scaffold; its discriminator is `contract_version`, never `version`.
-    Versions 1–4 are resume-compatible only: new `init-v4` is refused as
-    `blocked:contract_migration_required`, while existing v4 records remain
-    resumable and mutable; they cannot initialize new work. Its shared,
-    runtime-neutral contract gives every leaf
-    stable IDs, dependencies, task/boundary, named reads and writes, settled
-    decisions, size, portable tier, owner, one acceptance command, return shape,
-    stop conditions, a stable work unit, and exact `capability_requirements`:
-    baseline `plan-step-base-v1` plus bounded additional requirements. The
-    assigned work unit owns its `cohesive_outcome` and `decomposition` evidence:
-    `shape: single` has only `shape`; `parallel` has
-    `basis: parallel_independence` plus `rationale`; and `checkpointed` has
-    `basis: failure_isolation` or `rollback_boundary` plus `rationale`. Work units are weighted once
-    (`small=1`, `medium=2`, `large=3`); at least 0.60 of that weight must be
-    mechanical or standard ready unless the user explicitly approves and the
-    plan records an analytical-heavy exception. Missing load-bearing input stops
-    the leaf rather than inviting discovery or invention. The parent owns
-    integration and end-to-end verification; selective audit routing remains an
-    exceptional, bounded-evidence decision after targeted inspection or focused
-    tests cannot answer the question. A valid decision-complete v5 plan is
-    approval-ready without any host binding. It is dispatch-ready only after an
-    exact `planning-capability-binding-v1` joins its digest, every leaf, selected
-    host/executor, requirements, and bounded evidence; unavailable or mismatched
-    capability stops `blocked:capability_unavailable`, never silent substitution
-    or downgrade.
+- “Review this API for inconsistent error responses” loads `api-design`.
+- “Audit this pull request’s test suite” loads `test-quality-audit`.
+- “Create a user-flow and responsive layout for this dashboard” loads `app-design`.
+- “Prepare this issue for implementation” loads `issue-ops`.
 
-    Executable approval transport uses `planning-approval-handoff-v1`: a canonical
-    `plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline
-    v5 `plan`. Before approval, emit and resolve the envelope and include it inside
-    the host-carried plan; resolve again before capability binding and dispatch.
-    Prefer parent-owned `<git-common-dir>/planning-policy/plans/<sha256>/plan.json`
-    when saving is permitted; use inline JSON when it is not. The helper is read-only.
-    Parent recovery may inspect only the bounded same-task evidence described in
-    [approval handoff](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md);
-    workers still stop for missing assignment fields. Prose summaries never replace
-    canonical execution JSON.
-
-    For an approved plan with two or more delegated steps, exactly one parent
-    creates and writes the checkpoint ledger under the Git common directory at
-    `planning-policy/ledgers/<plan-id>/<run-id>/`, where `run-id` is a lowercase
-    UUID4. Each declared leaf has one assignment and one current, helper-issued
-    attempt identity. Ready agents may work concurrently only on independent
-    steps with separate worktrees and write paths. A leaf has a finite
-    `max_attempts` (1 through 5): unchanged return facts stop retries as
-    `blocked:no_progress`, exhaustion is terminal `blocked:retry_exhausted`, and
-    an exceeded task/boundary/read/write set is terminal `oversized` rather than
-    a silently broadened retry.
-    Each v5 plan includes bounded advisory `planning-execution-cost-v1` data;
-    the same validator invocation emits `planning-cost-advisory-v1` within 600
-    proxy tokens. Unknown token ranges remain indeterminate, execution control
-    is invariant, and proxy, declared-model-token, and provider-measured lanes
-    stay separate. Two stable codes flag batching signals:
-    `PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
-    mechanical/standard pair), `PLANCOST-PLAN-SCALE` (more than 12 leaves or
-    20 declared work-unit weight — slice into successive plans), and
-    `PLANCOST-MICROLEAF-RISK` (merge candidates into their work unit's cohesive
-    outcome unless its v5 decomposition evidence justifies the split); grooming acts
-    on all before approval, never as a validity gate. The human plan includes
-    compact **Execution economics** and
-    `tracing: off`.
-
-    A leaf's `acceptance_command` is scoped to its own write set; a
-    whole-suite run belongs only to the parent's final verification, run once
-    at closeout, never per integration cycle. A leaf may also declare a
-    `batch`: 2 to 8 chained mechanical/standard leaves sharing one worktree
-    owner dispatch once, in leaves-array order, in that one shared worktree,
-    with one bounded return per member. An in-batch dependency on an
-    earlier-listed member satisfies readiness at
-    `ready`/`in_progress`/`completed`; an external dependency still needs
-    `cleaned`. When a member stops, `transition --to pending` unwinds its
-    never-run followers — refunding the attempt and clearing agent/attempt
-    identity — the stopped member remediates in the same worktree, and
-    unwound followers redispatch as singles. The batch integrates once, via
-    the helper's `--batch-commit` entries, only once every member is
-    `completed` or terminal. A per-integration `rebased_tree_changed: false`
-    keeps a leaf's recorded acceptance; `true` re-runs only that leaf's scoped
-    acceptance.
-    The ledger is the sole retry-policy owner: new v5 runs stamp
-    `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve
-    old behavior. `portable_tier` is initial only. Only `failed:acceptance` and
-    `blocked:needs_higher_tier` are eligible; one same-tier retry follows only
-    `failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately.
-    Later retries use higher tiers through `deep`/`max_attempts`; each retry
-    persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
-    assignment checks. Terminal precedence is repeated result, ineligible
-    outcome, exhaustion, then tier ceiling. Every successful v5 lifecycle
-    result carries a live `next` block of at most 120 proxy tokens, from
-    `init-v5` and dispatch through integration, cleanup, closeout validation,
-    and blocked-run reopening. After a long pause or context compaction,
-    read-only `show --next-only` returns one highest-priority action in an
-    at-most-240-proxy-token envelope. Full `show` remains the diagnostic
-    fallback; the runtime reference is reserved for errors, legacy resumption,
-    diagnosis, retention operations, and ledger authoring or audit.
-
-    Successful leaves continue `completed` → `integrated` → `cleaned`.
-    The parent ingests bounded `planning-worktree-result-v1` evidence from the
-    Git-policy helper, which rebases and fast-forward-only merges rather than
-    routinely cherry-picking, then proves merged ancestry before non-force
-    cleanup. Cleanup retries safely after partial removal by revalidating
-    recorded identity, branch state, and target ancestry. Dependencies become
-    ready only after cleanup and start from the then-current parent tip;
-    `validate --closeout` requires every successful leaf to be cleaned.
-
-    The ledger records bounded lifecycle returns. Every handoff is one
-    at-most-8-KiB `bounded-step-return-v1` JSON object with
-    its step, agent, and attempt identity, bounded changed paths, exact scoped
-    acceptance result, blockers, typed notes, commit hash, and unstarted
-    remainder. It includes no `run_id` or raw logs. The ledger preserves an approved
-    plan copy and SHA-256 hash; a mismatch is `blocked:plan_tampered`. Its
-    bounded `show` rehydrates either one step or a truncated run summary, not
-    event history. A parent closes each run with an explicit completed, blocked,
-    or abandoned outcome; it may reopen only an eligible retained blocked run.
-    `list` emits bounded discovery, `gc --dry-run` previews outcome-specific
-    retention (completed 30 days, blocked 90 days, abandoned 7 days), and
-    `purge` requires one exact closed target and parent authority—there is no
-    bulk deletion. Invalid, ambiguous, and active state is preserved.
-    Version-1 ledgers remain readable and mutable in place with
-    `retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-    Their terminal `integrated` state remains unchanged; `cleaned` is v2/v3/v4/v5-only.
-    Current planning-policy cannot approve or dispatch an unversioned version-1
-    plan as new work; new documentation uses `init-v5`. Versions 1–4 remain
-    resume-compatible only. Remove legacy support
-    only in a later explicit breaking release after no version-1 ledger is
-    nonterminal. The optional fresh-context comparison is
-    `uv run python scripts/planning_policy_forward_eval.py --harness both
-    --output-dir /secure/path --execute`; it stores bounded summaries and reports
-    an unavailable mapped model as `blocked:model_unavailable`, never as a
-    silent downgrade. Token tracing is separately opt-in for one v3/v4/v5 run through
-    `trace-init`, `trace-record`, `trace-show`, and `trace-close`; ordinary use
-    creates no usage state or telemetry calls. Counter/provenance-only records
-    live outside the checkpoint and follow the run's retention and purge rules.
-12. Use `software-design` for bounded non-code content edits that require no
-    design decision through its early-return File Edit lane. It selects the
-    user or repository-required format-aware operation first, uses `jq` for
-    JSON and Mike Farah `yq` for YAML/TOML/XML where repository guidance
-    applies, and otherwise makes the smallest directly validated edit. Its
-    advisory clone-local native-tool state helper emits bounded JSON through
-    `tool_state.py list` and `tool_state.py gc`; it never creates a tracked
-    preference file or grants target-specific authority.
-
-13. Use `software-design` for capability-based tool selection during design and
-    implementation: it checks repository-configured commands, host-exposed
-    integrations, and task-relevant installed tools without crawling the
-    machine, then prefers the best fit and structured authoritative evidence.
-    When Context7 MCP is already exposed and current third-party documentation
-    matters, it resolves the library and queries relevant docs; otherwise it
-    continues through project docs, local help, official sources, or a bounded
-    fallback. The plugin does not install or configure Context7 and does not use
-    its CLI as a fallback.
-14. Use `software-design` Review's additive fragility check when changed code
-    may hide a precondition or scatter a nearby volatile decision. It is an
-    evidence-based review of regression risk, not a style rule, speculative
-    abstraction demand, analyzer requirement, or development-method mandate.
-    Findings pair an `SD-*` code with plain language and finish as pass, warn,
-    block, or not-assessed. Project-owned native tool results can support that
-    review but remain candidates, never a tool-adoption prerequisite. An explicit
-    “no”, “not now”, or “defer” to one optional suggestion is kept clone-local
-    for 30 UTC calendar days; it stays silent until the stored date, does not
-    suppress fragility findings, and falls back only to one conversation-local
-    disclosure if the local write is denied.
+Each skill’s expected output and boundaries are in [using skills](docs/using-skills.md).
 
 ## Validation
 
-Run these from the repo root:
-
-```text
-python scripts/check-runtime-metadata-parity.py --check .
-scripts/validate-fragmentation.sh
-scripts/skill-architecture-report.sh --strict .
-scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
-git diff --check
-uv run python -m unittest discover -s tests -p '*_test.py'
-```
-
-The parity check validates both marketplaces, both complete manifest families,
-and the architecture plugin's native Copilot manifest and MCP adapter. The
-fragmentation gate additionally validates native Codex manifest structure; the
-first-party Codex plugin validator is run during packaging changes when the
-installed CLI exposes one.
-
-The host smoke creates temporary `CODEX_HOME`, `CLAUDE_CONFIG_DIR`,
-`COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without replacing `HOME`. It
-registers this checkout, installs every supported plugin surface, checks the 15
-shared Claude/Codex skills plus the Copilot architecture skill, and drives the
-external Dediren JSON-RPC handshake through all three host adapters. It also
-checks legacy initialization and current stateless discovery, verifies required
-absolute `workspaceRoot` input, and fingerprints the normal host profiles before
-and after. The current Codex CLI has no standalone plugin validator, so that is
-an explicit skip; Claude strict validation still runs for every plugin.
-
-`scripts/validate-fragmentation.sh` includes
-`scripts/test-stop-hooks.sh`.
-
-Optional Dediren runtime smoke lane:
-
-```text
-DEDIREN_RUNTIME_SMOKE=1 uv run python -m unittest tests.architecture_dediren_release_test
-```
-
-The smoke lane resolves Dediren through the launcher's own lanes — set
-`DEDIREN_COMMAND` to run it against one explicit executable, or `DEDIREN_HOME`
-to keep any provisioned bundle in a scratch directory.
+Contributors run the documented checks in [contributing](docs/contributing.md), including `scripts/test-stop-hooks.sh` through the fragmentation gate.
 
 ## Detailed docs
 
-- [souroldgeezer-audit/docs/audit-reference/audit-craft.md](souroldgeezer-audit/docs/audit-reference/audit-craft.md)
-- [souroldgeezer-audit/docs/audit-reference/materiality.md](souroldgeezer-audit/docs/audit-reference/materiality.md)
-- [souroldgeezer-audit/docs/audit-reference/sampling-projection.md](souroldgeezer-audit/docs/audit-reference/sampling-projection.md)
-- [souroldgeezer-audit/docs/security-reference/devsecops.md](souroldgeezer-audit/docs/security-reference/devsecops.md)
-- [souroldgeezer-audit/docs/quality-reference/unit-testing.md](souroldgeezer-audit/docs/quality-reference/unit-testing.md)
-- [souroldgeezer-audit/docs/quality-reference/integration-testing.md](souroldgeezer-audit/docs/quality-reference/integration-testing.md)
-- [souroldgeezer-audit/docs/quality-reference/e2e-testing.md](souroldgeezer-audit/docs/quality-reference/e2e-testing.md)
-- [souroldgeezer-audit/docs/quality-reference/testing-core.md](souroldgeezer-audit/docs/quality-reference/testing-core.md)
-- [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md)
-- [souroldgeezer-audit/skills/lean-audit/SKILL.md](souroldgeezer-audit/skills/lean-audit/SKILL.md)
-- [souroldgeezer-design/docs/software-reference/software-design.md](souroldgeezer-design/docs/software-reference/software-design.md)
-- [souroldgeezer-design/docs/app-reference/app-design.md](souroldgeezer-design/docs/app-reference/app-design.md)
-- [souroldgeezer-design/docs/api-reference/api-design.md](souroldgeezer-design/docs/api-reference/api-design.md)
-- [souroldgeezer-design/docs/infra-reference/infra-design.md](souroldgeezer-design/docs/infra-reference/infra-design.md)
-- [souroldgeezer-design/docs/design-reference/architecture-pairing-core.md](souroldgeezer-design/docs/design-reference/architecture-pairing-core.md)
-- [souroldgeezer-architecture/docs/architecture-reference/architecture.md](souroldgeezer-architecture/docs/architecture-reference/architecture.md)
-- [souroldgeezer-policy/docs/policy-reference/policy-posture-core.md](souroldgeezer-policy/docs/policy-reference/policy-posture-core.md)
-- [souroldgeezer-policy/skills/git-workflow-policy/SKILL.md](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md)
-- [souroldgeezer-policy/skills/release-policy/SKILL.md](souroldgeezer-policy/skills/release-policy/SKILL.md)
-- [souroldgeezer-policy/skills/tdd-policy/SKILL.md](souroldgeezer-policy/skills/tdd-policy/SKILL.md)
-- [souroldgeezer-policy/skills/planning-policy/SKILL.md](souroldgeezer-policy/skills/planning-policy/SKILL.md)
-- [souroldgeezer-policy/skills/scope-policy/SKILL.md](souroldgeezer-policy/skills/scope-policy/SKILL.md)
-- [souroldgeezer-ops/docs/provider-reference/github.md](souroldgeezer-ops/docs/provider-reference/github.md)
-- [souroldgeezer-ops/docs/provider-reference/gitlab.md](souroldgeezer-ops/docs/provider-reference/gitlab.md)
-- [souroldgeezer-ops/docs/provider-reference/authoring.md](souroldgeezer-ops/docs/provider-reference/authoring.md)
-- [souroldgeezer-ops/docs/provider-reference/provider-lifecycle-core.md](souroldgeezer-ops/docs/provider-reference/provider-lifecycle-core.md)
-- [souroldgeezer-ops/skills/issue-ops/SKILL.md](souroldgeezer-ops/skills/issue-ops/SKILL.md)
-- [souroldgeezer-ops/skills/pr-ops/SKILL.md](souroldgeezer-ops/skills/pr-ops/SKILL.md)
-- [docs/release-checklist.md](docs/release-checklist.md)
-- [docs/skill-architecture.md](docs/skill-architecture.md)
+- [Using skills](docs/using-skills.md): task selection, examples, outputs, and boundaries.
+- [Runtime support](docs/runtime-support.md): supported hosts, adapters, hooks, and Dediren.
+- [Contributor guide](docs/contributing.md): local setup and validation.
+- [Skill architecture standard](docs/skill-architecture.md): authoring and review judgment.
+- [Privacy policy](PRIVACY.md) and [terms](TERMS.md).

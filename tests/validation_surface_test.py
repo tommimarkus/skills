@@ -1,3 +1,5 @@
+import json
+import re
 import unittest
 
 from tests.surface_test_lib import REPO_ROOT
@@ -12,10 +14,10 @@ class ValidationSurfaceTest(unittest.TestCase):
         contributing = read("docs/contributing.md")
 
         for guide in (
-            "skill-architecture.md",
-            "skill-evaluation.md",
-            "maintenance-procedures.md",
-            "release-checklist.md",
+            "[skill architecture standard](skill-architecture.md)",
+            "[evaluation evidence guide](skill-evaluation.md)",
+            "[maintenance procedures](maintenance-procedures.md)",
+            "[release checklist](release-checklist.md)",
         ):
             with self.subTest(guide=guide):
                 self.assertIn(guide, contributing)
@@ -31,19 +33,39 @@ class ValidationSurfaceTest(unittest.TestCase):
         self.assertIn("bash scripts/test-stop-hooks.sh", validation_script)
         self.assertIn("scripts/test-stop-hooks.sh", readme)
 
-    def test_readme_documents_optional_dediren_runtime_smoke_lane(self) -> None:
-        readme = read("README.md")
+    def test_runtime_guide_links_to_the_operator_dediren_procedure(self) -> None:
+        runtime = read("docs/runtime-support.md")
 
-        self.assertIn("DEDIREN_RUNTIME_SMOKE=1", readme)
-        # The lane no longer presumes an operator-installed runtime: it goes
-        # through the launcher's own resolution, so the README has to say which
-        # variable pins the executable under test.
-        self.assertIn("resolves Dediren through the launcher", readme)
-        self.assertIn("DEDIREN_COMMAND", readme)
-        self.assertIn(
-            "uv run python -m unittest tests.architecture_dediren_release_test",
-            readme,
-        )
+        self.assertIn("[dediren-install.md](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)", runtime)
+        self.assertIn("DEDIREN_COMMAND", runtime)
+        maintenance = read("docs/maintenance-procedures.md")
+        self.assertIn("DEDIREN_RUNTIME_SMOKE=1", maintenance)
+        self.assertIn("DEDIREN_COMMAND", maintenance)
+        self.assertIn("uv run python -m unittest tests.architecture_dediren_release_test", maintenance)
+
+    def test_readme_guide_links_and_skill_inventory_are_reachable(self) -> None:
+        readme = read("README.md")
+        for link in ("[using skills](docs/using-skills.md)", "[runtime support](docs/runtime-support.md)", "[contributor guide](docs/contributing.md)"):
+            with self.subTest(link=link):
+                self.assertIn(link, readme)
+        inventory = read("docs/using-skills.md")
+        marketplace = json.loads(read(".claude-plugin/marketplace.json"))
+        skill_paths = []
+        for plugin in marketplace["plugins"]:
+            skill_root = "skills"
+            skill_paths.extend(str(path.relative_to(REPO_ROOT)) for path in (REPO_ROOT / plugin["name"] / skill_root).glob("*/SKILL.md"))
+        self.assertEqual(16, len(skill_paths))
+        for path in skill_paths:
+            with self.subTest(path=path):
+                self.assertIn(f"](../{path})", inventory)
+                self.assertTrue((REPO_ROOT / path).is_file())
+
+    def test_readme_local_guides_have_targets_and_requested_anchors(self) -> None:
+        readme = read("README.md")
+        for target, anchor in (("docs/using-skills.md", "# Using skills"), ("docs/runtime-support.md", "# Runtime support"), ("docs/contributing.md", "# Contributing")):
+            with self.subTest(target=target):
+                self.assertRegex(readme, rf"\[[^]]+\]\({re.escape(target)}\)")
+                self.assertIn(anchor, read(target))
 
 
 if __name__ == "__main__":

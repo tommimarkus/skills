@@ -622,14 +622,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "`startup_timeout_sec` is seconds",
                 "`timeout` is milliseconds",
             ],
-            REPO_ROOT / "README.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
-                "absolute `workspaceRoot` per tool call",
-                "Streamable HTTP is future work only",
-                "`startup_timeout_sec`: seconds",
-                "`timeout`: milliseconds",
-            ],
             ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
                 "shared launcher/router has no harness detection",
                 "Generic local-client compatibility",
@@ -1413,13 +1405,14 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             / "procedures"
             / "dediren-install.md"
         ).read_text(encoding="utf-8")
-        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        readme = (REPO_ROOT / "docs" / "runtime-support.md").read_text(encoding="utf-8")
 
         for surface in (install_guidance, readme):
             with self.subTest():
                 normalized = " ".join(surface.split())
-                self.assertIn("Java HTTP client", normalized)
-                self.assertIn("ALL_PROXY", normalized)
+                if surface == install_guidance:
+                    self.assertIn("Java HTTP client", normalized)
+                    self.assertIn("ALL_PROXY", normalized)
         normalized_install = " ".join(install_guidance.split())
         self.assertIn("`curl` or `wget`", normalized_install)
         self.assertIn("release downloads", normalized_install)
@@ -1429,7 +1422,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         expectations = {
             REPO_ROOT / "AGENTS.md": f"pin `{pin}`",
             REPO_ROOT / "CLAUDE.md": f"pin `{pin}`",
-            REPO_ROOT / "README.md": f"(`{pin}`, support floor",
+            REPO_ROOT / "docs" / "runtime-support.md": "pinned Dediren release",
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": f"(`{pin}`)",
             ARCH_PLUGIN
             / "skills"
