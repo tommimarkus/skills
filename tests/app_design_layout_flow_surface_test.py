@@ -27,7 +27,8 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "unresolved layout direction",
             "explicitly concerns layout or flow mechanics",
             "routine component/state work",
-            "layout direction is already settled",
+            "narrow approved-layout changes",
+            "Approved direction skips alternatives",
         ):
             self.assertIn(route, skill)
 
@@ -42,6 +43,34 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "flow-step IDs or layout regions",
         ):
             self.assertIn(output, skill)
+
+    def test_alternatives_rubric_and_settled_routing_are_consistent(self) -> None:
+        cases = {r["id"]: r for r in read_jsonl(f"{APP_SKILL}/references/evals/behavior-cases.jsonl")}
+        case = cases["app-design-behavior-layout-alternatives-checkpoint"]
+        for field in ("expected_artifacts", "required_checks", "grader"):
+            wording = compact(str(case[field]))
+            self.assertIn("two or three", wording)
+            self.assertNotIn("exactly three", wording)
+        for requirement in ("wide and narrow", "tradeoffs", "selection"):
+            self.assertIn(requirement, str(case["required_checks"]))
+        for missing in ("missing tradeoffs", "missing selection checkpoint"):
+            self.assertIn(missing, str(case["forbidden_behaviors"]))
+        for count in ("two", "three"):
+            response = cases[f"app-design-behavior-layout-{count}-option-response"]
+            self.assertIn(f"{count} meaningful", response["prompt"])
+            self.assertIn("accept", response["grader"])
+            self.assertIn("tradeoffs", response["grader"])
+            self.assertIn("selection checkpoint", response["grader"])
+        substantial = cases["app-design-behavior-settled-layout-flow-routing"]
+        self.assertIn("dashboard", substantial["prompt"])
+        self.assertIn("load the layout-and-flow procedure", str(substantial["required_checks"]))
+        narrow = cases["app-design-behavior-narrow-approved-layout"]
+        self.assertIn("skip the whole procedure", str(narrow["required_checks"]))
+        for path in ("AGENTS.md", "CLAUDE.md", "README.md"):
+            with self.subTest(path=path):
+                guidance = compact(read(path))
+                self.assertIn("Approved direction skips alternatives", guidance)
+                self.assertIn("narrow approved-layout changes", guidance)
 
     def test_core_defines_flow_layout_primitives_and_findings(self) -> None:
         core = compact(read("souroldgeezer-design/docs/app-reference/app-design.md"))
@@ -209,6 +238,9 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
         review_targets = {route["target"] for route in scenarios["app-review-react-vite"]["load_routes"]}
         self.assertIn(PROCEDURE, build_targets)
         self.assertNotIn(PROCEDURE, review_targets)
+        for case_id, expected in (("app-build-approved-dashboard", True), ("app-review-narrow-approved-layout", False)):
+            targets = {route["target"] for route in scenarios[case_id]["load_routes"]}
+            self.assertEqual(PROCEDURE in targets, expected)
 
         baseline = json.loads(read("tests/skill_load_cost/baselines/app-design.json"))
         for code in ("APP-FLOW-1", "APP-FLOW-2", "APP-LAYOUT-1", "APP-LAYOUT-2"):

@@ -86,6 +86,32 @@ class AppDesignReactNextExtensionSurfaceTest(unittest.TestCase):
         self.assertIn("app-design", api_nextjs)
         self.assertIn("frontend app", api_nextjs)
 
+    def test_overlay_and_server_function_counterexamples_preserve_boundaries(self) -> None:
+        react = " ".join(read(f"{APP_SKILL}/extensions/react.md").split())
+        self.assertIn("Modal dialogs need focus trapping", react)
+        self.assertIn("inert background", react)
+        self.assertIn("Nonmodal popovers and tooltips", react)
+        self.assertIn("dismissal, focus, and scrolling behavior", react)
+        self.assertIn("portal does not make it modal", react)
+        self.assertNotIn("Portals, dialogs, popovers, and overlays need focus trap", react)
+        nextjs = " ".join(read(f"{APP_SKILL}/extensions/nextjs.md").split())
+        self.assertIn("'use server'", nextjs)
+        self.assertIn("may cross this boundary", nextjs)
+        self.assertIn("functions or closures, server-only clients, and secrets may not", nextjs)
+        cases = {r["id"]: r for r in read_jsonl(f"{APP_SKILL}/references/evals/behavior-cases.jsonl")}
+        overlay = cases["app-design-behavior-modal-and-popover-semantics"]
+        for widget in ("modal dialog", "nonmodal popover", "tooltip"):
+            self.assertIn(widget, overlay["prompt"])
+        self.assertIn("focus stays on its trigger", str(overlay["required_checks"]))
+        props = cases["app-design-behavior-server-function-props"]
+        self.assertIn("allow", str(props["required_checks"]))
+        self.assertIn("reject", str(props["required_checks"]))
+        self.assertIn("ordinary closure", props["prompt"])
+        self.assertIn("server-only client", props["prompt"])
+        grounding = read(f"{APP_SKILL}/references/source-grounding.md")
+        for url in ("https://react.dev/reference/rsc/use-server", "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/", "https://html.spec.whatwg.org/multipage/popover.html"):
+            self.assertIn(f"]({url})", grounding)
+
     def test_react_nextjs_support_has_synthetic_eval_coverage(self) -> None:
         triggers = {
             record["id"]

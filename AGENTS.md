@@ -205,13 +205,14 @@ alone. JavaScript/TypeScript software guidance remains the existing
 `typescript.md` lane; security uses its separate evidence-gated `jsts.*` pack,
 and Node/React lifecycle-test rules remain under test-quality-audit.
 App-design also owns user-flow mapping and adaptive screen layout through a
-framework-neutral on-demand procedure; substantial multi-screen or material
-layout work still loads flow analysis after its direction is settled, while
-routine component/state work and narrow approved-layout changes skip the whole
-procedure. Modal dialogs have modality semantics distinct from nonmodal
-popovers and portal mounting, and Next.js `use server` Server Function
-references are allowed across the Server/Client prop boundary while ordinary
-closures and secrets remain prohibited.
+framework-neutral on-demand procedure for substantial multi-screen, dashboard,
+and material-layout work. Approved direction skips alternatives; only routine
+component/state work and narrow approved-layout changes skip the whole procedure.
+Unsettled direction calls for two or three meaningful alternatives with
+tradeoffs and a selection checkpoint. Modal dialogs have modality semantics
+distinct from nonmodal popovers, tooltips, and portal mounting. Supported
+`'use server'` Server Function references may cross the Server/Client prop
+boundary; ordinary functions, server-only clients, and secrets may not.
 Every Deep test-quality audit assesses suite health by establishing management
 evidence before sampling: feedback lanes, project-declared budgets, current
 results, runtime distribution, reliability, ownership, overlap, and retirement

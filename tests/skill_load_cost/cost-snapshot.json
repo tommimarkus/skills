@@ -25,8 +25,8 @@
   "build-python-asgi": 17110,
   "review-python-wsgi-clean": 16952,
   "review-python-serverless": 16952,
-  "app-review-react-vite": 11165,
-  "app-build-layout-flow": 7314,
+  "app-review-react-vite": 11157,
+  "app-build-layout-flow": 7306,
   "sd-lookup-principle": 2228,
   "sd-build-csharp": 8083,
   "sd-review-typescript": 11420,
@@ -42,5 +42,7 @@
   "deep-devsecops-gha": 29124,
   "ip-triage-js": 11746,
   "ip-indepth-python": 15318,
-  "infra-review-azure-bicep": 6364
+  "infra-review-azure-bicep": 6364,
+  "app-build-approved-dashboard": 7306,
+  "app-review-narrow-approved-layout": 5991
 }
