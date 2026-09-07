@@ -43,7 +43,7 @@ edits/findings.
 - **Extract**: lift evidenced code/IaC/API/UI/workflow facts; mark
   architect-owned content. Put source-backed groups in `model.json` under
   `plugins.generic-graph.views[].groups`, not `package.json`.
-- **Review**: assess validity, readability, SVG, optional export, and drift;
+- **Review**: assess original validity, readability, SVG, optional export, and drift;
   lead with findings. `dediren_verify` is the artifact-freshness drift gate and
   `dediren_diff` compares two model revisions (architecture §9).
 - **Lookup**: answer bounded notation/package/reverse-lookup questions only,
@@ -92,7 +92,8 @@ Build.
    `dediren_build`, `dediren_guide`, plus the four read-only tools `dediren_diff` /
    `dediren_query` / `dediren_verify` / `dediren_status` (architecture §9, wired per
    mode above) — prefer MCP over the CLI. Extract, Review, and Lookup need only the
-   read-only tool subset; Build also needs `dediren_build`. When the `dediren_*`
+   read-only tool subset; Build, and Extract when it generates artifacts, need
+   `dediren_build`. When the `dediren_*`
    tools are absent, an internal CLI fallback may drive the same resolved
    executable; self-check § Server availability owns the availability check and
    exact `source-valid` cap condition. Provisioning is the launcher's job: never
@@ -148,7 +149,10 @@ Build.
    relationship, or view types unless the task is a purely mechanical update to
    an existing package. Keep a compact rationale for every non-obvious
    source-to-ArchiMate choice. Build/Extract may mutate source; Review/Lookup
-   do not mutate by default.
+   do not mutate by default. A Review needing reproducibility evidence loads
+   [isolated review](references/procedures/isolated-review.md): inspect original
+   evidence first, then prepare one persistent byte-accounted copy and build only
+   that copy. A copy build never repairs, refreshes, or upgrades the original.
 6. Validate before quality claims — call the Dediren MCP server's
    `dediren_validate` tool (pass absolute `workspaceRoot` plus the model's
    relative path and `profile`) so `source-valid` covers
@@ -172,8 +176,10 @@ Build.
    footer `Gallery:` line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
    its full input set, and when it goes stale.
 8. Stop when required evidence is missing, a dediren MCP tool returns an error
-   envelope (or the server is unavailable), the notation is unsupported, or a
+   envelope, the notation is unsupported, or a
    blocking finding prevents requested readiness.
+   When both MCP and the same resolved CLI are unavailable, continue static
+   findings and disclose runtime-dependent quality as not assessed.
 
 ## References
 
@@ -182,6 +188,7 @@ Build.
 | ArchiMate notation/profile | [`references/notations/archimate.md`](references/notations/archimate.md) |
 | UML® notation/profile and ArchiMate handoff links | [`references/notations/uml.md`](references/notations/uml.md) |
 | Review/readiness | [`references/smell-catalog.md`](references/smell-catalog.md), [`references/red-flags.md`](references/red-flags.md), [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) |
+| Isolated Review rebuild and original-integrity evidence | [`references/procedures/isolated-review.md`](references/procedures/isolated-review.md) |
 | implementation-readiness review; Build closeout disclosure | [`references/procedures/implementation-readiness-review.md`](references/procedures/implementation-readiness-review.md) |
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |

@@ -16,6 +16,10 @@ Use these levels in Build, Extract, and Review.
 
 The package rollup is the weakest applicable level across actual views.
 
+For Review, original readiness and isolated rebuild status are separate evidence
+lanes. A successful copy build proves only reproducibility of that snapshot; it
+does not clear a stale, missing, inaccessible, or visually defective original.
+
 Authority: `lifted-from-source` only when every visible claim has current
 evidence; `forward-only-or-inferred` for intent/future/process candidates;
 `architect-approved` or `stakeholder-validated` only when supplied.

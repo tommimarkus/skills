@@ -1474,5 +1474,41 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertNotIn("conformant UML 2.5.1 abstract syntax for whatever view kind", grounding)
 
 
+class ArchitectureReviewContractRuntimeTest(unittest.TestCase):
+    """Exercise the documented isolated Review contract on the adopted runtime."""
+
+    def test_isolated_copy_validates_both_profiles_and_keeps_original_bytes(self) -> None:
+        copy_helper = SCRIPT_DIR / "review-copy.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            shutil.copytree(MIXED_FIXTURE, workspace / "pkg")
+            original = {
+                path.relative_to(workspace).as_posix(): path.read_bytes()
+                for path in (workspace / "pkg").rglob("*") if path.is_file()
+            }
+            copy_root = root / "review-copy"
+            prepared = subprocess.run(
+                ["python3", str(copy_helper), "prepare", "--workspace-root", str(workspace),
+                 "--package", "pkg/package.json", "--destination", str(copy_root)],
+                check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            manifest = json.loads(prepared.stdout)["manifest"]
+            for source, profile in (("pkg/model.json", "archimate"), ("pkg/model-uml.json", "uml")):
+                result = subprocess.run(
+                    [dediren_executable(), "validate", "--input", source, "--plugin", "generic-graph", "--profile", profile],
+                    cwd=copy_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+            build = subprocess.run(
+                [dediren_executable(), "build", "--package", "pkg/package.json"], cwd=copy_root,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            self.assertEqual(build.returncode, 0, build.stderr)
+            verified = subprocess.run(["python3", str(copy_helper), "verify-original", "--manifest", manifest], text=True, stdout=subprocess.PIPE)
+            self.assertEqual((verified.returncode, json.loads(verified.stdout)["status"]), (0, "unchanged"))
+            self.assertEqual(original, {path.relative_to(workspace).as_posix(): path.read_bytes() for path in (workspace / "pkg").rglob("*") if path.is_file()})
+
+
 if __name__ == "__main__":
     unittest.main()

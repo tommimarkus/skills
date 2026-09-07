@@ -116,7 +116,7 @@ is requested, `uml-xmi` only when XMI export is requested.
 When the MCP server is unavailable, run the same validation through the internal CLI
 lane (§ Server availability): set `DEDIREN="${DEDIREN_COMMAND:-dediren}"`, require
 that command to exist, then run `"$DEDIREN" validate --input <pkg>/model.json` for schema and
-`"$DEDIREN" validate --plugin generic-graph --profile archimate` (or `uml`) for the
+`"$DEDIREN" validate --input <pkg>/model.json --plugin generic-graph --profile archimate` (or `uml`) for the
 semantic gate. This is the same evidence, obtained without the server.
 
 ## Migrating an outdated input
@@ -200,9 +200,11 @@ Command Handoff rules apply unchanged. Check `isError` on the tool result and th
 envelope `status` before trusting output.
 
 - `dediren_validate` returns a generic envelope: read `.status` and `.diagnostics[]`.
-- `dediren_build` is the exception — what it returns **is** the build-result
-  document (`build-result.schema` family), not wrapped in a `.data`. Roll up its
-  top-level `.status` together with every entry in `.views[]`: a stage failure is
+- A single-model `dediren_build` returns the unwrapped build-result document.
+  A package `dediren_build` returns the standard envelope: read `.data.status`,
+  `.data.views[]`, and `.data.exports[]`; do not index an unqualified top-level
+  `views` for a package result. For a single-model result, roll up the top-level
+  `.status` together with every entry in `.views[]`: a stage failure is
   scoped to the view it happened in, so the remaining views still run and still
   report, and reading only the first entry hides them. `.views[].artifacts[]` names
   each written file (`{artifact_kind, path}`) relative to `out`. A build-level

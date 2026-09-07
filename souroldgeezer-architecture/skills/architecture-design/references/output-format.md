@@ -27,6 +27,11 @@ where they support a finding or answer (`architecture.md` §9).
 Without runtime schema plus semantic-profile validation, report `Quality level:
 not assessed`; schema-only validation does not establish `source-valid`.
 
+Review reproducibility: report `Original evidence: <readiness/findings>` and
+`Isolated rebuild: not run | prepared <copy path>; build ok | build failed` separately.
+Also report the copy manifest path and the post-run original-integrity result.
+Copy success never upgrades the original quality level.
+
 Ownership/layout: imported release bundles are upstream artifacts; report
 `Dediren tool issues`. `package.json` declares bindings and paths; the runtime
 owns projection, layout, rendering, and export execution. Generated metadata,

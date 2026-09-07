@@ -12,6 +12,10 @@ marketplace, agent wrapper, hook, bundled reference, extension, or helper, read
 [`docs/skill-architecture.md`](docs/skill-architecture.md). Read the affected
 skill's own `SKILL.md` and only the references or extensions its load map selects.
 
+Architecture Review preserves original package evidence. When a reproducibility
+build is needed, use the architecture skill's isolated-review procedure and its
+byte-accounted persistent copy; never rebuild or refresh the reviewed original.
+
 Keep this file, `CLAUDE.md`, and `README.md` current when repository structure,
 runtime support, install commands, validation, or a public skill contract
 changes. `AGENTS.md` owns Codex-facing repository guidance; `CLAUDE.md` remains

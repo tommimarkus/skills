@@ -145,6 +145,10 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
 
 ## Skill architecture craft standard (MUST)
 
+Architecture Review keeps original package artifacts authoritative. When a Review
+needs reproducibility evidence, use the architecture-design isolated-review
+procedure and its persistent byte-accounted copy; never rebuild the original.
+
 For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, both runtime wrapper families, and the README / AGENTS / CLAUDE sections describing them.
 
 The standard is the first design input; the report is the repeatable check. Loading the standard only at closeout misses trigger precision, workflow shape, context discipline, runtime parity, and release-hygiene decisions made while changing the code. Before finishing, apply the standard and run `scripts/skill-architecture-report.sh` when available; if it cannot run, record why and what narrower verification was used. When you delegated the edit to a subagent and told it not to run the deterministic gates, its "verified" reports only its own drafting checks — run `scripts/skill-architecture-report.sh` and the lean-audit cost/fidelity guard yourself before integrating, since the Stop hooks fire only at session end (a mid-session integration lands first). The canonical silent breach is a description reword that trips the 1024-char `SAC-TRIGGER-DESC-LENGTH` cap.
