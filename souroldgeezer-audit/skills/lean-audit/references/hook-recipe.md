@@ -8,8 +8,9 @@ markdown. It ships **off** — installing the plugin does not enable enforcement
 Enable it deliberately, per this recipe.
 
 Use this only after the plugin is installed and its script path is known in the
-consumer project. A hook is local project configuration: enabling one neither
-changes the plugin nor grants it access beyond the host’s normal hook payload.
+consumer project. Merge the chosen hook into existing configuration rather
+than replacing other hooks. These commands run in the hook host's environment;
+the payload describes the event, not a filesystem-access boundary.
 
 ## What it does
 
@@ -55,7 +56,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/lean_guard.py\""
+            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/lean_guard.py\""
           }
         ]
       }
@@ -69,7 +70,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 > directory). A hook you add to your *own* `settings.json` is not plugin-owned,
 > so substitute the real installed script path instead — find it via `/plugin`
 > (the `souroldgeezer-audit` install path), e.g.
-> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/skills/lean-audit/references/scripts/lean_guard.py`.
+> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/<version>/skills/lean-audit/references/scripts/lean_guard.py`.
 > That path changes when the plugin updates, so re-point it after an update (or
 > point a stable env var at it in your shell profile and reference that).
 
@@ -162,7 +163,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
           }
         ]
       }
@@ -175,7 +176,7 @@ Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
 > substitutes this variable only in plugin-defined hook commands. For a hook you add
 > to your own `settings.json`, substitute the real installed path — find it via
 > `/plugin` (the `souroldgeezer-audit` install path), e.g.
-> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`.
+> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/<version>/skills/lean-audit/references/scripts/load_cost_guard.py`.
 > Re-point it after a plugin update.
 
 ## Enable in Codex — Stop hook (default)
@@ -218,7 +219,7 @@ For immediate at-edit blocking, add a `PreToolUse` hook instead:
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"$CLAUDE_PLUGIN_ROOT/skills/lean-audit/references/scripts/load_cost_guard.py\""
+            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
           }
         ]
       }

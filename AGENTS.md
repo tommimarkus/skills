@@ -25,8 +25,9 @@ making either runtime load the other's file first.
 - `<plugin>/plugin.json` + `<plugin>/mcp.json`: Agent Plugins 1.0.0 manifest and
   its MCP configuration — the current Codex lane, and the only one that
   interpolates `${PLUGIN_DATA}` in MCP config. The same root `plugin.json` is the
-  native Copilot manifest when that plugin supports Copilot CLI directly; its own
-  MCP adapter lives at `<plugin>/mcp/copilot.mcp.json`.
+  native Copilot manifest when that plugin supports Copilot CLI directly;
+  spec-aware Copilot reads root `mcp.json`, while its legacy adapter lives at
+  `<plugin>/mcp/copilot.mcp.json`.
 - `<plugin>/.codex-plugin/plugin.json`: legacy Codex manifest, retained as the
   fallback lane.
 - `<plugin>/mcp/codex.mcp.json`: legacy Codex MCP adapter when that manifest
@@ -173,9 +174,11 @@ authorization responsibilities.
   is correct, or a tested source-discovery bootstrap when the server must preserve
   the caller's workspace, and expect no plugin data root there. Claude MCP and
   hook commands use `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}`.
-- Copilot plugin MCP commands use `${PLUGIN_ROOT}` and writable plugin data uses
-  `${COPILOT_PLUGIN_DATA}`. Keep a separate Copilot MCP file; never let Copilot
-  fall through to the Codex bootstrap.
+- Legacy Copilot MCP commands use `${PLUGIN_ROOT}` and writable plugin data uses
+  `${COPILOT_PLUGIN_DATA}`. Keep that separate fallback file; never let legacy
+  Copilot fall through to the Codex bootstrap. Spec-aware Copilot consumes the
+  shared root `mcp.json` instead and exports plugin-data variables to the child;
+  keep that root file free of `env` and `cwd`, as documented above.
 
 Inspect existing tests before selecting the RED test: extend a suitable cohesive
 scenario without weakening coverage; create a new test when the scenario is

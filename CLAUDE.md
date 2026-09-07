@@ -29,8 +29,9 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
 - **MCP packaging is host-adapted, while the server contract stays shared.**
   Claude declares the launcher inline, Codex declares it in the root `mcp.json`
   of its Agent Plugins manifest (with `.codex-plugin/plugin.json` +
-  `mcp/codex.mcp.json` retained as the legacy fallback lane), and Copilot points
-  at `mcp/copilot.mcp.json`. The shared router preserves the
+  `mcp/codex.mcp.json` retained as the legacy fallback lane). Spec-aware Copilot
+  reads that same root `mcp.json`; `mcp/copilot.mcp.json` is its legacy fallback.
+  The shared router preserves the
   caller's workspace and requires an absolute `workspaceRoot` per operation.
   It starts every upstream child in an explicit valid directory, independent of
   the host launcher's inherited cwd, and mirrors child stderr while retaining a
@@ -315,7 +316,7 @@ Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped an existing version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply every applicable cell in the integration commit. A newly added Copilot manifest may start at the existing release's padded value as packaging content.
+Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped an existing version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply every applicable cell in the integration commit. A newly added Copilot manifest may start at the existing release's SemVer-normalized value as packaging content.
 
 **Stamp mechanics:**
 - Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current Claude version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version; the Codex cell is its normalized mirror.

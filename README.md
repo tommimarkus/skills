@@ -1,6 +1,6 @@
 # souroldgeezer
 
-Cross-runtime plugin marketplace by Sour Old Geezer. Claude Code™, Codex, and GitHub™ Copilot CLI publish the same shared skill workflows through additive host adapters.
+Cross-runtime plugin marketplace by Sour Old Geezer. The same skill workflows run in Claude Code™ and Codex, with native GitHub™ Copilot CLI support for the architecture plugin.
 
 ## What this is
 
@@ -20,6 +20,8 @@ The repo currently ships five plugins:
 
 ### Claude Code
 
+Run these in Claude Code. Add the marketplace, then install the plugins you need:
+
 ```text
 /plugin marketplace add tommimarkus/skills
 /plugin install souroldgeezer-audit@souroldgeezer
@@ -29,17 +31,30 @@ The repo currently ships five plugins:
 /plugin install souroldgeezer-ops@souroldgeezer
 ```
 
-For local development, point Claude at the clone instead:
+For local development, merge this configuration into `~/.claude/settings.json`
+using the absolute path of your task checkout:
 
 ```json
 // ~/.claude/settings.json
 {
-  "extraKnownMarketplaces": {"souroldgeezer": {"source": {"source": "directory", "path": "/absolute/path/to/skills"}}},
-  "enabledPlugins": {"souroldgeezer-audit@souroldgeezer": true, "souroldgeezer-design@souroldgeezer": true, "souroldgeezer-architecture@souroldgeezer": true, "souroldgeezer-policy@souroldgeezer": true, "souroldgeezer-ops@souroldgeezer": true}
+  "extraKnownMarketplaces": {
+    "souroldgeezer": {
+      "source": { "source": "directory", "path": "/absolute/path/to/skills" }
+    }
+  },
+  "enabledPlugins": {
+    "souroldgeezer-audit@souroldgeezer": true,
+    "souroldgeezer-design@souroldgeezer": true,
+    "souroldgeezer-architecture@souroldgeezer": true,
+    "souroldgeezer-policy@souroldgeezer": true,
+    "souroldgeezer-ops@souroldgeezer": true
+  }
 }
 ```
 
 ### Codex
+
+Run these in a terminal, selecting the plugins you need:
 
 ```bash
 codex plugin marketplace add tommimarkus/skills
@@ -87,7 +102,8 @@ Each skill’s expected output and boundaries are in [using skills](docs/using-s
 
 ## Validation
 
-Contributors run the documented checks in [contributing](docs/contributing.md), including `scripts/test-stop-hooks.sh` through the fragmentation gate.
+Contributors run the documented checks in [contributing](docs/contributing.md), including `scripts/test-stop-hooks.sh` through the fragmentation gate. The
+[release checklist](docs/release-checklist.md) covers release preparation.
 
 ## Detailed docs
 

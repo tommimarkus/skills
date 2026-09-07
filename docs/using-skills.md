@@ -1,51 +1,109 @@
 # Using skills
 
-Install the plugin that matches the work, then state the desired outcome and the relevant repository or artifact. A skill owns a bounded kind of work; it does not replace the project’s own requirements. Read its linked `SKILL.md` when you need its exact workflow, evidence, or stop conditions.
+Choose a skill by the result you need, install its plugin using the
+[README commands](../README.md#install), and describe the work in your project.
+Include the repository or artifact, the desired outcome, and any boundaries:
+for example, “review only” or “implement the approved change.” You can name the
+skill explicitly when several tasks overlap.
 
-## Choose by task
+The examples below are starting requests. The linked `SKILL.md` files own the
+complete workflows, evidence requirements, and stop conditions.
 
-| Skill | Ask it to do | Expected result | Boundary |
-|---|---|---|---|
-| [devsecops-audit](../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | audit a Dockerfile, CI pipeline, IaC, release, or code-security smell | risk-ranked findings and `Quick gate: <status>` | Security review, not general design or test-quality review. |
-| [test-quality-audit](../souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | review flaky, weak, slow, or incomplete tests | findings; Deep includes suite health and setup/teardown lifecycle evidence | Audit only; it does not implement tests. |
-| [ip-hygiene](../souroldgeezer-audit/skills/ip-hygiene/SKILL.md) | review copied material, notices, licences, marks, or source provenance | coded findings and `triage gate: <status>` or in-depth verdict | It is not legal clearance. |
-| [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) | audit workflow prose or plugin surfaces for duplication and context waste | bounded findings and `limited-scope gate: <status>` when applicable | Read-only; hooks and tracing remain opt-in. |
-| [software-design](../souroldgeezer-design/skills/software-design/SKILL.md) | design or review code/module boundaries and dependencies | ownership, coupling, and evolution decision | Not UI, API, infrastructure, architecture-model, security, or test audit work. |
-| [app-design](../souroldgeezer-design/skills/app-design/SKILL.md) | design screens, navigation, forms, responsive behaviour, or a dashboard flow | route/screen and state-flow guidance | Not backend, API, infrastructure, or architecture-model design. |
-| [api-design](../souroldgeezer-design/skills/api-design/SKILL.md) | design or review an HTTP API and consumers | versioned API contract with reliability and observability | Not general module or UI design. |
-| [infra-design](../souroldgeezer-design/skills/infra-design/SKILL.md) | design topology, environments, identity, rollout, or Terraform/Bicep | operational infrastructure design and handoff | Not API, UI, or source-module design. |
-| [architecture-design](../souroldgeezer-architecture/skills/architecture-design/SKILL.md) | build, inspect, render, or validate an ArchiMate®/UML® Dediren package | maintained package evidence and rendered output | Use another format for diagrams that must remain Mermaid, PlantUML, or draw.io®. |
-| [git-workflow-policy](../souroldgeezer-policy/skills/git-workflow-policy/SKILL.md) | establish or inspect repository git workflow rules | explicit workflow policy and preflight | Not PR/MR or release operations. |
-| [release-policy](../souroldgeezer-policy/skills/release-policy/SKILL.md) | establish or inspect version, release, tag, rollback, or exception policy | release policy guidance | Not general git workflow. |
-| [tdd-policy](../souroldgeezer-policy/skills/tdd-policy/SKILL.md) | establish or enforce test-first work | RED→GREEN→REFACTOR record | Not overall test-quality assessment. |
-| [planning-policy](../souroldgeezer-policy/skills/planning-policy/SKILL.md) | make an approved approach dispatch-ready | `contract_version: 5` plan from [plan-v5.json](../souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json), with `capability_requirements` and exact `planning-capability-binding-v1` before dispatch | Planning does not authorize implementation. |
-| [scope-policy](../souroldgeezer-policy/skills/scope-policy/SKILL.md) | keep an initialized change within a declared boundary | scope-level assessment and escalation record | Not solution minimalism. |
-| [issue-ops](../souroldgeezer-ops/skills/issue-ops/SKILL.md) | triage, resume, implement, or close an issue/work item | provider-specific lifecycle progress | Not pull requests. |
-| [pr-ops](../souroldgeezer-ops/skills/pr-ops/SKILL.md) | create, review, update, fix, merge, or close a PR/MR | provider-specific PR/MR lifecycle progress | Not issues. |
+## Review risks and evidence
 
-## Policies and audits
+| Skill | Example request | What to expect |
+|---|---|---|
+| [devsecops-audit](../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | “Run a Quick security audit of this Dockerfile and release workflow.” | Findings tied to file evidence and security criteria; Quick includes a bounded gate. Deep also assesses the wider posture. |
+| [test-quality-audit](../souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | “Audit this test diff for assertions that could pass despite a broken feature.” | Per-test findings and a Quick gate. Deep also examines suite health and setup/teardown lifecycle evidence. |
+| [ip-hygiene](../souroldgeezer-audit/skills/ip-hygiene/SKILL.md) | “Review these bundled examples and notices for source and licence hygiene.” | Provenance and notice findings, evidence gaps, and the applicable prospective decision, triage gate, or in-depth verdict. |
+| [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) | “Audit this skill's workflow for repeated prose and unnecessary context.” | Deterministic duplication findings plus evidence-based waste observations. A bounded scope includes a limited-scope gate. |
 
-Policies are passive until repository guidance initializes them or you explicitly request enforcement. A bounded lane gate is mechanical, not a full assurance verdict; see the [audit craft core](../souroldgeezer-audit/docs/audit-reference/audit-craft.md). New plans use `contract_version: 5`; `version` is never the discriminator. A decision-complete plan is approval-ready, but dispatch-ready only after the exact capability binding. The complete contract remains in [planning-policy](../souroldgeezer-policy/skills/planning-policy/SKILL.md).
+Audits are read-only unless repairs are explicitly requested. Security,
+software design, test quality, and source/IP hygiene are different questions;
+one audit does not establish the others. Lean's mechanical code-duplication
+check does not cover semantic DRY or source dead code. Its native-platform
+comparison and minification proposal require explicit requests; minification
+remains propose-only.
 
-## Example requests
+For bounded audits, `fail` means a substantiated in-scope blocker,
+`not-evaluated` means required evidence cannot rule out blockers, and
+`pass-limited` means that limited check found no blocker. A bounded lane gate
+is mechanical, not a full assurance verdict. Deep/in-depth reviews disclose
+broader coverage and remaining limits. IP-hygiene does not provide legal
+clearance. See [audit craft](../souroldgeezer-audit/docs/audit-reference/audit-craft.md#4a-bounded-lane-gate)
+for the shared gate rules.
 
-- “Check this release workflow for supply-chain risks.”
-- “Why are these integration tests flaky?”
-- “Review these examples and notices for copied material.”
-- “Find duplication and unnecessary context in this skill.”
-- “Propose module boundaries for this parser.”
-- “Map the signup flow and its mobile layout.”
-- “Design error responses for this public endpoint.”
-- “Plan a safe Terraform rollout for two environments.”
-- “Review this UML package and its source evidence.”
-- “Adopt a feature-branch worktree policy here.”
-- “Set a CalVer release and rollback policy.”
-- “Enforce test-first work for this feature.”
-- “Turn this approved approach into a dispatch-ready plan.”
-- “Keep this change within the targeted scope level.”
-- “Triage issue 42 and prepare it for implementation.”
-- “Review the open pull request and address its comments.”
+## Design and maintain a system
 
-## More detail
+| Skill | Example request | What to expect |
+|---|---|---|
+| [software-design](../souroldgeezer-design/skills/software-design/SKILL.md) | “Review this parser's module boundaries and where format changes would spread.” | Evidence about ownership, dependencies, coupling, and evolution, with bounded design recommendations. |
+| [app-design](../souroldgeezer-design/skills/app-design/SKILL.md) | “Map this signup flow and propose a responsive layout for its three screens.” | User-flow and layout guidance, component/state decisions, and appropriate browser evidence. Unsettled material layouts include alternatives and a selection checkpoint. |
+| [api-design](../souroldgeezer-design/skills/api-design/SKILL.md) | “Design a versioned HTTP API for creating and cancelling reservations.” | An API contract covering request/response behavior, errors, concurrency, security, reliability, and verification limits. |
+| [infra-design](../souroldgeezer-design/skills/infra-design/SKILL.md) | “Review this Terraform environment's identity boundaries and rollback plan.” | Infrastructure findings and operational handoff guidance grounded in topology, state, deployment, and ownership. |
+| [architecture-design](../souroldgeezer-architecture/skills/architecture-design/SKILL.md) | “Create a maintained UML deployment model for this service in the repository.” | A Dediren package and, for a build, validated/rendered evidence with readiness limits. A review inspects existing evidence without rebuilding by default. |
 
-See [runtime support](runtime-support.md) for installation and host behaviour. Contributors should use [contributing](contributing.md) and the [skill architecture standard](skill-architecture.md) before editing a skill or adapter.
+Use software-design for code/module decisions, app-design for UI, api-design
+for HTTP interfaces and consumers, infra-design for infrastructure, and
+architecture-design for maintained architecture models. They support different
+build, review, extraction, and lookup paths; a review request does not itself
+authorize implementation.
+
+Software-design also provides a bounded non-code File Edit lane and an additive
+fragility review. Its [native-tool procedure](../souroldgeezer-design/skills/software-design/references/procedures/native-tool-evidence.md)
+explains capability-based selection and optional evidence without making a new
+tool installation mandatory. App-design's
+[layout procedure](../souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md)
+explains when approved direction skips alternatives or a narrow edit skips the
+whole procedure.
+
+Architecture-design owns ArchiMate and UML Dediren packages. Diagrams that must
+remain Mermaid, PlantUML, or draw.io belong to another workflow. See
+[runtime support](runtime-support.md#dediren) for Dediren prerequisites and
+export/rendering limits.
+
+## Set repository policies
+
+Installing a policy does not activate enforcement. Initialize it in your
+repository guidance or explicitly request enforcement. A lookup or inspection
+can explain a policy without adopting it. Keep options and task exceptions in
+that repository's own guidance; the
+[policy posture](../souroldgeezer-policy/docs/policy-reference/policy-posture-core.md)
+owns this boundary.
+
+| Skill | Example request | What to expect |
+|---|---|---|
+| [git-workflow-policy](../souroldgeezer-policy/skills/git-workflow-policy/SKILL.md) | “Adopt feature branches and persistent task worktrees for this repository.” | Standing Git rules and preflight guidance; PR/MR execution belongs to pr-ops. |
+| [release-policy](../souroldgeezer-policy/skills/release-policy/SKILL.md) | “Establish CalVer release, verification, and rollback rules here.” | Release/version policy and authorized preparation guidance; publication needs its own authority. |
+| [tdd-policy](../souroldgeezer-policy/skills/tdd-policy/SKILL.md) | “Enforce test-first implementation for this feature.” | A RED→GREEN→REFACTOR workflow with the applicable coverage and exception rules. Inspect existing tests before selecting the RED test. |
+| [planning-policy](../souroldgeezer-policy/skills/planning-policy/SKILL.md) | “Plan this refactor for approval before implementation.” | An approval-ready approach and, when executable delegation is needed, a decision-complete plan and handoff. |
+| [scope-policy](../souroldgeezer-policy/skills/scope-policy/SKILL.md) | “Keep this change at targeted scope and record unrelated findings.” | A declared boundary, recorded out-of-scope findings, and the applicable escalation decision. |
+
+New executable plans start from
+[plan-v5.json](../souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json).
+The discriminator is `contract_version: 5`, never `version`. Every leaf has
+`capability_requirements`; approval-ready does not mean dispatch-ready. The
+exact `planning-capability-binding-v1` is required before dispatch. The
+[plan contract](../souroldgeezer-policy/skills/planning-policy/references/plan-contract.md),
+[approval handoff](../souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md),
+and [ledger reference](../souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md)
+carry the full execution rules. Tracing is separately opt-in; ordinary planning
+creates no usage telemetry. Scope policy bounds how far work may reach; it does
+not prescribe the smallest possible solution.
+
+## Handle tracked work
+
+| Skill | Example request | What to expect |
+|---|---|---|
+| [issue-ops](../souroldgeezer-ops/skills/issue-ops/SKILL.md) | “Triage GitHub issue 42 and prepare its implementation plan.” | Provider-specific issue progress, with decisions and verification tied to the work item. |
+| [pr-ops](../souroldgeezer-ops/skills/pr-ops/SKILL.md) | “Review this GitLab merge request and address the requested changes.” | Provider-specific PR/MR review or repair, followed by the requested lifecycle steps within your authority. |
+
+Name the tracker and item where possible. These skills load GitHub or GitLab
+support after identifying the provider; unavailable credentials or tools are
+reported. A request to inspect does not authorize closing, merging, or
+publishing. The repository's internal issue-lifecycle wrapper is contributor
+tooling, not an additional published skill.
+
+For missing skills, stale installations, hooks, or MCP failures, use
+[runtime support](runtime-support.md). To edit the marketplace itself, start
+with [contributing](contributing.md).

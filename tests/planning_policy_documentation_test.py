@@ -45,13 +45,53 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn("busy-poll", text)
 
     def test_runtime_neutral_contract_is_public(self) -> None:
-        readme = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
-        for phrase in (
-            "plan-v5.json", "approval handoff", "capability-binding-v1.json",
-            "validate --closeout", "show --run-id <uuid4> --next-only",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, readme)
+        # The concise entry links each authority; facts stay checked at that
+        # destination instead of requiring a second full contract in README.
+        root = "souroldgeezer-policy/skills/planning-policy/"
+        entry = self.text(root + "SKILL.md")
+        expectations = {
+            "references/plan-contract.md": (
+                "contract_version", "IDs/dependencies", "task", "boundary", "read_set",
+                "write_set", "settled_decisions", "acceptance_command", "stop_conditions",
+                "must be at least `0.60`", "analytical_heavy_exception",
+                "planning-execution-cost-v1", "planning-cost-advisory-v1",
+                "Versions 1–4 are resume-only", "approval_ready", "dispatch_ready",
+                "planning-capability-binding-v1", "max_attempts", "1–5",
+            ),
+            "references/core-workflow.md": (
+                "Execution economics", "tracing: off", "scoped acceptance",
+                "`completed` → `integrated` → `cleaned`", "only the parent creates",
+                "bounded checkpoints", "never raw logs", "select an owning audit",
+            ),
+            "references/ledger-contract.md": (
+                "<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/",
+                "canonical lowercase UUID4", "bounded-step-return-v1", "at most 8 KiB",
+                "The return does not list `run_id`", "blocked:plan_tampered",
+                "blocked:retry_exhausted", "blocked:no_progress", "`oversized`",
+                "planning-worktree-result-v1", "validate --closeout",
+                "retry_policy: escalating_remediation_v1", "retry-remediation-v1",
+                "blocked:needs_higher_tier", "parent re-runs only that leaf's own scoped acceptance",
+            ),
+            "references/ledger-compatibility.md": (
+                "retry_policy: legacy_unbounded", "terminal `integrated` state is unchanged",
+                "does not gain `cleaned`", "Do not approve new legacy work",
+                "initialize a separate v5 run", "Existing ledgers remain mutable",
+            ),
+            "references/usage-tracing.md": (
+                "trace-init", "trace-record", "trace-show", "trace-close",
+            ),
+            "extensions/codex.md": (
+                "blocked:model_unavailable", "do not silently downgrade",
+                "blocked:missing_input", "end-to-end verification",
+                "The ledger alone decides retry eligibility", "stable step ID and dependency IDs",
+            ),
+        }
+        for destination, facts in expectations.items():
+            self.assertIn(f"]({destination})", entry)
+            text = " ".join(self.text(root + destination).split())
+            for fact in facts:
+                with self.subTest(destination=destination, fact=fact):
+                    self.assertIn(fact.lower(), text.lower())
 
     def test_claude_guidance_uses_aliases_without_version_claim(self) -> None:
         claude = self.text("CLAUDE.md")

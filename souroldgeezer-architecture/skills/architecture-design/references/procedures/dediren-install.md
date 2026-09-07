@@ -10,10 +10,12 @@ provisioning does, how to override it, how to run without a network, and how to
 read a failure. The adapter contract around it (routing, timeouts, availability
 disclosure) stays in [self-check](self-check.md) § Server availability.
 
-Commands below are written with `${CLAUDE_PLUGIN_ROOT}`, which Claude Code
-expands in `SKILL.md`; this file is read raw, so carry the already-resolved value
-into them. In Codex, use the absolute `<skill-dir>` reported for the loaded skill
-and drop the `skills/architecture-design/` segment.
+Commands below use `${CLAUDE_PLUGIN_ROOT}`, which Claude Code expands in skill
+content; this file is read raw, so carry the already-resolved value into them.
+For a manual shell command, substitute the installed plugin's absolute path.
+In Codex, use the absolute `<skill-dir>` reported for the loaded skill and drop
+the `skills/architecture-design/` segment. These path forms locate the helper;
+they do not supply the host process's runtime environment to your shell.
 
 ## Prerequisite: a Java runtime
 
@@ -136,11 +138,23 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dedi
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren_runtime.py --ensure        # provision if needed, then print the path
 ```
 
-`--print-path` is the safe read-only check; only `--ensure` can download. Then
-confirm the executable itself:
+`--print-path` is the safe read-only check; only `--ensure` can download. Run
+these checks with the same `DEDIREN_HOME` or plugin-data environment as the MCP
+host. A shell that lacks those values can report no runtime even when the host
+has already installed one. Confirm the exact returned executable, which need
+not be on `PATH`:
 
 ```bash
-dediren --version          # or: "$DEDIREN_COMMAND" --version
+runtime_path=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren_runtime.py" --print-path) &&
+  "$runtime_path" --version
+```
+
+Codex source-path form, after replacing `<skill-dir>` with the loaded absolute
+skill directory:
+
+```bash
+runtime_path=$(python3 "<skill-dir>/references/scripts/dediren_runtime.py" --print-path) &&
+  "$runtime_path" --version
 ```
 
 The reported version must be **2026.07.28 or newer**.

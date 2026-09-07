@@ -1,36 +1,117 @@
 # Runtime support
 
-The marketplace publishes one shared workflow per skill and host-specific packaging around it. Claude Code and Codex support all 16 shared public skills. Copilot CLI currently supports the MCP-equipped `architecture-design` plugin.
+Use the [README installation commands](../README.md#install) for your host.
+Claude Code and Codex support all five plugins and all 16 shared public skills.
+Native Copilot CLI support currently covers `souroldgeezer-architecture` and
+its `architecture-design` skill. The workflows are shared; discovery, tool
+launch, permissions, and configuration belong to each host.
 
 ## Install and adapters
 
-Use the [README install commands](../README.md#install). Claude’s marketplace is `.claude-plugin/marketplace.json`; Codex uses `.agents/plugins/marketplace.json` and legacy `.codex-plugin` manifests. The architecture plugin also supplies the current root Agent Plugins `plugin.json` and `mcp.json`; that root manifest is the native Copilot surface. The legacy Codex and Copilot MCP files remain fallback adapters.
+Claude reads `.claude-plugin/marketplace.json`; Codex reads
+`.agents/plugins/marketplace.json`. Every plugin has Claude and legacy Codex
+manifests. The architecture plugin also has the current Agent Plugins root
+`plugin.json` and `mcp.json`, used by Codex and spec-aware Copilot.
 
-| Host | Current architecture MCP lane | Plugin data behaviour |
+| Host | Architecture MCP configuration | Runtime data |
 |---|---|---|
-| Claude Code | Claude manifest launches the shared router | `${CLAUDE_PLUGIN_DATA}` supplies the managed Dediren directory. |
-| Codex | Root `plugin.json` plus `mcp.json`; legacy `.codex-plugin` remains available | Agent Plugins exports `PLUGIN_ROOT` and `PLUGIN_DATA`; the legacy lane receives no plugin data root. |
-| Copilot CLI | Root Agent Plugins manifest and `mcp.json` | It exports plugin data variables but does not interpolate root `mcp.json`; `mcp/copilot.mcp.json` is legacy only. |
+| Claude Code | Inline launcher in `.claude-plugin/plugin.json` | Explicit `DEDIREN_HOME` from `${CLAUDE_PLUGIN_DATA}`. |
+| Codex, Agent Plugins | Root `plugin.json` and `mcp.json` | Host exports `PLUGIN_ROOT` and `PLUGIN_DATA` into the child. |
+| Codex, legacy fallback | `.codex-plugin/plugin.json` and `mcp/codex.mcp.json` | Literal paths, plugin-relative `cwd: "."`, no supplied plugin-data root. |
+| Copilot CLI, Agent Plugins | Root `plugin.json` and `mcp.json`; ignores the legacy MCP file | Host exports absolute plugin-data variables; does not expand root-file tokens. |
+| Copilot CLI, legacy fallback | `mcp/copilot.mcp.json` | Uses `${PLUGIN_ROOT}` and explicit `DEDIREN_HOME` from `${COPILOT_PLUGIN_DATA}`. |
 
-The shared root `mcp.json` declares no `env` or `cwd`: root-token expansion differs by host. The router receives an absolute `workspaceRoot` for every tool call and starts Dediren in that project. Generic local-client compatibility is limited to local stdio launch, Bash, Python, Java 21+, an absolute `workspaceRoot`, and either host data, absolute `DEDIREN_HOME`, or explicit `DEDIREN_COMMAND`.
+The shared root `mcp.json` deliberately declares no `env` or `cwd`: Codex would
+expand a token there while Copilot would leave it literal. The shared
+launcher/router has no harness detection. It requires absolute `workspaceRoot`
+per tool call and starts the upstream process in that project.
+
+The router's startup/catalog timeout is 120 seconds and its tool-call timeout
+is 360 seconds by default, configurable through the documented `DEDIREN_*`
+overrides. Codex Agent Plugins uses the host's 30-second startup default; the
+router answers initialization itself, before provisioning. In legacy adapters,
+`startup_timeout_sec` is seconds and Copilot `timeout` is milliseconds. See the
+[architecture adapter contract](../AGENTS.md#dediren-mcp-adapter-contract) for
+all environment and process details.
+
+Generic local-client compatibility means local stdio launch with Bash, Python,
+Java 21+, absolute `workspaceRoot` per tool call, and either a host-provided
+writable data directory, absolute `DEDIREN_HOME`, or explicit `DEDIREN_COMMAND`.
+It is not a promise to maintain another harness. Streamable HTTP is future work
+only for an explicit remote/shared multi-client service requirement.
 
 ## Dediren
 
-The architecture plugin provisions the pinned Dediren release on first `tools/list`, after the router has answered initialization. Java 21+ is host managed. Runtime resolution is explicit command, managed install, compatible `PATH` executable, legacy cache, then provisioning. `--print-path` only resolves an existing runtime; `--ensure` may provision. The complete procedure is [dediren-install.md](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md). Direct UML/XMI exports carry assurance data, while package builds carry only status, artifact, and diagnostics. Draw.io imports remain generic graphs, SVG remains the evidence of record, and `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` needs review or disclosure; the [architecture skill](../souroldgeezer-architecture/skills/architecture-design/SKILL.md) owns those task limits.
+For normal Linux, macOS, or WSL use, make Java 21+ available to the host; the
+plugin provisions the pinned Dediren release when tools are first listed.
+Java is host managed and is never downloaded by the plugin. An existing runtime
+can take precedence: resolution is explicit command, managed install,
+floor-compatible `PATH` executable, legacy migration cache, then provisioning.
+
+Use the [Dediren runtime guide](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)
+for the current pin/floor, download checks, environment overrides, offline
+setup, and exact error codes. `--print-path` resolves an existing executable
+without downloading; `--ensure` can provision one. Run diagnostics with the
+MCP host's environment and check the returned executable, rather than assuming
+`dediren` is on your shell's `PATH`.
+
+Keep these limits beside architecture results:
+
+- Direct UML/XMI exports expose assurance data. Native package-build results
+  expose export status, artifact, and diagnostics; do not infer the same
+  assurance from them.
+- draw.io imports become generic graphs, not promoted ArchiMate/UML models.
+  The layout engine replaces imported geometry and presentation hints.
+- The standalone ASCII/text lane does not replace SVG as the evidence of
+  record, and package builds do not select it.
+- `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` retains the SVG but maps to `ARCH-R-3`
+  until the affected label is visually clear or the limitation is disclosed.
+
+The [architecture reference](../souroldgeezer-architecture/docs/architecture-reference/architecture.md)
+owns these output contracts. Runtime smoke checks tool transport and discovery;
+it does not prove that a particular rendered diagram is visually clear.
 
 ## Troubleshooting
 
-| Symptom | Check | Action |
-|---|---|---|
-| A skill is missing or stale | Confirm its marketplace source and installed plugin | Re-add the current local clone path, then refresh or reinstall the named plugin. |
-| MCP cannot find storage or a runtime | Read the server error; `--print-path` only works with host runtime variables | Provide absolute `DEDIREN_HOME` or `DEDIREN_COMMAND`; `--ensure` is the provisioning action. |
-| Dediren reports Java or download failure | Check `java -version` and the procedure’s error row | Expose Java 21+ to the host; configure a proxy or use the documented air-gapped lane. |
-| A lean hook does not fire | Confirm the consumer project’s opt-in hook and trust review | Use the installed script path and follow the [hook recipe](../souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md); installation alone never enables it. |
+| Symptom | Check and next action |
+|---|---|
+| A skill is missing | Confirm its plugin is installed: use Claude's `/plugin`, `codex plugin list --json`, or `copilot plugin list`. Compare with the support scope above; Copilot support is architecture-only. |
+| Source edits do not appear | Inspect the installed cache path. Hosts can run a materialized copy rather than the source checkout. Refresh or reinstall that plugin from the intended local marketplace; restart a session that still loads the older copy. |
+| Dediren tools are missing | Inspect the MCP server error and the host's selected adapter. Use the [server self-check](../souroldgeezer-architecture/skills/architecture-design/references/procedures/self-check.md); do not treat a shell-only missing environment variable as proof the host installation failed. |
+| No data directory or runtime (exit 78) | Supply an absolute `DEDIREN_HOME` in the host's MCP environment, or point `DEDIREN_COMMAND` at an existing executable. Legacy Codex does not supply a plugin-data root. |
+| Java is missing or too old (exit 69) | Run `java -version`, then make Java 21+ visible to the host process through its environment. A shell-only Java configuration may not reach the host. |
+| Download or checksum failure | Follow the exact row in the [Dediren troubleshooting table](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md#troubleshooting). Configure the documented proxy/offline lane for connection failures; do not bypass checksum or archive checks. |
+| A lean hook does not fire | Confirm opt-in configuration, the current installed script path, Python 3.11+, and applicable trust review. The guards fail open on errors, so silence is not proof that enforcement ran. |
+| A requested tool or model is unavailable | Follow the skill's reported stop or documented fallback. Installed skill text does not make the host expose that capability. |
 
 ## Optional hooks
 
-Installing `lean-audit` does not enable hooks. The guard is deliberately opt-in, fail-open, and requires a user-maintained installed script path in a consumer project. Claude and Codex configurations, trust review, and overrides are in the [hook recipe](../souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md).
+Installing `lean-audit` enables neither of its guards. The
+[hook recipe](../souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md)
+explains the duplication PreToolUse guard and the fidelity/cost guard. It gives
+separate Claude and Codex configuration, overrides, prerequisites, and
+fail-open behavior.
 
-## Support limits
+Consumer-project hook commands need the real installed script path. Plugin
+root variables belong to plugin-owned hook definitions; do not assume they
+exist in project configuration. Review and trust new or changed Codex hooks.
+For load-cost checks, Codex supports the post-edit Stop form; the Claude
+PreToolUse load-cost adapter is not a supported Codex equivalent. Update
+consumer paths after a plugin update.
 
-Host capabilities, installed CLI versions, project configuration, and actual tool output determine what is available. A missing standalone Codex plugin validator is a reported skip, not a successful validation result. For repository changes, use [contributing](contributing.md).
+## Verify or report a problem
+
+Record the host/version, plugin/version and installed path, the requested
+skill/task, and the exact error with credentials removed. Separate an
+installation problem from a missing capability or an incorrect task result.
+Use [contributing](contributing.md#validate-the-change) for the full local
+validation and isolated host smoke. The
+[maintenance smoke recipe](maintenance-procedures.md#dediren-upstream-release-adoption)
+shows how to pin one executable with `DEDIREN_COMMAND` for the optional
+`DEDIREN_RUNTIME_SMOKE=1` lane.
+
+A missing standalone Codex plugin validator is a reported skip, not a pass.
+CLI help and the repository smoke verify the installed host; upstream
+[OpenAI plugin guidance](https://developers.openai.com/plugins/build/plugins)
+provides additional packaging and hook context but may describe a different
+manifest lane from the root adapter this repository tests.
