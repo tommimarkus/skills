@@ -17,7 +17,8 @@ language-level review uses core `SD-*` only, not the C# defaults below.
 Sources: .NET project SDK
 https://learn.microsoft.com/en-us/dotnet/core/project-sdk/overview, DI
 https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/basics,
-and EF modeling https://learn.microsoft.com/en-us/ef/core/modeling/.
+EF modeling https://learn.microsoft.com/en-us/ef/core/modeling/, and breaking
+changes https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/breaking-changes.
 
 Inspect project references, namespaces, public/internal/friend types, DI
 composition, EF entities, hosted services, options, shared projects, generated
@@ -32,8 +33,12 @@ value objects carry semantics; nullable-reference annotations are part of the
 contract; `IDisposable`/`IAsyncDisposable` and
 `async`/`Task`/`ValueTask`/`CancellationToken` name lifetime and concurrency
 ownership; DI lifetimes are contracts — a singleton capturing a scoped
-service breaks ownership; published-package compatibility is binary, not
-source.
+service breaks ownership. For published packages, assess source, binary, and
+behavioral compatibility against the supported baseline: ambiguous overloads
+and renamed parameters can break recompilation, changed public members can
+break compiled consumers, and changed results, exceptions, or accepted inputs
+can break behavior. Run project checks first and disclose any dimension they do
+not establish.
 
 For Build mode, include `devsecops-audit` Quick review for reflection, dynamic
 loading, serialization, process execution, generated code, or hosting-boundary

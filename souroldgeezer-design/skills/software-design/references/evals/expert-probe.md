@@ -125,3 +125,11 @@ Run log:
   (`shell.SD-B-1`, `SD-C-1`, `SD-S-3`, `SD-S-4`, `SD-Q-1`). Adjudicated
   covered: flat-namespace prefix discipline (core `SD-S-1`), errexit-stance
   inheritance across sourcing (`shell.SD-C-1` restore contract).
+- 2026-09 correction to the 2026-07-22 C# and Java compatibility notes: their
+  earlier "binary, not source" shorthand was too narrow. Published artifacts
+  require separate source, binary, and behavioral compatibility evidence
+  against the supported baseline. The correction is grounded in Microsoft
+  https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/breaking-changes
+  and JLS 13 https://docs.oracle.com/javase/specs/jls/se21/html/jls-13.html#jls-13.4.23.
+  This corrects the historical interpretation; it records no new expert-probe
+  run and adds no smell code.

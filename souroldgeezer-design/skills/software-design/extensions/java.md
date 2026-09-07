@@ -18,7 +18,8 @@ Sources: JLS packages/modules
 https://docs.oracle.com/javase/specs/jls/se21/html/jls-7.html, Maven POM
 https://maven.apache.org/pom.html, Gradle Java plugin
 https://docs.gradle.org/current/userguide/java_plugin.html, and Gradle testing
-https://docs.gradle.org/current/userguide/java_testing.html.
+https://docs.gradle.org/current/userguide/java_testing.html. Binary compatibility
+is specified by JLS 13, https://docs.oracle.com/javase/specs/jls/se21/html/jls-13.html#jls-13.4.23.
 
 Java packages may be grouped into a module when cohesive; use that as a
 platform fact, not a design recommendation. Inspect Maven/Gradle graph, source
@@ -32,7 +33,11 @@ Defaults: package access is not hierarchical; public/exported types are
 contracts; source sets are boundaries when classpath/artifacts differ;
 entrypoints/adapters stay thin; records/sealed/enums/value objects carry
 semantics; interfaces need current variation, external isolation, or real
-duplication; published-artifact compatibility is binary, not source; shading
+duplication. For published artifacts, assess source, binary, and behavioral
+compatibility against the supported baseline: a newly ambiguous call can break
+recompilation, a changed public callable member can break an existing binary,
+and changed results, exceptions, or accepted inputs can break behavior. Run
+project checks first and disclose any dimension they do not establish; shading
 relocates embedded packages and merges service registrations.
 
 For Build mode, include `devsecops-audit` Quick review for reflection, dynamic
@@ -49,7 +54,8 @@ service-loading, or generated-boundary ownership gaps.
 Key codes: `java.SD-B-1` package, build module, and runtime module disagree;
 `java.SD-C-2` service locator/static singleton carries workflow state;
 `java.SD-S-2` DTO/entity/domain model collapse hides ownership; `java.SD-W-1`
-interface/base class wraps one implementation; `java.SD-Q-1`
+interface/base class wraps one implementation without current variation or a
+real IO/time/randomness/network/state isolation boundary; `java.SD-Q-1`
 reflection/service-loading/generated boundary lacks owner and validation.
 
 Only these key codes are citable; the `Smell codes:` families above describe

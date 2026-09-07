@@ -135,3 +135,20 @@ plus `sd-acc-112` through `sd-acc-115` with a fresh Review agent. Merge back:
 shorten or merge the added procedure detail only when the core alone preserves
 latent-precondition recall, false-positive resistance, calibrated completion,
 and non-repeating optional-tool behavior in that retest.
+
+2026-09 C# and Java compatibility plus seam alignment: prior extension wording
+reduced published-artifact compatibility to binary compatibility, and the core
+seam guard was clearer than the C# and Java extension surfaces. The accepted
+extension rule requires source, binary, and behavioral compatibility against a
+supported baseline; it uses project checks first and discloses dimensions those
+checks do not establish. It also treats one implementation plus a test double
+as legitimate when it isolates real IO, time, randomness, network, or state,
+while retaining the pure-logic control against ceremony. Retest behavior cases
+`software-design-behavior-csharp-compatibility-dimensions`,
+`software-design-behavior-java-compatibility-dimensions`,
+`software-design-behavior-csharp-clock-seam`,
+`software-design-behavior-java-clock-seam`, and
+`software-design-behavior-pure-logic-wrapper-control`, with the existing Rust
+clock control. Merge-back condition: shorten this wording if fresh reviews
+consistently separate all three compatibility dimensions and preserve both the
+real-boundary exception and pure-logic false-positive resistance without it.

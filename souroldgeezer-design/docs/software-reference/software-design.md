@@ -29,6 +29,8 @@ Rules cite source families rather than copying source prose.
 - DDD empirical calibration: systematic literature review, https://www.sciencedirect.com/science/article/pii/S0164121225002055
 - Software maintenance lifecycle and maintenance-type taxonomy: ISO/IEC/IEEE 14764:2022 on ISO/IEC/IEEE 12207:2017, https://www.iso.org/standard/80710.html and https://www.iso.org/standard/63712.html
 - Version-as-compatibility-contract schemes: Semantic Versioning 2.0.0, https://semver.org/ and Calendar Versioning, https://calver.org/
+- .NET breaking-change dimensions: Microsoft, "Breaking changes", https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/breaking-changes
+- Java binary-compatibility rules: Java Language Specification 21, Chapter 13, https://docs.oracle.com/javase/specs/jls/se21/html/jls-13.html#jls-13.4.23
 - Dependency management, deprecation, and single-version convergence: Titus Winters, Tom Manshreck, and Hyrum Wright, *Software Engineering at Google*, https://abseil.io/resources/swe-book
 - Observable-behavior coupling calibration: Hyrum's Law, https://www.hyrumslaw.com/
 - Dependency freshness measurement: Cox, Bouwers, van Eekelen, and Visser, "Measuring Dependency Freshness in Software Systems," ICSE 2015, https://ericbouwers.github.io/papers/icse15.pdf
@@ -117,6 +119,8 @@ Every principle recommendation or rejection must state:
 
 A release communicates its compatibility impact. Classify every externally-visible change as breaking, additive, or cosmetic. SemVer encodes that contract in the version number; CalVer decouples it and requires the classification to be carried in a changelog and deprecation policy; live-at-HEAD replaces version negotiation with single-version convergence. Pick the scheme by audience, then hold the classification discipline regardless of scheme.
 
+For published C# and Java artifacts, assess source, binary, and behavioral compatibility against the supported baseline. Use the project's existing compatibility checks first and disclose which of those three dimensions their result does not establish. A new overload can make a formerly valid call ambiguous; in C#, a parameter rename can also break named callers after recompilation. Removing or changing a callable public member can break an already compiled consumer; changed results, exceptions, or accepted input can break consumer behavior even when it still builds and links. These are separate evidence questions, not interchangeable labels.
+
 A deprecation is a staged lifecycle — replacement, owner, removal trigger — not a permanent marker. Treat dependency currency as measurable design debt; prefer small continuous upgrades over a big-bang. Converge on one supported version of a shared concern; keep internal producer/consumer skew bounded and give any divergence a convergence owner and exit. Before removing or converging an observable behavior, account for Hyrum's Law and gather characterization evidence.
 
 Delegate HTTP versioning and `Sunset`/`Deprecation` headers to `api-design`, runtime config/fleet convergence and rollout to `infra-design`, upgrade CVE/supply-chain risk to `devsecops-audit`, and characterization tests to `test-quality-audit`.
@@ -137,7 +141,7 @@ Default: give every concurrent path one cancellation owner, and every failure cl
 
 Testability is a design property, not a property of the test suite: a unit is testable when the collaborators it depends on can be observed and substituted at its owning boundary. Put a genuine seam where isolation is actually needed — IO, time/clock, randomness, network, and global or singleton state — by taking the dependency as a parameter, port, or injected collaborator and constructing the real implementation at the composition edge. Policy that reaches those dependencies through hidden collaborators or constructor work resists substitution and can only be exercised against live externals (`SD-B-5`); when the hardwired dependency is shared mutable state, the coupling compounds (`SD-C-4`). Static evidence shows the hidden construction or direct external call inside policy; graph evidence shows policy referencing the concrete dependency instead of an owned contract.
 
-Do not over-seam. A seam that exists only so a test double can be injected — an interface or trait wrapping a single concrete implementation nothing else varies — is ceremony, not isolation (`SD-W-1`, `SD-W-2`); deterministic pure logic needs no seam at all. Seam count follows the real isolation boundaries, not the class count.
+Do not over-seam. One implementation plus test doubles is legitimate at a genuine IO, time, randomness, network, or state isolation boundary. Else, a seam that exists only so a test double can be injected — an interface or trait wrapping a single concrete implementation without isolation or current variation — is ceremony, not isolation (`SD-W-1`, `SD-W-2`); deterministic pure logic needs no seam at all. Seam count follows the real isolation boundaries, not the class count.
 
 Delegate judging the tests themselves — assertion quality, coverage, flakiness, characterization scope — to `test-quality-audit`; this section owns designing code to be testable, not the tests.
 
