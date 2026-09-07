@@ -26,6 +26,28 @@ The repository's `AGENTS.md` is the Codex-facing operational contract and
 repository structure, runtime support, install commands, validation, or a
 public skill contract changes.
 
+## Set up a local checkout
+
+Install Git, Python 3.11 or newer, `uv`, `jq`, and Mike Farah `yq`. The complete
+host smoke also needs Claude Code, Codex, Copilot CLI, and Java 21+ for Dediren.
+Use the repository's Python floor and local `uv` configuration; do not change
+dependencies merely to make a documentation check run.
+
+From the directory where you keep persistent repositories:
+
+```bash
+git clone https://github.com/tommimarkus/skills.git
+cd skills
+git worktree add .worktrees/my-change -b my-change main
+cd .worktrees/my-change
+uv sync --frozen
+```
+
+Use a distinct task and branch name for each change. If you already have a
+clone, start the worktree command from its primary checkout. `uv` creates the
+task's `.venv` and uses its repository-local cache. On an offline host with the
+required packages already cached, use `uv sync --offline --frozen`.
+
 ## Work in a clean task worktree
 
 Create feature worktrees under the primary checkout's persistent,
@@ -33,7 +55,9 @@ gitignored `.worktrees/<task-name>/` directory. Do not work directly on `main`
 or put task work in a temporary directory. Keep a narrow change scoped to its
 declared paths, stage exact paths, and do not force-add ignored files.
 
-Before committing, confirm that no ignored tracked file is staged:
+Before committing, confirm that no tracked file is ignored; this checks the
+whole tracked inventory, not only the staging area. The output must be empty
+unless the user approved an exact tracked exception:
 
 ```bash
 git ls-files -ci --exclude-standard
@@ -74,6 +98,13 @@ Do not use a pipeline or `||` fallback as evidence that a gate passed: capture
 the actual command's exit status or run it unpiped. The host smoke's two safety
 flags are required. It uses temporary host configuration and plugin-data state,
 and must not replace `HOME`.
+
+A test run that collects zero tests fails the gate. Use the available
+first-party plugin validators as well: the architecture report invokes
+`claude plugin validate --strict` when installed; the host smoke checks for a
+Codex validator and reports its absence as a skip. Before changing the
+published surface, apply the repository's in-depth IP-hygiene review;
+cosmetic edits use scoped triage.
 
 ## Documentation map
 
