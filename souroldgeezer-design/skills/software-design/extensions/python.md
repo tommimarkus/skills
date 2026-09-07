@@ -78,13 +78,16 @@ public symbols and disclose its limits. Identify breaking, deprecation, and
 migration consequences and the resulting release impact; delegate release
 execution and policy to `release-policy` rather than prescribing a versioning
 tool or scheme here.
-Before recommending a performance change, establish the user-visible measure,
-capture a representative profile or other runtime evidence, and identify the
-owning boundary for the bottleneck. Optimize the smallest evidenced hot path,
-then re-measure; do not turn a profiler, benchmark, or tool choice into a
-style rule. If retries, timeouts, fallbacks, or exception translation cross
+Ground a structural collection or storage choice in its operation, size, and
+semantic evidence; it does not require a profile. Before claiming a performance
+gain, adding a cache, or retaining tuning complexity, establish the user-visible
+measure, capture representative runtime evidence, and identify the owning
+boundary and rollback. Optimize the smallest evidenced hot path, then re-measure;
+do not turn a profiler, benchmark, or tool choice into a style rule. If retries, timeouts, fallbacks, or exception translation cross
 layers, preserve their contract and name one owner: use core `SD-S-5` for
 collapsed failure meanings and `SD-Q-4` for stacked failure handling.
+For collections, storage, batches, streams, caches, or repeated data paths,
+apply [data-efficiency](../../../docs/design-reference/data-efficiency.md).
 
 Defaults: package and module boundaries follow ownership and policy; the
 distribution/import surface (`[project]` metadata, entry points, extras, and

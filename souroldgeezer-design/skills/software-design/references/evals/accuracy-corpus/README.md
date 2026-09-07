@@ -56,7 +56,8 @@ model-dependent.
 
 ## Maintenance
 
-Keep ≥2 positive and ≥1 fp-bait case per core code. When a code is added, add
+Keep ≥2 positive and ≥1 fp-bait case per core code. `SD-Q-5` has two positives,
+one fp-bait, and one clean control. When a code is added, add
 its cases in the same change; when a code is retired (e.g. `SD-S-3`), remove its
 cases. Keep prompts synthetic and varied across domains; never paste real
 third-party code. Not scanned by the load-cost closure (not linked from

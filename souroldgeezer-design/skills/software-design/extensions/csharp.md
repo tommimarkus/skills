@@ -59,3 +59,8 @@ lacks owner and validation.
 
 Only these key codes are citable; the `Smell codes:` families above describe
 scope only. Emit core `SD-*` for anything not covered by a key code.
+
+For EF, inspect projection/filter/limit placement and materialization; treat
+DbContext as a scoped unit of work. Apply [data-efficiency](../../../docs/design-reference/data-efficiency.md);
+claim index use only with query-plan evidence. Sources: [efficient querying](https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying)
+and [DbContext lifetime](https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/).

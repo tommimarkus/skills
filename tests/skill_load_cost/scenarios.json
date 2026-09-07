@@ -728,5 +728,9 @@
     ]
   },
   {"id":"app-build-approved-dashboard","skill":"app-design","load_routes":[{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/SKILL.md","predicate":"always"},{"entry":"app-design-skill","target":"souroldgeezer-design/docs/app-reference/app-design.md","predicate":"conditional:build-core"},{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md","predicate":"conditional:substantial-approved-dashboard"}]},
+  {"id":"sd-build-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/software-reference/software-design.md","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
+  {"id":"sd-review-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/software-reference/software-design.md","souroldgeezer-design/skills/software-design/references/smell-catalog.md","souroldgeezer-design/skills/software-design/references/smell-cards.jsonl","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
+  {"id":"sd-lookup-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
+  {"id":"sd-file-edit-data-excluded","skill":"software-design","files":["souroldgeezer-design/skills/software-design/references/procedures/file-edit-lane.md"]},
   {"id":"app-review-narrow-approved-layout","skill":"app-design","load_routes":[{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/SKILL.md","predicate":"always"},{"entry":"app-design-skill","target":"souroldgeezer-design/docs/app-reference/app-design.md","predicate":"conditional:narrow-approved-layout-review"}]}
 ]

@@ -21,10 +21,10 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
 
     def test_accuracy_corpus_is_contiguous_and_calibrated(self) -> None:
         cases = read_jsonl("souroldgeezer-design/skills/software-design/references/evals/accuracy-corpus/expected.jsonl")
-        self.assertEqual([f"sd-acc-{number:03d}" for number in range(1, 116)], [case["id"] for case in cases])
+        self.assertEqual([f"sd-acc-{number:03d}" for number in range(1, 120)], [case["id"] for case in cases])
         self.assertEqual(["positive", "positive", "fp-bait", "clean"], [case["kind"] for case in cases[-4:]])
-        self.assertEqual(["SD-E-6"] * 4, [case["target"] for case in cases[-4:]])
-        self.assertEqual({"positive": 64, "fp-bait": 40, "clean": 11}, {kind: sum(case["kind"] == kind for case in cases) for kind in ("positive", "fp-bait", "clean")})
+        self.assertEqual(["SD-Q-5"] * 4, [case["target"] for case in cases[-4:]])
+        self.assertEqual({"positive": 66, "fp-bait": 41, "clean": 12}, {kind: sum(case["kind"] == kind for case in cases) for kind in ("positive", "fp-bait", "clean")})
         for case in cases[-4:]:
             self.assertEqual("synthetic", case["source_kind"])
             self.assertFalse(case["contains_third_party_text"])
@@ -42,7 +42,7 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
         scenarios = {item["id"] for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
         self.assertTrue({"sd-review-fragility", "sd-native-evidence-procedure", "sd-fragility-final-reporting"} <= scenarios)
         snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
-        for identifier, ceiling in {"sd-lookup-principle": 2266, "sd-build-csharp": 8121, "sd-review-typescript": 11423, "sd-review-fragility": 12628, "sd-native-evidence-procedure": 1200}.items():
+        for identifier, ceiling in {"sd-lookup-principle": 2478, "sd-build-csharp": 8333, "sd-review-typescript": 11670, "sd-review-fragility": 12628, "sd-native-evidence-procedure": 1200}.items():
             self.assertLessEqual(snapshot[identifier], ceiling)
         self.assertGreaterEqual(snapshot["sd-fragility-final-reporting"], 500)
         self.assertLessEqual(snapshot["sd-fragility-final-reporting"], 1000)

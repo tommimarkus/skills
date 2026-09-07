@@ -196,6 +196,18 @@ core-reference section it names for Lookup (a `Cite` column or a cite
 sentence)" so the instruction reads correctly for the pattern/NFR catalogs
 (which name the section in a sentence, not a `Cite` column).
 
+## Data-efficiency procedure — 2026-09
+
+The shared conditional procedure adds collection and storage reasoning only to
+declared data routes. Against baseline `40a7be1`, existing `sd-lookup-principle`,
+`sd-build-csharp`, and `sd-review-typescript` remain within the fixed +250 proxy
+token allowance; the new build/review/Lookup routes include the procedure while
+File Edit and unrelated principle Lookup exclude it. The snapshot and the
+`SoftwareDesignDataEfficiencyTest` remeasure all declared routes, compare the
+three existing routes to their pinned before values, and cap the procedure at
+1400 proxy tokens. The procedure is 184 words; this is measured route evidence,
+not a claimed runtime performance gain.
+
 # architecture-design per-use load cost
 
 Guard coverage added for issue #66: scenarios (`arch-lookup-notation`,

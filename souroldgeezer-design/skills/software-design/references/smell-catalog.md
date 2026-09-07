@@ -9,7 +9,7 @@ Use with [software-design.md](../../../docs/software-reference/software-design.m
 | Coupling | `SD-C-1`, `SD-C-2`, `SD-C-3`, `SD-C-4`, `SD-C-5`, `SD-C-6` | cycle, inversion, shared core, hidden state, version divergence, unowned concurrency |
 | Semantics | `SD-S-1`, `SD-S-2`, `SD-S-4`, `SD-S-5` | vocabulary, duplicate concepts, external model collapse, error-contract collapse |
 | Evolution | `SD-E-1`, `SD-E-2`, `SD-E-3`, `SD-E-4`, `SD-E-5`, `SD-E-6` | shotgun, migration exit, flag lifecycle, deprecation lifecycle, dependency currency, latent precondition |
-| Tradeoff | `SD-Q-1`, `SD-Q-2`, `SD-Q-3`, `SD-Q-4` | unsupported claim/NFR, unmeasured tactic, unallocated NFR, stacked failure handling |
+| Tradeoff | `SD-Q-1`, `SD-Q-2`, `SD-Q-3`, `SD-Q-4`, `SD-Q-5` | unsupported claim/NFR, unmeasured tactic, unallocated NFR, stacked failure handling, workload-mismatched data path |
 | Socio-technical | `SD-T-1` | owner/cognition mismatch |
 
 Core `SD-S-3` is intentionally retired and stays reserved: do not emit it or map findings to it. The extension code `shell.SD-S-3` is unrelated and remains valid.

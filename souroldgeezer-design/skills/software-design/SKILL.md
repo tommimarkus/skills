@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, ownership, coupling, evolution, library compatibility/versioning, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
+  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, algorithms, data structures, data-access efficiency, ownership, coupling, evolution, library compatibility/versioning, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -53,6 +53,9 @@ principle questions/claims and [references/pattern-catalog.md](references/patter
 pattern questions.
 Load [references/nfr-catalog.md](references/nfr-catalog.md) for NFRs, quality
 attributes, SLAs/SLOs, or latency/availability/throughput targets.
+For Build/Review data, load
+[data-efficiency](../../docs/design-reference/data-efficiency.md); debt Extract
+records, Lookup reads match, File Edit returns.
 Load
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
 for existing source, diffs, manifests, generated clients, shared code, adapters,
