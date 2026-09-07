@@ -263,6 +263,17 @@ schemas, and the troubleshooting table — is bundled with the plugin at
     capability stops `blocked:capability_unavailable`, never silent substitution
     or downgrade.
 
+    Executable approval transport uses `planning-approval-handoff-v1`: a canonical
+    `plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline
+    v5 `plan`. Before approval, emit and resolve the envelope and include it inside
+    the host-carried plan; resolve again before capability binding and dispatch.
+    Prefer parent-owned `<git-common-dir>/planning-policy/plans/<sha256>/plan.json`
+    when saving is permitted; use inline JSON when it is not. The helper is read-only.
+    Parent recovery may inspect only the bounded same-task evidence described in
+    [approval handoff](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md);
+    workers still stop for missing assignment fields. Prose summaries never replace
+    canonical execution JSON.
+
     For an approved plan with two or more delegated steps, exactly one parent
     creates and writes the checkpoint ledger under the Git common directory at
     `planning-policy/ledgers/<plan-id>/<run-id>/`, where `run-id` is a lowercase

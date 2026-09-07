@@ -195,7 +195,9 @@ path. Plugin installation alone does not enforce it; the standing guidance line 
 which must embed the invariant — is the enforcement authority. `adopt-guidance`
 writes that standing block. The enforcement action is native to Claude Code:
 `EnterPlanMode` opens plan mode and `ExitPlanMode` presents the plan for
-approval, so the skill owns no plan file of its own. The additive Codex lane uses
+approval. Host plan text carries the approval envelope; the parent may persist
+the executable contract when permitted, or carry it inline. The read-only helper
+owns neither persistence nor a new ledger. The additive Codex lane uses
 native Plan mode when active or exposed and otherwise stops for explicit user
 approval without claiming a mode change. Enforcement is honest: a default
 posture in phase 1, mechanically guaranteed only by an optional phase-2
@@ -314,3 +316,19 @@ into the bundle.
   `test-quality-audit`.
 - Commit/branch preflight: `git-workflow-policy`. PR/MR: `pr-ops`. Issues:
   `issue-ops`.
+
+## Approval transport evidence
+
+A reported fresh-context failure preserved the prose plan but lost executable
+JSON that had only been validated through stdin and retained in session memory.
+This is a workflow preservation gap; it does not establish a model-specific
+transport defect. `planning-approval-handoff-v1` carries the exact existing v5
+contract and its existing canonical digest, with reference-first persistence and
+an inline fallback. Parent recovery is bounded and evidence-based; worker
+missing-assignment stops are unchanged.
+
+`tests/planning_policy_handoff_test.py` exercises separate CLI processes with
+self-contained original fixtures, artifact removal, reformatting, tampering,
+malformed inputs, legacy validation, and byte limits. The bounded model-pressure
+procedure tests synthetic approval transport, not an actual host UI click or
+comparative model reliability. No third-party prompt text is copied.

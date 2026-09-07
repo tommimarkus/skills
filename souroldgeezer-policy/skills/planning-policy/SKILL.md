@@ -28,23 +28,20 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [plan contract](references/plan-contract.md), start new plan JSON from
   [plan-v5.json](references/templates/plan-v5.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
-  command before approval and again with the exact capability binding before
-  dispatch. A valid decision-complete v5 plan can be approval-ready without a
-  host binding; it is dispatch-ready only after a complete exact
-  `planning-capability-binding-v1` joins its digest, every leaf's
-  `capability_requirements`, selected host/executor, and bounded evidence. For
-  that dispatch check, start the host result from the
-  [binding scaffold](references/templates/capability-binding-v1.json). For
+  command before approval. For approval or fresh-context recovery, load
+  [approval handoff](references/approval-handoff.md): emit and resolve the exact
+  plan before approval, carry its envelope in the host plan, then resolve again
+  before dispatch. The [binding scaffold](references/templates/capability-binding-v1.json)
+  joins the recovered digest, every leaf, requirements, host/executor, and evidence
+  for the separate dispatch check. For
   an approved plan with two or more
   delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to
-  recover the highest-priority action. Lifecycle and
-  retention commands do not replace approval or dispatch validation. The ledger
-  is the sole retry owner: it records bounded remediation and chooses the next
-  mapped tier without changing the approved leaf contract. Slicing an oversized
+  recover the next action. The ledger alone owns retry remediation and tier
+  selection; approval and dispatch validation remain separate. Slicing an oversized
   plan into a successive series loads [plan series](references/plan-series.md).
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) when inspecting or
@@ -73,8 +70,8 @@ otherwise use `lookup`. `inspect` reports compliance and `adopt-guidance`
 writes the core template. Enforcement details, host lane behavior, and the
 executable-leaf contract live in the on-demand [core workflow](references/core-workflow.md).
 
-Universal stops: missing load-bearing information is `blocked:missing_input`
-(never discovery or invention); stop for ambiguous or multi-subsystem scope,
+Worker stops: missing assigned load-bearing information is `blocked:missing_input`
+(never discovery or invention). Parent artifact recovery follows approval handoff; stop for ambiguous or multi-subsystem scope,
 missing success criteria, an owning sibling request, an unenterable
 non-interactive plan mode, or new build work without approval or a logged
 opt-out. This skill does not write specs, commits, or implementation.

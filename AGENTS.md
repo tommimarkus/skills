@@ -247,6 +247,18 @@ bounded JSON (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 
 ### Planning-policy execution contract (Codex)
 
+
+Executable approval transport uses `planning-approval-handoff-v1`: a canonical
+`plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline
+v5 `plan`. Before approval, emit and resolve the envelope and include it inside
+the host-carried plan; resolve again before capability binding and dispatch.
+Prefer parent-owned `<git-common-dir>/planning-policy/plans/<sha256>/plan.json`
+when saving is permitted; use inline JSON when it is not. The helper is read-only.
+Parent recovery may inspect only the bounded same-task evidence described in
+[approval handoff](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md);
+workers still stop for missing assignment fields. Prose summaries never replace
+canonical execution JSON.
+
 The shared `planning-policy` contract is runtime-neutral. New executable plans
 use `contract_version: 5`. Start them from
 [references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);

@@ -82,22 +82,21 @@ full suite.
 
 ## Approval and output
 
-Present the groomed plan and stop: Claude uses `ExitPlanMode`; Codex uses native
-approval or asks explicitly and ends the turn. Non-interactive surfaces only
-return a proposal/open questions and say approval was not obtained. No spec,
-commit, implementation, or delegation happens before approval. Approval-ready
-means only that the decision-complete v5 plan validates; it does not imply a
-host, executor, or worker capability has been selected.
+Before presenting an executable plan, follow [approval handoff](approval-handoff.md).
+Emit and resolve its complete contract, then include the envelope in the host
+approval plan. Parent-owned plan persistence is permitted only when the host
+allows it; otherwise carry full inline JSON. This preparatory artifact is not
+implementation or a ledger. Present the groomed plan and stop: Claude uses
+`ExitPlanMode`; Codex uses native approval or asks explicitly and ends the turn.
+Non-interactive surfaces return a proposal and say approval was not obtained.
+No spec, commit, implementation, or delegation happens before approval.
+After approval, resolve the envelope before capability binding or ledger init.
 
-Dispatch is a separate host-resolution action. The active adapter resolves every
-leaf against its `capability_requirements`, then records the exact
-`planning-capability-binding-v1` plan digest, leaf join, selected host/executor,
-requirements, and bounded evidence. Only that complete binding makes the plan
-dispatch-ready. An unavailable or mismatched capability stops as
-`blocked:capability_unavailable`; do not substitute another capability, host, or
-executor silently. Claude's mechanical wrappers do not expose `Skill`, so a
-mechanical Claude worker cannot receive a leaf with an additional skill
-requirement.
+The active adapter resolves capabilities using the
+[exact binding contract](plan-contract.md#approval-and-dispatch-readiness).
+Missing capabilities stop `blocked:capability_unavailable`; never substitute
+silently. Claude mechanical wrappers lack `Skill` and cannot accept additional
+skill requirements.
 
 For two or more delegated steps, only the parent creates
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,

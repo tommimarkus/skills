@@ -1,12 +1,14 @@
 # Codex execution adapter
 
+This additive adapter does not replace the portable handoff contract.
+
 Render the shared plan's compact **Execution economics** line without inventing
 token ranges: expected/high attempts, largest repeated-context driver, declared
 range or `indeterminate`, final-verification reserve, and `tracing: off`.
 Normal dispatch never enables or inspects usage tracing.
 
-Read this additive adapter after the shared execution shape when the approved
-plan will execute in Codex. It does not replace the portable handoff contract.
+Before approval, put the `planning-approval-handoff-v1` JSON envelope **inside**
+the final `<proposed_plan>`. Resolve again before dispatch; see [approval handoff](../references/approval-handoff.md).
 
 ## Live lifecycle
 

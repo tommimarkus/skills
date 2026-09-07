@@ -81,5 +81,41 @@
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map", "predicate": "always"},
       {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "unknown"}
     ]
+  },
+  {
+    "id": "planning-policy-approval-handoff",
+    "provenance": "Approval or fresh-context recovery adds only the on-demand portable transport procedure.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md#load-map",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md",
+        "predicate": "conditional:enforcement"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md",
+        "predicate": "conditional:executable-plan"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json",
+        "predicate": "conditional:new-plan-authoring"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md",
+        "predicate": "conditional:codex"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md",
+        "predicate": "conditional:approval-or-recovery"
+      }
+    ]
   }
 ]

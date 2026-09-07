@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
-import sys
 import os
+import re
+import stat
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -479,71 +481,103 @@ def canonical_plan_sha256(plan: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _read_json_source(source: str) -> Any:
+class HandoffError(ValueError):
+    """A bounded approval transport failure; never contains a partial plan."""
+
+    def __init__(self, message: str, code: str = "blocked:missing_input"):
+        super().__init__(message)
+        self.code = code
+
+
+def _encoded(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def _read_json_source(source: str, limit: int | None = None) -> Any:
+    if limit is None:
+        text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8")
+        return json.loads(text)
     if source == "-":
-        return json.loads(sys.stdin.read())
-    return json.loads(Path(source).read_text(encoding="utf-8"))
+        raw = sys.stdin.buffer.read(limit + 1)
+    else:
+        # Nonblocking open plus fstat rejects devices/FIFOs without waiting for a writer.
+        descriptor = os.open(source, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(descriptor, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise HandoffError("handoff input must be a regular file or stdin")
+            raw = stream.read(limit + 1)
+    if len(raw) > limit:
+        raise HandoffError("handoff input exceeds its byte limit")
+    return json.loads(raw)
 
 
 def _error_result(code: str, message: str) -> dict[str, Any]:
     return {"valid": False, "errors": [f"{code}: {message}"], "blocked": code}
 
 
-def emit_handoff(plan: Any, mode: str) -> dict[str, Any]:
-    encoded = json.dumps(plan, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    if len(encoded.encode("utf-8")) > HANDOFF_PLAN_MAX:
-        raise ValueError("blocked:oversized: canonical plan exceeds 64 KiB")
-    validation = validate(plan)
-    if not validation["valid"] or not validation.get("approval_ready"):
-        raise ValueError("blocked:invalid_plan: plan is not approval-ready")
-    digest = canonical_plan_sha256(plan)
-    if mode == "inline":
-        handoff = {"schema": HANDOFF_SCHEMA, "plan_sha256": digest, "plan": plan}
+def _approval_validation(plan: Any) -> dict[str, Any]:
+    if len(_encoded(plan)) > HANDOFF_PLAN_MAX:
+        raise HandoffError("canonical plan exceeds 64 KiB")
+    result = validate(plan)
+    if not result["valid"] or not result.get("approval_ready"):
+        raise HandoffError("handoff requires a complete approval-ready v5 plan")
+    return result
+
+
+def _reference_path(value: Any, *, absolute: bool) -> Path:
+    if not isinstance(value, str) or not value or value == "-":
+        raise HandoffError("reference requires a persistent plan file")
+    candidate = Path(value)
+    if absolute and not candidate.is_absolute():
+        raise HandoffError("plan_path must be absolute")
+    resolved = candidate.resolve(strict=True)
+    roots = ["/tmp", "/var/tmp", "/dev/shm", "/run/user", tempfile.gettempdir()]
+    roots.extend(os.environ.get(name, "") for name in ("TMPDIR", "TEMP", "TMP"))
+    if any(root and Path(root).is_absolute() and resolved.is_relative_to(Path(root).resolve())
+           for root in roots):
+        raise HandoffError("temporary-directory references are ineligible")
+    return resolved
+
+
+def emit_handoff(plan: Any, mode: str, source: str = "-") -> dict[str, Any]:
+    _approval_validation(plan)
+    handoff = {"schema": HANDOFF_SCHEMA, "plan_sha256": canonical_plan_sha256(plan)}
+    if mode == "reference":
+        path = _reference_path(source, absolute=False)
+        recorded = _read_json_source(str(path), 4 * HANDOFF_PLAN_MAX)
+        if canonical_plan_sha256(recorded) != handoff["plan_sha256"]:
+            raise HandoffError("plan changed during emission", "blocked:plan_tampered")
+        handoff["plan_path"] = str(path)
+        limit = HANDOFF_REFERENCE_MAX
     else:
-        raise ValueError("reference emission requires a plan path")
-    if len(json.dumps(handoff, separators=(",", ":")).encode("utf-8")) > HANDOFF_INLINE_MAX:
-        raise ValueError("blocked:oversized: inline handoff exceeds 68 KiB")
-    return handoff
-
-
-def emit_reference(plan: Any, path: str) -> dict[str, Any]:
-    candidate = Path(path)
-    if not candidate.is_absolute() or not candidate.is_file() or candidate.is_symlink():
-        raise ValueError("blocked:missing_input: reference must be an existing regular absolute file")
-    try:
-        resolved = candidate.resolve(strict=True)
-    except OSError as error:
-        raise ValueError(f"blocked:missing_input: {error}") from error
-    if any(part in {"tmp", "temp"} for part in resolved.parts):
-        raise ValueError("blocked:missing_input: temporary-directory references are ineligible")
-    handoff = {"schema": HANDOFF_SCHEMA, "plan_sha256": canonical_plan_sha256(plan), "plan_path": str(resolved)}
-    if len(json.dumps(handoff, separators=(",", ":")).encode("utf-8")) > HANDOFF_REFERENCE_MAX:
-        raise ValueError("blocked:oversized: reference handoff exceeds 4 KiB")
+        handoff["plan"] = plan
+        limit = HANDOFF_INLINE_MAX
+    if len(_encoded(handoff)) > limit:
+        raise HandoffError("handoff envelope exceeds its byte limit")
     return handoff
 
 
 def resolve_handoff(handoff: Any) -> tuple[Any, dict[str, Any]]:
-    if not isinstance(handoff, dict) or set(handoff) != {"schema", "plan_sha256", "plan",} and set(handoff) != {"schema", "plan_sha256", "plan_path"}:
-        raise ValueError("blocked:invalid_handoff: expected exactly one plan or plan_path")
-    if handoff.get("schema") != HANDOFF_SCHEMA or not SHA256_HEX.fullmatch(str(handoff.get("plan_sha256", ""))):
-        raise ValueError("blocked:invalid_handoff: invalid schema or digest")
-    if ("plan" in handoff) == ("plan_path" in handoff):
-        raise ValueError("blocked:invalid_handoff: exactly one representation is required")
-    plan = handoff.get("plan")
-    if "plan_path" in handoff:
-        path = Path(handoff["plan_path"])
-        if not path.is_absolute() or not path.is_file() or path.is_symlink():
-            raise ValueError("blocked:missing_input: referenced plan is unavailable")
-        plan = _read_json_source(str(path))
-    encoded = json.dumps(plan, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    if len(encoded) > HANDOFF_PLAN_MAX:
-        raise ValueError("blocked:oversized: canonical plan exceeds 64 KiB")
-    if canonical_plan_sha256(plan) != handoff["plan_sha256"]:
-        raise ValueError("blocked:plan_tampered: plan digest does not match")
-    validation = validate(plan)
-    if not validation["valid"] or not validation.get("approval_ready"):
-        raise ValueError("blocked:invalid_plan: resolved plan is not approval-ready")
-    return plan, validation
+    expected = {"schema", "plan_sha256"}
+    if not isinstance(handoff, dict) or set(handoff) not in (expected | {"plan"}, expected | {"plan_path"}):
+        raise HandoffError("expected exactly schema, plan_sha256, and one of plan or plan_path")
+    digest = handoff["plan_sha256"]
+    if handoff["schema"] != HANDOFF_SCHEMA or not isinstance(digest, str) or not SHA256_HEX.fullmatch(digest):
+        raise HandoffError("invalid handoff schema or digest")
+    reference = "plan_path" in handoff
+    limit = HANDOFF_REFERENCE_MAX if reference else HANDOFF_INLINE_MAX
+    if len(_encoded(handoff)) > limit:
+        raise HandoffError("handoff envelope exceeds its byte limit")
+    if reference:
+        path = _reference_path(handoff["plan_path"], absolute=True)
+        plan = _read_json_source(str(path), 4 * HANDOFF_PLAN_MAX)
+    else:
+        plan = handoff["plan"]
+    if len(_encoded(plan)) > HANDOFF_PLAN_MAX:
+        raise HandoffError("canonical plan exceeds 64 KiB")
+    if canonical_plan_sha256(plan) != digest:
+        raise HandoffError("plan digest does not match", "blocked:plan_tampered")
+    return plan, _approval_validation(plan)
 
 
 def capability_requirements_valid(value: Any) -> bool:
@@ -1071,39 +1105,32 @@ def main(argv: list[str] | None = None) -> int:
     resolve_parser = subparsers.add_parser("resolve-handoff", help="resolve an approval handoff")
     resolve_parser.add_argument("handoff", type=str)
     args = parser.parse_args(argv)
+    handoff_mode = args.command == "resolve-handoff" or bool(args.emit_handoff)
     try:
         if args.command == "resolve-handoff":
-            handoff = _read_json_source(args.handoff)
+            handoff = _read_json_source(args.handoff, HANDOFF_INLINE_MAX)
             plan, validation = resolve_handoff(handoff)
-            print(json.dumps({"plan": plan, "validation": validation}, sort_keys=True, separators=(",", ":")))
-            return 0
-        plan = _read_json_source(str(args.plan))
-        binding = (
-            _read_json_source(str(args.capability_binding))
-            if args.capability_binding is not None
-            else None
-        )
-    except (OSError, json.JSONDecodeError, ValueError) as error:
-        print(
-            json.dumps(
-                contract_result(None, False, [], [str(error)]),
-                sort_keys=True,
-                separators=(",", ":"),
+            result = {"plan": plan, "validation": validation}
+        else:
+            plan = _read_json_source(str(args.plan), 4 * HANDOFF_PLAN_MAX if handoff_mode else None)
+            binding = (
+                _read_json_source(str(args.capability_binding))
+                if args.capability_binding is not None else None
             )
-        )
-        return 1 if str(error).startswith("blocked:") else 2
-    result = validate(plan, capability_binding=binding)
-    result["plan_sha256"] = canonical_plan_sha256(plan)
-    if args.emit_handoff and result.get("valid") and result.get("approval_ready"):
-        try:
-            result["handoff"] = (
-                emit_reference(plan, str(args.plan)) if args.emit_handoff == "reference" else emit_handoff(plan, "inline")
-            )
-        except (OSError, ValueError) as error:
-            print(json.dumps(_error_result("blocked:missing_input", str(error)), sort_keys=True, separators=(",", ":")))
-            return 1 if str(error).startswith("blocked:") else 2
+            result = validate(plan, capability_binding=binding)
+            result["plan_sha256"] = canonical_plan_sha256(plan)
+            if args.emit_handoff:
+                result["handoff"] = emit_handoff(plan, args.emit_handoff, str(args.plan))
+    except HandoffError as error:
+        print(json.dumps(_error_result(error.code, str(error)), sort_keys=True, separators=(",", ":")))
+        return 1
+    except (OSError, ValueError, RecursionError) as error:
+        result = (_error_result("blocked:missing_input", "unreadable or invalid JSON input")
+                  if handoff_mode else contract_result(None, False, [], [str(error)]))
+        print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+        return 2
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
-    return 0 if result["valid"] else 1
+    return 0 if args.command == "resolve-handoff" or result["valid"] else 1
 
 
 if __name__ == "__main__":

@@ -135,7 +135,9 @@ shared contract owns the required join.
 
 ## Validator
 
-Run one of these forms before approval or dispatch:
+Run one of these forms before approval or dispatch. For approval transport,
+use [approval handoff](approval-handoff.md); validation alone does not preserve
+the executable JSON across a context reset:
 
 ```text
 uv run python "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py" validate plan.json

@@ -40,3 +40,21 @@ a bounded last-message file in the disposable synthetic workdir. Codex has no
 CLI dollar cap, so its bounded synthetic scope and `--timeout-seconds` (maximum
 180) are the cost limit. Neither host transcript nor final-message file is
 retained.
+
+## Approval transport acceptance
+
+For an explicitly authorized handoff change, run one fresh producer and one
+fresh consumer per requested model (`gpt-6-astra` and `gpt-5.6-sol`, high effort).
+Use `codex exec --ephemeral --sandbox read-only`, 120 seconds per invocation,
+no retries or substitutions, and at most four invocations. This is synthetic
+transport acceptance, not a live TUI reset test or a model-quality comparison.
+
+Give each producer a fixed self-contained approval-ready v5 fixture and the
+candidate skill paths. The sandbox forbids saving the plan. Extract only its
+final `<proposed_plan>` payload. Give the consumer only that payload and the
+candidate skill paths, without producer tool history or fixture files. Require
+successful `resolve-handoff` and exact equality of the canonical digest,
+read/write sets, acceptance command, and capability requirements; require
+`approval_ready: true` and `dispatch_ready: false`. A prose-only payload fails.
+Keep bounded final approval/result artifacts and a compact comparison summary;
+do not collect provider usage, raw transcripts, or broaden the existing runner.

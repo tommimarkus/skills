@@ -50,6 +50,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
 
     def test_required_contract_and_audit_cases_are_evidence_backed(self):
         required = {
+            "planning-policy-behavior-approval-inline-reset",
+            "planning-policy-behavior-approval-parent-recovery",
             "planning-policy-behavior-readiness-weighted-floor",
             "planning-policy-behavior-readiness-no-leaf-gaming",
             "planning-policy-behavior-audit-ordinary-design",

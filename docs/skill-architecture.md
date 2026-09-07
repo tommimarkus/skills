@@ -714,3 +714,12 @@ them; do not copy their prose into repo guidance.
   <https://www.ornl.gov/publication/prompt-phrase-ordering-using-large-language-models-hpc-evaluating-prompt-sensitivity>
 - Information retrieval precision and recall:
   <https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-in-information-retrieval-1.html>
+
+### Executable approval transport
+
+Planning-policy's on-demand `references/approval-handoff.md` owns the portable
+`planning-approval-handoff-v1` envelope. The existing validator emits/resolves it
+read-only; the parent owns any authorized persistent JSON. Host adapters place
+that envelope inside their approval plan and re-resolve it before dispatch.
+This preserves v5 authority across context resets without another plan schema,
+ledger, retry owner, or runtime-specific skill fork.

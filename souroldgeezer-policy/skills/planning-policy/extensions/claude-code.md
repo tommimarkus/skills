@@ -5,9 +5,9 @@ token ranges: expected/high attempts, largest repeated-context driver, declared
 range or `indeterminate`, final-verification reserve, and `tracing: off`.
 Normal dispatch never enables or inspects usage tracing.
 
-Read this adapter when an approved `planning-policy` plan dispatches its steps
-through Claude Code. It adds host execution details to the portable tier roster;
-it does not replace the shared workflow.
+Before `ExitPlanMode`, put the `planning-approval-handoff-v1` JSON envelope in
+the host plan document alongside the human plan. Resolve it on implementation
+entry before dispatch; see [approval handoff](../references/approval-handoff.md).
 
 ## Live lifecycle
 

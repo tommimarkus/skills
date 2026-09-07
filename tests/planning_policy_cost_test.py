@@ -137,6 +137,13 @@ class PlanningPolicyCostTest(unittest.TestCase):
                 f"{scenario_id} must not load plan-series.md",
             )
 
+    def test_approval_handoff_route_is_bounded_and_conditional(self):
+        result = self.measure("planning-policy-approval-handoff")
+        self.assertLessEqual(result["load_total"], 8000)
+        self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
+        for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
+            self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))
+
     def test_unknown_predicate_is_charged_and_scenario_has_provenance(self):
         unknown = self.measure("planning-policy-unknown-host")
         self.assertGreater(unknown["load_total"], self.measure("planning-policy-lookup")["load_total"])
