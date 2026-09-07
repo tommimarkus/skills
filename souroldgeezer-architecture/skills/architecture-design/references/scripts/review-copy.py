@@ -143,6 +143,11 @@ def require_path_field(value: Any, label: str) -> str:
     return value
 
 
+def matches_snapshot(root: Path, rel: Path, expected: str | None) -> bool:
+    state, actual = current_path_state(root, rel)
+    return state == "missing" if expected is None else state == "regular" and actual == expected
+
+
 def package_tree_files(root: Path, package_dir: Path) -> set[Path]:
     directory = ensure_regular_directory(root, package_dir)
     files: set[Path] = set()
@@ -341,10 +346,7 @@ def prepare(workspace_root: Path, package: str, destination: Path) -> dict[str, 
         if state != "regular" or actual != expected:
             raise CopyError(f"original changed during copy: {rel.as_posix()}")
     for rel, expected in output_states.items():
-        state, actual = current_path_state(root, rel)
-        if (expected is None and state != "missing") or (
-            expected is not None and (state != "regular" or actual != expected)
-        ):
+        if not matches_snapshot(root, rel, expected):
             raise CopyError(f"original changed during copy: {rel.as_posix()}")
         mapping.setdefault(rel.as_posix(), expected)
     manifest = {
@@ -415,10 +417,7 @@ def verify_original(manifest_path: Path) -> tuple[dict[str, Any], int]:
         changes.add(package_rel.as_posix())
         return changed_result(changes)
     for rel, expected in validated_files.items():
-        state, actual = current_path_state(root, rel)
-        if (expected is None and state != "missing") or (
-            expected is not None and (state != "regular" or actual != expected)
-        ):
+        if not matches_snapshot(root, rel, expected):
             changes.add(rel.as_posix())
     package_expected = validated_files.get(package_rel)
     package_state, package_actual = current_path_state(root, package_rel)

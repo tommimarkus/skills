@@ -191,7 +191,7 @@ Build.
 | ArchiMate notation/profile | [`references/notations/archimate.md`](references/notations/archimate.md) |
 | UML® notation/profile and ArchiMate handoff links | [`references/notations/uml.md`](references/notations/uml.md) |
 | Review/readiness | [`references/smell-catalog.md`](references/smell-catalog.md), [`references/red-flags.md`](references/red-flags.md), [`references/procedures/professional-readiness.md`](references/procedures/professional-readiness.md) |
-| Isolated Review rebuild and original-integrity evidence | [`references/procedures/isolated-review.md`](references/procedures/isolated-review.md) |
+| Isolated Review rebuild and original-integrity evidence | [`references/procedures/isolated-review.md`](references/procedures/isolated-review.md); helper [`review-copy.py`](references/scripts/review-copy.py), verified with `python3 ${CLAUDE_SKILL_DIR}/references/scripts/review-copy.py --help` (Codex: `python3 <skill-dir>/references/scripts/review-copy.py --help`) |
 | implementation-readiness review; Build closeout disclosure | [`references/procedures/implementation-readiness-review.md`](references/procedures/implementation-readiness-review.md) |
 | Source-weighted ArchiMate element/relation selection | [`references/source-weighting.md`](references/source-weighting.md); details in [`../../docs/architecture-reference/source-weighting.md`](../../docs/architecture-reference/source-weighting.md) |
 | Drift / cross-package consistency | [`references/procedures/drift-detection.md`](references/procedures/drift-detection.md) |
