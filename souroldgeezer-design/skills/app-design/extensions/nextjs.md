@@ -112,8 +112,9 @@ Inspect these Next.js-specific signals after React and core app assimilation:
   effects, and custom Hooks. Server Components are for server-side data access,
   secret-bearing work, reduced client JavaScript, and streaming.
 - Props crossing from Server to Client Components need serializable shape and
-  explicit loading/error handling. Do not pass server-only clients, secrets, or
-  functions across the boundary.
+  explicit loading/error handling. A reference to a `use server` Server
+  Function, including a Server Action, may cross this boundary. Ordinary
+  functions or closures, server-only clients, and secrets may not.
 - Authenticated or user-specific UI must not be accidentally static or publicly
   cached. Dynamic APIs, route segment config, and fetch cache settings need to
   match the freshness/privacy contract.

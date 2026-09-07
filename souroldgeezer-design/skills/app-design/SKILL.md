@@ -43,10 +43,12 @@ patterns, forms, browser storage, rendering boundaries, navigation shell,
 runtime evidence, or diffs are in scope;
 [references/procedures/layout-and-flow.md](references/procedures/layout-and-flow.md)
 for Build, Extract, or Review involving a multi-screen flow, material layout
-redesign, dashboard/workspace composition, or unresolved layout direction; in
+redesign, dashboard/workspace composition, or unresolved layout direction. A
+substantial multi-screen or material-layout task still loads it when the layout
+direction is approved; in
 Lookup only when the question explicitly concerns layout or flow mechanics. Do
 not load it for routine component/state work or when the layout direction is
-already settled;
+already settled for a narrow approved-layout change;
 [extensions/vite.md](extensions/vite.md) for `vite.config.*`, `vite` scripts,
 `import.meta.env`, Vite entry/build/SSR/worker signals, and load it before the React extension;
 [extensions/react.md](extensions/react.md) for React component, hook, state,

@@ -32,6 +32,12 @@ documentation.
   original and limited to app-design implications for components, Hooks,
   state/data ownership, rendering, hydration, browser effects, forms, and
   responsive/accessibility/performance posture.
+- Source: React [Server Functions guidance](https://react.dev/reference/rsc/use-server),
+  WAI-ARIA Authoring Practices [modal-dialog guidance](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/),
+  and the [HTML popover specification](https://html.spec.whatwg.org/multipage/popover.html).
+  Handling: original paraphrases distinguish Server Function references from
+  ordinary functions at the Server/Client boundary, and modal semantics from
+  nonmodal popovers and portal mounting; no examples or source prose are copied.
 - Source: Vite official docs, including `vite.dev/guide`,
   `vite.dev/guide/build`, `vite.dev/guide/assets`,
   `vite.dev/guide/env-and-mode`, and `vite.dev/guide/ssr`.

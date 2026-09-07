@@ -535,7 +535,7 @@
     "load_routes": [
       {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/SKILL.md", "predicate": "always"},
       {"entry": "app-design-skill", "target": "souroldgeezer-design/docs/app-reference/app-design.md", "predicate": "conditional:build-core"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md", "predicate": "conditional:multi-screen-unsettled-layout"}
+      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md", "predicate": "conditional:material-or-multi-screen-flow"}
     ]
   },
   {

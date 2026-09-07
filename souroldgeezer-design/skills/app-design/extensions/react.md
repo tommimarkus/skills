@@ -131,9 +131,11 @@ not compliant merely because it exists.
   unless a framework-specific extension documents the escape hatch.
 - Browser-only reads such as `window`, `document`, storage, media queries, and
   observers need effect-time access, capability checks, and fallback UI.
-- Portals, dialogs, popovers, and overlays need focus trap/restoration,
-  keyboard behavior, inert/background handling, and scroll locking that works
-  across breakpoints.
+- Modal dialogs need focus trapping and restoration, modal keyboard behavior,
+  an inert background, and appropriate scroll handling across breakpoints.
+  Nonmodal popovers and tooltips retain their widget-specific keyboard,
+  dismissal, focus, and scrolling behavior; mounting a surface through a
+  portal does not make it modal.
 - Effects that subscribe to events, timers, observers, sockets, or external
   stores need cleanup. Effects should synchronize with external systems, not
   duplicate render-derived state. Async work needs a cleanup-owned cancellation

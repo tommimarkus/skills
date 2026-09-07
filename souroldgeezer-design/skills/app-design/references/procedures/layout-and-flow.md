@@ -3,8 +3,10 @@
 Use this procedure for Build, Extract, or Review work involving a multi-screen
 flow, material layout redesign, dashboard or workspace composition, or an
 unresolved layout direction. In Lookup, use it only for an explicit layout- or
-flow-mechanics question. Skip it for routine component/state work and for narrow
-changes whose layout direction is already approved.
+flow-mechanics question. Skip the whole procedure only for routine
+component/state work or a narrow change whose layout direction is already
+approved. A substantial flow or material-layout task still needs flow analysis
+after its direction is approved; it simply skips the alternatives checkpoint.
 
 Keep the result framework-neutral. Project-native patterns take precedence when
 they satisfy the core app-design contract. This procedure does not own brand,
@@ -73,9 +75,8 @@ information density, recovery, and adaptation. Then pause for user selection or
 combination before committing that direction to implementation or a settled
 design contract.
 
-Skip alternatives for a narrow fix or an already-approved layout. Disclose the
-reason for the skip so an omitted checkpoint is not mistaken for silent design
-approval.
+Skip alternatives for a narrow fix or an already-approved direction. Disclose
+the reason so an omitted checkpoint is not mistaken for silent design approval.
 
 ## Selected Layout Contract
 
