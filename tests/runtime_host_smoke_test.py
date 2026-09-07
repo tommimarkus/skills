@@ -19,8 +19,9 @@ smoke = load_script_module("runtime_host_smoke", SCRIPT)
 class FakeCliRunner:
     """In-process CLI double that materializes realistic isolated install trees."""
 
-    def __init__(self, repo: Path) -> None:
+    def __init__(self, repo: Path, *, aliased_paths: bool = False) -> None:
         self.repo = repo
+        self.aliased_paths = aliased_paths
         self.calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
         self.codex_installs: dict[str, Path] = {}
         self.claude_installs: dict[str, Path] = {}
@@ -113,9 +114,15 @@ class FakeCliRunner:
             return self.completed(args, json.dumps({"installed": records}))
         if args[:3] == ("codex", "debug", "prompt-input"):
             lines = []
-            for name, path in self.codex_installs.items():
+            for index, (name, path) in enumerate(self.codex_installs.items()):
+                if self.aliased_paths:
+                    lines.append(f"- `r{index}` = `{path / 'skills'}`")
                 for skill_path in sorted((path / "skills").glob("*/SKILL.md")):
-                    lines.append(f"- {name}:{skill_path.parent.name}: fake (file: {skill_path})")
+                    displayed = (
+                        f"r{index}/{skill_path.parent.name}/SKILL.md"
+                        if self.aliased_paths else str(skill_path)
+                    )
+                    lines.append(f"- {name}:{skill_path.parent.name}: fake (file: {displayed})")
             payload = [
                 {
                     "type": "message",
@@ -247,7 +254,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             (normal_claude / ".claude.json").write_text("{}\n", encoding="utf-8")
             (normal_copilot / "config.json").write_text("{}\n", encoding="utf-8")
 
-            fake = FakeCliRunner(REPO_ROOT)
+            fake = FakeCliRunner(REPO_ROOT, aliased_paths=True)
             mcp_calls = []
 
             def fake_mcp(argv, *, cwd, workspace_root, env, label):
@@ -309,6 +316,34 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             for _, cwd, workspace_root, _, _ in mcp_calls:
                 self.assertEqual(workspace_root, REPO_ROOT)
                 self.assertNotEqual(cwd.resolve(), workspace_root.resolve())
+
+    def test_codex_discovery_checks_the_named_skill_resolved_path(self) -> None:
+        root = Path("/isolated/plugin")
+        expected = root / "skills/audit/SKILL.md"
+        expectations = [smoke.PluginExpectation("plugin", "1", "1", None, ("audit",), ())]
+        cases = {
+            "absolute": (f"- plugin:audit: fake (file: {expected})", True),
+            "alias": ("- `r2` = `/isolated/plugin/skills`\n"
+                      "- plugin:audit: fake (file: r2/audit/SKILL.md)", True),
+            "undeclared alias": ("- plugin:audit: fake (file: r2/audit/SKILL.md)", False),
+            "wrong root": ("- `r2` = `/normal/plugin/skills`\n"
+                           "- plugin:audit: fake (file: r2/audit/SKILL.md)", False),
+            "conflicting alias": ("- `r2` = `/isolated/plugin/skills`\n"
+                                  "- `r2` = `/normal/plugin/skills`\n"
+                                  "- plugin:audit: fake (file: r2/audit/SKILL.md)", False),
+            "relative root": ("- `r2` = `skills`\n"
+                              "- plugin:audit: fake (file: r2/audit/SKILL.md)", False),
+            "unrelated expected path": (f"Mention elsewhere: {expected}\n"
+                                        "- plugin:audit: fake (file: /wrong/SKILL.md)", False),
+            "missing skill": (f"- plugin:other: fake (file: {expected})", False),
+        }
+        for name, (prompt, accepted) in cases.items():
+            with self.subTest(name=name):
+                if accepted:
+                    smoke.verify_codex_prompt_skills(prompt, {"plugin": root}, expectations)
+                else:
+                    with self.assertRaises(smoke.SmokeFailure):
+                        smoke.verify_codex_prompt_skills(prompt, {"plugin": root}, expectations)
 
     def test_profile_control_plane_mutation_fails_even_when_hosts_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

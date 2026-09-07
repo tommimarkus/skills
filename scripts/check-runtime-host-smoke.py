@@ -591,6 +591,49 @@ def _verify_plugin_records(
             raise SmokeFailure(f"{host} plugin is not enabled: {expectation.name}")
 
 
+def verify_codex_prompt_skills(
+    prompt_text: str,
+    installs: Mapping[str, Path],
+    expectations: Sequence[PluginExpectation],
+) -> None:
+    """Resolve declared prompt aliases, then check each installed skill entry."""
+    roots: dict[str, Path] = {}
+    for alias, raw_root in re.findall(
+        r"^- `(?P<alias>r\d+)` = `(?P<root>[^`\n]+)`[ \t]*$", prompt_text, re.MULTILINE
+    ):
+        root = Path(raw_root)
+        if not root.is_absolute():
+            raise SmokeFailure(f"Codex skill root {alias} is not absolute: {raw_root}")
+        root = root.resolve()
+        if alias in roots and roots[alias] != root:
+            raise SmokeFailure(f"Codex skill root {alias} has conflicting declarations")
+        roots[alias] = root
+
+    for expectation in expectations:
+        for skill in expectation.skills:
+            marker = f"- {expectation.name}:{skill}:"
+            entries = re.findall(
+                rf"^{re.escape(marker)}[^\n]*\(file: ([^\n]+)\)[ \t]*$",
+                prompt_text,
+                re.MULTILINE,
+            )
+            if len(entries) != 1:
+                raise SmokeFailure(f"Codex prompt discovery omitted or duplicated {marker}")
+            raw_path = entries[0]
+            path = Path(raw_path)
+            if not path.is_absolute():
+                alias, separator, relative = raw_path.partition("/")
+                if not separator or alias not in roots:
+                    raise SmokeFailure(f"Codex prompt discovery has an unresolved path: {raw_path}")
+                path = roots[alias] / relative
+            expected = installs[expectation.name] / "skills" / skill / "SKILL.md"
+            if path.resolve() != expected.resolve():
+                raise SmokeFailure(
+                    f"Codex prompt discovery used the wrong path for {marker} "
+                    f"expected {expected}, got {raw_path} (resolved: {path.resolve()})"
+                )
+
+
 def run_host_smoke(
     repo: Path,
     state_root: Path,
@@ -705,14 +748,7 @@ def run_host_smoke(
             label="codex debug prompt-input",
         )
         prompt_text = "\n".join(strings_in(prompt_input))
-        for expectation in expectations:
-            for skill in expectation.skills:
-                marker = f"- {expectation.name}:{skill}:"
-                if marker not in prompt_text:
-                    raise SmokeFailure(f"Codex prompt discovery omitted {marker}")
-                skill_path = codex_installs[expectation.name] / "skills" / skill / "SKILL.md"
-                if str(skill_path) not in prompt_text:
-                    raise SmokeFailure(f"Codex prompt discovery used the wrong path for {marker}")
+        verify_codex_prompt_skills(prompt_text, codex_installs, expectations)
 
         plugin_help = checked(
             runner,
