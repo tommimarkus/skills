@@ -239,6 +239,7 @@ When a repo-internal skill's tooling order prefers an MCP server (e.g. `github-i
 
 ```
 docs/skill-architecture.md             ← canonical skill architecture craft standard
+docs/contributing.md                   ← contributor entry point and guide map
 scripts/skill-architecture-report.sh   ← craft-standard validation wrapper for agent iteration
 scripts/skill_architecture_report.py   ← Python® validation engine and JSON/Markdown reporter
 tests/skill_architecture_report_test.py ← unittest coverage for report fixtures and wrapper smoke

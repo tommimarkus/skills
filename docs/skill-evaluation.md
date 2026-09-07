@@ -13,6 +13,10 @@ not an eval runner. The repository's deterministic report engine
 files; an external harness or a grading agent actually executes the cases
 against the rubric or grader.
 
+See the [contributor guide](contributing.md) for repository workflow and the
+[skill architecture standard](skill-architecture.md) for the conditions that
+require this evidence.
+
 ## Source Hygiene
 
 Evaluation artifacts are repo-authored evidence, not mirrors of benchmark

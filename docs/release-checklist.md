@@ -1,6 +1,9 @@
 # Release Checklist
 
-Use this before publishing a release or bumping a plugin version.
+Use this before publishing a release or bumping a plugin version. Start with
+[the contributor guide](contributing.md) for worktree and validation ownership,
+and use the [maintenance procedures](maintenance-procedures.md) for rare
+operational changes.
 
 ## Checklist
 
@@ -17,7 +20,7 @@ Use this before publishing a release or bumping a plugin version.
   the installed CLI exposes one.
 - Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
   with all three CLIs available; require all five Claude/Codex isolated installs,
-  all 15 shared skills, the isolated Copilot architecture install, Claude
+  all 16 shared public skills, the isolated Copilot architecture install, Claude
   component/strict validation, all three external-Dediren adapter handshakes,
   and unchanged normal plugin/config profiles. Record an unavailable standalone
   Codex validator as a skip.
@@ -25,8 +28,8 @@ Use this before publishing a release or bumping a plugin version.
 - Confirm `README.md` still acts as the product map.
 - Run the validation commands listed in `README.md`.
 - Inspect `git diff --check` for whitespace errors.
-- Update `docs/refactor/fragmentation-execplan.md` if the release changes the
-  documented public surface.
+- Review the README and the relevant contributor guide when the release changes
+  the documented public surface.
 
 ## Versioning guidance
 

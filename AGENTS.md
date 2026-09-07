@@ -474,6 +474,8 @@ Codex validator is a reported skip, not a fabricated pass.
 Update `README.md` when install commands, plugin names, skills, public behavior,
 or local validation changes. Update `docs/release-checklist.md` and
 `docs/maintenance-procedures.md` when packaging or version mechanics change.
+Use `docs/contributing.md` as the contributor entry point and keep its guide map
+accurate when a maintained documentation surface moves.
 Keep `.github/CODEOWNERS` on executable hook configuration and hook scripts.
 
 No checked-in `.codex/config.toml` should choose a model, approval policy, or

@@ -8,6 +8,22 @@ def read(relative_path: str) -> str:
 
 
 class ValidationSurfaceTest(unittest.TestCase):
+    def test_contributor_guide_links_the_maintainer_documentation(self) -> None:
+        contributing = read("docs/contributing.md")
+
+        for guide in (
+            "skill-architecture.md",
+            "skill-evaluation.md",
+            "maintenance-procedures.md",
+            "release-checklist.md",
+        ):
+            with self.subTest(guide=guide):
+                self.assertIn(guide, contributing)
+
+        release = read("docs/release-checklist.md")
+        self.assertIn("all 16 shared public skills", release)
+        self.assertNotIn("docs/refactor/fragmentation-execplan.md", release)
+
     def test_default_validation_runs_stop_hook_regression_script(self) -> None:
         validation_script = read("scripts/validate-fragmentation.sh")
         readme = read("README.md")

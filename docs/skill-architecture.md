@@ -16,6 +16,10 @@ Use `scripts/skill-architecture-report.sh` for repeatable detection and report
 formatting when that script is available; skill workflows should stay thin by
 delegating structural validation to the tool.
 
+For repository navigation, start with the [contributor guide](contributing.md).
+Use [skill evaluation evidence](skill-evaluation.md) when the change needs
+trigger, behavior, model-pressure, or source-grounding evidence.
+
 ## Load Conditions
 
 Load this document at the start of any task that creates, edits, reviews,

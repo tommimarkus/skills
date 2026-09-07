@@ -1,6 +1,9 @@
 # Repo maintenance procedures
 
-Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section is loaded on demand via the pointer at its original site.
+Rare-occasion repo maintenance procedures relocated from CLAUDE.md; each section
+is loaded on demand via the pointer at its original site. Start with the
+[contributor guide](contributing.md) for normal repository work, and use the
+[release checklist](release-checklist.md) for release preparation.
 
 ## Dediren upstream release adoption
 
