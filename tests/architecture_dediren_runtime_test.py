@@ -159,6 +159,57 @@ class VersionFloorTest(unittest.TestCase):
             runtime.pinned_version({"DEDIREN_VERSION": "1.2.3"})
 
 
+class VersionProbeTest(unittest.TestCase):
+    def completed(self, output: bytes, returncode: int = 0) -> mock.Mock:
+        result = mock.Mock(returncode=returncode)
+        result.stdout = output
+        return result
+
+    def test_version_output_combines_stdout_and_stderr_and_preserves_option(self) -> None:
+        with mock.patch.object(
+            runtime.subprocess,
+            "run",
+            return_value=self.completed(b'openjdk version "21.0.2"\n'),
+        ) as run:
+            self.assertEqual(runtime._version_output("java", "-version"), 'openjdk version "21.0.2"\n')
+        run.assert_called_once_with(
+            ["java", "-version"],
+            stdout=runtime.subprocess.PIPE,
+            stderr=runtime.subprocess.STDOUT,
+            timeout=120,
+        )
+
+    def test_nonzero_exit_is_none_for_both_public_callers(self) -> None:
+        with mock.patch.object(
+            runtime.subprocess, "run", return_value=self.completed(b"2026.08.9", 1)
+        ):
+            self.assertIsNone(runtime.reported_version("dediren"))
+            self.assertIsNone(runtime.java_major_version("java"))
+
+    def test_oserror_and_timeout_are_none(self) -> None:
+        for failure in (OSError("missing"), subprocess.TimeoutExpired("java", 120)):
+            with self.subTest(failure=type(failure).__name__), mock.patch.object(
+                runtime.subprocess, "run", side_effect=failure
+            ):
+                self.assertIsNone(runtime.reported_version("dediren"))
+                self.assertIsNone(runtime.java_major_version("java"))
+
+    def test_invalid_utf8_is_replaced_and_malformed_output_stays_none(self) -> None:
+        with mock.patch.object(
+            runtime.subprocess,
+            "run",
+            return_value=self.completed(b"dediren 2026.08.9 \xff"),
+        ):
+            self.assertEqual(runtime.reported_version("dediren"), "2026.08.9")
+        with mock.patch.object(
+            runtime.subprocess,
+            "run",
+            return_value=self.completed(b"not a version"),
+        ):
+            self.assertIsNone(runtime.reported_version("dediren"))
+            self.assertIsNone(runtime.java_major_version("java"))
+
+
 class ProvisioningTest(unittest.TestCase):
     def setUp(self) -> None:
         self.original_fetch = runtime.fetch

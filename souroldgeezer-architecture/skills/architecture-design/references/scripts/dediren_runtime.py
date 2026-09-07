@@ -107,11 +107,11 @@ def pinned_version(env: dict[str, str]) -> str:
     return version
 
 
-def reported_version(command: str) -> str | None:
-    """The CalVer `command --version` reports, or None when it cannot be read."""
+def _version_output(command: str, option: str) -> str | None:
+    """Return combined version output, or None when the probe cannot run."""
     try:
         completed = subprocess.run(
-            [command, "--version"],
+            [command, option],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             timeout=120,
@@ -120,7 +120,15 @@ def reported_version(command: str) -> str | None:
         return None
     if completed.returncode != 0:
         return None
-    match = CALVER_PATTERN.search(completed.stdout.decode("utf-8", "replace"))
+    return completed.stdout.decode("utf-8", "replace")
+
+
+def reported_version(command: str) -> str | None:
+    """The CalVer `command --version` reports, or None when it cannot be read."""
+    output = _version_output(command, "--version")
+    if output is None:
+        return None
+    match = CALVER_PATTERN.search(output)
     return None if match is None else match.group(0)
 
 
@@ -160,19 +168,11 @@ def java_command(env: dict[str, str]) -> str | None:
 
 
 def java_major_version(command: str) -> int | None:
-    try:
-        completed = subprocess.run(
-            [command, "-version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=120,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if completed.returncode != 0:
+    output = _version_output(command, "-version")
+    if output is None:
         return None
     match = re.search(
-        r'version "([0-9]+)(?:\.([0-9]+))?', completed.stdout.decode("utf-8", "replace")
+        r'version "([0-9]+)(?:\.([0-9]+))?', output
     )
     if match is None:
         return None
