@@ -210,6 +210,16 @@ class VersionProbeTest(unittest.TestCase):
             return_value=self.completed(b'openjdk version "21.0.2" \xff'),
         ):
             self.assertEqual(runtime.java_major_version("java"), 21)
+        # Replacement must not join digits across an invalid byte. These cases
+        # distinguish the existing replacement contract from errors="ignore".
+        for probe, output, expected in (
+            (runtime.reported_version, b"dediren 2026.08.\xff9", None),
+            (runtime.java_major_version, b'openjdk version "2\xff1.0.2"', 2),
+        ):
+            with self.subTest(output=output), mock.patch.object(
+                runtime.subprocess, "run", return_value=self.completed(output)
+            ):
+                self.assertEqual(probe("version-probe"), expected)
         with mock.patch.object(
             runtime.subprocess,
             "run",
