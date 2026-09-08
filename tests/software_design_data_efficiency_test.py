@@ -83,8 +83,9 @@ class SoftwareDesignDataEfficiencyTest(unittest.TestCase):
             if scenario["skill"] != "software-design":
                 continue
             self.assertEqual(snapshot[scenario_id], slc.measure_scenario(by_id[scenario_id], REPO_ROOT)["total"])
-        # Exact committed counts at 40a7be15237fc190d6ed611593fb84cedb04268d.
-        baseline = {"sd-lookup-principle": 2228, "sd-build-csharp": 8083, "sd-review-typescript": 11420, "sd-review-fragility": 10448}
+        # Original 40a comparison remains recorded in measurements. The approved
+        # task-relative baseline is current main e03780f.
+        baseline = {"sd-lookup-principle": 2326, "sd-build-csharp": 8269, "sd-review-typescript": 11559, "sd-review-fragility": 10587}
         for scenario_id, before in baseline.items():
             self.assertLessEqual(snapshot[scenario_id] - before, 250)
         self.assertLessEqual(slc.estimate_tokens(read(procedure)), 1400)

@@ -46,7 +46,7 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
         scenarios = {item["id"] for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
         self.assertTrue({"sd-review-fragility", "sd-native-evidence-procedure", "sd-fragility-final-reporting"} <= scenarios)
         snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
-        for identifier, ceiling in {"sd-lookup-principle": 2478, "sd-build-csharp": 8333, "sd-review-typescript": 11670, "sd-review-fragility": 12628, "sd-native-evidence-procedure": 1200}.items():
+        for identifier, ceiling in {"sd-lookup-principle": 2576, "sd-build-csharp": 8519, "sd-review-typescript": 11809, "sd-review-fragility": 12628, "sd-native-evidence-procedure": 1200}.items():
             self.assertLessEqual(snapshot[identifier], ceiling)
         self.assertGreaterEqual(snapshot["sd-fragility-final-reporting"], 500)
         self.assertLessEqual(snapshot["sd-fragility-final-reporting"], 1000)
