@@ -41,7 +41,7 @@ with explicit per-owner measures.
 
 | Item | Rule |
 |---|---|
-| Force | A measured quality requirement shapes the design; an unmeasured one does not. |
+| Force | A measured quality requirement shapes the design; source-grounded structural choices may also do so. |
 | Smell map | Missing measure -> `SD-Q-1`; unmeasured tactic -> `SD-Q-2`; no owning boundary -> `SD-Q-3`; known workload amplification -> `SD-Q-5`. |
 | Evidence | Threshold and claimed gain need `[runtime]`; source-grounded operation/boundedness/semantics can be `[static]`; owner/scope needs `[human]`. |
 | Delegation | Per-attribute tactics go to `app-design` / `api-design` / `infra-design`, `devsecops-audit`, `test-quality-audit`. |
