@@ -23,7 +23,7 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
         self.assertIn("SAD-G-data-access-amplification", reference)
         self.assertIn("Distinct from `SAD-A-consumer-chattiness`", reference)
         self.assertIn("never share `DbContext` concurrently", reference)
-        self.assertIn("`IHttpClientFactory` may create a short-lived client", reference)
+        self.assertIn("Factory short-lived and configured long-lived `HttpClient` are valid", reference)
 
     def test_routes_charge_shared_procedure_only_for_relevant_access_work(self) -> None:
         scenarios = json.loads(read("tests/skill_load_cost/scenarios.json"))
@@ -44,6 +44,13 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
         self.assertTrue(expected <= set(ids))
         self.assertEqual(len(ids), len(set(ids)))
         self.assertIn("api-design-behavior-review-extension-highrisk-gates", ids)
+
+    def test_new_finding_and_eval_references_are_defined_once(self) -> None:
+        reference = read("souroldgeezer-design/docs/api-reference/api-design.md")
+        self.assertEqual(reference.count("**SAD-G-data-access-amplification**"), 1)
+        cases = list(read_jsonl("souroldgeezer-design/skills/api-design/references/evals/behavior-cases.jsonl"))
+        nplus = next(case for case in cases if case["id"] == "api-design-behavior-data-nplus-review")
+        self.assertTrue(any("SAD-G-data-access-amplification" in item for item in nplus["required_checks"]))
 
     def test_existing_api_routes_stay_within_the_approved_content_allowance(self) -> None:
         scenarios = {item["id"]: item for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}

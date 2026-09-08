@@ -486,3 +486,13 @@ path set had drifted, so the path set gained the shared core.
 to its closure. Yesterday's `scaled-audit.md` entered four closures without one,
 which is how five floors ended up 6–7 sections low. That belongs beside the
 existing stamp obligation, not as separate discipline to remember.
+
+## API data-efficiency measurement
+
+Fresh measurements against `40a7be15237fc190d6ed611593fb84cedb04268d` and
+`e03780f9b8d873010772daeaf00a933686b605ea` retain all twelve API routes within
+the approved +250 allowance: 4126, 24661, 24379, 17410, 20587, 13822, 15639,
+16774, 5461, 17292, 17134, 17134 (scenario order). Generic stack scenarios
+reuse unchanged storage paths. Explicit touched-data routes load the full shared
+procedure: Build 13431, Review 13791, debt 13791; the composed API/software
+route is 19819 and counts the shared procedure once.
