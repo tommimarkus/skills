@@ -632,6 +632,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             self.assertEqual(layout_result.returncode, 0, layout_result.stderr)
             layout_payload = envelope(layout_result)
             self.assertEqual(layout_payload["status"], "ok")
+            self.assertEqual(
+                layout_payload["data"]["layout_result_schema_version"],
+                "layout-result.schema.v3",
+            )
+            for edge in layout_payload["data"]["edges"]:
+                self.assertNotIn("points", edge)
+                self.assertIn(edge["route"]["kind"], ("polyline", "cubic_bezier"))
 
             layout_result_path = temp_path / "layout-result.json"
             layout_result_path.write_text(json.dumps(layout_payload["data"]), encoding="utf-8")
@@ -683,7 +690,7 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
 
     def test_render_warning_retains_svg_when_an_edge_label_cannot_clear_a_node(self) -> None:
         layout = {
-            "layout_result_schema_version": "layout-result.schema.v2",
+            "layout_result_schema_version": "layout-result.schema.v3",
             "view_id": "crowded-integration",
             "nodes": [
                 {
@@ -728,10 +735,13 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
                     "source_id": "gateway-dispatches-worker",
                     "projection_id": "gateway-dispatches-worker",
                     "routing_hints": [],
-                    "points": [
-                        {"x": 190.0, "y": 66.0},
-                        {"x": 310.0, "y": 66.0},
-                    ],
+                    "route": {
+                        "kind": "polyline",
+                        "points": [
+                            {"x": 190.0, "y": 66.0},
+                            {"x": 310.0, "y": 66.0},
+                        ],
+                    },
                     "label": "dispatches asynchronously",
                     "source_pointer": "/relationships/0",
                 }

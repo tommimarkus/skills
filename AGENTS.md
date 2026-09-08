@@ -59,7 +59,7 @@ shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
 stdio Dediren process for the explicit `workspaceRoot` supplied to each tool
 call. Dediren itself is provisioned by the plugin: on first use the launcher
-installs the pinned, checksum-verified release (pin `2026.08.9`, support floor
+installs the pinned, checksum-verified release (pin `2026.09.0`, support floor
 `2026.07.28`, overridable by a CalVer `DEDIREN_VERSION` at or above that floor)
 into the host's own per-plugin writable data directory. That directory resolves
 from `DEDIREN_HOME` (which must be absolute), else `CLAUDE_PLUGIN_DATA`,
@@ -115,6 +115,12 @@ packages migrate that one field. Dediren 2026.08.9 converges render-result
 `artifact_kind` onto the media-suffix form (v7): `svg` → `svg+xml` and text →
 `ascii+text`, breaking for consumers reading that field. The repo's fixture
 compatibility baseline moves to 2026.08.9; the support floor stays 2026.07.28.
+
+Dediren 2026.09.0 emits `layout-result.schema.v3`: edges carry a typed
+`route` (polyline or cubic Bezier) instead of top-level `points`. Regenerate
+stored layouts and migrate consumers; there is no v2 output fallback. Authored
+models and render policies remain compatible, so the fixture baseline stays
+2026.08.9 and the support floor stays 2026.07.28.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|

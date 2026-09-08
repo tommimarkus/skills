@@ -21,7 +21,7 @@ Dediren must be executable in the MCP process sandbox, and the launcher gets it
 there itself: it resolves `DEDIREN_COMMAND`, its managed install under the
 plugin data directory, a `dediren` on `PATH` reporting at or above the floor, or
 the former verified release cache — and otherwise installs the pinned
-`2026.08.9` release, verified against `SHA256SUMS` before unpacking, on the first
+`2026.09.0` release, verified against `SHA256SUMS` before unpacking, on the first
 `tools/list`. It never installs Java, never downgrades, and never patches the
 runtime. When provisioning fails or must be overridden — no Java 21+, no plugin
 data directory (exit 78), a download or checksum failure, an air-gapped host, or
@@ -240,6 +240,12 @@ artifact-writing result stops the run without retry or fallback.
 
 ### Layout quality
 
+Dediren 2026.09.0 replaces each layout edge's top-level `points` with a typed
+`route`: `polyline` carries `points`; `cubic_bezier` carries a start and
+control-point segments. Regenerate stored layouts and update consumers of the
+old geometry shape; there is no v2 output fallback. Authored source models and
+render policies remain compatible.
+
 `dediren_build` runs `validate-layout` inside the build; its verdict lands on the
 build-result document, not in the mapped layout file. Read the `dediren_build`
 view entry as the authoritative source: `.data.views[].status` /
@@ -250,8 +256,8 @@ quality problem surfaces as a `warning` on the view entry with a
 example `overlap_count`, `route_detour_count`, or `edge_label_dissociation_count`;
 take the field names from the diagnostic itself — the runtime's gate-count set has
 drifted — and `edge_crossing_count` is informational). The mapped
-`generated/layout/<view-id>.json` (`layout-result.schema.v2`) carries layout
-*geometry* — `nodes` / `edges` / `groups` and a `warnings[]` array — not the
+`generated/layout/<view-id>.json` (`layout-result.schema.v3` on the pinned
+release) carries layout *geometry* — `nodes` / `edges` / `groups` and a `warnings[]` array — not the
 quality verdict, so do not read `data.status` or `data.*_count` from it; the
 runtime stopped emitting them there (see source grounding). Treat a `warning` view
 status or any nonzero non-informational count as a `warn`-class `ARCH-L-3` finding —

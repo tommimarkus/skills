@@ -39,7 +39,7 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   It discovers the live upstream tool catalog and supports both legacy MCP
   initialization and current stateless discovery. Dediren is plugin-provisioned:
   on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.08.9`, support floor `2026.07.28`, overridable by a CalVer
+  (pin `2026.09.0`, support floor `2026.07.28`, overridable by a CalVer
   `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
   writable data directory — `DEDIREN_HOME` (absolute) first, else
   `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
@@ -94,6 +94,12 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   → `ascii+text`, breaking for consumers reading that field. The fixture
   compatibility baseline moves to 2026.08.9; the support floor stays
   2026.07.28.
+
+  Dediren 2026.09.0 emits `layout-result.schema.v3`: edges carry a typed
+  `route` (polyline or cubic Bezier) instead of top-level `points`. Regenerate
+  stored layouts and migrate consumers; there is no v2 output fallback. Authored
+  models and render policies remain compatible, so the fixture baseline stays
+  2026.08.9 and the support floor stays 2026.07.28.
 
   The architecture plugin's Dediren configuration is host-specific, while the
   shared launcher/router has no harness detection. Its maintained adapters are
