@@ -29,13 +29,17 @@ default would be unsafe, ask; otherwise continue with disclosed defaults.
 
 Modes: Build, Extract, Review, Lookup. Existing API with no requested change
 defaults to Extract. New endpoint or feature defaults to Build.
-Review/audit/check wording defaults to Review. Narrow
-principle/status-code/header questions default to Lookup. If still ambiguous,
+Explicit Review/audit/check requests select Review, including lifetime questions.
+Otherwise narrow principle/status-code/header questions default to Lookup. If still ambiguous,
 ask the user which mode they want.
 
 ## Load Map
 
 Load what applies:
+
+- Before analyzing HTTP-to-storage paths in Build/Review or explicit debt Extract,
+  read [data efficiency](../../docs/design-reference/data-efficiency.md) in full.
+  Factual Extract skips it; Lookup reads only the matched section.
 
 - Core reference sections 2-7 for Build/Extract/Review; matched section plus
   immediate context for Lookup.
@@ -54,10 +58,6 @@ Load what applies:
   API portfolio decisions are in scope.
 - [references/procedures/red-flags.md](references/procedures/red-flags.md)
   before final output in Build and Review.
-- [../../docs/design-reference/data-efficiency.md](../../docs/design-reference/data-efficiency.md)
-  when Build or Review touches an HTTP-to-storage path, or Extract explicitly
-  requests data-access debt; factual Extract records facts only and Lookup reads
-  its matched section.
 - [extensions/azure-functions-dotnet.md](extensions/azure-functions-dotnet.md)
   for Azure Functions .NET isolated-worker or ASP.NET Core integration signals.
 - [extensions/nodejs.md](extensions/nodejs.md) for Node.js / TypeScript hosted

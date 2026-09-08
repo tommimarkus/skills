@@ -495,18 +495,18 @@ those commits; fresh measurements are identical. Stable-proxy tokens, not provid
 
 | Existing route | 40a before | e037 before | After | Task delta |
 |---|---:|---:|---:|---:|
-| `lookup-functions` | 4020 | 4020 | 4126 | +106 |
-| `build-functions-cosmos` | 24411 | 24411 | 24661 | +250 |
-| `review-functions-cosmos-blob` | 24147 | 24147 | 24379 | +232 |
-| `extract-functions-cosmos-factual` | 17239 | 17239 | 17410 | +171 |
-| `extract-functions-cosmos-debt` | 20394 | 20394 | 20587 | +193 |
-| `review-surface-architecture` | 13659 | 13659 | 13822 | +163 |
-| `extract-python-factual` | 15496 | 15496 | 15639 | +143 |
-| `extract-python-debt` | 16631 | 16631 | 16774 | +143 |
-| `lookup-python-lifecycle` | 5383 | 5383 | 5461 | +78 |
-| `build-python-asgi` | 17110 | 17110 | 17292 | +182 |
-| `review-python-wsgi-clean` | 16952 | 16952 | 17134 | +182 |
-| `review-python-serverless` | 16952 | 16952 | 17134 | +182 |
+| `lookup-functions` | 4020 | 4020 | 4115 | +95 |
+| `build-functions-cosmos` | 24411 | 24411 | 24650 | +239 |
+| `review-functions-cosmos-blob` | 24147 | 24147 | 24368 | +221 |
+| `extract-functions-cosmos-factual` | 17239 | 17239 | 17399 | +160 |
+| `extract-functions-cosmos-debt` | 20394 | 20394 | 20576 | +182 |
+| `review-surface-architecture` | 13659 | 13659 | 13811 | +152 |
+| `extract-python-factual` | 15496 | 15496 | 15628 | +132 |
+| `extract-python-debt` | 16631 | 16631 | 16763 | +132 |
+| `lookup-python-lifecycle` | 5383 | 5383 | 5450 | +67 |
+| `build-python-asgi` | 17110 | 17110 | 17281 | +171 |
+| `review-python-wsgi-clean` | 16952 | 16952 | 17123 | +171 |
+| `review-python-serverless` | 16952 | 16952 | 17123 | +171 |
 
 Existing generic stack scenarios cover HTTP contract/header work reusing unchanged
 storage paths. They do not imply changed-query coverage. The following explicit
@@ -515,12 +515,12 @@ tokens (actual 576). Factual Extract and status Lookup exclude it.
 
 | New route | Full load |
 |---|---:|
-| `build-api-data-access` | 13431 |
-| `review-api-data-access` | 13791 |
-| `extract-api-data-access-debt` | 13791 |
-| `review-api-software-composed` | 19819 |
-| `lookup-api-data-access` | 2200 |
-| `lookup-api-status-no-data` | 12460 |
+| `build-api-data-access` | 13420 |
+| `review-api-data-access` | 13780 |
+| `extract-api-data-access-debt` | 13780 |
+| `review-api-software-composed` | 19808 |
+| `lookup-api-data-access` | 2189 |
+| `lookup-api-status-no-data` | 12449 |
 
 The composed route counts the shared procedure once. The regression check also
 measures two entry routes to that file and verifies one charged row, two provenance
