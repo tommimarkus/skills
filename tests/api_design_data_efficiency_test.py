@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module, read, read_jsonl
@@ -33,7 +34,7 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
         for scenario_id in relevant:
             targets = [route["target"] for route in by_id[scenario_id]["load_routes"]]
             self.assertEqual(targets.count(target), 1, scenario_id)
-        for scenario_id in ("lookup-api-data-access", "extract-functions-cosmos-factual"):
+        for scenario_id in ("lookup-api-data-access", "lookup-api-status-no-data", "extract-functions-cosmos-factual"):
             targets = [route["target"] for route in by_id[scenario_id]["load_routes"]]
             self.assertNotIn(target, targets)
 
@@ -47,10 +48,20 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
 
     def test_new_finding_and_eval_references_are_defined_once(self) -> None:
         reference = read("souroldgeezer-design/docs/api-reference/api-design.md")
-        self.assertEqual(reference.count("**SAD-G-data-access-amplification**"), 1)
-        cases = list(read_jsonl("souroldgeezer-design/skills/api-design/references/evals/behavior-cases.jsonl"))
-        nplus = next(case for case in cases if case["id"] == "api-design-behavior-data-nplus-review")
-        self.assertTrue(any("SAD-G-data-access-amplification" in item for item in nplus["required_checks"]))
+        definitions = re.findall(r"^- \*\*(SAD-[A-Z]-[a-z0-9-]+)\*\*", reference, re.M)
+        self.assertEqual(len(definitions), len(set(definitions)))
+        self.assertIn("SAD-G-data-access-amplification", definitions)
+        cases = read_jsonl("souroldgeezer-design/skills/api-design/references/evals/behavior-cases.jsonl")
+        for case in cases:
+            if not case["id"].startswith("api-design-behavior-data-"):
+                continue
+            references = set(re.findall(r"SAD-[A-Z]-[a-z0-9-]+", json.dumps(case)))
+            self.assertLessEqual(references, set(definitions), case["id"])
+
+    def test_fidelity_baseline_protects_shared_efficiency_surface(self) -> None:
+        baseline = json.loads(read("tests/skill_load_cost/baselines/api-design.json"))
+        self.assertIn("SD-Q-5", baseline["codes"])
+        self.assertIn("Data-Efficiency Procedure", baseline["sections"])
 
     def test_existing_api_routes_stay_within_the_approved_content_allowance(self) -> None:
         scenarios = {item["id"]: item for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
@@ -76,6 +87,9 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
         measured = LOAD_COST.measure_scenario(scenario, REPO_ROOT)
         self.assertEqual(len(measured["rows"]), 1)
         self.assertEqual(len(measured["rows"][0]["routes"]), 2)
+        self.assertEqual(measured["total"], LOAD_COST.estimate_tokens(
+            read("souroldgeezer-design/docs/design-reference/data-efficiency.md")
+        ))
 
 
 if __name__ == "__main__":

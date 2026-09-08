@@ -489,10 +489,40 @@ existing stamp obligation, not as separate discipline to remember.
 
 ## API data-efficiency measurement
 
-Fresh measurements against `40a7be15237fc190d6ed611593fb84cedb04268d` and
-`e03780f9b8d873010772daeaf00a933686b605ea` retain all twelve API routes within
-the approved +250 allowance: 4126, 24661, 24379, 17410, 20587, 13822, 15639,
-16774, 5461, 17292, 17134, 17134 (scenario order). Generic stack scenarios
-reuse unchanged storage paths. Explicit touched-data routes load the full shared
-procedure: Build 13431, Review 13791, debt 13791; the composed API/software
-route is 19819 and counts the shared procedure once.
+Original baseline: `40a7be15237fc190d6ed611593fb84cedb04268d`. Approved task baseline:
+`e03780f9b8d873010772daeaf00a933686b605ea`. API load surfaces are unchanged between
+those commits; fresh measurements are identical. Stable-proxy tokens, not provider usage.
+
+| Existing route | 40a before | e037 before | After | Task delta |
+|---|---:|---:|---:|---:|
+| `lookup-functions` | 4020 | 4020 | 4126 | +106 |
+| `build-functions-cosmos` | 24411 | 24411 | 24661 | +250 |
+| `review-functions-cosmos-blob` | 24147 | 24147 | 24379 | +232 |
+| `extract-functions-cosmos-factual` | 17239 | 17239 | 17410 | +171 |
+| `extract-functions-cosmos-debt` | 20394 | 20394 | 20587 | +193 |
+| `review-surface-architecture` | 13659 | 13659 | 13822 | +163 |
+| `extract-python-factual` | 15496 | 15496 | 15639 | +143 |
+| `extract-python-debt` | 16631 | 16631 | 16774 | +143 |
+| `lookup-python-lifecycle` | 5383 | 5383 | 5461 | +78 |
+| `build-python-asgi` | 17110 | 17110 | 17292 | +182 |
+| `review-python-wsgi-clean` | 16952 | 16952 | 17134 | +182 |
+| `review-python-serverless` | 16952 | 16952 | 17134 | +182 |
+
+Existing generic stack scenarios cover HTTP contract/header work reusing unchanged
+storage paths. They do not imply changed-query coverage. The following explicit
+data-path scenarios charge the full shared procedure; its independent cap is 1,400
+tokens (actual 576). Factual Extract and status Lookup exclude it.
+
+| New route | Full load |
+|---|---:|
+| `build-api-data-access` | 13431 |
+| `review-api-data-access` | 13791 |
+| `extract-api-data-access-debt` | 13791 |
+| `review-api-software-composed` | 19819 |
+| `lookup-api-data-access` | 2200 |
+| `lookup-api-status-no-data` | 12460 |
+
+The composed route counts the shared procedure once. The regression check also
+measures two entry routes to that file and verifies one charged row, two provenance
+records, and exactly one procedure token count. Existing fidelity codes, sections,
+and pointers remain protected; only the affected API baseline is refreshed.
