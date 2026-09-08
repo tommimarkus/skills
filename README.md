@@ -102,6 +102,8 @@ Architecture Review preserves original source and artifacts as review evidence. 
 
 Use the [contributor guide](docs/contributing.md) for a persistent task worktree, validation, and release boundaries. Its [maintenance procedures](docs/maintenance-procedures.md) cover rare runtime operations.
 
+Lean Audit reports explicit requested-scope coverage for normal Markdown scans and treats an empty eligible scope as an input error. Its workflow forecast reports `indeterminate` until its declared core budget evidence is complete, except when known expected usage already proves an overflow.
+
 ## Examples
 
 - “Review this API for inconsistent error responses” loads `api-design`.

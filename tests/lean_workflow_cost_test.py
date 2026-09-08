@@ -89,8 +89,7 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
                 path: (
                     "```markdown\n"
                     "<!-- lean-audit:workflow-intentional — example only -->\n"
-                    "```\n"
-                    + workflow
+                    "```\n" + workflow
                 )
             }
         )
@@ -307,6 +306,226 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
 
 
 class ForecastTest(unittest.TestCase):
+    def test_missing_core_evidence_is_indeterminate_with_sorted_completeness(self) -> None:
+        mod = load_workflow_cost()
+        scenario = mod.load_scenario_data(
+            {
+                "id": "missing-core-evidence",
+                "context_window": 1000,
+                "orchestrator": {},
+                "stages": [{"id": "build", "role": "build"}],
+            }
+        )
+
+        forecast = mod.forecast_scenario(scenario)
+
+        self.assertEqual(forecast["verdict"], "indeterminate")
+        self.assertEqual(
+            forecast["completeness"],
+            {
+                "complete": False,
+                "missing_fields": [
+                    "orchestrator.base_tokens",
+                    "stages.role=verify",
+                    "stages[0].output_tokens",
+                    "stages[0].prompt_tokens",
+                    "verification_reserve",
+                ],
+            },
+        )
+
+    def test_missing_evidence_does_not_hide_proved_expected_overflow(self) -> None:
+        mod = load_workflow_cost()
+        scenario = mod.load_scenario_data(
+            {
+                "id": "incomplete-proved-overflow",
+                "context_window": 100,
+                "orchestrator": {"base_tokens": 100},
+                "stages": [
+                    {"id": "verify", "role": "verify", "prompt_tokens": 1, "output_tokens": 1}
+                ],
+            }
+        )
+
+        forecast = mod.forecast_scenario(scenario)
+
+        self.assertEqual(forecast["verdict"], "infeasible")
+        self.assertFalse(forecast["completeness"]["complete"])
+        self.assertIn("LA-RUN-2", {finding["code"] for finding in forecast["findings"]})
+
+    def test_each_missing_stage_bound_and_verification_role_is_independent(self) -> None:
+        mod = load_workflow_cost()
+        base = {
+            "context_window": 100,
+            "verification_reserve": 0,
+            "orchestrator": {"base_tokens": 0},
+            "stages": [{"id": "verify", "role": "verify", "prompt_tokens": 0, "output_tokens": 0}],
+        }
+        missing_output = json.loads(json.dumps(base))
+        del missing_output["stages"][0]["output_tokens"]
+        no_verify = json.loads(json.dumps(base))
+        no_verify["stages"][0]["role"] = "build"
+
+        self.assertEqual(
+            mod.forecast_scenario(mod.load_scenario_data(missing_output))["completeness"]["missing_fields"],
+            ["stages[0].output_tokens"],
+        )
+        self.assertEqual(
+            mod.forecast_scenario(mod.load_scenario_data(no_verify))["completeness"]["missing_fields"],
+            ["stages.role=verify"],
+        )
+
+    def test_missing_item_count_differs_from_explicit_zero(self) -> None:
+        mod = load_workflow_cost()
+        base = {
+            "context_window": 100,
+            "verification_reserve": 0,
+            "orchestrator": {"base_tokens": 0},
+            "stages": [
+                {
+                    "id": "verify",
+                    "role": "verify",
+                    "prompt_tokens": 0,
+                    "output_tokens": 0,
+                    "fixed_output_tokens": 0,
+                    "per_item_output_tokens": 1,
+                }
+            ],
+        }
+        missing = mod.forecast_scenario(mod.load_scenario_data(base))
+        explicit_zero = json.loads(json.dumps(base))
+        explicit_zero["stages"][0]["item_count"] = 0
+        complete = mod.forecast_scenario(mod.load_scenario_data(explicit_zero))
+
+        self.assertIn("stages[0].item_count", missing["completeness"]["missing_fields"])
+        self.assertFalse(missing["completeness"]["complete"])
+        self.assertTrue(complete["completeness"]["complete"])
+
+    def test_incomplete_forecast_suppresses_trace_calibration_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scenario = root / "scenario.json"
+            trace = root / "trace.json"
+            scenario.write_text(
+                json.dumps(
+                    {
+                        "context_window": 100,
+                        "verification_reserve": 0,
+                        "calibration_tolerance": 0,
+                        "orchestrator": {"base_tokens": 0},
+                        "stages": [{"id": "verify", "role": "verify", "prompt_tokens": 1}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            trace.write_text(
+                json.dumps({"usage": {"input_tokens": 10_000, "output_tokens": 0}}),
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root), "--scenario", str(scenario),
+                 "--trace", str(trace), "--format", "json"],
+                capture_output=True, text=True, check=False,
+            )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("LA-RUN-5", {row["code"] for row in json.loads(proc.stdout)["findings"]})
+
+    def test_text_cli_labels_incomplete_known_totals_and_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scenario = root / "scenario.json"
+            scenario.write_text(
+                json.dumps(
+                    {
+                        "context_window": 100,
+                        "orchestrator": {"base_tokens": 0},
+                        "stages": [{"id": "verify", "role": "verify", "prompt_tokens": 1}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root), "--scenario", str(scenario)],
+                capture_output=True, text=True, check=False,
+            )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("run verdict: indeterminate", proc.stdout)
+        self.assertIn("known-component expected total tokens:", proc.stdout)
+        self.assertIn("forecast limits:", proc.stdout)
+
+    def test_cli_overrides_can_complete_absent_capacity_and_reserve(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scenario = root / "scenario.json"
+            scenario.write_text(
+                json.dumps(
+                    {
+                        "id": "override-completeness",
+                        "orchestrator": {"base_tokens": 10},
+                        "stages": [
+                            {
+                                "id": "verify",
+                                "role": "verify",
+                                "prompt_tokens": 10,
+                                "output_tokens": 10,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(root),
+                    "--scenario",
+                    str(scenario),
+                    "--context-window",
+                    "1000",
+                    "--verification-reserve",
+                    "0",
+                    "--format",
+                    "json",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(json.loads(proc.stdout)["forecast"]["completeness"]["complete"])
+
+    def test_explicit_null_core_values_are_input_errors_while_zero_is_complete(self) -> None:
+        mod = load_workflow_cost()
+        with self.assertRaisesRegex(ValueError, "verification_reserve"):
+            mod.load_scenario_data(
+                {
+                    "context_window": 100,
+                    "verification_reserve": None,
+                    "orchestrator": {"base_tokens": 0},
+                    "stages": [
+                        {"id": "verify", "role": "verify", "prompt_tokens": 0, "output_tokens": 0}
+                    ],
+                }
+            )
+        complete = mod.forecast_scenario(
+            mod.load_scenario_data(
+                {
+                    "context_window": 100,
+                    "verification_reserve": 0,
+                    "orchestrator": {"base_tokens": 0},
+                    "stages": [
+                        {"id": "verify", "role": "verify", "prompt_tokens": 0, "output_tokens": 0}
+                    ],
+                }
+            )
+        )
+        self.assertTrue(complete["completeness"]["complete"])
+        self.assertEqual(complete["verdict"], "feasible")
+
     def test_declared_output_cardinality_multiplies_lanes_iterations_and_waterfall(
         self,
     ) -> None:

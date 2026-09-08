@@ -27,7 +27,9 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
         skill = " ".join(SKILL.read_text(encoding="utf-8").split())
         self.assertIn("limited-scope gate: <status>", skill)
         self.assertIn("only for a file, named-file, or diff coverage", skill)
-        self.assertIn("filter findings to the requested paths and apply declared carve-outs before", skill)
+        self.assertIn(
+            "filter findings to the requested paths and apply declared carve-outs before", skill
+        )
         self.assertIn("never derive it from a directory-wide engine exit alone", skill)
         self.assertIn("`LA-DUP-1`, `LA-DUP-2`, `LA-CODE-DUP-1`, `LA-RUN-2`, or `LA-RUN-3`", skill)
         self.assertIn("expected lane exceeds declared capacity", skill)
@@ -41,6 +43,13 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
         self.assertIn("cannot rule out overflow", skill)
         self.assertIn("Otherwise emit `pass-limited`", skill)
         self.assertIn("judgment-only findings are warn/info and nonblocking", skill)
+
+    def test_scan_coverage_and_indeterminate_forecast_contracts_are_explicit(self) -> None:
+        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
+        self.assertIn("Normal scans report `coverage`", skill)
+        self.assertIn("empty in-scope Markdown set is an input/coverage error", skill)
+        self.assertIn("verification reserve, orchestrator base tokens", skill)
+        self.assertIn("Treat missing bounds as `indeterminate`", skill)
 
     def test_behavior_cases_cover_block_clean_and_not_evaluated_paths(self) -> None:
         cases = rows(BEHAVIOR_CASES)

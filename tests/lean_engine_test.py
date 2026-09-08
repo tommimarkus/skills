@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from tests.surface_test_lib import (
@@ -583,6 +584,190 @@ class MalformedCarveOut(unittest.TestCase):
 
 
 class GitAwareReadRepo(unittest.TestCase):
+    def test_standalone_directory_coverage_root_is_the_scope(self) -> None:
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "SKILL.md").write_text("# Standalone\nunique words\n", encoding="utf-8")
+            output = io.StringIO()
+            with mock.patch.object(eng, "git_worktree_root", return_value=None), \
+                    contextlib.redirect_stdout(output):
+                result = eng.main([str(root), "--format", "json"])
+
+        self.assertEqual(result, 0)
+        self.assertEqual(json.loads(output.getvalue())["coverage"]["root"], str(root))
+
+    def test_non_git_explicit_corpus_excludes_nested_worktree_scope(self) -> None:
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            corpus = Path(tmp)
+            scope = corpus / ".worktrees" / "nested"
+            scope.mkdir(parents=True)
+            (scope / "SKILL.md").write_text("# Hidden\ncontent\n", encoding="utf-8")
+            output = io.StringIO()
+            with mock.patch.object(eng, "git_worktree_root", return_value=None), \
+                    mock.patch.dict(eng.read_repo.__globals__, {"git_worktree_root": lambda _: None}), \
+                    contextlib.redirect_stdout(output):
+                result = eng.main([str(scope), "--corpus-root", str(corpus), "--format", "json"])
+
+        self.assertEqual(result, 2)
+        self.assertEqual(json.loads(output.getvalue())["coverage"]["in_scope_files"], 0)
+
+    def test_root_skill_families_are_guarded(self) -> None:
+        eng = load_engine()
+        for path in (
+            "SKILL.md",
+            "agents/review.md",
+            "commands/audit.md",
+            "references/procedure.md",
+            "extensions/python.md",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(eng.is_guarded(path))
+
+    def test_empty_and_non_markdown_scopes_are_coverage_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            empty = root / "empty"
+            empty.mkdir()
+            text = root / "notes.txt"
+            text.write_text("plain text", encoding="utf-8")
+
+            empty_result = run_engine(str(empty), "--format", "json")
+            text_result = run_engine(str(text), "--format", "json")
+
+        self.assertEqual(empty_result.returncode, 2)
+        self.assertIn("no eligible in-scope Markdown", empty_result.stderr)
+        self.assertEqual(json.loads(empty_result.stdout)["coverage"]["in_scope_files"], 0)
+        self.assertEqual(text_result.returncode, 2)
+        self.assertIn("Markdown", text_result.stderr)
+
+    def test_file_scope_uses_real_git_root_registry_and_filters_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            first = root / "docs" / "first.md"
+            second = root / "docs" / "skill-architecture.md"
+            first.parent.mkdir(parents=True)
+            body = "# Shared\n" + " ".join(f"word{i}" for i in range(40)) + "\n"
+            first.write_text(body, encoding="utf-8")
+            second.write_text(body, encoding="utf-8")
+            (root / ".lean-audit.toml").write_text(
+                '[[canonical_home]]\npath = "docs/skill-architecture.md"\nheading = "Shared"\n', encoding="utf-8"
+            )
+            run_git(root, "init", "-q")
+            run_git(root, "add", "-A")
+            run_git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "init")
+
+            result = run_engine(str(first), "--format", "json")
+
+        self.assertEqual(result.returncode, 1)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["coverage"]["root"], str(root))
+        self.assertEqual(payload["coverage"]["in_scope_files"], 1)
+        self.assertIn("LA-DUP-2", {row["code"] for row in payload["findings"]})
+        self.assertTrue(all("docs/first.md" in {row["path"], row["matched_path"]}
+                            for row in payload["findings"]))
+
+    def test_bounded_directory_scan_ignores_out_of_scope_blocking_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs"
+            docs.mkdir()
+            (docs / "skill-architecture.md").write_text("# Clean\nunique wording\n", encoding="utf-8")
+            body = "# Shared\n" + " ".join(f"word{i}" for i in range(40)) + "\n"
+            (root / "README.md").write_text(body, encoding="utf-8")
+            (root / "CLAUDE.md").write_text(body, encoding="utf-8")
+            run_git(root, "init", "-q")
+            run_git(root, "add", "-A")
+            run_git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "init")
+
+            result = run_engine(str(docs), "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["findings"], [])
+
+    def test_named_file_filters_out_of_scope_blockers_before_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "target.MD"
+            target.write_text("# Unique\nonly target words\n", encoding="utf-8")
+            body = "# Shared\n" + " ".join(f"word{i}" for i in range(40)) + "\n"
+            (root / "README.md").write_text(body, encoding="utf-8")
+            (root / "CLAUDE.md").write_text(body, encoding="utf-8")
+
+            result = run_engine(str(target), "--corpus-root", str(root), "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["coverage"]["scanned_files"], 3)
+        self.assertEqual(payload["coverage"]["in_scope_files"], 1)
+        self.assertEqual(payload["findings"], [])
+
+    def test_explicit_subdir_corpus_root_owns_registry_and_coverage_base(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            corpus = root / "docs"
+            first = corpus / "first.md"
+            home = corpus / "SKILL.md"
+            corpus.mkdir(parents=True)
+            body = "# Shared\n" + " ".join(f"word{i}" for i in range(40)) + "\n"
+            first.write_text(body, encoding="utf-8")
+            home.write_text(body, encoding="utf-8")
+            (root / ".lean-audit.toml").write_text("exempt_paths = [\"docs/**\"]\n", encoding="utf-8")
+            (corpus / ".lean-audit.toml").write_text(
+                '[[canonical_home]]\npath = "SKILL.md"\nheading = "Shared"\n', encoding="utf-8"
+            )
+            run_git(root, "init", "-q")
+            run_git(root, "add", "-A")
+            run_git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "init")
+
+            result = run_engine(str(first), "--corpus-root", str(corpus), "--format", "json")
+
+        self.assertEqual(result.returncode, 1)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["coverage"]["root"], str(corpus))
+        self.assertIn("LA-DUP-2", {row["code"] for row in payload["findings"]})
+
+    def test_corpus_parent_keeps_owning_git_ignored_paths_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            corpus = Path(tmp)
+            repo = corpus / "repo"
+            scope = repo / "docs"
+            real = scope / "SKILL.md"
+            ignored = scope / ".ignored" / "SKILL.md"
+            real.parent.mkdir(parents=True)
+            real.write_text("# Real\nunique wording\n", encoding="utf-8")
+            (repo / ".gitignore").write_text("docs/.ignored/\n", encoding="utf-8")
+            run_git(repo, "init", "-q")
+            run_git(repo, "add", "-A")
+            run_git(repo, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", "init")
+            ignored.parent.mkdir()
+            ignored.write_text("# Ghost\nignored content\n", encoding="utf-8")
+
+            result = run_engine(str(scope), "--corpus-root", str(corpus), "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["coverage"]["root"], str(corpus))
+        self.assertEqual(payload["coverage"]["scanned_files"], 1)
+
+    def test_explicit_corpus_root_must_contain_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            corpus = root / "corpus"
+            corpus.mkdir()
+            outside = root / "outside.md"
+            outside.write_text("# Outside\n", encoding="utf-8")
+
+            result = run_engine(str(outside), "--corpus-root", str(corpus), "--format", "json")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("outside corpus root", result.stderr)
+
     def test_read_repo_excludes_ignored_nested_worktree(self):
         # Use .claude/worktrees/ as the ghost location: it is in .gitignore in
         # the real repo but NOT in _EXCLUDE, so only the git-membership gate

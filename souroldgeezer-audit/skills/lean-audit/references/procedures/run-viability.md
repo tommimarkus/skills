@@ -254,6 +254,16 @@ Field semantics:
   the stage field.
 - `workers.handoff_tokens`: result returned to and retained by the orchestrator.
 
+For a complete feasibility verdict, declare a positive `context_window`, a
+`verification_reserve` (zero is valid), `orchestrator.base_tokens`, and
+`prompt_tokens` plus `output_tokens` on every stage (zeros are valid), with at
+least one `role: "verify"` stage. If fixed or per-item output is declared,
+also declare `item_count` (zero is valid). Absent values are listed in the
+forecast's sorted `completeness.missing_fields`; an absent
+`verification_reserve` is represented as `null`, and explicit malformed values
+are input errors. CLI capacity/reserve overrides apply before completeness is
+evaluated.
+
 Run it with:
 
 ```text
@@ -283,7 +293,10 @@ Classify:
 - `feasible`: the high lane completes verification within capacity;
 - `at-risk`: expected fits but high overflows;
 - `infeasible`: expected overflows before or during verification;
-- `indeterminate`: capacity or required stage bounds are absent.
+- `indeterminate`: required forecast evidence is absent, unless the known
+  expected lane already proves an overflow. Known subtotal rows remain useful
+  but exclude unknown terms; an absent reserve can prove overflow only when the
+  full known context window is crossed.
 
 Always report the earliest expected and upper overflow, even when a later stage
 has a larger peak. Report total-use and peak-context ranges separately. Cached
@@ -325,9 +338,10 @@ events, unsupported usage records, `calibration_eligible`, and stable
 observed zero. A trace is calibration-eligible only when at least one complete
 usage event was recognized and no usage-shaped record was unsupported.
 
-If a scenario declares `calibration_tolerance`, emit `LA-RUN-5` when observed
-total tokens exceed the expected forecast by more than that fraction. Do not
-emit calibration drift without a declared tolerance.
+If a complete scenario declares `calibration_tolerance`, emit `LA-RUN-5` when
+observed total tokens exceed the expected forecast by more than that fraction.
+Do not emit calibration drift without a declared tolerance or complete forecast
+evidence.
 
 When hidden schema/hook overhead cannot be attributed, propose an isolated A/B
 capture: same synthetic workload, one exposure changed, repeated enough to show

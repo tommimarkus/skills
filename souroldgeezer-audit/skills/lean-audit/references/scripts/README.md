@@ -115,12 +115,16 @@ exist).
 
 ## The three analysis engines (CLIs)
 
-All three are pure, deterministic, and scan a **directory** (never a single file — the
-skill filters findings to its in-scope path set after the run). Output is text or
+All three are pure and deterministic. `lean_engine.py` accepts a Markdown
+**file or directory**: a file uses its containing directory as the bounded
+comparison corpus and filters findings to that named file. Output is text or
 `--format json`. Cite the codes from [`../smell-catalog.md`](../smell-catalog.md);
 this guide does not redefine them.
 
-- **`lean_engine.py <dir>`** — markdown duplication/waste. Emits `LA-DUP-1/2`,
+- **`lean_engine.py <file-or-dir>`** — markdown duplication/waste. Resolves the owning
+  Git worktree (or an explicit containing `--corpus-root`), preserves the requested
+  file/directory scope, and emits JSON/text coverage. An empty in-scope Markdown
+  set, a missing scope, or a non-Markdown file is exit 2, never a clean scan. Emits `LA-DUP-1/2`,
   `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, `LA-VERBOSE-1`. Flags: `--added-text -` (score one
   block from stdin, needs `--source`), `--corpus-root`, `--registry`,
   `--format {text,json}`. **Exit 0** = clean, **1** = a block-severity finding
@@ -132,7 +136,9 @@ this guide does not redefine them.
   nominations plus optional scenario-forecast `LA-RUN-*` / `LA-ORCH-*` findings.
   Flags: `--scenario`, repeatable `--trace` and `--hook-fixture`, `--context-window`,
   `--verification-reserve`, `--format {text,json}`. Exit 1 only when a block
-  forecast exists; exit 2 on invalid input. `.jsonl` traces stream record by
+  forecast exists; exit 2 on invalid input. Forecast JSON carries sorted
+  `completeness` evidence; only a complete forecast can be feasible/at-risk or
+  calibrate drift, while a proved expected overflow remains infeasible. `.jsonl` traces stream record by
   record. Native Codex usage sums complete `last_token_usage`, never cumulative
   `total_token_usage`; coverage limits suppress calibration drift for missing or
   partial usage. Optional native rollout counters remain fixed, bounded, and

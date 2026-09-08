@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from leanaudit.cli import add_shared_flags
-from leanaudit.discovery import read_repo
+from leanaudit.discovery import git_worktree_root, read_repo
 from leanaudit.registry import (
     Registry,
     carved_out,
@@ -275,7 +275,12 @@ def find_dead_refs(files: dict[str, str], reg: Registry | None = None) -> list[F
     than by markdown link (eval fixtures) are live inputs, not dead weight."""
     findings: list[Finding] = []
     for path in files:
-        if "/references/" not in path and "/extensions/" not in path:
+        if not (
+            path.startswith("references/")
+            or path.startswith("extensions/")
+            or "/references/" in path
+            or "/extensions/" in path
+        ):
             continue
         if reg is not None and path_exempt(reg, path):
             continue
@@ -474,10 +479,20 @@ def scan_verbosity(files: dict[str, str], reg: Registry) -> list[Finding]:
     return findings
 
 
-def _emit(findings: list[Finding], fmt: str) -> None:
+def _emit(findings: list[Finding], fmt: str, coverage: dict[str, object] | None = None) -> None:
     if fmt == "json":
-        print(json.dumps({"findings": [dataclasses.asdict(f) for f in findings]}, indent=2))
+        payload: dict[str, object] = {"findings": [dataclasses.asdict(f) for f in findings]}
+        if coverage is not None:
+            payload["coverage"] = coverage
+        print(json.dumps(payload, indent=2))
     else:
+        if coverage is not None:
+            print(
+                "coverage: "
+                f"root={coverage['root']} scope={coverage['scope']} "
+                f"scanned_files={coverage['scanned_files']} "
+                f"in_scope_files={coverage['in_scope_files']}"
+            )
         for f in findings:
             print(
                 f'{f.code} [{f.severity}] {f.path} §"{f.heading}" '
@@ -490,9 +505,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("scope", nargs="?", help="file or directory to scan")
     ap.add_argument("--added-text", metavar="-", help="read one block from stdin ('-')")
     ap.add_argument("--source", help="repo-relative path the stdin block belongs to")
-    ap.add_argument("--corpus-root", default=".", help="repo root for the corpus")
+    ap.add_argument("--corpus-root", help="repo root for the comparison corpus")
     add_shared_flags(ap)
     args = ap.parse_args(argv)
+    coverage: dict[str, object] | None = None
 
     if args.added_text is not None and args.added_text != "-":
         ap.error("--added-text only accepts '-' (read the block from stdin)")
@@ -506,7 +522,7 @@ def main(argv: list[str]) -> int:
         if args.added_text == "-":
             if not args.source:
                 ap.error("--added-text requires --source")
-            root = Path(args.corpus_root).resolve()
+            root = Path(args.corpus_root or ".").resolve()
             registry = Path(args.registry) if args.registry else None
             block = sys.stdin.read()
             findings = evaluate_added_block(root, args.source, block, registry)
@@ -514,9 +530,35 @@ def main(argv: list[str]) -> int:
             if not args.scope:
                 ap.error("scope is required")
             scope = Path(args.scope).resolve()
-            root = scope if scope.is_dir() else scope.parent
+            if not scope.exists():
+                raise ValueError(f"{scope}: scope does not exist")
+            if scope.is_file() and scope.suffix.lower() != ".md":
+                raise ValueError(f"{scope}: scope must be a Markdown file or directory")
+            if args.corpus_root:
+                root = Path(args.corpus_root).resolve()
+                if not root.is_dir():
+                    raise ValueError(f"{root}: corpus root must be a directory")
+                if not scope.is_relative_to(root):
+                    raise ValueError(f"{scope}: scope is outside corpus root {root}")
+            else:
+                root = git_worktree_root(scope) or (scope if scope.is_dir() else scope.parent)
             reg = load_registry(Path(args.registry) if args.registry else root / ".lean-audit.toml")
-            files = read_repo(root, scope)
+            files = read_repo(root, scope, include=scope if scope.is_file() else None)
+            scope_rel = scope.relative_to(root).as_posix()
+            in_scope = [
+                path
+                for path in files
+                if path == scope_rel
+                or (scope.is_dir() and (scope_rel == "." or path.startswith(scope_rel + "/")))
+            ]
+            coverage = {
+                "root": str(root),
+                "scope": str(scope),
+                "scanned_files": len(files),
+                "in_scope_files": len(in_scope),
+            }
+            if not in_scope:
+                raise ValueError("no eligible in-scope Markdown files were found")
             findings = (
                 scan(files, reg)
                 + scan_stale_refs(files, root)
@@ -524,12 +566,19 @@ def main(argv: list[str]) -> int:
                 + scan_bloat(files)
                 + scan_verbosity(files, reg)
             )
+            findings = [
+                finding
+                for finding in findings
+                if finding.path in in_scope or finding.matched_path in in_scope
+            ]
     # Each stable CLI keeps its own named error prefix and exit contract.
     # lean-audit:dup-intentional:begin
-    except (OSError, tomllib.TOMLDecodeError, re.error) as exc:
+    except (OSError, ValueError, tomllib.TOMLDecodeError, re.error) as exc:
+        if coverage is not None:
+            _emit([], args.format, coverage)
         print(f"lean-audit: {exc}", file=sys.stderr)
         return 2
     # lean-audit:dup-intentional:end
 
-    _emit(findings, args.format)
+    _emit(findings, args.format, coverage if args.added_text != "-" else None)
     return 1 if any(f.severity == "block" for f in findings) else 0

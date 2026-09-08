@@ -66,10 +66,11 @@ class Scenario:
 
     scenario_id: str
     context_window: int | None
-    verification_reserve: int
+    verification_reserve: int | None
     base_tokens: TokenRange
     stages: tuple[dict[str, Any], ...]
     calibration_tolerance: float | None
+    missing_fields: tuple[str, ...]
 
 
 # Detector regex catalogs intentionally repeat declarative name/pattern records.
@@ -692,22 +693,33 @@ def _optional_range(mapping: dict[str, Any], field: str, default: int = 0) -> To
 def load_scenario_data(data: dict[str, Any]) -> Scenario:
     """Validate and normalize a JSON scenario. Never invent a context capacity."""
     scenario_id = str(data.get("id", "scenario"))
+    missing_fields: list[str] = []
     context_value = data.get("context_window")
     context_window: int | None
-    if context_value is None:
+    if "context_window" not in data:
         context_window = None
+        missing_fields.append("context_window")
     elif (
         isinstance(context_value, int) and not isinstance(context_value, bool) and context_value > 0
     ):
         context_window = context_value
     else:
         raise ValueError("context_window: expected a positive integer")
-    reserve = data.get("verification_reserve", 0)
-    if not isinstance(reserve, int) or isinstance(reserve, bool) or reserve < 0:
+    reserve_missing = "verification_reserve" not in data
+    if reserve_missing:
+        reserve = None
+        missing_fields.append("verification_reserve")
+    else:
+        reserve = data["verification_reserve"]
+    if not reserve_missing and (
+        not isinstance(reserve, int) or isinstance(reserve, bool) or reserve < 0
+    ):
         raise ValueError("verification_reserve: expected a non-negative integer")
     orchestrator = data.get("orchestrator", {})
     if not isinstance(orchestrator, dict):
         raise ValueError("orchestrator: expected an object")
+    if "base_tokens" not in orchestrator:
+        missing_fields.append("orchestrator.base_tokens")
     stages = data.get("stages")
     if (
         not isinstance(stages, list)
@@ -720,6 +732,9 @@ def load_scenario_data(data: dict[str, Any]) -> Scenario:
         raise ValueError("stages: every stage needs a unique non-empty id")
     for index, stage in enumerate(stages):
         prefix = f"stages[{index}]"
+        for field in ("prompt_tokens", "output_tokens"):
+            if field not in stage:
+                missing_fields.append(f"{prefix}.{field}")
         _range(stage.get("iterations", 1), f"{prefix}.iterations", minimum=1)
         for field in (
             "prompt_tokens",
@@ -736,6 +751,11 @@ def load_scenario_data(data: dict[str, Any]) -> Scenario:
         ):
             if field in stage:
                 _range(stage[field], f"{prefix}.{field}")
+        if (
+            any(field in stage for field in ("fixed_output_tokens", "per_item_output_tokens"))
+            and "item_count" not in stage
+        ):
+            missing_fields.append(f"{prefix}.item_count")
         workers = stage.get("workers")
         if workers is not None:
             if not isinstance(workers, dict):
@@ -764,9 +784,25 @@ def load_scenario_data(data: dict[str, Any]) -> Scenario:
         scenario_id=scenario_id,
         context_window=context_window,
         verification_reserve=reserve,
-        base_tokens=_range(orchestrator.get("base_tokens", 0), "orchestrator.base_tokens"),
+        base_tokens=(
+            _range(orchestrator["base_tokens"], "orchestrator.base_tokens")
+            if "base_tokens" in orchestrator
+            else TokenRange(0, 0, 0)
+        ),
         stages=tuple(stages),
         calibration_tolerance=tolerance,
+        missing_fields=tuple(
+            sorted(
+                [
+                    *missing_fields,
+                    *(
+                        []
+                        if any(str(stage.get("role", "other")) == "verify" for stage in stages)
+                        else ["stages.role=verify"]
+                    ),
+                ]
+            )
+        ),
     )
 
 
@@ -870,7 +906,9 @@ def _simulate_lane(scenario: Scenario, lane: str) -> dict[str, Any]:
         allowed = None
         if capacity is not None:
             allowed = (
-                capacity if role == "verify" else max(0, capacity - scenario.verification_reserve)
+                capacity
+                if role == "verify"
+                else max(0, capacity - (scenario.verification_reserve or 0))
             )
             if peak > allowed and earliest_overflow is None:
                 earliest_overflow = str(stage["id"])
@@ -924,11 +962,18 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
     """Forecast peak coordinator context and total run usage for three lanes."""
     lanes = {lane: _simulate_lane(scenario, lane) for lane in _LANES}
     limits: list[str] = []
+    completeness = {
+        "complete": not scenario.missing_fields,
+        "missing_fields": list(scenario.missing_fields),
+    }
+    if not completeness["complete"]:
+        limits.append("forecast is incomplete; numeric totals include known components only")
     if scenario.context_window is None:
-        verdict = "indeterminate"
         limits.append("context_window is unknown; no capacity or verification-reserve verdict")
-    elif lanes["expected"]["earliest_overflow"] is not None:
+    if lanes["expected"]["earliest_overflow"] is not None:
         verdict = "infeasible"
+    elif not completeness["complete"]:
+        verdict = "indeterminate"
     elif lanes["high"]["earliest_overflow"] is not None:
         verdict = "at-risk"
     else:
@@ -1032,6 +1077,7 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
     return {
         "scenario": scenario.scenario_id,
         "verdict": verdict,
+        "completeness": completeness,
         "context_window": scenario.context_window,
         "verification_reserve": scenario.verification_reserve,
         "peak_context": _range_from_lanes(lanes, "peak_context"),
@@ -1051,7 +1097,7 @@ def forecast_scenario(scenario: Scenario) -> dict[str, Any]:
 def _calibration_finding(
     scenario: Scenario, forecast: dict[str, Any], trace: dict[str, Any]
 ) -> dict[str, Any] | None:
-    if scenario.calibration_tolerance is None:
+    if scenario.calibration_tolerance is None or forecast["completeness"]["complete"] is not True:
         return None
     coverage = trace.get("coverage")
     if not isinstance(coverage, dict) or coverage.get("calibration_eligible") is not True:
@@ -1082,6 +1128,20 @@ def _text_report(report: dict[str, Any]) -> str:
     forecast = report.get("forecast")
     if isinstance(forecast, dict):
         lines.append(f"run verdict: {forecast['verdict']}")
+        completeness = forecast["completeness"]
+        lines.append(
+            "forecast completeness: "
+            + (
+                "complete"
+                if completeness["complete"]
+                else "incomplete: " + ", ".join(completeness["missing_fields"])
+            )
+        )
+        if not completeness["complete"]:
+            lines.append(
+                f"known-component expected total tokens: {forecast['total_run_tokens']['expected']}"
+            )
+            lines.append("forecast limits: " + "; ".join(forecast["limits"]))
         lines.append(f"earliest expected overflow: {forecast['earliest_expected_overflow']}")
     trace = report.get("trace")
     if isinstance(trace, dict):
@@ -1142,11 +1202,25 @@ def main(argv: list[str] | None = None) -> int:
             if args.context_window is not None:
                 if args.context_window <= 0:
                     raise ValueError("--context-window must be positive")
-                scenario = replace(scenario, context_window=args.context_window)
+                scenario = replace(
+                    scenario,
+                    context_window=args.context_window,
+                    missing_fields=tuple(
+                        field for field in scenario.missing_fields if field != "context_window"
+                    ),
+                )
             if args.verification_reserve is not None:
                 if args.verification_reserve < 0:
                     raise ValueError("--verification-reserve must be non-negative")
-                scenario = replace(scenario, verification_reserve=args.verification_reserve)
+                scenario = replace(
+                    scenario,
+                    verification_reserve=args.verification_reserve,
+                    missing_fields=tuple(
+                        field
+                        for field in scenario.missing_fields
+                        if field != "verification_reserve"
+                    ),
+                )
             forecast = forecast_scenario(scenario)
         trace = (
             summarize_trace_records(

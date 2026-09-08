@@ -102,9 +102,10 @@ second mode; coverage still derives assurance.
 
 ## Workflow
 
-1. Establish the whole-repo, directory, named-file, or diff scope. Engines scan a
-   directory, so use the repo root or nearest common directory; filter findings
-   to the requested paths and apply declared carve-outs before deriving any
+1. Establish the whole-repo, directory, named-file, or diff scope. For a named
+   Markdown file, scan its containing directory as the bounded comparison corpus
+   and filter findings to that file; a directory scan stays inside that directory.
+   For all scopes, filter findings to the requested paths and apply declared carve-outs before deriving any
    limited-scope gate. Disclose `.lean-audit.toml` or `heuristic-only`.
 2. Run the markdown engine as JSON (use `uv`; `python3` is fallback only at
    ≥3.11):
@@ -114,7 +115,9 @@ second mode; coverage still derives assurance.
    uv run "<skill-dir>/references/scripts/lean_engine.py" <dir> --format json
    ```
 
-   Exit 1 means block findings, 2 input/tool error (disclose and continue
+   Normal scans report `coverage` (resolved root and scope, scanned comparison
+   files, and in-scope files). An empty in-scope Markdown set is an input/coverage
+   error, never a clean audit. Exit 1 means block findings, 2 input/tool error (disclose and continue
    judgment checks), and 3 an unmet interpreter floor (stop). Keep only
    in-scope paths; never invent or silently suppress engine findings.
 2b. If source files are in scope, run the same host-specific forms with
@@ -199,7 +202,8 @@ and source clones become `LA-MIN-3` referrals.
   reduced coverage and continue with the judgment-only checks; do not fabricate the
   deterministic findings.
 - Run viability: never name a run `feasible` without a declared context window,
-  stage ranges, and verification reserve. Treat missing bounds as `indeterminate`;
+  verification reserve, orchestrator base tokens, prompt/output ranges for every
+  stage, and a verification stage. Treat missing bounds as `indeterminate`;
   do not substitute a model-name guess. Keep out-of-band telemetry out of model-
   visible cost, never coerce unknown, partial, or unsupported usage to observed
   zero, and never echo raw trace content. Calibration findings require the

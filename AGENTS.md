@@ -167,6 +167,9 @@ authorization responsibilities.
   cumulative totals, and reports explicit coverage plus bounded content-free
   lifecycle counters. Missing or partial usage is calibration-ineligible; the
   counters are evidence, not automatic causal findings or proof of livelock.
+- Lean Audit normal Markdown scans report requested-scope coverage and reject an
+  empty eligible scope; workflow forecasts require declared core evidence before
+  reporting feasible or at-risk, while a proved expected overflow remains a block.
 - Do not force-add ignored files. Before a commit, run
   `git ls-files -ci --exclude-standard`; the result must be empty unless the
   user explicitly approved an exact tracked exception.

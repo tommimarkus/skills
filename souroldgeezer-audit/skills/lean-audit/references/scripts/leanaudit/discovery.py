@@ -8,7 +8,7 @@ import fnmatch
 import subprocess
 from pathlib import Path
 
-__all__ = ["is_guarded", "read_repo", "repo_paths"]
+__all__ = ["git_worktree_root", "is_guarded", "read_repo", "repo_paths"]
 
 _GUARD_GLOBS = (
     "CLAUDE.md",
@@ -21,6 +21,14 @@ _GUARD_GLOBS = (
     "docs/skill-architecture.md",
     "docs/skill-evaluation.md",
     "docs/release-checklist.md",
+    "SKILL.md",
+    "agents/*.md",
+    "commands/**/*.md",
+    "commands/*.md",
+    "references/**/*.md",
+    "references/*.md",
+    "extensions/**/*.md",
+    "extensions/*.md",
     "**/SKILL.md",
     "**/agents/*.md",
     "**/docs/*-reference/**/*.md",
@@ -39,6 +47,10 @@ def is_guarded(rel: str) -> bool:
     if any(seg in rel for seg in _EXCLUDE):
         return False
     return any(fnmatch.fnmatch(rel, g) for g in _GUARD_GLOBS)
+
+
+def _is_excluded(rel: str) -> bool:
+    return any(seg in rel for seg in _EXCLUDE)
 
 
 def repo_paths(root: Path) -> frozenset[str] | None:
@@ -76,17 +88,42 @@ def repo_paths(root: Path) -> frozenset[str] | None:
     # lean-audit:dup-intentional:end
 
 
-def read_repo(root: Path, scope: Path) -> dict[str, str]:
+def git_worktree_root(path: Path) -> Path | None:
+    """Return the owning worktree root for a path, if Git can identify one."""
+    try:
+        toplevel = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(path if path.is_dir() else path.parent),
+                "rev-parse",
+                "--show-toplevel",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return Path(toplevel).resolve()
+
+
+def read_repo(root: Path, scope: Path, *, include: Path | None = None) -> dict[str, str]:
     # Source readers deliberately share the git-membership/read loop shape.
     # lean-audit:dup-intentional:begin
     files: dict[str, str] = {}
     base = scope if scope.is_dir() else scope.parent
-    in_repo = repo_paths(root)
-    for path in sorted(base.rglob("*.md")):
+    repo_root = git_worktree_root(base) or root
+    in_repo = repo_paths(repo_root)
+    for path in sorted(path for path in base.rglob("*") if path.suffix.lower() == ".md"):
         rel = path.relative_to(root).as_posix()
-        if in_repo is not None and rel not in in_repo:
+        git_rel = path.relative_to(repo_root).as_posix()
+        scope_rel = path.relative_to(base).as_posix()
+        if _is_excluded(rel):
             continue
-        if is_guarded(rel):
+        if in_repo is not None and git_rel not in in_repo:
+            continue
+        if is_guarded(rel) or is_guarded(scope_rel) or path == include:
             files[rel] = path.read_text(encoding="utf-8", errors="replace")
     return files
     # lean-audit:dup-intentional:end
