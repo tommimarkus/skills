@@ -58,7 +58,7 @@ Detailed signatures and implementation guidance live in [`azure-functions-dotnet
 
 - Author only the isolated-worker model; treat legacy in-process projects as migration debt.
 - Use managed identity or workload identity for platform services and keep secrets out of source and committed settings.
-- Reuse singleton SDK clients and bound every public HTTP body, timeout, retry, and long-running operation.
+- Reuse thread-safe SDK clients, pools, and handlers; bound every public HTTP body, timeout, retry, and long-running operation.
 - Emit RFC 9457 problem details on error paths and keep required work durable before returning a response.
 
 ## Project assimilation (Azure Functions .NET-specific)

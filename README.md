@@ -13,7 +13,7 @@ data changes that need no code/module, API/schema, IaC, security, test, or
 other sibling-owned decision. It validates the named content operation directly
 and returns before loading normal design guidance.
 
-`software-design` owns general data-efficiency mechanics; `api-design` applies
+`software-design` owns general [data-efficiency](souroldgeezer-design/docs/design-reference/data-efficiency.md) mechanics; `api-design` applies
 the shared procedure to HTTP-to-storage access paths, including query shaping,
 resource lifetime, and API-owned amplification findings.
 

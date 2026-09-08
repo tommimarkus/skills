@@ -34,7 +34,6 @@ Extract stays core-only, explicit debt/compliance Extract adds only Review,
 Build excludes Review, Review excludes Build, and Lookup remains bounded to an
 anchored core rule plus at most one relevant stack lane.
 
-- Sources: Microsoft Learn EF Core efficient querying, ADO.NET SQL connection
-  pooling, HttpClient guidelines, and DbContext configuration.
+- Sources: [EF Core efficient querying](https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying), [ADO.NET SQL connection pooling](https://learn.microsoft.com/en-us/sql/connect/ado-net/sql-server-connection-pooling?view=sql-server-ver17), [HttpClient guidelines](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines), and [DbContext configuration](https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/).
   Handling: URL-only evidence for the lifetime and query-shaping rules; bundled
   cases are original synthetic prompts and do not reproduce source text.

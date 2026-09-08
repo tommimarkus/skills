@@ -142,11 +142,11 @@ Hosting is a contract parameter: it fixes startup tolerance, scale-out character
 *When to deviate:* clear cost, topology, compliance, or platform-standard reasons. Document the reason; the hosting choice is visible in IaC or deployment manifests and reviewable.
 
 ### 3.16 Data-access contract
-Reuse thread-safe HTTP clients, dispatchers, pools, `CosmosClient`, `BlobServiceClient`, and queue clients through DI or module scope. `IHttpClientFactory` may create a short-lived client backed by configured handlers. Scope and dispose SQL connections, sessions, transactions, readers, and `DbContext` to one operation; never share `DbContext` concurrently.
+Reuse thread-safe HTTP clients, dispatchers, pools, `CosmosClient`, `BlobServiceClient`, and queue clients through DI or module scope. `IHttpClientFactory` may create a short-lived client backed by configured handlers; configured long-lived `HttpClient` is also valid. Scope and dispose SQL connections, sessions, transactions, readers, and `DbContext` to one operation; never share `DbContext` concurrently.
 
-**Default:** reusable client/pool/handler; operation-scoped handles; managed/workload identity and per-request cost signals where available.
+**Default:** reusable client/pool/handler; operation-scoped handles; managed/workload identity, preferred regions for multi-region clients, and per-request cost signals where available.
 
-For HTTP-to-storage work, load the shared data-efficiency procedure. Preserve authorization and semantics; a capped response does not cap earlier retrieval.
+For Build/Review HTTP-to-storage work, or explicit Extract debt, load the shared data-efficiency procedure. Preserve authorization and semantics; a capped response does not cap earlier retrieval.
 
 *When to deviate:* local emulators may differ. Production code does not construct expensive pools or handlers per request.
 

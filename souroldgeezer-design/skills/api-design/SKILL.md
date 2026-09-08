@@ -55,8 +55,9 @@ Load what applies:
 - [references/procedures/red-flags.md](references/procedures/red-flags.md)
   before final output in Build and Review.
 - [../../docs/design-reference/data-efficiency.md](../../docs/design-reference/data-efficiency.md)
-  when Build or Review touches an HTTP-to-storage path or explicit data-access
-  debt; factual Extract records facts only and Lookup reads its matched section.
+  when Build or Review touches an HTTP-to-storage path, or Extract explicitly
+  requests data-access debt; factual Extract records facts only and Lookup reads
+  its matched section.
 - [extensions/azure-functions-dotnet.md](extensions/azure-functions-dotnet.md)
   for Azure Functions .NET isolated-worker or ASP.NET Core integration signals.
 - [extensions/nodejs.md](extensions/nodejs.md) for Node.js / TypeScript hosted
