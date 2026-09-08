@@ -6,7 +6,8 @@ report it as a finding.
 
 - Secret in app-settings literals, committed `local.settings.json`, committed
   `.env*`, connection string literal, access key literal, or token in a URL.
-- Per-invocation HTTP/data client construction inside a handler body.
+- Per-invocation construction of an HTTP handler, dispatcher, or expensive data pool; or a singleton/concurrently shared `DbContext`.
+- HTTP-to-storage N+1 round trips, unnecessary transfer, or unbounded intermediate materialization on a concrete access path.
 - Anonymous or key-only authorization on an endpoint that handles non-public
   data.
 - Error path returns string, HTML, or plain JSON instead of

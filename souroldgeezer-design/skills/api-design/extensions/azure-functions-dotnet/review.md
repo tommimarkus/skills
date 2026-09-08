@@ -13,13 +13,13 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 ### High-confidence
 
 - **`afdotnet.HC-1`** — In-process .NET Functions model in added or modified code (MSFT Learn: `migrate-dotnet-to-isolated-model`; retired 2026-11-10). *Layer:* static.
-- **`afdotnet.HC-2`** — Per-invocation `HttpClient` construction inside a function body (not via `IHttpClientFactory`). Connection-exhaustion under load. *Layer:* static.
+- **`afdotnet.HC-2`** — Per-invocation unpooled `HttpClient` handler construction inside a function body. Factory-created clients backed by configured handlers are valid. *Layer:* static.
 - **`afdotnet.HC-3`** — Hardcoded connection string or access key in `local.settings.json` being committed, or in a `.cs` literal. *Layer:* static.
 - **`afdotnet.HC-4`** — `AuthorizationLevel.Anonymous` on a trigger that handles non-public data (no Entra ID validator, no managed-identity-authenticated caller). *Layer:* static.
 - **`afdotnet.HC-5`** — Error path returns bare JSON / plain string rather than `application/problem+json`. *Layer:* static.
 - **`afdotnet.HC-6`** — POST mutation without `Idempotency-Key` support when retries are expected; or retries without dedup. *Layer:* static + contract.
 - **`afdotnet.HC-7`** — 429 emitted without `Retry-After`. *Layer:* static.
-- **`afdotnet.HC-8`** — Outbound `HttpClient` call without `traceparent` propagation (handcrafted client, not via `IHttpClientFactory`). *Layer:* static.
+- **`afdotnet.HC-8`** — Outbound HTTP call has no `traceparent` propagation evidence. `IHttpClientFactory` is one supported mechanism, not the only one. *Layer:* static.
 - **`afdotnet.HC-9`** — Long-running work on an HTTP trigger past the plan's function timeout or past the platform HTTP-trigger cap. Consumption plan: default 5 min, hard max 10 min. Premium / Flex Consumption / Dedicated: default 30 min, hard max unbounded — but HTTP triggers are capped at **230 seconds** across all plans by the Azure Load Balancer idle timeout (MSFT Learn: `functions-scale`). *Layer:* static + iac.
 - **`afdotnet.HC-10`** — Secrets read via raw connection string where Key Vault reference + managed identity applies. *Layer:* static + iac.
 - **`afdotnet.HC-11`** — `[FunctionName(...)]` attribute in isolated-worker code (should be `[Function(...)]`). *Layer:* static.
@@ -34,12 +34,12 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`afdotnet.LC-2`** — Durable orchestration used where a single queue trigger + HTTP 202 + `Location` would suffice. *Layer:* static.
 - **`afdotnet.LC-3`** — `HttpRequestData` / `HttpResponseData` used in a function that needs streaming or middleware; `[AspNetCore]` integration would be clearer. *Layer:* static.
 - **`afdotnet.LC-4`** — Missing ReadyToRun / Placeholder opt-ins on a latency-sensitive app. *Layer:* static + iac.
-- **`afdotnet.LC-5`** — Non-`IHttpClientFactory` typed client (still singleton but not registered via the factory); works but misses the resilience pipeline. *Layer:* static.
+- **`afdotnet.LC-5`** — Outbound HTTP client has no required timeout/resilience configuration. A supported `IHttpClientFactory` client or configured long-lived `HttpClient` may both be valid. *Layer:* static.
 
 ### Positive signals
 
 - **`afdotnet.POS-1`** — Isolated worker + `ConfigureFunctionsWebApplication()` with `TypedResults.Problem(...)` on error paths.
-- **`afdotnet.POS-2`** — Singleton data client (Cosmos / SQL / Service Bus / Blob) registered in DI with `DefaultAzureCredential`.
+- **`afdotnet.POS-2`** — Reusable Cosmos / Service Bus / Blob client or database pool registered in DI with `DefaultAzureCredential`; SQL connection, reader, transaction, and `DbContext` remain operation-scoped.
 - **`afdotnet.POS-3`** — Typed `HttpClient` via `IHttpClientFactory` with `.AddStandardResilienceHandler()` (or Polly v8 equivalent).
 - **`afdotnet.POS-4`** — Key Vault references in app settings; no secrets in code or literals.
 - **`afdotnet.POS-5`** — OpenTelemetry registered with Azure Monitor exporter and `traceparent` propagation.

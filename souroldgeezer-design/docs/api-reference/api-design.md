@@ -15,7 +15,7 @@ This reference treats contract, security, reliability, and observability as base
 - **2.5 Security is baseline:** HTTPS-only, TLS 1.2+; OAuth 2.0 / OIDC through maintained middleware; managed/workload identity for cloud hops; platform secret managers; data-plane RBAC; input validated at the boundary.
 - **2.6 Reliability is baseline:** mutations idempotent by verb or `Idempotency-Key`; outbound calls retry with exponential backoff + jitter + `Retry-After`; 429 with `Retry-After`; bounded retry + dead-letter on async workers; long-running work moves off the synchronous HTTP request.
 - **2.7 Observability is baseline:** W3C `traceparent` on every request; structured logs; correlation ID in every error response; OpenTelemetry / platform telemetry at worker startup; per-request cost signals (Cosmos RU, storage request count) as structured fields.
-- **2.8 Performance is responsiveness:** HTTP and data clients live in DI / module scope, not handler bodies; hosting selection is a design-time decision keyed to latency, scale, and cost.
+- **2.8 Performance is responsiveness:** follow the §3.16 lifetime contract; hosting selection is keyed to latency, scale, and cost.
 - **2.9 Progressive enhancement:** sync HTTP is baseline; 202+polling, webhooks, orchestration, and queue-backed processors are additive — reach for the simplest pattern that satisfies the requirement.
 - **2.10 Surface architecture:** default to one canonical HTTP contract per
   capability and consumer/trust/lifecycle boundary. Separate only for a
@@ -88,6 +88,8 @@ Filters and field projections that trust client-supplied names expand the API su
 
 **Default:** explicit allowlist. Filter fields and projection fields are enumerated in the OpenAPI; anything outside the list is 400 Bad Request with a problem+json `type` of `invalid-parameter`.
 
+Apply authorized filters, projection, stable ordering, and cursor cap in storage; require query-plan evidence for index claims.
+
 *When to deviate:* internal admin endpoints with trusted callers where maintaining an allowlist exceeds the value — document the trust boundary.
 
 ### 3.9 Async patterns
@@ -140,11 +142,13 @@ Hosting is a contract parameter: it fixes startup tolerance, scale-out character
 *When to deviate:* clear cost, topology, compliance, or platform-standard reasons. Document the reason; the hosting choice is visible in IaC or deployment manifests and reviewable.
 
 ### 3.16 Data-access contract
-Every outbound HTTP and data-store client (`HttpClient`, Undici / `fetch` dispatcher, database pool, `CosmosClient`, `BlobServiceClient`, `SqlConnection`, `ServiceBusClient`) is registered as a singleton in DI, module scope, or an application container and uses managed/workload identity where the platform supports it. Per-invocation construction is a bug.
+Reuse thread-safe HTTP clients, dispatchers, pools, `CosmosClient`, `BlobServiceClient`, and queue clients through DI or module scope. `IHttpClientFactory` may create a short-lived client backed by configured handlers. Scope and dispose SQL connections, sessions, transactions, readers, and `DbContext` to one operation; never share `DbContext` concurrently.
 
-**Default:** singleton / process-scope client; managed/workload-identity auth where available; preferred-regions configured for multi-region clients; per-request cost signals surfaced.
+**Default:** reusable client/pool/handler; operation-scoped handles; managed/workload identity and per-request cost signals where available.
 
-*When to deviate:* dev-only local emulator usage may differ. Production code does not instantiate clients per request.
+For HTTP-to-storage work, load the shared data-efficiency procedure. Preserve authorization and semantics; a capped response does not cap earlier retrieval.
+
+*When to deviate:* local emulators may differ. Production code does not construct expensive pools or handlers per request.
 
 ### 3.17 Secrets contract
 Secrets live in the platform secret manager and are referenced from runtime configuration rather than committed files or code literals. Azure targets use Key Vault references from app settings via the `@Microsoft.KeyVault(SecretUri=...)` syntax. Account keys, shared access keys, API keys in query strings, committed `.env` files, and connection strings with embedded secrets are legacy debt.
@@ -424,7 +428,8 @@ A production-grade receiver:
 
 - **SAD-G-secrets-in-settings** — account keys, connection strings with embedded secrets, function keys, or `.env` secrets committed as literals. Fix per §3.17: platform secret reference + managed/workload identity where available.
 - **SAD-G-shared-key-public** — shared-key / account-key / API-key auth exposed to public callers. Fix per §3.3 / §3.5.
-- **SAD-G-httpclient-per-invocation** — outbound HTTP client constructed inside a handler body (`new HttpClient()`, new Node dispatcher/Agent per request); socket exhaustion under load. Fix per §3.16 / §2.8: singleton via DI, app container, or module scope.
+- **SAD-G-httpclient-per-invocation** — per-request unpooled handler or dispatcher construction. Factory-created clients backed by configured handlers are valid. Fix per §3.16.
+- **SAD-G-data-access-amplification** — a concrete HTTP-to-storage path has N+1 round trips, unnecessary transfer, or unbounded intermediate materialization. Inherit the shared guards: warn with workload/consequence and block only a demonstrated correctness or resource-budget breach. Preserve authorization and semantics; report one API-owned defect. Distinct from `SAD-A-consumer-chattiness`.
 - **SAD-G-unbounded-response** — response body that scales with result-set size; OOM under growth. Fix per §3.7: cursor pagination with `limit` cap, or streaming.
 - **SAD-G-post-no-idempotency** — POST mutation with no idempotency key and no natural key; retries double-submit. Fix per §3.6 / §5.6.
 - **SAD-G-at-least-once-no-dedup** — claiming at-least-once delivery without a dedup mechanism; silently double-processes. Fix: idempotency key or natural key dedup on the receiving side.
@@ -513,8 +518,8 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - p95 latency + error rate + cold-start tracked in RUM / Azure Monitor `[runtime]`.
 
 ### Performance (hard requirements, at p95)
-- Singleton outbound HTTP client/factory/dispatcher (`IHttpClientFactory`, Undici / `fetch` dispatcher, or equivalent) `[static]`.
-- Singleton data-store clients / pools (`CosmosClient`, `BlobServiceClient`, database pools, queue clients) via DI, module scope, or app container `[static]`.
+- Reusable outbound HTTP client/factory/dispatcher with configured pooling (`IHttpClientFactory`, Undici / `fetch` dispatcher, or equivalent) `[static]`.
+- §3.16 lifetime contract and the shared procedure are applied to HTTP-to-storage work `[static]`.
 - Hosting/runtime choice fits latency, scale, timeout, payload, and operational requirements `[iac]`.
 - Runtime-specific startup optimizations are enabled for latency-sensitive apps when the loaded extension requires them `[static][iac]`.
 - Response / request payload sizes bounded; large payloads use direct-to-blob SAS `[static][contract]`.

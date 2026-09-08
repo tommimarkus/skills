@@ -41,7 +41,7 @@ Loaded extensions own deeper stack-specific discovery.
 | Error middleware | Emits `application/problem+json` with stable `type` URIs | Custom shape, English-string matching, stack traces, HTML/string errors |
 | Versioning | One explicit strategy applied uniformly | Mixed strategies, implicit v1, version only in domain name |
 | Pagination | Cursor-based opaque token with capped `limit` | Offset/skip on unbounded collections or no cap |
-| Data client lifetime | Singleton/module/app-container lifetime with managed/workload identity where available | Per-invocation construction, account keys, duplicate clients |
+| Data client lifetime | Reusable clients/pools/handlers with managed/workload identity; operation-scoped SQL/session/reader/transaction/`DbContext` handles | Per-invocation pools or handlers, singleton/concurrently shared `DbContext`, account keys |
 | Observability | Startup-registered telemetry, structured logs, trace propagation | Console logging, ad-hoc telemetry, missing outbound propagation |
 | Rate limiting | Edge-level or documented policy with `429` and `Retry-After` | Origin-only throttling without `Retry-After`, wildcard throttling |
 

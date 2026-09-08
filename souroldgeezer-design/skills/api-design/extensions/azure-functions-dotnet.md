@@ -67,7 +67,7 @@ Run this after the core framework-agnostic discovery pass; results feed into the
 
 1. **Isolated vs in-process** — grep `.csproj` for `Microsoft.Azure.Functions.Worker` (isolated) vs `Microsoft.NET.Sdk.Functions` (in-process). In-process → legacy debt on any added code.
 2. **ASP.NET Core integration** — grep `Program.cs` for `ConfigureFunctionsWebApplication()`. Present → use `[AspNetCore]` patterns; absent → use `[BuiltIn]` patterns or propose migration if the task adds streaming / middleware / problem-details needs.
-3. **DI in `Program.cs`** — grep for `builder.Services.AddSingleton<`, `AddHttpClient<`, `AddOptions<`. Record the registered services; singleton data clients are compliant infrastructure to reuse.
+3. **DI in `Program.cs`** — grep for `builder.Services.AddSingleton<`, `AddHttpClient<`, `AddDbContext<`, `AddScoped<`, `AddOptions<`. Record reusable clients/pools/handlers and operation-scoped `DbContext`/SQL handles separately.
 4. **OpenTelemetry / App Insights** — grep for `AddApplicationInsightsTelemetryWorkerService`, `AddOpenTelemetry`, `UseAzureMonitorExporter`. Compliant → reuse; absent → registration is added in Build mode.
 5. **`local.settings.json`** — must be `.gitignore`d or contain only non-secret scaffolding. Any committed secret is immediate legacy debt.
 6. **App settings vs Key Vault** — IaC (`Microsoft.Web/sites` in Bicep / `azurerm_linux_function_app` in Terraform) shows app settings. Any literal secret is debt; `@Microsoft.KeyVault(...)` references are compliant.
@@ -84,7 +84,7 @@ Run this after the core framework-agnostic discovery pass; results feed into the
 | §3.7 cursor pagination | `Results.Ok(new { items, nextCursor })` | `HttpResponseData` with same shape |
 | §3.9 async 202 | `Results.Accepted(locationUri, body)` | `response.StatusCode = HttpStatusCode.Accepted; response.Headers.Add("Location",...)` |
 | §3.14 observability | `ILogger<T>.BeginScope` + OpenTelemetry | Same |
-| §3.16 data access | Singleton clients via DI in `Program.cs` | Same |
+| §3.16 data access | Reusable clients/pools/handlers via DI; scoped `DbContext` and SQL handles | Same |
 | §3.17 secrets | `@Microsoft.KeyVault(...)` + managed identity | Same |
 
 ## Applies to reference sections

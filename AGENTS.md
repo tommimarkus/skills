@@ -175,6 +175,9 @@ authorization responsibilities.
 - Shared skill commands must preserve documented Claude substitutions and add a
   Codex source-path form beside them. Never replace `${CLAUDE_SKILL_DIR}` or
   `${CLAUDE_PLUGIN_ROOT}` with a generic placeholder as the only instruction.
+- `souroldgeezer-design/docs/design-reference/data-efficiency.md` is shared:
+  api-design owns its HTTP-to-storage application and API findings; software-design
+  owns non-HTTP algorithms and data paths. Report each defect once.
 - Codex hook commands use `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`. Codex MCP
   interpolation depends on the lane: the Agent Plugins root `mcp.json`
   interpolates `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`, so it is the only Codex lane

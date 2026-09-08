@@ -16,7 +16,7 @@ Verify the exact current signatures against the cited MSFT Learn page at authori
 
 - **`FunctionsApplication.CreateBuilder(args)`** — the preferred `IHostApplicationBuilder`-style entry (MSFT Learn: `dotnet-isolated-process-guide`). The legacy `Host.CreateDefaultBuilder(args).ConfigureFunctionsWorkerDefaults()` shape still works but the builder form is current.
 - **`builder.ConfigureFunctionsWebApplication()`** — opts into ASP.NET Core integration. Required for `HttpRequest` / `IActionResult` and for middleware / `IProblemDetailsService` / `TypedResults.Problem(...)`. Also required for streaming request bodies. Requires package `Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore`.
-- **DI registrations in `Program.cs`** — `builder.Services.AddSingleton<T>`, `AddHttpClient<TClient, TImpl>(...)`, `AddOptions<T>().BindConfiguration("...")`, `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` (the two Application Insights extension methods go together; the second wires the Functions worker into the Application Insights pipeline).
+- **DI registrations in `Program.cs`** — use `AddSingleton<T>` for thread-safe reusable SDK clients, pools, or handlers; `AddHttpClient<TClient, TImpl>(...)` for configured pooled HTTP handlers; `AddScoped<T>` / `AddDbContext<T>` for operation-scoped `DbContext` work. Dispose SQL connections, readers, and transactions with the operation. `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` wire the worker into Application Insights.
 - **`<FrameworkReference Include="Microsoft.AspNetCore.App" />`** in `.csproj` — required for ASP.NET Core integration; also improves non-HTTP performance (MSFT Learn: `dotnet-isolated-process-guide` performance section).
 
 ### Function shape
@@ -44,7 +44,7 @@ Input / output / trigger bindings for Cosmos, Service Bus, Blob, Queue, Table, S
 - **Application Insights** — `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` in `Program.cs`.
 - **OpenTelemetry** — `builder.Services.AddOpenTelemetry()` then tracing / logging / metrics per the current MSFT Learn `azure/azure-functions/functions-opentelemetry` page. The exact extension-method chain (`UseFunctionsWorkerDefaults` / `WithTracing` / `AddSource` / Azure Monitor exporter package name) has evolved between releases — cite the live page at authoring time.
 - **`ILogger<T>` scopes** — `using var scope = logger.BeginScope(new Dictionary<string, object> { ... })`. Named fields, structured logging.
-- **`traceparent`** — propagated automatically end-to-end when outbound HTTP uses `IHttpClientFactory`. Avoid handcrafted `HttpClient` instances.
+- **`traceparent`** — propagated automatically end-to-end when outbound HTTP uses `IHttpClientFactory`; a configured long-lived client is also valid when propagation is verified.
 
 ### Managed identity and secrets
 

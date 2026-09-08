@@ -297,6 +297,7 @@ Current `<kind>-reference/` directories in use:
 - `souroldgeezer-design/docs/api-reference/api-design.md` — api-design playbook
 - `souroldgeezer-design/docs/infra-reference/infra-design.md` — infra-design playbook
 - `souroldgeezer-design/docs/design-reference/architecture-pairing-core.md` — shared architecture-pairing mechanics the api-design / software-design pairing procedures and Load Maps cite
+- `souroldgeezer-design/docs/design-reference/data-efficiency.md` — shared data-efficiency procedure; api-design applies it to HTTP-to-storage paths while software-design owns non-HTTP data paths
 - `souroldgeezer-architecture/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate® 3.2, with UML® notation overlays under the skill references); `source-weighting.md` beside it is the source-evidence evaluator the skill loads when weighting extracted / reverse-lifted inputs
 - `souroldgeezer-policy/docs/policy-reference/policy-posture-core.md` — shared enforcement-posture core (passive install, standing-line authority, invariant-inline standing blocks, low-friction opt-out, honest limits) all five policy skills cite
 - `souroldgeezer-ops/docs/provider-reference/{github,gitlab}.md` — shared provider mechanics both ops skills' extensions cite; `provider-lifecycle-core.md` beside them holds the provider-agnostic lifecycle-marker and escalation core that both providers and both skills' SKILL.md / extensions cite; `authoring.md` is the shared extension-authoring template the two `extensions/README.md` entrypoints cite

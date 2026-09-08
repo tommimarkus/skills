@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when building, extracting, reviewing, or looking up modern HTTP APIs and client-facing API architecture — endpoint/service/API surfaces, portfolio cohesion, fragmentation, sprawl, consolidation, overlap, policy drift, or consumer chattiness. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Python® ASGI/WSGI and serverless APIs, Azure® Cosmos DB™, and Azure® Blob Storage™. Defer general code/module design to software-design, frontend/UI to app-design, infrastructure/IaC to infra-design, architecture models to architecture-design, and security and test quality to devsecops-audit and test-quality-audit.
+description: Use when building, extracting, reviewing, or looking up modern HTTP APIs and client-facing API architecture — endpoint/service/API surfaces, data-access efficiency, portfolio cohesion, fragmentation, sprawl, consolidation, overlap, policy drift, or consumer chattiness. Applies the bundled reference at souroldgeezer-design/docs/api-reference/api-design.md, enforcing OpenAPI™ 3.1, RFC 9457 problem+json, explicit versioning, conditional requests, security, reliability, observability, and verification-layer disclosure. Supports composable extensions for Azure® Functions™ .NET, Node.js® hosted/serverless APIs, hosted Next.js™, Python® ASGI/WSGI and serverless APIs, Azure® Cosmos DB™, and Azure® Blob Storage™. Defer general code/module design to software-design, frontend/UI to app-design, infrastructure/IaC to infra-design, architecture models to architecture-design, and security and test quality to devsecops-audit and test-quality-audit.
 ---
 
 # API Design
@@ -54,6 +54,9 @@ Load what applies:
   API portfolio decisions are in scope.
 - [references/procedures/red-flags.md](references/procedures/red-flags.md)
   before final output in Build and Review.
+- [../../docs/design-reference/data-efficiency.md](../../docs/design-reference/data-efficiency.md)
+  when Build or Review touches an HTTP-to-storage path or explicit data-access
+  debt; factual Extract records facts only and Lookup reads its matched section.
 - [extensions/azure-functions-dotnet.md](extensions/azure-functions-dotnet.md)
   for Azure Functions .NET isolated-worker or ASP.NET Core integration signals.
 - [extensions/nodejs.md](extensions/nodejs.md) for Node.js / TypeScript hosted

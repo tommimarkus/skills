@@ -22,7 +22,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`nodejs.HC-8`** — Public non-health endpoint with no authentication / authorization middleware and no explicit public-read-only declaration. *Layer:* static + contract.
 - **`nodejs.HC-9`** — Unawaited promise, timer, or in-memory queue used for required work after a serverless response returns. *Layer:* static.
 - **`nodejs.HC-10`** — Callback-style Lambda handler on a Node.js runtime where the official AWS docs require or recommend async handlers for the target version. *Layer:* static.
-- **`nodejs.HC-11`** — Per-request construction of expensive clients (`new Agent`, DB client, queue client, OpenTelemetry provider) inside handler logic. *Layer:* static.
+- **`nodejs.HC-11`** — Per-request construction of an expensive handler, dispatcher, database pool, queue client, or OpenTelemetry provider inside handler logic. Operation-scoped sessions, transactions, and readers remain valid. *Layer:* static.
 - **`nodejs.HC-12`** — Missing OpenAPI document / generator for an added endpoint. *Layer:* static + contract.
 - **`nodejs.HC-13`** — Boundary validation absent for request body/query/params on a mutation or public endpoint. *Layer:* static + contract.
 - **`nodejs.HC-14`** — Webhook signature checked after JSON parsing, compared with `===`, or accepted without timestamp freshness. *Layer:* static.

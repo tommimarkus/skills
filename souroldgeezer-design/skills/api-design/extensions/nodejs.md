@@ -135,7 +135,7 @@ the assimilation footer.
 | §3.9 async 202 | Enqueue job before returning `202` + `Location` |
 | §3.10 throttling | Edge/proxy limiter plus 429 helper with `Retry-After` |
 | §3.14 observability | AsyncLocalStorage + OpenTelemetry + structured logs |
-| §3.16 data access | Module-scope/server-scope singleton clients or DI container |
+| §3.16 data access | Module/server-scope reusable clients, pools, and dispatchers; operation-scoped sessions, transactions, and readers |
 | §3.17 secrets | Platform secret manager or cloud secret reference; no literals |
 
 ## Applies to reference sections
