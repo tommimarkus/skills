@@ -10,7 +10,6 @@ import os
 import re
 import stat
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -531,12 +530,22 @@ def _reference_path(value: Any, *, absolute: bool) -> Path:
     if absolute and not candidate.is_absolute():
         raise HandoffError("plan_path must be absolute")
     resolved = candidate.resolve(strict=True)
-    roots = ["/tmp", "/var/tmp", "/dev/shm", "/run/user", tempfile.gettempdir()]
-    roots.extend(os.environ.get(name, "") for name in ("TMPDIR", "TEMP", "TMP"))
-    if any(root and Path(root).is_absolute() and resolved.is_relative_to(Path(root).resolve())
-           for root in roots):
+    if any(resolved.is_relative_to(root) for root in temporary_roots()):
         raise HandoffError("temporary-directory references are ineligible")
     return resolved
+
+
+def temporary_roots() -> tuple[Path, ...]:
+    """Return known temporary roots without tempfile's writable discovery probe."""
+    values = ["/tmp", "/var/tmp", "/dev/shm", "/run/user"]
+    values.extend(os.environ.get(name, "") for name in ("TMPDIR", "TEMP", "TMP"))
+    roots: list[Path] = []
+    for value in values:
+        if value and Path(value).is_absolute():
+            root = Path(value).resolve(strict=False)
+            if root not in roots:
+                roots.append(root)
+    return tuple(roots)
 
 
 def emit_handoff(plan: Any, mode: str, source: str = "-") -> dict[str, Any]:

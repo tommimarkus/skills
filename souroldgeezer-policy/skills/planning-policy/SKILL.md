@@ -33,7 +33,10 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   plan before approval, carry its envelope in the host plan, then resolve again
   before dispatch. The [binding scaffold](references/templates/capability-binding-v1.json)
   joins the recovered digest, every leaf, requirements, host/executor, and evidence
-  for the separate dispatch check. For
+  for the separate dispatch check. For authorized preparatory persistence, use
+  `persist_plan.py` with one explicit durable root before reference emission;
+  the validator and resolver remain read-only. Use the complete inline envelope
+  when writes are prohibited, no eligible root is supplied, or storage is unavailable. For
   an approved plan with two or more
   delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from

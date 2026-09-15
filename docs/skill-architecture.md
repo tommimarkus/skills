@@ -117,6 +117,10 @@ for the task at hand:
   [core workflow](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
   and [plan contract](../souroldgeezer-policy/skills/planning-policy/references/plan-contract.md)
   for derivation, readiness, and capability requirements.
+- When an approved plan must survive a context reset, read the
+  [approval handoff](../souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md).
+  Its explicit-root writer owns authorized persistence; validation and recovery
+  remain read-only and retain the complete inline envelope when storage is unavailable.
 - For execution diagnosis, errors, legacy resumption, retention operations, or
   ledger authoring/audit, read the
   [ledger contract](../souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md).
@@ -670,8 +674,14 @@ them; do not copy their prose into repo guidance.
 ### Executable approval transport
 
 Planning-policy's on-demand `references/approval-handoff.md` owns the portable
-`planning-approval-handoff-v1` envelope. The existing validator emits/resolves it
-read-only; the parent owns any authorized persistent JSON. Host adapters place
-that envelope inside their approval plan and re-resolve it before dispatch.
-This preserves v5 authority across context resets without another plan schema,
-ledger, retry owner, or runtime-specific skill fork.
+`planning-approval-handoff-v1` envelope. The explicit-root writer is the only
+authorized persistence lane: it validates canonical JSON, atomically publishes
+`ROOT/<sha256>/plan.json` without overwrite, and returns the existing compact
+reference envelope. The validator emits/resolves read-only. Prefer the primary
+checkout's ignored `.planning-policy/plans` root or an explicitly supplied
+durable root; retain older git-common-dir references only for recovery. Hosts
+without write authority carry the complete inline envelope, and only an
+operational storage-unavailable result can use that fallback after a write
+attempt. Host adapters place the envelope inside their approval plan and
+re-resolve it before dispatch. This preserves v5 authority across context resets
+without another plan schema, ledger, retry owner, or runtime-specific skill fork.

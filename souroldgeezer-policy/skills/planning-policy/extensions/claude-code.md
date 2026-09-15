@@ -8,6 +8,9 @@ Normal dispatch never enables or inspects usage tracing.
 Before `ExitPlanMode`, put the `planning-approval-handoff-v1` JSON envelope in
 the host plan document alongside the human plan. Resolve it on implementation
 entry before dispatch; see [approval handoff](../references/approval-handoff.md).
+When this host authorizes a durable plan root, use the shared writer before
+reference emission; otherwise retain the complete inline plan without probing
+writable locations.
 
 ## Live lifecycle
 

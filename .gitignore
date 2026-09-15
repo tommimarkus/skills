@@ -1,5 +1,6 @@
 docs/superpowers/
 .worktrees/
+.planning-policy/
 .claude/worktrees/
 .venv/
 .cache/

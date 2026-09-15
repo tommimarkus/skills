@@ -58,3 +58,9 @@ read/write sets, acceptance command, and capability requirements; require
 `approval_ready: true` and `dispatch_ready: false`. A prose-only payload fails.
 Keep bounded final approval/result artifacts and a compact comparison summary;
 do not collect provider usage, raw transcripts, or broaden the existing runner.
+
+For an explicitly authorized writable-root acceptance, use a separate-process
+synthetic producer with an explicit durable root, then give a fresh consumer
+only the returned reference envelope. Require exact digest and plan recovery.
+This is storage-contract coverage, not a live clear-context UI claim; a
+read-only host continues to use the inline case above.

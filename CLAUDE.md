@@ -388,8 +388,13 @@ Executable approval transport uses `planning-approval-handoff-v1`: a canonical
 `plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline
 v5 `plan`. Before approval, emit and resolve the envelope and include it inside
 the host-carried plan; resolve again before capability binding and dispatch.
-Prefer parent-owned `<git-common-dir>/planning-policy/plans/<sha256>/plan.json`
-when saving is permitted; use inline JSON when it is not. The helper is read-only.
+Prefer the primary checkout's ignored `.planning-policy/plans` when saving is
+explicitly permitted, or use an explicitly supplied durable root; retain the
+older `<git-common-dir>/planning-policy/plans/<sha256>/plan.json` only for
+reference/recovery. Use `python3 -B ${CLAUDE_SKILL_DIR}/references/scripts/persist_plan.py
+--plan-root ABSOLUTE_ROOT PLAN`. The writer validates and atomically publishes
+canonical bytes without overwrite; the validator/resolver helper remains
+read-only. Use inline JSON without probing when writes or an eligible root are unavailable.
 Parent recovery may inspect only the bounded same-task evidence described in
 [approval handoff](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md);
 workers still stop for missing assignment fields. Prose summaries never replace

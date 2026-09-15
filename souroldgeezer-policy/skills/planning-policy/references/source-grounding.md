@@ -1,5 +1,17 @@
 # Planning Policy Source Grounding
 
+## 2026-09-15 durable approval handoffs
+
+The previous reference envelope preserved an executable plan only when an
+already-persistent file was supplied. Sandbox hosts frequently permit planning
+but prohibit incidental writes, while a context reset still needs exact JSON.
+The resulting rule is explicit ownership: a caller-authorized durable root may
+receive one validated canonical plan through the writer, and every other case
+uses the complete inline envelope. The writer's byte bounds, no-overwrite
+publication, and re-resolution are exercised by repository-authored synthetic
+fixtures; no host transcript, external orchestration text, or model benchmark
+is used as evidence.
+
 ## 2026-09-03 outcome-first v5 decomposition
 
 Version 5 responds to repository-authored plan reviews where a technically

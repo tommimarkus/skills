@@ -8,6 +8,10 @@ Install the plugin that owns the task, then describe the work in ordinary langua
 
 The repo currently ships five plugins:
 
+`planning-policy` can retain an approved executable plan through a caller-authorized
+durable root using its documented explicit-root writer. Hosts without that
+authority keep the complete inline approval envelope.
+
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or
 other sibling-owned decision. It validates the named content operation directly

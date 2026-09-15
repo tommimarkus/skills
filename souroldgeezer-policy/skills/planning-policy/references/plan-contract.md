@@ -149,6 +149,17 @@ Output includes validity/readiness, `contract_version`, `approval_ready`, `dispa
 `resume_ready`, `warnings`, and `cost_advisory`. Exit 0 is valid, 1 contract
 failure, 2 usage/JSON failure. Only a v5 plan with its exact capability binding dispatches.
 
+## Persistent approval artifact
+
+`persist_plan.py` is the sole writer for an authorized approval artifact. Its
+`--plan-root` is an absolute caller-authorized persistent directory; it has no
+implicit root, Git discovery, temporary-root fallback, subprocess, or runtime
+dependency. It validates with the shared canonicalization and approval validator,
+then atomically publishes `ROOT/<canonical-sha256>/plan.json` without replacing a
+different target. Its exit 0 contains only a verified reference envelope; exit 2
+`blocked:persistence_unavailable` is the only storage result eligible for the
+documented inline fallback. `validate_plan_contract.py` remains read-only.
+
 ## Parent ledger helper
 
 After approval, for two or more delegated steps, resolve the parent helper:

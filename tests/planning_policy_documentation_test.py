@@ -242,6 +242,18 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         ):
             self.assertIn(fact, contract)
 
+    def test_persistent_handoff_writer_keeps_inline_fallback_and_read_only_validator(self) -> None:
+        handoff = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md"
+        )
+        contract = self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
+        )
+        self.assertIn("persist_plan.py", handoff)
+        self.assertIn("blocked:persistence_unavailable", handoff)
+        self.assertIn("write probe", handoff)
+        self.assertIn("validate_plan_contract.py` remains read-only", contract)
+
 
 if __name__ == "__main__":
     unittest.main()
