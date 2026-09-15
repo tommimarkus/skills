@@ -83,13 +83,8 @@ full suite.
 ## Approval and output
 
 Before presenting an executable plan, follow [approval handoff](approval-handoff.md).
-Emit and resolve its complete contract, then include the envelope in the host
-approval plan. Parent-owned plan persistence is permitted only when the host
-explicitly allows it and supplies an eligible durable root; otherwise carry full inline JSON.
-Use the writer before reference emission, never a validator write or root probe.
-An operational `blocked:persistence_unavailable` result may use inline with one
-short disclosure; all contract and integrity failures stop. This preparatory artifact is not
-implementation or a ledger. Present the groomed plan and stop: Claude uses
+Include the resolved envelope in the host approval plan. Approval handoff owns
+authorized preparatory saves and inline fallback. Present the groomed plan and stop: Claude uses
 `ExitPlanMode`; Codex uses native approval or asks explicitly and ends the turn.
 Non-interactive surfaces return a proposal and say approval was not obtained.
 No spec, commit, implementation, or delegation happens before approval.

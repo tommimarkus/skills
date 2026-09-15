@@ -9,9 +9,7 @@ Normal dispatch never enables or inspects usage tracing.
 
 Before approval, put the `planning-approval-handoff-v1` JSON envelope **inside**
 the final `<proposed_plan>`. Resolve again before dispatch; see [approval handoff](../references/approval-handoff.md).
-When this host authorizes a durable plan root, run the shared `python3 -B`
-writer first; otherwise carry the complete inline envelope. Writable storage
-alone is not permission to persist, and the writer never requests escalation.
+Follow its save/inline procedure; writable storage alone is not permission.
 
 ## Live lifecycle
 
