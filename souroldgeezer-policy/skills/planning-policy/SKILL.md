@@ -28,12 +28,11 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   [plan contract](references/plan-contract.md), start new plan JSON from
   [plan-v5.json](references/templates/plan-v5.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
-  command before approval. For approval or fresh-context recovery, load
-  [approval handoff](references/approval-handoff.md): emit and resolve the exact
-  plan before approval, carry its envelope in the host plan, then resolve again
-  before dispatch. The [binding scaffold](references/templates/capability-binding-v1.json)
-  joins the recovered digest, every leaf, requirements, host/executor, and evidence
-  for the separate dispatch check. For
+  command before approval. For approval/recovery, [approval handoff](references/approval-handoff.md)
+  selects authorized [persistence](references/scripts/persist_plan.py) (`--help`)
+  or inline JSON. Resolve before approval and dispatch; carry the envelope in the
+  host plan. The [binding scaffold](references/templates/capability-binding-v1.json)
+  joins digest, leaves, requirements, host/executor, and evidence for dispatch. For
   an approved plan with two or more
   delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
