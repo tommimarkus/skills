@@ -245,6 +245,18 @@ runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise
 emits a proposed plan for explicit approval.
 
+For every operation that crosses about one second, keep status discoverable.
+Immediately acknowledge known slow foreground work, then report meaningful
+milestones or confirmed waiting within 60 seconds when the host can emit them.
+Use real completed/total progress only when a total is known; otherwise label
+the state indeterminate and never invent a percentage or ETA. Clear busy status
+on usable success, failure, cancellation, or awaiting input; keep housekeeping
+and terminal outcomes inspectable, with actionable failures surfaced. Prefer
+host notifications over polling and aggregate background status without repeated
+interruption. Do not promise an update during an uninterruptible host call;
+disclose that limit when it applies. The timing limits are repository guidance,
+not a host guarantee.
+
 ### Bounded audit-lane gate
 
 The shared audit craft contract defines a bounded-lane gate: `Quick gate: <status>`

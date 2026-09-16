@@ -127,6 +127,29 @@ Default: every async surface has a skeleton or progress state, an actionable
 error, an empty state that explains next action, offline behavior when relevant,
 and an unauthorized state that does not strand the user.
 
+Every operation that crosses about one second, including prefetch and
+housekeeping, has discoverable status. Acknowledge known slow work immediately.
+Make blocking feedback prominent and contextual, and block only actions whose
+next step depends on the result. Keep non-blocking work persistently
+discoverable with inspectable details, preserve other interaction and focus, and
+surface actionable failures. A near-instant operation does not need a
+distracting status surface.
+
+Use a labelled indeterminate status when no honest total exists. Show measured
+completed/total progress only when the total is known; never invent a percentage or ETA. Status
+does not take focus from the user's current task. Use an appropriate live-status
+mechanism, respect reduced-motion preferences, throttle repeated announcements,
+and provide progress semantics that assistive technology can identify. A
+CPU-bound browser task must yield or offload its work before a status state can
+paint; declaring state alone is not evidence of visible feedback.
+
+Completion means the result is usable and replaces busy status with an
+inspectable outcome. Failure, cancellation, and awaiting user input also clear
+busy status, remain inspectable, and expose the next action. Each operation has
+an owner for timeout, recovery, and supported cancellation; a generic timeout
+or a spinner that persists after the operation's state changes is not a recovery
+contract.
+
 ### 3.10 Responsive sizing, layout, and container behavior
 
 Default: design content-first and fluid. Use intrinsic sizing, `clamp()`,
@@ -336,6 +359,8 @@ generic toast-only feedback.
   sticky UI.
 - **APP-UX-1:** loading/error/empty/offline/unauthorized states are missing or
   not actionable.
+- **APP-UX-2:** operation feedback is absent, misleading, inaccessible, or
+  blocks unrelated work.
 - **APP-RSP-1:** layout depends on device breakpoints instead of content and
   containers.
 - **APP-RSP-2:** fixed label widths, physical properties, or bare viewport
@@ -380,6 +405,9 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
   placement, dirty state, focus on failure, and success recovery.
 - `[static]` Rendering boundaries identify SSR/static/client-only/hydrated
   surfaces and known hydration risks.
+- `[static]` Each potentially slow operation names status onset, known or
+  indeterminate progress semantics, blocking scope, completion, timeout,
+  cancellation, and recovery.
 - `[static]` Responsive layer uses fluid sizing, logical properties,
   content-derived breakpoints, touch-safe targets, and text-expansion room.
 - `[static]` Composition follows task order with grouped regions, width and
@@ -388,7 +416,8 @@ findings. Treat those as migration aliases to `APP-RSP-*`; new findings use
   live regions exist in the rendered DOM.
 - `[behaviour]` Main paths, branches, cancellation, back/reload, resumption,
   keyboard flow, focus restoration, modal trapping, unsaved changes, navigation
-  history, and offline/error/authentication recovery work in a browser.
+  history, offline/error/authentication recovery, and operation status clearing
+  on completion, failure, cancellation, or awaiting input work in a browser.
 - `[visual]` Layout works at 320 CSS px, 400% zoom, RTL, long text, dark mode,
   forced colors, reduced motion, and representative narrow/wide containers;
   supporting content stays subordinate and adaptive visual order preserves DOM,

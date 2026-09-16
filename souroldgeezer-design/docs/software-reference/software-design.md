@@ -146,6 +146,31 @@ Delegate judging the tests themselves — assertion quality, coverage, flakiness
 
 Default: one seam per genuine isolation boundary, construction at the composition edge, and no seam whose only consumer is a test double.
 
+### 3.11 Operation Feedback And CLI Progress
+
+Domain code supplies operation state; an adapter presents it. A CLI or agent
+operation that crosses about one second, including prefetch and housekeeping,
+keeps status discoverable, acknowledges known slow work immediately, reports
+completed/total only with a known total, and otherwise uses a labelled
+indeterminate state. It never fabricates percentages or ETA.
+Completion means the result is usable; failure, cancellation, and awaiting input
+clear busy status and state the next action.
+
+All CLI progress, including interactive TTY rendering, goes to stderr or a
+separate status channel, preserving stdout and exit semantics for data
+consumers. Redirected output uses bounded plain records. A detached job returns
+an identifier and a status route. Quiet mode may suppress healthy routine status
+only when a separate discoverable status route remains; it never hides terminal
+errors. Keep background outcomes inspectable.
+
+Each operation owns timeout, recovery, and supported cancellation. For
+foreground CLI and agent work, announce known slow work, report meaningful
+milestones and confirmed waiting at least every 60 seconds, prefer host
+notifications, and aggregate background status instead of interrupting the user
+repeatedly. Disclose when an uninterruptible host call prevents an interim
+update. The one-second and 60-second limits are repository defaults, not general
+standards.
+
 ## 4. Decision Defaults
 
 1. Start with one concrete use case before adding extension mechanisms.
@@ -161,6 +186,11 @@ Default: one seam per genuine isolation boundary, construction at the compositio
 11. Make each release's compatibility contract explicit and classify every externally-visible change as breaking, additive, or cosmetic — independent of scheme (SemVer, CalVer, or live-at-HEAD). Treat a deprecation as a staged lifecycle with a replacement, an owner, and a removal trigger, not a permanent marker.
 12. Keep dependencies and internal consumers converging on one supported version; prefer incremental upgrades over a big-bang, and give any divergence a convergence owner and exit.
 13. A library or module owns emitting diagnostics through injected or standard logging/tracing interfaces; it does not configure logging — root logger, sinks, levels — or own trace-context transport (the application entrypoint or composition root is the one place that configures). Treat trace/correlation context crossing a boundary as part of the boundary contract. Delegate API observability to `api-design` and ops/runtime observability to `infra-design`.
+14. Keep operation state at the owning boundary and presentation at the CLI,
+    UI, or agent adapter. Emit honest, channel-appropriate feedback for work
+    that outlasts immediate response; a quick completed operation, quiet mode
+    with a separate discoverable status route, or a supervised job with a
+    discoverable status route is not `SD-Q-6`.
 
 ## 5. Design Primitives
 

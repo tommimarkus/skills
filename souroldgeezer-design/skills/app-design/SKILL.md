@@ -48,6 +48,10 @@ including substantial work with an approved direction. Approved direction skips
 alternatives, not flow analysis. In Lookup, load it only when the question
 explicitly concerns layout or flow mechanics. Skip the whole procedure only
 for routine component/state work or narrow approved-layout changes;
+the [operation-feedback default](../../docs/app-reference/app-design.md#39-loading-error-empty-offline-and-unauthorized-states)
+for an operation that crosses about one second, and keep its
+status, progress semantics, cancellation/recovery, and blocking decision in the
+flow-state contract;
 [extensions/vite.md](extensions/vite.md) for `vite.config.*`, `vite` scripts,
 `import.meta.env`, Vite entry/build/SSR/worker signals, and load it before the React extension;
 [extensions/react.md](extensions/react.md) for React component, hook, state,
@@ -86,6 +90,8 @@ synthetic/paraphrased.
 4. When the layout-and-flow route matches, derive screens from the complete
    flow, explore unsettled directions before selection, and keep flow-step,
    route, state, layout-region, DOM, reading, and focus-order traceability.
+   Classify operations that cross about one second, including housekeeping, by
+   their status onset, total, blocking scope, terminal transition, and recovery.
 5. Check for a paired `docs/architecture/<feature>.dediren/` package when app
    route, screen, or workflow changes may affect architecture views.
 6. Separate fact from inference, choose the smallest move, include available

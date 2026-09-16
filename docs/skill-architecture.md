@@ -230,6 +230,19 @@ its own skill loader. References and extensions must be visible from `SKILL.md`
 with enough context for a fresh agent to choose the right file without exploring
 the tree.
 
+### Operation Feedback
+
+When a skill authorizes an operation that crosses about one second, describe
+the capability rather than a particular host widget: acknowledge known slow
+work, distinguish blocking from background work, expose honest progress only
+when a total is known, and make terminal outcomes usable. Keep status
+presentation at the UI, CLI, or agent adapter; the operation owner supplies the
+state, cancellation, timeout, and recovery contract. Use a host notification
+when it is available, aggregate background updates instead of busy-polling or
+repeated interruption, and disclose a host call that cannot emit an interim
+update. The one-second onset and 60-second foreground-update interval are
+repository defaults, not universal standards.
+
 ### 4. Deterministic machinery
 
 Deterministic machinery is for work that should not depend on model judgment:

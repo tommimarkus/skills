@@ -48,6 +48,10 @@ For each screen reached by the flow, complete a screen-state matrix covering
 default, loading, empty, error, offline, unauthorized, success, and
 destructive-confirmation behavior. Mark a state not applicable only with a
 reason. State changes must preserve a visible next action or recovery path.
+For an operation that crosses about one second, record the state transition
+information required by the [operation-feedback default](../../../../docs/app-reference/app-design.md#39-loading-error-empty-offline-and-unauthorized-states): status onset,
+known or unknown total, blocking scope, and completion, failure, cancellation,
+timeout, and awaiting-input paths.
 
 ## Layout Direction And Alternatives
 

@@ -53,6 +53,10 @@ principle questions/claims and [references/pattern-catalog.md](references/patter
 pattern questions.
 Load [references/nfr-catalog.md](references/nfr-catalog.md) for NFRs, quality
 attributes, SLAs/SLOs, or latency/availability/throughput targets.
+For interactive CLI, background-job, or agent-operation design, load the core
+reference's operation-feedback default before judging status ownership, progress
+output, cancellation, or detached-job recovery. UI feedback itself remains with
+`app-design`.
 For Build/Review data paths or explicit debt Extract, load
 [data-efficiency](../../docs/design-reference/data-efficiency.md).
 Factual Extract skips it; relevant Lookup reads its matched section; File Edit returns.

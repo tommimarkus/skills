@@ -21,6 +21,12 @@ and returns before loading normal design guidance.
 the shared procedure to HTTP-to-storage access paths, including query shaping,
 resource lifetime, and API-owned amplification findings.
 
+The design skills treat a long operation as a user-facing contract: known slow
+work is acknowledged, background status stays discoverable, measured progress
+is distinct from unknown work, and completion means the result is usable. CLI
+and agent adapters preserve their data channels and disclose host limits rather
+than fabricating status.
+
 | Plugin | Version | Skills | Docs |
 |---|---:|---|---|
 | `souroldgeezer-audit` | `2026.09.1` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md), [lean-audit](souroldgeezer-audit/skills/lean-audit/SKILL.md) | [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md), [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |

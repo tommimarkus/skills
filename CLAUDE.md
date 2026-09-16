@@ -4,6 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Codex uses the additive runtime guidance in `AGENTS.md`; neither file replaces
 the other runtime's contract.
 
+For every operation that crosses about one second, keep status discoverable.
+Immediately acknowledge known slow foreground work, then report meaningful
+milestones or confirmed waiting within 60 seconds when Claude Code can emit
+them. Use real completed/total progress only when a total is known; otherwise
+label the state indeterminate and never invent a percentage or ETA. Clear busy
+status on usable success, failure, cancellation, or awaiting input; keep
+housekeeping and terminal outcomes inspectable, with actionable failures
+surfaced. Prefer host notifications over polling and aggregate background status
+without repeated interruption. Do not promise an update during an
+uninterruptible host call; disclose that limit when it applies. The timing
+limits are repository guidance, not a host guarantee.
+
 ## What this repo is
 
 A **cross-runtime plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Codex support is additive through `.agents/plugins/marketplace.json` and per-plugin `.codex-plugin/plugin.json` mirrors over the same `skills/` tree. The MCP-equipped architecture plugin additionally has a native GitHub™ Copilot CLI `plugin.json`; all three hosts use the same shared skill source. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.

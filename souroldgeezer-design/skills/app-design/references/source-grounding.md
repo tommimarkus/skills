@@ -85,6 +85,13 @@ documentation.
   original paraphrase of the need to preserve content and meaning through
   narrow reflow, magnification, reading order, and sequential focus. No W3C
   examples or source prose are bundled.
+- Source: World Wide Web Consortium (W3C) WCAG 2.2 Understanding
+  [Status Messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)
+  and Microsoft [Progress controls](https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/progress-controls).
+  Handling: linked primary anchors distinguish a status announced without focus
+  movement from a focus change, and determinate progress from an honest unknown
+  total. The operation-feedback defaults, one-second onset, and 60-second agent
+  update interval are original repository policy, not claims from either source.
 - Source: GOV.UK Service Manual guidance to
   [map a user's whole problem](https://www.gov.uk/service-manual/design/map-a-users-whole-problem)
   and the [GOV.UK Design System pattern index](https://design-system.service.gov.uk/patterns/).
