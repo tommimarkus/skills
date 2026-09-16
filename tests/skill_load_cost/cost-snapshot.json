@@ -28,9 +28,9 @@
   "app-review-react-vite": 11578,
   "app-build-layout-flow": 7818,
   "sd-lookup-principle": 2440,
-  "sd-build-csharp": 8840,
-  "sd-review-typescript": 12345,
-  "sd-review-fragility": 11357,
+  "sd-build-csharp": 8166,
+  "sd-review-typescript": 11671,
+  "sd-review-fragility": 10683,
   "sd-native-evidence-procedure": 706,
   "sd-fragility-final-reporting": 519,
   "arch-lookup-notation": 4506,
@@ -44,8 +44,8 @@
   "ip-indepth-python": 15318,
   "infra-review-azure-bicep": 6364,
   "app-build-approved-dashboard": 7818,
-  "sd-build-data-efficiency": 7724,
-  "sd-review-data-efficiency": 11414,
+  "sd-build-data-efficiency": 7050,
+  "sd-review-data-efficiency": 10740,
   "sd-lookup-data-efficiency": 2577,
   "sd-file-edit-data-excluded": 797,
   "app-review-narrow-approved-layout": 6412,
@@ -54,5 +54,5 @@
   "lookup-api-data-access": 2189,
   "lookup-api-status-no-data": 12449,
   "extract-api-data-access-debt": 13780,
-  "review-api-software-composed": 20173
+  "review-api-software-composed": 19499
 }

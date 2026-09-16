@@ -78,73 +78,63 @@ Default: make the next safe move, then reassess.
 
 ### 3.6 Lightweight Quality-Attribute Tradeoffs
 
-Software design choices balance modifiability, performance, reliability, security, operability, cost, and cognitive load. The skill borrows ATAM's discipline of making forces explicit, but it does not run an architecture-board analysis.
-
-Non-functional requirements are quality attributes made explicit as requirements. Treat each in-scope NFR three ways: name it from the quality taxonomy, express it as a measurable quality-attribute scenario (stimulus, response, response measure), and allocate it to an owning boundary. An NFR with no measure is a claim (`SD-Q-1`); an NFR with no owning boundary is `SD-Q-3`.
-
-Load the compact decision aid at
-[../../skills/software-design/references/nfr-catalog.md](../../skills/software-design/references/nfr-catalog.md)
-when non-functional/quality requirements, SLAs/SLOs, latency/availability/throughput targets, or quality attributes are in scope. Do not expand this reference into a generic quality-engineering tutorial.
-
-Default: state the force and the local tactic. Do not pretend one design optimizes all qualities.
-
-For data paths, ground structure in operation/size/semantics; measure gains,
-caches, and tuning.
+Balance modifiability, performance, reliability, security, operability, cost,
+and cognitive load by making forces explicit, not by running an architecture
+board. For each in-scope NFR, name its quality, write a measurable scenario
+(stimulus, response, measure), and allocate an owning boundary; missing measure is
+`SD-Q-1`, missing owner `SD-Q-3`. Load the
+[NFR catalog](../../skills/software-design/references/nfr-catalog.md) for NFRs,
+SLAs/SLOs, or targets. State the force and local tactic; data paths use
+operation/size/semantics before measuring gains, caches, or tuning.
 
 ### 3.7 Socio-Technical Fit
 
-Boundaries are not only technical. Ownership, cognitive load, and coordination cost are design signals. A boundary that repeatedly forces unrelated teams to coordinate is suspect.
-
-Default: align code boundaries with stable ownership where that does not weaken semantic coherence.
-
-Load the compact decision aid at
-[../../skills/software-design/references/principles-catalog.md](../../skills/software-design/references/principles-catalog.md)
-when a user asks about named principles or slogans, proposes principle-based
-justification, or the source shows visible principle claims such as SOLID, DRY,
-KISS, YAGNI, information hiding, dependency inversion, or ubiquitous language.
-Do not expand this reference into a generic principle tutorial; rely on the base
-model for definitions and keep bundled guidance focused on force, misuse
-guardrails, smell impact, evidence layers, and delegation.
-
-Every principle recommendation or rejection must state:
-
-1. The current force it addresses.
-2. The concrete rule being applied.
-3. When to avoid using that principle as justification.
-4. Which `SD-*` smell family it can reduce.
-5. Which `SD-*` smell family it may introduce.
-6. The cheapest evidence layer needed before treating the principle as
-   justified.
+Ownership, cognitive load, and coordination cost are boundary signals; align
+code with stable ownership unless that weakens semantic coherence. Load the
+[principles catalog](../../skills/software-design/references/principles-catalog.md)
+for a named or source-visible principle (including SOLID, DRY, KISS, YAGNI,
+information hiding, dependency inversion, or ubiquitous language). A
+recommendation or rejection states its force, concrete rule, avoid case,
+reduced and introduced `SD-*` families, and cheapest justified evidence layer.
 
 ### 3.8 Version, Deprecation, And Convergence Lifecycle
 
-A release communicates its compatibility impact. Classify every externally-visible change as breaking, additive, or cosmetic. SemVer encodes that contract in the version number; CalVer decouples it and requires the classification to be carried in a changelog and deprecation policy; live-at-HEAD replaces version negotiation with single-version convergence. Pick the scheme by audience, then hold the classification discipline regardless of scheme.
-
-A deprecation is a staged lifecycle — replacement, owner, removal trigger — not a permanent marker. Treat dependency currency as measurable design debt; prefer small continuous upgrades over a big-bang. Converge on one supported version of a shared concern; keep internal producer/consumer skew bounded and give any divergence a convergence owner and exit. Before removing or converging an observable behavior, account for Hyrum's Law and gather characterization evidence.
-
-Delegate HTTP versioning and `Sunset`/`Deprecation` headers to `api-design`, runtime config/fleet convergence and rollout to `infra-design`, upgrade CVE/supply-chain risk to `devsecops-audit`, and characterization tests to `test-quality-audit`.
-
-Default: make the compatibility contract explicit and the next upgrade small.
+Classify every externally visible change as breaking, additive, or cosmetic.
+SemVer encodes that contract; CalVer carries it in changelog and deprecation
+policy; live-at-HEAD requires convergence. Choose by audience, then hold the
+classification discipline. A deprecation needs replacement, owner, and removal
+trigger. Treat dependency currency as measurable debt, prefer small upgrades,
+converge on one supported version, bound producer/consumer skew, and give
+divergence an owner and exit. Before changing observable behavior, account for
+Hyrum's Law with characterization evidence. Delegate HTTP versioning to
+`api-design`, fleet convergence to `infra-design`, CVE/supply-chain risk to
+`devsecops-audit`, and characterization tests to `test-quality-audit`.
 
 ### 3.9 Concurrency, Cancellation, And Error-Contract Ownership
 
-Concurrent work is a designed responsibility, not an implementation detail. Every spawned task, background job, or parallel flow has one owner for its lifetime: who starts it, who joins or supervises it, and how the caller's cancellation reaches it. Detached work that outlives its owner, or ignores cancellation, couples flows through timing and shared state the same way hidden globals do (`SD-C-4`, `SD-C-6`). Static evidence shows the spawn and the missing join or cancellation path; runtime evidence shows the leak, starvation, or shutdown hang.
-
-A boundary's failure contract is part of its interface. Name the failure taxonomy (domain rule, transport, infrastructure), how each class propagates or translates at the boundary, and which classes are retryable versus terminal. Collapsing distinct failures into one shape, or swallowing them mid-path, hides ownership the way a duplicate model does (`SD-S-5`). Retry, timeout, and fallback are failure-handling tactics with exactly one owning layer and an explicit budget; stacking them across layers multiplies load and duplicates non-idempotent side effects (`SD-Q-4`).
-
-Delegate HTTP error payload shape and status-code mapping to `api-design`, runtime failure SLIs/SLOs and rollout of failure-handling changes to `infra-design`, security consequences of failure modes (error-message disclosure, retry-driven denial of service) to `devsecops-audit`, and characterization tests of current failure behavior to `test-quality-audit`.
-
-Default: give every concurrent path one cancellation owner, and every failure class one meaning, one propagation path, and one retry owner with a budget.
+Every spawned, background, or parallel path has one lifetime owner: start,
+join/supervision, and caller-cancellation propagation. Detached work without it
+couples timing and state (`SD-C-4`, `SD-C-6`); static evidence shows the missing
+path and runtime evidence its leak, starvation, or shutdown hang. A boundary
+names domain, transport, and infrastructure failures, translation/propagation,
+and retryable versus terminal classes. Do not collapse or swallow meanings
+(`SD-S-5`), or stack retry, timeout, or fallback outside one budget owner
+(`SD-Q-4`), multiplying load or non-idempotent effects. Delegate HTTP error
+shape to `api-design`, runtime SLIs/SLOs and rollout to `infra-design`,
+failure-mode security to `devsecops-audit`, and characterization tests to
+`test-quality-audit`.
 
 ### 3.10 Testability And Seams
 
-Testability is a design property, not a property of the test suite: a unit is testable when the collaborators it depends on can be observed and substituted at its owning boundary. Put a genuine seam where isolation is actually needed — IO, time/clock, randomness, network, and global or singleton state — by taking the dependency as a parameter, port, or injected collaborator and constructing the real implementation at the composition edge. Policy that reaches those dependencies through hidden collaborators or constructor work resists substitution and can only be exercised against live externals (`SD-B-5`); when the hardwired dependency is shared mutable state, the coupling compounds (`SD-C-4`). Static evidence shows the hidden construction or direct external call inside policy; graph evidence shows policy referencing the concrete dependency instead of an owned contract.
-
-Do not over-seam. One implementation plus test doubles is legitimate at a genuine IO, time, randomness, network, or state isolation boundary. An interface or trait wrapping one implementation solely for test substitution, without isolation or current variation, is ceremony (`SD-W-1`, `SD-W-2`); deterministic pure logic needs no seam. Seam count follows the real isolation boundaries, not the class count.
-
-Delegate judging the tests themselves — assertion quality, coverage, flakiness, characterization scope — to `test-quality-audit`; this section owns designing code to be testable, not the tests.
-
-Default: one seam per genuine isolation boundary, construction at the composition edge, and no seam whose only consumer is a test double.
+Testability means collaborators can be observed and substituted at their owning
+boundary. Use a parameter, port, or injected collaborator for a real IO, clock,
+randomness, network, or global/singleton isolation boundary; construct the real
+implementation at the composition edge. Hidden construction inside policy is
+`SD-B-5`, compounded by shared mutable state (`SD-C-4`); static and graph
+evidence show the hidden dependency. One implementation plus test doubles is
+legitimate at a real isolation boundary. Do not add a wrapper solely for test
+substitution (`SD-W-1`, `SD-W-2`): pure logic needs no seam. Delegate test
+judgment to `test-quality-audit`.
 
 ### 3.11 Operation Feedback And CLI Progress
 
