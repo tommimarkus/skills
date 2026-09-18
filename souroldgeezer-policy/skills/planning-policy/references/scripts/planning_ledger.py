@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import importlib.util
 import json
@@ -271,6 +272,46 @@ def rel(value, label="path", maximum=MAX_PATH):
     ):
         raise Error(f"invalid relative {label}")
     return value
+
+
+def repository_glob_matches(path, pattern):
+    """Match a repository-relative path with segment-aware ``**`` support."""
+    path_parts = path.split("/")
+    pattern_parts = pattern.split("/")
+    pending = [(0, 0)]
+    visited = set()
+    while pending:
+        path_index, pattern_index = pending.pop()
+        state = (path_index, pattern_index)
+        if state in visited:
+            continue
+        visited.add(state)
+        if pattern_index == len(pattern_parts):
+            if path_index == len(path_parts):
+                return True
+            continue
+        pattern_part = pattern_parts[pattern_index]
+        if pattern_part == "**":
+            pending.append((path_index, pattern_index + 1))
+            if path_index < len(path_parts):
+                pending.append((path_index + 1, pattern_index))
+        elif path_index < len(path_parts) and fnmatch.fnmatchcase(
+            path_parts[path_index], pattern_part
+        ):
+            pending.append((path_index + 1, pattern_index + 1))
+    return False
+
+
+def changed_path_allowed(path, write_set):
+    for allowed in write_set:
+        if not isinstance(allowed, str):
+            continue
+        if any(character in allowed for character in ("*", "?", "[")):
+            if repository_glob_matches(path, allowed):
+                return True
+        elif path == allowed or path.startswith(allowed.rstrip("/") + "/"):
+            return True
+    return False
 
 
 def root(args):
@@ -2116,11 +2157,7 @@ def valid_return(value, data, step, leaf):
         raise Error("invalid changed_paths")
     for path in paths:
         rel(path, "changed path")
-        if not any(
-            path == allowed or path.startswith(allowed.rstrip("/") + "/")
-            for allowed in leaf["write_set"]
-            if isinstance(allowed, str)
-        ):
+        if not changed_path_allowed(path, leaf["write_set"]):
             raise Error("changed path outside write_set")
     accept = value["acceptance"]
     if (
@@ -2242,7 +2279,13 @@ def record(args):
         raise Error("invalid step return JSON") from exc
     sid = value.get("step_id") if isinstance(value, dict) else ""
     step = data["steps"].get(sid)
-    if step is None or step["status"] != "in_progress":
+    repairable_scope_rejection = step is not None and (
+        step["status"] == "oversized"
+        and step["reason"] == "oversized: changed path outside write_set"
+        and not step["return_path"]
+        and not step["return_sha256"]
+    )
+    if step is None or (step["status"] != "in_progress" and not repairable_scope_rejection):
         raise Error("return is not for current in_progress step")
     if len(raw) > MAX_RETURN:
         reject_return(

@@ -133,7 +133,10 @@ contains:
 
 - `changed_paths`: at most 32 unique, safe repository-relative paths of at
   most 240 characters (no absolute path or `..` segment), each inside the
-  leaf's approved `write_set`.
+  leaf's approved `write_set`. A write-set entry without glob metacharacters
+  owns that exact path and its descendants. An entry containing `*`, `?`, or a
+  bracket expression matches one path segment at a time; a complete `**`
+  segment matches zero or more segments.
 - `acceptance`: the exact plan `acceptance_command` (at most 480 characters),
   an integer or `null` `exit_code`, and a `summary` of at most 480 characters.
   Its optional `evidence_path` and `sha256` appear as a pair: the path is safe
@@ -157,6 +160,12 @@ acceptance must be `failed`, never completed. Each `blocked`, `failed`, and
 `oversized` return requires at least one blocker, and `oversized` also requires
 a non-empty `unstarted_remainder`. The parent computes and records the progress
 fingerprint after validating these invariants.
+
+If an older helper automatically stopped an otherwise current return as
+`oversized: changed path outside write_set` without storing that return, the
+parent may submit the same return again after upgrading the helper. This
+recovery applies only to that exact generated state and existing attempt
+identity; every other terminal return remains immutable.
 
 If changed paths, a failed acceptance result, or the return show that the
 assigned task/boundary/read/write sets no longer bound the work, mark the step

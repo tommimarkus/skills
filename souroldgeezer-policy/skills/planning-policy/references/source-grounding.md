@@ -1,5 +1,16 @@
 # Planning Policy Source Grounding
 
+## 2026-09-18 write-set glob enforcement repair
+
+The ledger previously accepted glob characters in an approved plan but checked
+returned paths only as literal paths or directory prefixes. A repository plan
+using `test_editor_locations*.py` therefore passed plan validation and then had
+matching concrete test files misclassified as scope expansion. The repair uses
+repository-authored lifecycle regressions for single-segment wildcards,
+recursive `**`, non-matches, and replay of the exact automatically rejected
+state. The path semantics and recovery lane are local contract corrections; no
+external workflow or glob specification supplied their wording or structure.
+
 ## 2026-09-15 durable approval handoffs
 
 The previous reference envelope preserved an executable plan only when an

@@ -925,6 +925,60 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(3, self.record(run, value)[0])
         self.assertEqual("oversized", self.checkpoint(run)["steps"]["step0"]["status"])
 
+    def test_write_set_globs_admit_only_matching_changed_paths(self):
+        plan = self.plan()
+        value = json.loads(plan.read_text())
+        value["leaves"][0]["write_set"] = [
+            "tests/test_editor_locations*.py",
+            "tools/editor-apps/src/**",
+        ]
+        plan.write_text(json.dumps(value))
+
+        run = self.init2(plan_path=plan)
+        step = self.start(run)
+        returned = self.returned(
+            step,
+            changed=[
+                "tests/test_editor_locations.py",
+                "tests/test_editor_locations_http.py",
+                "tools/editor-apps/src/index.ts",
+                "tools/editor-apps/src/open/dialog.tsx",
+            ],
+        )
+        self.assertEqual(0, self.record(run, returned)[0])
+        self.assertEqual("completed", self.checkpoint(run)["steps"]["step0"]["status"])
+
+        run = self.init2(plan_path=plan)
+        step = self.start(run)
+        returned = self.returned(step, changed=["tests/test_campaign_authoring.py"])
+        self.assertEqual(3, self.record(run, returned)[0])
+        self.assertEqual("oversized", self.checkpoint(run)["steps"]["step0"]["status"])
+
+        run = self.init2(plan_path=plan)
+        step = self.start(run)
+        returned = self.returned(step, changed=["tests/test_editor_locations/nested.py"])
+        self.assertEqual(3, self.record(run, returned)[0])
+
+    def test_scope_rejection_can_be_replayed_after_matcher_repair(self):
+        plan = self.plan()
+        value = json.loads(plan.read_text())
+        value["leaves"][0]["write_set"] = ["tests/test_editor_locations*.py"]
+        plan.write_text(json.dumps(value))
+        run = self.init2(plan_path=plan)
+        step = self.start(run)
+        returned = self.returned(step, changed=["tests/test_editor_locations_http.py"])
+
+        with patch.object(ledger, "changed_path_allowed", return_value=False):
+            self.assertEqual(3, self.record(run, returned)[0])
+        rejected = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual("oversized", rejected["status"])
+        self.assertEqual("oversized: changed path outside write_set", rejected["reason"])
+
+        self.assertEqual(0, self.record(run, returned)[0])
+        repaired = self.checkpoint(run)["steps"]["step0"]
+        self.assertEqual("completed", repaired["status"])
+        self.assertTrue(repaired["return_path"])
+
     def test_return_evidence_digest_notes_and_bounded_arrays(self):
         run = self.init2()
         step = self.start(run)
