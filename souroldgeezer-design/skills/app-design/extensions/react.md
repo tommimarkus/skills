@@ -210,7 +210,10 @@ contract review.
 - `react.APP-RSP-1`: component styling relies on fixed viewport/device
   breakpoints, physical properties, hover-only affordances, or brittle heights.
 - `react.APP-PERF-1`: bundle, hydration, Suspense, image/font, or script cost
-  is treated as verified without browser or RUM evidence.
+  is presented as measured or verified performance without relevant browser or
+  RUM evidence. A clearly labelled static posture observation is valid; flag a
+  runtime performance assertion only when its relevant runtime evidence is
+  missing.
 
 ## Carve-Outs
 

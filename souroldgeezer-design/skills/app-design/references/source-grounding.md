@@ -4,6 +4,11 @@ This skill's behavioral evals are synthetic, repo-authored cases. They do not
 copy external prompts, code, screenshots, diagrams, tables, examples, or
 documentation.
 
+- Synthetic behavior case `app-design-behavior-static-performance-posture`
+  checks that labelled static performance posture is accepted while an
+  unsupported runtime outcome assertion still requires relevant runtime
+  evidence.
+
 - Source: approved app-design replacement spec,
   `docs/superpowers/specs/2026-05-06-app-design-skill-replacement-design.md`.
   Handling: local approved design input; skill wording is original and uses the
