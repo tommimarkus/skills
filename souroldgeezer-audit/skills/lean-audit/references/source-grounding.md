@@ -36,6 +36,13 @@ schemas, or code are copied into this skill.
   advisory is likewise a local guard contract. No host/vendor loading schema,
   selection text, or trace was copied; committed scenarios use repository paths
   and synthetic selection strings.
+- Guard and minify operational recipes follow the current local executable
+  contracts: PreToolUse cost advice measures proposed positive marginal growth,
+  while Stop separately checks committed snapshot drift; normal empty eligible
+  Markdown scans report coverage and exit 2; proposal shadows must use an
+  authorized persistent task location where repository policy forbids ephemeral
+  task work. These are local implementation and policy references, not observed
+  production incidents.
 - Hook-cost inventory: the content-free selector/evidence fixture schema and
   enabled/model-visible frequency multiplication are repo-authored. Hook
   commands remain opaque and are neither executed nor emitted. Fixtures are

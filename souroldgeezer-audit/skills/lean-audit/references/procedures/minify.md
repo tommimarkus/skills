@@ -104,10 +104,15 @@ rejection (`escalation-cue-missing`), not a style note.
 ## Stage 3 — Fidelity-verify (adversarial; fail-closed)
 
 **Shadow workspace.** Never touch the target tree. Copy the audited root (the
-same `<dir>` the engine scanned in Workflow step 2) to a scratch directory
-(e.g. `$TMPDIR/lean-minify-<timestamp>/`), preserving repo-relative paths so
-every relative link and script pointer resolves identically. Apply the
-proposed diffs for one target (batched per target file) to the copy only.
+same `<dir>` the engine scanned in Workflow step 2) to an isolated, persistent
+task location authorized by the repository's storage policy, preserving
+repo-relative paths so every relative link and script pointer resolves
+identically. For this repository, use a dedicated shadow beneath the primary
+checkout's gitignored `.worktrees/<task-name>/` area; do not put uncommitted task
+work in `/tmp`, `$TMPDIR`, `/var/tmp`, a tmpfs/ramdisk, or another ephemeral
+location. If no authorized persistent root is available, stop or emit an inline
+proposal without building a shadow. Apply the proposed diffs for one target
+(batched per target file) to the copy only.
 When the audited root is too large to copy, mirror at minimum the full
 resolved closure of every affected entry artifact plus every non-markdown
 pointer target cited from edited files, and disclose the reduced mirror.
@@ -135,10 +140,11 @@ reports none), STOP per the host skill's interpreter-floor rule:
 - **G3 stale/anchor scan:** run `lean_engine.py <shadow-root> --format json` at
   the **mirrored repo root** — a path that preserves every file's repo-relative
   depth, NOT the bare skill directory. The engine keys guarded-file discovery on
-  the path relative to the scan root, so pointing it at a skill subdirectory
-  silently scans nothing and returns `[]`, indistinguishable from a clean pass.
-  First assert the guarded-file set is non-empty (the edited target files appear
-  in the run); only then compare `LA-STALE-1` findings to the before run: no NEW
+  the path relative to the scan root; a wrong root can omit the intended files.
+  Normal scans emit coverage, and an empty eligible Markdown scope is an
+  input/coverage error (exit 2), never a clean pass. First assert coverage
+  includes the edited target files; only then compare `LA-STALE-1` findings to
+  the before run: no NEW
   broken link or `#anchor`. **G3 is the ONLY gate that catches a broken
   `#anchor`** — G2's `diff`/`check_pointers` is existence-only on the file part
   before `#`, so a bad anchor slips through BOTH gates if G3 is run at the wrong

@@ -123,12 +123,13 @@ On `Edit` / `Write` / `MultiEdit` to any `.md` file in a skill's Load-Map closur
   reference section unreachable in the skill's closure — dropping an item below the
   baseline floor — it returns `permissionDecision: deny` and names the lost item.
   The fidelity floor must hold.
-- **Cost advisory (allow):** if the fidelity check passes but the current on-disk
-  closure is measurably heavier than the `cost-snapshot.json` baseline for affected
-  scenarios (tolerance: 200 tokens), it returns an advisory `permissionDecision: allow`
-  with a warning message. At Stop time the on-disk closure is the post-edit state
-  (accurate); at PreToolUse time it reflects pre-edit drift since the last snapshot.
-  Cost warnings are informational — they never block.
+- **Cost advisory (allow):** on PreToolUse, if the fidelity check passes and the
+  proposed edit adds more than the configured tolerance (200 proxy tokens by
+  default) to affected scenarios, it returns an advisory `permissionDecision: allow`
+  with a warning. Neutral or reducing edits stay silent even if the current tree
+  is already above its committed snapshot. The separate Stop check compares final
+  on-disk scenarios with `cost-snapshot.json`; this remains a distinct snapshot
+  freshness/maintenance concern. Cost warnings are informational — they never block.
 
 It is **fail-open**: any engine error, non-`.md` file, path outside every skill's
 closure, missing baseline, missing patterns file, or exception → the edit is allowed
@@ -231,6 +232,7 @@ For immediate at-edit blocking, add a `PreToolUse` hook instead:
 This intercepts every edit at the moment it is applied. Use this form when you want
 to block fidelity regressions in-flight rather than at session close. Note that
 closure resolution adds per-edit latency; the Stop hook form avoids this. The
-cost-warn advisory at PreToolUse time reflects current on-disk drift since the last
-snapshot (pre-edit), not the pending edit's marginal cost — use the Stop hook for
-accurate post-edit cost measurement.
+cost-warn advisory at PreToolUse time measures the pending edit's positive marginal
+growth against affected scenarios, not inherited snapshot drift. Stop separately
+compares the final on-disk closure with its committed snapshot; maintain that
+snapshot independently of the per-edit warning.
