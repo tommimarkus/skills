@@ -94,6 +94,33 @@ the subject run.
 
 Path: `references/evals/model-pressure.md`.
 
+## Fixed workflow-evidence pilot
+
+Planning-policy has one approved, opt-in synthetic pilot for comparing its
+guidance. The parent uses
+`scripts/planning_policy_workflow_report.py --manifest PATH --output PATH` to
+summarize at most sixteen content-free trial records. Each record is capped at
+64 KiB; the JSON report is capped at 16 KiB. The reporter is Python 3.11
+stdlib only and never discovers telemetry, dispatches work, or contacts a
+provider.
+
+The manifest is `planning-policy-workflow-manifest/v1` with `trials`. A trial
+has a unique `trial_id`, `baseline` or `candidate` variant, sequence, fixture
+and oracle SHA-256 values, host/profile, coordinator and standard-worker model
+mapping, the fixed limits (two worker leaves, four worker attempts, 15 minutes),
+content-free source path/digest summaries, coordinator/worker actor summaries
+(including step and attempt identities), worker leaf/attempt, failed
+attempt, retry, escalation, and dispatch counts, and execution outcome,
+lifecycle, oracle, and elapsed-time evidence. Usage is either a complete set
+of non-negative counters or `null`; unknown remains `null`.
+
+The report preserves failed and blocked trials. It reports medians, baseline
+repeat ranges, and paired deltas only when every trial has complete actor usage,
+matching conditions, a passed oracle, a completed outcome, and cleaned
+lifecycle. Otherwise it marks the comparison incomparable. It rejects malformed
+records, duplicate trial or actor identities, failed oracle evidence, and any
+limit outside the approved bounds.
+
 Use this only when a model-family or runtime-specific extension exists because
 generic wording failed. Record:
 

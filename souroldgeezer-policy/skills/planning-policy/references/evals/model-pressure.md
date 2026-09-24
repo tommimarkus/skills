@@ -1,5 +1,33 @@
 # Planning-policy forward-evaluation pressure set
 
+## Approved fixed workflow-evidence pilot
+
+This is a one-fixture, four-trial Codex-only procedure for testing whether the
+planning-policy guidance changes complete-run outcomes or measured economy. It
+does not authorize production telemetry, provider discovery, additional trials,
+or a Claude comparison; Claude remains unverified.
+
+The parent first pins the repository revision, fixture and immutable-oracle
+SHA-256 values, host version/profile, coordinator model/effort, and every
+available worker mapping. It then preflights complete coordinator and worker
+usage coverage before each spend. Four fresh `gpt-5.6-sol`/`high` coordinators
+run the original fixture in ABBA order: baseline, candidate, candidate,
+baseline. Every trial has a 15-minute ceiling, at most two worker leaves, four
+worker attempts, and terminal cleanup proof. Any deviation stops for approval.
+
+The fixture at `tests/planning_policy_workflow/fixture/` has two independent
+outcomes: separator-collapsing ASCII-alphanumeric slugs and stable
+case-insensitive deduplication of stripped nonempty labels. Its `oracle.py`
+and test are outside worker writes. Give coordinators only the goals and
+repository, never a prewritten plan or target score.
+
+After every trial, retain the supplied content-free usage summaries and outcome
+evidence privately. Feed only those records to
+`scripts/planning_policy_workflow_report.py`. The parent writes its bounded
+result here after integration. Missing usage, mismatched provenance, failed or
+blocked outcomes, unclean lifecycle, or failed oracle evidence make economy
+claims incomparable; lower counters from a failed run are not improvement.
+
 `forward-cases.jsonl` is an opt-in, live, fresh-context comparison. It does not
 run in unit tests and stores only bounded result summaries. Each harness receives
 the same copied synthetic repository, prompt, expected return shape, and
