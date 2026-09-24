@@ -28,7 +28,7 @@ handoffs into a new v5 plan assignment.
 
 ## Capability resolution
 
-Before **every** initial or retry dispatch, resolve every leaf's
+For v4–v5, before **every** initial or retry dispatch, resolve every leaf's
 `capability_requirements` against the active Codex host and selected executor.
 The baseline `plan-step-base-v1` and every additional `tool`, `skill`,
 `service`, `permission`, and `runtime` requirement need current host evidence.
@@ -41,6 +41,9 @@ dispatch with `blocked:capability_unavailable`; do not silently substitute,
 drop, defer, or probe for a replacement capability. This is distinct from
 `blocked:model_unavailable`, which applies only when the already selected
 model/effort mapping is unavailable.
+For a ledger-confirmed v1–v3 resume, preserve that version's dispatch contract:
+do not require or synthesize capability requirements or a binding. New work
+still starts from v5.
 
 ## Dispatch and model mapping
 
@@ -97,12 +100,13 @@ Call the host mechanism with a prompt containing all of the following:
 
 - stable step ID and dependency IDs;
 - run ID, step ID, agent ID, and attempt ID;
-- the exact resolved binding, including its `planning-capability-binding-v1`
-  schema, plan digest, matching step requirements, and selected executor;
+- for v4–v5, the exact resolved binding, including its
+  `planning-capability-binding-v1` schema, plan digest, matching step
+  requirements, and selected executor; a v1–v3 resume carries no binding;
 - task and boundary;
-- the assigned work unit's cohesive outcome and `decomposition` context:
+- for v5, the assigned work unit's cohesive outcome and `decomposition` context:
   `shape: single` only, or the required `basis` and `rationale` for
-  `parallel`/`checkpointed`;
+  `parallel`/`checkpointed`; a v1–v4 resume uses its versioned work unit shape;
 - named reads and writes;
 - settled decisions and constraints;
 - `size: <small|medium|large>` and portable tier;
@@ -115,9 +119,11 @@ Call the host mechanism with a prompt containing all of the following:
   unavailable mapped model, unavailable required capability, or a required
   decision outside the handoff.
 
-The agent must receive the binding alongside the plan/step/attempt identity and
-must reject a missing or mismatched binding as
-`blocked:capability_unavailable` without probing for a replacement.
+The agent must receive the v4–v5 binding alongside the plan/step/attempt identity
+and must reject a missing or mismatched binding as
+`blocked:capability_unavailable` without probing for a replacement. The parent
+must identify a v1–v4 assignment as a ledger-confirmed resume; workers do not
+reinterpret it as new v5 work.
 
 For a missing load-bearing input, return `blocked:missing_input`; do not search
 for or invent it. If the work exceeds its stated size, stop and return the

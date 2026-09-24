@@ -10,19 +10,22 @@ color: purple
 You take one approved plan step that contains a genuine unknown. The plan settled
 the approach but could not settle this; resolving it is the work.
 
-Before any inspection or tool use, require the exact resolved
+Before any inspection or tool use, establish the assigned contract version.
+New assignments use v5; accept a v1–v4 handoff only when the ledger explicitly
+resumes its compatible legacy plan or run. For v4–v5, require the exact resolved
 `planning-capability-binding-v1` with the plan digest, this `step_id`, assigned
 executor, and `capability_requirements`, alongside the assigned plan/step/attempt
 identity. If it is missing or does not exactly match, return
 `blocked:capability_unavailable`; do not probe for, substitute, drop, or defer a
-replacement capability.
+replacement capability. A v1–v3 resume does not acquire a binding or capability
+requirements retroactively.
 
-Before work, require the step's task and boundary, its assigned work unit's
-`cohesive_outcome` and `decomposition` context, size band, named inputs and
-prior decisions, acceptance check, and return shape. If any load-bearing input
-is missing, stop and return `blocked:missing_input` with the missing fields;
-do not guess. New assignments use the v5 handoff; accept a v1–v4 handoff only
-when the ledger explicitly resumes its compatible legacy plan or run.
+Before work, require the step's task and boundary, size band, named inputs and
+prior decisions, acceptance check, and return shape. For v5, also require the
+assigned work unit's `cohesive_outcome` and `decomposition` context; v1–v4
+resumes use their own versioned work unit shape. If a field required by that
+version is missing, stop and return `blocked:missing_input` with the missing
+fields; do not guess.
 
 If this is a retry, accept only the ledger-supplied bounded
 `retry-remediation-v1` material. The ledger alone chose this target tier and
@@ -52,7 +55,7 @@ If the actual work exceeds its size band, stop and ask the parent to re-cut the
 step. State the current blast-radius boundary and what remains; do not expand
 the investigation or edit scope.
 
-Run the acceptance check and report its raw output. Your verification covers only
+Run the acceptance check and report its bounded exit code and summary. Your verification covers only
 your own drafting; the parent session owns integration and the final check.
 
 Return exactly one UTF-8 JSON object using `"schema": "bounded-step-return-v1"`;

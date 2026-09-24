@@ -1,5 +1,25 @@
 # Planning Policy Source Grounding
 
+## 2026-09-24 worker handoff and forward-evaluation repair
+
+The forward evaluator's four-field host output was older than the ledger's
+`bounded-step-return-v1` validator. Its synthetic handoffs also lacked v5
+work-unit and capability-binding data, while the worker wrappers applied those
+new checks to legacy resumes. The repair derives host output bounds from the
+repository's ledger constants, validates each complete return with that ledger
+before retaining comparison facts, and constructs dispatch-ready synthetic v5
+plans with exact attempt identities and bindings. One negative fixture removes
+only its declared assigned-leaf field; the canonical synthetic plan stays valid.
+The evaluator makes no host call without `--execute`, and its fixture repositories
+are local Git baselines so a worker can return an attributable commit hash.
+
+The wrapper and adapter version gates follow this repository's own
+`ledger-compatibility.md`: v4–v5 require binding, v5 adds cohesive outcome and
+decomposition, and ledger-confirmed v1–v3 resumes retain their earlier shape.
+The docstring typo behavior case now follows the existing trivial-edit exception.
+All added cases and fake-host responses are repository-authored synthetic
+evidence; no provider transcript or third-party workflow text supplied them.
+
 ## 2026-09-18 write-set glob enforcement repair
 
 The ledger previously accepted glob characters in an approved plan but checked

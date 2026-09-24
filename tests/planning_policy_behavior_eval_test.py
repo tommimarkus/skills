@@ -1,6 +1,8 @@
 import importlib.util
+import copy
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from collections import Counter
@@ -136,7 +138,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         by_id = {case["id"]: case for case in self.forward}
         self.assertEqual(by_id["standard-implementation"]["attempts"], 2)
         self.assertEqual(by_id["missing-load-bearing-input"]["expected_status"], "blocked:missing_input")
-        self.assertEqual(by_id["oversized-standard"]["expected_status"], "blocked:oversized")
+        self.assertEqual(by_id["oversized-standard"]["expected_status"], "oversized")
         self.assertNotIn("deep", {case["tier"] for case in self.forward})
         for case in self.forward:
             self.assertTrue((FIXTURES / case["fixture"]).is_dir())
@@ -153,7 +155,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             self.assertEqual(len(case["acceptance_command"].splitlines()), 1)
         missing = by_id["missing-load-bearing-input"]
         self.assertIn("intentionally_missing_input", missing)
-        self.assertNotIn("settled_decisions", missing)
+        self.assertEqual(missing["intentionally_missing_input"], ["settled_decisions"])
+        self.assertIn("settled_decisions", missing)
         self.assertEqual(by_id["oversized-standard"]["size"], "small")
         chained = by_id["synthetic-chained-escalation"]
         self.assertEqual(chained["attempts"], 2)
@@ -181,7 +184,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
 
     def test_offline_runner_matrix_never_calls_hosts_without_execute(self):
         import tempfile
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, patch.object(self.runner.subprocess, "run", side_effect=AssertionError("offline evaluation must not launch a host")):
             output = Path(temporary)
             exit_code = self.runner.main(["--harness", "both", "--output-dir", str(output)])
             self.assertEqual(exit_code, 0)
@@ -191,6 +194,12 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(Counter(run["status"] for run in payload["runs"]), {"not_run:execute_required": 20})
         self.assertTrue(all("evidence_paths" in run and "raw_log" not in run for run in payload["runs"]))
         self.assertFalse((output / ".forward-workdirs").exists())
+
+    def test_trivial_docstring_case_uses_logged_exception(self):
+        case = self.behavior["planning-policy-behavior-trivial-docstring-exemption"]
+        self.assertIn("one typo in one docstring", case["prompt"])
+        self.assertIn("trivial edit", " ".join(case["expected_artifacts"]))
+        self.assertIn("entering Plan mode", " ".join(case["forbidden_behaviors"]))
 
     def test_stale_inheritance_expectation_was_replaced(self):
         case = self.behavior["planning-policy-behavior-delegation-contract"]
@@ -242,34 +251,135 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
                 self.assertIn(field, prompt)
         self.assertIn("# Codex execution adapter", codex_prompt)
         self.assertIn("additive adapter", codex_prompt)
+        for prompt in (claude_prompt, codex_prompt):
+            for field in ("contract_version", "plan_sha256", "capability_binding", "attempt_id", "cohesive_outcome", "decomposition"):
+                self.assertIn(field, prompt)
+
+    def test_synthetic_assignments_are_dispatch_ready_and_only_omit_declared_input(self):
+        for case in self.forward:
+            assignment = self.runner.handoff_for(case, "codex", 1)
+            verdict = self.contract.validate(assignment["plan"], assignment["capability_binding"])
+            self.assertTrue(verdict["dispatch_ready"], (case["id"], verdict["errors"]))
+            self.assertEqual(assignment["contract_version"], 5)
+            self.assertEqual(assignment["step_id"], case["id"])
+            self.assertEqual(assignment["capability_binding"]["bindings"][0]["step_id"], case["id"])
+            omitted = set(assignment["plan"]["leaves"][0]) - set(assignment["leaf"])
+            self.assertEqual(omitted, set(case.get("intentionally_missing_input", [])))
+
+    def test_full_return_is_validated_before_comparison_facts_are_selected(self):
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        assignment = self.runner.handoff_for(case, "codex", 1)
+        returned = {
+            "schema": "bounded-step-return-v1", "step_id": assignment["step_id"],
+            "agent_id": assignment["agent_id"], "attempt_id": assignment["attempt_id"],
+            "status": "completed", "changed_paths": ["slug.py"],
+            "acceptance": {"command": case["acceptance_command"], "exit_code": 0, "summary": "passed"},
+            "blockers": [], "notes": [], "commit_hash": "a" * 40, "unstarted_remainder": [],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            last = Path(temporary) / "last.json"
+            last.write_text(json.dumps(returned), encoding="utf-8")
+            self.assertEqual(self.runner.extract_return("codex", "", last, assignment), returned)
+            self.assertEqual(self.runner.return_summary(returned)["acceptance"]["summary"], "passed")
+            for change in ({"agent_id": "foreign"}, {"acceptance": {"command": "wrong", "exit_code": 0, "summary": "passed"}}, {"blockers": None}):
+                invalid = dict(returned, **change)
+                last.write_text(json.dumps(invalid), encoding="utf-8")
+                self.assertIsNone(self.runner.extract_return("codex", "", last, assignment))
+            missing = dict(returned)
+            missing.pop("notes")
+            last.write_text(json.dumps(missing), encoding="utf-8")
+            self.assertIsNone(self.runner.extract_return("codex", "", last, assignment))
+
+    def test_oversized_return_and_output_cap_follow_ledger_validator(self):
+        case = next(case for case in self.forward if case["id"] == "oversized-standard")
+        assignment = self.runner.handoff_for(case, "claude", 1)
+        returned = {
+            "schema": "bounded-step-return-v1", "step_id": assignment["step_id"],
+            "agent_id": assignment["agent_id"], "attempt_id": assignment["attempt_id"],
+            "status": "oversized", "changed_paths": [],
+            "acceptance": {"command": case["acceptance_command"], "exit_code": None, "summary": "not run"},
+            "blockers": [{"code": "oversized", "summary": "too much work"}], "notes": [],
+            "commit_hash": "", "unstarted_remainder": ["remaining modules"],
+        }
+        self.assertEqual(self.runner.bounded_return(returned, assignment), returned)
+        returned["notes"] = [{"type": "finding", "message": "x" * 9000}]
+        self.assertIsNone(self.runner.bounded_return(returned, assignment))
+        returned["notes"] = [{"type": "finding", "message": "x" * self.runner.ledger.MAX_NOTE_MESSAGE} for _ in range(self.runner.ledger.MAX_NOTES)]
+        returned["blockers"] = [{"code": "oversized", "summary": "x" * self.runner.ledger.MAX_BLOCKER_SUMMARY} for _ in range(self.runner.ledger.MAX_BLOCKERS)]
+        returned["unstarted_remainder"] = ["x" * self.runner.ledger.MAX_REMAINDER_ITEM for _ in range(self.runner.ledger.MAX_REMAINDER)]
+        returned["acceptance"]["summary"] = "x" * self.runner.ledger.MAX_ACCEPTANCE_SUMMARY
+        self.assertGreater(len(self.runner.ledger.canon(returned)), self.runner.ledger.MAX_RETURN)
+        self.assertIsNone(self.runner.bounded_return(returned, assignment))
+
+    def test_fake_host_success_uses_current_contract_without_persisting_transcript(self):
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        assignment = self.runner.handoff_for(case, "codex", 1)
+        real_run = subprocess.run
+
+        def fake_run(args, **kwargs):
+            if args[:2] != ["codex", "exec"]:
+                return real_run(args, **kwargs)
+            workdir = Path(kwargs["cwd"])
+            (workdir / "slug.py").write_text("def slug(value: str) -> str:\n    return '-'.join(value.lower().split())\n", encoding="utf-8")
+            returned = {"schema": "bounded-step-return-v1", "step_id": assignment["step_id"], "agent_id": assignment["agent_id"], "attempt_id": assignment["attempt_id"], "status": "completed", "changed_paths": ["slug.py"], "acceptance": {"command": case["acceptance_command"], "exit_code": 0, "summary": "one unittest passed"}, "blockers": [], "notes": [], "commit_hash": "a" * 40, "unstarted_remainder": []}
+            Path(args[args.index("--output-last-message") + 1]).write_text(json.dumps(returned), encoding="utf-8")
+            return subprocess.CompletedProcess(args, 0, "private host transcript", "")
+
+        with tempfile.TemporaryDirectory() as temporary, patch.object(self.runner.shutil, "which", return_value="/synthetic/codex"), patch.object(self.runner.subprocess, "run", side_effect=fake_run):
+            result = self.runner.run_case(case, "codex", 1, Path(temporary), True, 30, 0.5)
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["return_summary"]["acceptance"]["summary"], "one unittest passed")
+        self.assertNotIn("private host transcript", json.dumps(result))
+
+    def test_v3_and_v4_resume_shapes_do_not_inherit_v5_work_unit_fields(self):
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        current = self.runner.handoff_for(case, "codex", 1)["plan"]
+        for version in (3, 4):
+            with self.subTest(version=version):
+                plan = copy.deepcopy(current)
+                plan["contract_version"] = version
+                plan["work_units"][0].pop("cohesive_outcome")
+                plan["work_units"][0].pop("decomposition")
+                if version == 3:
+                    plan["leaves"][0].pop("capability_requirements")
+                verdict = self.contract.validate(plan)
+                self.assertTrue(verdict["valid"], verdict["errors"])
+                self.assertFalse(verdict["approval_ready"])
+                self.assertFalse(verdict["dispatch_ready"])
+                if version == 4:
+                    binding = {"schema": "planning-capability-binding-v1", "plan_sha256": self.contract.canonical_plan_sha256(plan), "bindings": [{"step_id": case["id"], "host": "codex", "executor": "gpt-5.6-terra", "requirements": plan["leaves"][0]["capability_requirements"], "evidence": ["synthetic resume capability"]}]}
+                    self.assertTrue(self.contract.validate(plan, binding)["resume_ready"])
 
     def test_chained_retry_prompt_carries_only_bounded_ledger_remediation(self):
         case = next(case for case in self.forward if case["id"] == "synthetic-chained-escalation")
         second = self.runner.case_for_attempt(case, 2)
         with tempfile.TemporaryDirectory() as temporary:
-            prompt = self.runner.build_prompt(second, "codex", Path(temporary) / "repo")
+            prompt = self.runner.build_prompt(second, "codex", Path(temporary) / "repo", 2)
         self.assertIn('"schema":"retry-remediation-v1"', prompt)
         self.assertIn('"target_portable_tier":"analytical"', prompt)
         self.assertIn('"executor_mode":"fresh"', prompt)
-        self.assertIn('"prior_attempt_id":"11111111-1111-4111-8111-111111111111"', prompt)
+        self.assertIn(f'"prior_attempt_id":"{self.runner.synthetic_id(case["id"], "codex", 1)}"', prompt)
         self.assertIn('"prior_return_sha256":', prompt)
         self.assertIn('"remediation_action":', prompt)
-        self.assertIn('"next_agent_id":"synthetic-retry-agent"', prompt)
-        self.assertIn('"next_harness":"synthetic-host"', prompt)
+        self.assertIn('"next_agent_id":"forward-codex-synthetic-chained-escalation-2"', prompt)
+        self.assertIn('"next_harness":"codex"', prompt)
         self.assertNotIn('"prior_return":', prompt)
         self.assertEqual(self.runner.MAPPINGS["codex"][second["tier"]], ("gpt-5.6-sol", "high"))
 
     def test_schema_extraction_uses_claude_structured_output_and_codex_last_message(self):
-        returned = {"status": "completed", "changed_paths": ["slug.py"], "acceptance_command": "python -m unittest", "acceptance_result": "passed"}
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        assignment = self.runner.handoff_for(case, "codex", 1)
+        returned = {"schema": "bounded-step-return-v1", "step_id": assignment["step_id"], "agent_id": assignment["agent_id"], "attempt_id": assignment["attempt_id"], "status": "completed", "changed_paths": ["slug.py"], "acceptance": {"command": case["acceptance_command"], "exit_code": 0, "summary": "passed"}, "blockers": [], "notes": [], "commit_hash": "a" * 40, "unstarted_remainder": []}
         with tempfile.TemporaryDirectory() as temporary:
             last = Path(temporary) / "last.json"
             last.write_text(json.dumps(returned), encoding="utf-8")
-            claude = self.runner.extract_return("claude", json.dumps({"structured_output": returned}), last)
-            codex = self.runner.extract_return("codex", "ignored raw stdout", last)
+            claude = self.runner.extract_return("claude", json.dumps({"structured_output": returned}), last, assignment)
+            codex = self.runner.extract_return("codex", "ignored raw stdout", last, assignment)
         self.assertEqual(claude, returned)
         self.assertEqual(codex, returned)
         self.assertTrue(self.runner.FINAL_SCHEMA["additionalProperties"] is False)
-        self.assertIn("status", self.runner.FINAL_SCHEMA["required"])
+        self.assertEqual(set(self.runner.FINAL_SCHEMA["required"]), set(returned))
+        self.assertEqual(set(self.runner.FINAL_SCHEMA["properties"]["status"]["enum"]), self.runner.ledger.RETURN_STATUSES)
 
     def test_runner_artifacts_do_not_change_stop_fixture_digest(self):
         with tempfile.TemporaryDirectory() as temporary:

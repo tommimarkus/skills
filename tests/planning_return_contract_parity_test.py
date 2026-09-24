@@ -65,6 +65,23 @@ class ReturnStatusParityTest(unittest.TestCase):
                 for status in ledger.RETURN_STATUSES:
                     self.assertIn(status, text, f"{path.name} omits status {status!r}")
 
+    def test_wrappers_gate_binding_and_work_unit_context_by_version(self):
+        for path in AGENTS:
+            text = normalized(path)
+            with self.subTest(document=path.name):
+                self.assertIn("v4–v5", text)
+                self.assertIn("v1–v3", text)
+                self.assertIn("v5", text)
+                self.assertIn("v1–v4", text)
+                self.assertNotIn("report its raw output", text)
+
+    def test_codex_handoff_gates_binding_and_decomposition_by_version(self):
+        text = normalized(SKILL / "extensions/codex.md")
+        self.assertIn("v4–v5", text)
+        self.assertIn("v1–v3", text)
+        self.assertIn("v5", text)
+        self.assertIn("v1–v4", text)
+
     def test_no_restatement_invents_a_blocked_prefixed_status(self):
         """`oversized` is a status; `blocked:` prefixes name blocker codes.
 
