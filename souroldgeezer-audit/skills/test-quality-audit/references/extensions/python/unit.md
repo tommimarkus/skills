@@ -62,7 +62,7 @@ chance to make detached work finish.
 
 ## Framework-Specific Low-Confidence Smells
 
-### `python.LC-3` — fixture parameterization hides expected values
+### `python.LC-5` — fixture parameterization hides expected values
 
 Applies to: unit
 

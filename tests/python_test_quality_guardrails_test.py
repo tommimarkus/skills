@@ -115,6 +115,20 @@ class PythonTestQualityGuardrailsTest(unittest.TestCase):
             self.assertEqual("python", golden[case_id]["stack"])
             self.assertIn("expected_action", golden[case_id])
 
+    def test_python_boundary_and_fixture_criteria_keep_distinct_codes(self) -> None:
+        core_path = PYTHON_ROOT / "references/extensions/python/core.md"
+        core = read(core_path)
+        unit = read(UNIT)
+        golden = read_jsonl(GOLDEN)
+
+        self.assertIn("### `python.LC-3`", core)
+        self.assertNotIn("### `python.LC-3`", unit)
+        self.assertIn("### `python.LC-5`", unit)
+        self.assertNotIn("### `python.LC-5`", core)
+        self.assertIn("python.LC-3", golden["TQA-GOLD-0008"]["expected_smells"])
+        self.assertIn("python.LC-5", golden["TQA-GOLD-0063"]["expected_smells"])
+        self.assertIn("python.LC-3", golden["TQA-GOLD-0063"]["expected_smells"])
+
 
 if __name__ == "__main__":
     unittest.main()

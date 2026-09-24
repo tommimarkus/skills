@@ -10,7 +10,7 @@ Integration tests have a different failure mode from unit tests. Unit tests fail
 This document covers integration tests in two sub-lanes that share principles but have distinct smells:
 
 - **Sub-lane A — in-process integration.** Real modules wired together in one process, with real adjacent dependencies (DB, queue, filesystem) where practical. The classic "middle tier" between unit and end-to-end.
-- **Sub-lane B — out-of-process contract.** The system under test is a *deployed artifact*, exercised as a black box through its public protocol (HTTP, message bus, gRPC). The unit boundary is the deployment unit, not the class.
+- **Sub-lane B — out-of-process contract.** The system under test is a *deployed artifact*, exercised as a black box through its public protocol (HTTP, message bus, gRPC). The unit boundary is the deployment unit, not the class. Calling an exported handler directly with request/response objects remains in-process; classify it under unit or sub-lane A according to the real modules and dependencies exercised.
 
 Browser-driven full-stack tests are explicitly out of scope; they belong in the end-to-end lane and warrant their own reference.
 
@@ -35,7 +35,7 @@ A test labeled "integration" without a stateable scope is a smell regardless of 
 - **Hermetic** (Google): the test brings every piece of state it needs with it, depends on nothing external, and produces the same result on every run. Hermeticity is a property of the test environment, not just the assertions.
 - **Test sizes** (Google): *small* = single process, no I/O, no network; *medium* = single machine, localhost only, no external network; *large* = multi-machine. Sub-lane A is almost always *medium*. Sub-lane B varies; tests against an artifact running in the same container suite are medium, tests against a deployed environment are large.
 - **Narrow vs. broad** (Fowler): a *narrow* integration test exercises the SUT against exactly one external dependency. A *broad* integration test sweeps in several at once. Narrow is the default; broad is a deliberate exception when the seams genuinely interact.
-- **Process boundary vs. deployment boundary**: Khorikov's rule for unit tests is "mock only across process boundaries." For integration tests in sub-lane B the relevant boundary is the *deployment unit* — anything outside the artifact-under-test is mockable; anything inside is not.
+- **Process boundary vs. deployment boundary**: Khorikov's rule for unit tests is "mock only across process boundaries." For integration tests in sub-lane B the relevant boundary is the *deployment unit*. A dependency outside that artifact may be controlled when the test still exercises the artifact, its real adapter, and the behavior it claims to prove; a double that replaces any of those bypasses the claimed seam.
 
 ---
 
@@ -164,8 +164,8 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 2. **`I-HC-B2`** — Test hits a test-only endpoint that does not exist in production. Whatever the test proves, it does not prove what production does.
 3. **`I-HC-B3`** — Snapshot of a full response body with no OpenAPI / JSON Schema / Protobuf source. Drifts on every product change unrelated to the contract.
 4. **`I-HC-B4`** — Hardcoded port, container name, hostname, or environment URL. The test runs in exactly one environment by accident.
-5. **`I-HC-B5`** — The downstream service is mocked at the transport layer. Defeats the entire sub-lane: the test exercises no real seam. Either move it to the unit lane or replace it with a contract test.
-6. **`I-HC-B6`** — Retry test that stubs the transport. The SUT's retry code path is never really executed; only the wiring around it is.
+5. **`I-HC-B5`** — A transport double replaces the service adapter or boundary whose behavior the test claims to prove, so the exercised artifact does not cross that seam. A declared double for an external dependency is allowed when the deployed subject and the claimed behavior remain exercised through the real adapter/seam; state what is controlled and what remains real.
+6. **`I-HC-B6`** — A retry test replaces the SUT's retry boundary or adapter, so the retry behavior under test is bypassed. A declared downstream double can be valid when requests still pass through the real retrying subject and the assertions prove its retry contract.
 7. **`I-HC-B7`** — Auth test with only a happy-path valid token/session. No missing token, expired token, tampered or malformed token, wrong issuer/audience/type where applicable, insufficient scope/role, cross-user or cross-tenant attempt, logout-invalidated session, or CSRF failure when those branches are part of the SUT. The negative space is exactly where auth bugs live.
 8. **`I-HC-B8`** — Contract test whose "expected" payload was pasted from a recorded run, with no consumer behind it. The contract is fictional.
 
@@ -202,9 +202,9 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 
 For the shared argument (Fowler, Khorikov, Google, Shore), see [unit-testing.md §7](unit-testing.md). Integration-specific position:
 
-- **Inside an integration test, a mock is almost always a scope leak.** If the seam you care about is faked, the test belongs in the unit lane. Proof obligation: every mock must point at a process or deployment boundary *and* a reason a contract test cannot cover it.
-- **Sub-lane A.** Use real adjacent dependencies (real DB in a container, real filesystem, real in-memory bus, real HTTP server). Mock only outside the deployment unit — third-party APIs you do not own, payment processors, identity providers in destructive flows.
-- **Sub-lane B.** Replace mocks of downstream services with consumer-driven contracts where feasible. If a contract exists, the mock is redundant; if a contract does not exist, the mock encodes the author's possibly-wrong beliefs about a collaborator (Fowler's classic objection to mockist tests, amplified at the service boundary).
+- **Judge doubles against the subject and seam under test.** A declared external double is acceptable when it controls a dependency while the test still exercises the subject's real behavior and the claimed boundary. It is a scope leak when it replaces that subject, the adapter/seam being evaluated, or behavior named in the test's proof claim. Record what is real and controlled; do not flag a double solely because it intercepts transport.
+- **Sub-lane A.** Prefer real adjacent dependencies where practical (real DB in a container, real filesystem, real in-memory bus, real HTTP server). A declared double for an external dependency is allowed when it preserves the in-process subject and seam being evaluated; retain the real integration boundary named by the test.
+- **Sub-lane B.** A declared downstream double is allowed when the deployed subject is exercised through its real adapter and the claimed contract remains covered. Prefer consumer-driven contracts where they verify the external contract; do not require them as a condition for every controlled external dependency. Flag only when substitution bypasses the claimed deployed subject, adapter, or behavior.
 - **Shore's nullable infrastructure** collapses the mock-vs-real choice into a single artifact and is preferred over either pole.
 
 ---
@@ -302,8 +302,8 @@ Distilled from §2–§7, written as directives an audit agent can apply directl
 
 1. **Every integration test must state what it integrates and why a unit test wouldn't do.** A test without a stateable scope is a smell regardless of how green it runs.
 2. **Prefer narrow over broad.** One seam per test. Broad tests must justify their breadth.
-3. **Inside an integration test, a mock is a scope leak.** Justify it (process or deployment boundary, no contract available) or move the test.
-4. **At a service boundary, prefer a consumer-driven contract over a mock.** A contract subsumes the mock; the mock encodes the author's beliefs.
+3. **Judge each double against the declared subject and seam.** Permit a declared external double when the subject's behavior remains exercised; flag substitutions that bypass the claimed boundary or behavior.
+4. **At a service boundary, use consumer-driven contracts when they answer the contract question.** A declared dependency double can still serve a different integration purpose when the real subject and adapter remain under test.
 5. **Hermetic by construction.** A test that depends on state it did not create depends on luck.
 6. **Test data is owned per-test.** Shared mutable fixtures are a smell;
    immutable or safely resettable infrastructure may be amortized without

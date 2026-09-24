@@ -65,8 +65,8 @@ Every test owns its own user account, its own browser context, its own cookies a
 ### 2.6 Diagnosable on failure
 Traces, screenshots, DOM snapshots, console logs, and network logs are captured on failure — **as diagnostics, never as assertion substrate**. The distinction is load-bearing: a screenshot saved on failure is a debugging artifact; a screenshot compared against a baseline *is* the assertion, and that assertion has the provenance problem of §1 unless there is a baseline workflow with an owner and a review gate.
 
-### 2.7 Runs few, runs deterministically
-The Google testing book's guidance — *"just say no to more end-to-end tests"* — is the floor, not the ceiling. E2E test count should be deliberately small, each test should cover a high-value journey, and the suite should be deterministic enough to run on every commit without a retry budget. A suite that grows linearly with feature count is a suite that will be quarantined within two quarters.
+### 2.7 Runs with a deliberate cadence
+Design E2E coverage around distinct browser-observable outcomes, and avoid duplicating contracts already proved at cheaper layers. The number of tests and their run cadence should fit user risk, suite purpose, and project-declared budgets. Run them on every commit when feedback needs and observed cost and reliability support that cadence; retries do not replace flake diagnosis. Count or growth alone is not a finding; assess measured budget breaches, overlap, ownership, and user-value coverage.
 
 ### 2.8 Trustworthy, readable, maintainable
 <!-- lean-audit:sync-intentional -->
@@ -163,7 +163,7 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 3. **`E-HC-A3`** — No keyboard-flow assertions. Tab order, focus indicator visibility, focus return on modal close, Escape behavior, Enter/Space activation — axe does not catch these and a mouse-only audit is not an audit.
 4. **`E-HC-A4`** — Asserts total violation count rather than violation IDs. A newly-introduced violation can hide a fix for an old one and the test stays green.
 5. **`E-HC-A5`** — No WCAG level cited. "Passes axe" without declaring the conformance target (2.1 AA, 2.2 AA, etc.) is not a contract. It is a vibe.
-6. **`E-HC-A6`** — Axe scoped to `<body>` when the page contains out-of-tree content (portals, tooltips, modals mounted to `document.body`). The scope is lying about what is actually on the page.
+6. **`E-HC-A6`** — Axe scoped to a container or subtree that excludes relevant rendered content, such as a portal mounted elsewhere in the document. Scanning `document.body` includes portals mounted under `body`; separately cover content that is unopened, hidden, or excluded from the scan.
 
 ### 5.3 High-confidence smells, sub-lane P (performance budget) — `E-HC-P1..E-HC-P6`
 
@@ -207,16 +207,16 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 
 ## 6. The test pyramid question — position
 
-A recurring fault line in the literature. The audit takes a position rather than equivocate.
+A recurring fault line in the literature. Use the project’s intended suite purpose, user-visible risks, declared budgets, and overlap evidence to assess the portfolio; layer ratios alone do not establish a defect.
 
 - **Cohn's Test Pyramid** places UI tests at the top: few, slow, expensive. The base is unit; the middle is service/integration. E2E is deliberately narrow.
-- **Google Testing Blog (*Just Say No to More End-to-End Tests*)** takes the same shape further: the recommended mix is 70% unit / 20% integration / 10% E2E, and even that 10% is a ceiling, not a target.
-- **Kent C. Dodds's Test Trophy** inverts slightly — more integration, similar caps on E2E, more emphasis on the middle lane because integration catches the most bugs per unit of maintenance cost.
+- **Google Testing Blog (*Just Say No to More End-to-End Tests*)** recommends a 70% unit / 20% integration / 10% E2E mix in its context; do not treat those counts as a universal ceiling or project target.
+- **Kent C. Dodds's Test Trophy** inverts slightly — more integration and emphasis on the middle lane because integration can catch bugs at lower maintenance cost; it does not supply a universal ratio requirement.
 - **Fowler (*TestPyramid*, *BroadStackTest*)** emphasizes that broad-stack tests have a place for the journeys that genuinely cross layers — but that the set of journeys that *need* the browser is much smaller than teams initially assume.
 
-**Position:** E2E should be deliberately few, deliberately high-value, and deliberately non-overlapping with the integration lane. The default answer to "should we add an E2E test?" is **no** — unless the test proves a user outcome that no cheaper test can, and the team is willing to own its flake profile. A suite that grows linearly with feature count is a quarantined suite waiting to happen. A suite that grows sub-linearly — one test per distinct user journey, with features routed to unit and integration coverage — is the target.
+**Position:** E2E tests should prove user outcomes that cheaper tests cannot, with their cost, reliability, ownership, cadence, and overlap assessed against project-declared budgets and suite purpose. Add journeys when risk or distinct user behavior warrants them; feature-count growth or a layer percentage alone is not a breach. Without a project budget, counts and ratios are observations, not targets.
 
-The sub-lanes inherit this constraint differently. Sub-lane F should be small and bounded by distinct user journeys. Sub-lane A should be proportional to page count, not feature count. Sub-lane P should cover representative pages, not every page. Sub-lane S should cover the browser-specific enforcement surface, nothing more.
+The sub-lanes have different evidence needs. Sub-lane F covers distinct user outcomes that need a browser; sub-lane A covers the accessibility states and interactions in scope; sub-lane P covers user-relevant performance paths; sub-lane S covers browser-specific enforcement behavior. Assess size and coverage by risk, declared budgets, and redundancy rather than universal count ratios.
 
 ---
 
@@ -273,7 +273,7 @@ A quarantined E2E test is a scope failure the suite has learned to ignore. Quara
 
 - **Flake rate per test** over the last N runs. A test above 1% flake is a scope smell.
 - **Time-to-green per test** — how long a failing E2E test takes to diagnose in practice. Longer-than-average times correlate with weak intent statements and snapshot-style assertions.
-- **Historical failure attribution.** What did the E2E suite catch in the last N weeks that unit and integration did not? If the answer is "nothing," the suite is a candidate for aggressive pruning.
+- **Historical failure attribution.** When comparable history is available, ask what distinct failures the E2E suite caught that cheaper lanes did not. No attributable catches can support a portfolio review, but does not alone prove redundancy; unavailable history remains unknown.
 - **Perf budget trend data.** Per-run artifacts feeding a trend graph. A per-run artifact that nobody reviews is noise; a trend graph with an owner is a signal.
 - **A11y scan deltas.** New violations over time, by rule ID — not a single total count.
 
@@ -328,10 +328,10 @@ Non-derivable directives (§2–§7 ground the full set; these add or sharpen):
 
 ### Google Testing
 Shared entries: [testing-core.md § Shared sources](testing-core.md). E2E lane
-deltas on those entries: the ch. 11 taxonomy is cited here also for the
-recommended mix; *Just Say No to More End-to-End Tests* is the canonical
-argument for keeping E2E deliberately small; *Hermetic Servers* applies doubly
-when the browser is in the loop.
+deltas on those entries: the ch. 11 taxonomy and *Just Say No to More End-to-End
+Tests* are cited for their context-specific guidance on avoiding low-value
+duplication; they do not establish a universal count or ratio. *Hermetic
+Servers* applies doubly when the browser is in the loop.
 
 ### Playwright, Cypress, WebDriverIO best practices
 - [Playwright: Best Practices](https://playwright.dev/docs/best-practices) — accessible-name selectors, auto-retrying assertions, test isolation.

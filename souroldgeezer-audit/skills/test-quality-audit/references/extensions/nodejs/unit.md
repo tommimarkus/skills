@@ -55,15 +55,15 @@ await user.click(btn);
 
 ### `nodejs.LC-U1` — `jest.mock('<local-relative>')` / `vi.mock('<local-relative>')` of the SUT's immediate collaborator
 
-**Applies to:** `unit` — under the integration rubric, module-level mocking of an in-process collaborator is already a scope leak (`I-HC-A1`); this refines the unit-rubric finding by targeting the one specific case `nodejs.HC-1` does not cover: an adjacent-module collaborator that the project team has declared a seam.
+**Applies to:** `unit` — applies the shared declared-seam rule from `core.md` at the unit rubric, where an adjacent collaborator may be a documented test seam.
 
-**Detection:** `(jest|vi)\.mock\(['"](?P<path>\.[^'"]+)['"]` at module level where `<path>` resolves to a sibling file of the SUT (same directory) or a child of the SUT's directory, AND the audit has **no** evidence the project treats this module as a seam (no matching carve-out in repo `CLAUDE.md` / `README.md` / ADR; no corresponding interface declaration).
+**Detection:** `(jest|vi)\.mock\(['"](?P<path>\.[^'"]+)['"]` at module level where `<path>` resolves to an immediate sibling collaborator of the SUT. Resolve whether the project declares that collaborator as a seam from its repo guidance or interface contract. If evidence clearly shows a declared seam preserves the subject behavior, do not flag; if evidence clearly shows the claimed behavior is bypassed, use high-confidence `nodejs.HC-1`. Emit this low-confidence code only when available evidence cannot resolve whether that adjacent collaborator is a valid seam or whether the test's proof claim is bypassed, and state the uncertainty.
 
-**Why low-confidence:** the same pattern is both a scope leak *and* a legitimate "test-via-seams" convention. Repo-level documentation distinguishes the two.
+**Why low-confidence:** module-path syntax does not show whether the target is a valid seam or whether the asserted behavior is bypassed. Resolve both from project and test evidence; use this code only when that decision remains uncertain.
 
-**Carve-out:** suppressed when the mocked module is an `index.ts` barrel that re-exports a domain boundary (e.g. `../services/index.ts` where `services/` is a documented DI seam), or when the project's `CLAUDE.md` / `README.md` states "interfaces in `*/seams/*` exist for testability".
+**Carve-out:** a declared seam is not a finding when the test preserves the stated subject and its observable behavior. This rule and confidence precedence are shared with `nodejs.HC-1`; do not classify the same resolved seam differently by rubric or confidence tier.
 
-**Rewrite (intent):** inject the collaborator as a constructor / function parameter and pass a `jest.fn()` at call time. The test names the dependency it's replacing at the call site rather than hijacking the module graph.
+**Rewrite (intent):** resolve the seam and proof claim. Keep a declared seam double when the subject behavior remains exercised; when it bypasses the claimed behavior, exercise that behavior through the real subject or choose a test boundary that proves it. Use constructor/function injection when the module graph is the only obstacle; do not require moving a valid seam to remove a finding.
 
 ---
 

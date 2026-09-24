@@ -63,8 +63,8 @@ Route the test to integration sub-lane B when any of these are present:
 
 - **Supertest against a deployed URL.** `request('https://api.example.com')` or `request('http://localhost:3000')` where the target is a URL string, not an app instance — exercises the SUT through its public HTTP surface.
 - **Raw `fetch(url, ...)` / `node:http` / `undici` client calls against a deployed base URL** with assertions on response status / body / headers, typically driven by an `API_BASE_URL` env var.
-- **MSW (Mock Service Worker) in pass-through mode.** `import { setupServer } from 'msw/node'` with handlers using `passthrough()` or `bypass()` to hit real upstreams. This is sub-lane B territory — you're contract-testing against a real remote service.
-- **Pact / consumer-driven contract test.** `import { Pact } from '@pact-foundation/pact'` or `import { PactV3, MatchersV3 }`.
+- **MSW (Mock Service Worker) in pass-through mode.** `import { setupServer } from 'msw/node'` with handlers using `passthrough()` or `bypass()` reaches a real upstream from the test process; it does not by itself show that the SUT is a deployed artifact. Classify by the SUT and actual process boundary.
+- **Pact / consumer-driven contract test.** `import { Pact } from '@pact-foundation/pact'` or `import { PactV3, MatchersV3 }`. Pact use alone does not select sub-lane B; inspect whether the test verifies a deployed provider, an in-process provider, or consumer behavior against a generated provider double.
 
 ### Unit rubric signals (default)
 
@@ -146,7 +146,7 @@ Types named `Fake*`, `InMemory*`, or any custom class that implements the real i
 
 - **Mixed use in one test.** Classify each double independently; interaction-pinning smells apply only to the verified collaborator.
 - **One mock per finding.** Name the offending collaborator, not the whole test.
-- **`jest.mock('path')` resolution.** Resolve the first argument against the module graph. Path under `node_modules/` → process boundary (no smell). Path inside `src/` / `app/` / `lib/` → same-layer code; apply `nodejs.HC-1` or `nodejs.LC-U1`.
+- **`jest.mock('path')` resolution.** Resolve the first argument against the module graph. Path under `node_modules/` → external library/process boundary. For in-repo paths, identify the test's stated subject and claimed seam, then apply the shared declared-seam rule in `unit-integration.md`: a documented seam double is allowed when the subject's relevant behavior remains exercised; flag only when the substitution bypasses that subject or the behavior the test claims to prove. Do not infer a scope leak from a local path alone.
 - **Auto-mock of a module that exports only types / constants.** Not a double — suppress all interaction-pinning smells.
 
 ---
@@ -320,6 +320,8 @@ Patterns that look like core smells but are idiomatic in Node.js / TypeScript an
 
 - **Do not flag `LC-1`** (mocking same-layer code) when the mocked type is an interface owned by the tested module *and* the project has a documented "test via seams" / "interface-segregation" convention (e.g. a `CLAUDE.md`, `README.md`, or ADR stating that interfaces exist specifically for testability). Ask before flagging if ambiguous.
 
+- **Declared Node test seams.** Apply one rule to `nodejs.HC-1` and `nodejs.LC-U1`: a declared adjacent-module seam may be doubled when the test still exercises and asserts the behavior of its stated subject. A declared seam does not excuse replacing the subject or the behavior under assertion. Missing or ambiguous seam evidence is not proof that a module is a valid boundary; resolve it from the project contract and report the limit when it remains unclear.
+
 - **Do not flag `LC-7`** (excessive setup) when the setup is constructing a `Testcontainers` stack (`new GenericContainer(...).withEnvironment(...).start()`), `supertest(app)` with a non-trivial app, `new NestApplication(...)` / `Test.createTestingModule(...).compile()` (safety net for NestJS projects until a dedicated extension exists), a `@playwright/test` `webServer` config, or a `vitest.config` `globalSetup` bringing up a real backend for an E2E run. Under the new dispatch model (see [SKILL.md § 0b (Rubric selection)](../../../SKILL.md)), these are **routing signals into the integration or E2E rubric** — tests using them should be audited under that rubric where heavy setup is expected, not the unit rubric at all. This carve-out stays in force as a **safety net** for cases where the dispatch is uncertain.
 
 - **Do not flag `HC-10`** (snapshot tests pinning unspecified output) when the snapshot target is:
@@ -327,6 +329,6 @@ Patterns that look like core smells but are idiomatic in Node.js / TypeScript an
   - A `@testing-library/jest-dom` accessible-tree snapshot (output of `prettyDOM(container)` or similar), OR
   - A Zod / Yup / Joi schema parse result where the schema is co-located with the SUT and exported from the same module — the schema **is** the contract.
 
-- **Do not flag `nodejs.HC-1`** (module-level mock of same-layer code) when the mocked module's path resolves to `node_modules/` (external package — by definition a process / library boundary).
+- **Do not flag `nodejs.HC-1`** (module-level mock of same-layer code) when the mocked module's path resolves to `node_modules/` (external package — by definition a process / library boundary). For in-repo modules, use the declared-seam rule above; path shape alone does not decide.
 
 ---

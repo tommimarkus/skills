@@ -11,13 +11,15 @@ Three-rubric smells stay in [`core.md`](core.md).
 
 **Applies to:** `unit, integration`
 
-**Detection:** `(jest|vi)\.mock\(['"](?P<path>\.{1,2}/[^'"]+)['"]` at module level of a test file. Resolve `path` against the test file's directory. The mock target is **same-layer** when it resolves under the SUT's own parent directory or a sibling `src/` path (i.e. the author's own code, not an external package).
+**Detection:** `(jest|vi)\.mock\(['"](?P<path>\.{1,2}/[^'"]+)['"]` at module level of a test file. Resolve `path` against the test file's directory. The mock target is **same-layer** when it resolves under the SUT's own parent directory or a sibling `src/` path (i.e. the author's own code, not an external package). Apply the declared-seam rule below. Report `nodejs.HC-1` when evidence shows the replacement bypasses behavior the test claims to prove; do not infer that solely from a local path.
 
-**Smell:** module-level mocking of the SUT's own collaborators pins the internal boundary. Refactors that move logic between the SUT and its collaborator break the test without changing observable behavior. The test is characterization of the current module graph.
+**Smell:** module-level mocking of the behavior the test claims to exercise pins an internal boundary. Refactors that move logic between the SUT and its collaborator break the test without changing observable behavior. A path inside the repository is not sufficient evidence by itself; the test's subject and claimed seam determine whether behavior was bypassed.
 
 **Carve-out — platform boundaries:** do not flag when the mock target is `fetch`, `node:http`, `node:https`, `undici`, `node-fetch`, `axios`, `got`, an `@octokit/*` package, an AWS / Azure / GCP SDK, `nodemailer`, a database driver (`pg`, `mysql2`, `mongodb`, `redis`, `ioredis`), `fs` / `node:fs`, or any package resolved from `node_modules/`. These are process boundaries. Carved out here to share the rule across the whole Node stack.
 
 **Carve-out — Next.js platform modules** (when `nextjs` extension is loaded): do not flag when the mock target is `next/navigation`, `next/headers`, `next/cache`, `next/font/*`, `server-only`, or `client-only`.
+
+**Declared-seam rule (shared with `nodejs.LC-U1`):** an in-repo module explicitly declared as a test seam may be replaced when the test still exercises the stated subject and asserts behavior at that seam. Do not flag based only on a local path or module-level mock. Flag the double only when it replaces the subject or bypasses the behavior the test claims to prove. Apply this same rule to unit and integration tests.
 
 **Example (smell):**
 ```ts

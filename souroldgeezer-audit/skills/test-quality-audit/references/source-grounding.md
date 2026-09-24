@@ -82,6 +82,11 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   only when the user's authorization covers the action and scope; successful
   observations inform separate skill maintenance and never edit installed
   guidance during an audit.
+- Source: local Next.js and Node.js rubric references, integration and E2E
+  quality references, and the golden corpus.
+  Handling: consumed setup, exercised process/deployment boundaries, declared
+  test seams, suite purpose, and accessibility scan scope are repo-authored
+  criteria; paired golden cases exercise accepted and rejected scenarios.
 - Source: Koochakzadeh and Garousi, “A Tester-Assisted Methodology for Test
   Redundancy Detection,” at `https://doi.org/10.1155/2010/932686`.
   Handling: linked for coverage-based redundancy false-positive risk and the

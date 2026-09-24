@@ -133,8 +133,8 @@ Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefix
 `I-HC-B2` — Test hits a test-only endpoint that does not exist in production.
 `I-HC-B3` — Snapshot of a full response body with no OpenAPI / JSON Schema / Protobuf source.
 `I-HC-B4` — Hardcoded port, container name, hostname, or environment URL.
-`I-HC-B5` — Downstream service mocked at the transport layer; defeats the sub-lane, belongs in unit lane or as a contract test.
-`I-HC-B6` — Retry test stubs the transport; the SUT's retry code path is never really executed.
+`I-HC-B5` — A transport double replaces the deployed subject or adapter/seam the test claims to prove; controlled external dependencies remain allowed when the real subject and claimed seam are exercised.
+`I-HC-B6` — A transport double bypasses the retry behavior under test; a declared downstream double is allowed when requests still pass through the real retrying subject and its retry contract is asserted.
 `I-HC-B7` — Auth test with only a happy-path valid token; no negative cases.
 `I-HC-B8` — Contract test whose "expected" payload was pasted from a recorded run with no consumer behind it.
 
@@ -184,7 +184,7 @@ Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** perfo
 `E-HC-A3` — No keyboard-flow assertions (tab order, focus indicator, focus return, Escape behavior, Enter/Space activation).
 `E-HC-A4` — Asserts total violation count rather than violation IDs; a new violation can hide a fix for an old one.
 `E-HC-A5` — No WCAG conformance level cited; "passes axe" without declaring the target (2.1 AA, 2.2 AA, etc.) is not a contract.
-`E-HC-A6` — Axe scoped to a subtree that excludes out-of-tree content (portals, tooltips, modals mounted to `document.body`); the scope is lying about what is actually on the page.
+`E-HC-A6` — Axe scoped to a container or subtree that excludes relevant rendered content. A `document.body` scan includes portals mounted under `body`; unopened, hidden, or excluded content needs separate coverage.
 
 ### High-confidence smells, sub-lane P / performance budget (E-HC-P*)
 

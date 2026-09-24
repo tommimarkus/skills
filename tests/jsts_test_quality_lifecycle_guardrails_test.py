@@ -120,6 +120,28 @@ class JsTsReactLifecycleGuardrailsTest(unittest.TestCase):
                 self.assertEqual(positives, golden[case_id]["expected_positives"])
                 self.assertIn("expected_action", golden[case_id])
 
+    def test_golden_corpus_distinguishes_setup_boundaries_and_declared_seams(self) -> None:
+        golden = read_jsonl(GOLDEN)
+        expected = {
+            "TQA-GOLD-0057": ("nextjs", "unit", [], ["nextjs.LC-1"]),
+            "TQA-GOLD-0058": ("nextjs", "integration", [], ["sub-lane-B"]),
+            "TQA-GOLD-0059": ("nodejs", "unit", [], ["nodejs.HC-1", "nodejs.LC-U1"]),
+            "TQA-GOLD-0060": ("nodejs", "unit", ["nodejs.HC-1"], []),
+            "TQA-GOLD-0061": ("synthetic", "e2e", [], ["E-HC-A6"]),
+            "TQA-GOLD-0062": ("synthetic", "e2e", ["E-HC-A6"], []),
+            "TQA-GOLD-0064": ("nextjs", "unit", ["nextjs.LC-1"], []),
+            "TQA-GOLD-0065": ("synthetic", "e2e", [], []),
+        }
+        for case_id, (stack, rubric, smells, forbidden) in expected.items():
+            with self.subTest(case_id=case_id):
+                case = golden[case_id]
+                self.assertEqual(stack, case["stack"])
+                self.assertEqual(rubric, case["rubric"])
+                self.assertEqual(smells, case["expected_smells"])
+                self.assertTrue(set(forbidden).issubset(set(case["forbidden_smells"])))
+        self.assertEqual([], golden["TQA-GOLD-0065"]["expected_suite_health_smells"])
+        self.assertEqual(["universal-e2e-ratio-ceiling"], golden["TQA-GOLD-0065"]["forbidden_actions"])
+
 
 if __name__ == "__main__":
     unittest.main()

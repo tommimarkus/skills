@@ -52,7 +52,7 @@ Record these on detection:
 
 ## Test type detection signals
 
-Consumed by [SKILL.md § 0b (Rubric selection)](../../../SKILL.md). Next.js **rewrites the test-type routing rules** because the file's location in the Next.js source tree dictates whether the test can be unit, integration, or E2E — a Server Component cannot be meaningfully unit-tested in isolation, a Route Handler is out-of-process contract, and a Server Action is in-process with a real DB.
+Consumed by [SKILL.md § 0b (Rubric selection)](../../../SKILL.md). Use Next.js file shapes and framework APIs to find likely tests and evidence, then classify each test by the process and deployment boundary it actually exercises. A source file's location or use of `Request` / `Response` does not itself make a test out-of-process.
 
 ### Next.js file-shape routing table
 
@@ -62,18 +62,18 @@ The SUT file's position in the source tree and its top-of-file directives determ
 |---|---|---|
 | `app/**/*.{tsx,jsx}` with top-of-file `'use client'` directive; the test renders it with `@testing-library/react` and mocks collaborators | Standard React component test | **unit** (default) |
 | `app/**/*.{tsx,jsx}` without `'use client'` (implicitly a Server Component); typically `async` function, `await`s server-side data (DB, fetch, `cookies()`, `headers()`) | Server Component — cannot execute under RTL in isolation (React Testing Library does not run server components) | **integration sub-lane A** (in-process with a real adjacent dependency) |
-| `app/**/route.{js,ts,jsx,tsx}` exporting one or more of `GET` / `POST` / `PUT` / `PATCH` / `DELETE` / `HEAD` / `OPTIONS` | Route Handler — tested by invoking the exported function with a `Request` and asserting on the returned `Response` | **integration sub-lane B** (out-of-process contract) |
+| `app/**/route.{js,ts,jsx,tsx}` exporting one or more of `GET` / `POST` / `PUT` / `PATCH` / `DELETE` / `HEAD` / `OPTIONS` | Route Handler — an exported function invoked directly with a `Request` runs in-process; use unit when isolated with controlled dependencies, or integration A when real adjacent modules are wired. A deployed handler exercised through HTTP is integration B. | **unit or integration A/B by exercised boundary** |
 | `app/**/actions.{ts,js}` OR any file containing an `async function` preceded by a `'use server'` directive (top-of-file or inline) | Server Action — in-process server code, typically writes to the DB and returns data to a client component | **integration sub-lane A** |
-| `proxy.{ts,js}` at root or `src/` root (v16+) — exports `proxy` function or default export; returns a `NextResponse` | Proxy — tested by invoking the function with a `NextRequest` and asserting on the returned `NextResponse` (redirect target, status, headers, cookies) | **integration sub-lane B** |
-| `middleware.{ts,js}` at root or `src/` root (pre-v16 legacy) — same shape, exported as `middleware` | Legacy middleware — same treatment as Proxy | **integration sub-lane B** |
-| `pages/api/**/*.{js,ts}` (Pages Router API route) exporting `default` handler of `(req, res) => void` | API route — HTTP contract | **integration sub-lane B** |
+| `proxy.{ts,js}` at root or `src/` root (v16+) — exports `proxy` function or default export; returns a `NextResponse` | Proxy — direct function invocation with `NextRequest` is in-process; a deployed proxy exercised through HTTP is out-of-process. | **unit or integration A/B by exercised boundary** |
+| `middleware.{ts,js}` at root or `src/` root (pre-v16 legacy) — same shape, exported as `middleware` | Legacy middleware — classify by the actual in-process or deployed boundary, as for Proxy. | **unit or integration A/B by exercised boundary** |
+| `pages/api/**/*.{js,ts}` (Pages Router API route) exporting `default` handler of `(req, res) => void` | API route — direct handler calls are in-process; a deployed HTTP request is out-of-process. | **unit or integration A/B by exercised boundary** |
 | `pages/**/*.{tsx,jsx}` declaring `getServerSideProps` / `getStaticProps` / `getStaticPaths` | Server-rendered page — exercises server data fetch path | **integration sub-lane A** |
 | `pages/**/*.{tsx,jsx}` with no server data fetch (purely client-rendered) | Client page | **unit** (default) |
 
 **Sub-lane selection within integration:**
 
-- **Sub-lane A (in-process):** the test instantiates the SUT (or its host) in the same process, wires real adjacent dependencies (DB via Testcontainers / Prisma / Drizzle / TypeORM / Knex; MSW for upstream HTTP), and asserts on observable state. Server Components, Server Actions, and `pages/*.tsx` with `getServerSideProps` fall here.
-- **Sub-lane B (out-of-process contract):** the test invokes a handler that speaks HTTP (Route Handler, Pages API, proxy / middleware) by constructing a `Request` / `NextRequest` and asserting on the returned `Response` / `NextResponse`. The boundary under test is the HTTP contract; internal collaborators (`cookies()`, `headers()`, `getServerSession()`) are exercised through the real request, not mocked.
+- **Sub-lane A (in-process):** the test instantiates the SUT (or its host) in the same process, wires real adjacent dependencies (DB via Testcontainers / Prisma / Drizzle / TypeORM / Knex; MSW for upstream HTTP), and asserts on observable state. Server Components, Server Actions, and `pages/*.tsx` with `getServerSideProps` fall here. A directly invoked Route Handler can fall here when the test wires real adjacent modules.
+- **Sub-lane B (out-of-process contract):** the test sends a request to a deployed artifact through its public protocol and asserts on the returned response. Constructing a `Request` / `NextRequest` and calling an exported handler in the test process does not establish this boundary by itself. Judge any doubles by whether they replace behavior or a seam included in the stated subject under test.
 
 ### E2E rubric signals
 
@@ -180,15 +180,15 @@ Use `cookies` / `headers` injection at the boundary if the handler's shape requi
 
 ## Framework-specific low-confidence smells (`nextjs.LC-*`)
 
-### `nextjs.LC-1` — `jest.mock('next/cache' | 'next/headers')` where the test never asserts invocation
+### `nextjs.LC-1` — Unconsumed setup double for `next/cache` or `next/headers`
 
 **Applies to:** `unit, integration`
 
-**Detection:** `(jest|vi)\.mock\(['"]next/(cache|headers)['"]` at the top of a test file, with no subsequent `.toHaveBeenCalled*` / `expect(<mockedExport>).*` assertion anywhere in the file referencing the mocked module.
+**Detection:** `(jest|vi)\.mock\(['"]next/(cache|headers)['"]` at the top of a test file where inspection shows that no mocked value is read or otherwise consumed by the SUT. Absence of a call assertion is not evidence that setup is unused.
 
-**Why low-confidence:** the mock is carved out by `core.md § Carve-outs` (platform boundary — see below). But if the test doesn't *use* what it mocked, the mock is dead code carrying a maintenance cost (must be kept in sync with Next.js's API surface). May also indicate the test author started to write an interaction assertion and abandoned it.
+**Why low-confidence:** these framework doubles are normally valid setup for controlled inputs. When the SUT consumes the configured value, a call assertion is unnecessary unless the interaction itself is the contract. Unconsumed setup is dead code carrying a maintenance cost.
 
-**Rewrite (intent):** either add the interaction assertion that motivated the mock, or remove the mock — the carve-out allows it but doesn't require it.
+**Rewrite (intent):** remove setup that the SUT does not consume. Keep consumed input setup and assert on the handler's observable behavior; add an interaction assertion only when that interaction is part of the contract.
 
 ---
 
@@ -228,11 +228,11 @@ Use `cookies` / `headers` injection at the boundary if the handler's shape requi
 
 ### `nextjs.POS-3` — Route Handler tested as `handler(new Request(url))` → `Response` round-trip
 
-**Applies to:** `integration`
+**Applies to:** `integration` — a direct handler call is in-process; use sub-lane A when real adjacent modules are wired. This positive signal recognizes the HTTP behavior asserted, not an out-of-process deployment boundary.
 
-**Detection:** a test of a file at `app/**/route.{ts,tsx}` that imports the named-export handler (`GET` / `POST` / etc.), constructs a `new Request(url, { method, body, headers })`, awaits the handler's return, and asserts on `res.status` / `await res.json()` / `res.headers.get(...)`.
+**Detection:** an integration sub-lane A test of a file at `app/**/route.{ts,tsx}` that imports the named-export handler (`GET` / `POST` / etc.), wires real adjacent modules, constructs a `new Request(url, { method, body, headers })`, awaits the handler's return, and asserts on `res.status` / `await res.json()` / `res.headers.get(...)`.
 
-**Why positive:** this is the Next.js idiomatic Route Handler test shape. The boundary under test is the HTTP contract — exactly what `I-POS-6` rewards. No module-level mocking of `next/headers` / `next/cache` needed; the handler's collaborators are exercised through the real Request. Counterpart to `nextjs.HC-4`.
+**Why positive:** this is a focused way to assert a Route Handler's HTTP behavior. The direct function call runs in-process; classify it as integration sub-lane A when real adjacent modules are wired. No module-level mocking of `next/headers` / `next/cache` is needed when the handler can consume the real Request. Counterpart to `nextjs.HC-4`.
 
 ---
 
