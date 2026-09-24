@@ -263,6 +263,14 @@ class RuntimeHostSmokeTest(unittest.TestCase):
 
             base_env = os.environ.copy()
             original_home = base_env.get("HOME")
+            poisoned_roots = {
+                "DEDIREN_HOME": str(normal_claude / "dediren-home"),
+                "CLAUDE_PLUGIN_DATA": str(normal_claude / "plugin-data"),
+                "COPILOT_PLUGIN_DATA": str(normal_copilot / "plugin-data"),
+                "PLUGIN_DATA": str(normal_codex / "plugin-data"),
+                "DEDIREN_COMMAND": "/explicit/bin/dediren",
+            }
+            base_env.update(poisoned_roots)
             summary = smoke.run_host_smoke(
                 REPO_ROOT,
                 state,
@@ -290,6 +298,14 @@ class RuntimeHostSmokeTest(unittest.TestCase):
 
             for argv, child_env in fake.calls:
                 self.assertEqual(child_env.get("HOME"), original_home, argv)
+                for key in (
+                    "DEDIREN_HOME",
+                    "CLAUDE_PLUGIN_DATA",
+                    "COPILOT_PLUGIN_DATA",
+                    "PLUGIN_DATA",
+                ):
+                    self.assertNotIn(key, child_env, argv)
+                self.assertEqual(child_env.get("DEDIREN_COMMAND"), poisoned_roots["DEDIREN_COMMAND"])
                 if argv[0] == "codex":
                     self.assertEqual(child_env["CODEX_HOME"], str(state / "codex-home"), argv)
                     self.assertNotIn("CLAUDE_CONFIG_DIR", child_env, argv)
@@ -316,6 +332,48 @@ class RuntimeHostSmokeTest(unittest.TestCase):
             for _, cwd, workspace_root, _, _ in mcp_calls:
                 self.assertEqual(workspace_root, REPO_ROOT)
                 self.assertNotEqual(cwd.resolve(), workspace_root.resolve())
+            for _, _, _, child_env, label in mcp_calls:
+                self.assertEqual(child_env.get("DEDIREN_COMMAND"), poisoned_roots["DEDIREN_COMMAND"])
+                self.assertNotIn("CLAUDE_PLUGIN_DATA", child_env, label)
+                self.assertNotIn("COPILOT_PLUGIN_DATA", child_env, label)
+                if label == "Codex":
+                    self.assertEqual(child_env["PLUGIN_DATA"], str(state / "runtime-data" / "codex" / "souroldgeezer-architecture"))
+                    self.assertNotIn("DEDIREN_HOME", child_env)
+                elif label == "Claude":
+                    self.assertEqual(child_env["DEDIREN_HOME"], str(state / "runtime-data" / "dediren"))
+                    self.assertNotIn("PLUGIN_DATA", child_env)
+                else:
+                    self.assertEqual(child_env["DEDIREN_HOME"], str(state / "runtime-data" / "copilot" / "souroldgeezer-architecture" / "dediren"))
+                    self.assertNotIn("COPILOT_PLUGIN_DATA", child_env)
+                    self.assertNotIn("PLUGIN_DATA", child_env)
+
+    def test_managed_runtime_home_rejects_external_and_symlink_escapes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            state = root / "state"
+            allocated = state / "runtime-data" / "plugin"
+            external = root / "normal-plugin-data"
+            allocated.mkdir(parents=True)
+            external.mkdir()
+
+            with self.subTest(kind="external"):
+                with self.assertRaisesRegex(smoke.SmokeFailure, "outside the smoke state"):
+                    smoke.assert_managed_runtime_home(
+                        REPO_ROOT,
+                        {"DEDIREN_HOME": str(external / "dediren")},
+                        allocated,
+                        label="test",
+                    )
+
+            (allocated / "dediren").symlink_to(external / "dediren", target_is_directory=True)
+            with self.subTest(kind="symlink"):
+                with self.assertRaisesRegex(smoke.SmokeFailure, "outside the smoke state"):
+                    smoke.assert_managed_runtime_home(
+                        REPO_ROOT,
+                        {"DEDIREN_HOME": str(allocated / "dediren")},
+                        allocated,
+                        label="test",
+                    )
 
     def test_codex_discovery_checks_the_named_skill_resolved_path(self) -> None:
         root = Path("/isolated/plugin")

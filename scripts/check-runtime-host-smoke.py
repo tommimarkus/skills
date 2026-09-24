@@ -482,6 +482,20 @@ def run_mcp_session(
 
 
 _RUNTIME_MODULE: Any = None
+_DATA_ROOT_ENV_KEYS = (
+    "DEDIREN_HOME",
+    "CLAUDE_PLUGIN_DATA",
+    "COPILOT_PLUGIN_DATA",
+    "PLUGIN_DATA",
+)
+
+
+def without_inherited_data_roots(env: Mapping[str, str]) -> dict[str, str]:
+    """Drop ambient per-plugin roots before assigning this smoke's own paths."""
+    isolated = dict(env)
+    for key in _DATA_ROOT_ENV_KEYS:
+        isolated.pop(key, None)
+    return isolated
 
 
 def runtime_module(repo: Path) -> Any:
@@ -525,15 +539,12 @@ def assert_managed_runtime_home(
         )
     if not resolved.is_absolute():
         raise SmokeFailure(f"{label} resolved a non-absolute runtime home: {resolved}")
-    candidates = [plugin_data] + [
-        Path(expanded_env[name])
-        for name in ("CLAUDE_PLUGIN_DATA", "COPILOT_PLUGIN_DATA", "PLUGIN_DATA")
-        if expanded_env.get(name, "").startswith("/")
-    ]
-    if not any(resolved.is_relative_to(candidate) for candidate in candidates):
+    allowed_root = plugin_data.resolve()
+    resolved_home = resolved.resolve()
+    if not resolved_home.is_relative_to(allowed_root):
         raise SmokeFailure(
-            f"{label} resolved a runtime home outside every per-plugin data "
-            f"directory it was given: {resolved}"
+            f"{label} resolved a runtime home outside the smoke state "
+            f"directory {allowed_root}: {resolved_home}"
         )
 
 
@@ -650,7 +661,7 @@ def run_host_smoke(
     if any(state_root.iterdir()):
         raise SmokeFailure(f"fresh state directory is not empty: {state_root}")
 
-    env = dict(os.environ if base_env is None else base_env)
+    env = without_inherited_data_roots(os.environ if base_env is None else base_env)
     profiles = tuple(
         default_profile_control_paths(env) if normal_profile_paths is None else normal_profile_paths
     )
@@ -921,7 +932,7 @@ def run_host_smoke(
         if not isinstance(codex_server, dict):
             raise SmokeFailure("installed Codex plugin omitted the Dediren adapter")
         codex_plugin_data = runtime_data / "codex" / architecture.name
-        codex_mcp_env = codex_env.copy()
+        codex_mcp_env = without_inherited_data_roots(codex_env)
         # Codex injects these two into every Agent Plugins stdio child, so the
         # manifest needs no `env` of its own. This smoke launches the server
         # directly rather than through Codex's MCP client, so it has to supply
@@ -993,7 +1004,7 @@ def run_host_smoke(
             raise SmokeFailure("installed Claude plugin omitted the Dediren adapter")
         claude_server = claude_servers["dediren"]
         claude_plugin_data = runtime_data
-        claude_mcp_env = claude_env.copy()
+        claude_mcp_env = without_inherited_data_roots(claude_env)
         claude_mcp_env["CLAUDE_PROJECT_DIR"] = str(repo)
         for key, value in claude_server.get("env", {}).items():
             claude_mcp_env[key] = expand_claude(
@@ -1028,7 +1039,7 @@ def run_host_smoke(
             label="Claude",
         )
         copilot_plugin_data = runtime_data / "copilot" / architecture.name
-        copilot_mcp_env = copilot_env.copy()
+        copilot_mcp_env = without_inherited_data_roots(copilot_env)
         for key, value in copilot_server.get("env", {}).items():
             copilot_mcp_env[key] = expand_copilot(
                 value,
