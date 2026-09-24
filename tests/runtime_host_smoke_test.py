@@ -19,9 +19,10 @@ smoke = load_script_module("runtime_host_smoke", SCRIPT)
 class FakeCliRunner:
     """In-process CLI double that materializes realistic isolated install trees."""
 
-    def __init__(self, repo: Path, *, aliased_paths: bool = False) -> None:
+    def __init__(self, repo: Path, *, aliased_paths: bool = False, native_copilot: bool = False) -> None:
         self.repo = repo
         self.aliased_paths = aliased_paths
+        self.native_copilot = native_copilot
         self.calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
         self.codex_installs: dict[str, Path] = {}
         self.claude_installs: dict[str, Path] = {}
@@ -192,6 +193,12 @@ class FakeCliRunner:
             manifest = json.loads((architecture / "plugin.json").read_text(encoding="utf-8"))
             mcp_path = architecture / manifest["mcpServers"].removeprefix("./")
             server = json.loads(mcp_path.read_text(encoding="utf-8"))["dediren"]
+            if self.native_copilot:
+                server = json.loads((architecture / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["dediren"]
+                data = Path(child_env["COPILOT_HOME"]) / "plugin-data" / smoke.MARKETPLACE / "souroldgeezer-architecture"
+                server["env"] = {key: str(data) for key in (
+                    "PLUGIN_DATA", "COPILOT_PLUGIN_DATA", "CLAUDE_PLUGIN_DATA"
+                )}
             server["env"] = {
                 **server.get("env", {}),
                 "CLAUDE_PLUGIN_ROOT": str(architecture),
@@ -347,6 +354,26 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     self.assertNotIn("COPILOT_PLUGIN_DATA", child_env)
                     self.assertNotIn("PLUGIN_DATA", child_env)
 
+    def test_native_copilot_runtime_home_stays_inside_isolated_host_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary) / "state"
+            state.mkdir()
+            calls = {}
+
+            def fake_mcp(argv, *, cwd, workspace_root, env, label):
+                calls[label] = dict(env)
+                return set(smoke.REQUIRED_DEDIREN_TOOLS)
+
+            smoke.run_host_smoke(
+                REPO_ROOT, state, base_env=os.environ.copy(),
+                runner=FakeCliRunner(REPO_ROOT, native_copilot=True),
+                mcp_runner=fake_mcp,
+                normal_profile_paths=(),
+            )
+            expected = state / "copilot-home" / "plugin-data" / smoke.MARKETPLACE / "souroldgeezer-architecture" / "dediren"
+            self.assertEqual(smoke.runtime_module(REPO_ROOT).data_home(calls["Copilot"]), expected)
+            self.assertNotIn("DEDIREN_HOME", calls["Copilot"])
+
     def test_managed_runtime_home_rejects_external_and_symlink_escapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -361,7 +388,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     smoke.assert_managed_runtime_home(
                         REPO_ROOT,
                         {"DEDIREN_HOME": str(external / "dediren")},
-                        allocated,
+                        state,
                         label="test",
                     )
 
@@ -371,7 +398,7 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     smoke.assert_managed_runtime_home(
                         REPO_ROOT,
                         {"DEDIREN_HOME": str(allocated / "dediren")},
-                        allocated,
+                        state,
                         label="test",
                     )
 

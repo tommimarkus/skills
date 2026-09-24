@@ -519,7 +519,7 @@ def runtime_module(repo: Path) -> Any:
 def assert_managed_runtime_home(
     repo: Path,
     expanded_env: dict[str, str],
-    plugin_data: Path,
+    isolation_root: Path,
     *,
     label: str,
 ) -> None:
@@ -539,7 +539,7 @@ def assert_managed_runtime_home(
         )
     if not resolved.is_absolute():
         raise SmokeFailure(f"{label} resolved a non-absolute runtime home: {resolved}")
-    allowed_root = plugin_data.resolve()
+    allowed_root = isolation_root.resolve()
     resolved_home = resolved.resolve()
     if not resolved_home.is_relative_to(allowed_root):
         raise SmokeFailure(
@@ -1047,7 +1047,9 @@ def run_host_smoke(
                 plugin_data=copilot_plugin_data,
             )
         assert_managed_runtime_home(
-            repo, copilot_mcp_env, copilot_plugin_data, label="Copilot"
+            # Native Copilot supplies its own plugin-data path under copilot_home;
+            # the legacy adapter uses runtime_data. Both must stay inside state_root.
+            repo, copilot_mcp_env, state_root, label="Copilot"
         )
         copilot_command = expand_copilot(
             copilot_server["command"],
