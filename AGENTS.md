@@ -332,8 +332,8 @@ silently substitute or downgrade. Each v5 plan carries an at-most-4-KiB advisory
 at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles,
 unknown ranges, shared-prefix repetition, retry multiplication, and verification
 reserve never affect validity, readiness, dispatch, retry, or lifecycle. Keep
-stable-proxy, declared-model-token, and provider-measured lanes separate. Two
-Three advisory codes flag planning-cost signals: `PLANCOST-UNBATCHED-CHAIN` (an
+stable-proxy, declared-model-token, and provider-measured lanes separate. Three
+advisory codes flag planning-cost signals: `PLANCOST-UNBATCHED-CHAIN` (an
 unbatched dependency-consecutive same-owner mechanical/standard pair),
 `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20 declared work-unit weight), and
 `PLANCOST-MICROLEAF-RISK` (merge candidates back into their work unit's
