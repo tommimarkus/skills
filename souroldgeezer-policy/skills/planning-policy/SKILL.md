@@ -49,8 +49,9 @@ choice invokes its owning design skill before approval.
   errors, legacy resumption, diagnosis, retention operations, or ledger
   authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
-- **Usage tracing:** only after an explicit trace, measure, or calibrate request,
-  read [usage tracing](references/usage-tracing.md). Ordinary runs never inspect telemetry,
+- **Usage tracing (explicit opt-in only):** only after the user explicitly asks
+  to trace, measure, or calibrate, read [usage tracing](references/usage-tracing.md).
+  Ordinary runs never inspect telemetry,
   create trace state, install hooks, or make measurement network/provider calls.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
@@ -71,4 +72,5 @@ Worker stops: missing assigned load-bearing information is `blocked:missing_inpu
 for unclear scope/success, sibling ownership, unavailable plan mode, or
 unapproved new build work. This skill does not write specs, commits, or implementation.
 
-Ask only if goal, constraints, success, input, or scope remain unclear.
+Ask vs continue: continue when goal, constraints, success, inputs, and scope are
+clear; otherwise ask the user before grooming.
