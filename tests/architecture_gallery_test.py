@@ -416,7 +416,7 @@ class SheetDerivationTest(unittest.TestCase):
             dense_pkg = os.path.join(d, "dense")
             os.makedirs(sparse_pkg)
             os.makedirs(dense_pkg)
-            _mk_pkg(sparse_pkg, occluded, edge_count=2)
+            _mk_pkg(sparse_pkg, occluded, edge_count=1)
             _mk_pkg(dense_pkg, readable, edge_count=50)
 
             sparse_html = self.m.build_html(sparse_pkg)
