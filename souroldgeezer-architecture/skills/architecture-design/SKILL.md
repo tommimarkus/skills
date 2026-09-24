@@ -178,11 +178,15 @@ Build.
    freshness alongside it (architecture §9, non-gating). Disclose the outcome in the
    footer `Gallery:` line. [`references/gallery.md`](references/gallery.md) owns what the gallery is,
    its full input set, and when it goes stale.
-8. Stop when required evidence is missing, a dediren MCP tool returns an error
-   envelope, the notation is unsupported, or a
-   blocking finding prevents requested readiness.
-   When both MCP and the same resolved CLI are unavailable, continue static
-   findings and disclose runtime-dependent quality as not assessed.
+8. For Dediren tool error envelopes or command failures, follow
+   [self-check](references/procedures/self-check.md) § Reading tool results:
+   stop for inspection when an artifact-writing outcome is uncertain; repair
+   and rerun only a confirmed, scoped diagnostic in Build or Extract; keep
+   Review reproduction to one isolated native package build with no repair
+   loop. Also stop when required evidence is missing, the notation is
+   unsupported, or a blocking finding prevents requested readiness. When both
+   MCP and the same resolved CLI are unavailable, continue static findings and
+   disclose runtime-dependent quality as not assessed.
 
 ## References
 
