@@ -160,9 +160,19 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(by_id["oversized-standard"]["size"], "small")
         chained = by_id["synthetic-chained-escalation"]
         self.assertEqual(chained["attempts"], 2)
-        self.assertEqual(chained["attempt_sequence"][0]["tier"], "mechanical")
+        initial = chained["attempt_sequence"][0]
+        self.assertEqual(initial["tier"], chained["tier"])
         self.assertEqual(chained["attempt_sequence"][0]["expected_status"], "blocked:needs_higher_tier")
         retry = chained["attempt_sequence"][1]["retry_remediation"]
+        ledger_next = self.runner.ledger.next_after_return(
+            self.runner.argparse.Namespace(plan_id="synthetic", run_id="synthetic"),
+            None, {}, {}, chained["id"],
+            {"current_tier": initial["tier"], "same_tier_retry_used": False},
+            {"status": "blocked", "blockers": [{"code": initial["expected_status"]}]},
+            "retry_eligible", {},
+        )
+        self.assertEqual(retry["target_portable_tier"], ledger_next["next_tier"])
+        self.assertEqual(chained["attempt_sequence"][1]["tier"], ledger_next["next_tier"])
         self.assertEqual(retry["schema"], "retry-remediation-v1")
         self.assertEqual(
             set(retry),
