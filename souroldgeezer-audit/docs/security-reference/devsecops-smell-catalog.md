@@ -25,7 +25,7 @@ Compact lookup table for every finding code the skill emits. The rubric prose li
 | `DSO-HC-8` | §5.1.8 | Container image without `@sha256:` digest or from unknown registry |
 | `DSO-HC-9` | §5.1.9 | Deploy workflow and merge workflow share identity/token |
 | `DSO-HC-10` | §5.1.10 | No `SECURITY.md` and no `/.well-known/security.txt` |
-| `DSO-HC-11` | §5.1.11 | Production artifacts unsigned |
+| `DSO-HC-11` | §5.1.11 | Production artifacts lack required provenance or signatures |
 | `DSO-HC-12` | §5.1.12 | CI logs / audit events not forwarded off the build platform |
 | `DSO-HC-13` | §5.1.13 | Dockerfile `USER root` or no `USER` directive |
 | `DSO-HC-14` | §5.1.14 | `TODO: security review` / `FIXME: vuln` older than 90 days |
@@ -113,11 +113,11 @@ Deep-mode step 4 of the skill scans the repo for each CICD-SEC anti-pattern. The
 | `CICD-SEC-2` | MCP collaborator probe, `gha.HC-4` | Stale accounts via `mcp__github__get_team_members`, shared PATs as CI secrets |
 | `CICD-SEC-3` | `gha.HC-2`, `docker.HC-2`, `DSO-HC-2` | `*.csproj` `<PackageReference>` without committed lockfile; `dependabot.yml` absent |
 | `CICD-SEC-4` | `gha.HC-3`, `gha.HC-6`, `gha.HC-7`, `gha.HC-8`, `gha.HC-9` (Direct-PPE family); `DSO-SUB-2` (Indirect-PPE) | Workflow imports a template from a weaker repo — check `uses:` against known org allow-list |
-| `CICD-SEC-5` | `gha.HC-1`, `gha.HC-12` (self-hosted), `gha.POS-2` (OIDC) inverse | Any workflow job with `permissions: write-all` or unspecified permissions |
+| `CICD-SEC-5` | `gha.HC-1`, `gha.HC-12` (self-hosted), `gha.POS-2` (OIDC) inverse | Verified excessive effective token permissions; an omitted YAML declaration alone is a review signal |
 | `CICD-SEC-6` | `dns.HC-1`, `DSO-HC-1`, `DSO-HC-7`, `docker.HC-3` | Long-lived `AZURE_CREDENTIALS` JSON in CI secrets; `gha.POS-2` inverse |
 | `CICD-SEC-7` | `docker.HC-5` (privileged), `bicep.HC-3` (local auth) | Public CI dashboards; outdated plugins — requires MCP or manual inspection |
 | `CICD-SEC-8` | `gha.HC-2` (third-party tag pin), `DSO-LC-4` (> 20 unrelated publishers) | Marketplace Actions beyond an org allow-list; unvetted OAuth apps granted org scopes |
-| `CICD-SEC-9` | `DSO-HC-11` (unsigned artifacts), `docker.HC-2` | No `cosign sign` / `cosign verify` in release workflow; no SLSA provenance |
+| `CICD-SEC-9` | `DSO-HC-11` (unsigned artifacts), `docker.HC-2` | Missing provenance or unmet project signature policy; SLSA level alone governs required provenance properties |
 | `CICD-SEC-10` | `DSO-HC-12` (no log forwarding), `DSO-SUB-6` (missing security-relevant fields) | No `Microsoft.Insights/diagnosticSettings` on Functions/App Service; no SIEM integration |
 
 Each row is a cross-reference, not a separate finding. Deep-mode step 4 rolls up the `CICD-SEC-*` coverage based on the extension findings already collected in step 5, plus the "Additional signals" checks when an extension does not cover them.
@@ -136,7 +136,7 @@ See [devsecops-extensions/github-actions.md](devsecops-extensions/github-actions
 | `gha.HC-2` | Floating tag in `uses:` (e.g. `@main`, `@v1`) |
 | `gha.HC-3` | `pull_request_target` with untrusted ref checkout |
 | `gha.HC-4` | Shared deploy/merge identity in a single workflow |
-| `gha.HC-5` | Security scan failure silently tolerated (`continue-on-error`, `\|\| true`, `if: always()`) |
+| `gha.HC-5` | Security scan failure masked from the required workflow result (`continue-on-error`, `\|\| true`, or equivalent) |
 | `gha.HC-6` | User-controlled input interpolated into `run:` |
 | `gha.HC-7` | `workflow_run` with untrusted artifact / checkout |
 | `gha.HC-8` | `persist-credentials: true` on checkout followed by push |
@@ -154,7 +154,7 @@ See [devsecops-extensions/github-actions.md](devsecops-extensions/github-actions
 
 See [devsecops-extensions/bicep.md](devsecops-extensions/bicep.md) for the full table.
 
-**Band 1 (always-block):**
+**Band 1 (always-evaluated; each rule keeps its own severity):**
 
 | Code | Intent |
 |---|---|
@@ -172,7 +172,7 @@ See [devsecops-extensions/bicep.md](devsecops-extensions/bicep.md) for the full 
 | `bicep.HC-12` | Key Vault still in access-policy mode (no `enableRbacAuthorization`) |
 | `bicep.HC-13` | Storage `requireInfrastructureEncryption` absent |
 | `bicep.HC-14` | Storage public-access flags permissive |
-| `bicep.HC-15` | Cosmos DB `enableFreeTier: true` on production account |
+| `bicep.HC-15` | Cosmos DB free-tier capacity or cost assumptions fail the declared workload |
 
 **Band 2 (cost-gated):**
 
@@ -239,7 +239,7 @@ See [devsecops-extensions/dotnet-security.md](devsecops-extensions/dotnet-securi
 | `dns.HC-11` | SQL injection via `CommandText` concatenation / interpolation |
 | `dns.HC-12` | `BinaryFormatter` usage |
 | `dns.HC-13` | Data Protection keys not persisted to a durable store |
-| `dns.HC-14` | `DefaultAzureCredential` used without explicit managed identity |
+| `dns.HC-14` | Production `DefaultAzureCredential` chain does not establish intended-identity selection |
 | `dns.HC-15` | Log forging / log injection in structured logs |
 | `dns.LC-1` | Shadow / zombie function endpoint (registered, not in route inventory) |
 | `dns.LC-2` | Mass assignment / BOPLA risk (deserialization into undocumented fields) |

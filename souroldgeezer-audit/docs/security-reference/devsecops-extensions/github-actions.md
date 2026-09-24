@@ -14,11 +14,11 @@
 
 ### `gha.HC-1` — Missing `permissions:` block
 
-**Pattern:** a workflow file (top-level) or individual job without a `permissions:` key. When the workflow does not declare `permissions:`, the effective `GITHUB_TOKEN` scope falls back to the repo/org "Workflow permissions" setting — which is **permissive** (read/write across most scopes) on orgs/repos created before Feb 2023 or any org/repo that hasn't flipped the setting. Repos created after that date default to the restricted "read" variant, but the auditor cannot see this setting from the workflow YAML alone, so the smell is still valid as written.
+**Pattern:** a workflow and its affected job have neither a top-level nor job-level `permissions:` declaration. A job inherits a workflow-level declaration when it has no job override, so the absence at one scope alone is not a finding. A fully omitted declaration is a least-privilege review signal, not proof of write access: GitHub initializes `GITHUB_TOKEN` from the applicable enterprise, organization, or repository default. Workflow-level and job-level declarations can then adjust it, and fork pull-request events can further reduce write permissions. Static YAML cannot establish the effective default. Verify the applicable settings and event context before claiming excessive token scope; record the effective scope as unverified when those settings are unavailable. See https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job.
 
-**Detection:** a `jobs:` block where no child job declares `permissions:` and the top level has no `permissions:` either.
+**Detection:** a workflow whose top level and affected job both omit `permissions:`. If either level declares the needed minimum scope, treat that as the applicable declaration unless the job widens it.
 
-**Severity:** `block`
+**Severity:** `warn` for an omitted declaration alone; `block` when available evidence confirms effective permissions exceed the job's demonstrated needs.
 
 **Rubric:** devsecops.md §5.1.3; OpenSSF Scorecard Token-Permissions.
 
@@ -31,10 +31,14 @@
 
 **Detection (two-pass, default ripgrep — avoids lookaround):**
 
-1. Enumerate every `uses:` line: `rg -nE 'uses:\s*\S+@\S+' .github/workflows/`
+1. Enumerate every `uses:` line: `rg -n 'uses:\s*\S+@\S+' .github/workflows/`
 2. For each match, extract the ref after `@` and check whether it is exactly 40 hex characters. Any ref that is not → `gha.HC-2` finding. Refs that are 40 hex → `gha.POS-3` positive.
 
 (If the caller insists on a single-pass regex, `rg --pcre2 'uses:\s*[^#\n]+@(?!([a-f0-9]{40}))[^\s#]+'` works with PCRE2. The two-pass form is preferred because it also drives `gha.POS-3` without a second scan.)
+
+For ripgrep commands in this extension, exit `0` means matches were found,
+`1` means the scan completed without matches, and `2` or higher means the
+scan failed. Preserve no-match and tool-error outcomes separately.
 
 **Severity:** `block` (third-party) / `warn` (first-party actions when manual ownership verification confirms the action is in the same GitHub org as the audited repo — see carve-out below)
 
@@ -74,12 +78,14 @@ on:\s*\n\s*pull_request_target  →  actions/checkout  →  ref:.*pull_request
 
 ### `gha.HC-5` — Security scan failure silently tolerated
 
-**Pattern:** a job step that runs a SAST / SCA / DAST / IaC scan and its failure is masked — any of the following forms:
+**Pattern:** a job runs a SAST / SCA / DAST / IaC scan and its failure is prevented from failing the required workflow result. Inspect the scan step, downstream jobs, and required checks together. These forms can mask failure when they actually suppress or fail to propagate the scanner's nonzero result:
 
-- `continue-on-error: true` on the scan step (or the whole job).
-- `if: always()` on a later step that consumes the scan output, combined with no explicit failure re-raise.
-- Shell-level `|| true`, `|| exit 0`, or `set +e` wrapping the scan command.
-- Severity gate above `critical` with no justifying comment.
+- `continue-on-error: true` on the scan step (or whole job), when no later required gate restores failure.
+- Shell-level `|| true`, `|| exit 0`, or `set +e` around the scan command without capturing and propagating its result.
+- An aggregate/reporting job whose successful status is the only required check while the failed scan job is not required and its result is not re-raised.
+- Severity gate above `critical` with no documented risk acceptance.
+
+`if: always()` by itself only controls whether a later step or job runs after a failure; it does not establish that the failure was masked. `strategy.fail-fast: false` controls whether matrix work is cancelled after one leg fails; it does not make the failed leg succeed. Do not report either setting alone. Verify the propagated job/workflow conclusion and which checks are required. See https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstrategyfail-fast and https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#always.
 
 **Detection (ripgrep):**
 ```
@@ -88,7 +94,7 @@ continue-on-error:\s*true
 \|\|\s*exit\s+0
 if:\s*always\(\)
 ```
-Then manually verify the matched step is a security scan (CodeQL, trivy, semgrep, snyk, checkov, tfsec, etc.) or a consumer of one. Also flag matrix jobs with `fail-fast: false` where any matrix leg is a security scan — one leg failing silently hides the finding.
+Then verify the matched step is a security scan or consumer, trace its outcome through dependent jobs and the required-check configuration, and confirm the workflow can report success when that scan fails. `fail-fast: false` is a collection/cancellation choice, not a failure-mask signal.
 
 **Severity:** `block`
 

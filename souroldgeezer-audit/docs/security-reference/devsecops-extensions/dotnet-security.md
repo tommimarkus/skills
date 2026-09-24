@@ -30,13 +30,18 @@
 
 **Detection (per-pattern ripgrep):**
 ```
-rg -nE 'AKIA[0-9A-Z]{16}' <path>
-rg -nE 'AccountKey=[A-Za-z0-9+/=]{88}' <path>
-rg -nE 'ghp_[A-Za-z0-9]{36}' <path>
-rg -nE 'xox[baprs]-[A-Za-z0-9-]+' <path>
-rg -nE 'Blizzard__ClientSecret\s*[:=]\s*["''][^"'']+' <path>
-rg -nE '^-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----' <path>
+rg -n 'AKIA[0-9A-Z]{16}' <path>
+rg -n 'AccountKey=[A-Za-z0-9+/=]{88}' <path>
+rg -n 'ghp_[A-Za-z0-9]{36}' <path>
+rg -n 'xox[baprs]-[A-Za-z0-9-]+' <path>
+rg -n "Blizzard__ClientSecret\\s*[:=]\\s*[\"'][^\"']+" <path>
+rg -n '^-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----' <path>
 ```
+
+With ripgrep, exit `0` means matches were found, `1` means the scan completed
+with no matches, and `2` or higher means the scan could not complete (for
+example, a missing path or invalid pattern). Preserve that distinction; a tool
+error is not a clean scan.
 
 Any real-shape credential in a committed file is a smell — **including** placeholder values shaped like real credentials in `.env.example` or `appsettings.Example.json`.
 
@@ -140,7 +145,7 @@ new\s+ServiceBusClient\s*\(\s*.*ConnectionString
 **Rubric:** devsecops.md §5.3.2 (positive is OIDC / MI); §5.1.7.
 
 **Remediation action:**
-> Replace with a `TokenCredential`-based client. In **production**, prefer a deterministic credential: `new CosmosClient(endpoint, new ManagedIdentityCredential(clientId: "<uami-client-id>"))`. Microsoft's current guidance deprecates `DefaultAzureCredential` for production use because its credential chain can silently pick the wrong identity when multiple are available — use it only in dev/local. If `DefaultAzureCredential` is used anywhere, set `ManagedIdentityClientId` or `ManagedIdentityResourceId` explicitly via `DefaultAzureCredentialOptions`. Grant the identity the appropriate data-plane role (e.g. `Cosmos DB Built-in Data Contributor`). See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
+> Replace with a `TokenCredential`-based client. In **production**, select the intended identity explicitly, for example: `new CosmosClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(configuration["UserAssignedClientId"]!)))`. Supply the configured user-assigned identity's actual client ID; use the system-assigned `ManagedIdentityCredential` form when that is the intended identity. Microsoft's current guidance recommends a specific credential implementation such as `ManagedIdentityCredential` in production because the `DefaultAzureCredential` chain can select a different available credential after configuration changes. A `ManagedIdentityClientId` option alone does not guarantee that the rest of the `DefaultAzureCredential` chain is disabled. Grant the selected identity the required data-plane role (for example, `Cosmos DB Built-in Data Contributor`). See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
 
 ### `dns.HC-8` — Authz denial log missing security-relevant fields
 
@@ -230,20 +235,20 @@ Then check whether the chain contains `PersistKeysTo...` and `ProtectKeysWith...
 **Remediation action:**
 > `services.AddDataProtection().PersistKeysToAzureBlobStorage(blobClient).ProtectKeysWithAzureKeyVault(keyIdentifier, credential);` using the `Azure.Extensions.AspNetCore.DataProtection.Blobs` + `...DataProtection.Keys` packages.
 
-### `dns.HC-14` — `DefaultAzureCredential` used without explicit managed identity
+### `dns.HC-14` — `DefaultAzureCredential` used where production identity selection is not deterministic
 
-**Pattern:** `new DefaultAzureCredential()` with no `DefaultAzureCredentialOptions.ManagedIdentityClientId` or `ManagedIdentityResourceId` set. In production environments with multiple identities (user-assigned + system-assigned + environment variables), the credential chain may silently pick the wrong one — auth failures appear as permission errors, not identity selection errors. See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
+**Pattern:** `DefaultAzureCredential` is used in production without evidence that its enabled sources are restricted to the intended identity. An unconfigured credential chain can select another available credential after environment changes, causing unexpected identity or privilege. Supplying only `ManagedIdentityClientId` / `ManagedIdentityResourceId` does not establish determinism if other chain sources remain enabled. For development, the flexible chain remains appropriate. See https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
 
 **Detection (ripgrep):**
 ```
-new\s+DefaultAzureCredential\s*\(\s*\)
+new\s+DefaultAzureCredential\s*\(
 ```
-Then check whether the call is wrapped with options setting `ManagedIdentityClientId` / `ManagedIdentityResourceId`.
+Then inspect the runtime environment and credential configuration for enabled chain sources. An explicit managed-identity option is evidence about identity selection, but alone does not prove that the chain is deterministic.
 
 **Severity:** `warn`
 
 **Remediation action:**
-> Production: replace with `new ManagedIdentityCredential(clientId: "<uami-client-id>")`. Dev: keep `DefaultAzureCredential` but pass `new DefaultAzureCredentialOptions { ManagedIdentityClientId = "<id>" }`.
+> Production: use `ManagedIdentityCredential` for the intended system- or user-assigned identity. Dev: `DefaultAzureCredential` may use the normal developer credential chain. Do not count `ManagedIdentityClientId` by itself as proof that a production chain is deterministic.
 
 ### `dns.HC-15` — Log forging / log injection in structured logs
 
@@ -264,9 +269,9 @@ logs are investigation evidence.
 
 **Detection (ripgrep):**
 ```
-rg -nE 'Log(Trace|Debug|Information|Warning|Error|Critical)\s*\(' api app shared
-rg -nE '(AuditLog\.Emit|EmitAudit|LogAudit|AppendAudit|WriteAudit)\s*\(' api app shared
-rg -nE '(RouteValues|Query|Form|Headers|\[From(Route|Query|Body)\]|HttpRequest|Audit(Event|Target|Detail))' api app shared
+rg -n 'Log(Trace|Debug|Information|Warning|Error|Critical)\s*\(' api app shared
+rg -n '(AuditLog\.Emit|EmitAudit|LogAudit|AppendAudit|WriteAudit)\s*\(' api app shared
+rg -n '(RouteValues|Query|Form|Headers|\[From(Route|Query|Body)\]|HttpRequest|Audit(Event|Target|Detail))' api app shared
 ```
 Then trace arguments into the logging call or wrapper. Flag values that may
 contain `\r`, `\n`, or other display-control characters and reach the log
@@ -360,7 +365,7 @@ new\s+X509Certificate2\s*\(\s*"[^"]+\.pfx"\s*,\s*"
 
 ### `dns.POS-1` — Production-grade managed identity client construction
 
-**Pattern:** Azure SDK clients instantiated with a deterministic `TokenCredential` — `ManagedIdentityCredential` with an explicit `clientId` / `resourceId`, or `DefaultAzureCredential` with `DefaultAzureCredentialOptions.ManagedIdentityClientId` set. Bare `new DefaultAzureCredential()` does **not** count (see `dns.HC-14`).
+**Pattern:** production Azure SDK clients use a specifically selected `TokenCredential`, such as `ManagedIdentityCredential` for the intended system- or user-assigned identity. `DefaultAzureCredential` does not count as deterministic solely because `ManagedIdentityClientId` / `ManagedIdentityResourceId` is set; see `dns.HC-14` and verify that the full chain selects only the intended identity.
 
 ### `dns.POS-2` — Key Vault reference resolution
 

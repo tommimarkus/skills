@@ -233,19 +233,21 @@ supportsHttpsTrafficOnly\s*:\s*false
 **Remediation action:**
 > Set `allowBlobPublicAccess: false`, `supportsHttpsTrafficOnly: true`, and either `publicNetworkAccess: 'Disabled'` (paired with a private endpoint — see `bicep.B2-2`) or `networkAcls: { defaultAction: 'Deny', ... }`.
 
-### `bicep.HC-15` — Cosmos DB free tier on production account
+### `bicep.HC-15` — Cosmos DB free-tier capacity or cost assumptions do not fit the workload
 
-**Pattern:** a `Microsoft.DocumentDB/databaseAccounts` resource with `properties.enableFreeTier: true` outside a dev/test environment (determined by module name, target environment param, or resource-group naming). Free tier is one-per-subscription and not intended for production; its unpredictable throughput caps cause latency regressions and its SLA is weaker. See https://learn.microsoft.com/azure/cosmos-db/free-tier.
+**Pattern:** a `Microsoft.DocumentDB/databaseAccounts` resource uses `properties.enableFreeTier: true` and available workload evidence shows its free allowance (first 1000 RU/s and 25 GB) is insufficient for the declared throughput, storage, or service objectives. The discount is limited to one account per subscription; throughput and storage beyond the free allowance are billed at regular rates. Microsoft describes free tier as suitable for small production workloads and says it retains the features and SLAs of a regular Cosmos DB account. Do not infer a capacity or security defect from the production environment or `enableFreeTier` alone. See https://learn.microsoft.com/en-us/azure/cosmos-db/free-tier.
 
 **Detection (ripgrep):**
 ```
 enableFreeTier\s*:\s*true
 ```
+This identifies a candidate only. Confirm its provisioned throughput, storage,
+declared demand/SLO, and applicable budget before emitting `bicep.HC-15`.
 
-**Severity:** `warn` (block if the module is clearly for production — name contains `prod`, `production`, or the environment param is `prod`).
+**Severity:** `warn` only when workload evidence demonstrates that the free allowance conflicts with required capacity, cost limits, or SLOs; do not raise severity from environment names alone.
 
 **Remediation action:**
-> Set `enableFreeTier: false` for production accounts. Use a dedicated dev/test subscription or non-prod Cosmos account for the free tier.
+> Size provisioned throughput, storage, regions, and budget against the declared workload. Retain the free-tier discount when its allowance and normal service features meet those requirements; account for regular-price billing above the allowance.
 
 ## Band 2 — cost-gated
 

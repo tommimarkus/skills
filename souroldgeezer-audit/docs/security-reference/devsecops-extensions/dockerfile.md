@@ -36,15 +36,19 @@ Plus: any Dockerfile with zero `USER` lines.
 
 **Detection (two-pass, default ripgrep — avoids lookbehind):**
 
-1. Enumerate every `FROM` line: `rg -nE '^FROM\s+\S+' **/Dockerfile* **/Dockerfile`
+1. Enumerate every `FROM` line: `rg -n '^FROM\s+\S+' --glob 'Dockerfile*' --glob '**/Dockerfile' .`
 2. For each match, check whether the image reference contains `@sha256:[a-f0-9]{64}`. Any reference without a digest → `docker.HC-2` finding. All references digest-pinned across the file → `docker.POS-1` positive.
 
 **Compose variant (portable regex — `\n` in character classes is grep-dialect dependent, so use `[:space:]`):**
 
-- Unpinned: `rg -nE '^\s*image:\s*[^@[:space:]]+:[^@[:space:]]+$' docker-compose*.y?ml`
-- Pinned: `rg -nE '^\s*image:\s*[^[:space:]]+@sha256:[a-f0-9]{64}\b' docker-compose*.y?ml`
+- Unpinned: `rg -n '^\s*image:\s*[^@[:space:]]+:[^@[:space:]]+$' --glob 'docker-compose*.yml' --glob 'docker-compose*.yaml' .`
+- Pinned: `rg -n '^\s*image:\s*[^[:space:]]+@sha256:[a-f0-9]{64}\b' --glob 'docker-compose*.yml' --glob 'docker-compose*.yaml' .`
 
 (If the caller insists on a single-pass regex, `rg --pcre2 '^FROM\s+[^\s]+(?<!@sha256:[a-f0-9]{64})\s*($|AS)'` works with PCRE2.)
+
+Ripgrep exit `0` means at least one match, `1` means no match, and `2` or
+higher means the scan failed (for example, no input files matched or a path is
+unreadable). Preserve these outcomes; do not report a failed scan as clean.
 
 **Severity:** `block` (third-party registry) / `warn` (organization-internal registry with signed tags, or Microsoft-owned `mcr.microsoft.com` registries per carve-out)
 

@@ -48,7 +48,7 @@ DSOMM Level 4 is explicitly characterized as "Automation drives most security ac
 
 ### 2.3 Measured by evidence, not attestation
 
-A compliance audit asks "is this control present?" A DevSecOps audit asks "what artifact would I produce to prove this control was enforced on *this specific release*?" SLSA v1.0 Build L1 requires signed provenance, not because signing is intrinsically better, but because an artifact either has verifiable provenance or it does not. SSDF PO.3.3 requires tools be "configured to generate artifacts supporting secure development practices." ENISA's 2024 CRA mapping reads as a table of *verifiable evidence rows* deliberately — each CRA requirement becomes something an auditor can point at.
+A compliance audit asks "is this control present?" A DevSecOps audit asks "what artifact would I produce to prove this control was enforced on *this specific release*?" Under SLSA v1.0 Build L1, provenance must exist and describe the build; it may be incomplete or unsigned. Build L2 adds hosted-platform provenance and authenticity verification, typically through a digital signature. A project may require signing at a higher bar, but report that separately from SLSA L1 compliance. SSDF PO.3.3 requires tools be "configured to generate artifacts supporting secure development practices." ENISA's 2024 CRA mapping reads as a table of *verifiable evidence rows* deliberately — each CRA requirement becomes something an auditor can point at.
 
 The deliverable of DevSecOps maturity is **evidence per release**, not evidence per year.
 
@@ -161,7 +161,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 
 1. **Secrets in source control.** Any cloud key, token, connection string, database URL, or private key committed to git — including history. A real-shape credential in `.env.example` is a smell; a rotated-but-still-present secret is still leaked.
 2. **Unpinned CI action / image / dependency.** `uses: foo/bar@main`, `FROM python:latest`, `npm install` without lockfile committed. Scorecard Pinned-Dependencies explicitly tests this.
-3. **GitHub Actions workflow without declared `permissions:`.** Token defaults to `write-all` when unspecified. Scorecard Token-Permissions.
+3. **GitHub Actions workflow without declared `permissions:`.** This leaves the token scope to enterprise, organization, or repository settings (then workflow/job overrides and event restrictions). YAML alone does not prove the effective scope; treat omission as a hardening review signal and verify settings before claiming excess privilege. Scorecard Token-Permissions.
 4. **No branch protection on default branch.** No required review, no required status checks, direct pushes allowed, or admin bypass enabled. Scorecard Branch-Protection.
 5. **`pull_request_target` checking out untrusted ref.** The canonical Direct-PPE vector. Scorecard Dangerous-Workflow.
 6. **SAST / SCA / DAST job present with `continue-on-error: true`**, or severity threshold set above "critical" with no comment justifying the exemption.
@@ -169,7 +169,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 8. **Container image without `@sha256:` digest or from unknown registry.** CICD-SEC-3 + CICD-SEC-9.
 9. **Deploy workflow and merge workflow share the same identity / token.** No separation of duties. CICD-SEC-2 + CICD-SEC-5.
 10. **No `SECURITY.md` and no `/.well-known/security.txt`.** No disclosure channel. Scorecard Security-Policy; CRA Part II item 5; ENISA CVD guidance; ISO/IEC 29147.
-11. **Production artifacts unsigned.** No cosign signature, no SLSA provenance, no in-toto attestation. SLSA L1+ violation; CICD-SEC-9.
+11. **Production artifacts lack required provenance or signatures.** No provenance violates SLSA v1.0 Build L1; unsigned provenance alone does not. Build L2 adds hosted-platform provenance and authenticity verification, typically by signature, or a project may declare a stronger signature policy. Verify both artifact evidence and the applicable policy before reporting a violation; CICD-SEC-9.
 12. **CI logs and audit events not forwarded off the build platform.** A compromised build host can delete its own evidence. CICD-SEC-10; SSDF PO.5.1.
 13. **Dockerfile `USER root` or no `USER` directive.** Explicit OWASP Docker Security Cheat Sheet violation.
 14. **`TODO: security review` or `FIXME: vuln` older than 90 days.** Intent recorded, never acted on.
@@ -213,7 +213,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 13. **Post-incident root-cause review that produces a lint/SAST rule, a test, or a policy-as-code rule.** SSDF RV.3.3/RV.3.4.
 14. **Role-targeted security training** (backend engineers, frontend, SRE, platform, data) rather than one annual generic course.
 15. **Fakes / in-memory test infrastructure used for external services** — so integration tests don't need the real vault or the real cloud. Consistent with Google's *real > fake > mock* preference order applied to security infrastructure.
-16. **SLSA Build Level declared and verifiable** (L1 minimum, L2 or L3 preferred for production artifacts).
+16. **SLSA Build Level declared and verifiable** (provenance exists at L1; L2 adds hosted-platform provenance and authenticity verification; prefer L2 or L3 for production only where the threat model and platform support justify that target).
 17. **ASVS and/or SCVS target level declared in the repo's security documentation**, with a self-assessment of gaps.
 
 ---

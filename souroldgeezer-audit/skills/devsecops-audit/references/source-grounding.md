@@ -33,6 +33,26 @@ tables, diagrams, screenshots, or documentation.
 - Source: https://github.com/tommimarkus/skills/issues/46.
   Handling: local issue records the repo-specific coverage gap and acceptance
   direction. The behavior eval is synthetic and does not copy issue text.
+- Sources:
+  https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job,
+  https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstrategyfail-fast,
+  and https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#always.
+  Handling: primary references for effective `GITHUB_TOKEN` scope, matrix
+  cancellation, and status-condition behavior. The rubric wording and synthetic
+  scan-failure cases are original; settings and required-check results remain
+  evidence an auditor must inspect.
+- Sources: https://slsa.dev/spec/v1.0/levels and
+  https://learn.microsoft.com/en-us/azure/cosmos-db/free-tier.
+  Handling: primary anchors for SLSA v1.0 level requirements and Cosmos DB
+  free-tier capacity/billing claims. The rubric paraphrases these properties;
+  synthetic cases distinguish standard requirements from a separately declared
+  project policy and distinguish the free discount from workload capacity.
+- Source:
+  https://learn.microsoft.com/dotnet/azure/sdk/authentication/best-practices#use-deterministic-credentials-in-production-environments.
+  Handling: primary anchor for production credential selection. The positive
+  example selects `ManagedIdentityCredential` explicitly; the rubric does not
+  claim that one managed-identity option disables other credential-chain
+  sources.
 - Source: `../../../docs/audit-reference/audit-craft.md`,
   `../../../docs/audit-reference/materiality.md`, and
   `../../../docs/audit-reference/sampling-projection.md`.
