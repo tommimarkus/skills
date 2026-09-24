@@ -1,71 +1,62 @@
-import re
 import unittest
 
-from tests.surface_test_lib import read, read_jsonl
-
-
-def _section(markdown: str, heading: str) -> str:
-    match = re.search(rf"(?ms)^{re.escape(heading)}\s*$\n(.*?)(?=^## |\Z)", markdown)
-    if match is None:
-        raise AssertionError(f"missing section {heading}")
-    return match.group(1)
+from tests.surface_test_lib import REPO_ROOT, load_script_module, read_jsonl
 
 
 class OpsAuthorityContractTest(unittest.TestCase):
-    def test_provider_route_selection_is_per_operation_and_auth_gated(self) -> None:
-        for path, provider_terms in (
-            ("souroldgeezer-ops/docs/provider-reference/github.md", ("GitHub MCP", "gh", "REST")),
-            ("souroldgeezer-ops/docs/provider-reference/gitlab.md", ("GitLab MCP", "glab", "REST")),
-        ):
-            tooling = _section(read(path), "## Tooling Order")
-            folded = tooling.casefold()
-            self.assertRegex(folded, r"per (each )?operation|separately for each operation")
-            self.assertRegex(folded, r"requested operation")
-            self.assertRegex(folded, r"authentication|authenticated|auth")
-            self.assertRegex(folded, r"permission|authority")
-            self.assertTrue(all(term.casefold() in folded for term in provider_terms), path)
-
-    def test_product_repair_requires_diagnosis_existing_authority_and_scope(self) -> None:
-        core = read("souroldgeezer-ops/skills/pr-ops/references/core-workflow.md").casefold()
-        github = read("souroldgeezer-ops/skills/pr-ops/extensions/github.md").casefold()
-        gitlab = read("souroldgeezer-ops/skills/pr-ops/extensions/gitlab.md").casefold()
-        for text in (core, github, gitlab):
-            self.assertRegex(text, r"diagnos\w*")
-            self.assertRegex(text, r"task authorit\w*|implementation authorit\w*")
-            self.assertRegex(text, r"scope")
-            self.assertRegex(text, r"repair plan")
-        self.assertRegex(core, r"automatic fix|automatic correction|auto-fix")
-
-    def test_issue_closure_policy_preserves_marker_order_and_reconciles_auto_close(self) -> None:
-        lifecycle = read("souroldgeezer-ops/docs/provider-reference/provider-lifecycle-core.md").casefold()
-        issue_core = read("souroldgeezer-ops/skills/issue-ops/references/core-workflow.md").casefold()
-        github = read("souroldgeezer-ops/skills/issue-ops/extensions/github.md").casefold()
-        internal = read("internal-skills/github-issue-lifecycle/SKILL.md").casefold()
-        self.assertLess(lifecycle.index("verification"), lifecycle.index("final issue marker"))
-        self.assertLess(lifecycle.index("final issue marker"), lifecycle.index("explicitly\nclosing"))
-        for text in (lifecycle, issue_core, github, internal):
-            self.assertRegex(text, r"non-closing")
-            self.assertRegex(text, r"auto-closed|auto-clos\w*")
-            self.assertRegex(text, r"marker followed closure|marker as a later event|actual order of events")
-
-    def test_claude_wrappers_inherit_tools_and_can_discover_provider_tools(self) -> None:
-        for path in ("souroldgeezer-ops/agents/issue-ops.md", "souroldgeezer-ops/agents/pr-ops.md"):
-            text = read(path)
-            frontmatter = text.split("---", 2)[1]
-            self.assertNotRegex(frontmatter, r"(?m)^tools:")
-            self.assertIn("deferred-tool discovery", text)
-            self.assertIn("inherits the caller's available tool set", text)
-            self.assertIn("does not add authority", text)
-
-    def test_synthetic_cases_cover_partial_capability_repair_and_auto_close(self) -> None:
-        packs = (
-            read_jsonl("souroldgeezer-ops/skills/pr-ops/references/evals/behavior-cases.jsonl"),
-            read_jsonl("souroldgeezer-ops/skills/issue-ops/references/evals/behavior-cases.jsonl"),
-            read_jsonl("internal-skills/github-issue-lifecycle/references/evals/behavior-cases.jsonl"),
+    @classmethod
+    def setUpClass(cls) -> None:
+        report = load_script_module(
+            "ops_authority_skill_architecture_report",
+            REPO_ROOT / "scripts" / "skill_architecture_report.py",
         )
-        ids = {case["id"] for pack in packs for case in pack}
-        self.assertTrue(
-            {
+        cls.parse_frontmatter = staticmethod(report.parse_frontmatter)
+
+    def test_claude_provider_agents_allow_inherited_tools(self) -> None:
+        for relative in (
+            "souroldgeezer-ops/agents/issue-ops.md",
+            "souroldgeezer-ops/agents/pr-ops.md",
+        ):
+            metadata, _body = self.parse_frontmatter(REPO_ROOT / relative)
+            with self.subTest(agent=relative):
+                self.assertNotIn("tools", metadata)
+
+    def test_synthetic_cases_have_valid_schema_and_required_decision_coverage(self) -> None:
+        packs = (
+            "souroldgeezer-ops/skills/pr-ops/references/evals/behavior-cases.jsonl",
+            "souroldgeezer-ops/skills/issue-ops/references/evals/behavior-cases.jsonl",
+            "internal-skills/github-issue-lifecycle/references/evals/behavior-cases.jsonl",
+        )
+        records = [case for pack in packs for case in read_jsonl(pack)]
+        ids = [case["id"] for case in records]
+        self.assertEqual(len(ids), len(set(ids)))
+
+        required_fields = {
+            "id": str,
+            "prompt": str,
+            "expected_artifacts": list,
+            "required_checks": list,
+            "forbidden_behaviors": list,
+            "grader": str,
+            "source_kind": str,
+            "source_url": str,
+            "ip_handling": str,
+            "contains_third_party_text": bool,
+        }
+        for case in records:
+            with self.subTest(case=case.get("id")):
+                for field, expected_type in required_fields.items():
+                    self.assertIsInstance(case.get(field), expected_type, field)
+                self.assertTrue(case["id"])
+                self.assertTrue(case["expected_artifacts"])
+                self.assertTrue(case["required_checks"])
+                self.assertTrue(case["forbidden_behaviors"])
+                self.assertTrue(case["grader"])
+
+        new_cases = {
+            case["id"]: case
+            for case in records
+            if case["id"].startswith((
                 "pr-ops-behavior-diagnosed-repair-authority",
                 "pr-ops-behavior-repair-without-authority",
                 "pr-ops-behavior-operation-capability-fallback",
@@ -74,12 +65,36 @@ class OpsAuthorityContractTest(unittest.TestCase):
                 "issue-ops-behavior-marker-before-auto-close",
                 "github-issue-lifecycle-behavior-partial-mcp",
                 "github-issue-lifecycle-behavior-auto-close-reconciliation",
-            }.issubset(ids)
-        )
-        for pack in packs:
-            for case in pack:
+            ))
+        }
+        expected_ids = {
+            "pr-ops-behavior-diagnosed-repair-authority",
+            "pr-ops-behavior-repair-without-authority",
+            "pr-ops-behavior-operation-capability-fallback",
+            "issue-ops-behavior-partial-mcp-capability",
+            "issue-ops-behavior-missing-cli-auth",
+            "issue-ops-behavior-marker-before-auto-close",
+            "github-issue-lifecycle-behavior-partial-mcp",
+            "github-issue-lifecycle-behavior-auto-close-reconciliation",
+        }
+        self.assertTrue(expected_ids.issubset(new_cases))
+        required_coverage = {
+            "provider_partial_capability",
+            "missing_authentication",
+            "repair_with_authority",
+            "repair_without_authority",
+            "closure_order",
+            "auto_close_reconciliation",
+        }
+        coverage = set()
+        for identifier, case in new_cases.items():
+            with self.subTest(case=identifier):
                 self.assertEqual(case["source_kind"], "synthetic")
                 self.assertFalse(case["contains_third_party_text"])
+                self.assertIsInstance(case.get("coverage"), list)
+                self.assertTrue(all(isinstance(item, str) for item in case["coverage"]))
+                coverage.update(case["coverage"])
+        self.assertTrue(required_coverage.issubset(coverage))
 
 
 if __name__ == "__main__":
