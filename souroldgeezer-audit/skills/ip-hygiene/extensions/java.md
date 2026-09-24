@@ -30,11 +30,14 @@ been pasted into a wrapper or reimplementation's own Javadoc.
 A licence header or `SPDX-License-Identifier` line is a leading `//` or
 `/* */` comment block and must precede the `package` declaration, which is
 itself required to be the first non-comment statement in the file. A
-package-level licence or notice has a dedicated home: `package-info.java`, a
-file whose sole content is a package-level Javadoc block followed by the
-`package` statement, with no class body. Treat a `package-info.java` missing
-from a package directory that otherwise carries per-file headers as a gap in
-package-level notice coverage, not evidence the package is unlicensed.
+package-level licence or notice can be placed in `package-info.java`, a file
+whose sole content is a package-level Javadoc block followed by the `package`
+statement, with no class body. Its absence alone is not a notice gap: inspect
+the operative licence terms, intended act and distribution, and any applicable
+project rule to determine what notice is required and whether existing
+per-file headers or another placement satisfy it. Where the operative terms
+specify a location or form, assess that requirement; otherwise assess whether
+the required notice remains with the covered material.
 
 ## Ecosystem licence metadata
 

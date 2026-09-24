@@ -12,6 +12,11 @@ external docs.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/{copyright,trademark,licence-assets,drive-by}.md`.
   Handling: local operational rules; eval prompts paraphrase decision
   categories and do not reproduce legal authority text.
+- Source: `souroldgeezer-audit/skills/ip-hygiene/extensions/java.md` and the
+  applicable notice analysis in `licence-assets.md`.
+  Handling: two synthetic Java notice cases distinguish compliant source
+  headers from a missing notice required for an actual distribution; neither
+  treats `package-info.java` absence alone as determinative.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/authority-index.md`.
   Handling: URL-level source notes only; eval prompts do not copy legal source
   language or vendor policy text.

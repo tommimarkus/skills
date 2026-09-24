@@ -1,3 +1,4 @@
+import json
 import re
 import unittest
 
@@ -208,6 +209,25 @@ class IpHygieneExtensionSurfaceTest(unittest.TestCase):
         assert_namespaced_criterion_does_not_restate_core_transformation(
             self, "fake.md", genuine_pack, namespace
         )
+
+    def test_java_notice_cases_distinguish_compliant_headers_from_missing_duty(self) -> None:
+        cases_path = SKILL_DIR / "references" / "evals" / "behavior-cases.jsonl"
+        cases = {
+            case["id"]: case
+            for line in cases_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+            for case in [json.loads(line)]
+        }
+        compliant = cases["ip-hygiene-java-source-header-satisfies-notice"]
+        missing = cases["ip-hygiene-java-required-distribution-notice-missing"]
+
+        self.assertIn("no package-info.java", compliant["prompt"])
+        self.assertIn("operative terms", compliant["prompt"])
+        self.assertTrue(any("do not infer a gap" in check for check in compliant["required_checks"]))
+        self.assertIn("operative licence requires", missing["prompt"])
+        self.assertIn("source distributions", missing["prompt"])
+        self.assertTrue(any("authority class" in check for check in missing["required_checks"]))
+        self.assertTrue(any("counsel boundary" in check for check in missing["required_checks"]))
 
 
 if __name__ == "__main__":
