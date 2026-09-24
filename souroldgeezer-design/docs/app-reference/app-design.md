@@ -369,7 +369,9 @@ generic toast-only feedback.
   focus visibility, or target size.
 - **APP-I18N-1:** layout assumes English text length, LTR direction, or Latin
   line breaking.
-- **APP-PERF-1:** LCP/CLS/INP posture is asserted without runtime evidence.
+- **APP-PERF-1:** runtime LCP/CLS/INP performance is claimed as measured or
+  verified without relevant runtime evidence; explicitly labelled static
+  posture is not a runtime claim.
 - **APP-BROWSER-1:** browser storage, network, or capability behavior has no
   ownership or fallback.
 - **APP-COMP-1:** screen/form mirrors data-model declaration order or renders
