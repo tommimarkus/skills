@@ -463,9 +463,6 @@ uv run python scripts/version_stamp.py guard
 uv run python scripts/version_stamp.py compute --plugin <name>
 ```
 
-Run the first command on the candidate branch before integration and the second
-on `main` after merging. Apply the computed cells in the integration commit.
-
 Then apply the padded computed stamp to the Claude manifest and matching README
 cell, and its normalized derivative to the Codex and native Copilot manifests,
 in the integration commit. New manifests added by a feature branch may
