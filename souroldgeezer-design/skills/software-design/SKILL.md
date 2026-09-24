@@ -47,7 +47,9 @@ optional suggestion is offered, load
 For Lookup, skip core: answer from the matched catalog below, cite its named
 core section, and name that catalog in the footer. Escalate to Review/Build or
 ask when code evidence, cross-section tradeoffs, or an unmatched question is
-needed.
+needed. Missing runtime or human evidence blocks only a conclusion that needs
+that evidence; answer a narrow source-grounded Lookup from its matched source
+and state the evidence limit.
 Load [references/principles-catalog.md](references/principles-catalog.md) for
 principle questions/claims and [references/pattern-catalog.md](references/pattern-catalog.md) for
 pattern questions.
@@ -142,6 +144,8 @@ layer.
 ## Stop Conditions
 <!-- lean-audit:sync-intentional -->
 
-Stop when source/scope is missing, sibling ownership dominates, runtime/human
-facts are absent, debt has no smaller safe move, extension validation is
-unavailable, or a principle/pattern claim lacks current force.
+Stop when source/scope needed for the requested conclusion is missing, sibling
+ownership dominates, required runtime/human facts are absent, debt has no
+smaller safe move, extension validation is unavailable, or a principle/pattern
+claim lacks current force. If those facts are irrelevant to a narrow
+source-grounded answer, continue and disclose the limit.
