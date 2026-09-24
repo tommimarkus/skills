@@ -341,7 +341,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         # that section instead of duplicating the prose (refactor ad4db28).
         canonical = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
         self._assert_phrases_in_surfaces([canonical], [
-            "If grouped layout validation still reports connector-through-node, invalid route, or group-boundary warnings",
+            "In Build or Extract, if grouped layout validation returns connector-through-node, invalid-route, or group-boundary diagnostics",
             "rerun the same view without groups",
             "use the cleaner layout as evidence and report the grouped-layout regression",
         ])
@@ -701,15 +701,20 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(phrase, self_check)
         # The consumer-side orchestration is retired with the package lane: no staging
         # dir, no plan/map remap, no per-view export fan-out, and no bundled build
-        # helper. The CLI fallback drives the selected host executable directly.
+        # helper. CLI fallback resolves through the plugin's exact runtime resolver.
         for absent in [
             "layout --plugin elk-layout",
             "project --target layout-request",
             "dediren-build.py",
             ".dediren-build",
+            '${DEDIREN_COMMAND:-dediren}',
+            'command -v "$DEDIREN"',
         ]:
             with self.subTest(absent=absent):
                 self.assertNotIn(absent, self_check)
+        self.assertIn("dediren_runtime.py --print-path", self_check)
+        self.assertIn("${CLAUDE_SKILL_DIR}/references/scripts/dediren_runtime.py", self_check)
+        self.assertIn('<skill-dir>/references/scripts/dediren_runtime.py', self_check)
 
     def test_guidance_points_to_dediren_guide_tool(self) -> None:
         self_check = (
@@ -891,6 +896,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
                 "generated/render-metadata",
                 "render-metadata",
+                "outputs.render_metadata",
                 "Layout runs inside each `dediren_build` call",
                 "hand-authored",
                 "reproducible output",
@@ -946,6 +952,19 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         }
 
         self._assert_phrases_per_surface(expectations)
+
+        behavior_cases = {
+            json.loads(line)["id"]: json.loads(line)
+            for line in (
+                ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        package_case = behavior_cases["architecture-design-behavior-package-generation-layout-concurrency"]
+        self.assertTrue(any("one native package build call" in check for check in package_case["required_checks"]))
+        self.assertTrue(any("outputs.render_metadata" in check for check in package_case["required_checks"]))
+        self.assertFalse(any("one call per model and render-policy group" in check for check in package_case["required_checks"]))
+        self.assertTrue(any("PATH independently" in forbidden for forbidden in package_case["forbidden_behaviors"]))
 
     def test_visual_readiness_guidance_flags_dense_valid_renders(self) -> None:
         expectations = {
@@ -1605,13 +1624,16 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn("unqualified top-level `views`", self_check)
         self.assertIn("seven-tool surface", self_check)
         self.assertIn("`dediren_import`", self_check)
-        self.assertIn("stops the run without retry or fallback", self_check)
+        self.assertIn("uncertain artifact-writing outcome stops for inspection without retry or fallback", self_check)
+        self.assertIn("confirmed, scoped diagnostic may be repaired and rerun in Build or Extract only", self_check)
         self.assertIn("Single-model `dediren_build` returns the unwrapped build-result", architecture)
         self.assertIn("Package `dediren_build` puts `package-build-result` under `.data`", architecture)
         self.assertIn("successful copy build does not clear stale or missing original evidence", architecture)
         self.assertIn("at most one native package build", isolated)
         self.assertIn("never promotes or removes a copy", isolated)
         self.assertIn("Copy success never upgrades the original quality level", output)
+        self.assertIn("Review reports defects in the original evidence", output)
+        self.assertIn("does not tune its copy", output)
 
         cases = {
             json.loads(line)["id"]: json.loads(line)
@@ -1627,6 +1649,12 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "architecture-design-behavior-review-runtime-unavailable",
             "architecture-design-behavior-build-result-shapes",
         } <= cases.keys())
+
+        render_review = cases["architecture-design-behavior-render-request"]
+        self.assertTrue(any("only when reproducibility evidence is needed" in check for check in render_review["required_checks"]))
+        self.assertIn("build or refresh the reviewed original", render_review["forbidden_behaviors"])
+        failed_review = cases["architecture-design-behavior-isolated-review-build-failure"]
+        self.assertIn("retry the uncertain package build", failed_review["forbidden_behaviors"])
 
     def test_old_runtime_files_are_removed(self) -> None:
         retired_paths = [

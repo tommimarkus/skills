@@ -71,9 +71,25 @@ Preserve the legacy verified-release-cache fallback. Streamable HTTP is future
 work only for an explicit remote/shared multi-client service requirement; first
 design authentication, origin validation, port/service lifecycle, session
 isolation, and workspace authorization.
-Require `dediren --version` (or `$DEDIREN_COMMAND --version`) to report
-`2026.07.28` or newer before rendering; that floor is the resolve gate for a
-host-supplied executable, while the plugin's own install is pinned above it.
+For any CLI fallback, resolve the executable once with the bundled
+`dediren_runtime.py --print-path` under the same `DEDIREN_HOME`, plugin-data,
+`DEDIREN_COMMAND`, and other `DEDIREN_*` environment as the MCP host. This
+read-only resolver honors the full runtime order, including the managed install;
+reuse its returned path for every fallback command. Do not independently select
+`dediren` from `PATH`. If the same host environment is unavailable or the
+resolver returns no runtime, treat the CLI fallback as unavailable. The resolver
+already enforces the supported floor for resolved installs; an explicit
+`DEDIREN_COMMAND` remains the operator's deliberate pinned-executable lane.
+
+Resolve it once in the same environment as the MCP host, then reuse `DEDIREN`:
+
+```bash
+# Claude Code
+DEDIREN="$(python3 "${CLAUDE_SKILL_DIR}/references/scripts/dediren_runtime.py" --print-path)" || exit 127
+
+# Codex: substitute the absolute loaded skill path for <skill-dir>.
+DEDIREN="$(python3 "<skill-dir>/references/scripts/dediren_runtime.py" --print-path)" || exit 127
+```
 
 `dediren_import`, `dediren_validate`, `dediren_guide`, and the four read-only
 tools (`dediren_diff` / `dediren_query` / `dediren_verify` / `dediren_status`)
@@ -85,11 +101,11 @@ the same resolved CLI is the fallback when MCP has no build capability. The
 plugin adapter runs full; the launcher never passes `--read-only` (architecture
 §9).
 
-When the MCP tools are absent, use the **internal CLI lane** only if the same
-resolved executable is available as `${DEDIREN_COMMAND:-dediren}`. This is
-internal machinery; the user never has to retype the model command. Do not
-hand-fetch or substitute a runtime outside the launcher's own provisioning. If
-neither MCP nor CLI can execute, disclose
+When the MCP tools are absent, use the **internal CLI lane** only with the
+executable returned by `dediren_runtime.py --print-path` as described above.
+This is internal machinery; the user never has to retype the model command. Do
+not hand-fetch or substitute a runtime outside the launcher's own provisioning.
+If neither MCP nor CLI can execute, disclose
 `not run (dediren runtime unavailable)` and report `Quality level: not assessed` — a
 capability cap, not a hard stop. Disclose which lane ran in the footer
 (`Dediren: MCP server | CLI fallback | not run`) and identify the missing external
@@ -117,8 +133,9 @@ to `archimate` or `uml` in the source, and add `archimate-oef` only when OEF exp
 is requested, `uml-xmi` only when XMI export is requested.
 
 When the MCP server is unavailable, run the same validation through the internal
-CLI lane (§ Server availability): set `DEDIREN="${DEDIREN_COMMAND:-dediren}"`,
-require that command to exist, and use the complete notation-specific pairs:
+CLI lane (§ Server availability): set `DEDIREN` once to the exact path returned
+by `dediren_runtime.py --print-path` in the same host environment, and use the
+complete notation-specific pairs:
 
 ```bash
 "$DEDIREN" validate --input <pkg>/model.json
@@ -186,13 +203,18 @@ arithmetic, no per-view fan-out: the runtime owns the build graph.
    one output path — surface as `DEDIREN_PACKAGE_*` and are raised up front, so a
    package the runtime refuses leaves no half-written artifacts behind.
 
-When the MCP server is unavailable, build through the internal CLI lane:
+When the MCP server is unavailable, build through the internal CLI lane, using
+the `DEDIREN` path resolved once as described in § Server availability:
 
 ```bash
-DEDIREN="${DEDIREN_COMMAND:-dediren}"
-command -v "$DEDIREN" >/dev/null 2>&1 || { printf 'Dediren unavailable\n' >&2; exit 127; }
 "$DEDIREN" build --package <pkg>/package.json      # or: "$DEDIREN" build <pkg>
 ```
+
+For a fresh Claude Code shell, resolve it with
+`python3 "${CLAUDE_SKILL_DIR}/references/scripts/dediren_runtime.py" --print-path`;
+for Codex, use `python3 "<skill-dir>/references/scripts/dediren_runtime.py" --print-path`.
+Capture that output in `DEDIREN` and retain the same runtime environment for the
+command. The resolver does not provision during this read-only check.
 
 Same `package-build-result` on stdout. Prefer the MCP tool when the server is up;
 use the CLI only as the fallback.
@@ -209,8 +231,11 @@ step below remains required, and a re-render still means a stale gallery
 MCP tool results carry the same command JSON the CLI printed, so the guide's
 Command Handoff rules apply unchanged. For MCP, first check outer `isError`; for
 either lane, then check the command `status` before trusting output. A known
-validation or freshness error becomes a finding. A failed or uncertain
-artifact-writing result stops the run without retry or fallback.
+validation or freshness error becomes a finding. An uncertain artifact-writing
+outcome stops for inspection without retry or fallback. A confirmed, scoped
+diagnostic may be repaired and rerun in Build or Extract only; Review's isolated
+reproduction remains one native package build and stops after any failed or
+uncertain writing result.
 
 - `dediren_validate` returns a generic envelope: read `.status` and `.diagnostics[]`.
 - A single-model `dediren_build` returns the unwrapped build-result document.

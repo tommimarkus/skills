@@ -82,9 +82,11 @@ identity conflicts (`ARCH-X-5`) and fragmentation candidates or rollup gaps
 Visual readiness: layout-valid is not visually clean. Emit `ARCH-L-3`,
 `ARCH-R-3`, or `ARCH-Q-2` for dense, hub fanout, label-obscured,
 label-dissociated (`architecture.md` §7 label-to-own-edge check),
-route-congested, group-imbalanced, or mixed concerns. Tune `layout_preferences`
-(`architecture.md` §9) for placement problems and re-validate before reporting
-or splitting. Missing `architecture.md` §9 accessible-name markup or visible
+route-congested, group-imbalanced, or mixed concerns. In Build or Extract, tune
+`layout_preferences` (`architecture.md` §9) for placement problems and
+re-validate before reporting or splitting. Review reports defects in the original
+evidence; any reproducibility build follows the isolated Review procedure and
+does not tune its copy. Missing `architecture.md` §9 accessible-name markup or visible
 title on rendered evidence is `ARCH-R-2`.
 
 Render mode: renders are static SVG. The footer `Layout/render options` line

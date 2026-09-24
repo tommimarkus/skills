@@ -139,10 +139,10 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dedi
 ```
 
 `--print-path` is the safe read-only check; only `--ensure` can download. Run
-these checks with the same `DEDIREN_HOME` or plugin-data environment as the MCP
-host. A shell that lacks those values can report no runtime even when the host
-has already installed one. Confirm the exact returned executable, which need
-not be on `PATH`:
+these checks with the same `DEDIREN_HOME`, plugin-data, `DEDIREN_COMMAND`, and
+other `DEDIREN_*` environment as the MCP host. A shell that lacks those values
+can report no runtime even when the host has already installed one. Reuse the
+exact returned executable for a CLI fallback; it need not be on `PATH`:
 
 ```bash
 runtime_path=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren_runtime.py" --print-path) &&

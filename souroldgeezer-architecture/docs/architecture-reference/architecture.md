@@ -208,7 +208,7 @@ under the canonical `docs/architecture/<feature>.dediren/` path.
 Use the package-level `render-metadata.json` only when a repository chooses a
 checked-in shared metadata policy/cache and can keep it synchronized with the
 views. Otherwise render with the generated per-view metadata declared in the
-view's `metadata.output`, after confirming the generated metadata profile
+view's `outputs.render_metadata`, after confirming the generated metadata profile
 matches the render policy profile.
 
 The `render` plugin emits the SVG artifact that remains the canonical proof. It
@@ -526,17 +526,19 @@ When Dediren emits the non-failing `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning,
 the render succeeded and its SVG remains evidence, but the affected view is
 `ARCH-R-3`, not visually clean or render-ready. Inspect that SVG and resolve the
 occlusion by widening the layout, shortening the label, or repositioning the
-affected nodes; otherwise disclose it explicitly.
+affected nodes in Build or Extract; Review preserves the SVG and reports the
+finding without tuning it. Otherwise disclose the limitation explicitly.
 
 First separate a *layout* problem from a *concern* problem. Density, route
 congestion, long spans, extreme aspect ratio, framing, and label displacement
-are placement problems: tune the dediren layout (§9 `layout_preferences` —
+are placement problems. In Build or Extract, tune the dediren layout (§9 `layout_preferences` —
 `mode`, `direction`, `density`, `wrapping`, `routing`, and the ELK Layered
 tuning knobs) and re-run
 `validate-layout` before reporting `ARCH-L-3`. Reserve `ARCH-Q-2` and view
 splitting for genuine concern problems — mixed audiences, multiple viewpoints,
 an inventory dump, or unrelated layers in one diagram — or for a view that
-layout tuning still cannot make scannable.
+layout tuning still cannot make scannable. Review records the defect and
+reports the evidence without changing the original or its isolated copy.
 
 When the concern is genuinely mixed, prefer splitting into narrower concerns
 over one wide graph. Process views should stay
@@ -785,12 +787,14 @@ mismatch as a package or policy defect until proven otherwise. Check
 `semantic_profile`, and `render-policy.json` before reporting a runtime issue.
 
 The repair and rebuild instructions in this layout section apply to Build and
-Extract. Review reports defects in original evidence without tuning it; its
+Extract only. A confirmed, scoped diagnostic may be repaired and rerun in those
+modes. An uncertain artifact-writing result stops for inspection without retry
+or fallback. Review reports defects in original evidence without tuning it; its
 optional isolated copy receives one package build and no repair loop.
 
 Layout runs inside each `dediren_build` call; there is no separate layout command
-to parallelize. In Build or Extract, if a view's build reports an `ARCH-L-1`
-layout failure, rebuild that single view on its own to isolate it, and
+to parallelize. In Build or Extract, if a completed build returns a confirmed
+`ARCH-L-1` layout diagnostic, rebuild that single view on its own to isolate it,
 disclose a reproducible layout-engine failure under `Dediren tool issues` with the
 package result's `.data.views[].diagnostics[]` or single-model result's
 `.views[].diagnostics[]` counts and the mapped
@@ -845,11 +849,12 @@ layout artifact that the architecture review still rejects, report the
 architecture finding normally and list the validator or renderer gap under
 `Dediren tool issues` in the footer.
 
-If grouped layout validation still reports connector-through-node, invalid
-route, or group-boundary warnings, rerun the same view without groups. If the
-ungrouped layout validates cleaner, keep source-backed groups in `model.json`,
-use the cleaner layout as evidence and report the grouped-layout regression
-with both validation counts.
+In Build or Extract, if grouped layout validation returns connector-through-node,
+invalid-route, or group-boundary diagnostics, rerun the same view without groups.
+If the ungrouped layout validates cleaner, keep source-backed groups in
+`model.json`, use the cleaner layout as evidence and report the grouped-layout
+regression with both validation counts. Review records these diagnostics and
+does not rerun or alter the evidence.
 
 ### Visible Title Band Post-Render Step
 
