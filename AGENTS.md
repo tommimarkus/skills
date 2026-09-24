@@ -277,6 +277,12 @@ work: use the shared workflow's format-aware precedence and direct validation.
 Its optional clone-local native-tool state helper emits bounded JSON
 (`tool_state.py list` / `tool_state.py gc`) and is advisory only.
 
+For DevSecOps audits, resolve cost guidance from the target repository's
+`AGENTS.md` and `CLAUDE.md` regardless of the active harness. Apply the rule
+scoped to the current host and task; retain matching guidance from the other
+file as evidence and disclose conflicting policies before applying paid-control
+criteria. Do not treat this repository's guidance as the target's policy.
+
 ### Planning-policy execution contract (Codex)
 
 
@@ -327,13 +333,14 @@ at-most-600-proxy-token `planning-cost-advisory-v1`; missing or invalid profiles
 unknown ranges, shared-prefix repetition, retry multiplication, and verification
 reserve never affect validity, readiness, dispatch, retry, or lifecycle. Keep
 stable-proxy, declared-model-token, and provider-measured lanes separate. Two
-stable codes flag batching signals: `PLANCOST-UNBATCHED-CHAIN` (an unbatched
-dependency-consecutive same-owner mechanical/standard pair) and
-`PLANCOST-PLAN-SCALE` (more than 12 leaves or 20 declared work-unit weight —
-slice into successive plans); grooming acts on both before approval, never as
-a validity gate. `PLANCOST-MICROLEAF-RISK` requires merging candidates back
-into their work unit's cohesive outcome unless its v5 decomposition evidence
-justifies the split. The
+Three advisory codes flag planning-cost signals: `PLANCOST-UNBATCHED-CHAIN` (an
+unbatched dependency-consecutive same-owner mechanical/standard pair),
+`PLANCOST-PLAN-SCALE` (more than 12 leaves or 20 declared work-unit weight), and
+`PLANCOST-MICROLEAF-RISK` (merge candidates back into their work unit's
+cohesive outcome unless its v5 decomposition evidence justifies the split).
+Groom microleaves first; if the plan remains over the scale signal, slice it
+into successive plans. Grooming acts on all three signals before approval,
+never as a validity gate. The
 human plan has one compact `Execution economics` summary and `tracing: off`.
 Route an initial inspection to at most one owning audit only when
 its bounded question and evidence surface remain unresolved by targeted
@@ -455,8 +462,8 @@ authority. Codex and any native Copilot manifest mirror it as strict SemVer
 `YYYY.M.MICRO`.
 
 Feature branches and worktrees carry content only. Do not increment existing
-version cells there. Before integration, run the guard from the candidate
-branch; after merging, compute the next stamp on `main`:
+version cells there. Verify the exact clean candidate before integration, then
+fast-forward that commit. After integration, compute the next stamp on `main`:
 
 ```text
 uv run python scripts/version_stamp.py guard
@@ -465,7 +472,15 @@ uv run python scripts/version_stamp.py compute --plugin <name>
 
 Then apply the padded computed stamp to the Claude manifest and matching README
 cell, and its normalized derivative to the Codex and native Copilot manifests,
-in the integration commit. New manifests added by a feature branch may
+in an integration commit that contains only version changes. Verification
+evidence from the exact clean candidate survives that atomic follow-up only
+when fast-forward ancestry is
+proved and the complete change is limited to these version cells: the Claude
+manifest, the matching normalized legacy Codex and (when present) root Agent
+Plugins/Copilot manifests, and the matching README version-table cell. Run the
+focused version and metadata-parity checks for that fixed surface. Any other
+source, plan, evidence, surface, or integration drift requires the full
+candidate verification again. New manifests added by a feature branch may
 carry the existing release's SemVer-normalized value; that is packaging content,
 not a release increment.
 
@@ -474,7 +489,9 @@ Breaking or additive public-surface work requires the repository's in-depth
 
 ## Validation
 
-Run from a clean worktree at repository root:
+Run the changed-surface checks first. Before integration, run the following
+ordered candidate gates from the clean persistent task worktree at repository
+root, preserving each command's exit status:
 
 ```text
 python scripts/check-runtime-metadata-parity.py --check .
@@ -483,10 +500,16 @@ scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
+uv run python scripts/version_stamp.py guard
 ```
 
-The fragmentation script runs metadata and stop-hook checks. The explicit
+Run the version guard after the candidate gates and before fast-forward
+integration. The fragmentation script runs metadata and stop-hook checks. The explicit
 `*_test.py` discovery command above owns the one full-suite run at closeout.
+This exact clean candidate and ordered gate sequence own the full verification
+evidence; fast-forward integration preserves it. If only the fixed version
+cells documented above change afterward, run the focused version guard and
+metadata-parity checks. Any other drift returns to the full sequence.
 
 Also validate every Codex plugin with the current first-party plugin validator
 when it is available, and run `claude plugin validate --strict` through the
@@ -502,7 +525,8 @@ from a downstream stage is no evidence the gate ran or passed.
 
 The host smoke must keep both safety flags. It uses temporary `CODEX_HOME`,
 `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME` state without
-replacing `HOME`, verifies installed plugin, skill, agent, and Dediren MCP
+replacing `HOME`, clears inherited plugin-data roots that could redirect
+provisioning, verifies installed plugin, skill, agent, and Dediren MCP
 surfaces, and fingerprints the normal host plugin/config control planes before
 and after. Dediren itself is plugin-provisioned, so the smoke resolves it
 through the launcher's own lanes — an explicit `DEDIREN_COMMAND`, or a temporary

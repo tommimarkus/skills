@@ -2,6 +2,12 @@
 
 Cross-runtime plugin marketplace by Sour Old Geezer. The same skill workflows run in Claude Code™ and Codex, with native GitHub™ Copilot CLI support for the architecture plugin.
 
+Published plugins package shared skills with their on-demand references,
+extensions, and evaluation evidence for supported runtimes. Host manifests,
+marketplaces, agents, hooks, and MCP adapters provide runtime packaging around
+those shared workflows. Repo-only authoring workflows live under
+`internal-skills/` and are not published in the marketplaces.
+
 ## What this is
 
 Install the plugin that owns the task, then describe the work in ordinary language. Start with [using skills](docs/using-skills.md) for task examples and boundaries, or use [runtime support](docs/runtime-support.md) for host behaviour.
@@ -125,7 +131,12 @@ Each skill’s expected output and boundaries are in [using skills](docs/using-s
 
 ## Validation
 
-Contributors run the documented checks in [contributing](docs/contributing.md). The fragmentation gate includes metadata checks and `scripts/test-stop-hooks.sh`; the explicit discovery command runs the full suite once at closeout. The
+The contributor guide defines the ordered changed-surface and clean candidate
+checks. Its fragmentation gate runs metadata validation and
+`scripts/test-stop-hooks.sh`, and the full test suite runs once at closeout.
+Evidence from an exact clean candidate survives fast-forward integration. Only
+the documented atomic version cell follow-up uses focused version and metadata
+checks. Other drift requires the full candidate gates again. The
 [release checklist](docs/release-checklist.md) covers release preparation.
 
 ## Detailed docs

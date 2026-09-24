@@ -526,3 +526,28 @@ The composed route counts the shared procedure once. The regression check also
 measures two entry routes to that file and verifies one charged row, two provenance
 records, and exactly one procedure token count. Existing fidelity codes, sections,
 and pointers remain protected; only the affected API baseline is refreshed.
+
+## Final reconciliation — 2026-09-24
+
+Regenerated the 56-route snapshot from the checked-in scenarios and current
+load closures. Compared with the pre-reconciliation snapshot, 42 routes changed
+(+16 to +963 tokens; net +13,924 across route totals), while 14 were unchanged.
+Largest increases were `extract-api-data-access-debt` (+963),
+`deep-nextjs-suite` (+799), `build-functions-cosmos` (+728),
+`deep-devsecops-gha` (+713), and the API review/build data-access routes
+(+377 each). Factual API Extract retains the project-assimilation procedure
+for discovery while omitting debt judgments and the debt footer; its routes
+measure 16,168 for Python (+540) and 17,979 for Functions plus Cosmos (+580).
+The explicit HTTP data-access debt route now includes the procedure and omits
+the review-only red-flags procedure (+963).
+
+Per-skill summed route deltas: api-design +8,196; test-quality-audit +2,137;
+architecture-design +1,803; devsecops-audit +1,232; software-design +392;
+app-design +91; lean-audit +73. Infra-design and ip-hygiene route totals did
+not change. These totals describe all load-set/content changes since the prior
+snapshot; they are not performance claims. The existing scenario ceiling stays
+at 105% of the committed measured snapshot.
+
+The test-quality fidelity inventory was regenerated from the current linked
+closure. Python fixture-driven expected values now use `python.LC-5`; the
+contract-derived boundary criterion remains `python.LC-3` in the Python core.

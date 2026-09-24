@@ -16,10 +16,11 @@ for their respective runtimes.
   [evaluation evidence guide](skill-evaluation.md). Keep bundled prompts and
   examples original or safely paraphrased.
 - For a release or a version change, use the
-  [release checklist](release-checklist.md). Feature branches carry content.
-  Run `uv run python scripts/version_stamp.py guard` from the candidate branch
-  before integration; integration on `main` owns computing and applying the
-  version stamp.
+  [release checklist](release-checklist.md). Feature branches carry content
+  without version increments. Verify and fast-forward the exact clean candidate;
+  after integration, `main` owns computing and applying the version stamp. The
+  release policy documents the fixed version cell follow-up and its focused
+  checks; any other drift requires full candidate verification again.
 - For a rare operational change, including Dediren adoption or support removal,
   use the [maintenance procedures](maintenance-procedures.md).
 
@@ -84,8 +85,9 @@ adapter instead of copying a runtime-specific workflow.
 
 ## Validate the change
 
-Run the checks that cover the files you changed first. Before integration, the
-parent runs the repository-wide gates from a clean worktree:
+Run focused checks for the files you changed first. From the clean persistent
+task worktree at repository root, run the candidate gates in this order before
+integration, preserving each command's exit status:
 
 ```text
 python scripts/check-runtime-metadata-parity.py --check .
@@ -94,10 +96,19 @@ scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
+uv run python scripts/version_stamp.py guard
 ```
 
-The fragmentation script runs metadata and stop-hook checks. The explicit
-`*_test.py` discovery command owns the one full-suite run at closeout.
+The version guard runs after the candidate gates and before fast-forward
+integration. The fragmentation script runs metadata and stop-hook checks. The explicit
+`*_test.py` discovery command owns the one full-suite run at closeout. This
+clean candidate and ordered gate sequence own full verification evidence, and
+an exact fast-forward preserves it. Only an atomic follow-up that changes
+version cells may reuse that evidence, limited to the Claude version, normalized
+legacy Codex and root Agent Plugins/Copilot versions, and matching README
+version-table cell for each stamped plugin; run focused version guard and
+metadata-parity checks afterward. Any other source, plan, evidence, surface,
+or integration drift requires the full candidate gates again.
 
 Do not use a pipeline or `||` fallback as evidence that a gate passed: capture
 the actual command's exit status or run it unpiped. The host smoke's two safety

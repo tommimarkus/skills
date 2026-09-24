@@ -221,16 +221,26 @@ When restructuring files the deterministic engines scan, gate on a **classified*
 Primary checks:
 
 ```bash
-bash scripts/skill-architecture-report.sh --help
-uv run python scripts/skill_architecture_report.py .
-uv run python scripts/skill_architecture_report.py --format json --strict .
-uv run python -m unittest tests.skill_architecture_report_test
+python scripts/check-runtime-metadata-parity.py --check .
+scripts/validate-fragmentation.sh
+scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'  # one full-suite run at closeout
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
+uv run python scripts/version_stamp.py guard
 ```
 
-Run the whole suite once at closeout with the explicit `*_test.py` pattern. Bare `python -m unittest` is also wired through `test_all.py`, which discovers that same suite; the explicit command makes the scope clear. Treat any test run that collects 0 tests as a failed gate.
+Run focused changed-surface checks first, then these ordered candidate gates
+from the clean persistent task worktree. The version guard follows them and
+runs before fast-forward integration. The exact candidate and gate sequence
+own full verification evidence, which exact fast-forward integration preserves.
+After integration, only an atomic version-cell follow-up may reuse that
+evidence. Its complete fixed surface is the Claude manifest, normalized legacy
+Codex and root Agent Plugins/Copilot manifests when present, and matching
+README version-table cell. Run focused version and metadata-parity checks for
+that surface. Any other source, plan, evidence, surface, or integration drift
+requires the full candidate gates again. The explicit `*_test.py` command owns
+the one full-suite run at closeout. A run that collects zero tests fails.
 
 When reading a gate's exit status, never let a pipeline stage or a `||` fallback own the reported code — `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's status, not the gate's, and can read green while the gate itself failed. Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and test the bare command, or run the gate unpiped; a status that provably came from a downstream stage is no evidence the gate ran or passed, the same way a 0-collected-tests run is treated as a failed gate.
 
@@ -258,7 +268,7 @@ Current internal skills:
 
 Add here when new internal skills appear. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `.claude-plugin/plugin.json`.
 
-When a repo-internal skill's tooling order prefers an MCP server (e.g. `github-issue-lifecycle` → GitHub™ MCP), it must also state that this harness may expose those MCP tools as **deferred** — loaded via `ToolSearch` before first use — and that the model should not fall back to an always-loaded CLI/Bash equivalent (e.g. `gh`) as its first move unless no such MCP server is connected. Keep this harness-specific loading guidance in repo-internal skills and agent guidance only; published `souroldgeezer-*` skills stay harness-agnostic and express tool *preference*, not `ToolSearch` mechanics.
+When a repo-internal skill's tooling order prefers an MCP server (e.g. `github-issue-lifecycle` → GitHub™ MCP), it must also state that this harness may expose those MCP tools as **deferred** — loaded via `ToolSearch` before first use — and that the model should not fall back to an always-loaded CLI/Bash equivalent (e.g. `gh`) as its first move while an MCP server is connected and exposes the operation needed for that step. Use the documented provider fallback when no such server is connected or its available operations do not cover the step. Keep this harness-specific loading guidance in repo-internal skills and agent guidance only; published `souroldgeezer-*` skills stay harness-agnostic and express tool *preference*, not `ToolSearch` mechanics.
 
 ## Directory layout
 
@@ -341,7 +351,22 @@ Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.
 - **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
 - **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
 
-Before integrating a worktree, run `uv run python scripts/version_stamp.py guard` (compares the branch against its merge-base with `main`); it fails if the branch stamped an existing version cell, or if any marketplace entry carries a `version` key (presence, not diff). At integration, get the correct padded Claude/README stamp with `uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its month for the Codex manifest, and apply every applicable cell in the integration commit. A newly added Copilot manifest may start at the existing release's SemVer-normalized value as packaging content.
+Verify the exact clean candidate with the ordered gates in "Primary checks",
+then run `uv run python scripts/version_stamp.py guard` before integration. It
+compares the branch against its merge-base with `main` and fails if the branch
+stamped an existing version cell, or if any marketplace entry carries a
+`version` key (presence, not diff). Fast-forward that exact commit. At
+integration, get the correct padded Claude/README stamp with
+`uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its
+month for Codex, and apply every applicable cell in an integration commit that
+contains only version changes. Exact candidate evidence survives this atomic
+follow-up only with proved fast-forward ancestry and changes limited to the
+complete version surface: Claude manifest, normalized legacy Codex and root
+Agent Plugins/Copilot manifests when present, and matching README version-table
+cell. Run focused version and metadata-parity checks. Any other source, plan,
+evidence, surface, or integration drift requires the full candidate gates
+again. A newly added Copilot manifest may start at the existing release's
+SemVer-normalized value as packaging content.
 
 **Stamp mechanics:**
 - Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current Claude version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version; the Codex cell is its normalized mirror.
@@ -380,8 +405,8 @@ Skills here follow a recurring shape. Understand it before editing any SKILL.md:
 - **Extensions are on-demand packs** in `skills/<skill>/extensions/`, loaded from detected target / provider. Most packs are a flat `<stack>.md`; `api-design` keeps that file as the compact stack core and may add `<stack>/build.md` or `<stack>/review.md` according to the selected mode. Audit and design extensions are per-stack; `issue-ops` / `pr-ops` use provider extensions; `git-workflow-policy` / `release-policy` start provider-agnostic, adding extensions later only when initialized options can't stay compact. For audits, extensions **ADD** namespaced smells (`<ext>.HC-N` / `.LC-N` / `.POS-N`) or **CARVE OUT** core smells for idiomatic framework patterns; for design, they also add stack-specific primitives, patterns, and project-assimilation rules; for operations, they add provider lifecycle mechanics; policy skills prefer declarative initialization options. Extensions **never override** core rules. Each skill's extension-authoring convention lives in `extensions/README.md` or a `references/procedures/*extension*.md` loaded from SKILL.md — follow its required-sections list exactly. `ip-hygiene` follows `devsecops-audit`'s convention location, `references/procedures/extension-authoring.md`, for its per-language packs. Multi-extension composition order is summarized in "Published skills index"; each skill's own `extensions/README.md` and SKILL.md carry the authoritative per-stack composition and the orthogonal finding namespaces (so findings never collide).
 - **Supporting files live under `references/`** (audit skills, and design skills when needed): `smell-catalog.md` (compact code index), `procedures/*.md` (reusable sub-procedures the workflow steps into), `scripts/*.sh` (allowed when a deterministic executable gate ships with the skill), `evals/*.jsonl` + `source-grounding.md` (behavioral evidence for trigger / workflow / source-grounding / high-risk-gate evals). `software-design`, `app-design`, `api-design`, `infra-design` use skill-local `references/procedures/project-assimilation.md` for existing-codebase discovery, reuse/debt classification, and migration disclosure. `app-design` keeps stack rules under `extensions/`; `software-design` uses a compact smell catalog + evidence; `infra-design` keeps evidence/source-grounding under `references/` while Azure® / Terraform™ / Bicep™ rules live under `extensions/`; `architecture-design` uses `references/` for notation references, finding catalog, package workflow procedures, source-lifting rules, evals, source grounding, and the dediren package fixture. `test-quality-audit` keeps its per-stack packs nested under `references/extensions/<stack>/<lane>.md` (e.g. `nodejs/core.md`) behind a thin `extensions/index.md`.
 - **Cross-skill coupling is via filesystem convention** (design skills). `architecture-design` owns `docs/architecture/<feature>.dediren/`; `app-design`, `api-design`, `infra-design`, `software-design` check that path when a paired model may need drift review. Siblings don't reach into the architecture-design surface beyond this path.
-- **Project assimilation is one-way** (design skills). Assimilate the *project* to the *reference*, not vice versa. New code is always reference-compliant; non-compliant existing infrastructure is reused only when substantively compliant, else flagged as legacy debt. Load skill-local `project-assimilation.md` when existing source, app structure, API wiring, IaC, diffs, or runtime/config evidence is in scope. Footer shape: `Project assimilation:` with `Reused`, `Legacy debt`, `Migrations performed`.
-- **Output footers disclose state.** Every report / build output ends with a footer listing loaded extensions, MCP availability, cost stance (if applicable), reference path, and (design skills) project-assimilation summary. Don't remove them — they're how users audit the auditor / verify the builder.
+- **Project assimilation is one-way** (design skills). In Build, Review, and explicit debt/compliance Extract, assimilate the *project* to the *reference*, not vice versa: new code follows the reference; existing infrastructure is reused only when substantively compliant, otherwise record it as legacy debt. Load skill-local `project-assimilation.md` when that evidence is in scope. Factual API Extract loads and uses this procedure for discovery when existing source or API/runtime evidence is in scope, but reports observed facts and evidence gaps without compliance or debt judgments and has no debt footer. The explicit debt/compliance Extract route classifies debt and emits its `Project assimilation:` footer (`Reused`, `Legacy debt`, `Migrations performed`).
+- **Output footers disclose state.** Reports and Build outputs end with the required footer listing loaded extensions, MCP availability, cost stance (if applicable), reference path, and (design skills) project-assimilation state when that mode requires it. Factual API Extract reports observations and evidence gaps without a debt footer. Don't remove required disclosures — they're how users audit the auditor / verify the builder.
 
 ## Subagents
 
@@ -452,13 +477,14 @@ progress as `blocked:no_progress`, exhaustion as terminal
 Each v5 plan has bounded advisory `planning-execution-cost-v1` data, and the
 same validator call emits `planning-cost-advisory-v1` within 600 proxy tokens.
 Unknown model-token estimates stay unknown; proxy, declared-model-token, and
-provider-measured lanes never mix. Two stable codes flag batching signals:
+provider-measured lanes never mix. Three advisory codes flag planning-cost signals:
 `PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
 mechanical/standard pair), `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20
-declared work-unit weight — slice into successive plans), and
-`PLANCOST-MICROLEAF-RISK` (merge candidates into their work unit's cohesive
-outcome unless its v5 decomposition evidence justifies the split); grooming acts on all before
-approval, never as a validity gate. The human plan renders compact **Execution
+declared work-unit weight), and `PLANCOST-MICROLEAF-RISK` (merge candidates
+into their work unit's cohesive outcome unless its v5 decomposition evidence
+justifies the split). Groom microleaves first; if the plan remains over the
+scale signal, slice it into successive plans. Grooming acts on all three signals
+before approval, never as a validity gate. The human plan renders compact **Execution
 economics** with `tracing: off`; cost findings never govern execution.
 
 A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
@@ -567,7 +593,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path |
 | `planning-policy` | `souroldgeezer-policy` | Active opt-out plan-first policy; install-passive, enforced-by-default once initialized; opens plan mode (EnterPlanMode) and runs a light brainstorm before new build work, approving the approach via ExitPlanMode with no spec file; low-friction opt-out |
 | `scope-policy` | `souroldgeezer-policy` | Passive change-footprint policy; bounds a change to a declared level (`targeted` / `balanced` / `open`), records out-of-level findings instead of doing them, and escalates one rung only when a level is insurmountable; bare initialization defaults to `balanced` |
-| `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain, and evidence-backed JavaScript/TypeScript security paths; cost stance via `config.yaml` |
+| `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain, and evidence-backed JavaScript/TypeScript security paths; cost stance from `config.yaml` or the target repository's `AGENTS.md` / `CLAUDE.md` guidance |
 | `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack, including Deep suite health and Node/React async lifecycle ownership |
 | `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces and repo-wide source, configuration, and build files |
 | `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; deterministic engines + judgment; surface-gated per-use cost (`LA-PUC-*`) and staged-workflow run viability/orchestrator survivability (`LA-RUN-*`, `LA-ORCH-*`) with metadata-only trace calibration; read-only; plus explicit-request-only propose-only minify (`LA-MIN-*`) and live-verified platform redundancy (`LA-NAT-*`) |
