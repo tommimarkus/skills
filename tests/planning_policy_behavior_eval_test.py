@@ -74,6 +74,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-series-close-requires-flag",
             "planning-policy-behavior-series-successor-gcd-predecessor",
             "planning-policy-behavior-series-final-end-verification",
+            "planning-policy-behavior-parent-preparation",
+            "planning-policy-behavior-v5-size-from-bounded-evidence",
         }
         self.assertTrue(required.issubset(self.behavior))
         scaffold = self.behavior["planning-policy-behavior-v5-canonical-scaffold"]
@@ -126,6 +128,29 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertIn("cohesive outcome", " ".join(rejected["required_checks"]))
         self.assertIn("tier gaming", " ".join(rejected["required_checks"]))
         self.assertIn("batch", " ".join(rejected["forbidden_behaviors"]))
+
+    def test_grooming_prepares_one_complete_handoff_per_cohesive_outcome(self):
+        preparation = self.behavior["planning-policy-behavior-parent-preparation"]
+        text = " ".join(
+            preparation[field]
+            if isinstance(preparation[field], str)
+            else " ".join(preparation[field])
+            for field in ("expected_artifacts", "required_checks", "forbidden_behaviors")
+        ).lower()
+        for concept in ("after convergence", "call sites", "write sets", "existing acceptance", "worker judgment"):
+            with self.subTest(concept=concept):
+                self.assertIn(concept, text)
+
+        sizing = self.behavior["planning-policy-behavior-v5-size-from-bounded-evidence"]
+        sizing_text = " ".join(
+            sizing[field]
+            if isinstance(sizing[field], str)
+            else " ".join(sizing[field])
+            for field in ("expected_artifacts", "required_checks", "forbidden_behaviors")
+        ).lower()
+        for concept in ("bounded read", "acceptance", "irreducible", "two checks"):
+            with self.subTest(concept=concept):
+                self.assertIn(concept, sizing_text)
         parallel = self.behavior["planning-policy-behavior-v5-parallel-control"]
         self.assertIn("one cohesive outcome", " ".join(parallel["expected_artifacts"]))
         self.assertIn("basis: parallel_independence", " ".join(parallel["expected_artifacts"]))

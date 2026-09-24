@@ -1,21 +1,20 @@
 ---
 name: planning-policy
-description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline — brainstorm an approach in plan mode and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer to the owning design, audit, or ops skill."
+description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline and economical delegated completion — brainstorm an approach, prepare cohesive handoffs, and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer to the owning design, audit, or ops skill."
 ---
 
 # Planning Policy
 
 Own plan-first enforcement only when repo/user guidance initializes this policy,
 or on an explicit “plan this first” request. The standing line is authority;
-installation alone is not. It protects this invariant: before new feature or
-build work, briefly brainstorm in the host plan lane, converge on an approach,
-and obtain user approval before implementation.
+installation alone is not. It protects economical delegated completion: plan
+new feature/build work, prepare cohesive bounded handoffs, and obtain approval.
+The parent prepares, integrates, verifies, and recovers; workers execute their
+assigned outcomes and scoped acceptance.
 
-Inputs: request, applicable guidance/options, intended work, and only the files
-needed to orient. Evidence: source/options, approved approach or blocker, and
-the bounded footer. Invoke the owning design skill before approval when an
-unresolved domain-design choice materially affects implementation. Audits,
-implementation, Git, issues, and PRs remain with their named sibling skills.
+Inputs: request, guidance, intended work, and orienting files. Evidence: source,
+approved approach or blocker, and bounded footer. An unresolved domain-design
+choice invokes its owning design skill before approval.
 
 ## Load map
 
@@ -32,8 +31,8 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   selects authorized [persistence](references/scripts/persist_plan.py) (`--help`)
   or inline JSON. Resolve before approval and dispatch; carry the envelope in the
   host plan. The [binding scaffold](references/templates/capability-binding-v1.json)
-  joins digest, leaves, requirements, host/executor, and evidence for dispatch. For
-  an approved plan with two or more
+  joins plan digest, leaves, requirements, executor, and evidence. For an approved
+  plan with two or more
   delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
   [`planning_ledger.py`](references/scripts/planning_ledger.py). Normal v5
@@ -50,11 +49,8 @@ implementation, Git, issues, and PRs remain with their named sibling skills.
   errors, legacy resumption, diagnosis, retention operations, or ledger
   authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
-- **Usage tracing (explicit opt-in only):** only after the user explicitly asks
-  to trace, measure, or calibrate one run, read
-  [usage tracing](references/usage-tracing.md). Ordinary planning and execution
-  never inspect telemetry, create trace state, install hooks, call a network, or
-  contact a provider.
+- **Usage tracing:** only after an explicit trace, measure, or calibrate request,
+  read [usage tracing](references/usage-tracing.md). Ordinary runs create no trace state.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never
@@ -70,11 +66,8 @@ writes the core template. Enforcement details, host lane behavior, and the
 executable-leaf contract live in the on-demand [core workflow](references/core-workflow.md).
 
 Worker stops: missing assigned load-bearing information is `blocked:missing_input`
-(never discovery or invention). Parent artifact recovery follows approval handoff; stop for ambiguous or multi-subsystem scope,
-missing success criteria, an owning sibling request, an unenterable
-non-interactive plan mode, or new build work without approval or a logged
-opt-out. This skill does not write specs, commits, or implementation.
+(never discovery or invention). Parent recovery follows approval handoff; stop
+for unclear scope/success, sibling ownership, unavailable plan mode, or
+unapproved new build work. This skill does not write specs, commits, or implementation.
 
-Ask vs continue: continue once goal, constraints, and success are clear. If the
-request is ambiguous, input is missing, or scope is uncertain, ask the user
-before grooming.
+Ask only if goal, constraints, success, input, or scope remain unclear.

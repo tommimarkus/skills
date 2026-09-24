@@ -11,35 +11,31 @@ implementation.
    read-only for explicit approval. Never claim a mode change.
 2. Orient only enough to ask good questions. Ask focused questions about goal,
    constraints, and success; stop when an approach is clear.
-3. State the approach in one or two sentences and name a real tradeoff/pick.
-   State execution shape: decomposable implementation steps delegate by default;
-   the parent retains decomposition, integration, and final verification.
-   Before approval, invoke the owning design skill if an unresolved domain-design
-   choice materially affects implementation; bring its settled choice back here.
-4. Groom after convergence by deriving cohesive outcomes before leaves. Default
-   to one leaf per outcome; merge a file-per-leaf, code-vs-test, preparatory
-   helper, tier-gaming, or plan-size-gaming split back into its outcome. A v5
-   work unit records `cohesive_outcome` and `decomposition`. Its `shape` is
-   `single`, `parallel`, or `checkpointed`; `parallel` has
-   `basis: parallel_independence` plus a rationale, while `checkpointed` has
-   `basis: failure_isolation` or `rollback_boundary` plus a rationale. Its
-   represented intermediate work must be independently accepted, but that
-   acceptance remains in the work-unit/leaf contract rather than an invented
-   decomposition field. Parallel keeps multiple independently acceptable
-   leaves or outputs inside one cohesive outcome; genuinely separate cohesive
-   outcomes normally remain separate single work units. Batch is operational only
-   and never justifies a split. Name each leaf’s reads/writes and settled
-   decisions. Scope each leaf's
+3. State a one- or two-sentence approach with a real tradeoff/pick and execution
+   shape: decomposable steps delegate by default; the parent retains decomposition,
+   integration, and final verification. Before approval, invoke the owning design skill for a material unresolved domain-design choice.
+4. Groom after convergence by deriving outcomes before leaves. The parent then
+   enumerates shared call sites, guidance, reads/writes, and scoped acceptance
+   once, and settles material domain choices with their owner. Required unknowns
+   are missing input; bounded implementation judgment belongs to the worker.
+   Default to one leaf per outcome; merge file-per-leaf, code-vs-test,
+   preparatory-helper, tier-gaming, and plan-size-gaming splits. A v5 work unit
+   records `cohesive_outcome` and `decomposition`: `single`, `parallel` with
+   `basis: parallel_independence` and rationale, or `checkpointed` with
+   `basis: failure_isolation` or `rollback_boundary` and rationale. Intermediate
+   work uses leaf acceptance; batch never justifies a split. Name reads/writes
+   and settled decisions. Derive small, medium, or large from bounded reads,
+   scoped acceptance, and worker judgment; large needs a concrete
+   irreducible reason. Two checks do not by themselves require two leaves.
+   Scope each leaf's
    `acceptance_command` to its write set; a whole-suite run belongs to the
    parent's final verification. A fresh
    agent must finish from the handoff. Start new plan JSON from the canonical
-   [plan-v5.json](templates/plan-v5.json) scaffold; it
-   starts with `contract_version`, and the authored plan keeps that discriminator
+   [plan-v5.json](templates/plan-v5.json) scaffold; `contract_version` stays
    first. Every leaf declares exact `capability_requirements`: baseline
-   `plan-step-base-v1` plus only bounded additional requirements. Load [plan contract](plan-contract.md),
-   validate it using its Claude `${CLAUDE_SKILL_DIR}` or Codex absolute
-   `<skill-dir>` form, and re-cut any missing boundary, decision, requirement, or
-   failed command. Every leaf includes `missing_load_bearing_information`.
+   `plan-step-base-v1` plus bounded additional requirements. Load [plan contract](plan-contract.md),
+   validate using its Claude `${CLAUDE_SKILL_DIR}` or Codex `<skill-dir>` form,
+   and re-cut failed contracts. Every leaf includes `missing_load_bearing_information`.
 5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
    contract. Leave unavailable token ranges unknown; never infer them from a
    size, tier, model name, or stable-proxy count. Contract validation calculates

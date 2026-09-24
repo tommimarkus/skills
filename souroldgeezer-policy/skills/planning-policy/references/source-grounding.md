@@ -20,6 +20,18 @@ The docstring typo behavior case now follows the existing trivial-edit exception
 All added cases and fake-host responses are repository-authored synthetic
 evidence; no provider transcript or third-party workflow text supplied them.
 
+## 2026-09-25 economical delegated completion
+
+The delegation, handoff, and outcome-first changes in commits `f86580b`,
+`dc72cc8`, `d999100`, `2c1ef5f`, `6223d01`, and `d717a37` establish one design
+intent: a parent gathers shared facts once after approach convergence, then
+hands a fresh worker a cohesive, bounded outcome with scoped acceptance. The
+revision makes that intent explicit. It distinguishes required missing input
+from implementation judgment the worker may make inside its boundary, and it
+derives size from bounded reads and acceptance. A large unit needs a concrete
+irreducible reason; multiple checks do not mandate multiple leaves. This records
+design intent, not measured savings.
+
 ## 2026-09-18 write-set glob enforcement repair
 
 The ledger previously accepted glob characters in an approved plan but checked

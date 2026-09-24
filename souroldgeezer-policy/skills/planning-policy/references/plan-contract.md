@@ -65,8 +65,12 @@ and identity. New v5 uses `escalating_remediation_v1`; old policy-less state is
 unchanged.
 
 `work_units` declares `{id, original_size, cohesive_outcome, decomposition}` once
-per cohesive outcome; every nonempty unit owns at
-least one leaf and is weighted once, preventing readiness-by-splitting.
+per cohesive outcome; each nonempty unit owns a leaf and is weighted once.
+
+After convergence, the parent records bounded reads, scoped acceptance, and
+permitted worker judgment once per outcome. They derive `small`, `medium`, or
+`large`; large names a concrete irreducible reason. Multiple checks alone do not
+justify leaves. A required unknown remains missing input.
 
 Analytical/deep requires `irreducible_unknown_or_risk`; mechanical mirrors it —
 `settled_decisions` and an enumerated `write_set` leaving no open choice.

@@ -457,7 +457,12 @@ assigned work unit owns its `cohesive_outcome` and `decomposition` evidence:
 `basis: failure_isolation` or `rollback_boundary` plus `rationale`. Original
 work units carry one weight (`small=1`, `medium=2`, `large=3`) and the plan needs
 `standard_ready_ratio >= 0.60`, except for an analytical-heavy exception that
-the user explicitly approves and the plan records. Selective audit routing is
+the user explicitly approves and the plan records. After approach convergence,
+the parent enumerates shared call sites, guidance, named reads/writes, and
+existing scoped acceptance once. It records bounded worker judgment separately
+from required missing input; size follows those bounded reads and acceptance,
+and large names a concrete irreducible reason. Two checks alone never require
+two leaves. Selective audit routing is
 exceptional: it needs one owner, a bounded question/evidence surface, and proof
 that targeted inspection or focused tests cannot resolve it. The parent owns
 integration and end-to-end verification. A valid decision-complete v5 plan is

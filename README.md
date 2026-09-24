@@ -16,7 +16,9 @@ The repo currently ships five plugins:
 
 `planning-policy` can retain an approved executable plan through a caller-authorized
 durable root using its documented explicit-root writer. Hosts without that
-authority keep the complete inline approval envelope.
+authority keep the complete inline approval envelope. It prepares economical
+delegation by gathering shared facts once, handing off cohesive bounded outcomes,
+and retaining parent integration and verification.
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or
