@@ -17,3 +17,7 @@ external documentation.
   Handling: local shared provider mechanics; the GitHub-MCP-default eval derives
   from the documented MCP-first tooling order, adding only the repo-local
   deferred-tool loading step. No external text copied.
+- Source: `souroldgeezer-ops/docs/provider-reference/provider-lifecycle-core.md`
+  and the repo-local issue overlay.
+  Handling: synthetic cases cover operation-specific fallback and honest
+  reconciliation when provider auto-close precedes the final marker.

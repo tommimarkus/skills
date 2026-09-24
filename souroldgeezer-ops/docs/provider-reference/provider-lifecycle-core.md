@@ -17,10 +17,18 @@ runtime, such as `Claude Code`.
 
 Each skill and provider defines its own lifecycle-status marker templates — for
 example `issue-ops:github:v1` or `pr-ops:gitlab:v1` — with the fields that matter
-for the item; keep the marker to one current-state block per item. The final
-marker update is sufficient before the terminal action — closing the item, or
-merging or closing the PR/MR — so do not add a separate closing or completion
-comment unless updating the marker fails.
+for the item; keep the marker to one current-state block per item. Complete
+verification and write the required final issue marker before explicitly
+closing an issue. The final marker update is sufficient before that terminal
+action — closing the issue, or merging or closing the PR/MR — so do not add a
+separate closing or completion comment unless updating the marker fails.
+
+When commit messages or PR/MR text can trigger automatic issue closure, use a
+non-closing issue reference until verification and the required final issue
+marker are complete. Then close explicitly after re-reading live state. If an
+integration already auto-closed the issue, report and reconcile the observed
+state after verification; preserve the actual order of events and never claim
+the marker preceded closure.
 
 ## Escalation gates
 

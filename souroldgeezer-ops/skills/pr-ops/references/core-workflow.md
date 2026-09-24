@@ -55,7 +55,13 @@ For each PR/MR or prepared branch:
 4. Classify mode, actionability, blockers, PR/MR creation or reuse state, review
    state, check state, branch state, merge safety, and integration strategy.
 5. Select or reuse a work area according to repo guidance and PR/MR ownership.
-6. Implement only clear, in-scope feedback or check-failure remediation.
+6. Implement only clear, in-scope feedback or check-failure remediation. A
+   diagnosed repository-owned product or test defect may be repaired when the
+   evidence identifies the defect, existing task authority covers the fix, and
+   the repair stays within the requested scope. A deterministic formatter,
+   generated-file, or lint correction may be applied as an automatic fix. If
+   diagnosis, implementation authority, or scope is unclear, escalate and give
+   a concrete repair plan instead of making the product change.
 7. Infer verification from repo guidance, touched-surface docs, scripts,
    package metadata, CI workflows, check failures, and touched files.
 8. Run item-level verification.
@@ -107,7 +113,7 @@ outside scope, repo-wide policy changes outside scope, destructive operations
 without authority, stale or concurrently changed state, public communication
 that rejects/blames/commits/asks reporters for work/exposes sensitive detail,
 untrusted PR content execution before inspection, unavailable verification,
-non-mechanical failures, push rejection, protected-branch mismatch, dirty owned
+non-mechanical failures whose cause or authorized repair is unclear, push rejection, protected-branch mismatch, dirty owned
 work areas, external fork boundaries, unknown check provider logs, missing
 required checks, code-owner review conflict, release/version ambiguity, unusual
 cost, or unusual runtime.

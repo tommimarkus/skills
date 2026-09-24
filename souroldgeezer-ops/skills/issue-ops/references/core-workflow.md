@@ -71,8 +71,13 @@ For each item:
 13. When a delegated PR/MR lifecycle reports a merged result, refresh live issue
     state, comments or notes, lifecycle markers, and linked work before closure
     or final lifecycle writes.
-14. Update lifecycle status, close or complete the item when allowed, and clean
-    up only issue work areas owned by this run.
+14. After verification and required final lifecycle-marker updates, re-read live
+    issue state and close or complete the item only when authorized and safe;
+    then clean up only issue work areas owned by this run. Use non-closing issue
+    references in commits and PR/MR text until this boundary so integration
+    cannot close an issue before its required marker. If integration has
+    already auto-closed it, reconcile the observed state after verification and
+    record the marker as a later event.
 
 ## Ask Vs Continue
 

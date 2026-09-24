@@ -60,9 +60,12 @@ matches this repository's remote, confirming identity with a cheap read
 (`get_me` or a repository lookup) before any write — the reference's "verify
 active session routing and repository identity" step.
 
-Fall back to `gh` CLI, then REST, only when no GitHub MCP server is connected in
-the session, such as a headless or cron run; then follow the shared Tooling
-Order's verification for that route.
+Choose the route per operation. Prefer GitHub MCP when it exposes the requested
+operation and has the required authority. If connected MCP tools do not expose
+that operation, continue to `gh` after its auth and repository checks, then to
+REST when needed and authorized. A missing operation permits fallback; missing
+authentication or permission does not. Verify account and repository identity
+on the selected route before writing, and preserve the user's action and target.
 
 ## Evidence Contract
 
@@ -97,9 +100,12 @@ Use these dedicated worktrees unless they are dirty or occupied:
 .worktrees/issue-<number>
 ```
 
-Keep direct-main issue branches local. Prefer one clean commit named
-`Fix #<number>: <title>` for defects or `Resolve #<number>: <title>`
-otherwise.
+Keep direct-main issue branches local. Until verification and the required final
+lifecycle marker are complete, use a non-closing issue reference in commits and
+PR text, such as `Issue #<number>: <title>`. After refreshing live issue state
+and writing the final marker, close explicitly when authorized. If integration
+has already auto-closed the issue, reconcile the observed closed state and
+record that the marker followed closure.
 
 `lesson-candidate` issues are self-describing: each carries its own Definition of
 Done (the lesson-loop graduation discipline). Drive the issue to that DoD, then close

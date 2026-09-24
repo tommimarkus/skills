@@ -99,8 +99,13 @@ Default public integration strategy is `pr-ops-handoff`:
 
 Use `direct-main` only when the user or repository guidance explicitly allows
 it, branch protection permits it, and live state is clean. In direct-main mode,
-prefer one clean commit named `Fix #<number>: <title>` for defects or
-`Resolve #<number>: <title>` otherwise.
+until verification and the required final lifecycle marker are complete, use a
+non-closing reference in commit titles and PR text, such as
+`Issue #<number>: <title>`. Closing-keyword text can close an issue as soon as
+it reaches the default branch. After verification, re-read live issue state,
+write the final marker, then close explicitly when authorized. If integration
+already auto-closed the issue, reconcile the live state and record that the
+marker followed closure.
 
 When an existing linked pull request or issue branch clearly owns the issue,
 handoff that target to `pr-ops` instead of assessing PR checks, reviews, branch

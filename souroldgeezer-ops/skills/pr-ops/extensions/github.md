@@ -156,7 +156,10 @@ before classifying the PR.
 
 Fix only clear in-repo failures: deterministic formatting, lint, compile, unit,
 integration, generated-file, or narrow test failures with enough logs to
-identify the repository-owned defect. Escalate external-provider failures,
+identify the repository-owned defect. A diagnosed product or test defect may
+be changed only when existing task authority covers the repair and it stays in
+scope; otherwise escalate with a concrete repair plan. Escalate external-provider
+failures,
 missing logs, unknown required checks, infrastructure outages, flaky
 non-reproducible failures, permission failures, and failures that require
 secrets or third-party service access.

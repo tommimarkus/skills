@@ -16,6 +16,15 @@ external provider documentation.
   Handling: local GitLab provider extension mechanics; eval cases mention
   provider state, lifecycle notes, and merge-request handoff limits without
   copying live tracker content.
+- Source: `souroldgeezer-ops/docs/provider-reference/github.md § Tooling Order`,
+  `souroldgeezer-ops/docs/provider-reference/provider-lifecycle-core.md`, and
+  the issue core.
+  Handling: local operation-capability and closure-order rules; added behavior
+  cases are original synthetic scenarios for partial provider capability,
+  authentication gates, and automatic-closure reconciliation.
+- Source: [GitHub closing-keyword behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue).
+  Handling: cited as a provider behavior anchor; issue guidance uses non-closing
+  references until verification and the final marker are ready.
 - Source: GitLab Docs at <https://docs.gitlab.com/api/rest/authentication/>,
   <https://docs.gitlab.com/api/issues/>,
   <https://docs.gitlab.com/api/notes/>,
