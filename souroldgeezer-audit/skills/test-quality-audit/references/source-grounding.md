@@ -76,6 +76,11 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: management evidence precedes sampling; current execution and
   runtime distribution are reported from available project evidence, while
   one-shot execution remains read-only, bounded, and opt-in by safety.
+- Source: local JUnit snapshot helper and its tests.
+  Handling: timing coverage distinguishes finite nonnegative measurements,
+  including measured zero, from missing or invalid values; partial observed
+  distributions remain explicitly scoped and cannot support complete totals,
+  shares, or budget judgments.
 - Source: local `audit-craft.md` read-only audit stance and explicit user
   authorization for actions beyond the audit's granted scope.
   Handling: test reruns and mutation remain read-only audit evidence activities

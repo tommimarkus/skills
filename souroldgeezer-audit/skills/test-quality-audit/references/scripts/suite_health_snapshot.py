@@ -17,13 +17,24 @@ PERCENTILES = (50, 90, 95, 99)
 RUNTIME_SHARE_PERCENTS = (1, 5, 10)
 
 
-def nonnegative_duration(value: str | None) -> float:
-    """Return a finite nonnegative JUnit duration, treating invalid values as zero."""
+def nonnegative_duration(value: str | None) -> float | None:
+    """Return a measured finite nonnegative duration, or None when it is unknown."""
     try:
-        duration = float(value) if value is not None else 0.0
+        duration = float(value) if value is not None else None
     except ValueError:
-        return 0.0
-    return duration if math.isfinite(duration) and duration > 0 else 0.0
+        return None
+    return duration if duration is not None and math.isfinite(duration) and duration >= 0 else None
+
+
+def timing_coverage(observed: int, unknown: int) -> dict[str, int | bool]:
+    """Describe timing evidence without treating absent measurements as zero."""
+    total = observed + unknown
+    return {
+        "observed": observed,
+        "unknown": unknown,
+        "total": total,
+        "complete": unknown == 0 and total > 0,
+    }
 
 
 def bounded_identity(value: str | None) -> str:
@@ -68,43 +79,53 @@ def snapshot(root: element_tree.Element) -> dict[str, Any]:
     statuses = {"total": 0, "passed": 0, "skipped": 0, "failed": 0, "error": 0}
     durations: list[float] = []
     testcases: list[tuple[float, str, str]] = []
-    suite_time = 0.0
+    suite_durations: list[float] = []
+    suite_unknown = 0
+    testcase_unknown = 0
     for element in root.iter():
         tag = element.tag.rsplit("}", 1)[-1]
         if tag == "testsuite":
-            suite_time += nonnegative_duration(element.get("time"))
+            duration = nonnegative_duration(element.get("time"))
+            if duration is None:
+                suite_unknown += 1
+            else:
+                suite_durations.append(duration)
         elif tag == "testcase":
             duration = nonnegative_duration(element.get("time"))
             statuses["total"] += 1
             statuses[testcase_status(element)] += 1
-            durations.append(duration)
-            testcases.append(
-                (
+            if duration is None:
+                testcase_unknown += 1
+            else:
+                durations.append(duration)
+                testcases.append((
                     duration,
                     bounded_identity(element.get("classname")),
                     bounded_identity(element.get("name")),
-                )
-            )
+                ))
 
     ordered_durations = sorted(durations)
-    total_duration = sum(ordered_durations)
-    percentiles = {
-        f"p{percentile}": nearest_rank(ordered_durations, percentile) for percentile in PERCENTILES
-    }
-    percentiles["max"] = ordered_durations[-1]
-    runtime_shares = {
-        f"top_{percent}_percent": (
-            sum(
+    observed_total_duration = sum(ordered_durations)
+    testcase_coverage = timing_coverage(len(ordered_durations), testcase_unknown)
+    suite_coverage = timing_coverage(len(suite_durations), suite_unknown)
+    percentiles = None
+    if ordered_durations:
+        percentiles = {
+            f"p{percentile}": nearest_rank(ordered_durations, percentile)
+            for percentile in PERCENTILES
+        }
+        percentiles["max"] = ordered_durations[-1]
+    runtime_shares = None
+    if testcase_coverage["complete"] and observed_total_duration > 0:
+        runtime_shares = {
+            f"top_{percent}_percent": sum(
                 sorted(ordered_durations, reverse=True)[
                     : math.ceil(len(ordered_durations) * percent / 100)
                 ]
             )
-            / total_duration
-            if total_duration
-            else 0.0
-        )
-        for percent in RUNTIME_SHARE_PERCENTS
-    }
+            / observed_total_duration
+            for percent in RUNTIME_SHARE_PERCENTS
+        }
     slow_testcases = [
         {"classname": classname, "name": name, "time_seconds": duration}
         for duration, classname, name in sorted(testcases, reverse=True)[:SLOW_TESTCASE_LIMIT]
@@ -112,8 +133,14 @@ def snapshot(root: element_tree.Element) -> dict[str, Any]:
     return {
         "schema": "suite-health-snapshot-v1",
         "testcase_statuses": statuses,
-        "reported_suite_time_seconds": suite_time,
-        "testcase_time_seconds": total_duration,
+        "timing_coverage": {"suites": suite_coverage, "testcases": testcase_coverage},
+        "reported_suite_time_seconds": (
+            sum(suite_durations) if suite_coverage["complete"] else None
+        ),
+        "testcase_time_seconds": (
+            observed_total_duration if testcase_coverage["complete"] else None
+        ),
+        "observed_testcase_time_seconds": observed_total_duration,
         "testcase_duration_percentiles_seconds": percentiles,
         "testcase_runtime_shares": runtime_shares,
         "slow_testcases": slow_testcases,

@@ -54,22 +54,27 @@ class SuiteHealthSnapshotTest(unittest.TestCase):
             snapshot["testcase_statuses"],
         )
         self.assertEqual(30.0, snapshot["reported_suite_time_seconds"])
-        self.assertEqual(10.0, snapshot["testcase_time_seconds"])
+        self.assertEqual(
+            {"observed": 2, "unknown": 0, "total": 2, "complete": True},
+            snapshot["timing_coverage"]["suites"],
+        )
+        self.assertIsNone(snapshot["testcase_time_seconds"])
+        self.assertEqual(
+            {"observed": 4, "unknown": 1, "total": 5, "complete": False},
+            snapshot["timing_coverage"]["testcases"],
+        )
+        self.assertEqual(10.0, snapshot["observed_testcase_time_seconds"])
         self.assertEqual(
             {"p50": 2.0, "p90": 4.0, "p95": 4.0, "p99": 4.0, "max": 4.0},
             snapshot["testcase_duration_percentiles_seconds"],
         )
-        self.assertEqual(
-            {"top_1_percent": 0.4, "top_5_percent": 0.4, "top_10_percent": 0.4},
-            snapshot["testcase_runtime_shares"],
-        )
+        self.assertIsNone(snapshot["testcase_runtime_shares"])
         self.assertEqual(
             [
                 {"classname": "beta", "name": "error", "time_seconds": 4.0},
                 {"classname": "beta", "name": "failure", "time_seconds": 3.0},
                 {"classname": "alpha", "name": "skip", "time_seconds": 2.0},
                 {"classname": "alpha", "name": "fast", "time_seconds": 1.0},
-                {"classname": "gamma", "name": "negative", "time_seconds": 0.0},
             ],
             snapshot["slow_testcases"],
         )
@@ -86,6 +91,19 @@ class SuiteHealthSnapshotTest(unittest.TestCase):
         self.assertEqual(25, snapshot["testcase_statuses"]["total"])
         self.assertEqual(99.0, snapshot["reported_suite_time_seconds"])
         self.assertEqual(300.0, snapshot["testcase_time_seconds"])
+        self.assertEqual(300.0, snapshot["observed_testcase_time_seconds"])
+        self.assertEqual(
+            {"observed": 25, "unknown": 0, "total": 25, "complete": True},
+            snapshot["timing_coverage"]["testcases"],
+        )
+        self.assertEqual(
+            {
+                "top_1_percent": 0.08,
+                "top_5_percent": 47 / 300,
+                "top_10_percent": 69 / 300,
+            },
+            snapshot["testcase_runtime_shares"],
+        )
         self.assertEqual(20, len(snapshot["slow_testcases"]))
         self.assertEqual("case-24", snapshot["slow_testcases"][0]["name"])
         self.assertEqual("case-5", snapshot["slow_testcases"][-1]["name"])
@@ -101,6 +119,71 @@ class SuiteHealthSnapshotTest(unittest.TestCase):
             report.write_text("<testsuite><testcase /></testsuite>", encoding="utf-8")
             self.assertEqual(2, module.main(["--junit", str(report), "--junit", str(report)]))
         self.assertEqual(2, module.main([]))
+
+    def test_missing_malformed_negative_and_nonfinite_durations_are_unknown(self) -> None:
+        snapshot = self.run_snapshot(
+            '<testsuite time="NaN">'
+            '<testcase name="missing" />'
+            '<testcase name="malformed" time="oops" />'
+            '<testcase name="empty" time="" />'
+            '<testcase name="negative" time="-0.1" />'
+            '<testcase name="nan" time="NaN" />'
+            '<testcase name="positive-infinity" time="Infinity" />'
+            '<testcase name="negative-infinity" time="-Infinity" />'
+            '<testcase name="measured-zero" time="0" />'
+            '<testcase name="measured" time="2.5" />'
+            '</testsuite>'
+        )
+
+        self.assertEqual(
+            {"observed": 2, "unknown": 7, "total": 9, "complete": False},
+            snapshot["timing_coverage"]["testcases"],
+        )
+        self.assertEqual(2.5, snapshot["observed_testcase_time_seconds"])
+        self.assertIsNone(snapshot["testcase_time_seconds"])
+        self.assertEqual(
+            {"p50": 0.0, "p90": 2.5, "p95": 2.5, "p99": 2.5, "max": 2.5},
+            snapshot["testcase_duration_percentiles_seconds"],
+        )
+        self.assertIsNone(snapshot["testcase_runtime_shares"])
+        self.assertEqual(
+            {"observed": 0, "unknown": 1, "total": 1, "complete": False},
+            snapshot["timing_coverage"]["suites"],
+        )
+        self.assertIsNone(snapshot["reported_suite_time_seconds"])
+        self.assertEqual(
+            [
+                {"classname": "", "name": "measured", "time_seconds": 2.5},
+                {"classname": "", "name": "measured-zero", "time_seconds": 0.0},
+            ],
+            snapshot["slow_testcases"],
+        )
+
+    def test_all_missing_durations_remain_unknown_and_zero_denominator_has_no_shares(self) -> None:
+        missing = self.run_snapshot(
+            '<testsuite><testcase name="one"/><testcase name="two" time=""/></testsuite>'
+        )
+        self.assertEqual(
+            {"observed": 0, "unknown": 2, "total": 2, "complete": False},
+            missing["timing_coverage"]["testcases"],
+        )
+        self.assertIsNone(missing["testcase_time_seconds"])
+        self.assertIsNone(missing["testcase_duration_percentiles_seconds"])
+        self.assertIsNone(missing["testcase_runtime_shares"])
+        self.assertIsNone(missing["reported_suite_time_seconds"])
+
+        zeros = self.run_snapshot(
+            '<testsuite time="0"><testcase name="zero-a" time="0"/>'
+            '<testcase name="zero-b" time="0"/></testsuite>'
+        )
+        self.assertTrue(zeros["timing_coverage"]["testcases"]["complete"])
+        self.assertEqual(0.0, zeros["testcase_time_seconds"])
+        self.assertEqual(0.0, zeros["observed_testcase_time_seconds"])
+        self.assertEqual(
+            {"p50": 0.0, "p90": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0},
+            zeros["testcase_duration_percentiles_seconds"],
+        )
+        self.assertIsNone(zeros["testcase_runtime_shares"])
 
     def test_output_is_capped_at_sixteen_kib(self) -> None:
         module = load_script_module("suite_health_snapshot_cap", SCRIPT)

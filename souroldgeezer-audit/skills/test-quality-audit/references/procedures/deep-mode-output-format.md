@@ -115,7 +115,14 @@ the dominant sub-lane verdict. Grade is `strong`, `adequate`, `weak`, or
 
 Always report collection count, pass/fail/error/skip outcomes, elapsed time,
 duration distribution, lane selection, and available ownership/cadence
-evidence. Current-run evidence is mandatory for a supported-positive **Current
+evidence. For JUnit snapshots, report valid-versus-unknown timing coverage:
+missing, malformed, negative, and non-finite durations are unknown, while a
+measured zero remains zero. Percentiles and slow cases describe only observed
+finite nonnegative testcase durations; mark their coverage when partial. Treat
+the testcase total as unknown when any testcase duration is unknown, and treat
+runtime shares as unknown when coverage is incomplete or the observed total is
+zero. Do not use partial observed totals for complete cost, share, or budget
+judgments. Current-run evidence is mandatory for a supported-positive **Current
 execution** disposition: record the current outcomes and exit status, or
 `unknown-evidence-gap` with its limit. Runtime distribution is mandatory for a supported-positive
 **Efficiency** disposition: record the available distribution and slow tail, or
