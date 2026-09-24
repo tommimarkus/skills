@@ -56,7 +56,7 @@ Consumed by [SKILL.md § 0b (Rubric selection)](../../../SKILL.md). Use Next.js 
 
 ### Next.js file-shape routing table
 
-The SUT file's position in the source tree and its top-of-file directives determine the rubric. Apply in order; first match wins.
+Use the SUT file's position in the source tree and its top-of-file directives as initial routing signals. Confirm the rubric against the process and deployment boundary actually exercised; a file-shape match does not override that evidence.
 
 | SUT file shape | Routing rule | Rubric |
 |---|---|---|
@@ -119,7 +119,7 @@ test('renders users', () => {
 });
 ```
 
-**Rewrite (intent):** route to integration sub-lane A. Test via a real DB fixture (Prisma / Drizzle / TypeORM / Knex) and a `fetch` against `next start` running the page, OR extract the server-side logic (the DB call, the cookie-read) into a plain TS helper and unit-test the helper with `../nodejs/core.md` patterns.
+**Rewrite (intent):** choose the lane by the executed boundary. Wire real adjacent modules in-process for integration sub-lane A; exercise a running `next start` deployment through HTTP for integration sub-lane B; or extract the server-side logic (the DB call, the cookie-read) into a plain TS helper and unit-test that helper with `../nodejs/core.md` patterns.
 
 ---
 
