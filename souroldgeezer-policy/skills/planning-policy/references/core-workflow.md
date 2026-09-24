@@ -45,11 +45,13 @@ and user approval before implementation.
    size, tier, model name, or stable-proxy count. Contract validation calculates
    the advisory in the same invocation. Act on its codes before approval:
    re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN`, re-tier
-   for `PLANCOST-TIER-OVER-ASSIGNED`, or slice the plan for
-   `PLANCOST-MICROLEAF-RISK`, merge the candidates unless the permitted
-   evidence-backed decomposition rationale applies. Before responding to
-   `PLANCOST-PLAN-SCALE` with a series, merge microleaf candidates; after an
-   oversized return, re-cut from cohesive outcomes rather than remainder items.
+   for `PLANCOST-TIER-OVER-ASSIGNED`, and merge unjustified split candidates for
+   `PLANCOST-MICROLEAF-RISK` unless the permitted evidence-backed decomposition
+   rationale applies. Then assess `PLANCOST-PLAN-SCALE`; only a still-oversized
+   plan is sliced into successive plans. After an approved leaf returns
+   `oversized`, preserve that run and its evidence, and obtain approval for a
+   replacement plan before dispatch; derive its leaves from the original
+   cohesive outcomes, not from the unstarted remainder alone.
    A plan sliced into successive plans composes and hands off per
    [plan series](plan-series.md).
 

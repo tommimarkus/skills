@@ -375,3 +375,12 @@ self-contained original fixtures, artifact removal, reformatting, tampering,
 malformed inputs, legacy validation, and byte limits. The bounded model-pressure
 procedure tests synthetic approval transport, not an actual host UI click or
 comparative model reliability. No third-party prompt text is copied.
+
+## Outcome-First Grooming Decision
+
+`PLANCOST-MICROLEAF-RISK` repairs unjustified splits by merging them into their
+cohesive work-unit outcome. `PLANCOST-PLAN-SCALE` applies after that grooming
+and slices only when the resulting plan remains oversized. The two advisories
+therefore drive sequential, distinct actions; slicing must not preserve
+decorative leaves across a series. The synthetic case checks merge-first and
+then conditional slicing without making either advisory a validity gate.

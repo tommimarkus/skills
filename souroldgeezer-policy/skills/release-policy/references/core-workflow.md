@@ -108,10 +108,14 @@ authority unless the initialization names the target and action.
 
 ## Authority Gates
 
-Ask before tag creation, provider release creation, publication, destructive
-correction, tag deletion/move, yanking, or any operation that cannot be safely
-retried. Continue for read-only preflight, authorized release-prep file edits,
-and local verification when tooling is available.
+Ask only when the exact action and target lack authority. An initialized policy
+or explicit request that names the action and target remains authority through
+the required verification; continue with that authorized write after its gates
+pass. This applies to matching tag creation, provider release creation,
+publication, destructive correction, tag deletion or movement, and yanking.
+Continue with read-only preflight, authorized release-prep edits, and local
+verification when tooling is available. A broad release request does not
+authorize an unnamed publication target or a different external action.
 
 ## Escalation Gates
 

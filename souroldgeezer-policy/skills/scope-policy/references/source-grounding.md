@@ -34,3 +34,10 @@ footprint (how far a change may reach beyond its target). No text, level names,
 rung structure, command surface, or prose from that project was reused, and no
 prose, code, schema, or assets from it are bundled here — only the general
 concept of a named, switchable intensity axis informed this skill's design.
+
+An approved executable plan adds an immutable boundary to this per-task scope
+policy. A wider correctness requirement makes the leaf terminal `oversized`;
+the parent retains its run evidence and seeks approval for a replacement plan.
+The `auto` setting cannot rewrite the approved digest or authorize another
+dispatch. The synthetic case exercises that interaction while the ordinary
+unapproved `auto` case continues to cover one-rung escalation.

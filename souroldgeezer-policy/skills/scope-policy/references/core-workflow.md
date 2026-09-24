@@ -62,12 +62,14 @@ Escalation is per-task, monotonic within it, and never inherited by the next
 task.
 
 Under an approved `planning-policy` plan, a leaf that cannot proceed within its
-level returns bounded `blocked` evidence naming the blocking constraint and the
-smallest wider footprint that resolves it. The parent adjudicates: `stop` halts
-and reports; `auto` re-cuts that leaf one rung wider and redispatches. A leaf
-never widens its own boundary. Level is orthogonal to that plan's portable
-tier — level bounds footprint, tier bounds reasoning depth; neither substitutes
-for the other.
+level returns bounded `oversized` evidence naming the blocking constraint and
+the smallest wider footprint that resolves it. This is terminal for the
+approved leaf. The parent preserves the original run and its evidence, then
+prepares a replacement plan with the revised scope and obtains approval before
+dispatching that work. The configured `auto` mode never edits or redispatches
+an approved leaf in place; a leaf never widens its own boundary. Level is
+orthogonal to that plan's portable tier — level bounds footprint, tier bounds
+reasoning depth; neither substitutes for the other.
 
 ## Adoption and output
 

@@ -28,3 +28,13 @@ verification event: focused version or metadata checks cover the only allowed
 change. Any source, plan, evidence, surface, or integration drift breaks that
 equivalence and restores the full gate; conflicting repository or host policy
 always stops reuse.
+
+## Authority Continuity Decision
+
+An initialized rule or explicit request that names an action and target is
+authority for that matching action after its verification gates pass. An
+unconditional later ask would erase that grant and make routine execution
+contradict the initialization. Ask when the target or action falls outside the
+grant; a broad release intent does not name an external publication target.
+The synthetic behavior case pairs an already-authorized tag and provider
+release with an unnamed target to preserve both sides of this boundary.
