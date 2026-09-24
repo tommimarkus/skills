@@ -13,6 +13,13 @@ tables, diagrams, screenshots, or documentation.
   Handling: local extension and procedure contracts; eval cases exercise
   extension loading, cost stance, MCP availability, and output disclosure
   without reproducing external configuration examples.
+- Source: `references/procedures/evidence-per-release.md`,
+  `references/procedures/stage-coverage-matrix.md`, and
+  `references/procedures/cost-stance-detection.md`.
+  Handling: the release-evidence and presence-versus-efficacy scenarios are
+  original synthetic cases covering unavailable live evidence, an unexecuted
+  hook, 95-percent pinning density, and Codex-only target-repository cost
+  guidance. They test evidence limits and runtime scope, not copied examples.
 - Source: installed Codex Security plugin skill metadata and
   `codex-security:security-scan` workflow name.
   Handling: local runtime capability reference only; the eval case is original

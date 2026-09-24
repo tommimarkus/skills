@@ -322,6 +322,7 @@ A static audit should recommend these when the program is high-coverage but shal
 **Things static analysis cannot know** (should admit, not fabricate):
 
 - Whether a declared control is actually *enforced* in CI runs — requires run history.
+- A script, job, signing command, or hook's presence does not establish that it was installed, invoked, or effective; label static evidence as configured/present and enforcement as unverified until execution evidence supports the claim.
 - Whether a reported vulnerability is *reachable* from your code — requires call-graph + runtime analysis.
 - Whether a secret was *used* before it was rotated — requires audit log review.
 - Whether a maintainer account is *legitimately* controlled — requires out-of-band verification.

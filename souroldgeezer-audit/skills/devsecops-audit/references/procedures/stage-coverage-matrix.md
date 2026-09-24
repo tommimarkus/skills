@@ -26,7 +26,7 @@ The classification `enforcing` vs `decorative` applies §1 of the rubric — the
 
 ### Develop
 - **Present if:** pre-commit secret scanning (`scripts/pre-commit` or similar); branch protection declarative config (`.github/branch-protection.yml`, ruleset JSON); `CODEOWNERS`; signed commits (`.gitattributes` or repo policy).
-- **Enforcing if:** pre-commit hook is installed by default (verify `scripts/pre-commit` exists and is executable); branch protection is visible in declarative config and MCP confirms it's active on the default branch.
+- **Enforcing if:** evidence shows the pre-commit hook is installed by default and actually invoked on the relevant change path; branch-protection config is present and live evidence confirms it is active on the default branch. A script's existence, executable bit, or a visible workflow step establishes configured/present evidence only. Without installation, invocation, or run evidence, record enforcement as unverified rather than enforcing.
 - **Decorative if:** `CODEOWNERS` exists but PRs bypass it; pre-commit hook exists but is opt-in.
 - **Missing if:** any of the above are absent.
 
@@ -44,7 +44,7 @@ The classification `enforcing` vs `decorative` applies §1 of the rubric — the
 
 ### Release
 - **Present if:** release workflow produces signed artifacts + SBOM + provenance.
-- **Enforcing if:** `cosign sign` / `cosign verify` visible in the pipeline; SLSA provenance attestation step; SBOM attached to release page.
+- **Enforcing if:** release-specific evidence shows the signing and verification steps ran successfully, provenance was produced and verified, and the SBOM was attached to that release. A visible `cosign` or attestation step establishes configured/present evidence only; without matching run and artifact evidence, record enforcement as unverified.
 - **Decorative if:** artifacts built but unsigned (`DSO-HC-11`); SBOM generated but not attached.
 - **Missing if:** release workflow doesn't produce verifiable artifacts at all.
 
@@ -73,7 +73,7 @@ The classification `enforcing` vs `decorative` applies §1 of the rubric — the
 For each stage in order:
 
 1. Run the matching grep / file-existence checks from the stage signals above.
-2. For each control found, classify as `enforcing` / `decorative` / `missing` using the classification rules in the signals section.
+2. For each control found, distinguish configured/present evidence from evidence of effective execution. Classify as `enforcing` only when available evidence supports that the control changes the relevant path or release; otherwise record enforcement as unverified (or decorative when evidence shows it has no effect). Never treat a script, job, or command's presence as proof it ran or blocked a change.
 3. Record the verdict plus evidence pointers (file:line or file path).
 4. Emit one stage row.
 
@@ -81,4 +81,4 @@ For each stage in order:
 
 - Do **not** re-emit smell findings here — findings from the anti-pattern scan (step 4) and smell-match step (step 5) are collected separately. The stage matrix references finding codes; it does not restate them.
 - The matrix is the framework for the presence-vs-efficacy verdict in step 11. A stage with all controls `decorative` contributes to a `decorative` program verdict; a stage with all controls `enforcing` contributes to `enforcing`.
-- When MCP is unavailable, the `enforcing` classification for Develop (branch protection), Build (recent run exit codes), and Deploy (OIDC verification) may degrade to "static config exists, enforcement unverified" — cite this in the matrix row and in the footer disclosure.
+- When live evidence is unavailable, classify affected controls from static inspection as "configured/present; enforcement unverified" — cite the evidence limit in the matrix row and footer. Continue independent static checks; do not infer a successful run, default hook installation, or active remote setting from file or command presence.

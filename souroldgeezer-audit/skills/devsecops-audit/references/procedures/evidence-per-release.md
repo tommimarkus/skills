@@ -65,7 +65,7 @@ Compute: (pinned dependencies / total dependencies) across:
 - `Dockerfile` `FROM` lines (digest-pinned vs tag-pinned)
 - `*.csproj` `PackageReference` versions (lockfile present?)
 
-Report the ratio. Under 0.9 → `DSO-HC-2` finding for each unpinned entry. Over 0.9 → `DSO-POS-3` positive signal.
+Report the ratio as descriptive coverage. Emit `DSO-HC-2` for each applicable unpinned entry, regardless of the aggregate ratio. Reserve `DSO-POS-3` (“pinned dependencies everywhere”) for the case where every applicable reference in the assessed scope is pinned; a ratio above 0.9, including 95%, is not that positive signal.
 
 ### Step 5 — Dependency update cadence
 
@@ -99,6 +99,6 @@ Dependency bot:
 
 ## Gotchas
 
-- MCP unavailability degrades confidence across all five steps but does not stop the procedure. Static evidence alone is still valuable; the report must disclose the MCP skip.
+- MCP unavailability does not stop static inspection or block independent conclusions. Continue with tags, committed release notes, and repository artifacts, and disclose which release metadata, assets, or live state could not be verified. Mark conclusions that require the missing live evidence as unknown or unverifiable; do not infer them from static presence. Stop only the requested conclusion that depends on the unavailable evidence.
 - A release with SBOM but no signature is not "half-secure" — an unsigned SBOM has no integrity guarantee. Report both cells honestly.
 - Claims in `SECURITY.md` that cannot be matched to artifacts are `DSO-SUB-7` regardless of how strong they sound.

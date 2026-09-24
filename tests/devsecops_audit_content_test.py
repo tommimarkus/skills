@@ -23,6 +23,34 @@ def load_behavior_case(case_id: str) -> dict:
 
 
 class DevSecOpsAuditContentTest(unittest.TestCase):
+    def test_security_evidence_decision_cases_are_synthetic_and_contract_complete(self) -> None:
+        expectations = {
+            "devsecops-audit-behavior-release-static-only": (
+                "continue independent static inspection using tags, committed release notes, and repository artifacts",
+                "stop the entire Deep audit because MCP is unavailable",
+            ),
+            "devsecops-audit-behavior-hook-presence-unverified": (
+                "classify enforcement as unverified when installation and execution evidence are absent",
+                "classify the hook as enforcing because it exists and is executable",
+            ),
+            "devsecops-audit-behavior-pinning-density-95-percent": (
+                "reserve DSO-POS-3 for every applicable reference being pinned",
+                "emit DSO-POS-3 because pin density exceeds 90 percent",
+            ),
+            "devsecops-audit-behavior-codex-agents-cost-guidance": (
+                "inspect target-repository AGENTS.md and CLAUDE.md regardless of current runtime",
+                "skip AGENTS.md because the host is Codex",
+            ),
+        }
+        for case_id, (required, forbidden) in expectations.items():
+            with self.subTest(case_id=case_id):
+                case = load_behavior_case(case_id)
+                self.assertEqual("synthetic", case["source_kind"])
+                self.assertFalse(case["contains_third_party_text"])
+                self.assertIn(required, case["required_checks"])
+                self.assertIn(forbidden, case["forbidden_behaviors"])
+                self.assertTrue(case["expected_artifacts"])
+
     def test_dotnet_log_forging_smell_is_documented_and_eval_backed(self) -> None:
         extension = DOTNET_EXTENSION.read_text(encoding="utf-8")
         catalog = SMELL_CATALOG.read_text(encoding="utf-8")
