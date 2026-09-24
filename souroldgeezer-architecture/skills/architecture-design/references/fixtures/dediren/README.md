@@ -10,7 +10,8 @@ mirror Dediren 2026.08.9's notation-aware reference resources exactly:
 These files are compatibility fixtures, not a local visual theme. Do not add
 local palette, stroke, marker, margin, or other visual overrides. When the
 repository's Dediren compatibility baseline changes, refresh every policy from
-the live MCP resources and keep the exact-parity regression green.
+the live MCP resources through `resources/list` and `resources/read` on the
+plugin adapter, and keep the exact-parity regression green.
 
 The mirrored policies retain the Dediren contributors' MIT notice in the
 architecture plugin's [third-party notices](../../../../../THIRD-PARTY-NOTICES.md).

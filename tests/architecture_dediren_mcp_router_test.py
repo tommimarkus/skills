@@ -119,6 +119,17 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                         "inputSchema": {"type": "object", "properties": {}},
                     },
                 ]
+                resources = [
+                    {"uri": "dediren://schema/model.schema.json", "name": "model schema"},
+                    {"uri": "dediren://fixture/render-policy/uml-svg.json", "name": "UML policy"},
+                    {"uri": "dediren://guide/authoring", "name": "authoring guide"},
+                    {"uri": "dediren://diagnostics/catalog", "name": "diagnostics"},
+                    {"uri": "file:///etc/passwd", "name": "invalid upstream resource"},
+                ]
+                resource_capabilities = (
+                    {} if os.environ.get("FAKE_NO_RESOURCES") == "1"
+                    else {"resources": {"listChanged": False}}
+                )
                 try:
                     for line in sys.stdin:
                         request = json.loads(line)
@@ -133,7 +144,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                     "result": {
                                         "resultType": "complete",
                                         "supportedVersions": ["2026-07-28"],
-                                        "capabilities": {"tools": {}},
+                                        "capabilities": {"tools": {}, **resource_capabilities},
                                     },
                                 }
                             else:
@@ -148,7 +159,10 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                 "id": request["id"],
                                 "result": {
                                     "protocolVersion": "2024-11-05",
-                                    "capabilities": {"tools": {"listChanged": False}},
+                                    "capabilities": {
+                                        "tools": {"listChanged": False},
+                                        **resource_capabilities,
+                                    },
                                     "serverInfo": {"name": "fake", "version": "latest"},
                                 },
                             }
@@ -203,6 +217,34 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                                     "isError": False,
                                 },
                             }
+                        elif method == "resources/list":
+                            if os.environ.get("FAKE_RESOURCE_ERROR_METHOD") == method:
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "error": {"code": -32001, "message": "x" * 10000}}
+                            elif os.environ.get("FAKE_NO_RESOURCES") == "1":
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "error": {"code": -32601, "message": "method not found"}}
+                            elif os.environ.get("FAKE_MALFORMED_RESOURCES") == "1":
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "result": {"resources": "wrong"}}
+                            else:
+                                cursor = request.get("params", {}).get("cursor")
+                                page = resources[2:] if cursor == "next" else resources[:2]
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "result": {"resources": page,
+                                                       **({"nextCursor": "next"} if cursor is None else {})}}
+                        elif method == "resources/read":
+                            uri = request["params"]["uri"]
+                            if os.environ.get("FAKE_RESOURCE_ERROR_METHOD") == method:
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "error": {"code": -32001, "message": "x" * 10000}}
+                            else:
+                                response = {"jsonrpc": "2.0", "id": request["id"],
+                                            "result": {
+                                                "contents": "wrong" if os.environ.get("FAKE_MALFORMED_READ") == "1"
+                                                else [{"uri": uri, "mimeType": "text/plain",
+                                                       "text": f"bundle:{selected_root}:{uri}"}]
+                                            }}
                         else:
                             continue
                         print(json.dumps(response), flush=True)
@@ -261,6 +303,112 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         discovery = responses["discover"]["result"]
         self.assertIn("2026-07-28", discovery["supportedVersions"])
         self.assertIn("tools", discovery["capabilities"])
+        self.assertIn("resources", discovery["capabilities"])
+        self.assertIn("resources", responses[1]["result"]["capabilities"])
+
+    def test_resource_catalog_and_read_use_product_backend_across_workspaces(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first, second = root / "first", root / "second"
+            first.mkdir()
+            second.mkdir()
+            backend = self._write_fake_backend(root)
+            log = root / "lifecycle.log"
+            calls = [
+                {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                 "params": {"name": "dediren_guide", "arguments": {"workspaceRoot": str(workspace)}}}
+                for i, workspace in ((1, first), (2, second))
+            ]
+            calls.extend([
+                {"jsonrpc": "2.0", "id": 3, "method": "resources/list",
+                 "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}}},
+                {"jsonrpc": "2.0", "id": 4, "method": "resources/read",
+                 "params": {"uri": "dediren://diagnostics/catalog",
+                            "_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}}},
+            ])
+            result = run_router(calls, env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                                            "FAKE_MODERN": "1", "FAKE_LIFECYCLE_LOG": str(log)})
+            events = log.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        self.assertTrue(all("result" in responses[i] for i in (1, 2, 3, 4)), responses)
+        uris = {item["uri"] for item in responses[3]["result"]["resources"]}
+        self.assertEqual(uris, {"dediren://schema/model.schema.json",
+                                "dediren://fixture/render-policy/uml-svg.json",
+                                "dediren://guide/authoring", "dediren://diagnostics/catalog"})
+        self.assertEqual(responses[4]["result"]["contents"][0]["text"],
+                         f"bundle:{root.resolve()}:dediren://diagnostics/catalog")
+        self.assertTrue(any(line.startswith(f"start {first.resolve()} ") for line in events))
+        self.assertTrue(any(line.startswith(f"start {second.resolve()} ") for line in events))
+        self.assertTrue(any(line.startswith(f"start {root.resolve()} ") for line in events))
+        self.assertEqual(responses[3]["result"]["resultType"], "complete")
+        self.assertEqual(responses[3]["result"]["cacheScope"], "public")
+        self.assertEqual(responses[4]["result"]["resultType"], "complete")
+
+    def test_legacy_resource_read_preserves_legacy_result_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            backend = self._write_fake_backend(root)
+            result = run_router([
+                {"jsonrpc": "2.0", "id": 1, "method": "resources/list"},
+                {"jsonrpc": "2.0", "id": 2, "method": "resources/read",
+                 "params": {"uri": "dediren://fixture/render-policy/uml-svg.json"}},
+            ], env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend)})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        self.assertEqual(len(responses[1]["result"]["resources"]), 4)
+        self.assertNotIn("resultType", responses[1]["result"])
+        self.assertEqual(responses[2]["result"]["contents"][0]["mimeType"], "text/plain")
+        self.assertNotIn("resultType", responses[2]["result"])
+
+    def test_resource_errors_are_bounded_and_reject_unowned_uris(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            backend = self._write_fake_backend(root)
+            requests = [
+                {"jsonrpc": "2.0", "id": i, "method": "resources/read", "params": {"uri": uri}}
+                for i, uri in enumerate(("file:///etc/passwd", "https://example.org/a",
+                                          "dediren://fixture/../secret",
+                                          "dediren://schema/unknown.json"), 1)
+            ]
+            result = run_router(requests, env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend)})
+            absent = run_router([{"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}}],
+                                env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                                     "FAKE_NO_RESOURCES": "1"})
+            malformed = run_router([{"jsonrpc": "2.0", "id": 6, "method": "resources/list", "params": {}}],
+                                   env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                                        "FAKE_MALFORMED_RESOURCES": "1"})
+            timeout = run_router([{"jsonrpc": "2.0", "id": 7, "method": "resources/list", "params": {}}],
+                                 env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                                      "FAKE_HANG_METHOD": "resources/list",
+                                      "DEDIREN_MCP_STARTUP_TIMEOUT_SEC": "0.2",
+                                      "FAKE_LIFECYCLE_LOG": str(root / "timeout.log")})
+            timeout_events = (root / "timeout.log").read_text(encoding="utf-8")
+            malformed_read = run_router(
+                [{"jsonrpc": "2.0", "id": 8, "method": "resources/read",
+                  "params": {"uri": "dediren://diagnostics/catalog"}}],
+                env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                     "FAKE_MALFORMED_READ": "1"},
+            )
+            upstream_error = run_router(
+                [{"jsonrpc": "2.0", "id": 9, "method": "resources/read",
+                  "params": {"uri": "dediren://diagnostics/catalog"}}],
+                env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(backend),
+                     "FAKE_RESOURCE_ERROR_METHOD": "resources/read"},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(all(responses_by_id(result)[i]["error"]["code"] == -32602
+                            for i in range(1, 5)))
+        self.assertEqual(responses_by_id(absent)[5]["error"]["code"], -32601)
+        self.assertEqual(responses_by_id(malformed)[6]["error"]["code"], -32000)
+        self.assertIn("timed out", responses_by_id(timeout)[7]["error"]["message"])
+        self.assertIn("stop ", timeout_events)
+        self.assertEqual(responses_by_id(malformed_read)[8]["error"]["code"], -32000)
+        self.assertEqual(responses_by_id(upstream_error)[9]["error"]["code"], -32001)
+        self.assertLess(len(responses_by_id(upstream_error)[9]["error"]["message"]), 2500)
 
     def test_tool_catalog_is_live_from_installed_dediren_and_adds_workspace_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -625,6 +625,10 @@ fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
 (`2026.09.0`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
+The same router exposes the installed runtime's product-owned resources through
+`resources/list` and `resources/read`; these calls use the catalog backend and
+take no `workspaceRoot`. Resource reads accept only URIs discovered in the four
+families below, so they cannot address workspace files or external URLs.
 It handles both legacy MCP initialization and the 2026-07-28 stateless discovery
 flow, bounds upstream waits, reaps catalog-only processes, restarts a known-dead
 workspace process only for the next call, never auto-retries an uncertain call,
@@ -763,7 +767,8 @@ fixtures to stamp them.
 **MCP resources.** The server also serves read-only resources returning bundle
 bytes: `dediren://schema/<file>`, `dediren://fixture/<relative-path>`,
 `dediren://guide/<topic>`, and `dediren://diagnostics/catalog` (every `DEDIREN_*`
-code with its repair text). Read a resource for the exact schema, fixture, guide
+code with its repair text). List resources through the MCP adapter, then read a
+listed URI for the exact schema, fixture, guide
 topic, or diagnostic repair text; the repair loop still runs through
 `dediren_guide`, with the diagnostics catalog as a direct lookup.
 

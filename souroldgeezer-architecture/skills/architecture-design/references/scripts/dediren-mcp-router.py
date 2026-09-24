@@ -8,6 +8,7 @@ import json
 import math
 import os
 import queue
+import re
 import shlex
 import signal
 import subprocess
@@ -29,6 +30,8 @@ DISCOVER_TTL_MS = 3_600_000
 # The catalog follows the resolved Dediren install, and the router advertises no
 # listChanged notification, so this interval is the only re-check clients get.
 TOOLS_TTL_MS = 300_000
+RESOURCES_TTL_MS = 300_000
+RESOURCE_ERROR_CHARS = 2048
 DEFAULT_STARTUP_TIMEOUT_SECONDS = 120.0
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 360.0
 STDERR_HEAD_BYTES = 4 * 1024
@@ -41,6 +44,26 @@ WORKSPACE_ROOT_SCHEMA = {
         "are resolved beneath it."
     ),
 }
+RESOURCE_URI = re.compile(
+    r"^dediren://(?:schema|fixture|guide)/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+)
+
+
+def product_resource_uri(uri: Any) -> bool:
+    if uri == "dediren://diagnostics/catalog":
+        return True
+    if not isinstance(uri, str) or RESOURCE_URI.fullmatch(uri) is None:
+        return False
+    path = uri.split("/", 3)[-1]
+    return all(segment not in (".", "..") for segment in path.split("/"))
+
+
+def resource_error_detail(error: Any) -> str:
+    if isinstance(error, dict):
+        message = error.get("message")
+        if isinstance(message, str):
+            return message[:RESOURCE_ERROR_CHARS]
+    return "invalid upstream resource error"
 
 
 class RouterError(RuntimeError):
@@ -163,6 +186,7 @@ class Backend:
         self.stderr_reader.start()
         self.next_id = 1
         self.modern = False
+        self.resources_supported = False
         try:
             discovery = self.request(
                 "server/discover",
@@ -180,6 +204,11 @@ class Backend:
                 "supportedVersions", []
             ):
                 self.modern = True
+                capabilities = discovered.get("capabilities")
+                self.resources_supported = (
+                    isinstance(capabilities, dict)
+                    and isinstance(capabilities.get("resources"), dict)
+                )
                 return
 
             response = self.request(
@@ -191,8 +220,13 @@ class Backend:
                 },
                 timeout=self.startup_timeout,
             )
-            if "result" not in response:
+            if not isinstance(response.get("result"), dict):
                 raise BackendError(f"Dediren initialization failed: {response.get('error')}")
+            capabilities = response["result"].get("capabilities")
+            self.resources_supported = (
+                isinstance(capabilities, dict)
+                and isinstance(capabilities.get("resources"), dict)
+            )
             self.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
         except BackendError:
             self.close()
@@ -474,6 +508,86 @@ class Router:
         self.tools_by_name = {tool["name"]: tool for tool in augmented}
         return augmented
 
+    def resource_catalog(self, backend: Backend) -> list[dict[str, Any]]:
+        if not backend.resources_supported:
+            raise RouterError(-32601, "installed Dediren has no MCP resources capability")
+        resources: list[dict[str, Any]] = []
+        cursor: str | None = None
+        seen: set[str] = set()
+        while True:
+            params = {"cursor": cursor} if cursor is not None else {}
+            response = backend.request("resources/list", params, timeout=self.startup_timeout)
+            if "error" in response:
+                error = response["error"]
+                if isinstance(error, dict) and error.get("code") == -32601:
+                    raise RouterError(-32601, "installed Dediren has no MCP resources capability")
+                raise BackendError(f"Dediren resources/list failed: {resource_error_detail(error)}")
+            result = response.get("result")
+            page = result.get("resources") if isinstance(result, dict) else None
+            if not isinstance(page, list) or any(not isinstance(item, dict) for item in page):
+                raise BackendError("installed Dediren returned malformed resources[] catalog")
+            resources.extend(item for item in page if product_resource_uri(item.get("uri")))
+            next_cursor = result.get("nextCursor")
+            if next_cursor is None:
+                break
+            if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen:
+                raise BackendError("installed Dediren returned invalid resource cursor")
+            seen.add(next_cursor)
+            if len(seen) > 100:
+                raise BackendError("installed Dediren resource catalog exceeded 100 pages")
+            cursor = next_cursor
+        return resources
+
+    def route_resource(self, method: str, params: Any, modern: bool) -> dict[str, Any]:
+        if method == "resources/list" and params is None:
+            params = {}
+        if not isinstance(params, dict):
+            raise RouterError(-32602, f"{method} params must be an object")
+        if method == "resources/list":
+            if params.get("cursor") is not None:
+                raise RouterError(-32602, "resource catalog is returned as one page")
+        else:
+            uri = params.get("uri")
+            if not product_resource_uri(uri):
+                raise RouterError(-32602, "resource URI must name a product-owned Dediren resource")
+        root = self.catalog_root
+        backend = self.backend(root)
+        try:
+            catalog = self.resource_catalog(backend)
+            if method == "resources/list":
+                result: dict[str, Any] = {"resources": catalog}
+            else:
+                if uri not in {item["uri"] for item in catalog}:
+                    raise RouterError(-32602, "unknown Dediren resource URI")
+                response = backend.request("resources/read", {"uri": uri})
+                if "error" in response:
+                    error = response["error"]
+                    if isinstance(error, dict) and isinstance(error.get("code"), int):
+                        raise RouterError(error["code"], resource_error_detail(error))
+                    raise BackendError(
+                        f"Dediren resources/read failed: {resource_error_detail(error)}"
+                    )
+                result = response.get("result")
+                contents = result.get("contents") if isinstance(result, dict) else None
+                if not isinstance(contents, list) or any(
+                    not isinstance(item, dict)
+                    or item.get("uri") != uri
+                    or not isinstance(item.get("text", item.get("blob")), str)
+                    for item in contents
+                ):
+                    raise BackendError("installed Dediren returned malformed resource contents")
+            if modern:
+                result = dict(result)
+                result.setdefault("resultType", "complete")
+                result.setdefault("ttlMs", RESOURCES_TTL_MS)
+                result.setdefault("cacheScope", CACHE_SCOPE)
+                result.setdefault("_meta", SERVER_META)
+            return result
+        finally:
+            catalog_backend = self.backends.pop(root, None)
+            if catalog_backend is not None:
+                catalog_backend.close()
+
     def validated_arguments(
         self,
         name: str,
@@ -523,7 +637,8 @@ class Router:
                     request_id,
                     {
                         "protocolVersion": negotiated,
-                        "capabilities": {"tools": {"listChanged": False}},
+                        "capabilities": {"tools": {"listChanged": False},
+                                         "resources": {"listChanged": False}},
                         "serverInfo": SERVER_INFO,
                         "instructions": (
                             "Pass an absolute workspaceRoot on every Dediren tool call."
@@ -536,7 +651,8 @@ class Router:
                     {
                         "resultType": "complete",
                         "supportedVersions": [MODERN_PROTOCOL, *LEGACY_PROTOCOLS],
-                        "capabilities": {"tools": {"listChanged": False}},
+                        "capabilities": {"tools": {"listChanged": False},
+                                         "resources": {"listChanged": False}},
                         "instructions": (
                             "Pass an absolute workspaceRoot on every Dediren tool call."
                         ),
@@ -547,6 +663,10 @@ class Router:
                 )
             if method == "ping":
                 return result_response(request_id, {})
+            if method in ("resources/list", "resources/read"):
+                return result_response(
+                    request_id, self.route_resource(method, request.get("params"), self.modern(request))
+                )
             if method == "tools/list":
                 result: dict[str, Any] = {"tools": self.load_tools()}
                 if self.modern(request):
