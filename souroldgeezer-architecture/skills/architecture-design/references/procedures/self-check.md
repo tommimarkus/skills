@@ -299,6 +299,11 @@ and rebuild. In Review, preserve the finding without tuning the original or the
 one-build reproduction copy. If it
 cannot be resolved within scope, disclose the warning with the artifact.
 
+The package gallery's edge-count label is only a density heuristic. It does not
+represent build status, layout validation, visual readability, or readiness; use
+the build-result status and diagnostics above, and inspect the SVG for visual
+defects.
+
 ### Rendered SVG
 
 After the build materializes a rendered SVG, add the visible title band — the

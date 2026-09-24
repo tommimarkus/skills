@@ -12,7 +12,8 @@ scripts, no separate stylesheet.
 package's own sources — `package.json` (view order, per-view `presentation`
 titles/questions/`diagram_kind`, model bindings, declared output paths), each
 model's own `semantic_profile`, the rendered `generated/svg/*.svg`, and
-`generated/render-metadata/*.json` (node/edge counts) — and writes one
+`generated/render-metadata/*.json` (node/edge counts and a derived edge-density
+hint) — and writes one
 standalone `<package>/gallery.html`. Every view's SVG is inlined as an inert
 `<template class="plate" data-id="<view-id>">`; only the currently selected
 plate is cloned into the live DOM (`#plate-host`). This is the **performance
@@ -114,8 +115,7 @@ the palette dicts in the script; to re-theme one package, ship a
 | `--wash` | accent tint (kind chip background) | `#ecebfb` | `#22233a` |
 | `--sheet` | diagram canvas — default; derived per view (see below) | `#ffffff` | `#ffffff` |
 | `--sheet-line` | sheet border — derived with the sheet | `#e7e3d8` | `#d8d4cb` |
-| `--ok` / `--ok-wash` | `chip-ok` ("layout ok") | `#2f6b45` / `#e6f1ea` | `#7ad3a0` / `#123123` |
-| `--warn` / `--warn-wash` | `chip-warn` ("dense layout") | `#8a5a12` / `#f6ead0` | `#e7c17c` / `#332913` |
+| `--ok` / `--ok-wash`, `--warn` / `--warn-wash` | retained theme tokens; density uses a neutral chip | `#2f6b45` / `#e6f1ea`, `#8a5a12` / `#f6ead0` | `#7ad3a0` / `#123123`, `#e7c17c` / `#332913` |
 | `--shadow` | elevation | soft, warm | soft, black |
 
 Hover states are derived, not stored: `color-mix(in srgb, var(--accent)
@@ -218,9 +218,9 @@ the content.
   lifts onto `--panel` with a 2px `--accent` left border and `--shadow`; the
   code turns `--accent-ink`.
 - **Chips** — mono pills: `chip-kind` (accent wash, shows the raw
-  `diagram_kind`), `chip-ok` / `chip-warn` (layout status), `chip-count`
-  (outline only, node/relationship counts). One notation/status/size read at
-  a glance.
+  `diagram_kind`), `chip-density` (neutral edge-count density hint), and
+  `chip-count` (outline only, node/relationship counts). The density hint does
+  not assess layout quality; use build diagnostics and inspect the SVG.
 - **Zoom group** — segmented `– · Fit · +`, mono, hairline-divided; range
   25–400%, "Fit" resets to 100% (fit-to-width). Ctrl/⌘ + wheel (and trackpad
   pinch) also zooms, anchored to the pointer position, without intercepting a
@@ -261,9 +261,12 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   (one `dediren_build` call with the `package` argument), then rebuild the
   gallery. Section, code letter, and counts are all derived — nothing to
   hand-edit in the markup.
-- **Density rule:** a view is flagged `chip-warn` ("dense layout") at
-  `DENSE_EDGES = 50` relationships (`status_of()` in `build-gallery.py`) —
-  tune that constant, never the generated markup.
+- **Density hint:** views with at least `DENSE_EDGES = 50` relationships are
+  labeled "dense by edge count"; lower counts are labeled "below density
+  threshold" (`density_of()` in `build-gallery.py`). This is a navigation hint,
+  not a layout-quality verdict or readiness signal. Use the build result's
+  status and diagnostics as layout authority, and inspect the SVG for visual
+  defects such as occlusion. Tune the threshold, never the generated markup.
 - **Build / refresh:**
 
   Claude Code expands `${CLAUDE_SKILL_DIR}`. In Codex, replace that token in the

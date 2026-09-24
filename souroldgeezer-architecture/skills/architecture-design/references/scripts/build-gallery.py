@@ -5,7 +5,8 @@ Reads the package's own sources — package.json (view order, per-view
 presentation title/question/diagram_kind, model bindings, declared output
 paths), each model's own plugins.generic-graph.semantic_profile (the notation),
 the rendered generated/svg/*.svg, and generated/render-metadata/*.json
-(node/edge counts) — and writes one standalone HTML file inside the package with
+(node/edge counts and a derived edge-density hint) — and writes one standalone
+HTML file inside the package with
 every diagram inlined as an inert <template>. No external assets, so it works on
 GitHub Pages, a static host, or opened straight from disk.
 
@@ -38,7 +39,7 @@ import re
 import sys
 from urllib.parse import quote
 
-DENSE_EDGES = 50  # a view is flagged "dense" at this many relationships
+DENSE_EDGES = 50  # edge-count density hint; never a layout-quality verdict
 
 # Built-in "paper & ink" gallery palette, held as data so an author theme can
 # override any token cleanly (see _resolve_theme). Colour tokens only; --sans /
@@ -101,9 +102,9 @@ def classify(profile, diagram_kind):
     return ("arch", "ArchiMate views", "ArchiMate 3.2", "A")
 
 
-def status_of(edges):
-    """'warning' when a view carries enough relationships to be hard to route."""
-    return "warning" if edges >= DENSE_EDGES else "ok"
+def density_of(edges):
+    """Return an edge-count density hint, not an assessment of rendered quality."""
+    return "dense" if edges >= DENSE_EDGES else "below-threshold"
 
 
 def _semantic_profile(pkg_dir, source):
@@ -399,7 +400,7 @@ def collect(pkg_dir):
             "q": pres.get("question", ""),
             "kind": pres.get("diagram_kind", ""),
             "nodes": n, "edges": e,
-            "status": status_of(e),
+            "density": density_of(e),
             "sheet": sheet, "sheetLine": sheet_line,
         })
         plates.append(
@@ -510,8 +511,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
 .chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.03em;
   padding:3px 8px;border-radius:5px;white-space:nowrap}
 .chip-kind{background:var(--wash);color:var(--accent-ink)}
-.chip-ok{background:var(--ok-wash);color:var(--ok)}
-.chip-warn{background:var(--warn-wash);color:var(--warn)}
+.chip-density{border:1px solid var(--line-2);color:var(--muted)}
 .chip-count{background:transparent;border:1px solid var(--line-2);color:var(--muted);font-variant-numeric:tabular-nums}
 .tools{display:flex;gap:9px;align-items:center;flex-shrink:0}
 .zoom{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;background:var(--panel)}
@@ -533,7 +533,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
 #plate-host svg [data-arch-a11y="visible-title"]{display:none}  /* title lives in the chrome */
 #foot{display:flex;gap:16px;align-items:center;padding:8px 24px;border-top:1px solid var(--line);
   background:var(--panel);font-family:var(--mono);font-size:11px;color:var(--faint)}
-#p-note{color:var(--warn)}
+#p-note{color:var(--muted)}
 
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 
@@ -563,7 +563,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
         <div class="head-main">
           <div class="eyebrow">
             <span id="p-kind" class="chip chip-kind"></span>
-            <span id="p-status" class="chip"></span>
+            <span id="p-density" class="chip chip-density"></span>
             <span id="p-count" class="chip chip-count"></span>
           </div>
           <h2 id="p-title"></h2>
@@ -650,12 +650,10 @@ function select(id){
   q('#p-kind').textContent  = d.kind;
   q('#p-title').textContent = d.title;
   q('#p-q').textContent     = d.q;
-  const st = q('#p-status');
-  st.textContent = d.status === 'warning' ? 'dense layout' : 'layout ok';
-  st.className = 'chip ' + (d.status === 'warning' ? 'chip-warn' : 'chip-ok');
+  q('#p-density').textContent = d.density === 'dense' ? 'dense by edge count' : 'below density threshold';
   q('#p-count').textContent = `${d.nodes} nodes · ${d.edges} relations`;
   q('#p-path').textContent  = `generated/svg/${d.id}.svg`;
-  q('#p-note').textContent  = d.status === 'warning' ? 'dense diagram — zoom in for detail' : '';
+  q('#p-note').textContent  = 'Density is an edge-count heuristic; assess layout quality from build diagnostics and the SVG.';
   zoom = 100; applyZoom();
   if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
   const sheet = q('#sheet');

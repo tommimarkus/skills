@@ -47,9 +47,9 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(self.m.classify("archimate", "x")[2], "ArchiMate 3.2")
         self.assertEqual(self.m.classify("uml", "UML Class")[2], "UML 2.5")
 
-    def test_density(self):
-        self.assertEqual(self.m.status_of(49), "ok")
-        self.assertEqual(self.m.status_of(50), "warning")
+    def test_density_is_an_edge_count_hint(self):
+        self.assertEqual(self.m.density_of(49), "below-threshold")
+        self.assertEqual(self.m.density_of(50), "dense")
 
 
 class ProfileResolverTest(unittest.TestCase):
@@ -274,7 +274,7 @@ _DARK_SVG = (
     '<title id="arch-a11y-title">Dark</title></svg>')
 
 
-def _mk_pkg(d, svg, theme=None):
+def _mk_pkg(d, svg, theme=None, edge_count=0):
     """Write a one-view package (package.json, svg, render-metadata) into d. The
     model file carries the notation, so it is written too."""
     os.makedirs(os.path.join(d, "generated", "svg"), exist_ok=True)
@@ -297,7 +297,10 @@ def _mk_pkg(d, svg, theme=None):
         fh.write(svg)
     with open(os.path.join(d, "generated", "render-metadata", "v.json"), "w",
               encoding="utf-8") as fh:
-        _json.dump({"nodes": {"n": 1}, "edges": {}}, fh)
+        nodes = ({"n": 1} if edge_count == 0 else
+                 {"n%d" % i: 1 for i in range(edge_count * 2)})
+        _json.dump({"nodes": nodes,
+                    "edges": {"e%d" % i: {} for i in range(edge_count)}}, fh)
     if theme is not None:
         with open(os.path.join(d, "gallery-theme.json"), "w", encoding="utf-8") as fh:
             _json.dump(theme, fh)
@@ -377,6 +380,61 @@ class SheetDerivationTest(unittest.TestCase):
         self.assertTrue(all(v["sheet"] is None for v in _data(html)))
         self.assertIn("--sheet:#ffffff;", _root_css(html))
         self.assertIn("--sheet-line:#e7e3d8;", _root_css(html))
+
+    def test_density_hint_does_not_claim_layout_quality(self):
+        occluded = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">'
+                    '<rect data-dediren-node-shape="uml_class" '
+                    'data-dediren-node-id="left" x="5" y="10" width="40" height="25"/>'
+                    '<rect data-dediren-node-shape="uml_class" '
+                    'data-dediren-node-id="right" x="70" y="10" width="25" height="25"/>'
+                    '<path data-dediren="edge" data-dediren-edge-id="e0" '
+                    'd="M45 22 L70 22" fill="none" stroke="#333"/>'
+                    '<text data-dediren-edge-label-for="e0" x="8" y="25">'
+                    'occluded label</text></svg>')
+        readable_edges = []
+        readable_nodes = []
+        for i in range(50):
+            y = 20 + i * 36
+            readable_nodes.extend((
+                '<rect data-dediren-node-shape="uml_class" data-dediren-node-id="l%d" '
+                'x="10" y="%d" width="70" height="24"/>' % (i, y),
+                '<rect data-dediren-node-shape="uml_class" data-dediren-node-id="r%d" '
+                'x="920" y="%d" width="70" height="24"/>' % (i, y),
+            ))
+            readable_edges.extend((
+                '<path data-dediren="edge" data-dediren-edge-id="e%d" '
+                'd="M80 %d L450 %d M550 %d L920 %d" '
+                'fill="none" stroke="#333"/>' %
+                (i, y + 12, y + 12, y + 12, y + 12),
+                '<text data-dediren-edge-label-for="e%d" x="480" y="%d">'
+                'edge %d label</text>' % (i, y + 8, i),
+            ))
+        readable = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1820">'
+                    + ''.join(readable_nodes + readable_edges) + '</svg>')
+        with tempfile.TemporaryDirectory() as d:
+            sparse_pkg = os.path.join(d, "sparse")
+            dense_pkg = os.path.join(d, "dense")
+            os.makedirs(sparse_pkg)
+            os.makedirs(dense_pkg)
+            _mk_pkg(sparse_pkg, occluded, edge_count=2)
+            _mk_pkg(dense_pkg, readable, edge_count=50)
+
+            sparse_html = self.m.build_html(sparse_pkg)
+            dense_html = self.m.build_html(dense_pkg)
+            sparse = _data(sparse_html)[0]
+            dense = _data(dense_html)[0]
+
+        self.assertEqual(sparse["density"], "below-threshold")
+        self.assertEqual(dense["density"], "dense")
+        self.assertNotIn("status", sparse)
+        self.assertNotIn("status", dense)
+        self.assertIn('data-dediren-edge-label-for="e0"', sparse_html)
+        self.assertIn('data-dediren-edge-id="e49"', dense_html)
+        self.assertIn("below density threshold", sparse_html)
+        self.assertIn("dense by edge count", dense_html)
+        self.assertNotIn("layout ok", sparse_html)
+        self.assertIn("assess layout quality from build diagnostics and the SVG",
+                      sparse_html)
 
 
 class AuthorThemeTest(unittest.TestCase):
