@@ -149,6 +149,6 @@ Stryker's JSON reporter writes the standard [mutation-testing-elements report sc
 
 ### When to run it
 
-**Always run in deep mode when the detection command succeeds**, regardless of which smells the static audit found. Mutation testing's highest-value output is the audit-vs-mutation disagreement: files rated `strong` by static audit that have surviving mutants. Those disagreements only surface if you run the tool unconditionally on a successful-audit suite.
+Run mutation testing in Deep mode only after passing the shared consent check in [the Deep output procedure](deep-mode-output-format.md), with user authorization that explicitly covers the mutation run and its scope. Tool availability does not grant authority. Without matching authorization, skip the run and report the evidence limit. For an authorized run, keep to its scope and record the results in the audit; do not edit installed skill guidance.
 
 If the suite has many `HC-1` / `HC-3` / `HC-5` / `HC-6` / `nodejs.HC-2` / `nodejs.HC-5` findings, the mutation run is especially valuable — those smells all indicate tests that execute code without verifying it, which mutation testing surfaces mechanically — but this is not a gating criterion.

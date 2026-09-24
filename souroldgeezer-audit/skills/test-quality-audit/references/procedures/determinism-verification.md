@@ -7,14 +7,14 @@
 Static smells `HC-11`, `LC-5`, `I-HC-A5`, `I-HC-A11`, `E-HC-F3` all flag *suspected* determinism problems. Two runs convert suspicion into evidence. The cost is a second test-suite execution. Gate on:
 
 - **Suite size** — a test project with < 500 methods and known-fast execution (< 60 s) reruns cheaply. Larger suites take proportionally longer; the audit agent should recommend but not run.
-- **User opt-in** — an interactive audit should ask "run determinism verification?" before the second execution when the first run took > 30 seconds. A batch audit should respect a config flag.
+- **User authorization** — determinism verification is additional execution. Before its first run, apply the shared consent check in [the Deep output procedure](deep-mode-output-format.md): proceed only when existing user authorization explicitly covers the reruns and their scope; otherwise ask first. Runtime estimates and batch flags do not grant authority.
 - **Extension support** — the loaded extension must declare a cheap-rerun command. Without it, skip the step.
 - **Existing findings** — if prior steps already produced five or more static determinism smells, the marginal value of the second run is lower. Run only if the user explicitly asks.
 
 ## Procedure
 
-1. **Read the extension's determinism-verification section.** If absent, skip.
-2. **Run the test project(s) once** via the extension's cheap-rerun command. Capture the pass / fail list — prefer test-result XML (`.trx` for .NET, JUnit XML for most other stacks) for structured parsing.
+1. **Pass the shared consent check** before either run. Read the extension's determinism-verification section; if absent, skip.
+2. **Run the test project(s) once** via the extension's cheap-rerun command, within the authorized scope. Capture the pass / fail list — prefer test-result XML (`.trx` for .NET, JUnit XML for most other stacks) for structured parsing.
 3. **Run the same test project(s) again**, isolated from the first run's state (fresh process for xUnit / NUnit, `pytest --forked` for Python). Capture a second pass / fail list.
 4. **Diff the two lists:**
    - A test that passed both times → stable.

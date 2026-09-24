@@ -46,6 +46,14 @@ mutation work. Call this a **safe one-shot suite execution** only after those
 checks; otherwise rely on readable current artifacts and disclose the
 limitation.
 
+Before any additional execution, check that the user's existing authorization
+explicitly covers the action and scope. This includes determinism reruns and
+mutation runs, even when the tool is installed or the run is expected to take
+less than 30 seconds. If matching authorization is absent, ask before starting;
+if the user declines or cannot be asked, do not run and report the evidence
+limit. Keep an authorized run within its stated scope. This is the shared
+consent check for every extra-execution procedure below.
+
 When a JUnit XML report is already available, the bundled one-shot parser can
 extract bounded distribution evidence without retaining failure bodies or
 captured output:

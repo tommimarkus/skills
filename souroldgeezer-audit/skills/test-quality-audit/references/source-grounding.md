@@ -76,6 +76,12 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: management evidence precedes sampling; current execution and
   runtime distribution are reported from available project evidence, while
   one-shot execution remains read-only, bounded, and opt-in by safety.
+- Source: local `audit-craft.md` read-only audit stance and explicit user
+  authorization for actions beyond the audit's granted scope.
+  Handling: test reruns and mutation remain read-only audit evidence activities
+  only when the user's authorization covers the action and scope; successful
+  observations inform separate skill maintenance and never edit installed
+  guidance during an audit.
 - Source: Koochakzadeh and Garousi, “A Tester-Assisted Methodology for Test
   Redundancy Detection,” at `https://doi.org/10.1155/2010/932686`.
   Handling: linked for coverage-based redundancy false-positive risk and the
