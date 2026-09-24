@@ -14,7 +14,6 @@ from pathlib import Path
 SCHEMA = "planning-worktree-result-v1"
 COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 BRANCH = re.compile(r"^(?!-)(?!.*\.\.)(?!.*(?:^|/)\.)(?!.*[~^:?*\\\[])[^\s]+$")
-SHA40 = re.compile(r"^[0-9a-f]{40}$")
 MAX_BATCH_COMMITS = 8
 
 
@@ -145,7 +144,7 @@ def parse_batch_commits(values: list[str]) -> dict[str, str]:
     commits: dict[str, str] = {}
     for value in values:
         step_id, sep, sha = value.partition("=")
-        if not sep or not step_id or not SHA40.fullmatch(sha):
+        if not sep or not step_id or not COMMIT.fullmatch(sha):
             raise Error(f"invalid --batch-commit value: {value}")
         if step_id in commits:
             raise Error(f"duplicate --batch-commit step id: {step_id}")
@@ -278,7 +277,7 @@ def read_integrated(path: str) -> dict[str, object]:
     if "batch_source_commits" in value:
         batch = value["batch_source_commits"]
         if not isinstance(batch, dict) or not batch or any(
-            not isinstance(step_id, str) or not step_id or not SHA40.fullmatch(str(sha))
+            not isinstance(step_id, str) or not step_id or not COMMIT.fullmatch(str(sha))
             for step_id, sha in batch.items()
         ):
             raise Error("invalid integrated batch source commits")

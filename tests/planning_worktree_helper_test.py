@@ -1,4 +1,5 @@
 import json
+import importlib.util
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +11,9 @@ SCRIPT = (
     REPO_ROOT
     / "souroldgeezer-policy/skills/git-workflow-policy/references/scripts/planning_worktree.py"
 )
+SPEC = importlib.util.spec_from_file_location("planning_worktree", SCRIPT)
+HELPER = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(HELPER)
 
 
 def git(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -430,6 +434,91 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         )
         self.assertNotEqual(0, result.returncode)
         self.assertIn("duplicate --batch-commit step id", value["error"])
+
+    def test_batch_commit_accepts_both_supported_object_id_lengths(self) -> None:
+        sha1 = "a" * 40
+        sha256 = "b" * 64
+        self.assertEqual(
+            {"sha1": sha1, "sha256": sha256},
+            HELPER.parse_batch_commits([f"sha1={sha1}", f"sha256={sha256}"]),
+        )
+        for malformed in ("a" * 39, "a" * 41, "a" * 63, "a" * 64 + "g", "a" * 65):
+            with self.assertRaises(HELPER.Error):
+                HELPER.parse_batch_commits([f"member={malformed}"])
+
+    def test_batch_evidence_accepts_sha256_ids_and_rejects_malformed_ids(self) -> None:
+        leaf = self.add_worktree("batch-evidence-format")
+        source = self.commit(leaf, "work.txt", "work\n")
+        result_path = Path(self.temporary.name) / "integrated.json"
+        integrated = {
+            "schema": "planning-worktree-result-v1",
+            "ok": True,
+            "action": "integrate",
+            "repo_root": str(self.root),
+            "target": "main",
+            "branch": "task/batch-evidence-format",
+            "worktree": str(leaf),
+            "source_commit": source,
+            "rebased_commit": source,
+            "parent_before": git(self.root, "rev-parse", "main").stdout.strip(),
+            "parent_after": source,
+            "rebased_tree_changed": False,
+            "batch_source_commits": {"member": "c" * 64},
+        }
+        result_path.write_text(json.dumps(integrated), encoding="utf-8")
+        self.assertEqual(integrated, HELPER.read_integrated(str(result_path)))
+
+        integrated["batch_source_commits"]["member"] = "c" * 63 + "Z"
+        result_path.write_text(json.dumps(integrated), encoding="utf-8")
+        with self.assertRaisesRegex(HELPER.Error, "invalid integrated batch source commits"):
+            HELPER.read_integrated(str(result_path))
+
+    def test_sha256_git_batch_integration_and_cleanup_retry(self) -> None:
+        root = Path(self.temporary.name) / "sha256-repo"
+        initialized = subprocess.run(
+            ["git", "init", "--object-format=sha256", "-b", "main", str(root)],
+            text=True,
+            capture_output=True,
+        )
+        if initialized.returncode:
+            self.skipTest("installed Git does not support SHA-256 repositories")
+        git(root, "config", "user.name", "Test User")
+        git(root, "config", "user.email", "test@example.invalid")
+        self.write(root / "base.txt", "base\n")
+        self.write(root / ".gitignore", ".worktrees/\n")
+        git(root, "add", "base.txt", ".gitignore")
+        git(root, "commit", "-m", "base")
+        leaf = root / ".worktrees" / "sha256-batch"
+        git(root, "worktree", "add", "-b", "task/sha256-batch", str(leaf), "main")
+        first = self.commit(leaf, "first.txt", "first\n")
+        second = self.commit(leaf, "second.txt", "second\n")
+
+        def invoke(command: str, *extra: str):
+            return subprocess.run(
+                [
+                    "python", str(SCRIPT), command,
+                    "--repo-root", str(root), "--target", "main",
+                    "--branch", "task/sha256-batch", "--worktree", str(leaf), *extra,
+                ],
+                text=True,
+                capture_output=True,
+            )
+
+        integrated_result = invoke(
+            "integrate", "--source-commit", second,
+            "--batch-commit", f"first={first}", "--batch-commit", f"second={second}",
+        )
+        self.assertEqual(0, integrated_result.returncode, integrated_result.stderr)
+        integrated = json.loads(integrated_result.stdout)
+        self.assertEqual(64, len(second))
+        self.assertEqual({"first": first, "second": second}, integrated["batch_source_commits"])
+
+        evidence = Path(self.temporary.name) / "sha256-integrated.json"
+        evidence.write_text(json.dumps(integrated), encoding="utf-8")
+        git(root, "worktree", "remove", str(leaf))
+        cleanup_result = invoke("cleanup", "--integrated-result", str(evidence))
+        self.assertEqual(0, cleanup_result.returncode, cleanup_result.stderr)
+        self.assertEqual("cleanup", json.loads(cleanup_result.stdout)["action"])
 
     def test_rebased_tree_changed_false_when_parent_untouched(self) -> None:
         leaf = self.add_worktree("tree-unchanged")
