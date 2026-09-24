@@ -28,6 +28,63 @@ result here after integration. Missing usage, mismatched provenance, failed or
 blocked outcomes, unclean lifecycle, or failed oracle evidence make economy
 claims incomparable; lower counters from a failed run are not improvement.
 
+### 2026-09-25 pilot evidence
+
+Pinned baseline: `33fae41589ddf05cf3ce07438302b97623b519ed`; candidate:
+`873d8b0d3a51c880fb6c118dcb35e0c9dc6db338`. Fixture SHA-256:
+`5731074c5cb3c1b7ba938f0a8f5cff1af7ae559432533b77d13bfdd3737a916a`;
+immutable oracle SHA-256:
+`7cf4d4996b8f47830c3c1697097a04f9fd95d18d6ce69a4c0ecb5e911ce60212`.
+The host was Codex CLI 0.156.1, coordinator `gpt-5.6-sol`/`high`, with the
+four declared exact tier mappings available. Workers selected
+`gpt-5.6-luna`/`low`. Native contexts confirmed matching `workspace-write`,
+`on-request`, and disabled sandbox network access.
+
+| Trial | Variant | Seconds | Task oracle / cleanup | Worker turns / ledger attempts | Workflow result |
+|---|---|---:|---|---:|---|
+| a1 | Baseline | 573.707 | Passed / cleaned | 2 / 2 | Failed: worker finals lacked the required bounded return; parent normalized them |
+| b1 | Candidate | 611.724 | Passed / cleaned | 4 / 2 | Failed: initial failed worker returns were omitted before same-ID follow-ups |
+| b2 | Candidate | 531.910 | Passed / cleaned | 4 / 2 | Failed: initial return shape errors; worker model aliases rejected by ledger tracing |
+| a2 | Baseline | 681.359 | Passed / cleaned | 4 / 2 | Failed: initial typed-note errors; coordinator usage could not be reconciled |
+
+All eight worker outcomes reached cleaned state, and the supervisor independently
+reran each final immutable oracle. The pilot required conforming native worker
+returns, not only eventual code success. Existing ledger validation confirmed
+typed-note errors in b2 and a2; b1 also returned invalid commit-hash fields.
+Follow-up turns include artifact correction, so their count alone does not prove
+a new ledger retry was required. This pilot leaves that turn/attempt workload
+accounting unreconciled instead of inventing attempt IDs or omitting the turns.
+
+Native usage normally carried two representations per inference. For the first
+three trials the supervisor proved their ordered counter equality, then passed
+only content-free native `last_token_usage` records to the existing collector.
+Counting both forms would double the total. In a2 the coordinator had 54 native
+events and 52 provider records, so its usage remains unknown. Each physical actor
+is counted once, including follow-up turns. These are provider token counters,
+including cached input, not billing amounts or stable proxies.
+
+**Result: incomparable.** Four task successes and zero fully conforming workflow
+results do not establish improved economy. The bounded reporter suppresses
+variant medians, repeat ranges, and paired deltas because of workflow failures,
+unreconciled attempt accounting, and missing usage. This small fixture establishes
+specific failure evidence; it does not establish general model quality.
+
+The host CLI automatically added a trial repository trust entry. For every
+trial the supervisor proved that removing only that entry restored the exact
+original configuration SHA-256; no other configuration change was retained.
+Private metadata summaries, source digests, native-to-ledger identity checks,
+and the bounded comparison report live under the ignored local
+`.planning-policy/evaluations/planning-purpose-evidence/` directory. No native
+conversation is bundled. Elapsed time covers the coordinator, workers,
+acceptance, integration, and worker cleanup; supervisor export and outer
+synthetic-repository cleanup are excluded.
+
+Concurrent guidance repairs were subsequently integrated from `68efbd5`.
+They are outside these pinned live comparisons; the combined final source has
+repository verification but no additional live trial. Claude remains unverified.
+
+## Narrow forward cases
+
 `forward-cases.jsonl` is an opt-in, live, fresh-context comparison. It does not
 run in unit tests and stores only bounded result summaries. Each harness receives
 the same copied synthetic repository, prompt, expected return shape, and

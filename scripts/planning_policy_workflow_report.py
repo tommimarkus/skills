@@ -184,6 +184,7 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[str], re
     complete_usage = trial["roster_complete"]
     mapping_matches = True
     worker_attempts = 0
+    seen_attempts: set[str] = set()
     for index, actor_value in enumerate(actors):
         actor = _object(actor_value, f"trial.actors[{index}]")
         _fields(actor, {"actor_id", "step_id", "attempt_id", "role", "model", "effort", "tier", "coverage_complete", "usage"} | ({"additional_attempt_ids"} if "additional_attempt_ids" in actor else set()), "actor")
@@ -204,6 +205,9 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[str], re
             _fail("actor.role must be coordinator or worker")
         roles.append(role)
         if role == "worker":
+            if seen_attempts.intersection(attempt_ids):
+                _fail("duplicate attempt identity")
+            seen_attempts.update(attempt_ids)
             worker_attempts += len(attempt_ids)
         elif additional:
             _fail("a fresh coordinator cannot declare retry attempts")

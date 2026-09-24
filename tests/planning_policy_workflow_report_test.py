@@ -81,6 +81,12 @@ class WorkflowReportTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate actor identity"):
             self.report([record])
 
+        record["actors"][-1]["actor_id"] = "another-worker"
+        record["actors"][-1]["step_id"] = "another-step"
+        record["counts"].update(worker_leaves=2, worker_attempts=2, dispatches=2)
+        with self.assertRaisesRegex(ValueError, "duplicate attempt identity"):
+            self.report([record])
+
     def test_mismatched_conditions_are_incomparable(self):
         changed = json.loads(json.dumps(CONDITIONS))
         changed["coordinator"]["model"] = "another-model"
