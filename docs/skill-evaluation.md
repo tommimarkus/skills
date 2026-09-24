@@ -124,6 +124,9 @@ source paths/digests identify private metadata summaries; the caller verifies
 them and reconciles the actor roster with native spawn and ledger identities.
 The reporter validates those supplied facts; it cannot discover omitted actors
 or authenticate a caller's asserted coverage.
+For a worker reused at the same model/effort, list later ledger-issued identities
+in optional `additional_attempt_ids`; its usage covers all listed attempts once.
+Unrecorded or reused retry identities leave the actor accounting unreconciled.
 
 The report preserves failed and blocked trials. It reports medians, baseline
 repeat ranges, and paired deltas only when every trial has complete actor usage,

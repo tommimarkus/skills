@@ -183,12 +183,19 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[str], re
     totals = {name: 0 for name in USAGE_FIELDS}
     complete_usage = trial["roster_complete"]
     mapping_matches = True
+    worker_attempts = 0
     for index, actor_value in enumerate(actors):
         actor = _object(actor_value, f"trial.actors[{index}]")
-        _fields(actor, {"actor_id", "step_id", "attempt_id", "role", "model", "effort", "tier", "coverage_complete", "usage"}, "actor")
+        _fields(actor, {"actor_id", "step_id", "attempt_id", "role", "model", "effort", "tier", "coverage_complete", "usage"} | ({"additional_attempt_ids"} if "additional_attempt_ids" in actor else set()), "actor")
         actor_id = _text(actor.get("actor_id"), "actor.actor_id")
         step_id = _text(actor.get("step_id"), "actor.step_id")
         attempt_id = _text(actor.get("attempt_id"), "actor.attempt_id")
+        additional = actor.get("additional_attempt_ids", [])
+        if not isinstance(additional, list) or len(additional) > 3:
+            _fail("actor.additional_attempt_ids must contain at most three identities")
+        attempt_ids = [attempt_id, *[_text(value, "additional attempt") for value in additional]]
+        if len(set(attempt_ids)) != len(attempt_ids):
+            _fail("duplicate attempt identity")
         if actor_id in seen_actors:
             _fail("duplicate actor identity")
         seen_actors.add(actor_id)
@@ -196,6 +203,10 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[str], re
         if role not in {"coordinator", "worker"}:
             _fail("actor.role must be coordinator or worker")
         roles.append(role)
+        if role == "worker":
+            worker_attempts += len(attempt_ids)
+        elif additional:
+            _fail("a fresh coordinator cannot declare retry attempts")
         if not isinstance(actor["coverage_complete"], bool):
             _fail("actor.coverage_complete must be boolean")
         for name in ("model", "effort"):
@@ -214,10 +225,12 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[str], re
         summary = {"actor_id": actor_id, "step_id": step_id, "attempt_id": attempt_id, "role": role, "coverage_complete": complete and actor["coverage_complete"], "usage": usage}
         if not actor_mapping_matches:
             summary["mapping_mismatch"] = {"model": actor["model"], "effort": actor["effort"]}
+        if additional:
+            summary["additional_attempt_ids"] = additional
         actor_summaries.append(summary)
     if roles.count("coordinator") != 1:
         _fail("trial actors must include exactly one coordinator")
-    complete_usage = complete_usage and roles.count("worker") == counts["worker_attempts"]
+    complete_usage = complete_usage and worker_attempts == counts["worker_attempts"]
     complete_usage = complete_usage and len({a["step_id"] for a in actors if a["role"] == "worker"}) == counts["worker_leaves"]
     execution = _object(trial.get("execution"), "trial.execution")
     _fields(execution, {"outcome", "lifecycle", "oracle", "elapsed_seconds"}, "execution")

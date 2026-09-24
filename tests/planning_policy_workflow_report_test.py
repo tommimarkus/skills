@@ -173,6 +173,18 @@ class WorkflowReportTest(unittest.TestCase):
         self.assertFalse(result["comparison"]["comparable"])
         self.assertIn("actor_mapping_mismatch", result["comparison"]["reasons"])
 
+    def test_reused_worker_is_counted_once_across_recorded_retry_attempts(self):
+        baseline = trial("baseline-1", "baseline", 1)
+        candidate = trial("candidate-1", "candidate", 2)
+        candidate["actors"][1]["additional_attempt_ids"] = ["candidate-retry"]
+        candidate["counts"].update(worker_attempts=2, failed_attempts=1, retries=1, dispatches=2)
+        result = self.report([baseline, candidate])
+        self.assertTrue(result["comparison"]["comparable"])
+        self.assertEqual(result["trials"][1]["usage"]["total_tokens"], 45)
+        candidate["actors"][1]["additional_attempt_ids"] = [candidate["actors"][1]["attempt_id"]]
+        with self.assertRaisesRegex(ValueError, "duplicate attempt"):
+            self.report([candidate])
+
     def test_conflicting_identifiers_and_nonfinite_evidence_are_rejected(self):
         base = trial("baseline-1", "baseline", 1)
         candidate = trial("candidate-1", "candidate", 2)
