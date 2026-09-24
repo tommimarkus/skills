@@ -1,4 +1,5 @@
 import hashlib
+import copy
 import importlib.util
 import json
 import tempfile
@@ -29,6 +30,7 @@ CONDITIONS = {
     "coordinator": {"model": "gpt-5.6-sol", "effort": "high"},
     "worker_mapping": {"standard": {"model": "gpt-5.6-terra", "effort": "medium"}},
 }
+REVISIONS = {"baseline": "a" * 40, "candidate": "b" * 40}
 
 
 def trial(identifier: str, variant: str, sequence: int, *, usage=True, outcome="completed", conditions=None):
@@ -37,6 +39,7 @@ def trial(identifier: str, variant: str, sequence: int, *, usage=True, outcome="
         "step_id": "evaluation",
         "attempt_id": f"{identifier}-attempt",
         "role": "worker",
+        "model": "gpt-5.6-terra", "effort": "medium", "tier": "standard", "coverage_complete": True,
         "usage": {"input_tokens": 10, "output_tokens": 5, "cached_input_tokens": 2, "total_tokens": 15}
         if usage
         else None,
@@ -45,12 +48,14 @@ def trial(identifier: str, variant: str, sequence: int, *, usage=True, outcome="
         "trial_id": identifier,
         "variant": variant,
         "sequence": sequence,
+        "policy_revision": REVISIONS[variant],
+        "roster_complete": True,
         "conditions": conditions or CONDITIONS,
         "limits": {"worker_leaves": 2, "worker_attempts": 4, "minutes": 15},
         "counts": {"worker_leaves": 1, "worker_attempts": 1, "failed_attempts": 0, "retries": 0, "escalations": 0, "dispatches": 1},
         "sources": [{"path": "usage/summary.json", "sha256": digest(identifier)}],
         "actors": [
-            {"actor_id": f"{identifier}-parent", "step_id": "parent", "attempt_id": "run", "role": "coordinator", "usage": {"input_tokens": 20, "output_tokens": 10, "cached_input_tokens": 0, "total_tokens": 30}},
+            {"actor_id": f"{identifier}-parent", "step_id": "parent", "attempt_id": "run", "role": "coordinator", "model": "gpt-5.6-sol", "effort": "high", "tier": None, "coverage_complete": True, "usage": {"input_tokens": 20, "output_tokens": 10, "cached_input_tokens": 0, "total_tokens": 30}},
             worker,
         ],
         "execution": {"outcome": outcome, "lifecycle": "cleaned", "oracle": "passed", "elapsed_seconds": 12},
@@ -62,7 +67,7 @@ class WorkflowReportTest(unittest.TestCase):
         self.reporter = load_reporter()
 
     def report(self, records):
-        return self.reporter.build_report({"schema": "planning-policy-workflow-manifest/v1", "trials": records})
+        return self.reporter.build_report({"schema": "planning-policy-workflow-manifest/v1", "revisions": REVISIONS, "trials": records})
 
     def test_missing_worker_usage_is_visible_but_blocks_comparison(self):
         report = self.report([trial("baseline-1", "baseline", 1, usage=False)])
@@ -115,7 +120,7 @@ class WorkflowReportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "manifest.json"
             output = Path(temporary) / "report.json"
-            manifest.write_text(json.dumps({"schema": "planning-policy-workflow-manifest/v1", "trials": [record]}), encoding="utf-8")
+            manifest.write_text(json.dumps({"schema": "planning-policy-workflow-manifest/v1", "revisions": REVISIONS, "trials": [record]}), encoding="utf-8")
             self.assertEqual(self.reporter.main(["--manifest", str(manifest), "--output", str(output)]), 0)
             self.assertLessEqual(output.stat().st_size, 16 * 1024)
 
@@ -124,15 +129,71 @@ class WorkflowReportTest(unittest.TestCase):
         report = self.report(records)
         self.assertLessEqual(len(json.dumps(report, sort_keys=True, separators=(",", ":")).encode("utf-8")), 16 * 1024)
 
-    def test_rejects_oracle_failure_and_excessive_limits(self):
-        oracle_failed = trial("baseline-1", "baseline", 1)
+    def test_oracle_failure_is_retained_without_economy_claims(self):
+        oracle_failed = trial("candidate-1", "candidate", 2, outcome="failed")
         oracle_failed["execution"]["oracle"] = "failed"
-        with self.assertRaisesRegex(ValueError, "oracle"):
-            self.report([oracle_failed])
+        result = self.report([trial("baseline-1", "baseline", 1), oracle_failed])
+        self.assertEqual(result["trials"][1]["execution"]["oracle"], "failed")
+        self.assertFalse(result["comparison"]["comparable"])
+        self.assertIsNone(result["variants"]["candidate"]["median_total_tokens"])
+
+    def test_rejects_excessive_limits(self):
         out_of_bounds = trial("baseline-2", "baseline", 2)
         out_of_bounds["limits"]["worker_attempts"] = 5
         with self.assertRaisesRegex(ValueError, "worker_attempts"):
             self.report([out_of_bounds])
+
+    def test_missing_actor_and_partial_coverage_invalidate_totals(self):
+        for change in ("missing_actor", "partial_usage", "unreconciled_roster"):
+            record = trial("baseline-1", "baseline", 1)
+            if change == "missing_actor":
+                record["counts"]["worker_attempts"] = 2
+            elif change == "partial_usage":
+                record["actors"][1]["coverage_complete"] = False
+            else:
+                record["roster_complete"] = False
+            with self.subTest(change=change):
+                result = self.report([record])
+                self.assertIsNone(result["trials"][0]["usage"]["total_tokens"])
+                self.assertFalse(result["comparison"]["comparable"])
+
+    def test_blocked_before_dispatch_and_unknown_counts_are_retained(self):
+        record = trial("baseline-1", "baseline", 1, outcome="blocked")
+        record["actors"] = record["actors"][:1]
+        record["counts"] = {key: None for key in record["counts"]}
+        record["execution"].update(oracle="not_run", lifecycle="not_cleaned", elapsed_seconds=None)
+        result = self.report([record])
+        self.assertIsNone(result["trials"][0]["counts"]["worker_attempts"])
+        self.assertFalse(result["comparison"]["comparable"])
+
+    def test_actor_mapping_drift_is_incomparable(self):
+        record = trial("candidate-1", "candidate", 2)
+        record["actors"][1]["model"] = "unexpected-model"
+        result = self.report([trial("baseline-1", "baseline", 1), record])
+        self.assertFalse(result["comparison"]["comparable"])
+        self.assertIn("actor_mapping_mismatch", result["comparison"]["reasons"])
+
+    def test_conflicting_identifiers_and_nonfinite_evidence_are_rejected(self):
+        base = trial("baseline-1", "baseline", 1)
+        candidate = trial("candidate-1", "candidate", 2)
+        for change in ("sequence", "actor", "revision", "nan", "content"):
+            row = copy.deepcopy(candidate)
+            if change == "sequence": row["sequence"] = 1
+            if change == "actor": row["actors"][0]["actor_id"] = base["actors"][0]["actor_id"]
+            if change == "revision": row["policy_revision"] = "c" * 40
+            if change == "nan": row["execution"]["elapsed_seconds"] = float("nan")
+            if change == "content": row["actors"][0]["completions"] = ["private text"]
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.report([base, row])
+
+    def test_cli_bounds_input_before_parsing_and_refuses_duplicate_json_keys(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            manifest = Path(temporary) / "manifest.json"
+            output = Path(temporary) / "report.json"
+            for contents in ('{"schema":"x","schema":"y"}', " " * (16 * 64 * 1024 + 4097)):
+                manifest.write_text(contents)
+                self.assertEqual(self.reporter.main(["--manifest", str(manifest), "--output", str(output)]), 2)
+                self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

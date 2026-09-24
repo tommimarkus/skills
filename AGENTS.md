@@ -322,13 +322,13 @@ bounded additional requirements. Its assigned work unit owns the
 `rationale`. A missing load-bearing field stops as `blocked:missing_input`; do
 not search for or invent it. Work units are weighted once from their original size
 (`small=1`, `medium=2`, `large=3`) and require `standard_ready_ratio >= 0.60`;
-after approach convergence, the parent enumerates shared call sites, guidance,
+only an explicitly user-approved, recorded analytical-heavy exception waives
+that gate. After approach convergence, the parent enumerates shared call sites, guidance,
 named reads/writes, and existing scoped acceptance once. It records bounded
 worker judgment separately from required missing input; size follows those
 bounded reads and acceptance, and large names a concrete irreducible reason.
 Two checks alone never require two leaves.
-only an explicitly user-approved, recorded analytical-heavy exception waives
-that gate. A valid decision-complete v5 plan is approval-ready without host
+A valid decision-complete v5 plan is approval-ready without host
 binding; it is dispatch-ready only after `planning-capability-binding-v1` joins
 plan digest, every leaf, host/executor, requirements, and bounded evidence. An
 unavailable or mismatched join stops `blocked:capability_unavailable`; never

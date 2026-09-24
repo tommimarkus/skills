@@ -94,6 +94,10 @@ the subject run.
 
 Path: `references/evals/model-pressure.md`.
 
+Use this only when a model-family or runtime-specific extension exists because
+generic wording failed. Record the pressure prompt, tested runtime/model,
+observed failure, accepted extension, retest, and merge-back condition.
+
 ## Fixed workflow-evidence pilot
 
 Planning-policy has one approved, opt-in synthetic pilot for comparing its
@@ -104,32 +108,33 @@ summarize at most sixteen content-free trial records. Each record is capped at
 stdlib only and never discovers telemetry, dispatches work, or contacts a
 provider.
 
-The manifest is `planning-policy-workflow-manifest/v1` with `trials`. A trial
+The manifest is `planning-policy-workflow-manifest/v1` with pinned Git
+`revisions` (`baseline` and `candidate`) and `trials`. A trial
 has a unique `trial_id`, `baseline` or `candidate` variant, sequence, fixture
-and oracle SHA-256 values, host/profile, coordinator and standard-worker model
+and oracle SHA-256 values, its variant's `policy_revision`, host/profile,
+coordinator and available worker model
 mapping, the fixed limits (two worker leaves, four worker attempts, 15 minutes),
 content-free source path/digest summaries, coordinator/worker actor summaries
-(including step and attempt identities), worker leaf/attempt, failed
+(including step/attempt identities, actual model/effort, worker tier, and
+`coverage_complete`), an explicitly reconciled `roster_complete`, worker leaf/attempt, failed
 attempt, retry, escalation, and dispatch counts, and execution outcome,
-lifecycle, oracle, and elapsed-time evidence. Usage is either a complete set
-of non-negative counters or `null`; unknown remains `null`.
+lifecycle, oracle, and elapsed-time evidence. Unknown counters and elapsed time
+remain `null`. Usage keys are input/output/cached-input/total tokens. Supplied
+source paths/digests identify private metadata summaries; the caller verifies
+them and reconciles the actor roster with native spawn and ledger identities.
+The reporter validates those supplied facts; it cannot discover omitted actors
+or authenticate a caller's asserted coverage.
 
 The report preserves failed and blocked trials. It reports medians, baseline
 repeat ranges, and paired deltas only when every trial has complete actor usage,
 matching conditions, a passed oracle, a completed outcome, and cleaned
 lifecycle. Otherwise it marks the comparison incomparable. It rejects malformed
-records, duplicate trial or actor identities, failed oracle evidence, and any
+records, duplicate/conflicting trial or actor identities, and any
 limit outside the approved bounds.
-
-Use this only when a model-family or runtime-specific extension exists because
-generic wording failed. Record:
-
-- pressure prompt id,
-- model family or runtime tested,
-- observed failure,
-- accepted extension rule,
-- retest command or prompt set,
-- merge-back condition.
+Oracle states are `passed`, `failed`, `not_run`, or `unknown`; failures stay
+visible. Record order in the report preserves validated trial sequence, and
+shared revisions and model mappings are stored once. The reporter bounds its
+input read before JSON parsing and rejects oversized output without writing it.
 
 ## Source Grounding
 

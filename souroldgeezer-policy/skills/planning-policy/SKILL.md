@@ -50,7 +50,8 @@ choice invokes its owning design skill before approval.
   authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
 - **Usage tracing:** only after an explicit trace, measure, or calibrate request,
-  read [usage tracing](references/usage-tracing.md). Ordinary runs create no trace state.
+  read [usage tracing](references/usage-tracing.md). Ordinary runs never inspect telemetry,
+  create trace state, install hooks, or make measurement network/provider calls.
 - **Host dispatch:** read exactly one additive adapter:
   [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
   If the host/mapping is unavailable, return its documented blocker; never
