@@ -83,9 +83,10 @@ limits, independence, and assurance level. Deep also reports MCP GitHub, verdict
 
 ## Stop Conditions
 
-Stop when scope is missing, sibling ownership dominates, live evidence is absent,
-cost-gated findings lack stance, MCP/tool failure would be retried, output would
-copy rubric/vendor prose, or confidence is too low.
+Stop when scope is missing, sibling ownership dominates, a required conclusion
+depends on unavailable live evidence, cost-gated findings lack stance, MCP/tool
+failure would be retried, output would copy rubric/vendor prose, or confidence
+is too low.
 
 Rerun obligations after craft or skill-surface changes:
 [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.
