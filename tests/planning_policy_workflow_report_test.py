@@ -190,7 +190,7 @@ class WorkflowReportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "manifest.json"
             output = Path(temporary) / "report.json"
-            for contents in ('{"schema":"x","schema":"y"}', " " * (16 * 64 * 1024 + 4097)):
+            for contents in ('{"schema":"x","schema":"y"}', " " * (16 * 64 * 1024 + 4097), "[" * 1500 + "0" + "]" * 1500):
                 manifest.write_text(contents)
                 self.assertEqual(self.reporter.main(["--manifest", str(manifest), "--output", str(output)]), 2)
                 self.assertFalse(output.exists())

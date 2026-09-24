@@ -337,7 +337,7 @@ def main(argv: list[str] | None = None) -> int:
         if len(encoded) > MAX_REPORT_BYTES:
             _fail(f"report exceeds {MAX_REPORT_BYTES} bytes")
         arguments.output.write_bytes(encoded + b"\n")
-    except (OSError, ValueError, json.JSONDecodeError) as error:
+    except (OSError, ValueError, RecursionError) as error:
         sys.stderr.write(f"planning-policy-workflow-report: {error}\n")
         return 2
     return 0
