@@ -207,13 +207,13 @@ App-setting value `@Microsoft.KeyVault(SecretUri=...)`; managed identity on the 
 `builder.Services.AddHttpClient<IMyClient, MyClient>(...).AddStandardResilienceHandler()` (or `.AddResilienceHandler("name", pipeline => ...)` with Polly v8). Retry + circuit breaker + timeout + rate limiter on every outbound call. Maps §2.6 / §3.14.
 
 ### `afdotnet.PAT-openapi` `[Both]`
-OpenAPI 3.1 document is the contract. Three generator paths for isolated-worker Functions, roughly in order of preference:
+OpenAPI 3.1 is the contract. Isolated-worker options, in preference order:
 
-1. **`Microsoft.Azure.Functions.Worker.Extensions.OpenApi` (attribute-driven)** — the canonical isolated-worker package. Decorate handlers with `[OpenApiOperation]`, `[OpenApiParameter]`, `[OpenApiRequestBody]`, `[OpenApiResponseWithBody]`; the package generates `/api/swagger.json` at runtime and can serve Swagger UI. Pros: one source of truth, generated at build. Cons: verbose on large surfaces; evolves with Microsoft's sample repo rather than a formal SLA.
-2. **Hand-authored YAML** at `openapi.yaml` in the repo root, served via a static-file Function or fronted by API Management. Pros: full control; easy to lint (Spectral); easy to diff in code review. Cons: drift between code and spec unless CI enforces contract-tests against the spec.
-3. **Swashbuckle** — **not natively supported in isolated-worker Functions** (it's ASP.NET Core host-bound). Can be made to work under `ConfigureFunctionsWebApplication()` with `.AddEndpointsApiExplorer()` + `.AddSwaggerGen()`, but it's an off-label configuration — prefer path 1 or 2.
+1. **`Microsoft.Azure.Functions.Worker.Extensions.OpenApi`** — canonical attribute generation using `[OpenApiOperation]`, `[OpenApiParameter]`, `[OpenApiRequestBody]`, `[OpenApiResponseWithBody]`; generates `/api/swagger.json` at runtime and optional Swagger UI. One source of truth; verbose at scale, sample-repo evolution without a formal SLA.
+2. **Hand-authored `openapi.yaml`** — serve from a static-file Function or API Management. Full control, lintability and reviewable diffs; prevent code/spec drift with CI contract tests.
+3. **Swashbuckle** — not natively supported; off-label ASP.NET Core integration needs `ConfigureFunctionsWebApplication()`, `.AddEndpointsApiExplorer()` and `.AddSwaggerGen()`. Prefer 1 or 2.
 
-**Recommendation:** path 1 for greenfield; path 2 when the API surface is stable and the team prefers spec-first review. Whichever path, add CI steps to (a) lint the spec (Spectral with the `spectral:oas` ruleset), (b) validate handlers against the spec (Schemathesis or Dredd), and (c) publish the spec as a build artefact. Maps §2.1 / §3.2.
+**Recommendation:** 1 for greenfield; 2 for stable surfaces with spec-first review. CI must lint (Spectral, `spectral:oas`), validate handlers (Schemathesis or Dredd), and publish the spec as a build artefact. Maps §2.1 / §3.2.
 
 ### `afdotnet.PAT-ratelimit-edge` `[Both]`
 Azure Front Door or API Management in front, with rate-limit policy per consumer + WAF rules. The Function app itself is a backend origin; rate-limiting lives at the edge. Maps §3.10 / §3.13.

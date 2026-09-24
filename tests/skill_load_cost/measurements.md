@@ -527,7 +527,7 @@ measures two entry routes to that file and verifies one charged row, two provena
 records, and exactly one procedure token count. Existing fidelity codes, sections,
 and pointers remain protected; only the affected API baseline is refreshed.
 
-## Final reconciliation — 2026-09-24
+## Initial reconciliation — 2026-09-24
 
 Regenerated the 56-route snapshot from the checked-in scenarios and current
 load closures. Compared with the pre-reconciliation snapshot, 42 routes changed
@@ -551,3 +551,19 @@ at 105% of the committed measured snapshot.
 The test-quality fidelity inventory was regenerated from the current linked
 closure. Python fixture-driven expected values now use `python.LC-5`; the
 contract-derived boundary criterion remains `python.LC-3` in the Python core.
+
+## Final budget reconciliation — 2026-09-25
+
+The complete suite exposed fixed API and planning route limits beyond the
+committed snapshot freshness check. Condensed repeated API explanations and
+mode notices while retaining defaults, exceptions, discovery loads, HTTP
+examples, bounded fan-out, authorization, and CORS constraints. All fixed API
+route budgets now pass; no threshold changed. The refreshed snapshot lowers
+18 API routes by 8–719 proxy tokens versus the initial reconciliation
+(total reduction 8499 across route totals). Other route costs are unchanged.
+
+Planning adapter restatements were also condensed without changing its model
+mapping, binding, return, retry or batch contract. Active Claude measures
+6,841/6,850, active Codex 6,938/6,950, and approval handoff 7,986/8,000;
+lookup and repeated live-next bounds remain intact. These are deterministic
+content proxies, not provider usage or measured runtime performance.

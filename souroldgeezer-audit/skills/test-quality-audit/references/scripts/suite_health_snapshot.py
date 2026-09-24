@@ -98,11 +98,13 @@ def snapshot(root: element_tree.Element) -> dict[str, Any]:
                 testcase_unknown += 1
             else:
                 durations.append(duration)
-                testcases.append((
-                    duration,
-                    bounded_identity(element.get("classname")),
-                    bounded_identity(element.get("name")),
-                ))
+                testcases.append(
+                    (
+                        duration,
+                        bounded_identity(element.get("classname")),
+                        bounded_identity(element.get("name")),
+                    )
+                )
 
     ordered_durations = sorted(durations)
     observed_total_duration = sum(ordered_durations)

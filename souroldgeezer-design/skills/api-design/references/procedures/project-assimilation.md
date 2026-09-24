@@ -3,12 +3,10 @@
 Load when existing project source, API contracts, auth, errors, observability,
 data clients, storage clients, IaC, or runtime configuration are in scope.
 
-Direction is one-way: assimilate the project to the reference, not the reference
-to the project. Build and Review assess the requested change against the
-reference; never extend a broken pattern into added code. Factual Extract
-records observed behavior and declared uncertainty without classifying debt or
-proposing remediation. Classify legacy debt only in Review or an explicitly
-requested debt/compliance Extract; disclose that Extract's Review-lane load.
+Direction is one-way: assess Build/Review changes against the reference; never
+extend broken patterns. Factual Extract records behavior and uncertainty without
+debt judgments. Classify debt only in Review or explicit debt/compliance Extract,
+and disclose that Extract's Review-lane load.
 
 ## Discovery
 
@@ -37,9 +35,8 @@ Loaded extensions own deeper stack-specific discovery.
 
 ## Reuse Or Replace
 
-Use the table's `Flag or migrate when` column only in Build or Review, or in an
-explicit debt/compliance Extract. Factual Extract records the observed asset
-and configuration without assigning a compliant/debt classification.
+Use “Flag or migrate when” only in Build/Review or explicit debt/compliance
+Extract. Factual Extract records assets and configuration without judgment.
 
 | Asset | Reuse when | Flag or migrate when |
 |---|---|---|
@@ -53,9 +50,8 @@ and configuration without assigning a compliant/debt classification.
 
 ## Conflict Handling
 
-In Build or Review, classify in-scope conflicts as `legacy debt` or
-`would-be-added-code`. In factual Extract, report what the source shows and any
-declared uncertainty without applying those debt labels.
+Build/Review classify conflicts as `legacy debt` or `would-be-added-code`; factual
+Extract reports source facts and uncertainty without debt labels.
 
 - In Build, added code must comply with the reference and loaded extensions.
 - Legacy debt is fixed only when migration is in scope.
@@ -67,9 +63,8 @@ declared uncertainty without applying those debt labels.
 
 ## Footer Block
 
-Use this shape in Build, Review, or explicit debt/compliance Extract when
-assimilation applies. Factual Extract instead reports observed facts and
-evidence gaps without debt judgments:
+Build, Review and debt/compliance Extract use this footer when assimilation
+applies; factual Extract reports facts and evidence gaps without debt judgments.
 
 ```text
 Project assimilation:

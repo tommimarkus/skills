@@ -2,14 +2,13 @@
 
 This additive adapter does not replace the portable handoff contract.
 
-Render the shared plan's compact **Execution economics** line without inventing
-token ranges: expected/high attempts, largest repeated-context driver, declared
-range or `indeterminate`, final-verification reserve, and `tracing: off`.
-Normal dispatch never enables or inspects usage tracing.
+Include the shared **Execution economics** line verbatim; do not invent missing
+ranges. Normal dispatch never enables or inspects tracing.
 
-Before approval, put the `planning-approval-handoff-v1` JSON envelope **inside**
-the final `<proposed_plan>`. Resolve again before dispatch; see [approval handoff](../references/approval-handoff.md).
-Follow its save/inline procedure; writable storage alone is not permission.
+Before approval, put the resolved `planning-approval-handoff-v1` envelope inside
+`<proposed_plan>`; resolve again before dispatch and follow
+[approval handoff](../references/approval-handoff.md). Writable storage alone is
+not permission.
 
 ## Live lifecycle
 
@@ -64,15 +63,14 @@ Use this settled mapping:
 
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
-A declared `batch` dispatches once: call `spawn_agent` a single time with the
-ordered member handoffs, not once per member. Per member in listed order,
-`transition --to ready` then `--to in_progress` mints its attempt identity
-before it runs; the worker commits each member, runs its own acceptance
-command, and returns one `bounded-step-return-v1` per member, stopping the
-batch at a member's stop. The parent unwinds un-run followers with
-`transition --to pending`, remediates a stopped member in its same worktree,
-redispatches followers as singles, and integrates once via the helper's
-`--batch-commit` entries once no member can still progress.
+A `batch` dispatches once: one `spawn_agent` call with ordered member handoffs.
+In listed order, each member gets `transition --to ready` then `--to in_progress`
+to mint its attempt before running. The worker commits each, runs its acceptance
+command, and returns one `bounded-step-return-v1` per member, stopping at the
+first stop. The parent marks unrun followers `transition --to pending`,
+remediates the stopped member in the same worktree, dispatches followers singly,
+and integrates once with helper `--batch-commit` when every member is completed
+or terminal.
 
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
@@ -86,13 +84,11 @@ digest, diagnosis and action, reuse or fresh executor mode, next agent/host,
 target portable tier, and optional paired evidence. It does not expose raw
 history or a host transcript.
 
-Map the ledger-selected target portable tier to this table exactly. Neither the
-parent, this adapter, nor the spawned agent selects or changes it. Honor the
-ledger's reuse or fresh executor assignment when dispatching. If the exact
-mapping is unavailable, return `blocked:model_unavailable` with target
-tier/model/effort and availability evidence; never silently downgrade. An agent
-that discovers a real need for more reasoning returns
-`blocked:needs_higher_tier` with bounded evidence; it does not select its retry.
+Retries use the mapping above. Honor the ledger-selected tier and executor;
+the parent and agent never change them. If unavailable, return
+`blocked:model_unavailable` with target tier/model/effort and availability
+evidence. An agent needing more reasoning returns `blocked:needs_higher_tier`
+with bounded evidence; it never selects its retry.
 
 ## Required handoff
 
@@ -100,9 +96,8 @@ Call the host mechanism with a prompt containing all of the following:
 
 - stable step ID and dependency IDs;
 - run ID, step ID, agent ID, and attempt ID;
-- for v4–v5, the exact resolved binding, including its
-  `planning-capability-binding-v1` schema, plan digest, matching step
-  requirements, and selected executor; a v1–v3 resume carries no binding;
+- v4–v5: exact `planning-capability-binding-v1` (plan digest, step requirements,
+  selected executor); v1–v3 resume: no binding;
 - task and boundary;
 - for v5, the assigned work unit's cohesive outcome and `decomposition` context:
   `shape: single` only, or the required `basis` and `rationale` for
@@ -119,11 +114,10 @@ Call the host mechanism with a prompt containing all of the following:
   unavailable mapped model, unavailable required capability, or a required
   decision outside the handoff.
 
-The agent must receive the v4–v5 binding alongside the plan/step/attempt identity
-and must reject a missing or mismatched binding as
-`blocked:capability_unavailable` without probing for a replacement. The parent
-must identify a v1–v4 assignment as a ledger-confirmed resume; workers do not
-reinterpret it as new v5 work.
+Pair v4–v5 bindings with plan/step/attempt identity; reject a missing or
+mismatched binding as `blocked:capability_unavailable` without probing. The
+parent labels v1–v4 assignments as ledger-confirmed resumes; workers never
+reinterpret them as new v5 work.
 
 For a missing load-bearing input, return `blocked:missing_input`; do not search
 for or invent it. If the work exceeds its stated size, stop and return the

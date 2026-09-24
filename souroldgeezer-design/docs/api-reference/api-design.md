@@ -2,7 +2,7 @@
 
 ## 1. Context
 
-This reference treats contract, security, reliability, and observability as baselines, not options. Every endpoint ships with an OpenAPI 3.1 definition, RFC 9457 `application/problem+json` on every error path, an explicit versioning strategy, RFC 9110 conditional requests (`ETag`, `If-Match`, `If-None-Match`) on mutable resources, and idempotency semantics that match the HTTP verb.
+Contract, security, reliability, and observability are baselines: every endpoint has an OpenAPI 3.1 definition, RFC 9457 problem+json errors, explicit versioning, RFC 9110 conditional requests on mutable resources, and verb-appropriate idempotency.
 
 **Scope.** HTTP APIs, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Node.js hosted/serverless APIs, hosted Next.js API surfaces, Cosmos DB, and Azure Blob Storage. See §8 for out-of-scope items.
 
@@ -27,64 +27,59 @@ This reference treats contract, security, reliability, and observability as base
 Each decision states the choice, the default rule, and when to deviate. Defaults are written on a single bold line so they can be lifted wholesale into code review.
 
 ### 3.1 REST over RPC-over-HTTP
-Resource-oriented URLs and verbs scale better than function-style endpoints. `POST /orders/{id}/cancel` beats `POST /cancelOrder` because the resource model is discoverable from the URL space.
 
 **Default:** REST. URLs name resources; verbs name operations; state transitions are `POST` sub-resources (`/orders/{id}/cancel`), not verbs in paths.
 
 *When to deviate:* genuinely RPC-style internal endpoints with no resource being mutated and a trusted internal caller — document as such.
 
 ### 3.2 Versioning scheme
-URI-path versioning is the most discoverable for public APIs and the easiest to route at the edge.
 
 **Default:** URI path — `/v1/...`, `/v2/...`. New v2 coexists with v1 until v1 is sunset per §5.10.
 
 *When to deviate:* internal APIs where a single client controls both sides and header versioning reduces churn; public APIs needing `api-version=` for URL compatibility. Media-type versioning only when content negotiation is the clearest expression of the contract.
 
 ### 3.3 Authentication model
-End-user calls authenticate with OAuth 2.0 / OIDC through maintained middleware. Service-to-service calls use OAuth 2.0 client credentials or platform managed/workload identity when available. Azure targets use Microsoft Entra ID and managed identities. Function keys and API keys are a narrow fallback for tightly-scoped service-to-service with a single trusted caller.
 
 **Default:** OAuth 2.0 / OIDC for callers, managed/workload identity where available, and no secrets in code. Azure targets default to Entra ID + managed identity.
 
 *When to deviate:* a narrow service-to-service hop where both sides are internal, the caller is a single trusted service, and the overhead of OAuth setup is not justified — use a scoped key sourced from a platform secret manager and rotated. Document the scope and the rotation policy.
 
 ### 3.4 Authorization model
-Authentication proves who. Authorization proves what they can do. Never use "holds a key" as proof of "allowed to perform this operation."
+Authentication establishes identity; authorization governs operations; a key alone does not authorize an operation.
 
 **Default:** scope-based or app-role-based authorization on every endpoint; deny-by-default; explicit route/handler policy metadata. Anonymous runtime-level access is allowed only if the endpoint is genuinely public (e.g., a health probe).
 
 **OAuth 2.0 flows.** Authorization Code+PKCE (interactive user/SPA), Client Credentials (service-to-service), On-Behalf-Of (downstream API preserving user identity), Device Code (CLI/headless). ROPC is **disallowed** for Entra ID.
 
-**Scope vs app role:** scopes (`scp` claim) are delegated permissions tied to the signed-in user ("this user consented to this app acting on their behalf"). App roles (`roles` claim) are application permissions granted to the app identity directly. An endpoint that a user invokes checks `scp`; an endpoint that only other services invoke checks `roles`. An endpoint that accepts both (end-user *and* service caller) checks whichever is present.
+**Scope vs app role:** `scp` carries delegated permissions consented by the signed-in user; `roles` carries application permissions granted to the app identity. User endpoints check `scp`, service endpoints check `roles`, and mixed endpoints check whichever is present.
 
-**Token validation:** use the platform's maintained OAuth / OIDC middleware rather than hand-rolling JWT validation against raw JWKs. Issuer multi-tenancy, issuer-version drift, audience checks, clock skew, and JWK rotation are all easy to get wrong.
+**Token validation:** maintained OAuth/OIDC middleware owns issuer multi-tenancy/version drift, audience, clock skew and JWK rotation; do not hand-roll JWT validation.
 
 *When to deviate:* health / readiness / liveness probes that must be reachable without credentials for platform health checks. Document and rate-limit.
 
 ### 3.5 Error contract
-Errors are data, and the data shape is RFC 9457 `application/problem+json`.
 
 **Default:** every error response that permits content returns `application/problem+json` with `type` (stable URI), `title`, `status`, `detail`, `instance`, plus extension members. Error `type` URIs are stable across versions and listed in the OpenAPI. HTTP methods that prohibit response content, including `HEAD`, still return the appropriate status and headers but no problem body; describe the corresponding problem representation for methods that permit content.
 
-**Type URI organization.** Pick one base URI per API (e.g., `https://api.example.com/errors/`) and hang kebab-case error names off it (`…/errors/invalid-parameter`, `…/errors/rate-limited`, `…/errors/insufficient-scope`, `…/errors/archived-blob`). The URI does not need to resolve to a hosted page at launch, but should resolve to a human-readable description before the API goes public (a registry page per type, or a documented redirect target). Once published, a type URI is forever — treat it like a database primary key, not a message.
+**Type URI organization.** Use one base URI per API (e.g., `https://api.example.com/errors/`) with kebab-case names: `invalid-parameter`, `rate-limited`, `insufficient-scope`, `archived-blob`. Resolution is optional at launch, but should provide a human-readable type page or documented redirect before public release. Published type URIs are immutable identifiers.
 
 *When to deviate:* never. Backward-compatibility with an existing non-conformant shape is a migration path, not a licence to emit new non-problem+json errors.
 
 ### 3.6 Idempotency for mutations
-HTTP verbs carry idempotency guarantees that clients rely on when retrying. PUT and DELETE are idempotent by spec. POST is not, unless the server makes it so.
 
 **Default:** PUT and DELETE use `If-Match: <etag>` for concurrent-write safety → 412 Precondition Failed on mismatch. POST accepts an optional `Idempotency-Key` header; the server stores `(key, result)` in a replay cache with TTL and returns the cached result on retry. Non-idempotent POST (no key, no dedup) is only safe when the client will never retry, which in practice means almost never.
 
 *When to deviate:* a POST endpoint whose effect is inherently idempotent because the payload carries a client-assigned natural key (e.g., an upsert by external ID) can skip the replay cache. Document the natural key and the uniqueness guarantee.
 
 ### 3.7 Pagination
-Cursor pagination survives reshuffling of the source (inserts, deletes, reindexing) and does not require the server to skip rows. Offset pagination is linear in the offset — pathological for large result sets — and unstable under concurrent writes.
+Cursor pagination tolerates concurrent writes; offset cost grows with skips and order can shift.
 
 **Default:** cursor-based. Request: `?limit=N&cursor=<opaque>`. Response: `{ items, nextCursor }`. The cursor is opaque to the client.
 
 *When to deviate:* read-only aggregates with a stable total order (e.g., admin audit log in strict time order, materialised report tables) where offset is simpler and cheap. Document the offset contract and cap the maximum offset.
 
 ### 3.8 Filtering / projection
-Filters and field projections that trust client-supplied names expand the API surface by accident and open authorization holes.
+Client-selected filter or projection names can expose unauthorized data.
 
 **Default:** explicit allowlist. Filter fields and projection fields are enumerated in the OpenAPI; anything outside the list is 400 Bad Request with a problem+json `type` of `invalid-parameter`.
 
@@ -93,49 +88,47 @@ Push authorized filters, projection, stable order, and cursor cap to storage; re
 *When to deviate:* internal admin endpoints with trusted callers where maintaining an allowlist exceeds the value — document the trust boundary.
 
 ### 3.9 Async patterns
-Long-running or deferred work is an explicit design choice with a named pattern; it is never achieved by blocking a synchronous HTTP request past the runtime timeout.
 
 **Default:** 202 Accepted + `Location` + polling for most async work. Webhook delivery when the client is itself a service with a reachable callback endpoint. Workflow orchestration when the process is multi-step, requires fan-out / fan-in, or needs compensation logic.
 
 *When to deviate:* a synchronous endpoint that legitimately takes 2–3 seconds and whose callers are tolerant (interactive admin action, for instance) can stay sync — but not past the loaded runtime extension's request timeout, gateway idle timeout, or configured platform limit.
 
 ### 3.10 Rate limiting & throttling
-Throttling is a first-class response, not an implementation detail. Clients that retry without observing `Retry-After` create amplification loops.
+Without `Retry-After`, client retries amplify throttling.
 
 **Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit` / `RateLimit-Policy` structured-field informational headers (IETF httpapi draft) on successful responses so clients can self-pace. Rate limiting is enforced at the edge (API gateway, reverse proxy, CDN/WAF, Front Door / API Management on Azure) on public endpoints; origin-only limiting is a fallback, not a primary defence.
 
 *When to deviate:* internal service-to-service endpoints with a small, trusted set of callers can skip `RateLimit-*` informational headers, but 429 + `Retry-After` remains mandatory.
 
 ### 3.11 Input validation
-Input is validated at the boundary. Handler bodies should not defend against shapes the OpenAPI rejected.
+OpenAPI rejects invalid shapes at the boundary; handlers need not duplicate schema checks.
 
 **Default:** schema validation (OpenAPI 3.1) on request bodies, query parameters, and headers; semantic validation (ranges, cross-field rules, allowlist values) at boundary; failures return 400 with problem+json `type` of `invalid-parameter` (syntactic) or 422 with `invalid-entity` (semantic-but-syntactically-valid). Oversized payloads return 413 Payload Too Large.
 
 *When to deviate:* never. Internal endpoints get the same discipline.
 
 ### 3.12 Payload size limits
-API runtimes have memory, timeout, and request-size ceilings that a blob payload can hit long before business logic does.
+Runtime memory, timeout, and request-size ceilings constrain payloads.
 
 **Default:** request bodies capped at a documented size (typically 25 MB for JSON / form uploads unless the loaded runtime extension says otherwise). Anything larger uses direct-to-object-store upload via a scoped delegated URL — the API mints the upload grant and the client uploads directly to storage, bypassing the API runtime. Response bodies are bounded or streamed (`Transfer-Encoding: chunked`).
 
 *When to deviate:* genuinely small-payload endpoints may skip streaming infrastructure. Object-store direct upload is the escape hatch for anything that would otherwise exhaust API runtime memory.
 
 ### 3.13 CORS
-`Access-Control-Allow-Origin: *` and credentials do not mix, and wildcard origin on an authenticated endpoint is a confused-deputy invitation.
+Credentials cannot accompany wildcard origin.
 
 **Default:** explicit origin allowlist. Wildcard is allowed only on genuinely public read-only endpoints (e.g., public metadata / status endpoints).
 
 *When to deviate:* never on authenticated endpoints.
 
 ### 3.14 Observability contract
-Observability is wired at worker startup, not per endpoint.
 
 **Default:** structured logger scopes / request context on every handler with named fields; W3C `traceparent` propagation end-to-end (inbound → scope/context → outbound HTTP → data-store SDK); correlation identifier (trace-id) in every error response body; OpenTelemetry / Application Insights / platform telemetry registered at startup. Per-request cost signals (Cosmos `RequestCharge`, storage request count, dependency latency/count) emitted as structured log fields.
 
 *When to deviate:* never. Every endpoint gets the same discipline.
 
 ### 3.15 Hosting and runtime selection
-Hosting is a contract parameter: it fixes startup tolerance, scale-out characteristics, timeout behavior, instance memory, operations model, and failure domains.
+Hosting determines startup, scale-out, timeout, memory, operations, and failure domains.
 
 **Default:** choose the smallest runtime shape that satisfies the API's latency, scale, timeout, payload, and operational requirements; document the decision in IaC or deployment docs. Loaded runtime extensions provide concrete defaults for their platforms.
 

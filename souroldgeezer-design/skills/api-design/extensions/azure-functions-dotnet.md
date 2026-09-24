@@ -2,7 +2,7 @@
 
 Stack-specific additions to the `api-design` skill for Azure Functions .NET. The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Functions-specific detection, hosting, assimilation, and shared safety rules on top without overriding core rules.
 
-> **Isolated worker only.** The in-process .NET Functions model reaches end of support on **2026-11-10** (MSFT Learn: `azure/azure-functions/migrate-dotnet-to-isolated-model`; `azure/azure-functions/functions-dotnet-class-library`). This extension does not author in-process code. Treat an existing in-process package as an observed runtime fact in factual Extract; Review evaluates it in the Review lane, and Build does not extend that model.
+> **Isolated worker only.** In-process support ends **2026-11-10** (MSFT Learn: `azure/azure-functions/migrate-dotnet-to-isolated-model`; `azure/azure-functions/functions-dotnet-class-library`). Do not author in-process code. Extract records it as fact; Review or debt Extract evaluates it; Build does not extend it.
 
 ## Name and detection signals
 
@@ -13,7 +13,7 @@ The skill loads this extension when any of the following match:
 - `[Function("...")]` attribute on a method in `.cs`.
 - `FunctionsApplication.CreateBuilder(args)` OR `ConfigureFunctionsWebApplication()` OR `ConfigureFunctionsWorkerDefaults()` in `Program.cs`.
 - `HttpRequestData` / `HttpResponseData` (built-in model) OR `HttpRequest` / `IActionResult` (ASP.NET Core integration) usage inside a function class.
-- `<PackageReference Include="Microsoft.NET.Sdk.Functions" ... />` — legacy **in-process** model; record this as a factual signal in Extract, apply Review classifications only in Review or explicit debt/compliance Extract, and do not add in-process code in Build.
+- `<PackageReference Include="Microsoft.NET.Sdk.Functions" ... />` — legacy **in-process** signal; Extract records it, Review/debt Extract classifies it, and Build does not add it.
 
 ## Hosting-model surface
 

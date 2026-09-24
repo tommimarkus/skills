@@ -1,8 +1,8 @@
 # Planning Policy Core Workflow
 
-The standing line, once initialized, is authority before new feature/build
-work. Its invariant is a brief host-plan-lane brainstorm, an agreed approach,
-and user approval before implementation.
+Once initialized, the standing line requires a brief brainstorm in the host
+planning lane, an agreed approach and user approval before new feature/build
+implementation.
 
 ## Enforcement
 
@@ -118,8 +118,7 @@ or `indeterminate`; final-verification reserve or `indeterminate`;
 `tracing: off`.
 Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
 
-Use this standing template for adoption (Codex substitutes its available native
-approval/delegation wording):
+Adoption template (Codex uses its native approval/delegation wording):
 
 > `planning-policy: <profile> — before new feature or build work, brainstorm the
 > approach in plan mode and get it approved before implementing. The approved
