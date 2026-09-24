@@ -53,8 +53,21 @@ class ValidationSurfaceTest(unittest.TestCase):
         self.assertNotIn("docs/refactor/fragmentation-execplan.md", release)
 
     def test_default_validation_runs_stop_hook_regression_script(self) -> None:
-        self.assertIn("bash scripts/test-stop-hooks.sh", read("scripts/validate-fragmentation.sh"))
-        self.assertIn("scripts/test-stop-hooks.sh", read("README.md"))
+        fragmentation = read("scripts/validate-fragmentation.sh")
+        self.assertIn("python scripts/check-runtime-metadata-parity.py --check .", fragmentation)
+        self.assertIn("bash scripts/test-stop-hooks.sh", fragmentation)
+        self.assertNotIn("python -m unittest", fragmentation)
+        for guide in ("AGENTS.md", "docs/contributing.md", "CLAUDE.md"):
+            with self.subTest(guide=guide):
+                content = " ".join(read(guide).split())
+                self.assertIn("one full-suite run at closeout", content)
+
+    def test_version_guard_precedes_main_integration_stamp(self) -> None:
+        agents = " ".join(read("AGENTS.md").split())
+        contributing = " ".join(read("docs/contributing.md").split())
+        self.assertIn("run the guard from the candidate branch", agents)
+        self.assertIn("guard` from the candidate branch before integration", contributing)
+        self.assertIn("on `main` after merging", agents)
 
     def test_runtime_guide_keeps_operator_and_optional_smoke_destinations(self) -> None:
         runtime = " ".join(read("docs/runtime-support.md").split())

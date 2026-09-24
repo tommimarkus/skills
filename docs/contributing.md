@@ -16,8 +16,10 @@ for their respective runtimes.
   [evaluation evidence guide](skill-evaluation.md). Keep bundled prompts and
   examples original or safely paraphrased.
 - For a release or a version change, use the
-  [release checklist](release-checklist.md). Feature branches carry content;
-  integration on `main` owns version stamping.
+  [release checklist](release-checklist.md). Feature branches carry content.
+  Run `uv run python scripts/version_stamp.py guard` from the candidate branch
+  before integration; integration on `main` owns computing and applying the
+  version stamp.
 - For a rare operational change, including Dediren adoption or support removal,
   use the [maintenance procedures](maintenance-procedures.md).
 
@@ -93,6 +95,9 @@ uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
 ```
+
+The fragmentation script runs metadata and stop-hook checks. The explicit
+`*_test.py` discovery command owns the one full-suite run at closeout.
 
 Do not use a pipeline or `||` fallback as evidence that a gate passed: capture
 the actual command's exit status or run it unpiped. The host smoke's two safety

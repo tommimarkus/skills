@@ -125,7 +125,7 @@ Each skill’s expected output and boundaries are in [using skills](docs/using-s
 
 ## Validation
 
-Contributors run the documented checks in [contributing](docs/contributing.md), including `scripts/test-stop-hooks.sh` through the fragmentation gate. The
+Contributors run the documented checks in [contributing](docs/contributing.md). The fragmentation gate includes metadata and stop-hook checks; the explicit discovery command runs the full suite once at closeout. The
 [release checklist](docs/release-checklist.md) covers release preparation.
 
 ## Detailed docs

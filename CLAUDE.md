@@ -225,12 +225,12 @@ bash scripts/skill-architecture-report.sh --help
 uv run python scripts/skill_architecture_report.py .
 uv run python scripts/skill_architecture_report.py --format json --strict .
 uv run python -m unittest tests.skill_architecture_report_test
-uv run python -m unittest discover -s tests -p '*_test.py'  # whole suite — NOT bare discover (default test*.py collects 0 here)
+uv run python -m unittest discover -s tests -p '*_test.py'  # one full-suite run at closeout
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
 ```
 
-Run the whole suite with the repo's actual `*_test.py` pattern; bare `unittest discover` uses `test*.py`, silently collects zero, and reads as a pass — treat a run that collects 0 tests as a failed gate.
+Run the whole suite once at closeout with the explicit `*_test.py` pattern. Bare `python -m unittest` is also wired through `test_all.py`, which discovers that same suite; the explicit command makes the scope clear. Treat any test run that collects 0 tests as a failed gate.
 
 When reading a gate's exit status, never let a pipeline stage or a `||` fallback own the reported code — `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's status, not the gate's, and can read green while the gate itself failed. Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and test the bare command, or run the gate unpiped; a status that provably came from a downstream stage is no evidence the gate ran or passed, the same way a 0-collected-tests run is treated as a failed gate.
 

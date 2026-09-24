@@ -455,12 +455,16 @@ authority. Codex and any native Copilot manifest mirror it as strict SemVer
 `YYYY.M.MICRO`.
 
 Feature branches and worktrees carry content only. Do not increment existing
-version cells there. At integration on `main`, run:
+version cells there. Before integration, run the guard from the candidate
+branch; after merging, compute the next stamp on `main`:
 
 ```text
 uv run python scripts/version_stamp.py guard
 uv run python scripts/version_stamp.py compute --plugin <name>
 ```
+
+Run the first command on the candidate branch before integration and the second
+on `main` after merging. Apply the computed cells in the integration commit.
 
 Then apply the padded computed stamp to the Claude manifest and matching README
 cell, and its normalized derivative to the Codex and native Copilot manifests,
@@ -483,6 +487,9 @@ uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
 git diff --check
 ```
+
+The fragmentation script runs metadata and stop-hook checks. The explicit
+`*_test.py` discovery command above owns the one full-suite run at closeout.
 
 Also validate every Codex plugin with the current first-party plugin validator
 when it is available, and run `claude plugin validate --strict` through the
