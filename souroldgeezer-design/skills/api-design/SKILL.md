@@ -47,7 +47,9 @@ Load what applies:
   Build, Extract, and Review.
 - [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
   when existing source, OpenAPI, auth, errors, observability, IaC, data clients,
-  or runtime wiring are in scope.
+  or runtime wiring are in scope. Factual Extract records observed behavior
+  and uncertainty; debt classification and Review-lane rules apply only to
+  Review or an explicitly requested debt/compliance Extract.
 - [references/procedures/architecture-pairing.md](references/procedures/architecture-pairing.md)
   (mechanics canonical in
   [../../docs/design-reference/architecture-pairing-core.md](../../docs/design-reference/architecture-pairing-core.md))

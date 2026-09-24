@@ -37,3 +37,8 @@ anchored core rule plus at most one relevant stack lane.
 - Sources: [EF Core efficient querying](https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying), [ADO.NET SQL connection pooling](https://learn.microsoft.com/en-us/sql/connect/ado-net/sql-server-connection-pooling?view=sql-server-ver17), [HttpClient guidelines](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines), and [DbContext configuration](https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/).
   Handling: URL-only evidence for the lifetime and query-shaping rules; bundled
   cases are original synthetic prompts and do not reproduce source text.
+- Sources: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) and
+  [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html).
+  Handling: primary standards grounding for HEAD's no-content rule, the 401
+  challenge requirement, and the problem-details media type and fields;
+  examples and eval cases remain repo-authored and do not reproduce RFC text.

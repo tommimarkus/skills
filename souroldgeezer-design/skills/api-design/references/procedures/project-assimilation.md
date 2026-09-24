@@ -4,9 +4,11 @@ Load when existing project source, API contracts, auth, errors, observability,
 data clients, storage clients, IaC, or runtime configuration are in scope.
 
 Direction is one-way: assimilate the project to the reference, not the reference
-to the project. Reuse compliant infrastructure, flag non-compliant
-infrastructure as legacy debt, and never extend a broken pattern into added
-code.
+to the project. Build and Review assess the requested change against the
+reference; never extend a broken pattern into added code. Factual Extract
+records observed behavior and declared uncertainty without classifying debt or
+proposing remediation. Classify legacy debt only in Review or an explicitly
+requested debt/compliance Extract; disclose that Extract's Review-lane load.
 
 ## Discovery
 
@@ -35,9 +37,13 @@ Loaded extensions own deeper stack-specific discovery.
 
 ## Reuse Or Replace
 
+Use the table's `Flag or migrate when` column only in Build or Review, or in an
+explicit debt/compliance Extract. Factual Extract records the observed asset
+and configuration without assigning a compliant/debt classification.
+
 | Asset | Reuse when | Flag or migrate when |
 |---|---|---|
-| Auth module | OAuth/OIDC or Entra ID + managed identity; secret references for any secret | Function keys only on public endpoints, custom token parsing, secrets in literals |
+| Auth module | OAuth/OIDC or Entra ID + managed identity; secret references for any secret | Function keys on public endpoints or outside the documented narrow single-caller internal exception, custom token parsing, secrets in literals |
 | Error middleware | Emits `application/problem+json` with stable `type` URIs | Custom shape, English-string matching, stack traces, HTML/string errors |
 | Versioning | One explicit strategy applied uniformly | Mixed strategies, implicit v1, version only in domain name |
 | Pagination | Cursor-based opaque token with capped `limit` | Offset/skip on unbounded collections or no cap |
@@ -47,18 +53,23 @@ Loaded extensions own deeper stack-specific discovery.
 
 ## Conflict Handling
 
-Classify conflicts as `legacy debt` or `would-be-added-code`.
+In Build or Review, classify in-scope conflicts as `legacy debt` or
+`would-be-added-code`. In factual Extract, report what the source shows and any
+declared uncertainty without applying those debt labels.
 
-- Added code must comply with the reference and loaded extensions.
+- In Build, added code must comply with the reference and loaded extensions.
 - Legacy debt is fixed only when migration is in scope.
-- If legacy debt is load-bearing for the requested change, stop and ask for
-  scope.
-- If not migrated, add `Legacy debt:` entries to the footer with file, line,
-  violated rule, and reason it was not changed.
+- If legacy debt is load-bearing for a Build or Review request, stop and ask
+  for scope.
+- In Review or explicit debt/compliance Extract, if debt is not migrated, add
+  `Legacy debt:` entries to the footer with file, line, violated rule, and
+  reason it was not changed. Factual Extract has no debt footer.
 
 ## Footer Block
 
-Use this shape when assimilation applies:
+Use this shape in Build, Review, or explicit debt/compliance Extract when
+assimilation applies. Factual Extract instead reports observed facts and
+evidence gaps without debt judgments:
 
 ```text
 Project assimilation:

@@ -63,7 +63,7 @@ Authentication proves who. Authorization proves what they can do. Never use "hol
 ### 3.5 Error contract
 Errors are data, and the data shape is RFC 9457 `application/problem+json`.
 
-**Default:** every error path returns `application/problem+json` with `type` (stable URI), `title`, `status`, `detail`, `instance`, plus extension members. Error `type` URIs are stable across versions and listed in the OpenAPI.
+**Default:** every error response that permits content returns `application/problem+json` with `type` (stable URI), `title`, `status`, `detail`, `instance`, plus extension members. Error `type` URIs are stable across versions and listed in the OpenAPI. HTTP methods that prohibit response content, including `HEAD`, still return the appropriate status and headers but no problem body; describe the corresponding problem representation for methods that permit content.
 
 **Type URI organization.** Pick one base URI per API (e.g., `https://api.example.com/errors/`) and hang kebab-case error names off it (`…/errors/invalid-parameter`, `…/errors/rate-limited`, `…/errors/insufficient-scope`, `…/errors/archived-blob`). The URI does not need to resolve to a hosted page at launch, but should resolve to a human-readable description before the API goes public (a registry page per type, or a documented redirect target). Once published, a type URI is forever — treat it like a database primary key, not a message.
 
@@ -179,7 +179,7 @@ Modern HTTP and API primitives with one-line purpose, minimal shape, and the key
 - **`PUT`** — replaces; idempotent. Use with `If-Match`.
 - **`PATCH`** — partial update; idempotent only if the patch document is. Use with `If-Match`.
 - **`DELETE`** — removes; idempotent (second DELETE → 404 or 204, both acceptable).
-- **`HEAD`** — GET without body (cache validation, existence checks).
+- **`HEAD`** — GET without response content (cache validation, existence checks). This applies to success and error responses: return the status and applicable headers, with no body. Problem details remain the error representation for methods that permit response content.
 - **`OPTIONS`** — CORS preflight only.
 
 ### Status codes (the ones that recur)
@@ -267,17 +267,29 @@ components:
   schemas:
     Problem:
       type: object
-      required: [type, title, status]
+      required: [type, title, status, detail, instance]
       properties:
-        type:    { type: string, format: uri }
+        type:    { type: string, format: uri-reference }
         title:   { type: string }
         status:  { type: integer }
         detail:  { type: string }
-        instance:{ type: string }
+        instance: { type: string, format: uri-reference }
         traceId: { type: string }
   responses:
     BadRequest:
       description: Invalid request
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Missing or invalid credentials
+      headers:
+        WWW-Authenticate: { schema: { type: string } }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Resource not found or concealed
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
@@ -309,8 +321,8 @@ paths:
       responses:
         "200": { description: OK, headers: { ETag: { schema: { type: string } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { description: Unauthorized }
-        "404": { description: Not found }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "429": { $ref: "#/components/responses/RateLimited" }
 ```
 
@@ -438,7 +450,7 @@ A production-grade receiver:
 - **SAD-G-silent-retry** — try-catch-retry loop that swallows the failure cause; prod issues present as latency bumps with no errors. Fix: observe retries (`retry-attempt` log field), bound them, surface exhaustion as 5xx with detail.
 - **SAD-G-no-correlation-id** — error response with no trace-id / correlation field; support tickets become scavenger hunts. Fix per §3.14.
 - **SAD-G-timer-doing-http-work** — timer trigger that calls outbound HTTP APIs in a loop (effectively an HTTP client); no scale, no observability, no DLQ. Fix: queue-backed processor.
-- **SAD-G-anonymous-private** — anonymous or key-only access on an endpoint that handles non-public data. Fix per §3.3 / §3.4 and the loaded runtime extension.
+- **SAD-G-anonymous-private** — anonymous or key-only access on an endpoint that handles non-public data, except the documented, tightly-scoped single-caller internal service-key case in §3.3. Fix per §3.3 / §3.4 and the loaded runtime extension.
 - **SAD-G-secrets-in-query-strings** — secrets, tokens, or PII placed in query strings; they end up in access logs, referer headers, and browser history. Fix: request body or `Authorization` header.
 - **SAD-G-cors-wildcard-auth** — `Access-Control-Allow-Origin: *` on an authenticated endpoint. Fix per §3.13.
 - **SAD-G-http-request-long-running** — work inside a synchronous HTTP request that regularly exceeds the runtime timeout. Fix per §3.9.
@@ -498,7 +510,10 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Input validated at boundary (OpenAPI schema + semantic) `[static][contract]`.
 - CORS allowlist, not wildcard on authenticated endpoints `[static][iac]`.
 - Rate limiting at the edge (Front Door / API Management) on public endpoints `[iac][security-tool]`.
-- No anonymous or key-only access on non-public endpoints `[static]`.
+- No anonymous access on non-public endpoints. Key-only access is permitted
+  only for a tightly-scoped internal service-to-service hop with one trusted
+  caller when OAuth setup overhead is not justified, and the key is
+  platform-managed, scoped, documented, and rotated `[static]`.
 - No secrets in logs, query strings, or error `detail` fields `[static][runtime]`.
 
 ### Reliability (hard requirements)

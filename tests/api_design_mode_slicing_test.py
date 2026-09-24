@@ -137,6 +137,10 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
             "exclude Build lanes",
             cases["api-design-behavior-extract-explicit-debt"]["required_checks"],
         )
+        factual_legacy = cases["api-design-behavior-extract-functions-legacy-factual"]
+        self.assertIn("load the Azure Functions core only", factual_legacy["required_checks"])
+        self.assertIn("classify the package as legacy debt", factual_legacy["forbidden_behaviors"])
+        self.assertIn("load the Review lane", factual_legacy["forbidden_behaviors"])
 
 
 if __name__ == "__main__":

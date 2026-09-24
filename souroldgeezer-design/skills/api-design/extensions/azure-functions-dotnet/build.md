@@ -82,14 +82,21 @@ HTTP POST trigger reads `Idempotency-Key` header, checks a replay cache, writes 
 HTTP starter with `[DurableClient]` schedules an orchestration via `ScheduleNewOrchestrationInstanceAsync(...)`; returns 202 + `Location: <statusQueryGetUri>` from `CreateCheckStatusResponse(...)`. The orchestrator coordinates activities; activities do the non-deterministic work. Maps §5.4.
 
 ### `afdotnet.PAT-durable-fanout` `[Both]`
-Fan out N activities and wait for all. Cap width (`items.Chunk(50)`) to avoid saturating downstream. Maps §5.4.
+Fan out N activities in bounded batches, preserving input/result order. This
+sample schedules at most 50 activities at once; a failed batch propagates and
+prevents later batches from being scheduled. Maps §5.4.
 ```csharp
 [Function(nameof(ProcessBatch))]
 public static async Task<Result> Run([OrchestrationTrigger] TaskOrchestrationContext ctx)
 {
     var items = ctx.GetInput<List<Item>>()!;
-    var tasks = items.Select(i => ctx.CallActivityAsync<ItemResult>(nameof(ProcessOne), i));
-    var results = await Task.WhenAll(tasks);
+    var results = new List<ItemResult>(items.Count);
+    foreach (var batch in items.Chunk(50))
+    {
+        var tasks = batch.Select(i =>
+            ctx.CallActivityAsync<ItemResult>(nameof(ProcessOne), i));
+        results.AddRange(await Task.WhenAll(tasks));
+    }
     return new Result(results);
 }
 ```
@@ -150,12 +157,12 @@ public async Task<IResult> Run(
 
     var sigHeader = req.Headers["X-Signature"].ToString();
     var eventId   = req.Headers["X-Event-Id"].ToString();
-    if (!TryParseSignature(sigHeader, out var ts, out var sig)) return Results.Unauthorized();
-    if (Math.Abs((DateTimeOffset.UtcNow - ts).TotalSeconds) > 300) return Results.Unauthorized();
+    if (!TryParseSignature(sigHeader, out var ts, out var sig)) return Problem401(req);
+    if (Math.Abs((DateTimeOffset.UtcNow - ts).TotalSeconds) > 300) return Problem401(req);
 
     var secret   = await secrets.GetAsync(source);
     var expected = Hmac($"{ts.ToUnixTimeSeconds()}.{Encoding.UTF8.GetString(body)}", secret);
-    if (!CryptographicOperations.FixedTimeEquals(sig, expected)) return Results.Unauthorized();
+    if (!CryptographicOperations.FixedTimeEquals(sig, expected)) return Problem401(req);
 
     try { await idempotency.CreateItemAsync(new { id = $"{source}:{eventId}", ttl = 86400 }); }
     catch (CosmosException e) when (e.StatusCode == HttpStatusCode.Conflict) { return Results.Accepted(); }
@@ -163,11 +170,23 @@ public async Task<IResult> Run(
     await _queue.SendAsync(new WebhookJob(source, eventId, body));
     return Results.Accepted();
 }
+
+static IResult Problem401(HttpRequest req)
+{
+    req.HttpContext.Response.Headers["WWW-Authenticate"] = "Webhook-HMAC";
+    return Results.Problem(
+        statusCode: StatusCodes.Status401Unauthorized,
+        type: "https://api.example.com/errors/invalid-signature",
+        title: "Unauthorized",
+        detail: "The webhook signature is missing or invalid.",
+        instance: req.Path.ToString());
+}
 ```
 
 Key points:
 - Buffer raw body *before* model binding (signature is over bytes).
 - Constant-time compare via `CryptographicOperations.FixedTimeEquals`.
+- Invalid credentials return `application/problem+json` plus a `WWW-Authenticate` challenge.
 - Dedup via Cosmos unique-key + TTL; `409 Conflict` on the insert is the dedup hit → return the same 202.
 - Cache the Key Vault secret with a short TTL; support previous-secret fallback during rotation.
 - Acknowledge with 202 + enqueue; do not process synchronously. Maps §5.5b.
