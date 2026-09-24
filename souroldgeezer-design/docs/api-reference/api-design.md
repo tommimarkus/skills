@@ -324,6 +324,17 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "429": { $ref: "#/components/responses/RateLimited" }
+    head:
+      operationId: headOrderById
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, headers: { ETag: { schema: { type: string } } } }
+        "401":
+          description: Missing or invalid credentials; no response content for HEAD
+          headers:
+            WWW-Authenticate: { schema: { type: string } }
+        "404": { description: Resource not found or concealed; no response content for HEAD }
 ```
 
 ### `traceparent` propagation sketch
