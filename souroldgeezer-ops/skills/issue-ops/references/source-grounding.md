@@ -31,6 +31,12 @@ external provider documentation.
   <https://docs.gitlab.com/api/issue_links/>,
   <https://docs.gitlab.com/api/merge_requests/>,
   <https://docs.gitlab.com/cli/issue/>, and
-  <https://docs.gitlab.com/user/project/issues/managing_issues/>.
+  <https://docs.gitlab.com/user/project/issues/managing_issues/> and
+  <https://docs.gitlab.com/user/project/issues/crosslinking_issues/>.
   Handling: official source anchors are linked; GitLab mechanics are
-  paraphrased in repo-authored wording.
+  paraphrased in repo-authored wording. Closing patterns in commit messages
+  and merge-request descriptions can close local and cross-project issues on
+  default-branch integration; `Ref` references cross-link without invoking
+  those closing patterns. Direct-main guidance therefore uses non-closing
+  references until post-integration verification and the final lifecycle
+  marker are complete, then requires a live-state reread before explicit close.

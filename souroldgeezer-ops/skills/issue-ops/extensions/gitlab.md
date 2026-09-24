@@ -147,9 +147,18 @@ requires a merge request:
 
 Use `direct-main` only when the user or repository guidance explicitly allows
 it, branch protection permits it, and live state is clean. In direct-main mode,
-prefer one clean commit named `Fix #<issue_iid>: <title>` for defects or
-`Resolve #<issue_iid>: <title>` otherwise when the issue is in the same project.
-Use a full GitLab issue reference for cross-project closure text.
+use a non-closing commit reference such as `Ref #<issue_iid>` for the same
+project or `Ref group/project#<issue_iid>` for another project. A full GitLab
+issue URL is also a non-closing reference. Do not use closing keywords such as
+`Fix`, `Resolve`, or `Close` in commit messages: GitLab can close referenced
+issues when the commit reaches the default branch, including cross-project
+issues.
+
+After integration, run the required post-integration verification, update the
+final lifecycle marker, re-read live issue state and related work, then close
+explicitly only when the existing authorization and closure-safety checks pass.
+If integration already auto-closed the issue, verify and reconcile the observed
+state without claiming that the marker came first.
 
 When an existing related merge request or issue branch clearly owns the issue,
 handoff that target to `pr-ops` instead of assessing MR checks, discussions,
@@ -205,9 +214,10 @@ the delegated `pr-ops` result. Escalate instead of closing when late comments,
 another actor marker, issue state changes, unresolved blockers, or a non-merged
 or escalated MR result alters closure safety.
 
-On completion, update the lifecycle marker before closing the issue. Close with
-the selected provider route only when live issue state is still safe and the
-user, repository guidance, or completed integration strategy authorizes closure.
+On completion, finish required post-integration verification, update the final
+lifecycle marker, and re-read issue state before closing. Close with the
+selected provider route only when live issue state is still safe and the user,
+repository guidance, or completed integration strategy authorizes closure.
 For REST close or reopen operations, use the Issues API update route with
 `state_event=close` or `state_event=reopen`; do not delete issues as a closure
 shortcut.
