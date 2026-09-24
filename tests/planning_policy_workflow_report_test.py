@@ -119,6 +119,11 @@ class WorkflowReportTest(unittest.TestCase):
             self.assertEqual(self.reporter.main(["--manifest", str(manifest), "--output", str(output)]), 0)
             self.assertLessEqual(output.stat().st_size, 16 * 1024)
 
+    def test_maximum_trial_count_still_has_a_bounded_report(self):
+        records = [trial(f"trial-{index}", "baseline" if index % 2 else "candidate", index) for index in range(1, 17)]
+        report = self.report(records)
+        self.assertLessEqual(len(json.dumps(report, sort_keys=True, separators=(",", ":")).encode("utf-8")), 16 * 1024)
+
     def test_rejects_oracle_failure_and_excessive_limits(self):
         oracle_failed = trial("baseline-1", "baseline", 1)
         oracle_failed["execution"]["oracle"] = "failed"

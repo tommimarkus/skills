@@ -184,10 +184,9 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[tuple[st
         "trial_id": trial_id,
         "variant": variant,
         "sequence": trial["sequence"],
-        "conditions": conditions,
-        "limits": limits,
+        "_condition_key": json.dumps(conditions, sort_keys=True, separators=(",", ":")),
         "counts": counts,
-        "sources": sources,
+        "evidence_source_count": len(sources),
         "actors": actor_summaries,
         "execution": {"outcome": outcome, "lifecycle": execution["lifecycle"], "oracle": "passed", "elapsed_seconds": elapsed},
         "usage": {"total_tokens": total if complete_usage else None, "complete": complete_usage},
@@ -195,7 +194,7 @@ def _validate_trial(value: Any, seen_trials: set[str], seen_actors: set[tuple[st
 
 
 def _condition_key(trial: dict[str, Any]) -> str:
-    return json.dumps(trial["conditions"], sort_keys=True, separators=(",", ":"))
+    return str(trial["_condition_key"])
 
 
 def _median(values: list[int]) -> int | float:
@@ -231,6 +230,8 @@ def build_report(manifest: Any) -> dict[str, Any]:
     if not reasons:
         for pair, (baseline, candidate) in enumerate(zip(baselines, candidates), start=1):
             paired_deltas.append({"pair": pair, "baseline_trial_id": baseline["trial_id"], "candidate_trial_id": candidate["trial_id"], "total_tokens_delta": int(candidate["usage"]["total_tokens"]) - int(baseline["usage"]["total_tokens"])})
+    for trial in trials:
+        trial.pop("_condition_key")
     comparison = {"comparable": not reasons, "reasons": reasons, "paired_deltas": paired_deltas}
     return {"schema": REPORT_SCHEMA, "trial_count": len(trials), "trials": trials, "variants": variants, "comparison": comparison, "limits": {"max_trials": MAX_TRIALS, "max_trial_bytes": MAX_RECORD_BYTES, "max_report_bytes": MAX_REPORT_BYTES}}
 
