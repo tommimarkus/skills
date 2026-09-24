@@ -96,8 +96,8 @@ Call the host mechanism with a prompt containing all of the following:
 
 - stable step ID and dependency IDs;
 - run ID, step ID, agent ID, and attempt ID;
-- v4–v5: exact `planning-capability-binding-v1` (plan digest, step requirements,
-  selected executor); v1–v3 resume: no binding;
+- v4–v5: exact resolved binding `planning-capability-binding-v1` (plan digest,
+  step requirements, selected executor); v1–v3 resume: no binding;
 - task and boundary;
 - for v5, the assigned work unit's cohesive outcome and `decomposition` context:
   `shape: single` only, or the required `basis` and `rationale` for

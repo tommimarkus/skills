@@ -564,6 +564,6 @@ route budgets now pass; no threshold changed. The refreshed snapshot lowers
 
 Planning adapter restatements were also condensed without changing its model
 mapping, binding, return, retry or batch contract. Active Claude measures
-6,841/6,850, active Codex 6,938/6,950, and approval handoff 7,986/8,000;
+6,841/6,850, active Codex 6,940/6,950, and approval handoff 7,988/8,000;
 lookup and repeated live-next bounds remain intact. These are deterministic
 content proxies, not provider usage or measured runtime performance.
