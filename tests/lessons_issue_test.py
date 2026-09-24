@@ -90,6 +90,40 @@ class BuildTest(unittest.TestCase):
         out = m.build(trigger="t", summary="", proposed_rule="always X", substrate="prose")
         self.assertEqual(out["title"], "always X")
 
+    def test_rejects_secret_in_title(self):
+        m = _mod()
+        secret = "sk-" + "a" * 24
+        with self.assertRaises(m.LessonIssueError) as raised:
+            m.build(trigger="t", summary=f"title {secret}",
+                    proposed_rule="always X", substrate="policy")
+        self.assertIn("openai-key", str(raised.exception))
+        self.assertNotIn(secret, str(raised.exception))
+
+    def test_rejects_secret_in_body(self):
+        m = _mod()
+        secret = "sk-" + "b" * 24
+        with self.assertRaises(m.LessonIssueError) as raised:
+            m.build(trigger="t", summary="clean title",
+                    proposed_rule=f"rule {secret}", substrate="policy")
+        self.assertIn("openai-key", str(raised.exception))
+        self.assertNotIn(secret, str(raised.exception))
+
+    def test_rejects_secret_in_fallback_title(self):
+        m = _mod()
+        secret = "sk-" + "c" * 24
+        with self.assertRaises(m.LessonIssueError) as raised:
+            m.build(trigger="t", summary="  ",
+                    proposed_rule=f"rule {secret}", substrate="prose")
+        self.assertIn("openai-key", str(raised.exception))
+        self.assertNotIn(secret, str(raised.exception))
+
+    def test_clean_payload_is_returned(self):
+        m = _mod()
+        out = m.build(trigger="self-correction", summary="safe title",
+                      proposed_rule="always X", substrate="policy")
+        self.assertEqual(out["title"], "safe title")
+        self.assertIn("**Proposed rule:** always X", out["body"])
+
 
 class ValidateTest(unittest.TestCase):
     def test_rejects_bad_substrate(self):

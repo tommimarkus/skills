@@ -12,8 +12,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import sys
+from pathlib import Path
+
+_SCANNER_SPEC = importlib.util.spec_from_file_location(
+    "_lessons_secret_scan", Path(__file__).with_name("lessons_secret_scan.py")
+)
+if _SCANNER_SPEC is None or _SCANNER_SPEC.loader is None:
+    raise RuntimeError("lesson secret scanner is unavailable")
+lessons_secret_scan = importlib.util.module_from_spec(_SCANNER_SPEC)
+_SCANNER_SPEC.loader.exec_module(lessons_secret_scan)
 
 SUBSTRATES = ("deterministic", "policy", "prose")
 CANDIDATE_LABEL = "lesson-candidate"
@@ -104,12 +114,21 @@ def build(*, trigger, summary, proposed_rule, substrate) -> dict:
     validate(trigger=trigger, proposed_rule=proposed_rule, substrate=substrate)
     summary = summary if isinstance(summary, str) else ""
     title = summary.strip() or proposed_rule.strip()
+    body = render_body(trigger=trigger, proposed_rule=proposed_rule,
+                       substrate=substrate)
+    try:
+        secret_labels = lessons_secret_scan.scan_text(f"{title}\n{body}")
+    except Exception as exc:
+        raise LessonIssueError("secret scan failed; payload withheld") from exc
+    if secret_labels:
+        raise LessonIssueError(
+            f"secret scan tripped: {', '.join(secret_labels)}; payload withheld"
+        )
     return {
         "title": title,
         "labels": labels(substrate=substrate),
         "fingerprint": fingerprint(substrate=substrate, proposed_rule=proposed_rule),
-        "body": render_body(trigger=trigger, proposed_rule=proposed_rule,
-                            substrate=substrate),
+        "body": body,
     }
 
 

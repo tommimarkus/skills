@@ -47,15 +47,11 @@ corrections, questions, or steering (the user's or your own) that surfaced a can
      --substrate "<deterministic|policy|prose>"
    ```
 
-   It prints one JSON line with `title`, `labels`, `fingerprint`, and `body`.
-7. **Hard secret-scan gate (required — capture is publishing).** Verify the rendered body is clean:
-
-   ```bash
-   printf '%s' "<body>" | python3 scripts/lessons_secret_scan.py
-   ```
-
-   If it prints **any** label (exit 1), do **not** create the issue — report
-   `no lesson (secret-scan tripped: <labels>)` and stop. This is the `DSO-POS-9` control.
+   It prints one JSON line with `title`, `labels`, `fingerprint`, and `body` only
+   after the final title and body pass the secret scanner. A scan hit or scanner
+   failure withholds the payload; on a scan hit, report
+   `no lesson (secret-scan tripped: <labels>)` and stop. Do not create an issue
+   if the command fails. This is the `DSO-POS-9` control.
 8. **Dedup.** Search open candidates for the same fingerprint before creating. Prefer
    GitHub MCP `search_issues`
    (`repo:tommimarkus/skills is:issue is:open label:lesson-candidate "<fingerprint>"`).
