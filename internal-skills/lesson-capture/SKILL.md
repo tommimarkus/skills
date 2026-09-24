@@ -51,12 +51,14 @@ corrections, questions, or steering (the user's or your own) that surfaced a can
    after the final title and body pass the secret scanner. A scan hit or scanner
    failure withholds the payload; on a scan hit, report
    `no lesson (secret-scan tripped: <labels>)` and stop. Do not create an issue
-   if the command fails. This is the `DSO-POS-9` control.
-8. **Dedup.** Search open candidates for the same fingerprint before creating. Prefer
+   if the command fails. After changing any input, rerun this build command so
+   the final title and body are scanned again. Use its emitted payload without
+   manual edits. This is the `DSO-POS-9` control.
+7. **Dedup.** Search open candidates for the same fingerprint before creating. Prefer
    GitHub MCP `search_issues`
    (`repo:tommimarkus/skills is:issue is:open label:lesson-candidate "<fingerprint>"`).
    If a match exists, report `duplicate of #<n>` and stop.
-9. **Ensure labels + create.** Create the issue with title=`title`, body=`body`, and the
+8. **Ensure labels + create.** Create the issue with title=`title`, body=`body`, and the
    two labels from `labels` (`lesson-candidate` + `lesson:<substrate>`). Prefer GitHub
    MCP `issue_write` (create); create any missing label first with `label_write`. Fall
    back to `gh issue create` **only** if no GitHub MCP server is connected.
