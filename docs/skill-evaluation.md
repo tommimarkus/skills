@@ -139,6 +139,15 @@ visible. Record order in the report preserves validated trial sequence, and
 shared revisions and model mappings are stored once. The reporter bounds its
 input read before JSON parsing and rejects oversized output without writing it.
 
+## Complex planning coverage
+
+Planning-policy's [complex trial procedure](../souroldgeezer-policy/skills/planning-policy/references/evals/complex-trial.md)
+adds shared decisions, dependent work, a fork and join, and restart evidence.
+Its offline grader separates immutable task-oracle results, ledger lifecycle,
+dependency coverage, and observer-supplied worker behavior. Local integration
+tests use deterministic executors; they are not live planning-quality or
+token-economy measurements.
+
 ## Source Grounding
 
 Path: `references/source-grounding.md`.

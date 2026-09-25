@@ -10,6 +10,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from tests.planning_policy_v4_capability_test import binding, plan
@@ -91,6 +92,22 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
                            "summary": "focused check passed"},
             "blockers": [], "notes": [], "unstarted_remainder": [], "commit_hash": "",
         }
+
+    def test_retained_v5_run_resumes_after_new_admission_rejects_its_old_shape(self):
+        self.plan["leaves"][0]["acceptance_command"] = "true"
+        self.plan_file.write_text(json.dumps(self.plan), encoding="utf-8")
+        self.binding_file.write_text(json.dumps(binding(self.plan)), encoding="utf-8")
+        validator = ledger.plan_validator()
+        self.assertFalse(validator(self.plan)["approval_ready"])
+        # Model a run admitted by the previous release, then resume normally.
+        def prior_admission(plan, capability_binding=None, **kwargs):
+            return validator(plan, capability_binding, admission=False)
+        with patch.object(ledger, "plan_validator", return_value=prior_admission):
+            run_id = self.started_run()
+        packet = self.handoff(run_id)
+        self.assertEqual("true", packet["leaf"]["acceptance_command"])
+        result = ledger.load_predecessor_run(self.root / "planning-policy/ledgers", "handoff-plan", run_id)
+        self.assertEqual(run_id, result[0]["run_id"])
 
     def test_handoff_contains_exact_worker_context_and_is_read_only(self) -> None:
         run_id = self.started_run()
@@ -240,6 +257,8 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
         self.assertIn("dependentRequired", schema["properties"]["acceptance"])
         self.assertEqual(ledger.MAX_NOTE_MESSAGE, schema["properties"]["notes"]["items"]["properties"]["message"]["maxLength"])
         self.assertEqual(ledger.COMMIT.pattern[:-1] + "?$", schema["properties"]["commit_hash"]["pattern"])
+        # Accepted commands have no separate character cap; the whole return is bounded.
+        self.assertNotIn("maxLength", schema["properties"]["acceptance"]["properties"]["command"])
 
     def test_malformed_files_and_events_fail_without_tracebacks(self) -> None:
         run_id = self.started_run()
@@ -266,6 +285,16 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
                                  "--return-file", str(return_file))
         self.assertNotEqual(0, code, result)
         self.assertEqual("invalid changed_paths", result["error"])
+
+        for field, malformed_value in (("status", []), ("notes", [{"type": {}, "message": "bad"}])):
+            with self.subTest(field=field):
+                malformed = self.completed_return(packet)
+                malformed[field] = malformed_value
+                return_file.write_text(json.dumps(malformed), encoding="utf-8")
+                code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
+                                         "--return-file", str(return_file))
+                self.assertNotEqual(0, code, result)
+                self.assertNotIn("Traceback", result["error"])
 
         handoff_file.write_bytes(b" " * (ledger.MAX_WORKER_HANDOFF_RAW + 1))
         code, result = self.call("validate-return", "--handoff-file", str(handoff_file),

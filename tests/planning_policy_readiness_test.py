@@ -70,6 +70,12 @@ class ReadinessAdmissionTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertTrue(any("safe repository-relative" in error for error in result["errors"]))
 
+        for path in (17, {}, "", "/absolute", "a/../b", "a\\b", "x" * 241):
+            with self.subTest(path=path):
+                self.assertFalse(MODULE.validate(plan(leaf("one", "u1", reads=[path])))["valid"])
+        read_only = leaf("one", "u1", reads=["x" * 240], writes=[])
+        self.assertTrue(MODULE.validate(plan(read_only))["valid"])
+
     def test_rejects_placeholder_decisions_and_noop_acceptance(self):
         subject = leaf("one", "u1")
         subject["settled_decisions"] = {"shape": "TBD"}
@@ -78,6 +84,10 @@ class ReadinessAdmissionTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertTrue(any("placeholder" in error for error in result["errors"]))
         self.assertTrue(any("no-op" in error for error in result["errors"]))
+
+        shared = plan(leaf("one", "u1"))
+        shared["approved_decisions"] = ["TBD"]
+        self.assertFalse(MODULE.validate(shared)["valid"])
 
     def test_requires_order_for_overlapping_write_coverage_and_shared_worktrees(self):
         first = leaf("one", "u1", writes=["src/package"])
@@ -95,6 +105,12 @@ class ReadinessAdmissionTest(unittest.TestCase):
         result = MODULE.validate(plan(first, second))
         self.assertFalse(result["valid"])
         self.assertTrue(any("shared worktree_owner" in error for error in result["errors"]))
+
+        middle = leaf("middle", "u3", dependencies=["one"])
+        second["dependencies"] = ["middle"]
+        self.assertTrue(MODULE.validate(plan(first, middle, second))["valid"])
+        shared_reads = plan(leaf("a", "ua"), leaf("b", "ub"))
+        self.assertTrue(MODULE.validate(shared_reads)["valid"])
 
     def test_conservative_globs_and_retained_admission_mode(self):
         first = leaf("one", "u1", writes=["src/*.py"])

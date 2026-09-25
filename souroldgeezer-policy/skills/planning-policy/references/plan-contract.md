@@ -1,14 +1,12 @@
 # Shared Plan Contract
 
-Runtime-neutral executable-plan fields; host adapters add syntax only.
+Runtime-neutral fields; adapters add host syntax.
 
 ## Plan JSON
 
 Start every new plan from the canonical
 [plan-v5.json](templates/plan-v5.json) scaffold and fill
-its blank load-bearing values before approval. The first key is
-`contract_version`. Do not use `version`; the validator rejects that mistaken
-alias even when `contract_version` is also present.
+its blank load-bearing values before approval. Use `contract_version` first; `version` is always invalid.
 
 Version 5 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
@@ -82,23 +80,15 @@ no tier invents input.
 
 ## New-plan admission
 
-New v5 approval and initialization validate every read/write entry as a unique,
-bounded, safe repository-relative string. Empty writes remain valid for read-only
-work; both input and output sets cannot be empty. Standalone placeholder
-decisions and known no-op acceptance commands (`true`, `:`, `exit 0`) are
-rejected. The parent still reviews whether the declared decisions settle the
-task and whether acceptance proves its outcome; these checks do not infer that.
-
-Across every work unit, leaves sharing a worktree owner or overlapping write
-coverage need dependency or batch ordering. Transitive dependencies count.
-Exact paths own their descendants; uncertain glob overlap is conservatively
-tested using the complete literal prefix before the first glob segment. Narrow
-the paths or sequence the work when independence cannot be established. Shared
-reads alone do not prevent parallel work.
-
-Existing ledger runs retain their original admission behavior after stored
-identity and plan-digest verification. This internal resumption path does not
-relax structural validation or offer a bypass for approving a new plan.
+New v5 approval/init requires unique safe repository-relative read/write
+strings; at least one set is nonempty. Reject standalone placeholder decisions
+and no-op acceptance (`true`, `:`, `exit 0`). Shared owners or overlapping writes
+across any work units require dependency/batch ordering, including transitive
+dependencies. Paths own descendants; glob overlap uses the literal prefix before
+the first glob segment. Narrow or sequence uncertain writes; shared reads are
+allowed. The parent still reviews semantic completeness and acceptance coverage.
+Retained runs preserve prior admission after identity/digest checks; structural
+validation remains mandatory, with no new-approval bypass.
 
 ## Advisory execution cost
 
@@ -174,9 +164,6 @@ Output includes validity/readiness, `contract_version`, `approval_ready`, `dispa
 failure, 2 usage/JSON failure. Only a v5 plan with its exact capability binding dispatches.
 
 `validate_plan_contract.py` remains read-only; approval handoff owns authorized saves.
-
-For complete worker transport and local return validation, follow
-[worker handoff](worker-handoff.md).
 
 ## Parent ledger helper
 

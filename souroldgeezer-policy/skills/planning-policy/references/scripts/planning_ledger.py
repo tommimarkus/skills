@@ -1063,7 +1063,7 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
         checkpoint.get("plan_hash", "")
     ):
         raise Error("unresolvable predecessor plan")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint), admission=False)
     ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
     if (
         not plan_result.get(ready_key)
@@ -1239,7 +1239,7 @@ def load2(args):
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data))
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
     ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
     if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
         raise Error("blocked:plan_tampered")
@@ -2148,7 +2148,7 @@ def valid_return(value, data, step, leaf):
         or value["agent_id"] != step["agent_id"]
     ):
         raise Error("stale or foreign return identity")
-    if value["status"] not in RETURN_STATUSES:
+    if not isinstance(value["status"], str) or value["status"] not in RETURN_STATUSES:
         raise Error("invalid return status")
     paths = value["changed_paths"]
     if (
@@ -2212,6 +2212,7 @@ def valid_return(value, data, step, leaf):
         or any(
             not isinstance(x, dict)
             or set(x) != {"type", "message"}
+            or not isinstance(x["type"], str)
             or x["type"] not in NOTE_TYPES
             or not isinstance(x["message"], str)
             or len(x["message"]) > MAX_NOTE_MESSAGE
@@ -2244,7 +2245,7 @@ def valid_return(value, data, step, leaf):
 
 
 def bounded_return_schema():
-    """Return the complete JSON Schema for the bounded worker return contract."""
+    """Return structural output guidance; valid_return owns semantic checks."""
     evidence = {
         "evidence_path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
         "sha256": {"type": "string", "pattern": SHA.pattern},
@@ -2272,7 +2273,7 @@ def bounded_return_schema():
                 "required": ["command", "exit_code", "summary"],
                 "dependentRequired": {"evidence_path": ["sha256"], "sha256": ["evidence_path"]},
                 "properties": {
-                    "command": {"type": "string", "minLength": 1, "maxLength": 480},
+                    "command": {"type": "string", "minLength": 1},
                     "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
                     "summary": {"type": "string", "maxLength": MAX_ACCEPTANCE_SUMMARY},
                     **evidence,
@@ -2312,7 +2313,7 @@ def bounded_return_schema():
 
 
 WORKER_HANDOFF_FIELDS = {
-    "schema", "handoff_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "agent_id",
+    "schema", "contract_version", "handoff_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "agent_id",
     "attempt_id", "plan_context", "leaf", "work_unit", "worktree", "portable_tier", "host",
     "executor", "capability_binding", "retry_remediation", "return_schema",
 }
@@ -2399,6 +2400,7 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None):
         raise Error("unexpected retry remediation artifact")
     value = {
         "schema": "planning-worker-handoff-v1",
+        "contract_version": FORWARD_SCHEMA,
         "handoff_sha256": "",
         "plan_id": plan_id,
         "run_id": run_id,
@@ -2426,7 +2428,8 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None):
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if set(value) != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1":
+    if (set(value) != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+            or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
         raise Error("invalid worker handoff sha256")
@@ -2863,7 +2866,7 @@ def classify_v2(plan_id, directory, current):
         checkpoint.get("plan_hash", "")
     ):
         raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint))
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint), admission=False)
     ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
     if (
         not plan_result.get(ready_key)

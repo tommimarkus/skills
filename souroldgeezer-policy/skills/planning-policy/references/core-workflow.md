@@ -14,30 +14,21 @@ implementation.
 3. State a one- or two-sentence approach with a real tradeoff/pick and execution
    shape: decomposable steps delegate by default; the parent retains decomposition,
    integration, and final verification. Before approval, invoke the owning design skill for a material unresolved domain-design choice.
-4. Groom after convergence by deriving outcomes before leaves. The parent then
-   enumerates shared call sites, guidance, reads/writes, and scoped acceptance
-   once, and settles material domain choices with their owner. Required unknowns
-   are missing input; bounded implementation judgment belongs to the worker.
+4. Groom outcomes before leaves. Enumerate shared call sites, guidance,
+   reads/writes, scoped acceptance, and bounded worker judgment once; settle
+   material choices with their owner. Required unknowns remain missing input.
    Default to one leaf per outcome; merge file-per-leaf, code-vs-test,
-   preparatory-helper, tier-gaming, and plan-size-gaming splits. A v5 work unit
-   records `cohesive_outcome` and `decomposition`: `single`, `parallel` with
-   `basis: parallel_independence` and rationale, or `checkpointed` with
-   `basis: failure_isolation` or `rollback_boundary` and rationale. Intermediate
-   work uses leaf acceptance; batch never justifies a split. Name reads/writes
-   and settled decisions. Derive small, medium, or large from bounded reads,
-   scoped acceptance, and worker judgment; large needs a concrete
-   irreducible reason. Two checks do not by themselves require two leaves.
-   Scope each leaf's
-   `acceptance_command` to its write set; a whole-suite run belongs to the
-   parent's final verification. A fresh
-   agent must finish from the handoff. Review the acceptance command for actual
-   task coverage and carry relevant shared approved decisions into the worker
-   context; structural validation does not establish semantic completeness. Start new plan JSON from the canonical
-   [plan-v5.json](templates/plan-v5.json) scaffold; `contract_version` stays
-   first. Every leaf declares exact `capability_requirements`: baseline
-   `plan-step-base-v1` plus bounded additional requirements. Load [plan contract](plan-contract.md),
-   validate using its Claude `${CLAUDE_SKILL_DIR}` or Codex `<skill-dir>` form,
-   and re-cut failed contracts. Every leaf includes `missing_load_bearing_information`.
+   preparatory-helper, tier-gaming, and plan-size-gaming splits. Record each
+   unit's `cohesive_outcome` and permitted `decomposition` evidence; neither
+   batching nor multiple checks justifies splitting. Derive size from bounded
+   reads, acceptance and judgment; large requires an irreducible reason.
+   A fresh worker must finish from its handoff, including shared decisions.
+   Review acceptance for actual task coverage; structural validation cannot.
+   Leaf acceptance covers its write set; whole-suite verification stays with
+   the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
+   [plan contract](plan-contract.md) for fields, capabilities and the Claude
+   `${CLAUDE_SKILL_DIR}` / Codex `<skill-dir>` validator commands. Re-cut failed
+   contracts; every leaf includes `missing_load_bearing_information`.
 5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
    contract. Leave unavailable token ranges unknown; never infer them from a
    size, tier, model name, or stable-proxy count. Contract validation calculates
@@ -66,12 +57,8 @@ audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
 otherwise use the owning design skill.
 
-Portable tier is selected once per outcome leaf: `mechanical`, `standard`,
-`analytical`, or `deep`; no per-leaf runtime tuning. Analytical/deep names its
-irreducible risk; a leaf with no open implementation choice is `mechanical`. Stable work units are weighted once (`small=1`, `medium=2`,
-`large=3`); medium-ready units contain only mechanical/standard leaves and
-need ratio `>=0.60`, unless the recorded user-approved analytical-heavy
-exception applies. The adapter maps tiers or returns its blocker.
+Select each leaf's portable tier and weighted readiness under the plan contract;
+the adapter maps tiers or returns its blocker. No per-leaf runtime tuning.
 
 Final verification runs once, at closeout, never per integration cycle;
 per-integration checks are the helper's ancestry and fast-forward proofs, not
@@ -100,9 +87,8 @@ For two or more delegated steps, only the parent creates
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
 evidence paths, and returns, never raw logs. Successful leaves close
 `completed` → `integrated` → `cleaned`; only then create dependent worktrees
-from the current parent tip. Generate ledger-backed assignments through
-[worker handoff](worker-handoff.md), including shared plan decisions and the
-return schema, and preflight each worker return before ingestion. Use the ledger's Git-policy helper, not a routine
+from the current parent tip. Follow [worker handoff](worker-handoff.md) for
+generated assignments and return preflight. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
 For a new version-5 run, the parent uses the ledger's

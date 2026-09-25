@@ -290,6 +290,16 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             for field in ("contract_version", "plan_sha256", "capability_binding", "attempt_id", "cohesive_outcome", "decomposition"):
                 self.assertIn(field, prompt)
 
+    def test_forward_prompt_preserves_shared_decisions_and_uses_ledger_schema(self):
+        case = next(case for case in self.forward if case["id"] == "standard-implementation")
+        for harness in ("codex", "claude"):
+            prompt = self.runner.build_prompt(case, harness, Path("/synthetic/fixture"))
+            self.assertIn('"plan_context"', prompt)
+            self.assertIn('"approved_decisions"', prompt)
+            self.assertIn("Run only the named synthetic fixture and its acceptance check.", prompt)
+            self.assertIn('"planning-worker-handoff-v1"', prompt)
+        self.assertEqual(self.runner.ledger.bounded_return_schema(), self.runner.FINAL_SCHEMA)
+
     def test_synthetic_assignments_are_dispatch_ready_and_only_omit_declared_input(self):
         for case in self.forward:
             assignment = self.runner.handoff_for(case, "codex", 1)

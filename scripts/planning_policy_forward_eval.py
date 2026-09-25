@@ -48,23 +48,7 @@ def load_contract(name: str, path: Path) -> Any:
 plan_contract = load_contract("planning_policy_forward_plan_contract", CONTRACT_SCRIPT)
 ledger = load_contract("planning_policy_forward_ledger", LEDGER_SCRIPT)
 
-EVIDENCE_PROPERTIES = {"evidence_path": {"type": "string", "maxLength": ledger.MAX_PATH}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
-FINAL_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["schema", "step_id", "agent_id", "attempt_id", "status", "changed_paths", "acceptance", "blockers", "notes", "commit_hash", "unstarted_remainder"],
-    "properties": {
-        "schema": {"const": "bounded-step-return-v1"},
-        "step_id": {"type": "string"}, "agent_id": {"type": "string"}, "attempt_id": {"type": "string"},
-        "status": {"type": "string", "enum": sorted(ledger.RETURN_STATUSES)},
-        "changed_paths": {"type": "array", "maxItems": ledger.MAX_CHANGED_PATHS, "uniqueItems": True, "items": {"type": "string", "maxLength": ledger.MAX_PATH}},
-        "acceptance": {"type": "object", "additionalProperties": False, "required": ["command", "exit_code", "summary"], "properties": {"command": {"type": "string"}, "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255}, "summary": {"type": "string", "maxLength": ledger.MAX_ACCEPTANCE_SUMMARY}, **EVIDENCE_PROPERTIES}},
-        "blockers": {"type": "array", "maxItems": ledger.MAX_BLOCKERS, "items": {"type": "object", "additionalProperties": False, "required": ["code", "summary"], "properties": {"code": {"type": "string", "minLength": 1, "maxLength": ledger.MAX_BLOCKER_CODE}, "summary": {"type": "string", "maxLength": ledger.MAX_BLOCKER_SUMMARY}, **EVIDENCE_PROPERTIES}}},
-        "notes": {"type": "array", "maxItems": ledger.MAX_NOTES, "items": {"type": "object", "additionalProperties": False, "required": ["type", "message"], "properties": {"type": {"type": "string", "enum": sorted(ledger.NOTE_TYPES)}, "message": {"type": "string", "maxLength": ledger.MAX_NOTE_MESSAGE}}}},
-        "commit_hash": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})?$"},
-        "unstarted_remainder": {"type": "array", "maxItems": ledger.MAX_REMAINDER, "items": {"type": "string", "minLength": 1, "maxLength": ledger.MAX_REMAINDER_ITEM}},
-    },
-}
+FINAL_SCHEMA = ledger.bounded_return_schema()
 
 
 def bound_value(value: Any) -> Any:
@@ -132,12 +116,32 @@ def case_for_attempt(case: dict[str, Any], attempt: int) -> dict[str, Any]:
 def build_prompt(case: dict[str, Any], harness: str, workdir: Path, attempt: int = 1) -> str:
     adapter = CODEX_ADAPTER.read_text(encoding="utf-8") if harness == "codex" else ""
     assignment = handoff_for(case, harness, attempt)
-    # The parent validates the full plan; workers receive its exact digest and
-    # assigned leaf, so a deliberately omitted field stays genuinely absent.
-    assignment.pop("plan")
-    contract = json.dumps(assignment, sort_keys=True, separators=(",", ":"))
+    binding = assignment["capability_binding"]
+    remediation = assignment.get("retry_remediation")
+    step = {
+        "id": assignment["step_id"], "status": "in_progress",
+        "agent_id": assignment["agent_id"], "attempt_id": assignment["attempt_id"],
+        "assignment": {"worktree": str(workdir.resolve())},
+        "current_assignment": {"agent_id": assignment["agent_id"], "harness": harness,
+                               "model_or_alias": assignment["executor"]},
+        "current_tier": assignment["portable_tier"],
+        "capability_binding": binding, "capability_binding_sha256": ledger.digest(binding),
+        "retry_remediation_path": "retry.json" if remediation else "",
+        "retry_remediation_sha256": ledger.digest(remediation) if remediation else "",
+    }
+    packet = ledger.build_worker_handoff(assignment["plan"], step, case["id"],
+                                         assignment["run_id"], remediation)
+    # Deliberately incomplete negative cases still omit the assigned input;
+    # the missing field must not leak through a full-plan copy.
+    for field in case.get("intentionally_missing_input", []):
+        packet["leaf"].pop(field, None)
+    packet["handoff_sha256"] = ledger.worker_handoff_digest(packet)
+    contract = json.dumps(packet, sort_keys=True, separators=(",", ":"))
     prefix = f"Shipped Codex planning-policy adapter follows:\n{adapter}\n\n" if adapter else ""
-    return f"{prefix}Execute this complete approved planning-policy handoff in the isolated synthetic repository {workdir}:\n{contract}\n\n{case['prompt']} Work only in that repository. Do not use network or alter files outside it. Return only the required bounded JSON object."
+    instruction = case.get("prompt", "Complete the assigned task and its acceptance check.")
+    return (f"{prefix}Execute this approved planning-policy packet in the isolated synthetic repository {workdir}:\n"
+            f"{contract}\n\n{instruction} Work only in that repository. Do not use network or alter files outside it. "
+            "Return only the required bounded JSON object.")
 
 
 def bounded_return(value: Any, assignment: dict[str, Any]) -> dict[str, Any] | None:

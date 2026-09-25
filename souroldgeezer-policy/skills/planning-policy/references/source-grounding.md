@@ -1,5 +1,22 @@
 # Planning Policy Source Grounding
 
+## 2026-09-25 executable-assignment review
+
+A local review found that v5 admission accepted placeholder decisions, empty
+input/output sets, no-op acceptance and unordered cross-unit write overlap.
+It also found that the forward runner discarded shared approved decisions and
+that the fixed pilot's eventual task success hid malformed native returns.
+The repair adds new-plan checks while preserving retained runs, generates a
+bounded packet from stored assignments, and preflights returns with the existing
+ledger validator. The parent still judges semantic completeness and live identity.
+
+The complex catalog fixture and external oracle are original synthetic material.
+Its local regression drives a fork/join and fresh CLI processes through the real
+lifecycle; the on-demand procedure separately describes future live observation.
+No external source or transcript is bundled. Source: this repository's reviewed
+validator, runner and 2026-09-25 pilot entry in `evals/model-pressure.md`;
+type: local review; bundling: idea-only. No new model-quality claim is made.
+
 ## 2026-09-24 worker handoff and forward-evaluation repair
 
 The forward evaluator's four-field host output was older than the ledger's

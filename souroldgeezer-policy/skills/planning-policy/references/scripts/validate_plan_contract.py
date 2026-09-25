@@ -875,6 +875,8 @@ def validate(
     else:
         contract_version = None
         errors.append("contract_version must be 2, 3, 4, or 5 when specified")
+    if contract_version == 5 and admission and has_placeholder_decision(plan.get("approved_decisions")):
+        errors.append("approved_decisions cannot contain a standalone placeholder")
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:

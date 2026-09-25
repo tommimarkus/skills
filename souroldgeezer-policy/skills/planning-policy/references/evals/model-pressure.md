@@ -85,6 +85,10 @@ repository verification but no additional live trial. Claude remains unverified.
 
 ## Narrow forward cases
 
+Dependency and restart coverage now has a separate [complex trial](complex-trial.md).
+The local test exercises real ledger/Git seams with deterministic executors.
+No additional live trial has been run; the pilot result above remains unchanged.
+
 `forward-cases.jsonl` is an opt-in, live, fresh-context comparison. It does not
 run in unit tests and stores only bounded result summaries. Each harness receives
 the same copied synthetic repository, prompt, expected return shape, and
