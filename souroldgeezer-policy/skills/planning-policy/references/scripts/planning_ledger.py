@@ -23,6 +23,8 @@ from pathlib import Path
 MAX_CHECKPOINT = 64 * 1024
 MAX_LEGACY_CHECKPOINT = 16 * 1024
 MAX_RETURN = 8 * 1024
+MAX_WORKER_HANDOFF = 32 * 1024
+MAX_WORKER_HANDOFF_RAW = MAX_WORKER_HANDOFF + 1024
 MAX_REMEDIATION = 4 * 1024
 MAX_SERIES_HANDOFF = 8 * 1024
 MAX_USAGE = 4 * 1024
@@ -2152,6 +2154,7 @@ def valid_return(value, data, step, leaf):
     if (
         not isinstance(paths, list)
         or len(paths) > MAX_CHANGED_PATHS
+        or any(not isinstance(path, str) for path in paths)
         or len(set(paths)) != len(paths)
     ):
         raise Error("invalid changed_paths")
@@ -2238,6 +2241,298 @@ def valid_return(value, data, step, leaf):
     if value["status"] == "oversized" and not rem:
         raise Error("oversized return requires unstarted_remainder")
     return value
+
+
+def bounded_return_schema():
+    """Return the complete JSON Schema for the bounded worker return contract."""
+    evidence = {
+        "evidence_path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
+        "sha256": {"type": "string", "pattern": SHA.pattern},
+    }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "schema", "step_id", "attempt_id", "agent_id", "status", "changed_paths",
+            "acceptance", "blockers", "notes", "unstarted_remainder", "commit_hash",
+        ],
+        "properties": {
+            "schema": {"const": "bounded-step-return-v1"},
+            "step_id": {"type": "string", "pattern": ID.pattern},
+            "attempt_id": {"type": "string", "format": "uuid"},
+            "agent_id": {"type": "string", "minLength": 1, "maxLength": 128},
+            "status": {"type": "string", "enum": sorted(RETURN_STATUSES)},
+            "changed_paths": {
+                "type": "array", "maxItems": MAX_CHANGED_PATHS, "uniqueItems": True,
+                "items": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
+            },
+            "acceptance": {
+                "type": "object", "additionalProperties": False,
+                "required": ["command", "exit_code", "summary"],
+                "dependentRequired": {"evidence_path": ["sha256"], "sha256": ["evidence_path"]},
+                "properties": {
+                    "command": {"type": "string", "minLength": 1, "maxLength": 480},
+                    "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                    "summary": {"type": "string", "maxLength": MAX_ACCEPTANCE_SUMMARY},
+                    **evidence,
+                },
+            },
+            "blockers": {
+                "type": "array", "maxItems": MAX_BLOCKERS,
+                "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["code", "summary"],
+                    "dependentRequired": {"evidence_path": ["sha256"], "sha256": ["evidence_path"]},
+                    "properties": {
+                        "code": {"type": "string", "minLength": 1, "maxLength": MAX_BLOCKER_CODE},
+                        "summary": {"type": "string", "maxLength": MAX_BLOCKER_SUMMARY},
+                        **evidence,
+                    },
+                },
+            },
+            "notes": {
+                "type": "array", "maxItems": MAX_NOTES,
+                "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["type", "message"],
+                    "properties": {
+                        "type": {"type": "string", "enum": sorted(NOTE_TYPES)},
+                        "message": {"type": "string", "maxLength": MAX_NOTE_MESSAGE},
+                    },
+                },
+            },
+            "unstarted_remainder": {
+                "type": "array", "maxItems": MAX_REMAINDER,
+                "items": {"type": "string", "minLength": 1, "maxLength": MAX_REMAINDER_ITEM},
+            },
+            "commit_hash": {"type": "string", "pattern": COMMIT.pattern[:-1] + "?$"},
+        },
+    }
+
+
+WORKER_HANDOFF_FIELDS = {
+    "schema", "handoff_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "agent_id",
+    "attempt_id", "plan_context", "leaf", "work_unit", "worktree", "portable_tier", "host",
+    "executor", "capability_binding", "retry_remediation", "return_schema",
+}
+
+
+def worker_handoff_digest(value):
+    return digest({key: item for key, item in value.items() if key != "handoff_sha256"})
+
+
+def worker_handoff_context(plan):
+    if not isinstance(plan, dict):
+        raise Error("invalid worker handoff plan context")
+    context = {
+        "objective": plan.get("objective"),
+        "scope_summary": plan.get("scope_summary"),
+        "approved_decisions": plan.get("approved_decisions"),
+    }
+    if (
+        not isinstance(context["objective"], str)
+        or not 1 <= len(context["objective"]) <= 240
+        or not isinstance(context["scope_summary"], str)
+        or not 1 <= len(context["scope_summary"]) <= 480
+        or not isinstance(context["approved_decisions"], list)
+        or not 1 <= len(context["approved_decisions"]) <= 8
+        or any(not isinstance(item, str) or not 1 <= len(item) <= 240 for item in context["approved_decisions"])
+    ):
+        raise Error("invalid worker handoff plan context")
+    return context
+
+
+def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None):
+    """Build one self-contained v5 worker assignment without mutating a ledger."""
+    ident(plan_id, "plan id")
+    uuid4(run_id, "run id")
+    if not isinstance(plan, dict) or plan.get("contract_version") != FORWARD_SCHEMA:
+        raise Error("worker handoff requires a version-5 plan")
+    if not isinstance(step, dict) or step.get("status") != "in_progress":
+        raise Error("worker handoff requires an in_progress step")
+    sid = ident(step.get("id"), "step id")
+    leaf = leaves_by_id(plan).get(sid)
+    units = {unit.get("id"): unit for unit in plan.get("work_units", []) if isinstance(unit, dict)}
+    work_unit = units.get(leaf.get("work_unit_id") if leaf else None)
+    if leaf is None or work_unit is None:
+        raise Error("worker handoff has no assigned leaf or work unit")
+    agent_id = step.get("agent_id")
+    if not isinstance(agent_id, str) or not 1 <= len(agent_id) <= 128 or not agent_id.strip():
+        raise Error("worker handoff requires a bounded agent_id")
+    attempt_id = uuid4(step.get("attempt_id"), "attempt id")
+    assignment = step.get("assignment")
+    current = step.get("current_assignment")
+    if not isinstance(assignment, dict) or not isinstance(current, dict):
+        raise Error("worker handoff requires an assignment")
+    worktree = assignment.get("worktree")
+    if not isinstance(worktree, str) or not Path(worktree).is_absolute():
+        raise Error("worker handoff requires an absolute worktree")
+    host, executor = current.get("harness"), current.get("model_or_alias")
+    if (
+        current.get("agent_id") != agent_id
+        or not isinstance(host, str) or not 1 <= len(host) <= 160 or not host.strip()
+        or not isinstance(executor, str) or not 1 <= len(executor) <= 160 or not executor.strip()
+        or step.get("current_tier") not in PORTABLE_TIERS
+    ):
+        raise Error("worker handoff has an invalid current assignment")
+    plan_sha256 = digest(plan)
+    binding = step.get("capability_binding")
+    if (
+        digest(binding) != step.get("capability_binding_sha256")
+        or not valid_stored_binding(binding, plan_sha256, sid, leaf, current)
+    ):
+        raise Error("blocked:capability_unavailable")
+    remediation_path = step.get("retry_remediation_path", "")
+    if remediation_path:
+        if retry_remediation is None or digest(retry_remediation) != step.get("retry_remediation_sha256"):
+            raise Error("retry remediation artifact digest mismatch")
+        valid_remediation(retry_remediation)
+        if (
+            retry_remediation["step_id"] != sid
+            or retry_remediation["next_agent_id"] != agent_id
+            or retry_remediation["next_harness"] != host
+            or retry_remediation["target_portable_tier"] != step["current_tier"]
+        ):
+            raise Error("retry remediation artifact identity mismatch")
+    elif retry_remediation is not None:
+        raise Error("unexpected retry remediation artifact")
+    value = {
+        "schema": "planning-worker-handoff-v1",
+        "handoff_sha256": "",
+        "plan_id": plan_id,
+        "run_id": run_id,
+        "plan_sha256": plan_sha256,
+        "step_id": sid,
+        "agent_id": agent_id,
+        "attempt_id": attempt_id,
+        "plan_context": worker_handoff_context(plan),
+        "leaf": leaf,
+        "work_unit": work_unit,
+        "worktree": worktree,
+        "portable_tier": step["current_tier"],
+        "host": host,
+        "executor": executor,
+        "capability_binding": binding,
+        "retry_remediation": retry_remediation,
+        "return_schema": bounded_return_schema(),
+    }
+    value["handoff_sha256"] = worker_handoff_digest(value)
+    if len(canon(value)) > MAX_WORKER_HANDOFF:
+        raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
+    return value
+
+
+def valid_worker_handoff(value):
+    if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
+        raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
+    if set(value) != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1":
+        raise Error("invalid planning-worker-handoff-v1 schema")
+    if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
+        raise Error("invalid worker handoff sha256")
+    if value["handoff_sha256"] != worker_handoff_digest(value):
+        raise Error("worker handoff digest mismatch")
+    ident(value.get("plan_id"), "plan id")
+    uuid4(value.get("run_id"), "run id")
+    require_sha256(value.get("plan_sha256"), "invalid worker handoff plan sha256")
+    sid = ident(value.get("step_id"), "step id")
+    if not isinstance(value.get("agent_id"), str) or not 1 <= len(value["agent_id"]) <= 128:
+        raise Error("invalid worker handoff agent_id")
+    uuid4(value.get("attempt_id"), "attempt id")
+    worker_handoff_context(value["plan_context"])
+    leaf = value.get("leaf")
+    unit = value.get("work_unit")
+    if (
+        not isinstance(leaf, dict) or leaf.get("id") != sid
+        or not isinstance(unit, dict) or unit.get("id") != leaf.get("work_unit_id")
+    ):
+        raise Error("invalid worker handoff assignment")
+    if (
+        not isinstance(leaf.get("acceptance_command"), str)
+        or not isinstance(leaf.get("write_set"), list)
+        or not isinstance(leaf.get("capability_requirements"), dict)
+    ):
+        raise Error("invalid worker handoff leaf")
+    if not isinstance(value.get("worktree"), str) or not Path(value["worktree"]).is_absolute():
+        raise Error("invalid worker handoff worktree")
+    if value.get("portable_tier") not in PORTABLE_TIERS:
+        raise Error("invalid worker handoff portable tier")
+    current = {"agent_id": value["agent_id"], "harness": value.get("host"), "model_or_alias": value.get("executor")}
+    if not valid_stored_binding(value.get("capability_binding"), value["plan_sha256"], sid, leaf, current):
+        raise Error("invalid worker handoff capability binding")
+    remediation = value.get("retry_remediation")
+    if remediation is not None:
+        valid_remediation(remediation)
+        if (
+            remediation["step_id"] != sid or remediation["next_agent_id"] != value["agent_id"]
+            or remediation["next_harness"] != value["host"]
+            or remediation["target_portable_tier"] != value["portable_tier"]
+        ):
+            raise Error("invalid worker handoff retry remediation")
+    if value.get("return_schema") != bounded_return_schema():
+        raise Error("invalid worker handoff return schema")
+    return value
+
+
+def handoff(args):
+    directory, data, plan, _leafs = load2(args)
+    validate_events2(directory, data)
+    active_run(data)
+    sid, step = selected_step(data, args.step_id)
+    remediation = None
+    if step.get("retry_remediation_path"):
+        remediation = read_json(
+            directory / rel(step["retry_remediation_path"], "retry remediation path"),
+            "missing retry remediation artifact",
+        )
+    return {
+        "ok": True,
+        "action": "handoff",
+        "handoff": build_worker_handoff(plan, step, data["plan_id"], data["run_id"], remediation),
+    }
+
+
+def validate_return(args):
+    try:
+        handoff_raw = read_bounded_input(args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff")
+        return_raw = read_bounded_input(args.return_file, MAX_RETURN, "step return")
+        handoff_value = json.loads(handoff_raw)
+        return_value = json.loads(return_raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid worker handoff or return JSON") from exc
+    handoff_value = valid_worker_handoff(handoff_value)
+    if len(canon(return_value)) > MAX_RETURN:
+        raise Error("bounded-step-return-v1 exceeds 8 KiB")
+    step = {
+        "id": handoff_value["step_id"],
+        "agent_id": handoff_value["agent_id"],
+        "attempt_id": handoff_value["attempt_id"],
+    }
+    valid_return(return_value, {}, step, handoff_value["leaf"])
+    return {
+        "ok": True,
+        "action": "validate-return",
+        "plan_id": handoff_value["plan_id"],
+        "run_id": handoff_value["run_id"],
+        "step_id": handoff_value["step_id"],
+        "agent_id": handoff_value["agent_id"],
+        "attempt_id": handoff_value["attempt_id"],
+        "status": return_value["status"],
+        "handoff_sha256": handoff_value["handoff_sha256"],
+        "return_sha256": digest(return_value),
+    }
+
+
+def read_bounded_input(path, maximum, label):
+    """Read at most one byte beyond a fixed input bound before JSON parsing."""
+    try:
+        with Path(path).open("rb") as file:
+            raw = file.read(maximum + 1)
+    except OSError as exc:
+        raise Error(f"cannot read {label}") from exc
+    if len(raw) > maximum:
+        raise Error(f"{label} exceeds byte limit")
+    return raw
 
 
 def next_after_return(args, directory, data, batches, sid, step, value, disposition, plan):
@@ -3293,6 +3588,12 @@ def parse():
     va = commands.add_parser("validate")
     va.add_argument("--run-id")
     va.add_argument("--closeout", action="store_true")
+    worker_handoff = commands.add_parser("handoff")
+    worker_handoff.add_argument("--run-id", required=True)
+    worker_handoff.add_argument("--step-id", required=True)
+    validate_return_parser = commands.add_parser("validate-return")
+    validate_return_parser.add_argument("--handoff-file", required=True)
+    validate_return_parser.add_argument("--return-file", required=True)
     commands.add_parser("list")
     close = commands.add_parser("close")
     close.add_argument("--actor", required=True)
@@ -3350,6 +3651,10 @@ def main(argv=None):
             value = show(args)
         elif args.command == "validate":
             value = validate(args)
+        elif args.command == "handoff":
+            value = handoff(args)
+        elif args.command == "validate-return":
+            value = validate_return(args)
         elif args.command == "list":
             value = list_runs(args)
         elif args.command == "close":
