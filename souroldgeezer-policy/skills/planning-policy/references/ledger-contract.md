@@ -123,6 +123,17 @@ result with a `next` field — while any successful step is only `completed` or
 validation can pass. A successful v5 closeout validation names the completed
 run `close` command in its bounded `next` block.
 
+### Generated worker packets
+
+`handoff --run-id <uuid4> --step-id <id>` is read-only and requires an active
+v5 run with that step `in_progress`. It validates the stored plan, events,
+current assignment and binding, then emits the complete `handoff` object.
+`validate-return --handoff-file PATH --return-file PATH` is also read-only and
+needs no ledger access. It checks the packet and applies the same return rules
+as `record-return`; it does not normalize fields, execute acceptance or replace
+the parent's current-attempt check. See [worker handoff](worker-handoff.md)
+for both runtime command forms, bounds and authority limits.
+
 ### Bounded step return
 
 Each return is exactly one JSON object of at most 8 KiB with `schema` exactly

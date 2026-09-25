@@ -30,7 +30,9 @@ implementation.
    Scope each leaf's
    `acceptance_command` to its write set; a whole-suite run belongs to the
    parent's final verification. A fresh
-   agent must finish from the handoff. Start new plan JSON from the canonical
+   agent must finish from the handoff. Review the acceptance command for actual
+   task coverage and carry relevant shared approved decisions into the worker
+   context; structural validation does not establish semantic completeness. Start new plan JSON from the canonical
    [plan-v5.json](templates/plan-v5.json) scaffold; `contract_version` stays
    first. Every leaf declares exact `capability_requirements`: baseline
    `plan-step-base-v1` plus bounded additional requirements. Load [plan contract](plan-contract.md),
@@ -98,7 +100,9 @@ For two or more delegated steps, only the parent creates
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
 evidence paths, and returns, never raw logs. Successful leaves close
 `completed` → `integrated` → `cleaned`; only then create dependent worktrees
-from the current parent tip. Use the ledger's Git-policy helper, not a routine
+from the current parent tip. Generate ledger-backed assignments through
+[worker handoff](worker-handoff.md), including shared plan decisions and the
+return schema, and preflight each worker return before ingestion. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
 For a new version-5 run, the parent uses the ledger's

@@ -420,6 +420,15 @@ Two agent classes live under `<plugin>/agents/`.
 
 ### Planning-policy execution contract (Claude Code)
 
+Generated worker transport uses `planning-worker-handoff-v1`: read-only
+`planning_ledger.py handoff` carries shared approved decisions, the exact leaf
+and work unit, current assignment and binding, and return schema. Workers use
+read-only `validate-return` before parent ingestion; `record-return` still owns
+current-attempt validation. New v5 admission rejects unsafe/nonstring IO paths,
+placeholder decisions, known no-op acceptance, and unordered shared owners or
+overlapping writes across work units. Retained ledgers preserve prior admission
+behavior. See [worker handoff](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
+
 
 Executable approval transport uses `planning-approval-handoff-v1`: a canonical
 `plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline

@@ -19,6 +19,10 @@ durable root using its documented explicit-root writer. Hosts without that
 authority keep the complete inline approval envelope. It prepares economical
 delegation by gathering shared facts once, handing off cohesive bounded outcomes,
 and retaining parent integration and verification.
+New plans also validate task boundaries across the dependency graph. Generated
+worker packets include shared decisions and a return schema, with local return
+validation before parent ingestion; existing runs remain resumable. See the
+[worker handoff procedure](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or

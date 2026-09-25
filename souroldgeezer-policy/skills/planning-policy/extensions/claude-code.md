@@ -104,6 +104,15 @@ alias, effort, and availability evidence; never silently downgrade. An executor
 that cannot proceed because a genuinely higher tier is required returns
 `blocked:needs_higher_tier` with bounded evidence; it does not choose its retry.
 
+## Generated assignment and return preflight
+
+For ledger-backed v5 work, follow [worker handoff](../references/worker-handoff.md)
+to generate the assigned packet after `in_progress`. Send the packet unchanged,
+including `plan_context` with objective, scope and all shared approved decisions.
+The packet's `return_schema` supports host structured output. Workers run the
+read-only `validate-return` command before submitting; the parent still uses
+`record-return` to reject a stale attempt. Digest consistency grants no approval.
+
 ## Bounded step return
 
 Every assigned agent returns exactly one UTF-8 JSON object with

@@ -80,6 +80,26 @@ Analytical/deep requires `irreducible_unknown_or_risk`; mechanical mirrors it â€
 scope expansion, failed acceptance, or a stop condition returns bounded evidence;
 no tier invents input.
 
+## New-plan admission
+
+New v5 approval and initialization validate every read/write entry as a unique,
+bounded, safe repository-relative string. Empty writes remain valid for read-only
+work; both input and output sets cannot be empty. Standalone placeholder
+decisions and known no-op acceptance commands (`true`, `:`, `exit 0`) are
+rejected. The parent still reviews whether the declared decisions settle the
+task and whether acceptance proves its outcome; these checks do not infer that.
+
+Across every work unit, leaves sharing a worktree owner or overlapping write
+coverage need dependency or batch ordering. Transitive dependencies count.
+Exact paths own their descendants; uncertain glob overlap is conservatively
+tested using the complete literal prefix before the first glob segment. Narrow
+the paths or sequence the work when independence cannot be established. Shared
+reads alone do not prevent parallel work.
+
+Existing ledger runs retain their original admission behavior after stored
+identity and plan-digest verification. This internal resumption path does not
+relax structural validation or offer a bypass for approving a new plan.
+
 ## Advisory execution cost
 
 Version 3 adds an at-most-4-KiB `execution_cost` object: schema
@@ -154,6 +174,9 @@ Output includes validity/readiness, `contract_version`, `approval_ready`, `dispa
 failure, 2 usage/JSON failure. Only a v5 plan with its exact capability binding dispatches.
 
 `validate_plan_contract.py` remains read-only; approval handoff owns authorized saves.
+
+For complete worker transport and local return validation, follow
+[worker handoff](worker-handoff.md).
 
 ## Parent ledger helper
 

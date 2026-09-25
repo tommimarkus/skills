@@ -302,6 +302,15 @@ Parent recovery may inspect only the bounded same-task evidence described in
 workers still stop for missing assignment fields. Prose summaries never replace
 canonical execution JSON.
 
+Generated worker transport uses `planning-worker-handoff-v1`: the read-only
+`planning_ledger.py handoff` command carries shared approved decisions, exact
+leaf/work-unit and current assignment, binding, and return schema. Workers use
+read-only `validate-return` before parent ingestion; `record-return` still owns
+current-attempt validation. New v5 admission rejects unsafe/nonstring IO paths,
+placeholder decisions, known no-op acceptance, and unordered shared owners or
+overlapping writes across work units. Retained ledgers preserve prior admission
+behavior. See [worker handoff](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
+
 The shared `planning-policy` contract is runtime-neutral. New executable plans
 use `contract_version: 5`. Start them from
 [references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
