@@ -48,6 +48,8 @@ COST_LANES = (
 )
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 GLOB_CHARS = ("*", "?", "[")
+PLACEHOLDER_DECISIONS = {"tbd", "todo", "unknown", "unresolved"}
+NOOP_ACCEPTANCE_COMMANDS = {"true", ":", "exit 0"}
 PLAN_SCALE_LEAF_LIMIT = 12
 PLAN_SCALE_WEIGHT_LIMIT = 20
 MICROLEAF_CANDIDATE_LIMIT = 8
@@ -209,6 +211,100 @@ def safe_exact_write_set(leaf: dict[str, Any]) -> bool:
             for path in normalized
         )
     )
+
+
+def safe_repository_path(value: Any) -> bool:
+    """Accept one bounded, repository-relative declaration, including existing glob forms."""
+    if not isinstance(value, str) or not value or value != value.strip() or len(value) > 240:
+        return False
+    if value.startswith("/") or "\\" in value or any(ord(character) < 32 or ord(character) == 127 for character in value):
+        return False
+    return all(segment not in {"", ".", ".."} for segment in value.split("/"))
+
+
+def declared_path_set_errors(leaf: dict[str, Any], field: str) -> list[str]:
+    value = leaf.get(field)
+    if not isinstance(value, list):
+        return []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for index, path in enumerate(value):
+        if not safe_repository_path(path):
+            errors.append(f"{field}[{index}] must be a unique safe repository-relative path string from 1 to 240 characters")
+            continue
+        if path in seen:
+            errors.append(f"{field}[{index}] must be unique")
+        seen.add(path)
+    return errors
+
+
+def has_placeholder_decision(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in PLACEHOLDER_DECISIONS
+    if isinstance(value, dict):
+        return any(has_placeholder_decision(item) for item in value.values())
+    if isinstance(value, list):
+        return any(has_placeholder_decision(item) for item in value)
+    return False
+
+
+def static_path_prefix(path: str) -> tuple[str, ...]:
+    """Return only complete literal segments before a glob, avoiding unsound glob parsing."""
+    prefix: list[str] = []
+    for segment in path.split("/"):
+        if any(character in segment for character in GLOB_CHARS):
+            break
+        prefix.append(segment)
+    return tuple(prefix)
+
+
+def path_coverage_overlaps(first: str, second: str) -> bool:
+    first_prefix, second_prefix = static_path_prefix(first), static_path_prefix(second)
+    shared = min(len(first_prefix), len(second_prefix))
+    return first_prefix[:shared] == second_prefix[:shared]
+
+
+def write_coverage_overlaps(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    first_writes, second_writes = first.get("write_set"), second.get("write_set")
+    if not isinstance(first_writes, list) or not isinstance(second_writes, list):
+        return False
+    return any(
+        path_coverage_overlaps(first_path, second_path)
+        for first_path in first_writes
+        if safe_repository_path(first_path)
+        for second_path in second_writes
+        if safe_repository_path(second_path)
+    )
+
+
+def dependency_orders(first_id: str, second_id: str, dependencies: dict[str, list[str]]) -> bool:
+    """Return whether either leaf transitively depends on the other."""
+    def reaches(start: str, target: str) -> bool:
+        pending = list(dependencies.get(start, []))
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current == target:
+                return True
+            if current not in visited:
+                visited.add(current)
+                pending.extend(dependencies.get(current, []))
+        return False
+
+    return reaches(first_id, second_id) or reaches(second_id, first_id)
+
+
+def leaves_are_ordered(
+    first_id: str,
+    second_id: str,
+    dependencies: dict[str, list[str]],
+    leaf_records: dict[str, tuple[int, dict[str, Any]]],
+) -> bool:
+    if dependency_orders(first_id, second_id, dependencies):
+        return True
+    first_index, first = leaf_records[first_id]
+    second_index, second = leaf_records[second_id]
+    return stable_id(first.get("batch")) and first.get("batch") == second.get("batch") and first_index != second_index
 
 
 def direct_dependency(first: dict[str, Any], second: dict[str, Any]) -> bool:
@@ -740,7 +836,9 @@ def contract_result(
     }
 
 
-def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
+def validate(
+    plan: Any, capability_binding: Any = None, *, admission: bool = True
+) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(plan, dict):
@@ -869,6 +967,16 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
         for field in ("read_set", "write_set", "stop_conditions"):
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
+        if contract_version == 5 and admission:
+            for field in ("read_set", "write_set"):
+                errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
+            if leaf.get("read_set") == [] and leaf.get("write_set") == []:
+                errors.append(f"{prefix}.read_set and {prefix}.write_set cannot both be empty")
+            if has_placeholder_decision(leaf.get("settled_decisions")):
+                errors.append(f"{prefix}.settled_decisions cannot contain a standalone placeholder")
+            command = leaf.get("acceptance_command")
+            if isinstance(command, str) and command.strip().lower() in NOOP_ACCEPTANCE_COMMANDS:
+                errors.append(f"{prefix}.acceptance_command cannot be a known no-op command")
         if (
             isinstance(leaf.get("stop_conditions"), list)
             and "missing_load_bearing_information" not in leaf["stop_conditions"]
@@ -998,6 +1106,20 @@ def validate(plan: Any, capability_binding: Any = None) -> dict[str, Any]:
 
     for leaf_id in dependencies:
         visit(leaf_id)
+
+    if contract_version == 5 and admission:
+        ordered_records = list(leaf_records.items())
+        for first_position, (first_id, (_first_index, first)) in enumerate(ordered_records):
+            for second_id, (_second_index, second) in ordered_records[first_position + 1 :]:
+                ordered = leaves_are_ordered(first_id, second_id, dependencies, leaf_records)
+                if not ordered and first.get("worktree_owner") == second.get("worktree_owner"):
+                    errors.append(
+                        f"leaves {first_id} and {second_id} have shared worktree_owner without dependency or batch ordering"
+                    )
+                if not ordered and write_coverage_overlaps(first, second):
+                    errors.append(
+                        f"leaves {first_id} and {second_id} have overlapping write coverage without dependency or batch ordering"
+                    )
 
     if contract_version == 5:
         for unit_id, members in unit_leaves.items():

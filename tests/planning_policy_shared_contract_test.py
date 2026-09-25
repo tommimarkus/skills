@@ -34,7 +34,7 @@ def leaf(identifier, unit, tier="standard", dependencies=None):
         "task": "Implement one bounded concern",
         "boundary": "Do not edit other concerns",
         "read_set": ["a.py"],
-        "write_set": ["b.py"],
+        "write_set": [f"outputs/{identifier}.py"],
         "settled_decisions": {"shape": "chosen"},
         "size": "medium",
         "portable_tier": tier,
@@ -368,6 +368,8 @@ class SharedContractTest(unittest.TestCase):
         second["write_set"] = ["second.py"]
         third = leaf("third", "checkpointed")
         fourth = leaf("fourth", "checkpointed", dependencies=["third"])
+        third["worktree_owner"] = "task/checkpointed"
+        fourth["worktree_owner"] = "task/checkpointed"
         units = [
             {"id": "parallel", "original_size": "medium", "cohesive_outcome": "Deliver independent interfaces", "decomposition": {"shape": "parallel", "basis": "parallel_independence", "rationale": "The interfaces have disjoint writes."}},
             {"id": "checkpointed", "original_size": "medium", "cohesive_outcome": "Deliver a recoverable migration", "decomposition": {"shape": "checkpointed", "basis": "rollback_boundary", "rationale": "Each stage isolates rollback."}},
