@@ -379,7 +379,7 @@ into the bundle.
 
 ## Boundary decisions
 
-- Plan-first approach approval before new build work: `planning-policy`.
+- Plan-first approval for work covered by initialized guidance: `planning-policy`.
 - Test-first ordering while implementing: `tdd-policy` (composes after the plan).
 - Code/module design and coupling: `software-design`.
 - Frontend app design: `app-design`. HTTP API design: `api-design`. IaC design:

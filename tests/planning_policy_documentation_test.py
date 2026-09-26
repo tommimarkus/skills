@@ -21,6 +21,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn(description, agent)
         self.assertIn("Apply its stated scope", entry)
         self.assertIn("Explicit scope overrides the bare default", workflow)
+        for host in (".claude-plugin", ".codex-plugin"):
+            manifest = json.loads(self.text(f"souroldgeezer-policy/{host}/plugin.json"))
+            self.assertIn("work covered by initialized guidance", manifest["description"])
+        self.assertIn("work covered by initialized guidance", self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
+        ))
         cases = [json.loads(line) for line in self.text(
             "souroldgeezer-policy/skills/planning-policy/references/evals/trigger-cases.jsonl"
         ).splitlines()]
