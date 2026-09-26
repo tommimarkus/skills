@@ -1,14 +1,14 @@
 ---
 name: planning-policy
-description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline and economical delegated completion — brainstorm an approach, prepare cohesive handoffs, and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer to the owning design, audit, or ops skill."
+description: "Use when loaded guidance initializes planning-policy and work is in its stated scope, including named fixes and refactors; or for explicit plan-first requests and policy inspection/adoption. Own approval and bounded handoffs; domain design stays with its owner."
 ---
 
 # Planning Policy
 
 Own plan-first enforcement only when repo/user guidance initializes this policy,
 or on an explicit “plan this first” request. The standing line is authority;
-installation alone is not. It protects economical delegated completion: plan
-new feature/build work, prepare cohesive bounded handoffs, and obtain approval.
+installation alone is not. Apply its stated scope, including named fixes
+and refactors; get approval before implementation.
 The parent prepares, integrates, verifies, and recovers; workers execute their
 assigned outcomes and scoped acceptance.
 
@@ -71,7 +71,7 @@ executable-leaf contract live in the on-demand [core workflow](references/core-w
 Worker stops: missing assigned load-bearing information is `blocked:missing_input`
 (never discovery or invention). Parent recovery follows approval handoff; stop
 for unclear scope/success, sibling ownership, unavailable plan mode, or
-unapproved new build work. This skill does not write specs, commits, or implementation.
+unapproved in-scope implementation. This skill does not write specs, commits, or implementation.
 
 Ask vs continue: continue when goal, constraints, success, inputs, and scope are
 clear; otherwise ask the user before grooming.

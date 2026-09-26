@@ -14,7 +14,9 @@ Install the plugin that owns the task, then describe the work in ordinary langua
 
 The repo currently ships five plugins:
 
-`planning-policy` can retain an approved executable plan through a caller-authorized
+`planning-policy` follows the scope of the consuming repository's initialization line,
+including nontrivial fixes and refactors when that line covers them. It can
+retain an approved executable plan through a caller-authorized
 durable root using its documented explicit-root writer. Hosts without that
 authority keep the complete inline approval envelope. It prepares economical
 delegation by gathering shared facts once, handing off cohesive bounded outcomes,

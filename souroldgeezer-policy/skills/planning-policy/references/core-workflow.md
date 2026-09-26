@@ -1,8 +1,8 @@
 # Planning Policy Core Workflow
 
-Once initialized, the standing line requires a brief brainstorm in the host
-planning lane, an agreed approach and user approval before new feature/build
-implementation.
+The standing line sets scope. For covered work, brainstorm in the
+planning lane and get approval before implementation. Explicit scope
+overrides defaults.
 
 ## Enforcement
 
@@ -112,8 +112,9 @@ Adoption template (Codex uses its native approval/delegation wording):
 > not, and keep integration and verification in the parent. Scope <globs>. Opt
 > out per task by saying "skip planning" (logged). Enforcement <model>.`
 
-Bare initialization governs new feature/build/creative work; trivial edits,
-hotfixes, spikes, and end-to-end domain-owned work are logged exceptions.
+Explicit scope overrides the bare default of new feature/build/creative
+work. Trivial edits, hotfixes, spikes, and domain-owned work are exceptions
+only if the standing line does not cover them.
 `delegation` is `subagents-by-default` or `inline`; `enforcement` is behavioral
 `model`, not a claimed mechanical backstop. Opt out by removing/off, a logged
 per-task phrase, or scope/exception globs.

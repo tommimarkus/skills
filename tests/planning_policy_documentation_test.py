@@ -11,6 +11,23 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
     def text(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
+    def test_initialized_scope_controls_trigger(self) -> None:
+        import json
+
+        entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
+        agent = self.text("souroldgeezer-policy/agents/planning-policy.md")
+        workflow = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
+        description = next(line for line in entry.splitlines() if line.startswith("description:"))
+        self.assertIn(description, agent)
+        self.assertIn("Apply its stated scope", entry)
+        self.assertIn("Explicit scope overrides the bare default", workflow)
+        cases = [json.loads(line) for line in self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/evals/trigger-cases.jsonl"
+        ).splitlines()]
+        fix = next(case for case in cases if case["id"] == "planning-policy-trigger-yes-explicit-scope-fix")
+        self.assertTrue(fix["expected_activation"])
+        self.assertIn("nontrivial", fix["prompt"])
+
     def test_live_next_chain_is_public_and_exception_routed(self) -> None:
         entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
         contract = self.text(

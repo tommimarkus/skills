@@ -1,6 +1,6 @@
 ---
 name: planning-policy
-description: "Use when loaded repo or user guidance initializes planning-policy, or when asked to inspect, adopt, or enforce plan-first discipline and economical delegated completion — brainstorm an approach, prepare cohesive handoffs, and get it approved before implementing new feature or build work. Not for domain design, writing code, or one-off diagrams; defer to the owning design, audit, or ops skill."
+description: "Use when loaded guidance initializes planning-policy and work is in its stated scope, including named fixes and refactors; or for explicit plan-first requests and policy inspection/adoption. Own approval and bounded handoffs; domain design stays with its owner."
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---
