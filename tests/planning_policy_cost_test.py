@@ -79,7 +79,11 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # exact single/parallel/checkpointed evidence, the microleaf-risk
         # disposition, v1-v4 resume-only guidance, and the larger v5 scaffold.
         # The lookup and repeated live-next paths retain their existing bounds.
-        self.assertLessEqual(claude["load_total"], 6850)
+        # Parent-orchestrator refinement adds 227 measured proxy tokens to the
+        # shared core workflow. Charge 230 only to its authoring routes: active
+        # Claude/Codex, series authoring, and approval handoff. Lookup and normal
+        # live-next execution retain their existing loads and budgets.
+        self.assertLessEqual(claude["load_total"], 7080)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -91,7 +95,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # core-workflow.md/plan-contract.md batch additions as claude above.
         # codex was re-baselined once more, from 6350, alongside claude above
         # for the same shared plan-series pointers.
-        self.assertLessEqual(codex["load_total"], 6950)
+        self.assertLessEqual(codex["load_total"], 7180)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -118,9 +122,10 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # references/plan-series.md alongside the same enforcement/executable-plan
         # surface as active-claude/active-codex, minus any host adapter (the
         # series contract is runtime-neutral). V5 adds the same outcome-first
-        # contract and scaffold charged above; measured at 6,840 tokens.
+        # contract and scaffold charged above. Including the orchestrator prose
+        # charged above, this route measures 7,038 proxy tokens.
         series = self.measure("planning-policy-series-successor")
-        self.assertLessEqual(series["load_total"], 6875)
+        self.assertLessEqual(series["load_total"], 7105)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -139,7 +144,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_approval_handoff_route_is_bounded_and_conditional(self):
         result = self.measure("planning-policy-approval-handoff")
-        self.assertLessEqual(result["load_total"], 8000)
+        self.assertLessEqual(result["load_total"], 8230)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

@@ -76,27 +76,22 @@ Refine plan prose for a fresh parent orchestrator at Codex `sol/high`, Claude
 Authors may use a stronger model or greater effort. These are writing targets;
 runtime model settings and subagent tier selection remain separate.
 
-Before approval, read the plan and its named references from that orchestrator's
-perspective. Make the following explicit wherever execution would otherwise
-depend on reconstructing the planning conversation:
+Before approval, read the plan and its named references as that fresh parent.
+Provide enough detail to dispatch, assess returns, integrate, recover, and verify:
 
-- Settled decisions and concise rationale for choices that affect execution.
+- Settled decisions and concise rationale affecting execution.
 - Prerequisites, dependencies, sequencing, and integration order.
-- Routine judgment the orchestrator may exercise, and decisions requiring
-  clarification or replanning.
-- Expected verification evidence, responses to foreseeable failures, and the
-  reference or checkpoint from which interrupted work resumes.
+- Permitted routine judgment and decisions requiring clarification or replanning.
+- Expected verification evidence, foreseeable failure responses, and the
+  reference or checkpoint for resuming interrupted work.
 
-The target orchestrator should be able to dispatch work, assess returns,
-integrate, recover, and complete final verification using that material. If it
-would need to infer a missing decision or reopen a settled design choice,
-refine the plan before presenting it for approval. Structural validation alone
-does not establish this readability.
+If execution requires reconstructing the planning conversation, inferring a
+missing decision, or reopening a settled choice, refine before approval.
+Structural validation alone does not establish readability.
 
-Keep cohesive steps and concise named references. Add the detail needed to
-carry decisions across the handoff; avoid repeating the workflow, preserving a
-conversation transcript, or splitting work merely to spell out routine actions.
-Bounded implementation judgment remains with its assigned owner.
+Keep cohesive steps and concise named references; avoid repeating workflows,
+copying conversations, or splitting routine actions into extra steps. Bounded
+implementation judgment remains with its assigned owner.
 
 ## Approval and output
 
