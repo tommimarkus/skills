@@ -23,6 +23,8 @@ overrides defaults.
    batching nor multiple checks justifies splitting. Derive size from bounded
    reads, acceptance and judgment; large requires an irreducible reason.
    A fresh worker must finish from its handoff, including shared decisions.
+   Refine the whole plan for its parent using the
+   [orchestrator readability target](#orchestrator-readability).
    Review acceptance for actual task coverage; structural validation cannot.
    Leaf acceptance covers its write set; whole-suite verification stays with
    the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
@@ -66,6 +68,35 @@ test re-runs. Acceptance evidence survives a tree-identical rebase: the
 helper's `rebased_tree_changed: false` means a leaf's recorded acceptance
 stands, and `true` means re-run only that leaf's scoped acceptance, never the
 full suite.
+
+## Orchestrator readability
+
+Refine plan prose for a fresh parent orchestrator at Codex `sol/high`, Claude
+`opus/high`, or comparable capability on another host, including Copilot.
+Authors may use a stronger model or greater effort. These are writing targets;
+runtime model settings and subagent tier selection remain separate.
+
+Before approval, read the plan and its named references from that orchestrator's
+perspective. Make the following explicit wherever execution would otherwise
+depend on reconstructing the planning conversation:
+
+- Settled decisions and concise rationale for choices that affect execution.
+- Prerequisites, dependencies, sequencing, and integration order.
+- Routine judgment the orchestrator may exercise, and decisions requiring
+  clarification or replanning.
+- Expected verification evidence, responses to foreseeable failures, and the
+  reference or checkpoint from which interrupted work resumes.
+
+The target orchestrator should be able to dispatch work, assess returns,
+integrate, recover, and complete final verification using that material. If it
+would need to infer a missing decision or reopen a settled design choice,
+refine the plan before presenting it for approval. Structural validation alone
+does not establish this readability.
+
+Keep cohesive steps and concise named references. Add the detail needed to
+carry decisions across the handoff; avoid repeating the workflow, preserving a
+conversation transcript, or splitting work merely to spell out routine actions.
+Bounded implementation judgment remains with its assigned owner.
 
 ## Approval and output
 

@@ -420,6 +420,12 @@ Two agent classes live under `<plugin>/agents/`.
 
 ### Planning-policy execution contract (Claude Code)
 
+Refine plan prose for a fresh parent at Claude `opus/high`, Codex `sol/high`,
+or comparable capability on another host, following
+[orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
+This writing target carries decisions across a context reset; it does not set
+runtime models or change subagent tier selection.
+
 Generated worker transport uses `planning-worker-handoff-v1`: read-only
 `planning_ledger.py handoff` carries shared approved decisions, the exact leaf
 and work unit, current assignment and binding, and return schema. Workers use

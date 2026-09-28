@@ -24,7 +24,9 @@ choice invokes its owning design skill before approval.
   [core workflow §enforcement](references/core-workflow.md#enforcement) and
   [§approval-and-output](references/core-workflow.md#approval-and-output).
 - **Executable plan, delegation, or returned handoff:** also read
-  [plan contract](references/plan-contract.md), start new plan JSON from
+  [orchestrator readability](references/core-workflow.md#orchestrator-readability)
+  when refining plan prose for a fresh parent, and
+  [plan contract](references/plan-contract.md); start new plan JSON from
   [plan-v5.json](references/templates/plan-v5.json), and run the advertised
   [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
   command before approval. For approval/recovery, [approval handoff](references/approval-handoff.md)

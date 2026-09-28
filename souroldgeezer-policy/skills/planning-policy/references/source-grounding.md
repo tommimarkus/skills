@@ -1,5 +1,16 @@
 # Planning Policy Source Grounding
 
+## 2026-09-28 parent orchestrator readability
+
+The maintainer requested that a plan authored with stronger reasoning remain
+usable by a fresh parent at Codex `sol/high`, Claude `opus/high`, or comparable
+capability on another host. The approved change targets refinement and prose:
+carry settled decisions, their relevant rationale, sequencing, verification,
+and recovery into the handoff while keeping routine judgment bounded. It adds
+no runtime model setting or worker-selection rule. The behavior cases are
+original synthetic handoffs derived from that request. They document the
+desired authoring standard, not measured reliability or model equivalence.
+
 ## 2026-09-25 executable-assignment review
 
 A local review found that v5 admission accepted placeholder decisions, empty

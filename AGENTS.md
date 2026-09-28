@@ -285,6 +285,11 @@ criteria. Do not treat this repository's guidance as the target's policy.
 
 ### Planning-policy execution contract (Codex)
 
+Refine plan prose for a fresh parent at Codex `sol/high`, Claude `opus/high`,
+or comparable capability on another host, following
+[orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
+This writing target carries decisions across a context reset; it does not set
+runtime models or change subagent tier selection.
 
 Executable approval transport uses `planning-approval-handoff-v1`: a canonical
 `plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline

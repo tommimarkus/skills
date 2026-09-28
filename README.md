@@ -21,6 +21,9 @@ durable root using its documented explicit-root writer. Hosts without that
 authority keep the complete inline approval envelope. It prepares economical
 delegation by gathering shared facts once, handing off cohesive bounded outcomes,
 and retaining parent integration and verification.
+Plan prose targets a fresh parent at Codex `sol/high`, Claude `opus/high`, or
+comparable capability on another host; see
+[orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
 New plans also validate task boundaries across the dependency graph. Generated
 worker packets include shared decisions and a return schema, with local return
 validation before parent ingestion; existing runs remain resumable. See the
