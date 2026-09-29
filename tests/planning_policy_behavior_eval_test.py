@@ -76,8 +76,18 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-series-final-end-verification",
             "planning-policy-behavior-parent-preparation",
             "planning-policy-behavior-v5-size-from-bounded-evidence",
+            "planning-policy-behavior-claude-plan-mode-reference",
+            "planning-policy-behavior-claude-withheld-approval",
         }
         self.assertTrue(required.issubset(self.behavior))
+        reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]
+        self.assertIn("git check-ignore", " ".join(reference["required_checks"]))
+        self.assertIn("inline block", (reference["prompt"] + " ".join(reference["required_checks"])))
+        withheld = self.behavior["planning-policy-behavior-claude-withheld-approval"]
+        forbidden = " ".join(withheld["forbidden_behaviors"])
+        self.assertIn("dispatching", forbidden)
+        self.assertIn("plan mode as exited", forbidden)
+        self.assertIn("ExitPlanMode again", " ".join(withheld["expected_artifacts"]))
         scaffold = self.behavior["planning-policy-behavior-v5-canonical-scaffold"]
         self.assertIn("plan-v5.json", " ".join(scaffold["expected_artifacts"]))
         self.assertIn("contract_version", " ".join(scaffold["required_checks"]))

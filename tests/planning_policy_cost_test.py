@@ -83,7 +83,12 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # shared core workflow. Charge 230 only to its authoring routes: active
         # Claude/Codex, series authoring, and approval handoff. Lookup and normal
         # live-next execution retain their existing loads and budgets.
-        self.assertLessEqual(claude["load_total"], 7080)
+        # Live-run repair: one over-long approval-envelope plan line made Claude
+        # Code withhold approval, and a rejected ExitPlanMode was read as
+        # approval. The adapter now states plan-mode persistence, display limits,
+        # and the rejection rule (+108 measured, 7,184); the block-format
+        # handoff adds 51 (8,274) on its route. Each budget carries 5 slack.
+        self.assertLessEqual(claude["load_total"], 7189)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -144,7 +149,10 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_approval_handoff_route_is_bounded_and_conditional(self):
         result = self.measure("planning-policy-approval-handoff")
-        self.assertLessEqual(result["load_total"], 8230)
+        # Block-format envelope emission and the 4,096-character line limit
+        # answer the same live failure: an over-long envelope line withheld
+        # approval and a rejected ExitPlanMode was mistaken for approval.
+        self.assertLessEqual(result["load_total"], 8279)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

@@ -1,5 +1,22 @@
 # Planning Policy Source Grounding
 
+## 2026-09-29 Claude approval display and plan-mode persistence
+
+A reported Claude Code session could not approve a plan: the approval dialog
+withheld its approve options, a typed "approved" returned as a rejection of
+`ExitPlanMode`, the model misread it as approval and dispatched a worker, and the
+worker refused under plan mode. The plan held its whole approval envelope as one
+compact line of about 7,900 characters.
+
+The installed Claude Code 2.1.284 client showed this behavior; its public
+documentation and changelog are silent, so the limits are observed behavior that
+can change. The repository owner decided Claude persists during plan mode (one
+authorized `persist_plan.py` write into the ignored root) and falls back to the
+line-wrapped inline block. Codex Plan mode cannot write, so it stays inline.
+
+Evidence is repository-authored tests and synthetic behavior cases only. Limits
+are paraphrased; no client source or dialog text is copied.
+
 ## 2026-09-28 parent orchestrator readability
 
 The maintainer requested that a plan authored with stronger reasoning remain

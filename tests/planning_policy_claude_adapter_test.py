@@ -92,6 +92,23 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertIn("`cohesive_outcome`", adapter)
         self.assertIn("assigned work unit's `cohesive_outcome`", adapter)
 
+    def test_claude_adapter_pins_plan_mode_persistence_and_display_limits(self):
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        normalized = re.sub(r"\s+", " ", adapter)
+        for fact in (
+            "persist_plan.py",
+            ".planning-policy/plans",
+            "git check-ignore",
+            "blocked:persistence_unavailable",
+            "fenced `json` block",
+            "4,096",
+            "200,000",
+            "never approval",
+            "call `ExitPlanMode` again",
+        ):
+            self.assertIn(fact, normalized)
+        self.assertNotIn("2.1.284", adapter)
+
     def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
         documents = [ADAPTER.read_text(encoding="utf-8")]
         documents.extend((AGENTS / f"{tier}.md").read_text(encoding="utf-8") for tier in EXPECTED_TIERS)

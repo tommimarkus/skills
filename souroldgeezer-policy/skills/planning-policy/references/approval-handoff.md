@@ -12,12 +12,13 @@
    Only exit 2 with `blocked:persistence_unavailable` permits validated inline
    fallback after storage failure; disclose it briefly.
    Invalid input, unsafe paths, altered contracts, and CLI usage errors block.
-3. For inline, pass the complete plan to `validate - --emit-handoff inline`
-   and extract `handoff`. Require successful `resolve-handoff` before approval.
-   Put the envelope **inside** the host approval plan,
-   after the readable human plan: Codex's final `<proposed_plan>` or Claude's
-   document presented through `ExitPlanMode`. Earlier messages, tool outputs,
-   and session variables do not suffice.
+3. For inline, pass the complete plan to
+   `validate - --emit-handoff inline --handoff-format block`; stdout is the
+   envelope alone. Paste it verbatim into a fenced `json` block **inside** the
+   host approval plan, after the readable human plan: Codex's final
+   `<proposed_plan>` or Claude's document presented through `ExitPlanMode`.
+   Require successful `resolve-handoff` on the block exactly as carried before
+   approval. Earlier messages, tool outputs, and session variables do not suffice.
 4. Resolve again after approval, before binding, assignment, or ledger init.
    Use the returned exact `plan`; recovery grants
    neither dispatch readiness nor additional authority. Preparatory persistence
@@ -27,7 +28,7 @@ Claude commands:
 
 ```text
 python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/persist_plan.py" --plan-root "ABSOLUTE_ROOT" "PLAN"
-python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py" validate - --emit-handoff inline
+python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py" validate - --emit-handoff inline --handoff-format block
 python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/validate_plan_contract.py" resolve-handoff "HANDOFF"
 ```
 
@@ -35,7 +36,7 @@ Codex replaces `<skill-dir>` with the loaded skill's absolute source directory:
 
 ```text
 python3 -B "<skill-dir>/references/scripts/persist_plan.py" --plan-root "ABSOLUTE_ROOT" "PLAN"
-python3 -B "<skill-dir>/references/scripts/validate_plan_contract.py" validate - --emit-handoff inline
+python3 -B "<skill-dir>/references/scripts/validate_plan_contract.py" validate - --emit-handoff inline --handoff-format block
 python3 -B "<skill-dir>/references/scripts/validate_plan_contract.py" resolve-handoff "HANDOFF"
 ```
 
@@ -55,8 +56,9 @@ legacy validation is unchanged.
 References require regular files outside resolved `/tmp`, `/var/tmp`, `/dev/shm`,
 `/run/user`, the system temporary root, and absolute `TMPDIR`/`TEMP`/`TMP` roots.
 Stdin/devices cannot be references. Limits: raw plan input 256 KiB, canonical
-plan 64 KiB, reference envelope 4 KiB, inline envelope and raw envelope input
-68 KiB. Errors return no partial plan.
+plan 64 KiB, reference envelope 4 KiB, inline envelope 68 KiB, raw envelope
+input 272 KiB. Block lines are at most 4,096 characters; a longer single string
+blocks emission. Errors return no partial plan.
 
 The writer rejects symlink storage components and nonregular targets. New
 files/directories are private where supported; existing permissions stay intact.
