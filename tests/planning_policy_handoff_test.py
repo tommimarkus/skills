@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -223,6 +224,20 @@ class PlanningPolicyHandoffTest(unittest.TestCase):
         self.assertNotIn('yyyy', run.stdout)
         self.assertEqual(self.cli(*args)[0], 0)
 
+    def test_block_error_names_the_overlong_line_not_the_longest_string(self):
+        spec = importlib.util.spec_from_file_location('handoff_block_contract', SCRIPT)
+        assert spec is not None and spec.loader is not None
+        contract = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(contract)
+        # The shallow list item is the longest string but fits; the long key pushes a shorter value over.
+        handoff = {'a': ['x' * 4050], 'plan': {'k' * 100: 'y' * 3995}}
+        with self.assertRaises(contract.HandoffError) as raised:
+            contract.render_handoff_block(handoff)
+        message = str(raised.exception)
+        self.assertIn('$.plan.kkk', message)
+        self.assertNotIn('a[0]', message)
+        self.assertNotIn('yyy', message)
+
     def test_block_format_near_canonical_limit_exceeds_envelope_limit_raw(self):
         plan = copy.deepcopy(self.plan)
         settled = plan['leaves'][0]['settled_decisions']
@@ -232,7 +247,7 @@ class PlanningPolicyHandoffTest(unittest.TestCase):
             index += 1
         settled['padding'] = 'x' * (64 * 1024 - len(canonical(plan)) - len(',"padding":""'))
         self.assertEqual(len(canonical(plan)), 64 * 1024)
-        compact, text = self.block('inline', plan)
+        _, text = self.block('inline', plan)
         self.assertGreater(len(text.encode()), 68 * 1024)
         self.assertTrue(all(len(line) <= 4096 for line in text.splitlines()))
         self.recovered(self.cli('resolve-handoff', '-', raw=text), plan)

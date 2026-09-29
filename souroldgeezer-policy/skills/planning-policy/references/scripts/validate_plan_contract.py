@@ -663,25 +663,30 @@ def emit_handoff(plan: Any, mode: str, source: str = "-") -> dict[str, Any]:
     return handoff
 
 
-def _longest_string_path(value: Any, path: str = "") -> tuple[int, str]:
-    """Return (rendered length, path) of the longest string value or key, never its content."""
-    if isinstance(value, str):
-        return len(json.dumps(value, ensure_ascii=True)), path or "$"
-    best = (0, path or "$")
-    items = value.items() if isinstance(value, dict) else enumerate(value) if isinstance(value, list) else ()
-    for key, child in items:
-        child_path = f"{path}.{key}" if isinstance(value, dict) and path else str(key) if isinstance(value, dict) else f"{path}[{key}]"
-        if isinstance(key, str) and len(json.dumps(key, ensure_ascii=True)) > best[0]:
-            best = (len(json.dumps(key, ensure_ascii=True)), "key of " + (path or "$"))
-        best = max(best, _longest_string_path(child, child_path), key=lambda item: item[0])
-    return best
+def _overlong_block_path(value: Any, path: str = "$", depth: int = 0) -> str | None:
+    """Return the path of the first element whose block line is too long, never its content."""
+    if isinstance(value, dict):
+        members = [(json.dumps(key) + ": ", f"{path}.{key}", child) for key, child in sorted(value.items())]
+    elif isinstance(value, list):
+        members = [("", f"{path}[{index}]", child) for index, child in enumerate(value)]
+    else:
+        return None
+    for position, (label, child_path, child) in enumerate(members):
+        opener = ("[" if isinstance(child, list) else "{") if isinstance(child, (dict, list)) and child else json.dumps(child)
+        comma = "," if position < len(members) - 1 else ""
+        if depth + 1 + len(label) + len(opener) + len(comma) > HANDOFF_BLOCK_LINE_MAX:
+            return child_path
+        found = _overlong_block_path(child, child_path, depth + 1)
+        if found:
+            return found
+    return None
 
 
 def render_handoff_block(handoff: dict[str, Any]) -> str:
     """Render the envelope one element per line so every line fits the approval dialog."""
     text = json.dumps(handoff, sort_keys=True, indent=1, ensure_ascii=True)
     if any(len(line) > HANDOFF_BLOCK_LINE_MAX for line in text.splitlines()):
-        location = _longest_string_path(handoff)[1][:80]
+        location = (_overlong_block_path(handoff) or "$")[:80]
         raise HandoffError(f"block line exceeds {HANDOFF_BLOCK_LINE_MAX} characters at {location}")
     return text
 
