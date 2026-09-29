@@ -1,6 +1,6 @@
 {
   "name": "souroldgeezer-policy",
-  "version": "2026.9.9",
+  "version": "2026.9.10",
   "description": "Passive policy skills for repo-initialized git workflow, release versioning, test-driven development, plan-first approval for work covered by initialized guidance, and declared change-scope levels with single-rung escalation, plus runtime-appropriate delegation guidance for approved plan steps.",
   "author": {
     "name": "Sour Old Geezer",
