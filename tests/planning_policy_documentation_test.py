@@ -275,7 +275,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("persist_plan.py", handoff)
         self.assertIn("blocked:persistence_unavailable", handoff)
         self.assertIn("write probe", handoff)
-        self.assertEqual(2, handoff.count("validate - --emit-handoff inline --handoff-format block"))
+        self.assertEqual(2, handoff.count("contract.py\" validate - --emit-handoff inline --handoff-format block"))
         self.assertIn("272 KiB", handoff)
         self.assertIn("4,096 characters", handoff)
         self.assertIn("validate_plan_contract.py` remains read-only", contract)
