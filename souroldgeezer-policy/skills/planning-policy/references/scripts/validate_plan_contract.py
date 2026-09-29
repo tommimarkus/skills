@@ -64,6 +64,7 @@ HANDOFF_SCHEMA = "planning-approval-handoff-v1"
 HANDOFF_PLAN_MAX = 64 * 1024
 HANDOFF_REFERENCE_MAX = 4 * 1024
 HANDOFF_INLINE_MAX = 68 * 1024
+HANDOFF_BLOCK_LINE_MAX = 4096
 
 
 def proxy_tokens(value: Any) -> int:
@@ -662,6 +663,29 @@ def emit_handoff(plan: Any, mode: str, source: str = "-") -> dict[str, Any]:
     return handoff
 
 
+def _longest_string_path(value: Any, path: str = "") -> tuple[int, str]:
+    """Return (rendered length, path) of the longest string value or key, never its content."""
+    if isinstance(value, str):
+        return len(json.dumps(value, ensure_ascii=True)), path or "$"
+    best = (0, path or "$")
+    items = value.items() if isinstance(value, dict) else enumerate(value) if isinstance(value, list) else ()
+    for key, child in items:
+        child_path = f"{path}.{key}" if isinstance(value, dict) and path else str(key) if isinstance(value, dict) else f"{path}[{key}]"
+        if isinstance(key, str) and len(json.dumps(key, ensure_ascii=True)) > best[0]:
+            best = (len(json.dumps(key, ensure_ascii=True)), "key of " + (path or "$"))
+        best = max(best, _longest_string_path(child, child_path), key=lambda item: item[0])
+    return best
+
+
+def render_handoff_block(handoff: dict[str, Any]) -> str:
+    """Render the envelope one element per line so every line fits the approval dialog."""
+    text = json.dumps(handoff, sort_keys=True, indent=1, ensure_ascii=True)
+    if any(len(line) > HANDOFF_BLOCK_LINE_MAX for line in text.splitlines()):
+        location = _longest_string_path(handoff)[1][:80]
+        raise HandoffError(f"block line exceeds {HANDOFF_BLOCK_LINE_MAX} characters at {location}")
+    return text
+
+
 def resolve_handoff(handoff: Any) -> tuple[Any, dict[str, Any]]:
     expected = {"schema", "plan_sha256"}
     if not isinstance(handoff, dict) or set(handoff) not in (expected | {"plan"}, expected | {"plan_path"}):
@@ -1235,13 +1259,16 @@ def main(argv: list[str] | None = None) -> int:
         help="optional planning-capability-binding-v1 JSON for dispatch validation",
     )
     validate_parser.add_argument("--emit-handoff", choices=("reference", "inline"))
+    validate_parser.add_argument("--handoff-format", choices=("json", "block"), default="json")
     resolve_parser = subparsers.add_parser("resolve-handoff", help="resolve an approval handoff")
     resolve_parser.add_argument("handoff", type=str)
     args = parser.parse_args(argv)
+    if args.command == "validate" and args.handoff_format == "block" and not args.emit_handoff:
+        parser.error("--handoff-format block requires --emit-handoff")
     handoff_mode = args.command == "resolve-handoff" or bool(args.emit_handoff)
     try:
         if args.command == "resolve-handoff":
-            handoff = _read_json_source(args.handoff, HANDOFF_INLINE_MAX)
+            handoff = _read_json_source(args.handoff, 4 * HANDOFF_INLINE_MAX)
             plan, validation = resolve_handoff(handoff)
             result = {"plan": plan, "validation": validation}
         else:
@@ -1254,6 +1281,9 @@ def main(argv: list[str] | None = None) -> int:
             result["plan_sha256"] = canonical_plan_sha256(plan)
             if args.emit_handoff:
                 result["handoff"] = emit_handoff(plan, args.emit_handoff, str(args.plan))
+                if args.handoff_format == "block":
+                    print(render_handoff_block(result["handoff"]))
+                    return 0
     except HandoffError as error:
         print(json.dumps(_error_result(error.code, str(error)), sort_keys=True, separators=(",", ":")))
         return 1

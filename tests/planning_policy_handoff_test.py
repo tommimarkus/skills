@@ -153,16 +153,95 @@ class PlanningPolicyHandoffTest(unittest.TestCase):
                     self.assertNotIn('handoff', result)
 
     def test_envelope_limits_and_invalid_json(self):
-        for raw, expected in (('{', 2), (json.dumps(envelope(self.plan)) + ' ' * (68 * 1024), 1)):
+        limit = 4 * 68 * 1024
+        compact = json.dumps(envelope(self.plan))
+        code, result = self.cli('resolve-handoff', '-', raw=compact + ' ' * (limit - len(compact)))
+        self.recovered((code, result))
+        for raw, expected in (('{', 2), (compact + ' ' * (limit - len(compact) + 1), 1)):
             code, result = self.cli('resolve-handoff', '-', raw=raw)
             self.assertEqual(code, expected, result)
             self.assertNotIn('plan', result)
+        big = copy.deepcopy(self.plan)
+        settled = big['leaves'][0]['settled_decisions']
+        settled['padding'] = 'x'
+        settled['padding'] += 'x' * (68 * 1024 - len(canonical(big)))
+        raw = json.dumps(envelope(big))
+        self.assertLess(len(raw), limit)
+        code, result = self.cli('resolve-handoff', '-', raw=raw)
+        self.assertEqual(code, 1, result)
+        self.assertNotIn('plan', result)
+        self.assertIn('envelope exceeds its byte limit', json.dumps(result))
         handoff = envelope(self.plan)
         del handoff['plan']
         handoff['plan_path'] = '/' + 'a' * 4096
         code, result = self.cli('resolve-handoff', '-', value=handoff)
         self.assertEqual(code, 1, result)
         self.assertNotIn('plan', result)
+
+    def block(self, mode, plan=None, path=None):
+        target = str(path or self.path)
+        if plan is not None:
+            Path(target).write_text(json.dumps(plan))
+        args = ('validate', target, '--emit-handoff', mode)
+        code, compact = self.cli(*args)
+        self.assertEqual(code, 0, compact)
+        run = subprocess.run([sys.executable, str(SCRIPT), *args, '--handoff-format', 'block'],
+                             cwd=self.directory, capture_output=True, text=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stdout)
+        return compact['handoff'], run.stdout
+
+    def test_block_format_is_line_broken_and_resolves(self):
+        for mode in ('inline', 'reference'):
+            with self.subTest(mode=mode):
+                compact, text = self.block(mode)
+                self.assertGreater(len(text.splitlines()), 1)
+                self.assertTrue(all(len(line) <= 4096 for line in text.splitlines()))
+                self.assertEqual(json.loads(text), compact)
+                self.recovered(self.cli('resolve-handoff', '-', raw=text))
+
+    def test_explicit_json_format_is_byte_identical(self):
+        args = (sys.executable, str(SCRIPT), 'validate', str(self.path), '--emit-handoff', 'inline')
+        default = subprocess.run(args, cwd=self.directory, capture_output=True, text=True, timeout=10)
+        explicit = subprocess.run((*args, '--handoff-format', 'json'), cwd=self.directory,
+                                  capture_output=True, text=True, timeout=10)
+        self.assertEqual(default.returncode, 0)
+        self.assertEqual(explicit.stdout, default.stdout)
+
+    def test_block_format_fails_closed_on_overlong_string(self):
+        plan = copy.deepcopy(self.plan)
+        plan['leaves'][0]['settled_decisions']['padding'] = 'y' * 4200
+        self.path.write_text(json.dumps(plan))
+        args = ('validate', str(self.path), '--emit-handoff', 'inline')
+        run = subprocess.run([sys.executable, str(SCRIPT), *args, '--handoff-format', 'block'],
+                             cwd=self.directory, capture_output=True, text=True, timeout=10)
+        self.assertEqual(run.returncode, 1, run.stdout)
+        result = json.loads(run.stdout)
+        self.assertEqual(result['blocked'], 'blocked:missing_input')
+        self.assertNotIn('handoff', result)
+        self.assertNotIn('plan', result)
+        self.assertIn('padding', run.stdout)
+        self.assertNotIn('yyyy', run.stdout)
+        self.assertEqual(self.cli(*args)[0], 0)
+
+    def test_block_format_near_canonical_limit_exceeds_envelope_limit_raw(self):
+        plan = copy.deepcopy(self.plan)
+        settled = plan['leaves'][0]['settled_decisions']
+        index = 0
+        while len(canonical(plan)) < 64 * 1024 - 40:
+            settled[f'k{index:05d}'] = 'x'
+            index += 1
+        settled['padding'] = 'x' * (64 * 1024 - len(canonical(plan)) - len(',"padding":""'))
+        self.assertEqual(len(canonical(plan)), 64 * 1024)
+        compact, text = self.block('inline', plan)
+        self.assertGreater(len(text.encode()), 68 * 1024)
+        self.assertTrue(all(len(line) <= 4096 for line in text.splitlines()))
+        self.recovered(self.cli('resolve-handoff', '-', raw=text), plan)
+
+    def test_block_format_requires_emit_handoff(self):
+        run = subprocess.run([sys.executable, str(SCRIPT), 'validate', '-', '--handoff-format', 'block'],
+                             input=json.dumps(self.plan), cwd=self.directory,
+                             capture_output=True, text=True, timeout=10)
+        self.assertEqual(run.returncode, 2)
 
     def test_legacy_validate_unchanged_but_cannot_emit_new_handoff(self):
         plan = v4_plan(leaf('prepare', 'u1', tier='mechanical'))
