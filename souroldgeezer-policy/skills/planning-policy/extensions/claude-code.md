@@ -6,17 +6,17 @@ range or `indeterminate`, final-verification reserve, and `tracing: off`.
 Normal dispatch never enables or inspects usage tracing.
 
 Before `ExitPlanMode`, this adapter authorizes one plan-mode write:
-`persist_plan.py` into the primary checkout's ignored `.planning-policy/plans`,
-checked read-only with `git check-ignore`. Carry the returned reference envelope
-in a fenced `json` block. Use the inline block instead if the root is not
-ignored, the write is denied, or the writer exits 2 with
+`persist_plan.py` into the primary checkout's `.planning-policy/plans`, once a
+read-only `git check-ignore` confirms that root is ignored. Carry the returned
+reference envelope in a fenced `json` block. Use the inline block instead if the
+root is not ignored, the write is denied, or the writer exits 2 with
 `blocked:persistence_unavailable`. Resolve on implementation entry before
 dispatch; see [approval handoff](../references/approval-handoff.md).
 
 Claude Code withholds approval when a plan line exceeds 4,096 characters or the
-plan exceeds 200,000; wrap prose. An `ExitPlanMode` rejection is never approval,
-even when its feedback text approves: plan mode stays active, nothing dispatches.
-Fix the layout and call `ExitPlanMode` again.
+plan exceeds 200,000 characters; wrap prose. An `ExitPlanMode` rejection is never
+approval, even when its feedback text approves: plan mode stays active, nothing
+dispatches. Fix the layout and call `ExitPlanMode` again.
 
 ## Live lifecycle
 

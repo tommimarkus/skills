@@ -86,9 +86,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # Live-run repair: one over-long approval-envelope plan line made Claude
         # Code withhold approval, and a rejected ExitPlanMode was read as
         # approval. The adapter now states plan-mode persistence, display limits,
-        # and the rejection rule (+108 measured, 7,184); the block-format
+        # and the rejection rule (+113 measured, 7,189); the block-format
         # handoff adds 51 (8,274) on its route. Each budget carries 5 slack.
-        self.assertLessEqual(claude["load_total"], 7189)
+        self.assertLessEqual(claude["load_total"], 7194)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,

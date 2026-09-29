@@ -5,14 +5,16 @@
 A reported Claude Code session could not approve a plan: the approval dialog
 withheld its approve options, a typed "approved" returned as a rejection of
 `ExitPlanMode`, the model misread it as approval and dispatched a worker, and the
-worker refused under plan mode. The plan held its whole approval envelope as one
-compact line of about 7,900 characters.
+worker refused under plan mode. The 15,158-character plan held its whole
+approval envelope as one compact line of 7,948 characters.
 
-The installed Claude Code 2.1.284 client showed this behavior; its public
-documentation and changelog are silent, so the limits are observed behavior that
-can change. The repository owner decided Claude persists during plan mode (one
-authorized `persist_plan.py` write into the ignored root) and falls back to the
-line-wrapped inline block. Codex Plan mode cannot write, so it stays inline.
+The installed Claude Code 2.1.284 client withheld approval when a plan line
+exceeded 4,096 characters, when many near-maximum lines exhausted its display
+budget, or when the plan exceeded 200,000 characters. Its public documentation
+and changelog are silent, so these limits are observed behavior that can change.
+The repository owner decided Claude persists during plan mode (one authorized
+`persist_plan.py` write into the ignored root) and falls back to the line-broken
+inline block. Codex Plan mode cannot write, so it stays inline.
 
 Evidence is repository-authored tests and synthetic behavior cases only. Limits
 are paraphrased; no client source or dialog text is copied.
