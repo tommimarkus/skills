@@ -168,6 +168,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         standard = " ".join(standard.split())
         for principle in (
             "the derivation it comes from", "the consumer that reads it",
+            "each enumerated case in guidance gets a behavior eval",
             "size band from its read-set and acceptance check",
             "host overlay may add dispatch syntax but cannot rewrite",
         ):

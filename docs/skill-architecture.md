@@ -101,7 +101,8 @@ change: the derivation it comes from, and the consumer that reads it. A value
 with no reader is decorative and drifts from whatever produced it; a check with
 no declared referent falls back to unstated judgment. When adding or reviewing
 one, ask both directions — what reads this value, and what does this check
-compare against — and treat a missing answer either way as unfinished. The two
+compare against — and treat a missing answer either way as unfinished; each enumerated case in
+guidance gets a behavior eval. The two
 shapes to copy:
 [materiality.md](../souroldgeezer-audit/docs/audit-reference/materiality.md)
 grounds the risk tier in an observable signal and the audit worklist consumes it

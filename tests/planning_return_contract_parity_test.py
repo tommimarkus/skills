@@ -297,5 +297,55 @@ class NextBlockScopeParityTest(unittest.TestCase):
         )
 
 
+class ReferencedReturnCodeParityTest(unittest.TestCase):
+    """Guidance may only name a return code the ledger registers or a script emits."""
+
+    CODE = re.compile(r"\b(?:blocked|failed|oversized):[a-z][a-z0-9_]*")
+    EMITTER_SCRIPTS = (
+        SCRIPT,
+        SKILL / "references/scripts/validate_plan_contract.py",
+        SKILL / "references/scripts/persist_plan.py",
+        REPO_ROOT / "scripts/planning_policy_forward_eval.py",
+    )
+
+    @classmethod
+    def allowed(cls) -> set[str]:
+        codes = {code for family in ledger.RETURN_CODES.values() for code in family}
+        for script in cls.EMITTER_SCRIPTS:
+            codes.update(cls.CODE.findall(script.read_text(encoding="utf-8")))
+        return codes
+
+    @staticmethod
+    def scanned() -> list[Path]:
+        paths = set(POLICY.glob("**/*.md"))
+        paths.update((SKILL / "references/evals").glob("*.jsonl"))
+        paths.update(
+            path
+            for path in (REPO_ROOT / "tests/planning_policy_forward").rglob("*")
+            if path.is_file()
+        )
+        paths.update((REPO_ROOT / "CLAUDE.md", REPO_ROOT / "AGENTS.md"))
+        return sorted(paths)
+
+    def test_allowed_set_derives_from_the_registry(self):
+        allowed = self.allowed()
+        self.assertTrue({"blocked:environment", "failed:execution", "oversized:scope"} <= allowed)
+        self.assertNotIn("blocked:oversized", allowed)
+
+    def test_every_named_return_code_is_registered_or_emitted(self):
+        allowed = self.allowed()
+        unknown = {}
+        for path in self.scanned():
+            text = path.read_text(encoding="utf-8")
+            for code in sorted(set(self.CODE.findall(text)) - allowed):
+                unknown.setdefault(code, []).append(str(path.relative_to(REPO_ROOT)))
+        self.assertEqual(
+            {},
+            unknown,
+            "return code named in guidance but neither registered in RETURN_CODES "
+            "nor emitted by a planning script",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
