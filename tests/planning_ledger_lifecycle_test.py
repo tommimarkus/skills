@@ -205,7 +205,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             },
             "blockers": []
             if status == "completed"
-            else [{"code": "waiting", "summary": "waiting"}],
+            else [{"code": "blocked:missing_input", "summary": "waiting"}],
             "notes": [],
             "unstarted_remainder": [],
             "commit_hash": "",
