@@ -34,6 +34,7 @@ ledger = load("planning_ledger_next_block", SCRIPTS / "planning_ledger.py")
 FAIL = {"code": "failed:acceptance", "summary": "acceptance exited 1"}
 HIGHER = {"code": "blocked:needs_higher_tier", "summary": "needs deeper reasoning"}
 OTHER = {"code": "blocked:missing_input", "summary": "missing a load-bearing input"}
+SCOPE = {"code": "oversized:scope", "summary": "work outgrew its size band"}
 
 
 def canonical_sha256(value: object) -> str:
@@ -550,7 +551,7 @@ class RecordReturnNextBlockTest(LedgerHarness):
     def test_oversized_reports_no_retry(self):
         self.init()
         self.start()
-        block = self.give("oversized", OTHER, marker="a")["next"]
+        block = self.give("oversized", SCOPE, marker="a")["next"]
         self.assertFalse(block["retry_eligible"])
         self.assertEqual("oversized", block["outcome"])
 
