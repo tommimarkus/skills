@@ -2092,6 +2092,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
             value = {
                 "ready_step_ids": unblocked,
                 "command": dispatch_command(args.plan_id, args.run_id, unblocked[0]),
+                "cleanup_step_id": sid,
             }
         return bounded_action_next(value, "ready_step_ids")
     newly_unblocked = [

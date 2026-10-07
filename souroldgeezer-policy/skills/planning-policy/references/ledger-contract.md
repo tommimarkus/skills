@@ -121,15 +121,16 @@ stands; `true` means the parent re-runs only that leaf's own scoped acceptance
 — never the plan's full final verification, which still runs exactly once, at
 closeout.
 
-For a version-5 run, successful transitions add bounded live guidance:
-`ready` names the `in_progress` command; `in_progress` names the agent and
-attempt to await; `integrated` names cleanup plus any newly unblocked pending steps; and `cleaned` names newly
-unblocked pending steps plus the first ready command, or `validate --closeout`
-when every step is cleaned. In a version-5 run `init-v5`, `integrated`,
-`cleaned`, `reopen` and the next-only `ready_pending` category name `dispatch`
-as that command, `integrated` leads with the dispatch of an unblocked
-dependent before its cleanup, and the record-return `completed` block and the
-next-only integrate and cleanup categories name `land`. These results are derived after the checkpoint is
+For a version-5 run, successful transitions add bounded live guidance: `ready`
+names the `in_progress` command; `in_progress` names the agent and attempt to
+await; `integrated` names cleanup plus any newly unblocked pending steps; and
+`cleaned` names newly unblocked pending steps plus the first ready command, or
+`validate --closeout` when every step is cleaned. In a version-5 run `init-v5`,
+`integrated`, `cleaned`, `reopen` and the next-only `ready_pending` category
+name `dispatch` as that command, `integrated` leads with the dispatch of an
+unblocked dependent and keeps its own cleanup as `cleanup_step_id`, and the
+record-return `completed` block and the next-only integrate and cleanup
+categories name `land`. These results are derived after the checkpoint is
 written and do not alter v1 or policy-less v2/v3 output.
 
 ### Composite land

@@ -368,6 +368,8 @@ class LifecycleNextBlockTest(LedgerHarness):
         self.assertIn("--step-id later", integrated["command"])
         self.assertIn(" dispatch ", integrated["command"])
         self.assertEqual(["later"], integrated["ready_step_ids"])
+        # The integrated step's own cleanup stays named, just behind the dispatch.
+        self.assertEqual("build", integrated["cleanup_step_id"])
         self.assertBounded(integrated)
 
         cleaned = self.worktree_transition("build", "cleaned")["next"]
