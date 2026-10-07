@@ -151,8 +151,10 @@ Each amendment is stored in the step's checkpoint `amendments` list (at most 4,
 each at most 8 paths per list, `reason` at most 480 characters; an absent list
 means none) with `after_attempt_id`, `after_attempt_count`, and
 `return_recorded`, which orders it against that attempt's stored return, and an
-`amend-v5` event records its digest. `plan.json`, `plan_hash`, and the stored
-capability bindings never change. One effective leaf — the approved leaf plus
+`amend-v5` event records its digest. Every load binds the stored list to those
+event digests, per step and in order; an unmatched record or event fails closed
+as `blocked:plan_tampered`. `plan.json`, `plan_hash`, and the stored capability
+bindings never change. One effective leaf — the approved leaf plus
 the cumulative overlay — feeds return validation, the scope-rejection re-record,
 generated packets (the effective leaf plus a bounded `amendments` summary), and
 step validation. Before storing, the effective plan must pass v5 admission

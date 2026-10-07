@@ -489,6 +489,42 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertEqual(3, self.amend("capped", run_id, "step0", "--add-read", "docs9")[0])
         self.assertEqual(4, len(self.checkpoint("capped", run_id)["steps"]["step0"]["amendments"]))
 
+    def tamper(self, plan_id, run_id, mutate):
+        path = self.root / "planning-policy/ledgers" / plan_id / run_id / "checkpoint.json"
+        state = json.loads(path.read_text())
+        mutate(state)
+        path.write_text(json.dumps(state))
+
+    def test_amend_overlay_is_bound_to_its_event_digests(self):
+        # Amendments widen what a return may change, so a stored record that no
+        # amend-v5 event digest vouches for fails closed instead of granting scope.
+        cases = (
+            ("widened", lambda s: s["steps"]["step0"]["amendments"][0]["add_write"].append("etc")),
+            ("dropped", lambda s: s["steps"]["step0"].pop("amendments")),
+            (
+                "injected",
+                lambda s: s["steps"]["step1"].__setitem__(
+                    "amendments", [dict(s["steps"]["step0"]["amendments"][0])]
+                ),
+            ),
+        )
+        for name, mutate in cases:
+            run_id = self.init2(name)
+            self.assertEqual(0, self.amend(name, run_id, "step0", "--add-read", "docs")[0])
+            self.assertEqual(0, self.call(*self.common(name), "show", "--run-id", run_id)[0])
+            self.tamper(name, run_id, mutate)
+            code, result = self.call(*self.common(name), "show", "--run-id", run_id)
+            self.assertEqual(3, code, name)
+            self.assertEqual("blocked:plan_tampered", result["error"], name)
+
+    def test_amend_reports_a_bad_attempt_cap_as_input_not_tampering(self):
+        run_id = self.init2("cap")
+        for value in ("2", "6"):
+            code, result = self.amend("cap", run_id, "step1", "--max-attempts", value)
+            self.assertEqual(3, code, value)
+            self.assertNotEqual("blocked:plan_tampered", result["error"], value)
+            self.assertIn("max_attempts", result["error"], value)
+
     def init_absolute(self, plan_id):
         selected = self.plan(plan_id)
         assigned = json.loads(self.assignments(plan_id).read_text())

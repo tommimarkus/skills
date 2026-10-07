@@ -671,6 +671,37 @@ def valid_amendments(step, approved, schema):
     return value
 
 
+def validate_amendment_events(directory, data):
+    """Bind each stored amendment to the digest its `amend-v5` event recorded.
+
+    An amendment widens what a return may change, so a checkpoint record that no
+    event vouches for, or an event whose record is gone, fails closed.
+    """
+    stored = {
+        sid: [digest(item) for item in step["amendments"]]
+        for sid, step in data.get("steps", {}).items()
+        if isinstance(step, dict) and step.get("amendments")
+    }
+    recorded = {}
+    path = directory / "events.jsonl"
+    if path.is_file() and not path.is_symlink():
+        try:
+            lines = path.read_text().splitlines()
+        except OSError as exc:
+            raise Error("blocked:plan_tampered") from exc
+        for line in lines:
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise Error("blocked:plan_tampered") from exc
+            if isinstance(value, dict) and value.get("action") == "amend-v5":
+                recorded.setdefault(value.get("step_id"), []).append(
+                    value.get("amendment_sha256")
+                )
+    if stored != recorded:
+        raise Error("blocked:plan_tampered")
+
+
 def effective_leaf(leaf, amendments):
     """The approved leaf plus its cumulative amendment overlay."""
     if not amendments:
@@ -852,13 +883,14 @@ def validate_events2(directory, data):
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
     actions = {
-        f"amend-v{schema}",
         f"init-v{schema}",
         f"transition-v{schema}",
         "record-return",
         f"close-v{schema}",
         f"reopen-v{schema}",
     }
+    if schema == FORWARD_SCHEMA:
+        actions.add("amend-v5")
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
@@ -1405,6 +1437,7 @@ def load2(args):
     leafs = leaves_by_id(plan)
     if set(data.get("steps", {})) != set(leafs):
         raise Error("blocked:plan_tampered")
+    validate_amendment_events(directory, data)
     leafs = effective_leaves(plan, data)
     for step in data["steps"].values():
         for field, default in CLOSEOUT_FIELDS.items():
@@ -2825,6 +2858,21 @@ def amend(args):
         raise Error(f"a {step['status']} step cannot be amended")
     reason = bounded_reason(args.reason, "amend", required=True)
     current = leafs[sid]
+    # Operator input errors are named plainly; `valid_amendments` below stays the
+    # fail-closed check that reports any stored-state mismatch as tampering.
+    if len(step.get("amendments", [])) >= MAX_AMENDMENTS:
+        raise Error(f"a step carries at most {MAX_AMENDMENTS} amendments")
+    if args.max_attempts is not None and not (
+        current["max_attempts"] < args.max_attempts <= MAX_AMENDED_ATTEMPTS
+    ):
+        raise Error(
+            f"--max-attempts must raise max_attempts above {current['max_attempts']}"
+            f" and stay at most {MAX_AMENDED_ATTEMPTS}"
+        )
+    if args.acceptance_command is not None and not (
+        1 <= len(args.acceptance_command) <= MAX_AMENDED_COMMAND
+    ):
+        raise Error(f"--acceptance-command must be 1 to {MAX_AMENDED_COMMAND} characters")
     requested = {"add_write": args.add_write, "add_read": args.add_read}
     amendment = {"reason": reason}
     for key, field in (("add_write", "write_set"), ("add_read", "read_set")):

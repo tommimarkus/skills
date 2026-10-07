@@ -38,7 +38,8 @@ Every v5 leaf also declares exact `capability_requirements`: `{ "baseline":
 "plan-step-base-v1", "additional": [...] }`. `additional` is bounded and each
 item names a supported requirement kind, name, and reason; it expresses what a
 fresh worker needs without resolving it to a host. The baseline is required even
-when `additional` is empty.
+when `additional` is empty. Select only `portable_tier`; host adapters own
+model/effort.
 
 Each `work_units` entry has non-empty `cohesive_outcome` and a `decomposition`
 object. `decomposition.shape` is `single`, `parallel`, or `checkpointed`.

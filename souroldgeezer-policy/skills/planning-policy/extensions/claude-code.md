@@ -154,4 +154,5 @@ based on the current parent tip.
 It uses rebase plus fast-forward integration, never a routine cherry-pick.
 
 Run `claude plugin validate --strict` through the repository validation path to
-validate configured aliases and efforts.
+validate configured aliases and efforts; it does not establish the version an
+alias resolves to.

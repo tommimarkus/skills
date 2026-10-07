@@ -366,19 +366,20 @@ its bounded question and evidence surface remain unresolved by targeted
 inspection or focused tests; ordinary design is not an audit route.
 
 A leaf's acceptance command is scoped to its own write set; a whole-suite run
-belongs only to the parent's final verification, run once at closeout, never
-per integration cycle. A leaf may also declare a `batch`: 2 to 8 chained
+belongs only to the parent's final verification, run once at closeout, never per
+integration cycle. A leaf may also declare a `batch`: 2 to 8 chained
 mechanical/standard leaves sharing one worktree owner dispatch once, in
 leaves-array order, in that one shared worktree, with one bounded return per
 member. An in-batch dependency on an earlier-listed member satisfies readiness
-at `ready`/`in_progress`/`completed`; an external dependency needs
-`integrated` or `cleaned` (a v5 run; earlier versions need `cleaned`). When a member stops, `transition --to pending` unwinds its
-never-run followers — refunding the attempt and clearing agent/attempt
-identity — the stopped member remediates in the same worktree, and unwound
-followers redispatch as singles. The batch integrates once, via the helper's
-`--batch-commit` entries, only once every member is `completed` or terminal. A
-per-integration `rebased_tree_changed: false` keeps a leaf's recorded
-acceptance; `true` re-runs only that leaf's scoped acceptance.
+at `ready`/`in_progress`/`completed`; an external dependency needs `integrated`
+or `cleaned` (a v5 run; earlier versions need `cleaned`). When a member stops,
+`transition --to pending` unwinds its never-run followers — refunding the
+attempt and clearing agent/attempt identity — the stopped member remediates in
+the same worktree, and unwound followers redispatch as singles. The batch
+integrates once, via the helper's `--batch-commit` entries, only once every
+member is `completed` or terminal. A per-integration `rebased_tree_changed:
+false` keeps a leaf's recorded acceptance; `true` re-runs only that leaf's
+scoped acceptance.
 
 For an approved plan with at least two delegated steps, only the parent may
 activate and write a run at
@@ -425,8 +426,8 @@ fast-forward-only merge, then prove merged ancestry and clean up without force.
 Cleanup retries safely after partial removal by revalidating recorded identity,
 branch state, and target ancestry. Routine integration never cherry-picks.
 Dependencies become ready once their prerequisites are `integrated` (v5; earlier
-versions need `cleaned`), and their worktrees start at the then-current parent tip. `validate --closeout` requires
-every successful step to be cleaned.
+versions need `cleaned`), and their worktrees start at the then-current parent
+tip. `validate --closeout` requires every successful step to be cleaned.
 
 Use bounded checkpoint and lifecycle/retry returns, never raw logs. Every
 delegated handoff is one at-most-8-KiB `bounded-step-return-v1` JSON object;

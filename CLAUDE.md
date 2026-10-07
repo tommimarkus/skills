@@ -514,12 +514,12 @@ A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
 one worktree owner dispatch once, in leaves-array order, in that one shared
 worktree, with one bounded return per member. An in-batch dependency on an
 earlier-listed member satisfies readiness at `ready`/`in_progress`/`completed`;
-an external dependency needs `integrated` or `cleaned` (a v5 run; earlier versions need `cleaned`). When a member stops, `transition
---to pending` unwinds its never-run followers — refunding the attempt and
-clearing agent/attempt identity — the stopped member remediates in the same
-worktree, and unwound followers redispatch as singles. The batch integrates
-once, via the helper's `--batch-commit` entries, only once every member is
-`completed` or terminal.
+an external dependency needs `integrated` or `cleaned` (a v5 run; earlier
+versions need `cleaned`). When a member stops, `transition --to pending` unwinds
+its never-run followers — refunding the attempt and clearing agent/attempt
+identity — the stopped member remediates in the same worktree, and unwound
+followers redispatch as singles. The batch integrates once, via the helper's
+`--batch-commit` entries, only once every member is `completed` or terminal.
 
 The ledger is the sole retry-policy owner. New v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
@@ -555,14 +555,15 @@ fast-forward-only merge, then prove merged ancestry and clean up without force.
 Cleanup retries safely after partial removal by revalidating recorded identity,
 branch state, and target ancestry. Routine integration never cherry-picks.
 Dependencies become ready once their prerequisites are `integrated` (v5; earlier
-versions need `cleaned`), and their worktrees start at the then-current parent tip. `validate --closeout` requires
-every successful step to be cleaned. A terminal non-completed leaf — `oversized`,
-or an unretryable `blocked`/`failed` — still owns a worktree and is disposed in
-the same closeout: its committed partial work is integrated or discarded, never
-left uncommitted. Final verification runs once, at closeout, never per
-integration cycle; a per-integration `rebased_tree_changed: false` keeps a
-leaf's recorded acceptance, while `true` re-runs only that leaf's scoped
-acceptance, never the full suite.
+versions need `cleaned`), and their worktrees start at the then-current parent
+tip. `validate --closeout` requires every successful step to be cleaned. A
+terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`failed`
+— still owns a worktree and is disposed in the same closeout: its committed
+partial work is integrated or discarded, never left uncommitted. Final
+verification runs once, at closeout, never per integration cycle; a
+per-integration `rebased_tree_changed: false` keeps a leaf's recorded
+acceptance, while `true` re-runs only that leaf's scoped acceptance, never the
+full suite.
 
 Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
 logs. Every delegated handoff is one at-most-8-KiB
