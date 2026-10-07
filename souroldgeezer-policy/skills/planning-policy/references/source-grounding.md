@@ -1,5 +1,21 @@
 # Planning Policy Source Grounding
 
+## 2026-10-07 inline departures need a stated case
+
+A read-only review found the inline-departure rule unsatisfiable. Its fifth
+case, dispatch overhead exceeding the work, counted only when it cited a
+cost-advisory finding, yet no validator `PLANCOST-*` code compares dispatch
+overhead with the size of the work; the nearest codes prescribe batching or
+merging instead. The citation clause also read as covering every case, although
+it was meant for the fifth alone, while the stated-case behavior eval accepts a
+judgment case with one stated line and no citation. The repository owner chose
+deletion over a new advisory code: batching and merging already remedy dispatch
+overhead, and indivisible/trivial covers one small leaf. Each of the four
+remaining cases needs one stated line in the plan and footer.
+
+Evidence is the validator's own code list and repository-authored synthetic
+behavior cases; no third-party text is involved.
+
 ## 2026-09-29 Claude approval display and plan-mode persistence
 
 A reported Claude Code session could not approve a plan: the approval dialog

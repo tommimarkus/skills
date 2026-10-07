@@ -78,6 +78,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-v5-size-from-bounded-evidence",
             "planning-policy-behavior-claude-plan-mode-reference",
             "planning-policy-behavior-claude-withheld-approval",
+            "planning-policy-behavior-execution-shape-overhead-not-inline",
         }
         self.assertTrue(required.issubset(self.behavior))
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]

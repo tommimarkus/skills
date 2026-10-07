@@ -230,6 +230,24 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("unresolved domain-design", entry)
         self.assertIn("Before approval, invoke the owning design skill", core)
 
+    def test_inline_departure_needs_a_stated_case_not_a_cost_citation(self) -> None:
+        # No PLANCOST code compares dispatch overhead with the work, so an
+        # inline case citing one is uncitable; batching/merging owns overhead.
+        core = " ".join(self.text(
+            "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md"
+        ).split())
+        self.assertIn("Delegate unless the plan states one case in one line", core)
+        for case in (
+            "indivisible/trivial", "needs user mid-flight",
+            "context cannot travel", "each result redefines the next",
+        ):
+            with self.subTest(case=case):
+                self.assertIn(case, core)
+        self.assertIn("Dispatch overhead is a batching/merge issue", core)
+        for retired in ("cites the cost-advisory finding", "dispatch overhead exceeds the work"):
+            with self.subTest(retired=retired):
+                self.assertNotIn(retired, core.lower())
+
     def test_v5_authors_are_directed_to_the_canonical_scaffold(self) -> None:
         for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):

@@ -50,11 +50,10 @@ When guidance initializes `scope-policy`, the plan records its level and
 escalation mode in `settled_decisions`; each leaf's `boundary`/`write_set`
 materializes them, adding no plan field. `scope-policy` owns the semantics.
 
-Delegate unless the plan records one case: indivisible/trivial, needs user
-mid-flight, context cannot travel, each result redefines the next, or dispatch
-overhead exceeds the work — a case valid only when it cites the cost-advisory
-finding as its evidence. Overlap
-is a sequencing/isolation issue, not an inline exception. Select an owning
+Delegate unless the plan states one case in one line: indivisible/trivial,
+needs user mid-flight, context cannot travel, or each result redefines the
+next. Dispatch overhead is a batching/merge issue and overlap a
+sequencing/isolation issue; neither is an inline case. Select an owning
 audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
 otherwise use the owning design skill.
