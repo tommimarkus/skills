@@ -56,7 +56,7 @@ vocabulary for that run: `blocked:missing_input`, `blocked:needs_higher_tier`,
 blocker code, and a blocked, failed, or oversized return must carry at least one
 code of its own status; the error names that status's allowed codes. Handoff
 packets from a stamped run carry the registered `return_schema` variant, whose
-blocker `code` is an enum. An absent `return_codes` keeps today's open
+blocker `code` is an enum. An absent `return_codes` keeps the open
 vocabulary, any other value fails ledger load, and retry eligibility is
 unchanged.
 It retains the resolved binding with each assigned step. An assignment change

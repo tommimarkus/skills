@@ -3,15 +3,19 @@
 ## 2026-10-07 closed return-code vocabulary
 
 A read-only review found the blocker-code vocabulary open: validation accepted
-any non-empty code of at most 120 characters, while only two exact codes drive
-retry. A misspelled `failed:acceptence` is silently ineligible and the
-ledger stops it with no retry, and the stale forward-eval fixture schema
-carried the open form. Guidance named codes a worker could emit with no
-documented fallback for a tool crash or an environment denial. The repository
-owner chose a registered vocabulary stamped on new v5 runs
-(`return_codes: registered_v1`), with `failed:execution` and `blocked:environment`
-as the fallbacks and `oversized:scope` for scope stops. Unstamped and retained
-runs keep the open vocabulary.
+any non-empty code of at most 120 characters, while retry eligibility branches
+on exactly `failed:acceptance` and `blocked:needs_higher_tier`. A misspelling of
+either still validated, and the ledger then treated the return as ineligible and
+stopped the leaf with no retry. On 2026-08-12 a Codex worker reported an oversize
+stop under a `blocked:` prefix, and it validated cleanly. The forward fixture
+`tests/planning_policy_forward/oversized/task.md` still asked for that same code
+while its case expected status `oversized`; the existing parity test scanned
+seven documents and no fixtures. Guidance named no fallback for a tool crash or
+an environment denial, and an `oversized` stop had no code at all. The
+repository owner chose a registered vocabulary stamped on new v5 runs
+(`return_codes: registered_v1`), with `failed:execution` and
+`blocked:environment` as the fallbacks and `oversized:scope` for scope stops.
+Unstamped and retained runs keep the open vocabulary.
 
 Evidence is the ledger's own validation code, repository-authored tests, and
 synthetic behavior cases; no third-party text is involved.
