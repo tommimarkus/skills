@@ -6,10 +6,10 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from unittest import mock
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module
 
@@ -738,6 +738,13 @@ class ChangedSinceSelectorTest(unittest.TestCase):
 
     def test_bad_base_runs(self) -> None:
         self.assertTrue(self.select("no-such-rev")[0])
+
+    def test_option_shaped_base_runs_without_reaching_git_diff(self) -> None:
+        self.commit_change("plug/skills/s/references/note.md")
+        with tempfile.TemporaryDirectory() as elsewhere:
+            target = Path(elsewhere) / "diff-output"
+            self.assertTrue(self.select(f"--output={target}")[0])
+            self.assertEqual(list(Path(elsewhere).iterdir()), [])
 
     def test_not_a_git_repo_runs(self) -> None:
         with tempfile.TemporaryDirectory() as plain:

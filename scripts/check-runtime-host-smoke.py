@@ -1133,8 +1133,6 @@ def run_host_smoke(
     return summary
 
 
-# lean-audit:dup-intentional:begin -- independent CLI entrypoints retain local
-# safety flags, dependency checks, diagnostics, and exit-code wording.
 def host_relevant(path: str) -> bool:
     return any(fnmatch.fnmatchcase(path, pattern) for pattern in HOST_RELEVANT_PATTERNS)
 
@@ -1155,12 +1153,16 @@ def git_output(repo: Path, *args: str) -> str:
 def select_run(repo: Path, revision: str) -> tuple[bool, str]:
     """Return (run, reason). Skip only when git proves no host-relevant path changed."""
     try:
+        # Resolve first so an option-shaped REV never reaches git diff as a flag.
+        base = git_output(
+            repo, "rev-parse", "--verify", "--quiet", "--end-of-options", f"{revision}^{{commit}}"
+        ).strip()
         if git_output(repo, "status", "--porcelain", "--untracked-files=all").strip():
             return True, f"working tree is not clean; running against base {revision}"
         changed = [
             line
             for line in git_output(
-                repo, "diff", "--name-only", "--no-renames", f"{revision}...HEAD"
+                repo, "diff", "--name-only", "--no-renames", f"{base}...HEAD"
             ).splitlines()
             if line
         ]
@@ -1177,6 +1179,8 @@ def select_run(repo: Path, revision: str) -> tuple[bool, str]:
     )
 
 
+# lean-audit:dup-intentional:begin -- independent CLI entrypoints retain local
+# safety flags, dependency checks, diagnostics, and exit-code wording.
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
