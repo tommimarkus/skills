@@ -48,7 +48,7 @@ def load_contract(name: str, path: Path) -> Any:
 plan_contract = load_contract("planning_policy_forward_plan_contract", CONTRACT_SCRIPT)
 ledger = load_contract("planning_policy_forward_ledger", LEDGER_SCRIPT)
 
-FINAL_SCHEMA = ledger.bounded_return_schema()
+FINAL_SCHEMA = ledger.bounded_return_schema(registered=True)
 
 
 def bound_value(value: Any) -> Any:
@@ -130,7 +130,7 @@ def build_prompt(case: dict[str, Any], harness: str, workdir: Path, attempt: int
         "retry_remediation_sha256": ledger.digest(remediation) if remediation else "",
     }
     packet = ledger.build_worker_handoff(assignment["plan"], step, case["id"],
-                                         assignment["run_id"], remediation)
+                                         assignment["run_id"], remediation, registered=True)
     # Deliberately incomplete negative cases still omit the assigned input;
     # the missing field must not leak through a full-plan copy.
     for field in case.get("intentionally_missing_input", []):

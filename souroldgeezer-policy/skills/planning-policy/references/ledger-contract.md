@@ -48,6 +48,17 @@ trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
 
 Every new version-5 run also stamps `retry_policy: escalating_remediation_v1`.
+It also stamps `return_codes: registered_v1`, which closes the blocker-code
+vocabulary for that run: `blocked:missing_input`, `blocked:needs_higher_tier`,
+`blocked:model_unavailable`, `blocked:capability_unavailable`,
+`blocked:environment`, `failed:acceptance`, `failed:execution`, and
+`oversized:scope`. `record-return` and `validate-return` then reject any other
+blocker code, and a blocked, failed, or oversized return must carry at least one
+code of its own status; the error names that status's allowed codes. Handoff
+packets from a stamped run carry the registered `return_schema` variant, whose
+blocker `code` is an enum. An absent `return_codes` keeps today's open
+vocabulary, any other value fails ledger load, and retry eligibility is
+unchanged.
 It retains the resolved binding with each assigned step. An assignment change
 requires an exact re-binding before the step can become ready; otherwise stop
 `blocked:capability_unavailable`, never silently substitute or downgrade.

@@ -79,6 +79,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-claude-plan-mode-reference",
             "planning-policy-behavior-claude-withheld-approval",
             "planning-policy-behavior-execution-shape-overhead-not-inline",
+            "planning-policy-behavior-return-code-fallbacks",
         }
         self.assertTrue(required.issubset(self.behavior))
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]
@@ -309,7 +310,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             self.assertIn('"approved_decisions"', prompt)
             self.assertIn("Run only the named synthetic fixture and its acceptance check.", prompt)
             self.assertIn('"planning-worker-handoff-v1"', prompt)
-        self.assertEqual(self.runner.ledger.bounded_return_schema(), self.runner.FINAL_SCHEMA)
+        self.assertEqual(self.runner.ledger.bounded_return_schema(registered=True), self.runner.FINAL_SCHEMA)
 
     def test_synthetic_assignments_are_dispatch_ready_and_only_omit_declared_input(self):
         for case in self.forward:

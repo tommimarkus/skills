@@ -1,5 +1,21 @@
 # Planning Policy Source Grounding
 
+## 2026-10-07 closed return-code vocabulary
+
+A read-only review found the blocker-code vocabulary open: validation accepted
+any non-empty code of at most 120 characters, while only two exact codes drive
+retry. A misspelled `failed:acceptence` is silently ineligible and the
+ledger stops it with no retry, and the stale forward-eval fixture schema
+carried the open form. Guidance named codes a worker could emit with no
+documented fallback for a tool crash or an environment denial. The repository
+owner chose a registered vocabulary stamped on new v5 runs
+(`return_codes: registered_v1`), with `failed:execution` and `blocked:environment`
+as the fallbacks and `oversized:scope` for scope stops. Unstamped and retained
+runs keep the open vocabulary.
+
+Evidence is the ledger's own validation code, repository-authored tests, and
+synthetic behavior cases; no third-party text is involved.
+
 ## 2026-10-07 inline departures need a stated case
 
 A read-only review found the inline-departure rule unsatisfiable. Its fifth

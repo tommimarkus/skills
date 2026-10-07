@@ -260,6 +260,45 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
         # Accepted commands have no separate character cap; the whole return is bounded.
         self.assertNotIn("maxLength", schema["properties"]["acceptance"]["properties"]["command"])
 
+    def validate_blocked(self, packet: dict, blocker_code: str):
+        returned = self.completed_return(packet)
+        returned.update(
+            status="blocked", blockers=[{"code": blocker_code, "summary": "stopped"}],
+            acceptance={"command": packet["leaf"]["acceptance_command"], "exit_code": None, "summary": ""},
+        )
+        handoff_file = self.root / "handoff.json"
+        return_file = self.root / "return.json"
+        handoff_file.write_text(json.dumps(packet), encoding="utf-8")
+        return_file.write_text(json.dumps(returned), encoding="utf-8")
+        return self.call("validate-return", "--handoff-file", str(handoff_file),
+                         "--return-file", str(return_file))
+
+    def test_stamped_run_packet_carries_registered_schema_and_preflight_enforces_it(self) -> None:
+        packet = self.handoff(self.started_run())
+        enum = packet["return_schema"]["properties"]["blockers"]["items"]["properties"]["code"]["enum"]
+        self.assertEqual(sorted(code for family in ledger.RETURN_CODES.values() for code in family), enum)
+        self.assertEqual(packet["return_schema"], ledger.bounded_return_schema(registered=True))
+        self.assertEqual("build", ledger.valid_worker_handoff(packet)["step_id"])
+        code, result = self.validate_blocked(packet, "blocked:environment")
+        self.assertEqual(0, code, result)
+        code, result = self.validate_blocked(packet, "blocked:made_up")
+        self.assertNotEqual(0, code, result)
+        self.assertIn("not registered", result["error"])
+        code, result = self.validate_blocked(packet, "failed:execution")
+        self.assertNotEqual(0, code, result)
+        self.assertIn("blocked return requires a code of its own", result["error"])
+
+    def test_unstamped_packet_keeps_open_vocabulary(self) -> None:
+        run_id = self.started_run()
+        step = self._step_for(run_id)
+        packet = ledger.build_worker_handoff(self.plan, step, "handoff-plan", run_id)
+        self.assertEqual(packet["return_schema"], ledger.bounded_return_schema())
+        self.assertNotIn(
+            "enum", packet["return_schema"]["properties"]["blockers"]["items"]["properties"]["code"]
+        )
+        code, result = self.validate_blocked(packet, "free_form_code")
+        self.assertEqual(0, code, result)
+
     def test_malformed_files_and_events_fail_without_tracebacks(self) -> None:
         run_id = self.started_run()
         packet = self.handoff(run_id)

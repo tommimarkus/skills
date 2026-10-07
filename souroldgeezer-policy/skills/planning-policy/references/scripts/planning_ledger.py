@@ -126,6 +126,22 @@ RETENTION_DAYS = {
 }
 LIFECYCLE_FIELDS = {"run_status", "outcome", "closed_at", "purge_after"}
 ESCALATING_RETRY_POLICY = "escalating_remediation_v1"
+REGISTERED_RETURN_CODES = "registered_v1"
+# The closed blocker-code vocabulary a registered run enforces, by return status.
+RETURN_CODES = {
+    "blocked": tuple(
+        f"blocked:{name}"
+        for name in (
+            "missing_input",
+            "needs_higher_tier",
+            "model_unavailable",
+            "capability_unavailable",
+            "environment",
+        )
+    ),
+    "failed": ("failed:acceptance", "failed:execution"),
+    "oversized": ("oversized:scope",),
+}
 RUN_SCHEMAS = {2, 3, 4, 5}
 CAPABILITY_SCHEMAS = {4, 5}
 LIVE_NEXT_SCHEMAS = {4, 5}
@@ -627,6 +643,8 @@ def active_run(data):
 def validate_steps2(data, leafs):
     if data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}:
         raise Error("invalid v2 retry policy")
+    if data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}:
+        raise Error("invalid v2 return codes")
     steps = data.get("steps")
     if not isinstance(steps, dict) or set(steps) != set(leafs):
         raise Error("blocked:plan_tampered")
@@ -1178,6 +1196,7 @@ def init5(args):
         "purge_after": None,
         "close_reason": "",
         "retry_policy": ESCALATING_RETRY_POLICY,
+        "return_codes": REGISTERED_RETURN_CODES,
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
@@ -1234,6 +1253,7 @@ def load2(args):
         or data.get("plan_id") != args.plan_id
         or data.get("run_id") != args.run_id
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
+        or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
     ):
         raise Error("invalid run checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
@@ -2124,7 +2144,9 @@ def reopen2(args):
     return result
 
 
-def valid_return(value, data, step, leaf):
+def valid_return(value, data, step, leaf, registered=None):
+    if registered is None:
+        registered = data.get("return_codes") == REGISTERED_RETURN_CODES
     if not isinstance(value, dict) or len(canon(value)) > MAX_RETURN:
         raise Error("bounded-step-return-v1 exceeds 8 KiB")
     required = {
@@ -2239,18 +2261,25 @@ def valid_return(value, data, step, leaf):
         raise Error("changed work requires a commit hash")
     if value["status"] in RETURN_STATUSES - {"completed"} and not blockers:
         raise Error("non-completed returns require blockers")
+    if registered:
+        allowed = set().union(*RETURN_CODES.values())
+        if any(blocker["code"] not in allowed for blocker in blockers):
+            raise Error("blocker code is not registered: use " + ", ".join(sorted(allowed)))
+        family = RETURN_CODES.get(value["status"], ())
+        if family and not any(blocker["code"] in family for blocker in blockers):
+            raise Error(f"{value['status']} return requires a code of its own: " + ", ".join(family))
     if value["status"] == "oversized" and not rem:
         raise Error("oversized return requires unstarted_remainder")
     return value
 
 
-def bounded_return_schema():
+def bounded_return_schema(registered=False):
     """Return structural output guidance; valid_return owns semantic checks."""
     evidence = {
         "evidence_path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
         "sha256": {"type": "string", "pattern": SHA.pattern},
     }
-    return {
+    schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "additionalProperties": False,
@@ -2310,6 +2339,10 @@ def bounded_return_schema():
             "commit_hash": {"type": "string", "pattern": COMMIT.pattern[:-1] + "?$"},
         },
     }
+    if registered:
+        codes = sorted(set().union(*RETURN_CODES.values()))
+        schema["properties"]["blockers"]["items"]["properties"]["code"]["enum"] = codes
+    return schema
 
 
 WORKER_HANDOFF_FIELDS = {
@@ -2344,7 +2377,7 @@ def worker_handoff_context(plan):
     return context
 
 
-def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None):
+def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, registered=False):
     """Build one self-contained v5 worker assignment without mutating a ledger."""
     ident(plan_id, "plan id")
     uuid4(run_id, "run id")
@@ -2417,7 +2450,7 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None):
         "executor": executor,
         "capability_binding": binding,
         "retry_remediation": retry_remediation,
-        "return_schema": bounded_return_schema(),
+        "return_schema": bounded_return_schema(registered),
     }
     value["handoff_sha256"] = worker_handoff_digest(value)
     if len(canon(value)) > MAX_WORKER_HANDOFF:
@@ -2472,7 +2505,7 @@ def valid_worker_handoff(value):
             or remediation["target_portable_tier"] != value["portable_tier"]
         ):
             raise Error("invalid worker handoff retry remediation")
-    if value.get("return_schema") != bounded_return_schema():
+    if value.get("return_schema") not in (bounded_return_schema(), bounded_return_schema(True)):
         raise Error("invalid worker handoff return schema")
     return value
 
@@ -2491,7 +2524,10 @@ def handoff(args):
     return {
         "ok": True,
         "action": "handoff",
-        "handoff": build_worker_handoff(plan, step, data["plan_id"], data["run_id"], remediation),
+        "handoff": build_worker_handoff(
+            plan, step, data["plan_id"], data["run_id"], remediation,
+            registered=data.get("return_codes") == REGISTERED_RETURN_CODES,
+        ),
     }
 
 
@@ -2511,7 +2547,10 @@ def validate_return(args):
         "agent_id": handoff_value["agent_id"],
         "attempt_id": handoff_value["attempt_id"],
     }
-    valid_return(return_value, {}, step, handoff_value["leaf"])
+    valid_return(
+        return_value, {}, step, handoff_value["leaf"],
+        registered=handoff_value["return_schema"] == bounded_return_schema(True),
+    )
     return {
         "ok": True,
         "action": "validate-return",

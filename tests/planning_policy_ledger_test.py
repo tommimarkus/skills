@@ -142,6 +142,7 @@ class PlanningLedgerTest(unittest.TestCase):
         checkpoint = json.loads(checkpoint_path.read_text())
         checkpoint["schema"] = 2
         checkpoint["plan_hash"] = ledger.digest(plan)
+        checkpoint.pop("return_codes")
         if policyless:
             checkpoint.pop("retry_policy")
         for step in checkpoint["steps"].values():
@@ -244,7 +245,7 @@ class PlanningLedgerTest(unittest.TestCase):
         )
         return self.checkpoint(run)["steps"][sid]
 
-    def blocker(self, code="blocked_reason", summary="reason"):
+    def blocker(self, code="blocked:environment", summary="reason"):
         return {"code": code, "summary": summary}
 
     def returned(
@@ -390,6 +391,38 @@ class PlanningLedgerTest(unittest.TestCase):
         )
         self.assertEqual("", step["retry_remediation_path"])
         self.assertEqual("", step["retry_remediation_sha256"])
+
+    def test_new_run_stamps_registered_return_codes(self):
+        run = self.init2()
+        self.assertEqual("registered_v1", self.checkpoint(run)["return_codes"])
+        directory = self.root / "planning-policy/ledgers/plan" / run
+        checkpoint = json.loads((directory / "checkpoint.json").read_text())
+        checkpoint["return_codes"] = "open_v2"
+        (directory / "checkpoint.json").write_text(json.dumps(checkpoint))
+        code, result = self.call(*self.common, "show", "--run-id", run)
+        self.assertNotEqual(0, code, result)
+
+    def test_registered_run_rejects_unregistered_and_wrong_family_codes(self):
+        cases = (
+            ("failed", "failed:acceptence", "not registered"),
+            ("blocked", "blocked:no_such_code", "not registered"),
+            ("failed", "blocked:environment", "failed return requires a code of its own"),
+            ("blocked", "failed:execution", "blocked return requires a code of its own"),
+        )
+        for status, blocker_code, message in cases:
+            with self.subTest(code=blocker_code, status=status):
+                run = self.init2()
+                step = self.start(run)
+                value = self.returned(step, status, code=1, blockers=[self.blocker(blocker_code)])
+                code, result = self.record(run, value)
+                self.assertEqual(3, code)
+                self.assertIn(message, result["error"])
+        for status, blocker_code in (("failed", "failed:execution"), ("blocked", "blocked:environment")):
+            with self.subTest(accepted=blocker_code):
+                run = self.init2()
+                step = self.start(run)
+                value = self.returned(step, status, code=1, blockers=[self.blocker(blocker_code)])
+                self.assertEqual(0, self.record(run, value)[0])
 
     def test_v5_trace_init_is_available_but_v2_stays_rejected(self):
         run = self.init2()
@@ -913,7 +946,7 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(3, self.record(run, value)[0])
         run = self.init2()
         step = self.start(run)
-        value = self.returned(step, "failed", code=None, blockers=[self.blocker()])
+        value = self.returned(step, "failed", code=None, blockers=[self.blocker("failed:execution")])
         self.assertEqual(0, self.record(run, value)[0])
         run = self.init2()
         step = self.start(run)
@@ -996,13 +1029,15 @@ class PlanningLedgerTest(unittest.TestCase):
         run = self.init2()
         step = self.start(run)
         value = self.returned(
-            step, "oversized", blockers=[self.blocker("scope", "outside")], remainder=["step1"]
+            step, "oversized", blockers=[self.blocker("oversized:scope", "outside")], remainder=["step1"]
         )
         self.assertEqual(0, self.record(run, value)[0])
         self.assertEqual("oversized", self.checkpoint(run)["steps"]["step0"]["status"])
         run = self.init2()
         step = self.start(run)
-        value = self.returned(step, "oversized", blockers=[self.blocker()], remainder=[])
+        value = self.returned(
+            step, "oversized", blockers=[self.blocker("oversized:scope")], remainder=[]
+        )
         self.assertEqual(3, self.record(run, value)[0])
         run = self.init2()
         step = self.start(run)
@@ -1022,6 +1057,7 @@ class PlanningLedgerTest(unittest.TestCase):
 
     def test_changed_work_needs_a_commit_hash_on_every_status(self):
         """A non-completed stop that edited files must name the commit holding them."""
+        family = {"oversized": "scope", "failed": "execution", "blocked": "environment"}
         for status, remainder in (("oversized", ["step1"]), ("failed", []), ("blocked", [])):
             with self.subTest(status=status):
                 run = self.init2()
@@ -1030,7 +1066,7 @@ class PlanningLedgerTest(unittest.TestCase):
                     step,
                     status,
                     changed=["src/file.py"],
-                    blockers=[self.blocker()],
+                    blockers=[self.blocker(f"{status}:{family[status]}")],
                     remainder=remainder,
                 )
                 self.assertEqual("a" * 40, value["commit_hash"])
@@ -1042,7 +1078,7 @@ class PlanningLedgerTest(unittest.TestCase):
                     step,
                     status,
                     changed=["src/file.py"],
-                    blockers=[self.blocker()],
+                    blockers=[self.blocker(f"{status}:{family[status]}")],
                     remainder=remainder,
                 )
                 value["commit_hash"] = ""
@@ -1196,7 +1232,7 @@ class PlanningLedgerTest(unittest.TestCase):
         step = self.start(run)
         blockers = [
             {
-                "code": f"blocked:{index}",
+                "code": "blocked:environment",
                 "summary": "x " * 120,
                 "evidence_path": f"evidence/{index}.json",
                 "sha256": f"{index:x}" * 64,
