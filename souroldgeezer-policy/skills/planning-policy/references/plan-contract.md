@@ -40,9 +40,6 @@ item names a supported requirement kind, name, and reason; it expresses what a
 fresh worker needs without resolving it to a host. The baseline is required even
 when `additional` is empty.
 
-Select only `portable_tier`; model/effort belong to the host adapter. Missing
-mapping or delegation returns its blocker without a silent tier change.
-
 Each `work_units` entry has non-empty `cohesive_outcome` and a `decomposition`
 object. `decomposition.shape` is `single`, `parallel`, or `checkpointed`.
 `single` has only `shape`. `parallel` has exactly `shape`,
@@ -60,7 +57,9 @@ its cohesive outcome.
 
 Retries are ledger-owned, add no plan fields, and preserve the approved boundary
 and identity. New v5 uses `escalating_remediation_v1`; old policy-less state is
-unchanged.
+unchanged. A running v5 step's execution metadata (`write_set`/`read_set`
+additions, `acceptance_command`, `max_attempts`) is parent-amendable; scope
+fields (task, boundary, decisions, dependencies, tier, owner) need a new plan.
 
 `work_units` declares `{id, original_size, cohesive_outcome, decomposition}` once
 per cohesive outcome; each nonempty unit owns a leaf and is weighted once.
@@ -112,7 +111,7 @@ split lacks a permitted evidence-backed decomposition rationale), and plan scale
 12 leaves or 20 declared work-unit weight — slice into successive plans,
 advisory only); `tier_mix` reports per-tier counts, mechanical share, and
 over-assigned count. Every finding
-is advisory; execution control is invariant. Merge microleaf candidates before
+is advisory. Merge microleaf candidates before
 series slicing. After an oversized return, derive the re-cut from the original
 cohesive outcomes, not a list of remainder items. Successive-plan composition and
 handoff live in [plan series](plan-series.md).
@@ -144,8 +143,7 @@ when an exact `planning-capability-binding-v1` joins the canonical plan SHA-256,
 every leaf, the selected host and executor, identical requirements, and bounded
 capability evidence. Missing, stale, incomplete, or mismatched bindings yield
 `blocked:capability_unavailable`; never silently substitute or downgrade a
-capability or executor. Host adapters own capability resolution, while this
-shared contract owns the required join.
+capability or executor.
 
 ## Validator
 
@@ -175,13 +173,13 @@ uv run python "<skill-dir>/references/scripts/planning_ledger.py" --plan-id <pla
 ```
 
 The parent uses `init-v5`, then follows each successful v5 command's live
-`next` result through `transition`, `record-return`, cleanup,
+`next` result through `transition`, `record-return`, `amend`, cleanup,
 `validate --closeout`, and terminal `close`. After a pause or context
 compaction, `show --run-id <uuid4> --next-only` returns one deterministic highest-priority
 legal category and first command; its `next` block is at most
 120 proxy tokens and the whole result at most 240 proxy tokens. Full `show`
 remains the at-most-1,200-token diagnostic fallback. `reopen` is blocked-run
 only; `list`, `gc --dry-run`, and exact-target `purge` manage retention.
-Mutations require `--actor parent`. Keep bounded evidence, not raw logs. Read
+Mutations require `--actor parent`. Read
 the [ledger contract](ledger-contract.md) only for errors, legacy resumption,
 diagnosis, retention operations, or ledger authoring/audit.

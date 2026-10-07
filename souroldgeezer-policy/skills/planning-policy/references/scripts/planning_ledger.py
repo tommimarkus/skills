@@ -118,6 +118,22 @@ CLOSEOUT_FIELDS = {
     "cleanup_result_path": "",
     "cleanup_result_sha256": "",
 }
+# Execution-metadata amendments: a bounded per-step overlay on the approved leaf.
+AMENDMENT_FIELDS = {
+    "reason",
+    "add_write",
+    "add_read",
+    "after_attempt_id",
+    "after_attempt_count",
+    "return_recorded",
+}
+AMENDMENT_OPTIONAL = {"acceptance_command", "max_attempts"}
+MAX_AMENDMENTS = 4
+MAX_AMENDMENT_PATHS = 8
+MAX_AMENDED_ATTEMPTS = 5
+MAX_AMENDED_COMMAND = 2048
+AMENDABLE_STATES = {"pending", "ready", "blocked", "failed", "oversized"}
+SCOPE_REJECTION_REASON = "oversized: changed path outside write_set"
 RETENTION_DAYS = {
     "completed": 30,
     "blocked": 90,
@@ -575,6 +591,98 @@ def leaves_by_id(plan):
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
 
 
+def attempt_return_recorded(step):
+    """True once the step's current attempt has a stored return."""
+    return bool(step["attempt_id"]) and step["return_path"] == str(
+        Path("returns") / step["id"] / f"{step['attempt_id']}.json"
+    )
+
+
+def valid_amendments(step, approved, schema):
+    """Return a step's stored amendments, failing closed on any malformed record."""
+    value = step.get("amendments", [])
+    if not isinstance(value, list) or len(value) > MAX_AMENDMENTS or (
+        value and schema != FORWARD_SCHEMA
+    ):
+        raise Error("blocked:plan_tampered")
+    attempts = approved["max_attempts"]
+    try:
+        for item in value:
+            if (
+                not isinstance(item, dict)
+                or not AMENDMENT_FIELDS <= set(item) <= AMENDMENT_FIELDS | AMENDMENT_OPTIONAL
+                or not isinstance(item["reason"], str)
+                or not 1 <= len(item["reason"]) <= 480
+                or not isinstance(item["after_attempt_id"], str)
+                or not isinstance(item["after_attempt_count"], int)
+                or isinstance(item["after_attempt_count"], bool)
+                or not isinstance(item["return_recorded"], bool)
+            ):
+                raise Error("invalid amendment")
+            for key in ("add_write", "add_read"):
+                paths = item[key]
+                if not isinstance(paths, list) or len(paths) > MAX_AMENDMENT_PATHS:
+                    raise Error("invalid amendment")
+                for path in paths:
+                    rel(path, "amendment path")
+            if "acceptance_command" in item and (
+                not isinstance(item["acceptance_command"], str)
+                or not 1 <= len(item["acceptance_command"]) <= MAX_AMENDED_COMMAND
+            ):
+                raise Error("invalid amendment")
+            if "max_attempts" in item:
+                number = item["max_attempts"]
+                if (
+                    not isinstance(number, int)
+                    or isinstance(number, bool)
+                    or not attempts < number <= MAX_AMENDED_ATTEMPTS
+                ):
+                    raise Error("invalid amendment")
+                attempts = number
+    except Error as exc:
+        raise Error("blocked:plan_tampered") from exc
+    return value
+
+
+def effective_leaf(leaf, amendments):
+    """The approved leaf plus its cumulative amendment overlay."""
+    if not amendments:
+        return leaf
+    value = dict(leaf)
+    for field, key in (("write_set", "add_write"), ("read_set", "add_read")):
+        paths = list(leaf[field])
+        for item in amendments:
+            paths.extend(path for path in item[key] if path not in paths)
+        value[field] = paths
+    for item in amendments:
+        for field in AMENDMENT_OPTIONAL:
+            if field in item:
+                value[field] = item[field]
+    return value
+
+
+def effective_leaves(plan, data):
+    """Every consumer of amendable leaf fields reads through this one overlay."""
+    steps = data.get("steps", {})
+    return {
+        sid: effective_leaf(
+            leaf,
+            valid_amendments(steps[sid], leaf, data.get("schema")) if sid in steps else [],
+        )
+        for sid, leaf in leaves_by_id(plan).items()
+    }
+
+
+def scope_rejection_state(step):
+    """A step stopped on write_set alone, with no stored return, is repairable."""
+    return (
+        step["status"] == "oversized"
+        and step["reason"] == SCOPE_REJECTION_REASON
+        and not step["return_path"]
+        and not step["return_sha256"]
+    )
+
+
 def step_batches(plan):
     """Derive each batched leaf's member list from the stored canonical plan."""
     groups = {}
@@ -717,6 +825,7 @@ def validate_events2(directory, data):
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
     actions = {
+        f"amend-v{schema}",
         f"init-v{schema}",
         f"transition-v{schema}",
         "record-return",
@@ -1269,6 +1378,7 @@ def load2(args):
     leafs = leaves_by_id(plan)
     if set(data.get("steps", {})) != set(leafs):
         raise Error("blocked:plan_tampered")
+    leafs = effective_leaves(plan, data)
     for step in data["steps"].values():
         for field, default in CLOSEOUT_FIELDS.items():
             step.setdefault(field, default)
@@ -2410,6 +2520,9 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, re
         raise Error("worker handoff requires an in_progress step")
     sid = ident(step.get("id"), "step id")
     leaf = leaves_by_id(plan).get(sid)
+    amendments = step.get("amendments") or []
+    if leaf is not None:
+        leaf = effective_leaf(leaf, valid_amendments(step, leaf, FORWARD_SCHEMA))
     units = {unit.get("id"): unit for unit in plan.get("work_units", []) if isinstance(unit, dict)}
     work_unit = units.get(leaf.get("work_unit_id") if leaf else None)
     if leaf is None or work_unit is None:
@@ -2475,6 +2588,11 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, re
         "retry_remediation": retry_remediation,
         "return_schema": bounded_return_schema(registered),
     }
+    if amendments:
+        value["amendments"] = [
+            {key: item[key] for key in ("reason", "add_write", "add_read", *AMENDMENT_OPTIONAL) if key in item}
+            for item in amendments
+        ]
     value["handoff_sha256"] = worker_handoff_digest(value)
     if len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
@@ -2484,7 +2602,7 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, re
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -2519,6 +2637,11 @@ def valid_worker_handoff(value):
     current = {"agent_id": value["agent_id"], "harness": value.get("host"), "model_or_alias": value.get("executor")}
     if not valid_stored_binding(value.get("capability_binding"), value["plan_sha256"], sid, leaf, current):
         raise Error("invalid worker handoff capability binding")
+    amendments = value.get("amendments", [])
+    if not isinstance(amendments, list) or len(amendments) > MAX_AMENDMENTS or (
+        "amendments" in value and not amendments
+    ):
+        raise Error("invalid worker handoff amendments")
     remediation = value.get("retry_remediation")
     if remediation is not None:
         valid_remediation(remediation)
@@ -2630,6 +2753,72 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
     return bounded_next(block, droppable=("command",))
 
 
+def amend(args):
+    """Parent-only execution-metadata amendment; plan.json and plan_hash never change."""
+    directory, data, plan, leafs = mutating_run(args)
+    if data.get("schema") != FORWARD_SCHEMA:
+        raise Error("amend requires a version-5 run")
+    sid, step = selected_step(data, args.step_id)
+    if step["status"] not in AMENDABLE_STATES:
+        raise Error(f"a {step['status']} step cannot be amended")
+    reason = bounded_reason(args.reason, "amend", required=True)
+    current = leafs[sid]
+    requested = {"add_write": args.add_write, "add_read": args.add_read}
+    amendment = {"reason": reason}
+    for key, field in (("add_write", "write_set"), ("add_read", "read_set")):
+        paths = list(dict.fromkeys(requested[key]))
+        if len(paths) > MAX_AMENDMENT_PATHS:
+            raise Error("amendment exceeds 8 paths per list")
+        amendment[key] = [rel(path, "amendment path") for path in paths if path not in current[field]]
+    if args.acceptance_command is not None and args.acceptance_command != current["acceptance_command"]:
+        amendment["acceptance_command"] = args.acceptance_command
+    if args.max_attempts is not None:
+        amendment["max_attempts"] = args.max_attempts
+    if not (
+        amendment["add_write"]
+        or amendment["add_read"]
+        or {"acceptance_command", "max_attempts"} & set(amendment)
+    ):
+        raise Error("amendment changes nothing")
+    amendment.update(
+        after_attempt_id=step["attempt_id"],
+        after_attempt_count=step["attempt_count"],
+        return_recorded=attempt_return_recorded(step),
+    )
+    amendments = [*step.get("amendments", []), amendment]
+    approved = leaves_by_id(plan)[sid]
+    valid_amendments({"amendments": amendments}, approved, data["schema"])
+    candidate = {**leafs, sid: effective_leaf(current, [amendment])}
+    admitted = plan_validator()(
+        {**plan, "leaves": [candidate[leaf["id"]] for leaf in plan["leaves"]]},
+        capability_binding=None,
+        admission=True,
+    )
+    if not admitted.get("valid") or not admitted.get("approval_ready"):
+        raise Error("amended plan is not approval-ready: " + "; ".join(admitted.get("errors", []))[:200])
+    step["amendments"] = amendments
+    if "max_attempts" in amendment:
+        step["max_attempts"] = amendment["max_attempts"]
+    event(directory, data, "amend-v5", step_id=sid, amendment_sha256=digest(amendment), amendment_count=len(amendments))
+    if scope_rejection_state(step) and amendment["add_write"]:
+        following = bounded_action_next(
+            {
+                "category": "rerecord_return",
+                "step_id": sid,
+                "command": (
+                    f"--plan-id {args.plan_id} record-return --actor parent "
+                    f"--run-id {args.run_id} --return-file <bounded-step-return-v1.json>"
+                ),
+            }
+        )
+    else:
+        following = checkpoint_next(directory, data, step_batches(plan), plan)
+    return result2(
+        "amend-v5", args, sid, step,
+        amendment_count=len(amendments), amendment_sha256=digest(amendment), next=following,
+    )
+
+
 def record(args):
     directory, data, plan, leafs = mutating_run(args)
     raw = Path(args.return_file).read_bytes()
@@ -2639,12 +2828,7 @@ def record(args):
         raise Error("invalid step return JSON") from exc
     sid = value.get("step_id") if isinstance(value, dict) else ""
     step = data["steps"].get(sid)
-    repairable_scope_rejection = step is not None and (
-        step["status"] == "oversized"
-        and step["reason"] == "oversized: changed path outside write_set"
-        and not step["return_path"]
-        and not step["return_sha256"]
-    )
+    repairable_scope_rejection = step is not None and scope_rejection_state(step)
     if step is None or (step["status"] != "in_progress" and not repairable_scope_rejection):
         raise Error("return is not for current in_progress step")
     if len(raw) > MAX_RETURN:
@@ -2667,7 +2851,7 @@ def record(args):
                 data,
                 step,
                 sid,
-                "oversized: changed path outside write_set",
+                SCOPE_REJECTION_REASON,
                 "scope_expanded",
                 "changed path outside write_set",
             )
@@ -3321,6 +3505,7 @@ def show(args):
                 "return_path": step["return_path"],
                 "return_sha256": step["return_sha256"],
                 "retry_allowed": step["retry_allowed"],
+                **({"amendment_count": len(step["amendments"])} if step.get("amendments") else {}),
                 "returned_commit": step["returned_commit"],
                 "integrated_commit": step["integrated_commit"],
                 "integration_result_path": step["integration_result_path"],
@@ -3642,6 +3827,15 @@ def parse():
     trans.add_argument("--evidence-path", default="")
     trans.add_argument("--blocker-code", default="")
     trans.add_argument("--worktree-result", default="")
+    amending = commands.add_parser("amend")
+    amending.add_argument("--actor", required=True)
+    amending.add_argument("--run-id", required=True)
+    amending.add_argument("--step-id", required=True)
+    amending.add_argument("--reason", required=True)
+    amending.add_argument("--add-write", action="append", default=[])
+    amending.add_argument("--add-read", action="append", default=[])
+    amending.add_argument("--acceptance-command")
+    amending.add_argument("--max-attempts", type=int)
     rec = commands.add_parser("record-return")
     rec.add_argument("--actor", required=True)
     rec.add_argument("--run-id")
@@ -3710,6 +3904,8 @@ def main(argv=None):
             value = init5(args)
         elif args.command == "transition":
             value = transition2(args) if args.run_id else transition1(args)
+        elif args.command == "amend":
+            value = amend(args)
         elif args.command == "record-return":
             value = record(args)
         elif args.command == "show":

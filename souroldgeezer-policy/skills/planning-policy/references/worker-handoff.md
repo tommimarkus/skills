@@ -20,7 +20,8 @@ with the host dispatch instructions. A batch carries one packet per member.
 Do not give a worker the whole plan or reconstruct a packet from prose.
 
 `planning-worker-handoff-v1` is at most 32 KiB. It carries the plan digest and
-plan/run/step/agent/attempt identities, exact assigned leaf and work unit,
+plan/run/step/agent/attempt identities, exact assigned leaf (the effective leaf, with a bounded `amendments` summary
+after a parent `amend`) and work unit,
 absolute worktree, current tier/host/executor and binding, bounded retry
 remediation when applicable, and `return_schema` derived from ledger constants.
 `plan_context` includes objective, scope and every shared approved decision;

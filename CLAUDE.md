@@ -538,6 +538,13 @@ legacy resumption, diagnosis, retention operations, or ledger authoring/audit.
 Between active returns, wait for a host notification; never busy-poll or start
 an autonomous lifecycle loop.
 
+The parent may `amend` an active v5 step's execution metadata only: add
+write/read paths, replace `acceptance_command`, or raise `max_attempts` (at most
+5). The bounded per-step overlay and its `amend-v5` event leave `plan.json`, the
+plan hash, and capability bindings unchanged, and one effective leaf feeds
+return validation, packets, and step validation. Task, boundary, decisions,
+dependencies, tier, and owner still need a new approved plan.
+
 Successful v2/v3/v4/v5 steps continue `completed` → `integrated` → `cleaned`.
 The parent ingests bounded `planning-worktree-result-v1` evidence from the
 Git-policy helper: rebase the exact returned branch onto the current parent,

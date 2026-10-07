@@ -400,6 +400,13 @@ identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
 
+The parent may `amend` an active v5 step's execution metadata only: add
+write/read paths, replace `acceptance_command`, or raise `max_attempts` (at most
+5). The bounded per-step overlay and its `amend-v5` event leave `plan.json`, the
+plan hash, and capability bindings unchanged, and one effective leaf feeds
+return validation, packets, and step validation. Task, boundary, decisions,
+dependencies, tier, and owner still need a new approved plan.
+
 Every successful v5 lifecycle result carries a live `next` block of at most
 120 proxy tokens. After a long pause or context compaction, read-only
 `show --next-only` returns one highest-priority action in an at-most-240-token

@@ -1,5 +1,22 @@
 # Planning Policy Source Grounding
 
+## 2026-10-07 ledger-corpus execution friction
+
+A read-only review of the local ledger corpus found 22 runs. At least 6 of the
+13 v3-v5 runs that did not complete stopped on plan metadata rather than on the
+work: a write_set miss became a terminal `oversized` or `missing_input` stop, a
+relative worktree path was accepted at init and refused at handoff, and a
+`worktree_owner` that differed from the branch name was found only after the
+merge. The repository owner chose in-run recovery over new runs: the parent
+`amend` command overlays execution metadata (write/read additions, acceptance
+command, attempt cap) on the approved leaf while task, boundary, decisions,
+dependencies, tier, and owner stay scope that needs a new plan. `plan.json` and
+its hash never change, so approval integrity is preserved.
+
+Evidence is the paraphrased corpus review above, the ledger's own validation
+code, repository-authored tests in `tests/planning_ledger_lifecycle_test.py`,
+and a synthetic behavior case; no third-party text is involved.
+
 ## 2026-10-07 closed return-code vocabulary
 
 A read-only review found the blocker-code vocabulary open: validation accepted

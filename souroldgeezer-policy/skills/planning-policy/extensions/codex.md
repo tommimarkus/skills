@@ -17,8 +17,6 @@ the stated command. After dispatch it waits for a host notification that the
 assigned return is available; it does not busy-poll, start an autonomous loop,
 or enable telemetry. After a 24-hour pause or context compaction, call
 `show --run-id <uuid4> --next-only` once and continue from that bounded result.
-Load the full ledger reference only for an error, legacy resumption, diagnosis,
-retention work, or ledger authoring/audit.
 
 Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
 is refused as `blocked:contract_migration_required`; existing v4 records remain
@@ -88,7 +86,8 @@ Retries use the mapping above. Honor the ledger-selected tier and executor;
 the parent and agent never change them. If unavailable, return
 `blocked:model_unavailable` with target tier/model/effort and availability
 evidence. An agent needing more reasoning returns `blocked:needs_higher_tier`
-with bounded evidence; it never selects its retry.
+with bounded evidence; it never selects its retry. A wrong write/read set,
+acceptance command, or attempt cap is not retried: the parent runs `amend`.
 
 ## Required handoff
 

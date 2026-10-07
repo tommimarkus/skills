@@ -339,6 +339,222 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         state = self.checkpoint("ceiling", ceiling_run)["steps"]["step0"]
         self.assertEqual("blocked:retry_ceiling_reached", state["reason"])
 
+    def amend(self, plan_id, run_id, step_id="step0", *extra, reason="repair metadata"):
+        return self.call(
+            *self.common(plan_id), "amend", "--actor", "parent", "--run-id", run_id,
+            "--step-id", step_id, "--reason", reason, *extra,
+        )
+
+    def move(self, plan_id, run_id, step_id, target, *extra):
+        return self.call(
+            *self.common(plan_id), "transition", "--actor", "parent", "--run-id", run_id,
+            "--step-id", step_id, "--to", target, *extra,
+        )
+
+    def scoped_return(self, step, paths, command="uv run test"):
+        value = self.returned(step)
+        value["changed_paths"] = paths
+        value["commit_hash"] = "a" * 40
+        value["acceptance"]["command"] = command
+        return value
+
+    def test_amend_repairs_a_scope_rejection_without_touching_the_plan(self):
+        run_id = self.init2("amended")
+        run_dir = self.root / "planning-policy/ledgers/amended" / run_id
+        plan_before = (run_dir / "plan.json").read_bytes()
+        step = self.start("amended", run_id, "step0")
+        value = self.scoped_return(step, ["lib/new.py"])
+        self.assertEqual(3, self.record("amended", run_id, value)[0])
+        self.assertEqual("oversized", self.checkpoint("amended", run_id)["steps"]["step0"]["status"])
+
+        code, result = self.amend("amended", run_id, "step0", "--add-write", "lib/**")
+        self.assertEqual(0, code, result)
+        self.assertEqual("amend-v5", result["action"])
+        self.assertEqual(0, self.record("amended", run_id, value)[0])
+        state = self.checkpoint("amended", run_id)
+        self.assertEqual("completed", state["steps"]["step0"]["status"])
+        self.assertEqual(plan_before, (run_dir / "plan.json").read_bytes())
+        self.assertEqual(
+            hashlib.sha256(
+                json.dumps(json.loads(plan_before), sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest(),
+            state["plan_hash"],
+        )
+        events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text().splitlines()]
+        amended = [event for event in events if event["action"] == "amend-v5"]
+        self.assertEqual(1, len(amended))
+        record = state["steps"]["step0"]["amendments"][0]
+        self.assertEqual(ledger.digest(record), amended[0]["amendment_sha256"])
+        self.assertEqual(
+            {"reason", "add_write", "add_read", "after_attempt_id",
+             "after_attempt_count", "return_recorded"},
+            set(record),
+        )
+        self.assertEqual(step["attempt_id"], record["after_attempt_id"])
+        self.assertEqual(1, record["after_attempt_count"])
+        self.assertFalse(record["return_recorded"])
+
+    def test_amend_marks_whether_the_attempts_return_was_already_recorded(self):
+        run_id = self.init2("marked", max_attempts=3)
+        step = self.start("marked", run_id, "step0")
+        failed = self.eligible_return(step)
+        self.assertEqual(0, self.record("marked", run_id, failed)[0])
+        self.assertEqual(0, self.amend("marked", run_id, "step0", "--add-read", "docs")[0])
+        record = self.checkpoint("marked", run_id)["steps"]["step0"]["amendments"][0]
+        self.assertTrue(record["return_recorded"])
+        self.assertEqual(step["attempt_id"], record["after_attempt_id"])
+        # A new attempt that has not returned yet is amended before its return.
+        failed_step = self.checkpoint("marked", run_id)["steps"]["step0"]
+        self.assertEqual(0, self.retry("marked", run_id, failed_step, "analytical")[0])
+        self.assertEqual(0, self.amend("marked", run_id, "step0", "--add-read", "more")[0])
+        second = self.checkpoint("marked", run_id)["steps"]["step0"]["amendments"][1]
+        self.assertFalse(second["return_recorded"])
+        self.assertEqual(2, second["after_attempt_count"])
+
+    def test_amend_replaces_acceptance_and_raises_max_attempts(self):
+        run_id = self.init2("accept")
+        step = self.start("accept", run_id, "step0")
+        code, result = self.amend(
+            "accept", run_id, "step0", "--acceptance-command", "uv run other", "--max-attempts", "4"
+        )
+        self.assertEqual(3, code, result)
+        self.assertEqual(0, self.record("accept", run_id, self.returned(step, "blocked"))[0])
+        code, result = self.amend(
+            "accept", run_id, "step0", "--acceptance-command", "uv run other", "--max-attempts", "4"
+        )
+        self.assertEqual(0, code, result)
+        state = self.checkpoint("accept", run_id)["steps"]["step0"]
+        self.assertEqual(4, state["max_attempts"])
+        fresh = self.init2("accept2")
+        step = self.start("accept2", fresh, "step0")
+        self.assertEqual(
+            0,
+            self.record("accept2", fresh, self.scoped_return(step, [], "uv run test"))[0],
+        )
+
+    def test_amend_acceptance_is_what_returns_are_checked_against(self):
+        run_id = self.init2("swap")
+        step = self.start("swap", run_id, "step0")
+        self.assertEqual(0, self.record("swap", run_id, self.eligible_return(step))[0])
+        self.assertEqual(
+            0, self.amend("swap", run_id, "step0", "--acceptance-command", "uv run other")[0]
+        )
+        failed = self.checkpoint("swap", run_id)["steps"]["step0"]
+        self.assertEqual(0, self.retry("swap", run_id, failed, "standard")[0])
+        step = self.continue_ready("swap", run_id)
+        self.assertEqual(
+            3, self.record("swap", run_id, self.scoped_return(step, [], "uv run test"))[0]
+        )
+        self.assertEqual(
+            0, self.record("swap", run_id, self.scoped_return(step, [], "uv run other"))[0]
+        )
+
+    def test_amend_is_refused_for_active_or_finished_steps_and_bad_inputs(self):
+        run_id = self.init2("refused")
+        step = self.start("refused", run_id, "step0")
+        self.assertEqual(3, self.amend("refused", run_id, "step0", "--add-write", "lib")[0])
+        self.assertEqual(0, self.record("refused", run_id, self.returned(step))[0])
+        self.assertEqual(3, self.amend("refused", run_id, "step0", "--add-write", "lib")[0])
+        for extra, reason in (
+            (("--add-write", "../escape"), "repair"),
+            (("--add-write", "/abs"), "repair"),
+            ((), "repair"),
+            (("--add-read", "docs"), ""),
+            (("--add-read", "docs"), "x" * 481),
+            (("--max-attempts", "6"), "repair"),
+            (("--max-attempts", "2"), "repair"),
+            (tuple(a for n in range(9) for a in ("--add-read", f"docs{n}")), "repair"),
+        ):
+            self.assertEqual(3, self.amend("refused", run_id, "step1", *extra, reason=reason)[0], extra)
+        code, _ = self.call(
+            *self.common("refused"), "amend", "--actor", "worker", "--run-id", run_id,
+            "--step-id", "step1", "--reason", "repair", "--add-read", "docs",
+        )
+        self.assertEqual(3, code)
+
+    def test_amend_runs_plan_admission_on_the_effective_plan(self):
+        run_id = self.init2("overlap")
+        # step1 already owns src1; an unordered second owner must be refused.
+        code, result = self.amend("overlap", run_id, "step0", "--add-write", "src1")
+        self.assertEqual(3, code, result)
+        self.assertNotIn("amendments", self.checkpoint("overlap", run_id)["steps"]["step0"])
+        code, result = self.amend("overlap", run_id, "step0", "--acceptance-command", "true")
+        self.assertEqual(3, code, result)
+
+    def test_amend_is_capped_at_four_per_step(self):
+        run_id = self.init2("capped")
+        for number in range(4):
+            code, result = self.amend("capped", run_id, "step0", "--add-read", f"docs{number}")
+            self.assertEqual(0, code, result)
+        self.assertEqual(3, self.amend("capped", run_id, "step0", "--add-read", "docs9")[0])
+        self.assertEqual(4, len(self.checkpoint("capped", run_id)["steps"]["step0"]["amendments"]))
+
+    def init_absolute(self, plan_id):
+        selected = self.plan(plan_id)
+        assigned = json.loads(self.assignments(plan_id).read_text())
+        for item in assigned:
+            item["worktree"] = str(self.root / f"{plan_id}-{item['id']}")
+        path = self.root / f"{plan_id}-absolute.json"
+        path.write_text(json.dumps(assigned))
+        code, result = self.call(
+            *self.common(plan_id), "init-v5", "--actor", "parent", "--approved",
+            "--plan-file", str(selected), "--assignments-file", str(path),
+            "--capability-binding-file", str(self.capability_binding(selected)),
+        )
+        self.assertEqual(0, code, result)
+        return result["run_id"]
+
+    def test_worker_packet_carries_the_effective_leaf_and_amendment_summary(self):
+        run_id = self.init_absolute("packet")
+        self.assertEqual(
+            0,
+            self.move(
+                "packet", run_id, "step0", "ready", "--agent-id", "agent-step0"
+            )[0],
+        )
+        self.assertEqual(
+            0,
+            self.amend(
+                "packet", run_id, "step0", "--add-write", "lib/**", "--add-read", "docs",
+                reason="lib is generated by the leaf",
+            )[0],
+        )
+        self.assertEqual(0, self.move("packet", run_id, "step0", "in_progress")[0])
+        code, result = self.call(
+            *self.common("packet"), "handoff", "--run-id", run_id, "--step-id", "step0"
+        )
+        self.assertEqual(0, code, result)
+        packet = result["handoff"]
+        self.assertEqual(["src", "lib/**"], packet["leaf"]["write_set"])
+        self.assertEqual(["src", "docs"], packet["leaf"]["read_set"])
+        self.assertEqual(1, len(packet["amendments"]))
+        self.assertEqual("lib is generated by the leaf", packet["amendments"][0]["reason"])
+        files = {}
+        for name, value in (("packet", packet), ("return", self.scoped_return(
+            self.checkpoint("packet", run_id)["steps"]["step0"], ["lib/x.py"]))):
+            files[name] = self.root / f"{name}.json"
+            files[name].write_text(json.dumps(value))
+        code, checked = self.call(
+            "validate-return", "--handoff-file", str(files["packet"]),
+            "--return-file", str(files["return"]),
+        )
+        self.assertEqual(0, code, checked)
+        # An unamended step's packet stays exactly as before.
+        other = self.init_absolute("plain")
+        self.start("plain", other, "step0")
+        code, plain = self.call(*self.common("plain"), "handoff", "--run-id", other, "--step-id", "step0")
+        self.assertNotIn("amendments", plain["handoff"])
+
+    def test_tampered_amendments_fail_closed(self):
+        run_id = self.init2("tamper")
+        self.assertEqual(0, self.amend("tamper", run_id, "step0", "--add-read", "docs")[0])
+        path = self.root / "planning-policy/ledgers/tamper" / run_id / "checkpoint.json"
+        value = json.loads(path.read_text())
+        value["steps"]["step0"]["amendments"][0]["add_write"] = ["../escape"]
+        path.write_text(json.dumps(value))
+        code, _ = self.call(*self.common("tamper"), "show", "--run-id", run_id)
+        self.assertEqual(3, code)
+
     def test_retry_remediation_is_bounded_and_exact(self):
         run_id = self.init2("bounded", max_attempts=3)
         step = self.start("bounded", run_id, "step0")

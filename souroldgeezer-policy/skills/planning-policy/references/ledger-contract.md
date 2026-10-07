@@ -136,6 +136,29 @@ result with a `next` field — while any successful step is only `completed` or
 validation can pass. A successful v5 closeout validation names the completed
 run `close` command in its bounded `next` block.
 
+### Execution-metadata amendment
+
+`amend --actor parent --run-id <uuid4> --step-id <id> --reason <text>` corrects
+a running v5 step's execution metadata without a new plan or run. Choose any of
+repeatable `--add-write PATH`, repeatable `--add-read PATH`, `--acceptance-command
+CMD`, and `--max-attempts N` (above the current value, at most 5). Task,
+boundary, settled decisions, dependencies, `portable_tier`, `worktree_owner`,
+`capability_requirements`, and `batch` are scope: changing them needs a new
+approved plan. The step must be `pending`, `ready`, `blocked`, `failed`, or
+`oversized`; never `in_progress`, `completed`, `integrated`, or `cleaned`.
+
+Each amendment is stored in the step's checkpoint `amendments` list (at most 4,
+each at most 8 paths per list, `reason` at most 480 characters; an absent list
+means none) with `after_attempt_id`, `after_attempt_count`, and
+`return_recorded`, which orders it against that attempt's stored return, and an
+`amend-v5` event records its digest. `plan.json`, `plan_hash`, and the stored
+capability bindings never change. One effective leaf — the approved leaf plus
+the cumulative overlay — feeds return validation, the scope-rejection re-record,
+generated packets (the effective leaf plus a bounded `amendments` summary), and
+step validation. Before storing, the effective plan must pass v5 admission
+(`approval_ready`), so path safety and cross-unit write ordering still hold.
+An amendment never changes retry eligibility.
+
 ### Generated worker packets
 
 `handoff --run-id <uuid4> --step-id <id>` is read-only and requires an active
@@ -185,11 +208,12 @@ acceptance must be `failed`, never completed. Each `blocked`, `failed`, and
 a non-empty `unstarted_remainder`. The parent computes and records the progress
 fingerprint after validating these invariants.
 
-If an older helper automatically stopped an otherwise current return as
-`oversized: changed path outside write_set` without storing that return, the
-parent may submit the same return again after upgrading the helper. This
-recovery applies only to that exact generated state and existing attempt
-identity; every other terminal return remains immutable.
+If a current return was automatically stopped as
+`oversized: changed path outside write_set` without being stored, the parent may
+submit the same return again once `amend --add-write` covers its paths, or after
+upgrading an older helper. This recovery applies only to that exact generated
+state and existing attempt identity; every other terminal return remains
+immutable.
 
 If changed paths, a failed acceptance result, or the return show that the
 assigned task/boundary/read/write sets no longer bound the work, mark the step

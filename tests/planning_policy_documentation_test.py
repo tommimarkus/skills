@@ -163,6 +163,23 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 self.assertIn(phrase, agents)
         self.assertNotIn("Copilot execution mapping", agents)
 
+    def test_amend_splits_execution_metadata_from_scope(self) -> None:
+        root = "souroldgeezer-policy/skills/planning-policy/"
+        for path in ("CLAUDE.md", "AGENTS.md"):
+            text = " ".join(self.text(path).split())
+            self.assertIn("`amend` an active v5 step's execution metadata only", text)
+            self.assertIn("amend-v5", text)
+            self.assertIn("new approved plan", text)
+        ledger = " ".join(self.text(root + "references/ledger-contract.md").split())
+        for fact in ("amend --actor parent", "`amend-v5` event", "effective leaf", "at most 4"):
+            self.assertIn(fact, ledger)
+        self.assertIn("`amend`", self.text(root + "SKILL.md"))
+        self.assertIn("parent-amendable", self.text(root + "references/plan-contract.md"))
+        for adapter in ("claude-code", "codex"):
+            text = " ".join(self.text(root + f"extensions/{adapter}.md").split())
+            self.assertIn("the parent runs `amend`", text)
+        self.assertIn("ledger-corpus execution friction", self.text(root + "references/source-grounding.md"))
+
     def test_craft_standard_preserves_declared_value_consumer_loop(self) -> None:
         standard = self.text("docs/skill-architecture.md")
         standard = " ".join(standard.split())
