@@ -312,7 +312,7 @@ class InitNextBlockTest(LedgerHarness):
     def test_init_v4_names_only_dependency_free_steps_and_the_ready_command(self):
         result = self.init([leaf("build", []), leaf("later", ["build"])])
         block = result["next"]
-        # `ready()` admits a pending step only once each dependency is cleaned.
+        # `ready()` admits a pending step only once each dependency is integrated or cleaned.
         self.assertEqual(["build"], block["ready_step_ids"])
         self.assertIn(f"--run-id {self.run_id}", block["command"])
         self.assertIn("--step-id build", block["command"])
@@ -351,13 +351,14 @@ class LifecycleNextBlockTest(LedgerHarness):
         self.assertEqual(self.checkpoint()["steps"]["build"]["attempt_id"], block["attempt_id"])
         self.assertBounded(block)
 
-    def test_integrated_names_cleanup_and_cleaned_names_newly_unblocked_work(self):
+    def test_integrated_names_cleanup_and_newly_unblocked_work_and_cleaned_names_it_again(self):
         self.init([leaf("build", []), leaf("later", ["build"])])
         self.start("build")
         self.give("completed", sid="build")
         integrated = self.worktree_transition("build", "integrated")["next"]
         self.assertIn("--step-id build", integrated["command"])
         self.assertIn("--to cleaned", integrated["command"])
+        self.assertEqual(["later"], integrated["ready_step_ids"])
         self.assertBounded(integrated)
 
         cleaned = self.worktree_transition("build", "cleaned")["next"]
@@ -415,6 +416,30 @@ class LifecycleNextBlockTest(LedgerHarness):
         self.assertBounded(block)
 
 
+class ExternalDependencyGateTest(unittest.TestCase):
+    def data(self, schema: int, status: str) -> dict:
+        return {
+            "schema": schema,
+            "steps": {
+                "a": {"id": "a", "status": status, "dependencies": []},
+                "b": {"id": "b", "status": "pending", "dependencies": ["a"]},
+            },
+        }
+
+    def test_only_schema_5_externals_unblock_at_integrated(self):
+        for schema, expected in ((5, True), (4, False), (3, False), (2, False)):
+            with self.subTest(schema=schema):
+                data = self.data(schema, "integrated")
+                self.assertEqual(
+                    expected, ledger.dependencies_clean(data, data["steps"]["b"], {})
+                )
+        for schema in (2, 4, 5):
+            data = self.data(schema, "cleaned")
+            self.assertTrue(ledger.dependencies_clean(data, data["steps"]["b"], {}))
+            data = self.data(schema, "completed")
+            self.assertFalse(ledger.dependencies_clean(data, data["steps"]["b"], {}))
+
+
 class NextOnlyRehydrationTest(LedgerHarness):
     def assertEnvelopeBounded(self, result: dict) -> None:
         self.assertLessEqual(ledger.proxy_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
@@ -441,13 +466,33 @@ class NextOnlyRehydrationTest(LedgerHarness):
         self.assertEqual(0, code)
         self.start("active", "agent-active")
 
-        block = self.assertCategory("cleanup_integrated")
-        self.assertIn("--step-id clean", block["command"])
-        self.worktree_transition("clean", "cleaned")
+        # Schema 5 puts cleanup behind every dispatch-side action.
         self.assertCategory("integrate_completed")
         self.worktree_transition("integrate", "integrated")
-        self.worktree_transition("integrate", "cleaned")
         self.assertCategory("remediate_failure")
+
+    def test_cleanup_waits_behind_ready_dispatch_and_await_then_leads_to_closeout(self):
+        self.init([leaf("clean", []), leaf("pending", []), leaf("ready", []), leaf("active", [])])
+        self.start("clean", "agent-clean")
+        self.give("completed", sid="clean")
+        self.worktree_transition("clean", "integrated")
+        self.assertCategory("ready_pending")
+        for sid in ("pending", "ready", "active"):
+            code, _ = self.transition(sid, "ready", "--agent-id", f"agent-{sid}")
+            self.assertEqual(0, code)
+        self.assertCategory("dispatch_ready")
+        for sid in ("pending", "ready", "active"):
+            code, _ = self.transition(sid, "in_progress")
+            self.assertEqual(0, code)
+        self.assertCategory("await_return")
+        for sid in ("pending", "ready", "active"):
+            self.give("completed", sid=sid)
+            self.worktree_transition(sid, "integrated")
+        block = self.assertCategory("cleanup_integrated")
+        self.assertIn("--step-id active", block["command"])
+        for sid in ("clean", "pending", "ready", "active"):
+            self.worktree_transition(sid, "cleaned")
+        self.assertCategory("validate_closeout")
 
     def test_pending_dispatch_await_closeout_and_terminal_categories(self):
         self.init()

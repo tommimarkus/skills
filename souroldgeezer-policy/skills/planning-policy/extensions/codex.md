@@ -165,5 +165,6 @@ with the applicable blocker code, preserve unstarted work, and do not make a new
 decision. The parent interprets the bounded return and owns integration and
 final verification. For every successful leaf it ingests the Git-policy
 helper's bounded result through `completed` → `integrated` → `cleaned`, and
-only then dispatches dependents from a worktree based on the current parent tip.
+dispatches dependents once each prerequisite is `integrated`, from a worktree
+based on the current parent tip.
 It uses rebase plus fast-forward integration, never a routine cherry-pick.

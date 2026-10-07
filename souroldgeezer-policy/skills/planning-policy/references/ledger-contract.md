@@ -23,10 +23,11 @@ Only one parent writes a run. Its isolated ledger directory is
 is the stable approved-plan identifier and `run-id` is the contractually
 canonical lowercase UUID4. A delegated leaf returns one `bounded-step-return-v1`
 object to the parent and never mutates the ledger. Independent leaves may run concurrently only when their dependencies
-are already `cleaned` and they do not share a worktree or write path — except
+are already `cleaned` (`integrated` or `cleaned` for a version-5 run) and they do not share a worktree or write path — except
 that an in-batch dependency on an earlier-listed same-batch member satisfies
 readiness at `ready`, `in_progress`, or `completed`, since a batch shares one
-worktree; an external dependency still requires `cleaned`. Each step
+worktree; an external dependency still requires `cleaned`, except that a
+version-5 run accepts `integrated` or `cleaned`. Each step
 has exactly one current attempt at a time.
 
 The binding a parent must construct before calling `init-v5` is
@@ -77,7 +78,8 @@ All lifecycle commands require the same `--run-id` after `init-v5` returns it:
 `transition` names a `--step-id` and a `--to` target status; it checks that
 exactly one attempt is current and records a bounded reason plus an optional
 safe relative evidence path. A step may move to `ready` from `pending`,
-`blocked`, or `failed`, provided every dependency is already `cleaned` (an
+`blocked`, or `failed`, provided every dependency is already `cleaned` — or, in a version-5 run,
+`integrated` or `cleaned` (an
 in-batch dependency on an earlier-listed same-batch member instead needs only
 `ready`, `in_progress`, or `completed`), the
 attempt limit is not exhausted, and — for a retry — the call passes `--retry`;
@@ -121,7 +123,7 @@ closeout.
 
 For a version-5 run, successful transitions add bounded live guidance:
 `ready` names the `in_progress` command; `in_progress` names the agent and
-attempt to await; `integrated` names cleanup; and `cleaned` names newly
+attempt to await; `integrated` names cleanup plus any newly unblocked pending steps; and `cleaned` names newly
 unblocked pending steps plus the first ready command, or `validate --closeout`
 when every step is cleaned. These results are derived after the checkpoint is
 written and do not alter v1 or policy-less v2/v3 output.
@@ -205,7 +207,9 @@ Load the Git-policy-owned
 [planning worktree closeout](../../git-workflow-policy/references/planning-worktree-closeout.md)
 procedure and ingest each successful helper result. Leave a cleanup failure at
 `integrated` so it can be retried. Create a dependent leaf's worktree only
-after its prerequisites are cleaned, from the then-current parent tip.
+after its prerequisites are integrated (version 5) or cleaned (earlier
+versions), from the then-current parent tip; cleanup stays mandatory before
+closeout.
 
 A terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`failed`
 — still owns a worktree. Close it out too: from the bounded return, integrate the
@@ -305,9 +309,9 @@ omitted records.
 `show --run-id <uuid4> --next-only` is the read-only v5 rehydration lane. It
 returns one deterministic highest-priority category and first command, with a
 120-proxy-token `next` block and a 240-proxy-token whole envelope. Priority is:
-cleanup integrated work; integrate completed work; remediate eligible
-failures; ready unblocked pending work; dispatch ready work; await active
-returns; validate closeout; then report terminal blockage or closure. It uses
+integrate completed work; remediate eligible failures; ready unblocked pending
+work; dispatch ready work; await active returns; cleanup integrated work;
+validate closeout; then report terminal blockage or closure. It uses
 the same dependency, attempt, and retry predicates as mutation. Full `show`
 remains unchanged as the at-most-1,200-token diagnostic fallback, especially
 when its wide summary reports truncation. Version 1 and policy-less v2/v3 reject

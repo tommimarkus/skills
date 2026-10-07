@@ -189,7 +189,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
         ).split())
         for fact in (
-            "an external dependency still requires `cleaned`",
+            "an external dependency still requires `cleaned`, except that a version-5 run accepts `integrated` or `cleaned`",
             "an in-batch dependency on an earlier-listed same-batch member",
             "readiness at `ready`, `in_progress`, or `completed`",
         ):

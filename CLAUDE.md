@@ -514,7 +514,7 @@ A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
 one worktree owner dispatch once, in leaves-array order, in that one shared
 worktree, with one bounded return per member. An in-batch dependency on an
 earlier-listed member satisfies readiness at `ready`/`in_progress`/`completed`;
-an external dependency still needs `cleaned`. When a member stops, `transition
+an external dependency needs `integrated` or `cleaned` (a v5 run; earlier versions need `cleaned`). When a member stops, `transition
 --to pending` unwinds its never-run followers — refunding the attempt and
 clearing agent/attempt identity — the stopped member remediates in the same
 worktree, and unwound followers redispatch as singles. The batch integrates
@@ -544,8 +544,8 @@ Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
 Cleanup retries safely after partial removal by revalidating recorded identity,
 branch state, and target ancestry. Routine integration never cherry-picks.
-Dependencies become ready only after their prerequisites are cleaned, and their
-worktrees start at the then-current parent tip. `validate --closeout` requires
+Dependencies become ready once their prerequisites are `integrated` (v5; earlier
+versions need `cleaned`), and their worktrees start at the then-current parent tip. `validate --closeout` requires
 every successful step to be cleaned. A terminal non-completed leaf — `oversized`,
 or an unretryable `blocked`/`failed` — still owns a worktree and is disposed in
 the same closeout: its committed partial work is integrated or discarded, never

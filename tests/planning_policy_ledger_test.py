@@ -1102,7 +1102,7 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertTrue(state["integration_result_sha256"])
         self.assertTrue(state["cleanup_result_sha256"])
 
-    def test_dependency_waits_for_cleanup_and_closeout_requires_cleaned(self):
+    def test_v5_dependent_readies_at_integrated_and_closeout_requires_cleaned(self):
         plan = self.plan()
         data = json.loads(plan.read_text())
         data["leaves"][1]["dependencies"] = ["step0"]
@@ -1114,9 +1114,24 @@ class PlanningLedgerTest(unittest.TestCase):
         integrated = self.worktree_result(step)
 
         self.assertEqual(3, self.call(*self.common, "validate", "--run-id", run, "--closeout")[0])
+        # A merely completed prerequisite does not unblock the dependent.
+        self.assertEqual(3, self.call(
+                *self.common,
+                "transition",
+                "--actor",
+                "parent",
+                "--run-id",
+                run,
+                "--step-id",
+                "step1",
+                "--to",
+                "ready",
+                "--agent-id",
+                "dependent",
+            )[0])
         self.assertEqual(0, self.transition_result(run, "step0", "integrated", integrated)[0])
         self.assertEqual(
-            3,
+            0,
             self.call(
                 *self.common,
                 "transition",
@@ -1132,26 +1147,10 @@ class PlanningLedgerTest(unittest.TestCase):
                 "dependent",
             )[0],
         )
+        self.assertEqual(3, self.call(*self.common, "validate", "--run-id", run, "--closeout")[0])
         self.assertEqual(
             0,
             self.transition_result(run, "step0", "cleaned", {**integrated, "action": "cleanup"})[0],
-        )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--run-id",
-                run,
-                "--step-id",
-                "step1",
-                "--to",
-                "ready",
-                "--agent-id",
-                "dependent",
-            )[0],
         )
 
     def test_cleanup_failure_is_retryable_without_state_change(self):

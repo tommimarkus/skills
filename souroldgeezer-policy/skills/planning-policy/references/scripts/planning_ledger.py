@@ -107,6 +107,7 @@ WORKTREE_RESULT_OPTIONAL = {"rebased_tree_changed", "batch_source_commits"}
 # A batch is one dispatch in one shared worktree, so a member's dependency on an
 # earlier member is satisfied by progress rather than by that member's cleanup.
 BATCH_DEPENDENCY_STATES = {"ready", "in_progress", "completed", "cleaned"}
+EXTERNAL_DEPENDENCY_STATES = {"integrated", "cleaned"}
 BATCH_STOPPED_STATES = {"blocked", "failed", "oversized"}
 BATCH_ACTIVE_STATES = {"pending", "ready", "in_progress"}
 CLOSEOUT_FIELDS = {
@@ -544,10 +545,12 @@ def transition_scope(plan_id, run_id):
 
 
 def dependencies_clean(data, step, batches):
+    """Dependencies are satisfied; schema-5 externals unblock at `integrated`."""
     members = batches.get(step["id"], ())
+    external = EXTERNAL_DEPENDENCY_STATES if data.get("schema") == FORWARD_SCHEMA else {"cleaned"}
     return all(
         data["steps"][dep]["status"]
-        in (BATCH_DEPENDENCY_STATES if dep in members else {"cleaned"})
+        in (BATCH_DEPENDENCY_STATES if dep in members else external)
         for dep in step["dependencies"]
     )
 
@@ -1217,8 +1220,8 @@ def init5(args):
         "plan_hash": data["plan_hash"],
         "retry_policy": data["retry_policy"],
     }
-    # `ready()` admits a pending step only once every dependency is `cleaned`,
-    # so at initialization exactly the dependency-free steps can start.
+    # `ready()` admits a pending step only once every dependency is `integrated`
+    # or `cleaned`, so at initialization exactly the dependency-free steps can start.
     startable = [sid for sid in sorted(steps) if not steps[sid]["dependencies"]]
     if startable:
         result["next"] = bounded_next(
@@ -1573,7 +1576,11 @@ def ready(args, directory, data, plan, batches, step):
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
     if not dependencies_clean(data, step, batches):
-        raise Error("dependencies are not cleaned")
+        raise Error(
+            "dependencies are not integrated or cleaned"
+            if data.get("schema") == FORWARD_SCHEMA
+            else "dependencies are not cleaned"
+        )
     if not attempt_available(step):
         raise Error("blocked:retry_exhausted")
     if retry_state:
@@ -1691,8 +1698,9 @@ def checkpoint_next(directory, data, batches, plan):
     plan_id, run_id = data["plan_id"], data["run_id"]
     steps = ordered_steps(data["steps"])
     integrated = [step["id"] for step in steps if step["status"] == "integrated"]
+    cleanup = None
     if integrated:
-        return bounded_action_next(
+        cleanup = bounded_action_next(
             {
                 "category": "cleanup_integrated",
                 "step_ids": integrated,
@@ -1703,6 +1711,9 @@ def checkpoint_next(directory, data, batches, plan):
             },
             "step_ids",
         )
+    # Schema 5 keeps the critical path moving: cleanup waits behind dispatch.
+    if cleanup and data.get("schema") != FORWARD_SCHEMA:
+        return cleanup
 
     # A batch shares one worktree and integrates its tip once, so a completed
     # member waits until no sibling can still commit to that worktree.
@@ -1780,6 +1791,9 @@ def checkpoint_next(directory, data, batches, plan):
             }
         )
 
+    if cleanup:
+        return cleanup
+
     if steps and all(step["status"] == "cleaned" for step in steps):
         return bounded_action_next(
             series_closeout_overlay(
@@ -1814,14 +1828,23 @@ def next_after_transition(args, directory, data, batches, step, plan):
             }
         )
     if step["status"] == "integrated":
-        return bounded_action_next(
-            {
-                "command": (
-                    f"{scope} --step-id {sid} --to cleaned "
-                    "--worktree-result <planning-worktree-result-v1.json>"
-                )
-            }
-        )
+        value = {
+            "command": (
+                f"{scope} --step-id {sid} --to cleaned "
+                "--worktree-result <planning-worktree-result-v1.json>"
+            )
+        }
+        unblocked = [
+            candidate["id"]
+            for candidate in ordered_steps(data["steps"])
+            if data.get("schema") == FORWARD_SCHEMA
+            and candidate["status"] == "pending"
+            and sid in candidate["dependencies"]
+            and ready_candidate(data, candidate, batches)
+        ]
+        if unblocked:
+            value["ready_step_ids"] = unblocked
+        return bounded_action_next(value, "ready_step_ids")
     newly_unblocked = [
         candidate["id"]
         for candidate in ordered_steps(data["steps"])

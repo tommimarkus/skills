@@ -111,8 +111,8 @@ skill requirements.
 For two or more delegated steps, only the parent creates
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
 evidence paths, and returns, never raw logs. Successful leaves close
-`completed` → `integrated` → `cleaned`; only then create dependent worktrees
-from the current parent tip. Follow [worker handoff](worker-handoff.md) for
+`completed` → `integrated` → `cleaned`; create dependent worktrees from the
+current parent tip once each prerequisite is `integrated`. Follow [worker handoff](worker-handoff.md) for
 generated assignments and return preflight. Use the ledger's Git-policy helper, not a routine
 cherry-pick, then validate `--closeout`.
 
