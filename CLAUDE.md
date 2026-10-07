@@ -521,6 +521,12 @@ identity — the stopped member remediates in the same worktree, and unwound
 followers redispatch as singles. The batch integrates once, via the helper's
 `--batch-commit` entries, only once every member is `completed` or terminal.
 
+The parent starts a leaf, or a whole batch, with the composite `dispatch`: it
+checks that the assigned worktree is registered on the leaf's `worktree_owner`
+(its git branch name) before any state change, creating it with `--create-from`,
+then readies, starts, and returns one worker packet per member. The granular
+`transition` and `handoff` commands remain for recovery.
+
 The ledger is the sole retry-policy owner. New v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
 behavior, and `portable_tier` is initial only. One predicate classifies a return

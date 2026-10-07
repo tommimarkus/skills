@@ -1,8 +1,8 @@
 # Worker handoff and return preflight
 
 Use for ledger-backed v5 delegation. The parent resolves approval and capability
-binding, creates the worktree and starts the assigned attempt through the normal
-ledger lifecycle. The generated packet transports those decisions; it grants no
+binding; `dispatch` verifies the worktree identity (creating it with
+`--create-from`), starts the assigned attempt and returns the packet. The generated packet transports those decisions; it grants no
 approval, permission or new retry. Existing single-step or legacy manual
 handoffs retain their versioned contract and must carry relevant shared decisions.
 

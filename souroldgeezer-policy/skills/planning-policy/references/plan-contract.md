@@ -19,7 +19,7 @@ Other explicit versions are invalid.
 
 Each `leaves` entry has non-empty
 `id`, `dependencies`, `task`, `boundary`, `read_set`, `write_set`,
-`settled_decisions`, `size`, `portable_tier`, `worktree_owner`, one string
+`settled_decisions`, `size`, `portable_tier`, `worktree_owner` (its git branch), one string
 `acceptance_command`, `return_contract`, `stop_conditions`, and `work_unit_id`.
 IDs/dependencies match `[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*` (maximum 64).
 Dependencies/read/write/stops are arrays; stops include

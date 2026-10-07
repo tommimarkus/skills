@@ -33,9 +33,9 @@ choice invokes its owning design skill before approval.
   host plan. The [binding scaffold](references/templates/capability-binding-v1.json)
   joins plan digest, leaves, requirements, executor, and evidence. For an approved
   plan with two or more
-  delegated steps, the parent alone uses `init-v5`, `transition`, `record-return`, `amend`, `show`,
+  delegated steps, the parent alone uses `init-v5`, `dispatch`, `transition`, `record-return`, `amend`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py). For assigned workers, use the generated packet and read-only return preflight
+  [`planning_ledger.py`](references/scripts/planning_ledger.py). Assigned workers use the generated packet and read-only return preflight
   in [worker handoff](references/worker-handoff.md). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to

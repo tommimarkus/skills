@@ -371,6 +371,16 @@ def root(args):
     return common / "planning-policy" / "ledgers"
 
 
+def repository_top(args):
+    """The checkout relative assignment worktrees resolve against."""
+    if args.repo_root:
+        return Path(args.repo_root).resolve()
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], text=True, capture_output=True
+    )
+    return Path(result.stdout.strip() if result.returncode == 0 else Path.cwd()).resolve()
+
+
 def plan_dir(args):
     return root(args) / ident(args.plan_id, "plan id")
 
@@ -563,6 +573,23 @@ def ordered_steps(steps):
 
 def transition_scope(plan_id, run_id):
     return f"--plan-id {plan_id} transition --actor parent --run-id {run_id}"
+
+
+def dispatch_command(plan_id, run_id, step_id):
+    return (
+        f"--plan-id {plan_id} dispatch --actor parent --run-id {run_id} "
+        f"--step-id {step_id} --agent-id <agent-id>"
+    )
+
+
+def ready_command(data, step_id):
+    """Start a pending step: composite dispatch in v5, granular ready before."""
+    if data.get("schema") == FORWARD_SCHEMA:
+        return dispatch_command(data["plan_id"], data["run_id"], step_id)
+    return (
+        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
+        "--to ready --agent-id <agent-id>"
+    )
 
 
 def dependencies_clean(data, step, batches):
@@ -1298,6 +1325,13 @@ def init5(args):
     approved_parent(args)
     plan = read_plan(args.plan_file, FORWARD_SCHEMA)
     assigned = assignments(args.assignments_file, plan)
+    top = repository_top(args)
+    # Resolve a relative worktree once, so every later command and every
+    # artifact comparison sees one absolute path whatever its cwd.
+    assigned = {
+        sid: {**item, "worktree": os.path.normpath(top / item["worktree"])}
+        for sid, item in assigned.items()
+    }
     bindings = capability_bindings(args.capability_binding_file, plan)
     ledger_root = root(args)
     collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
@@ -1395,11 +1429,7 @@ def init5(args):
         result["next"] = bounded_next(
             {
                 "ready_step_ids": startable,
-                "command": (
-                    f"--plan-id {args.plan_id} transition --actor parent "
-                    f"--run-id {run_id} --step-id {startable[0]} --to ready "
-                    "--agent-id <agent-id>"
-                ),
+                "command": dispatch_command(args.plan_id, run_id, startable[0]),
             },
             droppable=("command",),
             trimmable="ready_step_ids",
@@ -1960,10 +1990,7 @@ def checkpoint_next(directory, data, batches, plan):
             {
                 "category": "ready_pending",
                 "ready_step_ids": pending,
-                "command": (
-                    f"{transition_scope(plan_id, run_id)} --step-id {pending[0]} --to ready "
-                    "--agent-id <agent-id>"
-                ),
+                "command": ready_command(data, pending[0]),
             },
             "ready_step_ids",
         )
@@ -2046,7 +2073,11 @@ def next_after_transition(args, directory, data, batches, step, plan):
             and ready_candidate(data, candidate, batches)
         ]
         if unblocked:
-            value["ready_step_ids"] = unblocked
+            # Dispatch keeps the critical path moving; cleanup waits behind it.
+            value = {
+                "ready_step_ids": unblocked,
+                "command": dispatch_command(args.plan_id, args.run_id, unblocked[0]),
+            }
         return bounded_action_next(value, "ready_step_ids")
     newly_unblocked = [
         candidate["id"]
@@ -2059,10 +2090,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
         return bounded_action_next(
             {
                 "ready_step_ids": newly_unblocked,
-                "command": (
-                    f"{scope} --step-id {newly_unblocked[0]} --to ready "
-                    "--agent-id <agent-id>"
-                ),
+                "command": ready_command(data, newly_unblocked[0]),
             },
             "ready_step_ids",
         )
@@ -2358,8 +2386,7 @@ def reopen2(args):
         ids = result["retryable_steps"]
         first = data["steps"][ids[0]]
         command = (
-            f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {first['id']} "
-            "--to ready --agent-id <agent-id>"
+            ready_command(data, first["id"])
             if first["status"] == "pending"
             else retry_command(data["plan_id"], data["run_id"], first["id"])
         )
@@ -2749,23 +2776,132 @@ def valid_worker_handoff(value):
     return value
 
 
-def handoff(args):
-    directory, data, plan, _leafs = load2(args)
-    validate_events2(directory, data)
-    active_run(data)
-    sid, step = selected_step(data, args.step_id)
+def step_handoff(directory, data, plan, step):
     remediation = None
     if step.get("retry_remediation_path"):
         remediation = read_json(
             directory / rel(step["retry_remediation_path"], "retry remediation path"),
             "missing retry remediation artifact",
         )
+    return build_worker_handoff(
+        plan, step, data["plan_id"], data["run_id"], remediation,
+        registered=data.get("return_codes") == REGISTERED_RETURN_CODES,
+    )
+
+
+def handoff(args):
+    directory, data, plan, _leafs = load2(args)
+    validate_events2(directory, data)
+    active_run(data)
+    sid, step = selected_step(data, args.step_id)
     return {
         "ok": True,
         "action": "handoff",
-        "handoff": build_worker_handoff(
-            plan, step, data["plan_id"], data["run_id"], remediation,
-            registered=data.get("return_codes") == REGISTERED_RETURN_CODES,
+        "handoff": step_handoff(directory, data, plan, step),
+    }
+
+
+def registered_worktrees(repo):
+    """Map each registered worktree path of the repository to its branch name."""
+    result = subprocess.run(
+        ["git", "-C", str(repo), "worktree", "list", "--porcelain"],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode:
+        raise Error("cannot list git worktrees")
+    entries, path = {}, None
+    for line in result.stdout.splitlines():
+        if line.startswith("worktree "):
+            path = Path(line[len("worktree "):]).resolve()
+            entries[path] = ""
+        elif line.startswith("branch ") and path is not None:
+            entries[path] = line[len("branch "):].removeprefix("refs/heads/")
+    return entries
+
+
+def verify_worktree_identity(repo, step, leaf, create_from):
+    """Fail before any state change unless the leaf's worktree carries its branch."""
+    path = Path(step["assignment"]["worktree"])
+    if not path.is_absolute():
+        path = repo / path
+    owner = leaf["worktree_owner"]
+    if not path.exists() and not path.is_symlink() and create_from:
+        created = subprocess.run(
+            ["git", "-C", str(repo), "worktree", "add", "-b", owner, str(path), create_from],
+            text=True,
+            capture_output=True,
+        )
+        if created.returncode:
+            raise Error(f"cannot create worktree {path}: {created.stderr.strip()[:200]}")
+    registry = registered_worktrees(repo)
+    if path.resolve() not in registry:
+        raise Error(
+            f"worktree {path} is not a registered worktree of {repo}"
+            + ("" if create_from else "; pass --create-from TARGET to create it")
+        )
+    actual = registry[path.resolve()]
+    if actual != owner:
+        raise Error(
+            f"worktree {path} has branch {actual or 'detached'}, "
+            f"expected worktree_owner {owner}"
+        )
+
+
+def dispatch(args):
+    """Ready and start a leaf, or a whole pending batch, and return its packets."""
+    directory, data, plan, leafs = mutating_run(args)
+    if data.get("schema") != FORWARD_SCHEMA:
+        raise Error("dispatch requires a version-5 run")
+    batches = step_batches(plan)
+    sid, _step = selected_step(data, args.step_id)
+    members = batches.get(sid, ())
+    group = (
+        list(members)
+        if members
+        and members[0] == sid
+        and all(data["steps"][member]["status"] == "pending" for member in members)
+        else [sid]
+    )
+    # Every change stays in memory until identity and packets are proven, so a
+    # failure anywhere leaves the checkpoint untouched.
+    moves = []
+    for member in group:
+        step = data["steps"][member]
+        old = step["status"]
+        ready(args, directory, data, plan, batches, step)
+        moves.append((member, old, step["attempt_id"]))
+        advance(step, "ready", "ready", "in_progress", args.summary or "in progress")
+    repo = repository_top(args)
+    for member in group:
+        verify_worktree_identity(repo, data["steps"][member], leafs[member], args.create_from)
+    packets = [step_handoff(directory, data, plan, data["steps"][member]) for member in group]
+    for member, old, attempt_id in moves:
+        for before, after in ((old, "ready"), ("ready", "in_progress")):
+            event(
+                directory,
+                data,
+                f"transition-v{data['schema']}",
+                step_id=member,
+                from_status=before,
+                to_status=after,
+                attempt_id=attempt_id,
+            )
+    first = data["steps"][group[0]]
+    return {
+        "ok": True,
+        "action": "dispatch",
+        "run_id": args.run_id,
+        "step_id": sid,
+        "status": first["status"],
+        "step_ids": group,
+        "handoffs": packets,
+        "next": bounded_action_next(
+            {
+                "await_step_id": first["id"],
+                "agent_id": first["agent_id"],
+                "attempt_id": first["attempt_id"],
+            }
         ),
     }
 
@@ -3938,6 +4074,18 @@ def parse():
     trans.add_argument("--evidence-path", default="")
     trans.add_argument("--blocker-code", default="")
     trans.add_argument("--worktree-result", default="")
+    dispatching = commands.add_parser("dispatch")
+    dispatching.add_argument("--actor", required=True)
+    dispatching.add_argument("--run-id", required=True)
+    dispatching.add_argument("--step-id", required=True)
+    dispatching.add_argument("--agent-id", default="")
+    dispatching.add_argument("--harness", default="")
+    dispatching.add_argument("--model-or-alias", default="")
+    dispatching.add_argument("--capability-binding-file", default="")
+    dispatching.add_argument("--summary", default="")
+    dispatching.add_argument("--retry", action="store_true")
+    dispatching.add_argument("--retry-remediation-file", default="")
+    dispatching.add_argument("--create-from", default="")
     amending = commands.add_parser("amend")
     amending.add_argument("--actor", required=True)
     amending.add_argument("--run-id", required=True)
@@ -4015,6 +4163,8 @@ def main(argv=None):
             value = init5(args)
         elif args.command == "transition":
             value = transition2(args) if args.run_id else transition1(args)
+        elif args.command == "dispatch":
+            value = dispatch(args)
         elif args.command == "amend":
             value = amend(args)
         elif args.command == "record-return":

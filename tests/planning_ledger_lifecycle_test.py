@@ -27,7 +27,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.temporary.cleanup()
 
     def common(self, plan_id="plan"):
-        return ["--ledger-root", str(self.root), "--plan-id", plan_id]
+        return ["--ledger-root", str(self.root), "--repo-root", str(self.root), "--plan-id", plan_id]
 
     def call(self, *arguments):
         with contextlib.redirect_stdout(io.StringIO()) as stream:
@@ -1119,7 +1119,7 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         self.root = Path(self.temporary.name)
 
     def common(self, plan_id):
-        return ["--ledger-root", str(self.root), "--plan-id", plan_id]
+        return ["--ledger-root", str(self.root), "--repo-root", str(self.root), "--plan-id", plan_id]
 
     def call(self, *arguments):
         with contextlib.redirect_stdout(io.StringIO()) as stream:
@@ -1371,7 +1371,8 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         run = self.init("batch", self.members)
         steps = self.checkpoint("batch", run)["steps"]
         self.assertEqual(
-            {".worktrees/batch"}, {step["assignment"]["worktree"] for step in steps.values()}
+            {str(self.root / ".worktrees/batch")},
+            {step["assignment"]["worktree"] for step in steps.values()},
         )
         for sid in self.members:
             self.start("batch", run, sid)
@@ -1424,7 +1425,9 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         self.complete("unwind", run, "b1")
         remediated = self.checkpoint("unwind", run)["steps"]["b1"]
         self.assertEqual("standard", remediated["current_tier"])
-        self.assertEqual(".worktrees/batch", remediated["assignment"]["worktree"])
+        self.assertEqual(
+            str(self.root / ".worktrees/batch"), remediated["assignment"]["worktree"]
+        )
 
         self.start("unwind", run, "b2", agent="redispatched-worker")
         self.complete("unwind", run, "b2")

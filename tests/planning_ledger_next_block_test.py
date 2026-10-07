@@ -122,7 +122,10 @@ class LedgerHarness(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        self.common = ["--ledger-root", str(self.root), "--plan-id", self.plan_id]
+        self.common = [
+            "--ledger-root", str(self.root), "--repo-root", str(self.root),
+            "--plan-id", self.plan_id,
+        ]
 
     def build(self, leaves: list[dict], series: dict | None = None) -> None:
         self.plan = make_plan(leaves, series)
@@ -320,7 +323,8 @@ class InitNextBlockTest(LedgerHarness):
         self.assertEqual(["build"], block["ready_step_ids"])
         self.assertIn(f"--run-id {self.run_id}", block["command"])
         self.assertIn("--step-id build", block["command"])
-        self.assertIn("--to ready", block["command"])
+        self.assertIn(" dispatch ", block["command"])
+        self.assertNotIn("--to ready", block["command"])
         self.assertBounded(block)
 
     def test_init_v4_lists_every_independent_step_in_stable_order(self):
@@ -360,15 +364,16 @@ class LifecycleNextBlockTest(LedgerHarness):
         self.start("build")
         self.give("completed", sid="build")
         integrated = self.worktree_transition("build", "integrated")["next"]
-        self.assertIn("--step-id build", integrated["command"])
-        self.assertIn("--to cleaned", integrated["command"])
+        # Dispatching the unblocked dependent outranks cleanup on the critical path.
+        self.assertIn("--step-id later", integrated["command"])
+        self.assertIn(" dispatch ", integrated["command"])
         self.assertEqual(["later"], integrated["ready_step_ids"])
         self.assertBounded(integrated)
 
         cleaned = self.worktree_transition("build", "cleaned")["next"]
         self.assertEqual(["later"], cleaned["ready_step_ids"])
         self.assertIn("--step-id later", cleaned["command"])
-        self.assertIn("--to ready", cleaned["command"])
+        self.assertIn(" dispatch ", cleaned["command"])
         self.assertBounded(cleaned)
 
     def test_cleaning_the_last_step_names_closeout_validation(self):

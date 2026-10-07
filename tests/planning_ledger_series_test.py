@@ -27,7 +27,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         self.temporary.cleanup()
 
     def common(self, plan_id="plan"):
-        return ["--ledger-root", str(self.root), "--plan-id", plan_id]
+        return ["--ledger-root", str(self.root), "--repo-root", str(self.root), "--plan-id", plan_id]
 
     def call(self, *arguments):
         with contextlib.redirect_stdout(io.StringIO()) as stream:

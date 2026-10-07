@@ -381,6 +381,12 @@ member is `completed` or terminal. A per-integration `rebased_tree_changed:
 false` keeps a leaf's recorded acceptance; `true` re-runs only that leaf's
 scoped acceptance.
 
+The parent starts a leaf, or a whole batch, with the composite `dispatch`: it
+checks that the assigned worktree is registered on the leaf's `worktree_owner`
+(its git branch name) before any state change, creating it with `--create-from`,
+then readies, starts, and returns one worker packet per member. The granular
+`transition` and `handoff` commands remain for recovery.
+
 For an approved plan with at least two delegated steps, only the parent may
 activate and write a run at
 `<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`; `run-id` is a

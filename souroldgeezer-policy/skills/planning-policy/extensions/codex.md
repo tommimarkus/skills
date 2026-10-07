@@ -59,9 +59,9 @@ Use this settled mapping:
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
 A `batch` dispatches once: one `spawn_agent` call with ordered member handoffs.
-In listed order, each member gets `transition --to ready` then `--to in_progress`
-to mint its attempt before running. The worker commits each, runs its acceptance
-command, and returns one `bounded-step-return-v1` per member, stopping at the
+`dispatch` on the first member starts every member in listed order and returns
+one packet per member. The worker commits
+each, runs its acceptance command, and returns one `bounded-step-return-v1` per member, stopping at the
 first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
 and integrates once with helper `--batch-commit` when every member is completed

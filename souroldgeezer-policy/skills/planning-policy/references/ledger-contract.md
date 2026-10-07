@@ -125,8 +125,33 @@ For a version-5 run, successful transitions add bounded live guidance:
 `ready` names the `in_progress` command; `in_progress` names the agent and
 attempt to await; `integrated` names cleanup plus any newly unblocked pending steps; and `cleaned` names newly
 unblocked pending steps plus the first ready command, or `validate --closeout`
-when every step is cleaned. These results are derived after the checkpoint is
+when every step is cleaned. In a version-5 run `init-v5`, `integrated`,
+`cleaned`, `reopen` and the next-only `ready_pending` category name `dispatch`
+as that command, and `integrated` leads with the dispatch of an unblocked
+dependent before its cleanup. These results are derived after the checkpoint is
 written and do not alter v1 or policy-less v2/v3 output.
+
+### Composite dispatch
+
+`dispatch --actor parent --run-id <uuid4> --step-id <id> --agent-id <id>`
+starts a v5 leaf in one call and returns its worker packet in `handoffs`. It
+accepts the `ready` options (`--harness`, `--model-or-alias`,
+`--capability-binding-file`, `--summary`, `--retry`,
+`--retry-remediation-file`) and reuses the same `ready` and `in_progress` logic
+and packet builder as the granular `transition` and `handoff` commands, which
+keep working unchanged for recovery. Before any state change it checks
+identity: the step's assignment worktree must be a registered worktree of the
+repository (`git worktree list --porcelain`, from `--repo-root` or the cwd
+toplevel) whose checked-out branch equals the leaf's `worktree_owner`; a
+mismatch names both values. `--create-from TARGET` runs `git worktree add -b
+<worktree_owner> <worktree> TARGET` only when that path is absent, and never
+moves or deletes a worktree. An identity, creation, readiness or packet failure
+leaves the checkpoint unchanged. `init-v5` resolves a relative assignment
+worktree once against `--repo-root` (or the cwd toplevel) and stores it
+absolute. Dispatching the first member of an all-pending batch readies and
+starts every member in listed order and returns one packet per member; any
+other batch member dispatches singly. The result's `next` names the first
+member to await.
 
 `validate` checks the plan copy/hash, assignment join, dependency order,
 current-attempt uniqueness, and attempt limits before handoff. `validate

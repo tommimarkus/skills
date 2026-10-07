@@ -550,6 +550,20 @@ def nonempty(value: Any) -> bool:
     return value is not None and value != "" and value != [] and value != {}
 
 
+def valid_branch_name(value: Any) -> bool:
+    """Stdlib mirror of `git check-ref-format --branch` for a leaf branch name."""
+    if not isinstance(value, str) or not value or value == "@" or value.startswith(("-", "/")):
+        return False
+    if value.endswith(("/", ".")) or "//" in value or ".." in value or "@{" in value:
+        return False
+    if re.search(r"[\x00-\x20\x7f~^:?*\[\\]", value):
+        return False
+    return all(
+        part and not part.startswith(".") and not part.endswith(".lock")
+        for part in value.split("/")
+    )
+
+
 def stable_id(value: Any) -> bool:
     return isinstance(value, str) and len(value) <= 64 and STABLE_ID.fullmatch(value) is not None
 
@@ -1003,6 +1017,10 @@ def validate(
                 errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
             if leaf.get("read_set") == [] and leaf.get("write_set") == []:
                 errors.append(f"{prefix}.read_set and {prefix}.write_set cannot both be empty")
+            if nonempty(leaf.get("worktree_owner")) and not valid_branch_name(
+                leaf.get("worktree_owner")
+            ):
+                errors.append(f"{prefix}.worktree_owner must be a valid git branch name")
             if has_placeholder_decision(leaf.get("settled_decisions")):
                 errors.append(f"{prefix}.settled_decisions cannot contain a standalone placeholder")
             command = leaf.get("acceptance_command")

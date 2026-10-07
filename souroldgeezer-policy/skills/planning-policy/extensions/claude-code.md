@@ -62,11 +62,10 @@ plugin agents under this scoped identifier, and the bare tier name alone
 returns `Agent type '<tier>' not found`.
 
 A declared `batch` dispatches once: call `Agent` a single time with the
-ordered member handoffs, not once per member. Per member in listed order,
-`transition --to ready` then `--to in_progress` mints its attempt identity
-before it runs; the worker commits each member, runs its own acceptance
-command, and returns one `bounded-step-return-v1` per member, stopping the
-batch at a member's stop. The parent unwinds un-run followers with
+ordered member handoffs, not once per member. `dispatch` on the first member
+starts every member in listed order and returns one packet per member; the
+worker commits each member, runs its own acceptance command, and returns one
+`bounded-step-return-v1` per member, stopping the batch at a member's stop. The parent unwinds un-run followers with
 `transition --to pending`, remediates a stopped member in its same worktree,
 redispatches followers as singles, and integrates once via the helper's
 `--batch-commit` entries once no member can still progress.
