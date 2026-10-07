@@ -6,7 +6,8 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from unittest import mock
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 
@@ -665,6 +666,123 @@ class RuntimeHostSmokeTest(unittest.TestCase):
         parsed = smoke.parse_args(["--fresh", "--assert-profile-isolation", "."])
         self.assertTrue(parsed.fresh)
         self.assertTrue(parsed.assert_profile_isolation)
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+        check=True,
+        capture_output=True,
+    )
+
+
+ARCH_SCRIPTS = "souroldgeezer-architecture/skills/architecture-design/references/scripts"
+
+
+class ChangedSinceSelectorTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.repo = Path(self._tmp.name)
+        _git(self.repo, "init", "-q", "-b", "main")
+        for rel in (
+            "plug/skills/s/SKILL.md",
+            "plug/skills/s/references/note.md",
+            "plug/agents/s.md",
+            "plug/.claude-plugin/plugin.json",
+            f"{ARCH_SCRIPTS}/dediren-mcp.sh",
+            "README.md",
+        ):
+            self.write(rel, "base\n")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "base")
+        _git(self.repo, "branch", "base")
+
+    def write(self, rel: str, text: str) -> None:
+        path = self.repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def commit_change(self, rel: str, *, delete: bool = False) -> None:
+        if delete:
+            _git(self.repo, "rm", "-q", rel)
+        else:
+            self.write(rel, "changed\n")
+            _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "change")
+
+    def select(self, revision: str = "base") -> tuple[bool, str]:
+        return smoke.select_run(self.repo, revision)
+
+    def test_references_only_change_skips(self) -> None:
+        self.commit_change("plug/skills/s/references/note.md")
+        run, reason = self.select()
+        self.assertFalse(run)
+        self.assertIn("no host-relevant surface changed since base (1 changed paths)", reason)
+
+    def test_relevant_changes_run(self) -> None:
+        for rel in (
+            "plug/skills/s/SKILL.md",
+            "plug/agents/s.md",
+            "plug/.claude-plugin/plugin.json",
+            f"{ARCH_SCRIPTS}/dediren-mcp.sh",
+        ):
+            with self.subTest(rel=rel):
+                _git(self.repo, "reset", "-q", "--hard", "base")
+                self.commit_change(rel)
+                self.assertTrue(self.select()[0])
+
+    def test_deleted_relevant_path_runs(self) -> None:
+        self.commit_change("plug/agents/s.md", delete=True)
+        self.assertTrue(self.select()[0])
+
+    def test_bad_base_runs(self) -> None:
+        self.assertTrue(self.select("no-such-rev")[0])
+
+    def test_not_a_git_repo_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as plain:
+            self.assertTrue(smoke.select_run(Path(plain), "main")[0])
+
+    def test_dirty_tree_runs_even_for_irrelevant_change(self) -> None:
+        self.commit_change("README.md")
+        self.write("plug/skills/s/references/note.md", "dirty\n")
+        self.assertTrue(self.select()[0])
+
+    def test_untracked_file_runs(self) -> None:
+        self.write("scratch.txt", "x\n")
+        self.assertTrue(self.select()[0])
+
+    def test_patterns_cover_load_expectations_surface(self) -> None:
+        expected = [".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"]
+        for expectation in smoke.load_expectations(REPO_ROOT):
+            plugin = next(
+                manifest.parent.parent.name
+                for manifest in REPO_ROOT.glob("*/.claude-plugin/plugin.json")
+                if json.loads(manifest.read_text(encoding="utf-8"))["name"] == expectation.name
+            )
+            expected += [
+                f"{plugin}/.claude-plugin/plugin.json",
+                f"{plugin}/.codex-plugin/plugin.json",
+                *(f"{plugin}/skills/{skill}/SKILL.md" for skill in expectation.skills),
+                *(f"{plugin}/agents/{agent}.md" for agent in expectation.agents),
+            ]
+        scripts = REPO_ROOT / ARCH_SCRIPTS
+        expected += [path.relative_to(REPO_ROOT).as_posix() for path in scripts.iterdir() if path.is_file()]
+        self.assertGreater(len(expected), 40)
+        for path in expected:
+            with self.subTest(path=path):
+                self.assertTrue(smoke.host_relevant(path))
+
+    def test_main_skips_before_cli_presence_check(self) -> None:
+        self.commit_change("plug/skills/s/references/note.md")
+        out = StringIO()
+        with redirect_stdout(out), mock.patch.object(smoke.shutil, "which", return_value=None):
+            code = smoke.main(
+                ["--fresh", "--assert-profile-isolation", "--changed-since", "base", str(self.repo)]
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("SKIP: no host-relevant surface changed since base (1 changed paths)", out.getvalue())
+        self.assertIn("Runtime host smoke OK (skipped)", out.getvalue())
 
 
 if __name__ == "__main__":

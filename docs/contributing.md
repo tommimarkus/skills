@@ -94,7 +94,7 @@ python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'
-scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
+scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```

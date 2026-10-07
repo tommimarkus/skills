@@ -10,6 +10,7 @@ planes before and after the run.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import importlib.util
 import json
@@ -35,6 +36,20 @@ REQUIRED_DEDIREN_TOOLS = {
     "dediren_validate",
     "dediren_verify",
 }
+HOST_RELEVANT_PATTERNS = (
+    ".claude-plugin/*",
+    ".agents/plugins/*",
+    "*/.claude-plugin/*",
+    "*/.codex-plugin/*",
+    "*/plugin.json",
+    "*/mcp.json",
+    "*/mcp/*",
+    "*/agents/*",
+    "*/skills/*/SKILL.md",
+    ".codex/*",
+    "scripts/check-runtime-host-smoke.py",
+    "souroldgeezer-architecture/skills/architecture-design/references/scripts/*",
+)
 DEFAULT_TIMEOUT_SECONDS = 120
 MCP_TIMEOUT_SECONDS = 360
 
@@ -1120,6 +1135,48 @@ def run_host_smoke(
 
 # lean-audit:dup-intentional:begin -- independent CLI entrypoints retain local
 # safety flags, dependency checks, diagnostics, and exit-code wording.
+def host_relevant(path: str) -> bool:
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in HOST_RELEVANT_PATTERNS)
+
+
+def git_output(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit {result.returncode}"
+        raise SmokeFailure(f"git {' '.join(args)}: {detail}")
+    return result.stdout
+
+
+def select_run(repo: Path, revision: str) -> tuple[bool, str]:
+    """Return (run, reason). Skip only when git proves no host-relevant path changed."""
+    try:
+        if git_output(repo, "status", "--porcelain", "--untracked-files=all").strip():
+            return True, f"working tree is not clean; running against base {revision}"
+        changed = [
+            line
+            for line in git_output(
+                repo, "diff", "--name-only", "--no-renames", f"{revision}...HEAD"
+            ).splitlines()
+            if line
+        ]
+    except (OSError, SmokeFailure) as exc:
+        return True, f"cannot select by changes since {revision} ({exc}); running"
+    relevant = [path for path in changed if host_relevant(path)]
+    if relevant:
+        return True, (
+            f"{len(relevant)} host-relevant changed paths since {revision} "
+            f"(e.g. {relevant[0]})"
+        )
+    return False, (
+        f"no host-relevant surface changed since {revision} ({len(changed)} changed paths)"
+    )
+
+
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1132,6 +1189,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="fingerprint normal plugin/config control planes before and after (mandatory)",
     )
+    parser.add_argument(
+        "--changed-since",
+        metavar="REV",
+        help="skip when no host-relevant path changed since REV; runs on any doubt",
+    )
     parser.add_argument("repo", nargs="?", default=".", help="repository root to install")
     args = parser.parse_args(argv)
     if not args.fresh or not args.assert_profile_isolation:
@@ -1141,12 +1203,19 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    repo = Path(args.repo).resolve()
+    if args.changed_since:
+        run, reason = select_run(repo, args.changed_since)
+        if not run:
+            print(f"SKIP: {reason}")
+            print("Runtime host smoke OK (skipped)")
+            return 0
+        print(f"RUN: {reason}")
     for executable in ("codex", "claude", "copilot"):
         if shutil.which(executable) is None:
             print(f"Error: required CLI is not installed: {executable}", file=sys.stderr)
             return 2
 
-    repo = Path(args.repo).resolve()
     try:
         with tempfile.TemporaryDirectory(prefix="runtime-host-smoke-") as temporary:
             summary = run_host_smoke(repo, Path(temporary))

@@ -225,7 +225,7 @@ python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
 uv run python -m unittest discover -s tests -p '*_test.py'  # one full-suite run at closeout
-scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .
+scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```
@@ -251,7 +251,10 @@ Claude installed components and strict validation, Copilot installation and MCP
 inventory, then handshakes the plugin-provisioned Dediren server through all three
 adapters. It fingerprints every normal plugin/config profile before and after.
 Keep both safety flags; the current Codex CLI's lack of a standalone plugin
-validator is an explicit skip.
+validator is an explicit skip. With `--changed-since REV` it skips, printing
+`SKIP: no host-relevant surface changed since REV (N changed paths)`, only when
+git proves no changed path is host-relevant; a dirty tree, unresolvable `REV`, or
+git error runs it.
 
 Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####` IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`), and a unique intent; the unittest suite rejects duplicate IDs, intents, and fixture/expectation fingerprints before executing the cases. The report's primary replacement claim is empirical: the `Replacement Calibration` section runs the local gold ledger and reports how many skill-only findings the tool detects automatically — keep ≥500 gold-finding cases and ≥90% automated replacement recall (catalog coverage is secondary metadata, not the success criterion). When cases are bulk-generated, update `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL in the same change.
 

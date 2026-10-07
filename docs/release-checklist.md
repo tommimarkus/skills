@@ -26,6 +26,7 @@ operational changes.
 - Run the complete [contributor validation](contributing.md#validate-the-change)
   from the clean task worktree, preserving each gate's exit status.
 - Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
+  unconditionally, without `--changed-since`,
   with all three CLIs available; require all five Claude/Codex isolated installs,
   all 16 shared public skills, the isolated Copilot architecture install, Claude
   component/strict validation, all three external-Dediren adapter handshakes,
