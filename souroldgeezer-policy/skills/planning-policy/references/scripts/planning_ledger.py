@@ -582,6 +582,32 @@ def dispatch_command(plan_id, run_id, step_id):
     )
 
 
+def land_command(data, step_id):
+    """Integrate and clean a step: composite land in v5, granular transitions before."""
+    return (
+        f"--plan-id {data['plan_id']} land --actor parent --run-id {data['run_id']} "
+        f"--step-id {step_id} --target <target-branch>"
+    )
+
+
+def integrate_command(data, step_id):
+    if data.get("schema") == FORWARD_SCHEMA:
+        return land_command(data, step_id)
+    return (
+        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
+        "--to integrated --worktree-result <planning-worktree-result-v1.json>"
+    )
+
+
+def cleanup_command(data, step_id):
+    if data.get("schema") == FORWARD_SCHEMA:
+        return land_command(data, step_id)
+    return (
+        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
+        "--to cleaned --worktree-result <planning-worktree-result-v1.json>"
+    )
+
+
 def ready_command(data, step_id):
     """Start a pending step: composite dispatch in v5, granular ready before."""
     if data.get("schema") == FORWARD_SCHEMA:
@@ -1936,10 +1962,7 @@ def checkpoint_next(directory, data, batches, plan):
             {
                 "category": "cleanup_integrated",
                 "step_ids": integrated,
-                "command": (
-                    f"{transition_scope(plan_id, run_id)} --step-id {integrated[0]} "
-                    "--to cleaned --worktree-result <planning-worktree-result-v1.json>"
-                ),
+                "command": cleanup_command(data, integrated[0]),
             },
             "step_ids",
         )
@@ -1959,10 +1982,7 @@ def checkpoint_next(directory, data, batches, plan):
             {
                 "category": "integrate_completed",
                 "step_ids": completed,
-                "command": (
-                    f"{transition_scope(plan_id, run_id)} --step-id {completed[0]} "
-                    "--to integrated --worktree-result <planning-worktree-result-v1.json>"
-                ),
+                "command": integrate_command(data, completed[0]),
             },
             "step_ids",
         )
@@ -2058,12 +2078,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
             }
         )
     if step["status"] == "integrated":
-        value = {
-            "command": (
-                f"{scope} --step-id {sid} --to cleaned "
-                "--worktree-result <planning-worktree-result-v1.json>"
-            )
-        }
+        value = {"command": cleanup_command(data, sid)}
         unblocked = [
             candidate["id"]
             for candidate in ordered_steps(data["steps"])
@@ -2128,6 +2143,27 @@ def unwind(args, data, batches, sid, step):
         step["current_assignment"]["agent_id"] = ""
 
 
+def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summary=""):
+    """Validate a helper artifact and move one step to `integrated` or `cleaned`."""
+    expected = "completed" if new == "integrated" else "integrated"
+    old = step["status"]
+    value, result_path, result_sha = worktree_result(
+        path, directory, sid, step, leaf, new, batches
+    )
+    advance(step, old, expected, new, summary or new)
+    if new == "integrated":
+        step.update(
+            integrated_commit=value["rebased_commit"],
+            integration_result_path=result_path,
+            integration_result_sha256=result_sha,
+        )
+    else:
+        step.update(
+            cleanup_result_path=result_path,
+            cleanup_result_sha256=result_sha,
+        )
+
+
 def transition2(args):
     directory, data, plan, leafs = mutating_run(args)
     batches = step_batches(plan)
@@ -2141,22 +2177,9 @@ def transition2(args):
     elif new == "pending":
         unwind(args, data, batches, sid, step)
     elif new in {"integrated", "cleaned"}:
-        expected = "completed" if new == "integrated" else "integrated"
-        value, result_path, result_sha = worktree_result(
-            args.worktree_result, directory, sid, step, leafs[sid], new, batches
+        apply_worktree_result(
+            args.worktree_result, directory, sid, step, leafs[sid], new, batches, args.summary
         )
-        advance(step, old, expected, new, args.summary or new)
-        if new == "integrated":
-            step.update(
-                integrated_commit=value["rebased_commit"],
-                integration_result_path=result_path,
-                integration_result_sha256=result_sha,
-            )
-        else:
-            step.update(
-                cleanup_result_path=result_path,
-                cleanup_result_sha256=result_sha,
-            )
     else:
         raise Error("v2 transition permits pending, ready, in_progress, integrated, or cleaned")
     event(
@@ -2253,6 +2276,112 @@ def worktree_result(path, directory, sid, step, leaf, target, batches):
     destination = directory / "worktree-results" / sid / f"{target}.json"
     write(destination, value, 4096)
     return value, str(destination.relative_to(directory)), digest(value)
+
+
+WORKTREE_HELPER = (
+    Path(__file__).resolve().parents[3]
+    / "git-workflow-policy/references/scripts/planning_worktree.py"
+)
+
+
+def run_worktree_helper(*arguments):
+    """Run the Git-policy helper; return its parsed result and whether it succeeded."""
+    result = subprocess.run(
+        [sys.executable, "-B", str(WORKTREE_HELPER), *arguments],
+        text=True,
+        capture_output=True,
+    )
+    try:
+        value = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        value = None
+    if not isinstance(value, dict):
+        value = {"ok": False, "error": (result.stderr or "helper produced no result").strip()[:240]}
+    return value, result.returncode == 0 and value.get("ok") is True
+
+
+def helper_error(value):
+    return str(value.get("error", "helper failed"))[:240]
+
+
+def land(args):
+    """Integrate and clean a completed leaf, or a settled batch, through the helper."""
+    directory, data, plan, leafs = mutating_run(args)
+    if data.get("schema") != FORWARD_SCHEMA:
+        raise Error("land requires a version-5 run")
+    batches = step_batches(plan)
+    sid, step = selected_step(data, args.step_id)
+    group = list(batches.get(sid, ())) or [sid]
+    if len(group) > 1 and not batch_settled(data, batches, sid):
+        raise Error("batch is not settled: a member can still commit to its worktree")
+    if step["status"] not in {"completed", "integrated"}:
+        raise Error("only completed or integrated steps can land")
+    repo = repository_top(args)
+    leaf = leafs[sid]
+    worktree = step["assignment"]["worktree"]
+    base = ("--repo-root", str(repo), "--target", args.target, "--branch", leaf["worktree_owner"],
+            "--worktree", worktree)
+    landed = [member for member in group if data["steps"][member]["status"] == "completed"]
+    if landed:
+        commits = {member: data["steps"][member]["returned_commit"] for member in landed}
+        if not all(COMMIT.fullmatch(commit) for commit in commits.values()):
+            raise Error("completed step has no returned commit to integrate")
+        extra = [f"--batch-commit={member}={commits[member]}" for member in landed] if len(group) > 1 else []
+        value, ok = run_worktree_helper(
+            "integrate", *base, "--source-commit", commits[landed[-1]], *extra
+        )
+        if not ok:
+            raise Error(f"integrate failed: {helper_error(value)}")
+        with tempfile.TemporaryDirectory() as scratch:
+            artifact = Path(scratch) / "integrate.json"
+            artifact.write_text(json.dumps(value))
+            # Validate every member before persisting any, so a bad artifact leaves the ledger unchanged.
+            for member in landed:
+                apply_worktree_result(
+                    str(artifact), directory, member, data["steps"][member],
+                    leafs[member], "integrated", batches, args.summary,
+                )
+        for member in landed:
+            event(
+                directory, data, f"transition-v{data['schema']}", step_id=member,
+                from_status="completed", to_status="integrated",
+                attempt_id=data["steps"][member]["attempt_id"],
+            )
+    cleanable = [member for member in group if data["steps"][member]["status"] == "integrated"]
+    result = {
+        "ok": True,
+        "action": "land",
+        "run_id": args.run_id,
+        "step_id": sid,
+        "integrated": landed,
+    }
+    if cleanable:
+        recorded = directory / data["steps"][cleanable[0]]["integration_result_path"]
+        value, ok = run_worktree_helper("cleanup", *base, "--integrated-result", str(recorded))
+        if ok:
+            with tempfile.TemporaryDirectory() as scratch:
+                artifact = Path(scratch) / "cleanup.json"
+                artifact.write_text(json.dumps(value))
+                for member in cleanable:
+                    apply_worktree_result(
+                        str(artifact), directory, member, data["steps"][member],
+                        leafs[member], "cleaned", batches, args.summary,
+                    )
+            for member in cleanable:
+                event(
+                    directory, data, f"transition-v{data['schema']}", step_id=member,
+                    from_status="integrated", to_status="cleaned",
+                    attempt_id=data["steps"][member]["attempt_id"],
+                )
+            result["cleaned"] = cleanable
+        else:
+            result["cleanup_error"] = helper_error(value)
+            result["retry_command"] = land_command(data, sid).replace(
+                "<target-branch>", args.target
+            )
+    result["status"] = step["status"]
+    result["next"] = next_after_transition(args, directory, data, batches, step, plan)
+    return result
 
 
 def close2(args):
@@ -2977,10 +3106,7 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
         )
     block = {"retry_eligible": False, "outcome": disposition}
     if disposition == "completed":
-        block["command"] = (
-            f"{scope} --step-id {sid} --to integrated "
-            "--worktree-result <planning-worktree-result-v1.json>"
-        )
+        block["command"] = integrate_command(data, sid)
     return bounded_next(block, droppable=("command",))
 
 
@@ -4086,6 +4212,12 @@ def parse():
     dispatching.add_argument("--retry", action="store_true")
     dispatching.add_argument("--retry-remediation-file", default="")
     dispatching.add_argument("--create-from", default="")
+    landing = commands.add_parser("land")
+    landing.add_argument("--actor", required=True)
+    landing.add_argument("--run-id", required=True)
+    landing.add_argument("--step-id", required=True)
+    landing.add_argument("--target", required=True)
+    landing.add_argument("--summary", default="")
     amending = commands.add_parser("amend")
     amending.add_argument("--actor", required=True)
     amending.add_argument("--run-id", required=True)
@@ -4165,6 +4297,8 @@ def main(argv=None):
             value = transition2(args) if args.run_id else transition1(args)
         elif args.command == "dispatch":
             value = dispatch(args)
+        elif args.command == "land":
+            value = land(args)
         elif args.command == "amend":
             value = amend(args)
         elif args.command == "record-return":

@@ -64,8 +64,7 @@ one packet per member. The worker commits
 each, runs its acceptance command, and returns one `bounded-step-return-v1` per member, stopping at the
 first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
-and integrates once with helper `--batch-commit` when every member is completed
-or terminal.
+and lands the batch once every member is completed or terminal.
 
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
@@ -161,8 +160,9 @@ stopping before any edit; otherwise commit the finished slice into `commit_hash`
 or revert clean — never leave edits uncommitted. Stop
 with the applicable blocker code, preserve unstarted work, and do not make a new
 decision. The parent interprets the bounded return and owns integration and
-final verification. For every successful leaf it ingests the Git-policy
-helper's bounded result through `completed` → `integrated` → `cleaned`, and
-dispatches dependents once each prerequisite is `integrated`, from a worktree
-based on the current parent tip.
+final verification. For every successful leaf `land` runs the Git-policy
+helper and ingests its bounded result through
+`completed` → `integrated` → `cleaned`; the parent dispatches dependents once
+each prerequisite is `integrated`, from a worktree based on the
+current parent tip.
 It uses rebase plus fast-forward integration, never a routine cherry-pick.

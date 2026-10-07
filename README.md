@@ -26,7 +26,8 @@ comparable capability on another host; see
 [orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
 New plans also validate task boundaries across the dependency graph. Generated
 worker packets include shared decisions and a return schema, with local return
-validation before parent ingestion; existing runs remain resumable. See the
+validation before parent ingestion; composite `dispatch` and `land` commands
+start and close out a leaf or batch; existing runs remain resumable. See the
 [worker handoff procedure](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or

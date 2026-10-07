@@ -127,9 +127,31 @@ attempt to await; `integrated` names cleanup plus any newly unblocked pending st
 unblocked pending steps plus the first ready command, or `validate --closeout`
 when every step is cleaned. In a version-5 run `init-v5`, `integrated`,
 `cleaned`, `reopen` and the next-only `ready_pending` category name `dispatch`
-as that command, and `integrated` leads with the dispatch of an unblocked
-dependent before its cleanup. These results are derived after the checkpoint is
+as that command, `integrated` leads with the dispatch of an unblocked
+dependent before its cleanup, and the record-return `completed` block and the
+next-only integrate and cleanup categories name `land`. These results are derived after the checkpoint is
 written and do not alter v1 or policy-less v2/v3 output.
+
+### Composite land
+
+`land --actor parent --run-id <uuid4> --step-id <id> --target <branch>`
+composes the Git-policy closeout for a version-5 step. The helper is the
+sibling `git-workflow-policy/references/scripts/planning_worktree.py`, resolved
+from the ledger script's own location and run with the current interpreter and
+`-B`; the global `--repo-root` (or the cwd toplevel) is the integration
+checkout it receives. For a `completed` step it runs `integrate` with the
+returned commit, validates the artifact through the same checks as `transition
+--to integrated --worktree-result` (copying it to
+`worktree-results/<step>/integrated.json`), and records `integrated`. It then
+runs `cleanup` against that stored artifact and records `cleaned` the same way;
+an `integrated` step performs only the cleanup. An integrate failure leaves the
+checkpoint unchanged and exits nonzero with the helper's error. A cleanup
+failure leaves the step `integrated` and returns `ok` with `cleanup_error` and
+a `retry_command` naming `land`; dependents are not blocked. For a batch, `land`
+requires the batch to be settled, integrates once with a `--batch-commit` entry
+for every completed member, records every member `integrated`, then cleans once
+and records every member `cleaned`. Granular `transition` calls remain for
+recovery and diagnosis.
 
 ### Composite dispatch
 

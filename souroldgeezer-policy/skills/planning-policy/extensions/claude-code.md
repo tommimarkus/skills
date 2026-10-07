@@ -67,8 +67,8 @@ starts every member in listed order and returns one packet per member; the
 worker commits each member, runs its own acceptance command, and returns one
 `bounded-step-return-v1` per member, stopping the batch at a member's stop. The parent unwinds un-run followers with
 `transition --to pending`, remediates a stopped member in its same worktree,
-redispatches followers as singles, and integrates once via the helper's
-`--batch-commit` entries once no member can still progress.
+redispatches followers as singles, and lands the batch once no member can
+still progress.
 
 Never substitute a versioned model identifier for an alias and never silently
 downgrade a requested tier. If Claude Code cannot provide the requested alias or
@@ -146,10 +146,11 @@ stopping before any edit; otherwise commit the finished slice into `commit_hash`
 or revert clean — never leave edits uncommitted. Stop
 with the applicable blocker code, preserve unstarted work, and do not make a new
 decision. The parent interprets the bounded return and owns integration and
-final verification. For every successful leaf it ingests the Git-policy
-helper's bounded result through `completed` → `integrated` → `cleaned`, and
-dispatches dependents once each prerequisite is `integrated`, from a worktree
-based on the current parent tip.
+final verification. For every successful leaf `land` runs the Git-policy
+helper and ingests its bounded result through
+`completed` → `integrated` → `cleaned`; the parent dispatches dependents once
+each prerequisite is `integrated`, from a worktree based on the
+current parent tip.
 It uses rebase plus fast-forward integration, never a routine cherry-pick.
 
 Run `claude plugin validate --strict` through the repository validation path to

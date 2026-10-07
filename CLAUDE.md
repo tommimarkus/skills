@@ -560,6 +560,8 @@ Git-policy helper: rebase the exact returned branch onto the current parent,
 fast-forward-only merge, then prove merged ancestry and clean up without force.
 Cleanup retries safely after partial removal by revalidating recorded identity,
 branch state, and target ancestry. Routine integration never cherry-picks.
+In v5 the parent's `land` runs the helper's integrate then cleanup and records
+both; a cleanup failure leaves the step `integrated`, and a batch lands once.
 Dependencies become ready once their prerequisites are `integrated` (v5; earlier
 versions need `cleaned`), and their worktrees start at the then-current parent
 tip. `validate --closeout` requires every successful step to be cleaned. A

@@ -1382,7 +1382,7 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         )
         for sid in self.members[:-1]:
             self.assertEqual("await_return", self.complete("batch", run, sid)["next"]["category"])
-        self.assertIn("--to integrated", self.complete("batch", run, "b2")["next"]["command"])
+        self.assertIn(" land ", self.complete("batch", run, "b2")["next"]["command"])
 
         self.close_out_batch("batch", run)
         state = self.checkpoint("batch", run)["steps"]

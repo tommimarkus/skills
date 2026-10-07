@@ -30,6 +30,10 @@ Stale registrations, unexpected filesystem entries, changed tips, upstreams,
 dirty state, and identity mismatches stop recovery. If cleanup fails, preserve
 the remaining state and retry only after fixing the stated condition.
 
+A planning-policy v5 run's parent normally drives both commands through
+`planning_ledger.py land`, which runs `integrate` then `cleanup` and records
+each bounded result; the helper's semantics are unchanged.
+
 Use `integrate --require-patch-equivalent` only for explicitly approved
 historical retirement: every `git cherry` row must be `-`, and the rebased
 branch must equal the parent tip, so the operation cannot introduce content.

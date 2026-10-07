@@ -564,7 +564,7 @@ class RecordReturnNextBlockTest(LedgerHarness):
         block = self.give("completed")["next"]
         self.assertFalse(block["retry_eligible"])
         self.assertEqual("completed", block["outcome"])
-        self.assertIn("--to integrated", block["command"])
+        self.assertIn(" land ", block["command"])
         self.assertBounded(block)
 
     def test_first_acceptance_failure_keeps_the_same_tier(self):
@@ -812,7 +812,7 @@ class BatchNextBlockTest(LedgerHarness):
         settled = self.give("completed", sid="b1")["next"]
         self.assertFalse(settled["retry_eligible"])
         self.assertEqual("completed", settled["outcome"])
-        self.assertIn("--to integrated", settled["command"])
+        self.assertIn(" land ", settled["command"])
         self.assertBounded(settled)
 
         code, ready_to_integrate = self.show_next()
