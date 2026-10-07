@@ -20,8 +20,7 @@ or enable telemetry. After a 24-hour pause or context compaction, call
 
 Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
 is refused as `blocked:contract_migration_required`; existing v4 records remain
-resumable and mutable. Do not initialize new work from them or translate their
-handoffs into a new v5 plan assignment.
+resumable and mutable.
 
 ## Capability resolution
 
@@ -35,9 +34,7 @@ reuse a binding for a different executor or attempt assignment.
 
 If the baseline or any additional requirement cannot be evidenced, stop before
 dispatch with `blocked:capability_unavailable`; do not silently substitute,
-drop, defer, or probe for a replacement capability. This is distinct from
-`blocked:model_unavailable`, which applies only when the already selected
-model/effort mapping is unavailable.
+drop, defer, or probe for a replacement capability.
 For a ledger-confirmed v1–v3 resume, preserve that version's dispatch contract:
 do not require or synthesize capability requirements or a binding. New work
 still starts from v5.
@@ -86,8 +83,10 @@ Retries use the mapping above. Honor the ledger-selected tier and executor;
 the parent and agent never change them. If unavailable, return
 `blocked:model_unavailable` with target tier/model/effort and availability
 evidence. An agent needing more reasoning returns `blocked:needs_higher_tier`
-with bounded evidence; it never selects its retry. A wrong write/read set,
-acceptance command, or attempt cap is not retried: the parent runs `amend`.
+with bounded evidence; it never selects its retry. Repairable stops (`blocked:environment`, or any
+stop amended after its return) retry at the same tier; only reasoning stops
+escalate. A wrong write/read set, acceptance command, or attempt cap is not
+retried: the parent runs `amend`.
 
 ## Required handoff
 

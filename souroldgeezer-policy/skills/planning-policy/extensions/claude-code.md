@@ -28,8 +28,7 @@ or enable telemetry. After a 24-hour pause or context compaction, call
 
 Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
 is refused as `blocked:contract_migration_required`; existing v4 records remain
-resumable and mutable. Do not initialize new work from them or translate their
-handoffs into a new v5 plan assignment.
+resumable and mutable.
 
 ## Capability resolution
 
@@ -47,8 +46,6 @@ evidence an additional `skill` requirement: stop with
 `blocked:capability_unavailable` instead of granting a tool or changing Agent
 frontmatter. Apply the same evidence rule to every other missing capability;
 do not silently substitute, drop, defer, or probe for a replacement capability.
-This is distinct from `blocked:model_unavailable`, which applies only when the
-already selected alias/effort mapping is unavailable.
 
 Use the `Agent` tool once per decomposed step. Assign the cheapest tier that
 fits and preserve these portable Claude aliases and effort values exactly:
@@ -109,8 +106,9 @@ mapping is unavailable, return `blocked:model_unavailable` with the target tier,
 alias, effort, and availability evidence; never silently downgrade. An executor
 that cannot proceed because a genuinely higher tier is required returns
 `blocked:needs_higher_tier` with bounded evidence; it does not choose its retry.
-A wrong write/read set, acceptance command, or attempt cap is not retried: the
-parent runs `amend`.
+Repairable stops (`blocked:environment`, or any stop amended after its return)
+retry at the same tier; only reasoning stops escalate. A wrong write/read set,
+acceptance command, or attempt cap is not retried: the parent runs `amend`.
 
 For ledger-backed v5 assignments and local return preflight, follow
 [worker handoff](../references/worker-handoff.md).
@@ -156,5 +154,4 @@ based on the current parent tip.
 It uses rebase plus fast-forward integration, never a routine cherry-pick.
 
 Run `claude plugin validate --strict` through the repository validation path to
-validate configured aliases and efforts. It does not establish the underlying
-version that Claude Code resolves for an alias.
+validate configured aliases and efforts.

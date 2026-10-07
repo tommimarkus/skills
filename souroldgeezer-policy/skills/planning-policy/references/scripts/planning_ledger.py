@@ -134,6 +134,11 @@ MAX_AMENDED_ATTEMPTS = 5
 MAX_AMENDED_COMMAND = 2048
 AMENDABLE_STATES = {"pending", "ready", "blocked", "failed", "oversized"}
 SCOPE_REJECTION_REASON = "oversized: changed path outside write_set"
+TERMINAL_RETRY_REASONS = {
+    "blocked:no_progress",
+    "blocked:retry_exhausted",
+    "blocked:retry_ceiling_reached",
+}
 RETENTION_DAYS = {
     "completed": 30,
     "blocked": 90,
@@ -575,8 +580,30 @@ def attempt_available(step):
     return step["attempt_count"] < step["max_attempts"]
 
 
+def amended_after_return(step):
+    """True when an amendment was recorded after the current attempt's return."""
+    return any(
+        item["after_attempt_id"] == step["attempt_id"] and item["return_recorded"]
+        for item in step.get("amendments", ())
+    )
+
+
+def repair_reopened(step):
+    """A non-terminal blocked/failed stop whose cause was amended after its return."""
+    return (
+        step["status"] in {"blocked", "failed"}
+        and step["reason"] not in TERMINAL_RETRY_REASONS
+        and attempt_return_recorded(step)
+        and amended_after_return(step)
+    )
+
+
+def retry_open(step):
+    return step["retry_allowed"] or repair_reopened(step)
+
+
 def ready_status_legal(step):
-    return step["status"] in {"pending", "blocked", "failed"} and step["retry_allowed"]
+    return step["status"] in {"pending", "blocked", "failed"} and retry_open(step)
 
 
 def ready_candidate(data, step, batches):
@@ -698,7 +725,7 @@ def batch_settled(data, batches, step_id):
         data["steps"][member]["status"] in BATCH_ACTIVE_STATES
         or (
             data["steps"][member]["status"] in {"blocked", "failed"}
-            and data["steps"][member]["retry_allowed"]
+            and retry_open(data["steps"][member])
         )
         for member in batches.get(step_id, ())
     )
@@ -1462,26 +1489,52 @@ def current_return(directory, step):
     return value
 
 
-def retry_outcome(value):
-    blockers = value.get("blockers", [])
-    if not isinstance(blockers, list) or len(blockers) != 1:
-        return ""
-    code = blockers[0].get("code") if isinstance(blockers[0], dict) else ""
-    if value.get("status") == "failed" and code == "failed:acceptance":
-        return "failed:acceptance"
-    if value.get("status") == "blocked" and code == "blocked:needs_higher_tier":
-        return "blocked:needs_higher_tier"
+def primary_code(value):
+    """The first blocker code that belongs to the return status's own family."""
+    family = RETURN_CODES.get(value.get("status"), ())
+    for blocker in value.get("blockers") or ():
+        code = blocker.get("code") if isinstance(blocker, dict) else None
+        if code in family:
+            return code
     return ""
 
 
-def needs_higher_tier(step, outcome):
-    return outcome == "blocked:needs_higher_tier" or (
-        outcome == "failed:acceptance"
-        and (step["same_tier_retry_used"] or step["attempt_count"] > 1)
+def retry_class(data, step, value):
+    """The one retry-eligibility predicate: (kind, outcome), or ("", "").
+
+    Reasoning stops (`failed:acceptance`, `blocked:needs_higher_tier`) keep the
+    same-tier-then-escalate rules. Repairable stops (`blocked:environment`, or
+    any other blocked/failed stop amended after its return) retry at the same
+    tier. Retained runs below schema 5 keep the exactly-one-blocker rule.
+    """
+    status = value.get("status")
+    if data.get("schema") != FORWARD_SCHEMA:
+        blockers = value.get("blockers", [])
+        code = ""
+        if isinstance(blockers, list) and len(blockers) == 1 and isinstance(blockers[0], dict):
+            code = blockers[0].get("code")
+        if (status, code) in {("failed", "failed:acceptance"), ("blocked", "blocked:needs_higher_tier")}:
+            return "reasoning", code
+        return "", ""
+    code = primary_code(value)
+    if (status, code) in {("failed", "failed:acceptance"), ("blocked", "blocked:needs_higher_tier")}:
+        return "reasoning", code
+    if status in {"blocked", "failed"} and (code == "blocked:environment" or repair_reopened(step)):
+        return "repairable", code or status
+    return "", ""
+
+
+def needs_higher_tier(step, kind, outcome):
+    return kind == "reasoning" and (
+        outcome == "blocked:needs_higher_tier"
+        or (
+            outcome == "failed:acceptance"
+            and (step["same_tier_retry_used"] or step["attempt_count"] > 1)
+        )
     )
 
 
-def store_remediation(args, directory, step):
+def store_remediation(args, data, directory, step):
     if not args.retry_remediation_file:
         raise Error("retry requires --retry-remediation-file")
     value = read_remediation(args.retry_remediation_file)
@@ -1493,8 +1546,8 @@ def store_remediation(args, directory, step):
         or digest(prior) != value["prior_return_sha256"]
     ):
         raise Error("stale retry remediation identity")
-    outcome = retry_outcome(prior)
-    if not outcome:
+    kind, outcome = retry_class(data, step, prior)
+    if not kind:
         raise Error("prior outcome is not retry eligible")
     if value["executor_mode"] == "reuse":
         if value["next_agent_id"] != step["agent_id"]:
@@ -1507,15 +1560,21 @@ def store_remediation(args, directory, step):
     target = PORTABLE_TIERS.index(value["target_portable_tier"])
     if target < current:
         raise Error("retry target tier cannot decrease")
-    if outcome == "blocked:needs_higher_tier" and target == current:
-        raise Error("blocked:needs_higher_tier requires a higher target tier")
-    if step["attempt_count"] > 1 and target == current:
-        raise Error("later eligible retries require a higher target tier")
-    if target == current and step["same_tier_retry_used"]:
-        raise Error("same-tier retry already used")
+    if kind == "reasoning":
+        if outcome == "blocked:needs_higher_tier" and target == current:
+            raise Error("blocked:needs_higher_tier requires a higher target tier")
+        if step["attempt_count"] > 1 and target == current:
+            raise Error("later eligible retries require a higher target tier")
+        if target == current and step["same_tier_retry_used"]:
+            raise Error("same-tier retry already used")
     destination = directory / "retry-remediations" / step["id"] / f"{step['attempt_id']}.json"
     write(destination, value, MAX_REMEDIATION)
-    return value, str(destination.relative_to(directory)), digest(value), target == current
+    return (
+        value,
+        str(destination.relative_to(directory)),
+        digest(value),
+        target == current and kind == "reasoning",
+    )
 
 
 def valid_series_handoff(value):
@@ -1680,7 +1739,7 @@ def ready(args, directory, data, plan, batches, step):
         if not args.retry:
             raise Error("retry requires --retry")
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            retry_state = store_remediation(args, directory, step)
+            retry_state = store_remediation(args, data, directory, step)
         elif not args.summary:
             raise Error("retry requires --retry and bounded --summary")
     elif args.retry or args.retry_remediation_file:
@@ -1759,11 +1818,11 @@ def retryable_steps(directory, data, batches):
         if step["status"] not in {"blocked", "failed"} or not ready_candidate(data, step, batches):
             continue
         try:
-            outcome = retry_outcome(current_return(directory, step))
+            kind, outcome = retry_class(data, step, current_return(directory, step))
         except Error:
             continue
-        if outcome:
-            result.append((step, outcome))
+        if kind:
+            result.append((step, outcome, kind))
     return result
 
 
@@ -1847,10 +1906,11 @@ def checkpoint_next(directory, data, batches, plan):
 
     retryable = retryable_steps(directory, data, batches)
     if retryable:
-        ids = [step["id"] for step, _outcome in retryable]
+        ids = [step["id"] for step, _outcome, _kind in retryable]
         return bounded_action_next(
             {
                 "category": "remediate_failure",
+                "retry_class": retryable[0][2],
                 "retryable_step_ids": ids,
                 "command": retry_command(plan_id, run_id, ids[0]),
             },
@@ -2221,7 +2281,7 @@ def reopen2(args):
             for step in ordered_steps(data["steps"])
             if step["status"] == "pending" and ready_candidate(data, step, batches)
         ]
-        retryable = pending + [s for s, _outcome in retryable_steps(directory, data, batches)]
+        retryable = pending + [s for s, _outcome, _kind in retryable_steps(directory, data, batches)]
     else:
         retryable = [
             step
@@ -2730,12 +2790,14 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
         return checkpoint_next(directory, data, batches, plan)
     if disposition == "retry_eligible":
         tier = step["current_tier"]
-        if needs_higher_tier(step, retry_outcome(value)):
+        kind, outcome = retry_class(data, step, value)
+        if needs_higher_tier(step, kind, outcome):
             tier = PORTABLE_TIERS[PORTABLE_TIERS.index(tier) + 1]
         return bounded_next(
             {
                 "retry_eligible": True,
-                "outcome": retry_outcome(value),
+                "retry_class": kind,
+                "outcome": outcome,
                 "next_tier": tier,
                 "command": (
                     f"{scope} --step-id {sid} --to ready --retry "
@@ -2879,6 +2941,7 @@ def record(args):
         or (value["blockers"][0]["summary"] if value["blockers"] else value["status"])
     )[:480]
     previous = step["fingerprints"][-1] if step["fingerprints"] else ""
+    retry = retry_class(data, step, value)
     step["fingerprints"].append(fingerprint)
     step["fingerprints"] = step["fingerprints"][-5:]
     # `disposition` names the branch that actually fired, so a `next` block
@@ -2895,7 +2958,7 @@ def record(args):
             "repeated non-completed progress fingerprint",
         )
         disposition = "blocked:no_progress"
-    elif data.get("retry_policy") == ESCALATING_RETRY_POLICY and not retry_outcome(value):
+    elif data.get("retry_policy") == ESCALATING_RETRY_POLICY and not retry[0]:
         step.update(status=value["status"], retry_allowed=False)
         disposition = "ineligible_outcome"
     elif step["attempt_count"] >= step["max_attempts"]:
@@ -2909,7 +2972,7 @@ def record(args):
         disposition = "blocked:retry_exhausted"
     elif (
         data.get("retry_policy") == ESCALATING_RETRY_POLICY
-        and needs_higher_tier(step, retry_outcome(value))
+        and needs_higher_tier(step, *retry)
         and step["current_tier"] == PORTABLE_TIERS[-1]
     ):
         stop_step(

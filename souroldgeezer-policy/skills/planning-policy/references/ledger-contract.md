@@ -157,7 +157,8 @@ the cumulative overlay — feeds return validation, the scope-rejection re-recor
 generated packets (the effective leaf plus a bounded `amendments` summary), and
 step validation. Before storing, the effective plan must pass v5 admission
 (`approval_ready`), so path safety and cross-unit write ordering still hold.
-An amendment never changes retry eligibility.
+An amendment creates no attempt; its only retry effect is the repairable class
+in [retry policy](#retry-policy-remediation-and-terminal-precedence).
 
 ### Generated worker packets
 
@@ -348,12 +349,24 @@ version-2/3/4 `max_attempts` (1 through 5). The parent assigns each attempt a
 helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
 which the returned handoff echoes with the same `step_id` and `agent_id`; an
 agent cannot borrow another step's remaining attempts. Under
-`escalating_remediation_v1`, the ledger is the sole retry owner. It may retry
-only an exact `failed:acceptance` return or `blocked:needs_higher_tier`; every
-other outcome is ineligible. An exact `failed:acceptance` gets at most one
-same-tier retry total, and only after bounded remediation. A
-`blocked:needs_higher_tier` escalates immediately. Later eligible retries use a
-higher mapped tier, may skip tiers, and stop at `deep` and `max_attempts`.
+`escalating_remediation_v1`, the ledger is the sole retry owner. One predicate
+(`retry_class`) classifies a return by its first blocker whose code belongs to
+its status family (v2–v4 runs keep the exactly-one-blocker rule) and serves
+`record-return`, `retryable_steps`, `show --next-only`, and remediation.
+Reasoning stops are an exact `failed:acceptance` and
+`blocked:needs_higher_tier`. A `failed:acceptance` gets at most one same-tier
+retry total, and only after bounded remediation. A `blocked:needs_higher_tier`
+escalates immediately. Later reasoning retries use a higher mapped tier, may
+skip tiers, and stop at `deep` and `max_attempts`.
+
+Repairable stops are `blocked:environment` at any time, and any other `blocked`
+or `failed` stop whose step has an amendment recorded after that attempt's
+return (`return_recorded`; see [amendment](#execution-metadata-amendment)). They
+retry at the same tier: the retry does not set `same-tier-used`, is never forced
+upward, and still stops at `max_attempts` and `blocked:no_progress`. The `next`
+block's `retry_class` names `reasoning` or `repairable`. Worker-reported
+`oversized` and the terminal stops below are never repairable. Every other
+outcome is ineligible.
 
 Before creating a new current attempt, the ledger persists one bounded
 `retry-remediation-v1` artifact under the run. It binds `step_id`, prior

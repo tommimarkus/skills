@@ -13,6 +13,15 @@ command, attempt cap) on the approved leaf while task, boundary, decisions,
 dependencies, tier, and owner stay scope that needs a new plan. `plan.json` and
 its hash never change, so approval integrity is preserved.
 
+The same review showed that those stops, and environment denials, ended as
+ineligible outcomes that only a new run could clear, while the cause was
+repairable at the same capability. Retry eligibility therefore splits into
+reasoning stops, which keep the same-tier-then-escalate rules, and repairable
+stops (`blocked:environment`, or another blocked or failed stop amended after
+its return), which retry at the same tier without spending the same-tier retry.
+One predicate serves every consumer so `record-return`, `show --next-only`, and
+remediation cannot disagree.
+
 Evidence is the paraphrased corpus review above, the ledger's own validation
 code, repository-authored tests in `tests/planning_ledger_lifecycle_test.py`,
 and a synthetic behavior case; no third-party text is involved.

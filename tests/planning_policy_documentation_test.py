@@ -180,6 +180,20 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn("the parent runs `amend`", text)
         self.assertIn("ledger-corpus execution friction", self.text(root + "references/source-grounding.md"))
 
+    def test_repairable_retry_class_is_documented_everywhere(self) -> None:
+        root = "souroldgeezer-policy/skills/planning-policy/"
+        for path in ("CLAUDE.md", "AGENTS.md"):
+            text = " ".join(self.text(path).split())
+            self.assertIn("Repairable stops (`blocked:environment`", text)
+            self.assertIn("without spending that retry or escalating", text)
+        ledger = " ".join(self.text(root + "references/ledger-contract.md").split())
+        for fact in ("retry_class", "Repairable stops are `blocked:environment`", "first blocker whose code belongs to its status family"):
+            self.assertIn(fact, ledger)
+        for adapter in ("claude-code", "codex"):
+            text = " ".join(self.text(root + f"extensions/{adapter}.md").split())
+            self.assertIn("Repairable stops (`blocked:environment`", text)
+            self.assertIn("only reasoning stops escalate", text)
+
     def test_craft_standard_preserves_declared_value_consumer_loop(self) -> None:
         standard = self.text("docs/skill-architecture.md")
         standard = " ".join(standard.split())

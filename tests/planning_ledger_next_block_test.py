@@ -31,6 +31,8 @@ def load(name: str, path: Path):
 
 ledger = load("planning_ledger_next_block", SCRIPTS / "planning_ledger.py")
 
+ENV = {"code": "blocked:environment", "summary": "sandbox denied a required write"}
+EXEC = {"code": "failed:execution", "summary": "the tool crashed"}
 FAIL = {"code": "failed:acceptance", "summary": "acceptance exited 1"}
 HIGHER = {"code": "blocked:needs_higher_tier", "summary": "needs deeper reasoning"}
 OTHER = {"code": "blocked:missing_input", "summary": "missing a load-bearing input"}
@@ -218,7 +220,7 @@ class LedgerHarness(unittest.TestCase):
         code, result = self.transition(sid, "in_progress")
         self.assertEqual(0, code, result)
 
-    def give(self, status: str, blocker: dict | None = None, marker: str = "x",
+    def give(self, status: str, blocker: dict | list | None = None, marker: str = "x",
              sid: str = "build"):
         step = self.checkpoint()["steps"][sid]
         value = {
@@ -233,7 +235,9 @@ class LedgerHarness(unittest.TestCase):
                 "exit_code": 0 if status == "completed" else 1,
                 "summary": f"attempt {marker}",
             },
-            "blockers": [] if blocker is None else [blocker],
+            "blockers": (
+                [] if blocker is None else blocker if isinstance(blocker, list) else [blocker]
+            ),
             "notes": [],
             "commit_hash": "",
             "unstarted_remainder": ["remaining work"] if status == "oversized" else [],
@@ -627,6 +631,152 @@ class RecordReturnNextBlockTest(LedgerHarness):
         block = self.give("blocked", HIGHER, marker="c")["next"]
         self.assertFalse(block["retry_eligible"])
         self.assertEqual("blocked:retry_ceiling_reached", block["outcome"])
+
+
+class RepairableRetryTest(LedgerHarness):
+    """Reasoning stops escalate; repairable stops retry at the same tier."""
+
+    def amend(self, *extra: str, sid: str = "build"):
+        return self.call(
+            *self.common, "amend", "--actor", "parent", "--run-id", self.run_id,
+            "--step-id", sid, "--reason", "repair execution metadata", *extra,
+        )
+
+    def step(self, sid: str = "build") -> dict:
+        return self.checkpoint()["steps"][sid]
+
+    def test_environment_stops_retry_at_the_same_tier_without_spending_it(self):
+        self.init([leaf("build", [], attempts=4)])
+        self.start()
+        block = self.give("blocked", ENV, marker="a")["next"]
+        self.assertTrue(block["retry_eligible"])
+        self.assertEqual("repairable", block["retry_class"])
+        self.assertEqual("blocked:environment", block["outcome"])
+        self.assertEqual("standard", block["next_tier"])
+        self.assertBounded(block)
+        self.retry("standard", "agent-2")
+        self.assertFalse(self.step()["same_tier_retry_used"])
+        block = self.give("blocked", ENV, marker="b")["next"]
+        self.assertEqual("standard", block["next_tier"])
+        self.retry("standard", "agent-3")
+        self.assertEqual("standard", self.step()["current_tier"])
+
+    def test_a_repairable_stop_after_a_spent_same_tier_retry_is_not_forced_upward(self):
+        self.init()
+        self.start()
+        self.give("failed", FAIL, marker="a")
+        self.retry("standard", "agent-2")
+        self.assertTrue(self.step()["same_tier_retry_used"])
+        block = self.give("blocked", ENV, marker="b")["next"]
+        self.assertEqual("repairable", block["retry_class"])
+        self.assertEqual("standard", block["next_tier"])
+        self.retry("standard", "agent-3")
+
+    def test_reasoning_stops_keep_their_rules_and_class(self):
+        self.init()
+        self.start()
+        block = self.give("failed", FAIL, marker="a")["next"]
+        self.assertEqual("reasoning", block["retry_class"])
+        self.retry("standard", "agent-2")
+        block = self.give("failed", FAIL, marker="b")["next"]
+        self.assertEqual("analytical", block["next_tier"])
+
+    def test_the_first_family_blocker_classifies_the_return(self):
+        for blockers, eligible in (
+            ([FAIL, EXEC], True),
+            ([EXEC, FAIL], False),
+            ([{"code": "failed:acceptance", "summary": "again"}, FAIL], True),
+        ):
+            with self.subTest(blockers=[b["code"] for b in blockers]):
+                self.init()
+                self.start()
+                block = self.give("failed", blockers)["next"]
+                self.assertEqual(eligible, block["retry_eligible"])
+        self.init()
+        self.start()
+        block = self.give("blocked", [OTHER, ENV])["next"]
+        self.assertFalse(block["retry_eligible"])
+        self.assertEqual("ineligible_outcome", block["outcome"])
+
+    def test_the_predicate_is_one_function_for_every_consumer(self):
+        self.init()
+        self.start()
+        self.give("blocked", ENV, marker="a")
+        data = self.checkpoint()
+        step = data["steps"]["build"]
+        directory = self.root / "planning-policy/ledgers" / self.plan_id / self.run_id
+        value = ledger.current_return(directory, step)
+        self.assertEqual(("repairable", "blocked:environment"), ledger.retry_class(data, step, value))
+        retryable = ledger.retryable_steps(directory, data, {})
+        self.assertEqual([("build", "blocked:environment", "repairable")], [(s["id"], o, k) for s, o, k in retryable])
+        code, result = self.show_next()
+        self.assertEqual("remediate_failure", result["next"]["category"])
+        self.assertEqual("repairable", result["next"]["retry_class"])
+
+    def test_an_amendment_after_the_return_makes_other_stops_repairable(self):
+        for status, blocker in (("blocked", OTHER), ("failed", EXEC)):
+            with self.subTest(code=blocker["code"]):
+                self.init()
+                self.start()
+                block = self.give(status, blocker, marker="a")["next"]
+                self.assertFalse(block["retry_eligible"])
+                self.assertEqual("terminal_blocked", self.show_next()[1]["next"]["category"])
+                code, result = self.amend("--add-read", "docs")
+                self.assertEqual(0, code, result)
+                code, result = self.show_next()
+                self.assertEqual("remediate_failure", result["next"]["category"])
+                self.assertEqual("repairable", result["next"]["retry_class"])
+                self.retry("standard", "agent-2")
+                self.assertFalse(self.step()["same_tier_retry_used"])
+                self.assertEqual("standard", self.step()["current_tier"])
+
+    def test_an_amendment_before_the_return_does_not_make_the_stop_repairable(self):
+        self.init()
+        code, result = self.transition("build", "ready", "--agent-id", "agent-1")
+        self.assertEqual(0, code, result)
+        self.assertEqual(0, self.amend("--add-read", "docs")[0])
+        self.assertEqual(0, self.transition("build", "in_progress")[0])
+        block = self.give("blocked", OTHER, marker="a")["next"]
+        self.assertFalse(block["retry_eligible"])
+        self.assertEqual("terminal_blocked", self.show_next()[1]["next"]["category"])
+
+    def test_an_amendment_does_not_reopen_other_terminal_stops(self):
+        self.init([leaf("build", [], attempts=1)])
+        self.start()
+        block = self.give("blocked", ENV, marker="a")["next"]
+        self.assertEqual("blocked:retry_exhausted", block["outcome"])
+        self.assertEqual(0, self.amend("--add-read", "docs")[0])
+        self.assertEqual("terminal_blocked", self.show_next()[1]["next"]["category"])
+        code, _ = self.transition("build", "ready", "--retry")
+        self.assertEqual(3, code)
+        self.init()
+        self.start()
+        self.give("oversized", SCOPE, marker="a")
+        self.assertEqual(0, self.amend("--add-read", "docs")[0])
+        self.assertEqual("terminal_blocked", self.show_next()[1]["next"]["category"])
+
+    def test_a_repairable_retry_is_still_bounded_by_attempts_and_progress(self):
+        self.init([leaf("build", [], attempts=2)])
+        self.start()
+        self.give("blocked", ENV, marker="same")
+        self.retry("standard", "agent-2")
+        block = self.give("blocked", ENV, marker="same")["next"]
+        self.assertEqual("blocked:no_progress", block["outcome"])
+        self.init([leaf("build", [], attempts=2)])
+        self.start()
+        self.give("blocked", ENV, marker="a")
+        self.retry("standard", "agent-2")
+        block = self.give("blocked", ENV, marker="b")["next"]
+        self.assertEqual("blocked:retry_exhausted", block["outcome"])
+
+    def test_a_retained_v4_run_keeps_the_exactly_one_blocker_rule(self):
+        step = {"attempt_id": "a", "amendments": []}
+        value = {"status": "blocked", "blockers": [ENV]}
+        self.assertEqual(("", ""), ledger.retry_class({"schema": 4}, step, value))
+        value = {"status": "failed", "blockers": [FAIL, EXEC]}
+        self.assertEqual(("", ""), ledger.retry_class({"schema": 4}, step, value))
+        value = {"status": "failed", "blockers": [FAIL]}
+        self.assertEqual(("reasoning", "failed:acceptance"), ledger.retry_class({"schema": 4}, step, value))
 
 
 class BatchNextBlockTest(LedgerHarness):

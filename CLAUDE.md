@@ -523,10 +523,13 @@ once, via the helper's `--batch-commit` entries, only once every member is
 
 The ledger is the sole retry-policy owner. New v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
-behavior, and `portable_tier` is initial only. Only `failed:acceptance` and
-`blocked:needs_higher_tier` are eligible: one same-tier retry follows only
-`failed:acceptance`, while `blocked:needs_higher_tier` escalates immediately;
-later retries use higher mapped tiers through `deep` and `max_attempts`. Each
+behavior, and `portable_tier` is initial only. One predicate classifies a return
+by its first blocker in its status family. Reasoning stops are eligible:
+one same-tier retry follows only `failed:acceptance`, while
+`blocked:needs_higher_tier` escalates immediately; later retries use higher
+mapped tiers through `deep` and `max_attempts`. Repairable stops
+(`blocked:environment`, or another blocked/failed stop amended after its
+return) retry at the same tier without spending that retry or escalating. Each
 retry persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
 assignment checks. Terminal precedence is repeated result, ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling. Every successful v5

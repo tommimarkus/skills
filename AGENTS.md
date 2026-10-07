@@ -391,11 +391,14 @@ finite `max_attempts` (1–5): identical progress fingerprints block a retry as
 and a boundary overrun is terminal `oversized`, never an expanded retry.
 The ledger is the sole retry-policy owner: new v5 runs stamp
 `retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
-behavior. `portable_tier` is initial only. Only `failed:acceptance` and
-`blocked:needs_higher_tier` are eligible; one same-tier retry is allowed only
-after `failed:acceptance`, while `blocked:needs_higher_tier` escalates
-immediately. Later retries use higher tiers through `deep`/`max_attempts`.
-Each retry persists a bounded `retry-remediation-v1` artifact and checks
+behavior. `portable_tier` is initial only. One predicate classifies a return by
+its first blocker in its status family. Reasoning stops are eligible; one
+same-tier retry is allowed only after `failed:acceptance`, while
+`blocked:needs_higher_tier` escalates immediately. Later retries use higher
+tiers through `deep`/`max_attempts`. Repairable stops (`blocked:environment`,
+or another blocked/failed stop amended after its return) retry at the same tier
+without spending that retry or escalating. Each retry persists a bounded
+`retry-remediation-v1` artifact and checks
 identity, prior-return digest, worktree, boundary, and assignment. Terminal
 precedence is repeated result (`blocked:no_progress`), ineligible outcome,
 exhaustion (`blocked:retry_exhausted`), then tier ceiling.
