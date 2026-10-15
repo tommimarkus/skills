@@ -26,6 +26,16 @@ NEW_BEHAVIOR_CASES = {
     "tdd-policy-behavior-refactor-retires-superseded": "successor",
     "tdd-policy-behavior-retirement-evidence-insufficient": "retain",
     "tdd-policy-behavior-delegated-parent-consolidation": "integration",
+    "tdd-policy-behavior-reuse-shared-helper": "shared",
+    "tdd-policy-behavior-setup-lifetime-immutable-only": "immutable",
+    "tdd-policy-behavior-no-fixed-sleep": "condition",
+    "tdd-policy-behavior-machine-format-hostile-locale": "locale",
+    "tdd-policy-behavior-human-format-explicit-locale": "explicit",
+    "tdd-policy-behavior-env-locale-assert-applied": "took effect",
+    "tdd-policy-behavior-minimal-input": "smallest",
+    "tdd-policy-behavior-lane-marker": "lane",
+    "tdd-policy-behavior-green-duration-slow-tail": "duration",
+    "tdd-policy-behavior-stack-idioms-fallback": "software-design",
 }
 
 
@@ -124,6 +134,70 @@ class TddPolicyContractTest(unittest.TestCase):
         self.assertIn("verify-then-retire", flat_core)
         self.assertIn("parent runs the suite step once", flat_core)
 
+    def test_core_states_stack_neutral_test_authoring_rules(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "## Writing the test",
+            "Reuse before define",
+            "shared test-support surface",
+            "defaulted parameter",
+            "moves into the shared surface in the same cycle",
+            "immutable or safely resettable",
+            "cleanup that runs even when the test fails",
+            "No fixed sleeps or real clocks",
+            "observable condition with a bounded timeout",
+            "must not depend on the runner's locale",
+            "assert it took effect",
+            "Expected values never come from the authoring environment",
+            "smallest fixture that exhibits the behavior",
+            "no order dependence",
+            "lane marker, tag, or location",
+            "loaded once per task",
+            "`stack idioms: n/a`",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_core_red_can_fail_where_it_runs_and_green_reads_duration(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "must be able to fail where it runs",
+            "comma-decimal locale",
+            "For machine-facing output",
+            "the locale is an explicit test input",
+            "read the new test's duration",
+            "slow tail",
+            "record the duration only",
+            "duplication detector",
+            "names the shared test-support paths in each worker's reads",
+            "Language-specific test-code idioms → `software-design`",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_standing_block_and_footer_carry_test_authoring(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "Tests reuse the suite's shared fixtures and helpers, share only immutable setup, "
+            "and never depend on real sleeps, clocks, or the machine's locale or timezone.",
+            "cost <duration|unknown>[: reason]",
+            "stack idioms <software-design:<stack>|n/a>",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+        skill = flat(self.skill())
+        for phrase in ("Writing the test", "test-code idioms", "duration", "stack idioms"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, skill)
+
+    def test_software_design_is_referenced_by_name_never_by_path(self) -> None:
+        for path in sorted(TDD_ROOT.rglob("*")):
+            if path.is_file():
+                with self.subTest(path=path.relative_to(TDD_ROOT).as_posix()):
+                    text = path.read_text(encoding="utf-8")
+                    self.assertNotIn("souroldgeezer-design", text)
+                    self.assertNotRegex(text, r"extensions/\S*test-code")
+
     def test_standing_block_carries_level_retirement_and_budget(self) -> None:
         core = flat(self.core())
         for phrase in (
@@ -211,6 +285,7 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn(case_id, cases)
                 case = cases[case_id]
                 self.assertEqual(case["source_kind"], "synthetic")
+                self.assertTrue(case.get("ip_handling"))
                 self.assertTrue(
                     any(keyword in check.lower() for check in case["required_checks"]),
                     f"{case_id} needs a required check mentioning {keyword!r}",
@@ -233,6 +308,10 @@ class TddPolicyContractTest(unittest.TestCase):
             "feedback budget",
             "inherited",
             "verify-then-retire",
+            "Test Desiderata",
+            "testing.googleblog.com",
+            "decimal separator",
+            "by skill name",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, grounding)
@@ -253,6 +332,8 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn("Inspect existing tests before selecting the RED test", guidance)
                 self.assertIn("cheapest level", guidance)
                 self.assertIn("REFACTOR includes the suite", guidance)
+                self.assertIn("`tests/surface_test_lib.py` helpers before defining new ones", guidance)
+                self.assertIn("share only immutable setup", guidance)
 
 
 if __name__ == "__main__":
