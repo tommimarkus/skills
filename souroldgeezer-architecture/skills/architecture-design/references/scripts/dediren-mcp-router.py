@@ -317,7 +317,7 @@ class Backend:
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.close()
+                self.close(graceful=False)
                 raise BackendError(
                     self._failure(
                         f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
@@ -326,7 +326,7 @@ class Backend:
             try:
                 response = self.responses.get(timeout=remaining)
             except queue.Empty as exc:
-                self.close()
+                self.close(graceful=False)
                 raise BackendError(
                     self._failure(
                         f"Dediren timed out after {wait_timeout:g}s waiting for {method}"
@@ -340,7 +340,7 @@ class Backend:
             if response.get("id") == request_id:
                 return response
 
-    def close(self) -> None:
+    def close(self, *, graceful: bool = True) -> None:
         if self.closed:
             return
         self.closed = True
@@ -349,9 +349,17 @@ class Backend:
                 self.process.stdin.close()
             except OSError:
                 pass
-        try:
-            self.process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
+        # A backend that already failed to answer within its timeout is treated
+        # as hung, so the router terminates it immediately instead of granting
+        # the voluntary-exit grace.
+        exited = False
+        if graceful:
+            try:
+                self.process.wait(timeout=2)
+                exited = True
+            except subprocess.TimeoutExpired:
+                pass
+        if not exited:
             self.process.terminate()
             try:
                 self.process.wait(timeout=2)

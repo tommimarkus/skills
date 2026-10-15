@@ -122,6 +122,16 @@ Codex validator and reports its absence as a skip. Before changing the
 published surface, apply the repository's in-depth IP-hygiene review;
 cosmetic edits use scoped triage.
 
+Mutation testing is not configured, by decision rather than omission. The suite
+loads the production scripts by file path (`load_script_module` in
+`tests/surface_test_lib.py`) and drives them as subprocesses, so an
+import-interception mutator such as Mutmut never sees the module under test;
+adopting one needs a path-aware harness first. Until then, effectiveness
+evidence comes from the controlled-break check the test-quality audit's
+recovery gates use: in the task worktree, alter one literal or branch of the
+module under test, run its focused tests, confirm they fail, then revert that
+file with `git checkout -- <file>` before making any other edit to it.
+
 ## Documentation map
 
 Use [README.md](../README.md) for installation and the published-plugin map.

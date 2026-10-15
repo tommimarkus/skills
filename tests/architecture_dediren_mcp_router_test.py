@@ -870,7 +870,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
             log = lifecycle_log.read_text(encoding="utf-8")
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertLess(elapsed, 5)
+        self.assertLess(elapsed, 1.5, "a timed-out backend must be terminated promptly, not after the graceful-exit grace")
         error = responses_by_id(result)[8]["error"]
         self.assertEqual(error["code"], -32000)
         self.assertIn("timed out", error["message"])
