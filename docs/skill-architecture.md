@@ -80,6 +80,13 @@ Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
 
+When shortening prose to meet a load budget, list each removed or shortened
+rule-bearing sentence in the handoff or commit and map its obligations to
+retained wording on the same load route or an always-loaded source. Before
+landing, the integrator verifies that mapping; without an equivalent, retain the
+obligation and tighten wording or justify a budget change. Token counts and
+code/heading inventories do not prove semantic retention.
+
 A capability the `SKILL.md` advertises must be one the supported runtime can
 actually express. Verify a composed claim — a specific mode × notation × export
 combination — against the runtime before shipping it; if the runtime cannot
@@ -264,6 +271,13 @@ Prefer machinery when the check is structural, repetitive, brittle under prose,
 or important enough to rerun after every change. Prose should explain why a
 rule matters and how to interpret edge cases; scripts should calculate what can
 be calculated.
+
+Before approving a tighter vocabulary or validation predicate, run the proposed
+check (or its exact matcher) across the tracked base-tree consumers and planned
+same-batch fixtures and examples. Classify matches: migrate valid consumers,
+preserve intentional negative tests and declared compatibility cases, or record
+an explicit exception. Put affected paths in the owning work unit's write set
+before approval; a pattern match alone does not establish a violation.
 
 A bundled compensating script is not automatically a thin shim just because a
 pinned upstream runtime ships a new tool surface (for example an MCP server)
@@ -625,6 +639,9 @@ Before finishing a skill change, inspect for these common regressions:
 
 - The trigger became louder but less precise.
 - The workflow added steps without changing decisions or failure detection.
+- A policy description, standing line, or stop condition enforces a broader
+  scope than its invariant. Compare their qualifiers and exceptions; omitted
+  behavioral-change, source, or lane limits are over-enforcement.
 - The skill now duplicates a sibling skill instead of delegating.
 - Heavy reference material moved into always-loaded context.
 - Plugin manifest, marketplace entry, and matching subagent metadata diverged.
