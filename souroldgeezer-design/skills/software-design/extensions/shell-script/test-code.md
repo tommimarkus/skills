@@ -28,7 +28,8 @@ https://www.gnu.org/software/bash/manual/bash.html
   `BATS_SUITE_TMPDIR` (whole run). Write mutable state to the per-test one.
 - Trap: globals and `cd` set in one test do not carry over, because each test
   runs in its own process; do not rely on that for state you meant to share
-  (core `SD-C-4`).
+  (core `SD-C-4`). `teardown` also runs after a failed `setup`, so guard state
+  that may be only partly created.
 
 ## Time, randomness, and ambient environment
 
@@ -39,14 +40,19 @@ https://www.gnu.org/software/bash/manual/bash.html
   A locale that is not installed falls back silently, so probe that it took
   effect, for example with `locale` output or a known-format command (core
   `SD-B-5`).
-- Pin `LANG`, `PATH`, and `HOME` to fixture values for scripts that read them,
-  and stub external commands with a per-test `bin/` directory on `PATH`.
+- Reset the environment in one shared helper, not per test: `HOME` (and XDG
+  dirs) under the temp dir, `LANG`, `TZ`, and `PATH` with a per-test stub
+  `bin/` first. Stub only external effects, never the core utilities the runner
+  itself uses; run `hash -r` after changing `PATH` in a long-lived shell.
 
 ## Isolation and parallel runs
 
 - `bats --jobs N` needs GNU parallel (or a compatible tool such as rush) and
   runs files and tests concurrently; every test needs unique temp paths, ports,
   and names (use `BATS_TEST_TMPDIR`).
+- A background service started in `setup_file` redirects its output and closes
+  file descriptor 3 (`3>&-`), or Bats waits on it at the end of the file; keep
+  its pid in `BATS_FILE_TMPDIR` and stop it in `teardown_file`.
 - Set `BATS_NO_PARALLELIZE_WITHIN_FILE=true` (in `setup_file` or at file top)
   for a file whose tests share state; `--no-parallelize-within-files` does the
   same for the whole run.
@@ -57,5 +63,7 @@ https://www.gnu.org/software/bash/manual/bash.html
   (`# bats file_tags=` for the whole file) and select with
   `--filter-tags slow,!flaky`; or split by directory. Tags are case-sensitive.
 - Durations: `bats --timing` (`-T`) prints per-test time.
+- Tags, `setup_file`, and the `BATS_*_TMPDIR` variables need a recent
+  bats-core; check `bats --version`, as older distribution packages lack them.
 
 Adds no key codes; findings cite core `SD-*`; test adequacy → `test-quality-audit`.

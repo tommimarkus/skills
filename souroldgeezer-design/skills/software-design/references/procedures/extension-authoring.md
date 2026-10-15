@@ -21,7 +21,7 @@ define a key code first.
 Per-stack test-code lane files live at `extensions/<stack>/test-code.md`
 (`csharp/test-code.md`, `java/test-code.md`, `python/test-code.md`,
 `rust/test-code.md`, `shell-script/test-code.md`, `typescript/test-code.md`).
-Keep each at most about 70 lines with these sections in order:
+Keep each at most 75 lines with these sections in order:
 `# <Stack> Test-Code Lane` (load cue plus a `Sources:` line linking the official
 runner, fixture, time, and parallel-run docs), `## Shared test support`,
 `## Setup lifetime`, `## Time, randomness, and ambient environment`,

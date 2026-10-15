@@ -598,8 +598,8 @@ Measured against main `d2e72d8`.
 | `review-api-software-composed` | 19,429 | 19,651 | +222 |
 | `sd-build-csharp` | 8,222 | 8,520 | +298 |
 | `sd-review-typescript` | 11,727 | 12,019 | +292 |
-| `sd-test-code-python` | — (new) | 3,139 | — |
-| `sd-test-code-typescript` | — (new) | 3,089 | — |
+| `sd-test-code-python` | — (new) | 3,227 | — |
+| `sd-test-code-typescript` | — (new) | 3,203 | — |
 | `tdd-enforce` | 3,055 | 3,714 | +659 |
 
 `tdd-enforce` is new as a scenario; its "before" is the same file pair measured
@@ -616,7 +616,7 @@ Where the software-design growth comes from:
 - **+70 to +76 on the stack routes** is each `<stack>.md` ambient default plus
   its narrowed delegation line.
 
-The test-code content itself loads only on the test-code routes, at about 3.1k
+The test-code content itself loads only on the test-code routes, at about 3.2k
 tokens: `SKILL.md` plus one test-code file, with neither the core reference nor
 `<stack>.md`.
 

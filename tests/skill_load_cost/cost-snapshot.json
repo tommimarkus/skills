@@ -56,7 +56,7 @@
   "lookup-api-status-no-data": 12323,
   "extract-api-data-access-debt": 14180,
   "review-api-software-composed": 19651,
-  "sd-test-code-python": 3139,
-  "sd-test-code-typescript": 3089,
+  "sd-test-code-python": 3227,
+  "sd-test-code-typescript": 3203,
   "tdd-enforce": 3714
 }

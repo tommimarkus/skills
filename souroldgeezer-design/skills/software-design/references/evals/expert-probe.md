@@ -125,6 +125,49 @@ Run log:
   (`shell.SD-B-1`, `SD-C-1`, `SD-S-3`, `SD-S-4`, `SD-Q-1`). Adjudicated
   covered: flat-namespace prefix discipline (core `SD-S-1`), errexit-stance
   inheritance across sourcing (`shell.SD-C-1` restore contract).
+- 2026-10-15 test-code lane, all six `<stack>/test-code.md` files, lenses A
+  (expert test-code practice) and B (a reviewer's check of a mature suite's
+  support structure), Claude Fable 5.1. Each probe wrote both formulations
+  without reading the repository; the parent diffed them against the files.
+  Genuine gaps fixed:
+  - python: the `conftest.py` versus importable-support-package split; a wide
+    fixture's cached value missing a later per-test `monkeypatch`; frozen
+    monotonic clocks hanging deadline loops; the xdist once-per-run file lock;
+    fixture cost visible in `--durations` setup rows; global state such as
+    logging handlers, warning filters, and cached singletons.
+  - shell-script: `teardown` running after a failed `setup`; environment reset
+    in one shared helper, with `hash -r` and stubs limited to external effects;
+    background services closing file descriptor 3; bats-core version gating.
+  - typescript: helpers matching the test glob; global setup running in the
+    parent process; `test.extend` fixtures; mock and env reset through runner
+    config; faking only the needed timer APIs; worker-id resources; cwd-free
+    fixture paths; the setup/collect duration split.
+  - java: test-jar transitive loss versus a test-support module;
+    `ExtensionContext.Store` state and root-store singletons; mutable statics
+    under the default lifecycle; per-test restarts of a non-static
+    `@Container`; transaction rollback missing server-port and async work;
+    random-orderer lanes.
+  - csharp: NUnit's shared fixture instance; a test-support library must not
+    reference the test SDK; `xunit.runner.json` copy-to-output; one shared
+    `WebApplicationFactory`; culture flowing across awaits and pinned defaults;
+    fixture setup missing from per-test durations; `AppContext.BaseDirectory`
+    data.
+  - rust: guard bindings that drop at the end of their statement, and `Drop`
+    not running on abort; Cargo path variables instead of cwd; per-test tokio
+    runtimes; `try_init` for process globals; nextest test groups; doctests
+    skipped by nextest; `.cargo/config.toml` `[env]`; `HashMap` order.
+
+  Covered by stack cores and core: SUT seams such as main guards and injected
+  commands (`shell-script.md`, §3.10), helper purity (`shell.SD-C-1`),
+  portability matrices (`shell-script.md`), and a binary crate's thin `main`
+  (`rust.md`). Sibling-owned: assertion mechanics, snapshot/approval tooling,
+  mocking strictness, and data-driven case design (test-quality-audit), and
+  test-level choice such as Spring slices (tdd-policy's level ladder). Linter
+  territory: banned-API analyzers, ArchUnit/forbidden-apis, shellcheck, and
+  clippy on tests. Surfaced, not added (line budget, lower value): config-file
+  precedence and import modes, async plugin choice, hook ordering, hang
+  diagnostics, per-test timeouts, and build-speed profiles. No key code was
+  added.
 - 2026-09 correction to the 2026-07-22 C# and Java compatibility notes: their
   earlier "binary, not source" shorthand was too narrow. Published artifacts
   require separate source, binary, and behavioral compatibility evidence
