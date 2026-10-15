@@ -622,8 +622,8 @@ tokens: `SKILL.md` plus one test-code file, with neither the core reference nor
 
 **Budget change.** Two Build/Review routes exceed the 250-token per-change
 allowance in `software_design_data_efficiency_test.py` (+298 and +292) after
-wording was tightened twice: −17 on the route, −16 on §3.10, and −11 to −16 per
-stack sentence. The remaining excess is the link list. The guard's task-relative
+wording was tightened twice: −17 on the route, −16 on §3.10, and −7 (TypeScript)
+to −11 (C#) on the stack sentences. The remaining excess is the link list. The guard's task-relative
 baseline moves to this change and the fragility ceilings to that baseline +250,
 as `a6a53be` did. This needs the owner's acceptance; the alternative is to
 drop the stack ambient defaults from `<stack>.md`, which the plan placed there.
