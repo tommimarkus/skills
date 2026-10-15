@@ -206,7 +206,9 @@ clarity or regression coverage, reusing existing fixtures. A pre-existing
 failure counts as RED only when it precisely represents the intended behavior.
 Run the focused scenario per RED/GREEN step and the full suite at the declared
 cadence. REFACTOR includes the suite: retire or consolidate a test the new one
-supersedes, naming its successor.
+supersedes, naming its successor. Reuse `tests/surface_test_lib.py` helpers before
+defining new ones; share only immutable setup; no fixed sleeps, real clocks, or
+reliance on the machine's locale or timezone.
 
 ## Runtime parity
 

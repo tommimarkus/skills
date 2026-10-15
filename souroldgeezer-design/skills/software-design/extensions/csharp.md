@@ -7,7 +7,14 @@ package refs, or C# modules.
 
 Covers C# on .NET — project/assembly/DI/EF/hosted-service structure **and** C#
 language semantics. Delegate HTTP to `api-design`, security to `devsecops-audit`,
-and tests to `test-quality-audit`.
+and test adequacy to `test-quality-audit`; test-code structure idioms are in
+the test-code lane (Load Map).
+
+Ambient environment default: machine-facing formatting, parsing, and casing
+specify culture and `StringComparison` explicitly (the opt-in globalization
+analyzers CA1304, `CA1305`, CA1307, CA1309, CA1310, and CA1311 flag the
+implicit forms), and time flows through an injected `TimeProvider`; ambient
+reads are core `SD-B-5`.
 
 F# and VB.NET sources load this extension for .NET build/module facts only
 (`.sln`, `.fsproj`/`.vbproj`, `Directory.Build.*`, `global.json`, project refs,

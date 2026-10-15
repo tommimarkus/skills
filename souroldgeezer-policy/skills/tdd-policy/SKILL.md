@@ -19,8 +19,9 @@ time when readable, existing tests.
 Evidence: cite the initialization source or explicit request, the variant and
 scope in force, the change classification, the RED level (with its reason when
 above the cheapest), the execution scope run, exceptions/opt-outs applied, the
-failing-test → pass cycle or the blocker, the suite delta, and retired tests with
-their successors.
+failing-test → pass cycle or the blocker, the suite delta, the new test's
+duration, the stack idioms applied or n/a, and retired tests with their
+successors.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
 enforcement, guidance edits, or adoption. When editing triggers, behavior, source
@@ -43,16 +44,18 @@ first, at the cheapest level that proves it; refactors run under existing passin
 tests; RED→GREEN→REFACTOR, and REFACTOR retires or consolidates superseded
 coverage; shipped behavior stays covered by at least one test that fails on
 regression." Classify the change, select RED, scope execution, and maintain the
-suite per the reference. Apply initialized options; bare initialization uses the
-default profile in `references/core-workflow.md`. When implementation is
+suite per the reference; write each test per "Writing the test" there. Apply
+initialized options; bare initialization uses the default profile in
+`references/core-workflow.md`. When implementation is
 delegated, each worker selects RED inside its own write set and the parent runs
 the suite step once across all workers' tests at integration, before final
 verification. Keep opt-out low-friction (disable line, one-phrase per-task
 override logged, scope/exception globs, `test-after` downgrade) — opt-out is
 where user choice lives. `test-after` relaxes the invariant and is an opt-out,
 never a variant. Delegate test adequacy and similarity/history retirement to
-`test-quality-audit`, code/module design to `software-design`, commit/branch
-preflight to `git-workflow-policy`, PR/MR to `pr-ops`, issues to `issue-ops`.
+`test-quality-audit`, code/module design and test-code idioms to
+`software-design`, commit/branch preflight to `git-workflow-policy`, PR/MR to
+`pr-ops`, issues to `issue-ops`.
 
 Ask vs continue: continue when scope, variant, exceptions, and the test command
 are clear. Stop and ask on ambiguous scope, an unlogged exception request, or when

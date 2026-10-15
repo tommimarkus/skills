@@ -5,8 +5,13 @@ libraries, completions, bootstrap code, or scripts claiming Linux, macOS, or
 WSL support.
 
 Covers script/module design. Delegate injection/secrets to `devsecops-audit`,
-provisioning to `infra-design`, endpoint contracts to `api-design`, and tests
-to `test-quality-audit`.
+provisioning to `infra-design`, endpoint contracts to `api-design`, and test
+adequacy to `test-quality-audit`; test-code structure idioms are in the
+test-code lane (Load Map).
+
+Ambient environment default: set `LC_ALL=C` (or the specific `LC_*`) for
+machine output, `sort`, `printf`, and parsed tool messages; leave the user's
+locale only for human-facing text (core `SD-B-5`).
 
 Use GNU Bash, Z Shell, POSIX shell, Apple Terminal, and Microsoft WSL docs only
 for platform facts. Inspect interpreter contract, sourcing graph, options/traps

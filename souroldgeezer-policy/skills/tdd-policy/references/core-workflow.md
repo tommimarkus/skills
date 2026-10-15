@@ -25,8 +25,10 @@ standing-line rule — the invariant inline, never a bare pointer. Template:
 > `tdd-policy: <variant> — new or changed behavior gets a focused failing test first, at the
 > cheapest level that proves it; refactors run under existing passing tests; RED→GREEN→REFACTOR,
 > and REFACTOR retires or consolidates superseded coverage; shipped behavior stays covered by
-> at least one test that fails on regression. Scope <globs>. Budget <lane: value|inherited|none>.
-> Exceptions <list> (logged). Enforcement <model|model+gate>.`
+> at least one test that fails on regression. Tests reuse the suite's shared fixtures and helpers,
+> share only immutable setup, and never depend on real sleeps, clocks, or the machine's locale or
+> timezone. Scope <globs>. Budget <lane: value|inherited|none>. Exceptions <list> (logged).
+> Enforcement <model|model+gate>.`
 
 ## Default profile
 
@@ -88,12 +90,49 @@ order:
 6. **RED evidence.** An existing failing test counts as RED only when its
    failure precisely represents the intended behavior.
    Unrelated failures do not establish RED; add or extend a focused test and
-   observe it fail for the intended reason.
+   observe it fail for the intended reason. RED must be able to fail where it
+   runs: formatting, parsing, collation, case-mapping, and time behavior may be
+   unable to fail under the author's own locale or timezone, so run RED under a
+   value that can fail — a comma-decimal locale, a locale with special case
+   mapping, or a non-UTC zone with daylight saving. Classify the output first:
+   For machine-facing output, invariance *is* the behavior; for human-facing
+   output, the locale is an explicit test input.
 7. **Budget.** When the lane is at or over its budget, RED is still written;
    GREEN does not land until "REFACTOR includes the suite" brings the lane back
    within budget, or a logged exception applies. Without a budget there is no
    breach — the level ladder still applies and the footer reports the suite
-   delta.
+   delta. At GREEN, read the new test's duration from the focused run's
+   output. If it lands in the lane's slow tail (measured against a readable
+   duration distribution), apply the "Writing the test" moves or record a
+   reason. Without a distribution, record the duration only.
+
+## Writing the test
+
+- **Reuse before define:** find the suite's shared test-support surface and
+  search it and neighboring tests before defining a fixture, helper, or
+  builder. Extend a shared builder with a defaulted parameter rather than
+  copying it. A helper that a second module needs moves into the shared surface
+  in the same cycle.
+- **Setup lifetime:** the widest scope only for immutable or safely resettable
+  infrastructure. Mutable data, users, and sessions stay per-test, with cleanup
+  that runs even when the test fails.
+- **Time and waiting:** No fixed sleeps or real clocks. Control time, or wait on
+  an observable condition with a bounded timeout.
+- **Machine independence:** the result must not depend on the runner's locale or
+  culture, timezone, encoding, line endings, path separators, or message
+  language. Set any of these the behavior depends on explicitly, preferably in
+  process. When it is set through the environment, assert it took effect:
+  missing locale data falls back silently. Expected values never come from the
+  authoring environment.
+- **Minimal input:** use the smallest fixture that exhibits the behavior.
+- **Isolation:** per-test temp dirs, ports, and environment; no order
+  dependence.
+- **Lane:** a test above the unit level carries the project's lane marker, tag,
+  or location.
+- **Stack idioms:** when `software-design` is available, apply its test-code
+  file for the detected stack, loaded once per task. Otherwise apply these rules
+  with the project's conventions and the runner's documentation, and disclose
+  `stack idioms: n/a`.
 
 ## Execution scope
 
@@ -112,7 +151,9 @@ After GREEN, review the tests this cycle touched or made redundant:
 - Retire a test whose regression protection is now carried by the test just
   written or extended: name the successor and show it fails for the retired
   test's reason, or use a controlled removal.
-- Fold duplicated scaffolding into the suite's shared helpers.
+- Fold duplicated scaffolding into the suite's shared helpers. When the project
+  configures a duplication detector, run it on the test files touched this cycle
+  and fold its findings into shared helpers.
 - Move a test down a level when the lower level proves the same thing.
 - Where evidence is insufficient, retain the test and name the verification
   needed.
@@ -125,7 +166,8 @@ accumulated suite and applies `verify-then-retire`.
 
 Each worker applies "Selecting the RED test" inside its own write set. The
 parent runs the suite step once across all workers' tests at integration,
-before final verification, because only the parent sees the whole suite.
+before final verification, because only the parent sees the whole suite. The
+parent names the shared test-support paths in each worker's reads.
 
 ## Config options
 
@@ -173,6 +215,7 @@ mechanical enforcement is the optional `enforcement: model+gate` PreToolUse hook
 - Test adequacy / brittle assertions, and retirement judged from similarity or
   history → `test-quality-audit`.
 - Code/module design → `software-design`.
+- Language-specific test-code idioms → `software-design`.
 - Commit/branch preflight → `git-workflow-policy`. PR/MR → `pr-ops`. Issues → `issue-ops`.
 
 ## Output footer
@@ -183,6 +226,7 @@ End every run with:
 tdd-policy: <mode> | variant <v> | change <behavioral|refactor|requirement-change> |
 level <unit|in-process|child-process|e2e>[: reason] | ran <focused|affected|full> |
 suite delta <+n/−m tests; lane <time|unknown> vs budget <value|inherited|none>> |
+cost <duration|unknown>[: reason] | stack idioms <software-design:<stack>|n/a> |
 retired: <list|none> | exceptions/opt-outs applied: <list|none> |
 enforcement <model|model+gate>, gate <ran|n/a> | reference core-workflow.md | delegated: <list|none>
 ```

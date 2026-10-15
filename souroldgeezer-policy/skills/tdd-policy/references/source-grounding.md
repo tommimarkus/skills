@@ -44,6 +44,38 @@ when needed.
   `references/evals/behavior-cases.jsonl`; the contract test keys every case to
   its rule.
 
+## Test Authoring Rationale
+
+The "Writing the test" rules rest on Kent Beck's
+[Test Desiderata](https://testdesiderata.com/) (properties such as isolated,
+deterministic, fast, and structure-insensitive) and the Google Testing Blog's
+[test-size restrictions](https://testing.googleblog.com/2010/12/test-sizes.html)
+(smaller tests forgo sleeps, system properties, and external resources). Paraphrased
+rationale per rule:
+
+- Reuse before define: a helper defined twice drifts twice; a defaulted
+  parameter on the shared builder keeps one definition serving every caller.
+- Setup lifetime: sharing only immutable setup keeps tests isolated, and
+  cleanup that survives failure stops one broken test from poisoning the next.
+- Time and waiting: fixed sleeps are either too short, which makes the test
+  flaky, or too long, which makes the suite slow; a controlled clock or a
+  bounded wait on an observable condition is neither.
+- Machine independence: a test passed in its author's environment and failed on
+  a colleague's machine because the decimal separator differed by locale. That
+  is why RED must be able to fail where it runs, and why expected values never
+  come from the authoring environment. Missing locale data falls back silently,
+  so a requested setting is asserted to have taken effect.
+- Minimal input and isolation: the smallest fixture keeps failures diagnosable
+  and fast; per-test resources remove order dependence.
+- Lane: a marker, tag, or location lets the project run each size where it
+  belongs and keeps the budget measurable per lane.
+- Duplication evidence from the maintainers' own suite: nine test modules
+  re-implemented a module loader and git helpers that the suite's shared support
+  file already provided, data builders were redefined in up to five modules, and
+  blocking clones in the tests directory climbed from 0 to 168 because no gate
+  scanned it. Hence reuse-before-define, the duplication-detector step in
+  REFACTOR, and naming the shared support paths in delegated reads.
+
 ## Boundary Decisions
 
 - Test-first enforcement while writing code, including the change
@@ -53,3 +85,7 @@ when needed.
   or history: `test-quality-audit`. Both read the one declared feedback budget.
 - Code/module design and coupling: `software-design`.
 - Commit/branch preflight: `git-workflow-policy`. PR/MR: `pr-ops`. Issues: `issue-ops`.
+- Language-specific test-code idioms: `software-design`, referenced by skill
+  name only, because plugins install independently and a cross-plugin relative
+  path cannot resolve. Without it the neutral rules plus project conventions and
+  runner documentation apply, disclosed as `stack idioms: n/a`.

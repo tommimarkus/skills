@@ -15,8 +15,8 @@ are missing, or scope is uncertain, ask the user; otherwise continue. Also ask
 before destructive work or when a sibling owns it without a safe default.
 Also own an early-return File Edit lane for bounded non-code changes needing no
 software-design judgment; it is not a fifth design mode.
-Delegate UI/API/IaC/architecture/security/tests to `app-design`, `api-design`,
-`infra-design`, `architecture-design`, `devsecops-audit`, and
+Delegate UI/API/IaC/architecture/security/test adequacy to `app-design`,
+`api-design`, `infra-design`, `architecture-design`, `devsecops-audit`, and
 `test-quality-audit`. `lean-audit` owns mechanical `LA-CODE-DUP-*` scans;
 semantic duplication/DRY stays here (`SD-S-2`).
 
@@ -33,6 +33,15 @@ loading source. From consumer repository, Claude uses
 `python3 "${CLAUDE_SKILL_DIR}/references/scripts/tool_state.py" --repo-root "<consumer-repository>"`;
 Codex uses `python3 "<absolute-loaded-skill-dir>/references/scripts/tool_state.py" --repo-root "<consumer-repository>"`.
 Carry it into raw procedures; never enter the installed skill directory.
+
+For writing or restructuring tests, fixtures, or test helpers, or a `tdd-policy`
+handoff, load only the matched test-code file:
+[csharp](extensions/csharp/test-code.md), [java](extensions/java/test-code.md),
+[python](extensions/python/test-code.md), [rust](extensions/rust/test-code.md),
+[shell](extensions/shell-script/test-code.md), or
+[typescript](extensions/typescript/test-code.md). Skip the core reference and
+`<stack>.md` unless the work also makes production-design claims; then
+escalate to Build/Review. Test adequacy stays with `test-quality-audit`.
 
 For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).

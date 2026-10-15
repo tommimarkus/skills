@@ -18,5 +18,19 @@ Each extension declares two code surfaces: the `Smell codes:` family globs
 defined key codes (or core `SD-*`). To report a new finding kind, add and
 define a key code first.
 
+Per-stack test-code lane files live at `extensions/<stack>/test-code.md`
+(`csharp/test-code.md`, `java/test-code.md`, `python/test-code.md`,
+`rust/test-code.md`, `shell-script/test-code.md`, `typescript/test-code.md`).
+Keep each at most about 70 lines with these sections in order:
+`# <Stack> Test-Code Lane` (load cue plus a `Sources:` line linking the official
+runner, fixture, time, and parallel-run docs), `## Shared test support`,
+`## Setup lifetime`, `## Time, randomness, and ambient environment`,
+`## Isolation and parallel runs`, `## Lanes and durations`, and the closing line
+"Adds no key codes; findings cite core `SD-*`; test adequacy → `test-quality-audit`."
+They load only through the SKILL.md test-code route, state the principle and
+main variants, never mandate a tool the project does not use or add a
+dependency. Expert-probe lenses: A = expert test-code practice for the stack;
+B = what a reviewer checks in a mature suite's support structure.
+
 Current extensions: `csharp.md`, `java.md`, `rust.md`, `typescript.md`,
 `shell-script.md`, and `python.md`.

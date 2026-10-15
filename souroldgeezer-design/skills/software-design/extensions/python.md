@@ -13,8 +13,15 @@ internal module, package, domain-model, and import design of a Python
 service, application, or library is owned here; only its web/ASGI HTTP
 contract layer (routes, request/response schemas, OpenAPI) delegates to
 `api-design`, and UI to `app-design`. Delegate command injection, secrets,
-supply chain, lockfiles, and permissions to `devsecops-audit`; delegate tests
-to `test-quality-audit`.
+supply chain, lockfiles, and permissions to `devsecops-audit`; delegate test
+adequacy to `test-quality-audit`; test-code structure idioms are in the
+test-code lane (Load Map).
+
+Ambient environment default: text I/O passes explicit `encoding=` (surface
+implicit use with `EncodingWarning`; UTF-8 mode becomes the default from 3.15
+per `PEP 686`), datetimes are timezone-aware, and locale-sensitive APIs (the
+`locale` module, the `n` format type, `time.strftime` names) stay off machine
+paths (core `SD-B-5`).
 
 Sources for platform facts: the import system
 https://docs.python.org/3/reference/import.html, the Python Packaging User
@@ -101,7 +108,7 @@ them; prefer stdlib unless a dependency removes more maintenance than it
 adds; a shipped `py.typed` makes the annotated public surface a contract.
 
 For Build mode, include `devsecops-audit` Quick review when available. Route
-tests and test-quality claims to `test-quality-audit`; route HTTP/API contract
+test-adequacy claims to `test-quality-audit`; route HTTP/API contract
 work to `api-design`; and leave implementation style to the project's own
 conventions. Otherwise choose the project's available evidence, such as
 `python -m py_compile`, import smoke, a distribution build, or configured

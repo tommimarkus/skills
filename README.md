@@ -35,6 +35,14 @@ data changes that need no code/module, API/schema, IaC, security, test, or
 other sibling-owned decision. It validates the named content operation directly
 and returns before loading normal design guidance.
 
+`tdd-policy` stays stack-neutral about how a test is written: tests reuse the
+suite's shared helpers, share only immutable setup, avoid fixed sleeps and real
+clocks, give the same result under any machine locale or timezone, and run RED
+under a value that can actually fail. It hands language idioms to
+`software-design` by skill name, whose per-stack test-code lane covers shared
+test support, setup lifetime, time and locale control, parallel runs, lanes, and
+per-test durations; test adequacy stays with `test-quality-audit`.
+
 `software-design` owns general [data-efficiency](souroldgeezer-design/docs/design-reference/data-efficiency.md) mechanics; `api-design` applies
 the shared procedure to HTTP-to-storage access paths, including query shaping,
 resource lifetime, and API-owned amplification findings.

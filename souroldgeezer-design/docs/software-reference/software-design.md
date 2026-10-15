@@ -133,8 +133,13 @@ implementation at the composition edge. Hidden construction inside policy is
 `SD-B-5`, compounded by shared mutable state (`SD-C-4`); static and graph
 evidence show the hidden dependency. One implementation plus test doubles is
 legitimate at a real isolation boundary. Do not add a wrapper solely for test
-substitution (`SD-W-1`, `SD-W-2`): pure logic needs no seam. Delegate test
-judgment to `test-quality-audit`.
+substitution (`SD-W-1`, `SD-W-2`): pure logic needs no seam. Ambient
+locale/culture, timezone, and encoding are seams too: machine-readable formats
+(persisted, exchanged, logged, or parsed by tools) use invariant culture,
+ordinal comparison, and explicit encoding; human-facing output takes an
+explicit culture. A machine-facing path that reads the ambient value is
+`SD-B-5`. Test code is code: its structure follows the stack's test-code file,
+and test judgment narrows to adequacy, delegated to `test-quality-audit`.
 
 ### 3.11 Operation Feedback And CLI Progress
 

@@ -5,8 +5,14 @@ Rust source, `build.rs`, proc-macro crates, Cargo features, `no_std`, or Rust
 repo tooling.
 
 Covers crate/workspace/API design. Delegate unsafe/FFI, supply chain, secrets,
-permissions, and command execution to `devsecops-audit`; delegate tests to
-`test-quality-audit`.
+permissions, and command execution to `devsecops-audit`; delegate test adequacy
+to `test-quality-audit`; test-code structure idioms are in the test-code lane
+(Load Map).
+
+Ambient environment default: standard formatting and parsing are
+locale-independent, so the ambient surfaces are `chrono::Local` (system
+timezone) and locale crates; inject a clock and pass timezone and locale
+explicitly for machine output (core `SD-B-5`).
 
 Sources: Cargo workspaces
 https://doc.rust-lang.org/cargo/reference/workspaces.html, Cargo features

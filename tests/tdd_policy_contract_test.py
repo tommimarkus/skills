@@ -176,7 +176,7 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn(phrase, core)
 
     def test_standing_block_and_footer_carry_test_authoring(self) -> None:
-        core = flat(self.core())
+        core = flat(re.sub(r"(?m)^> ", "", self.core()))  # the template wraps as a blockquote
         for phrase in (
             "Tests reuse the suite's shared fixtures and helpers, share only immutable setup, "
             "and never depend on real sleeps, clocks, or the machine's locale or timezone.",
