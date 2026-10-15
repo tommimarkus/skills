@@ -88,7 +88,12 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval. The adapter now states plan-mode persistence, display limits,
         # and the rejection rule (+113 measured, 7,189); the block-format
         # handoff adds 51 (8,274) on its route. Each budget carries 5 slack.
-        self.assertLessEqual(claude["load_total"], 7194)
+        # tdd-policy suite-step handoff: one sentence in the verification-economy
+        # paragraph states the parent-owned suite step planning-policy hands to
+        # tdd-policy at integration (+13 claude / +21 codex / +21 approval
+        # measured), charged to every route that loads core-workflow.md; series
+        # keeps its headroom. Each budget still carries 5 slack.
+        self.assertLessEqual(claude["load_total"], 7207)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -100,7 +105,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # core-workflow.md/plan-contract.md batch additions as claude above.
         # codex was re-baselined once more, from 6350, alongside claude above
         # for the same shared plan-series pointers.
-        self.assertLessEqual(codex["load_total"], 7180)
+        self.assertLessEqual(codex["load_total"], 7201)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -152,7 +157,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # Block-format envelope emission and the 4,096-character line limit
         # answer the same live failure: an over-long envelope line withheld
         # approval and a rejected ExitPlanMode was mistaken for approval.
-        self.assertLessEqual(result["load_total"], 8279)
+        self.assertLessEqual(result["load_total"], 8300)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

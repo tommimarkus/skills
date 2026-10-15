@@ -196,10 +196,17 @@ authorization responsibilities.
   shared root `mcp.json` instead and exports plugin-data variables to the child;
   keep that root file free of `env` and `cwd`, as documented above.
 
-Inspect existing tests before selecting the RED test: extend a suitable cohesive
-scenario without weakening coverage; create a new test when the scenario is
-distinct or reuse would weaken clarity or regression coverage. A pre-existing
+Inspect existing tests before selecting the RED test, and classify the change
+first: new or changed observable behavior needs a focused failing test at the
+cheapest level that proves it; a behavior-preserving refactor runs under
+existing passing tests, adding bounded characterization coverage only where
+protection is missing. Extend a suitable cohesive scenario without weakening
+coverage; create a new test when the scenario is distinct or reuse would weaken
+clarity or regression coverage, reusing existing fixtures. A pre-existing
 failure counts as RED only when it precisely represents the intended behavior.
+Run the focused scenario per RED/GREEN step and the full suite at the declared
+cadence. REFACTOR includes the suite: retire or consolidate a test the new one
+supersedes, naming its successor.
 
 ## Runtime parity
 

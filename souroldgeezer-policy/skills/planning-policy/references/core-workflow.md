@@ -66,7 +66,8 @@ per-integration checks are the helper's ancestry and fast-forward proofs, not
 test re-runs. Acceptance evidence survives a tree-identical rebase: the
 helper's `rebased_tree_changed: false` means a leaf's recorded acceptance
 stands, and `true` means re-run only that leaf's scoped acceptance, never the
-full suite.
+full suite. When tdd-policy is in force, the parent runs its suite step once,
+at integration, before final verification.
 
 ## Orchestrator readability
 

@@ -472,7 +472,7 @@ into the bundle.
 ## Boundary decisions
 
 - Plan-first approval for work covered by initialized guidance: `planning-policy`.
-- Test-first ordering while implementing: `tdd-policy` (composes after the plan).
+- Test-first ordering while implementing: `tdd-policy` (composes after the plan; its suite step runs once in the parent at integration).
 - Code/module design and coupling: `software-design`.
 - Frontend app design: `app-design`. HTTP API design: `api-design`. IaC design:
   `infra-design`. ArchiMate®/UML® models: `architecture-design`.
