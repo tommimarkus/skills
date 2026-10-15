@@ -76,6 +76,25 @@ rationale per rule:
   scanned it. Hence reuse-before-define, the duplication-detector step in
   REFACTOR, and naming the shared support paths in delegated reads.
 
+## Forward Checks
+
+Two fresh-agent runs (Claude Sonnet, 2026-10-15) on synthetic Python
+repositories with a shared `tests/support.py` loader and builder. pytest was not
+installed, so a shared support module stood in for `conftest.py`.
+
+- Standing line only, skill not loaded. The task was a CSV export whose amount
+  column must use a dot on every machine. The agent reused the existing loader
+  and row builder. It made RED fail under a comma-decimal condition set in
+  process, by patching the locale lookup rather than calling `setlocale`, then
+  confirmed the command under a real comma-decimal locale after GREEN. That
+  meets the rule. Patching the lookup does tie the test to how the code reads
+  the locale; setting a real locale in process, with a took-effect check,
+  avoids that coupling.
+- Skill loaded, `software-design` absent. The task was a readiness poller with a
+  timeout. The agent injected a fake clock (no real sleeps), placed it in the
+  shared support module, and read the new test's duration from the focused
+  run. Its footer carried `cost` and `stack idioms n/a`.
+
 ## Boundary Decisions
 
 - Test-first enforcement while writing code, including the change
