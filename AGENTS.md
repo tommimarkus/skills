@@ -244,8 +244,10 @@ evidence before sampling: feedback lanes, project-declared budgets, current
 results, runtime distribution, reliability, ownership, overlap, and retirement
 discipline. It also includes a bounded setup/teardown lifecycle assessment for
 cost attribution, safe infrastructure amortization, per-test mutable-state
-isolation, and failure-safe cleanup. Quick remains per-test. Missing optional
-history or effectiveness evidence is `unknown`, not a prompt to build analytics.
+isolation, and failure-safe cleanup. Deep appends a propose-only suite
+recovery program when Suite health substantiates a feedback or efficiency
+finding. Quick remains per-test. Missing optional history or effectiveness
+evidence is `unknown`, not a prompt to build analytics.
 
 When a shared workflow needs host behavior, state the capability and give a
 runtime mapping with a safe fallback. For example, Claude planning retains

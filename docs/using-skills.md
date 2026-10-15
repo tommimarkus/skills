@@ -14,7 +14,7 @@ complete workflows, evidence requirements, and stop conditions.
 | Skill | Example request | What to expect |
 |---|---|---|
 | [devsecops-audit](../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | “Run a Quick security audit of this Dockerfile and release workflow.” | Findings tied to file evidence and security criteria; Quick includes a bounded gate. Deep also assesses the wider posture. |
-| [test-quality-audit](../souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | “Audit this test diff for assertions that could pass despite a broken feature.” | Per-test findings and a Quick gate. Deep also examines suite health and setup/teardown lifecycle evidence. |
+| [test-quality-audit](../souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | “Audit this test diff for assertions that could pass despite a broken feature.” | Per-test findings and a Quick gate. Deep also examines suite health and setup/teardown lifecycle evidence, and appends a propose-only suite recovery program when a budget or efficiency finding is substantiated. |
 | [ip-hygiene](../souroldgeezer-audit/skills/ip-hygiene/SKILL.md) | “Review these bundled examples and notices for source and licence hygiene.” | Provenance and notice findings, evidence gaps, and the applicable prospective decision, triage gate, or in-depth verdict. |
 | [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) | “Audit this skill's workflow for repeated prose and unnecessary context.” | Deterministic duplication findings plus evidence-based waste observations. A bounded scope includes a limited-scope gate. |
 

@@ -17,7 +17,9 @@ For suite-health work, cover healthy growth and managed lanes, costly
 cross-layer overlap, failed current runs, missing history, unreadable result
 formats, monolithic every-change execution, broad unbudgeted cost, ownership,
 selective-execution safety, quarantine ownership, count-only neutrality, and
-retirement evidence. Lifecycle cases cover a measured repeated immutable setup
+retirement evidence. A recovery-program case covers an hour-long mixed lane
+expecting a propose-only program with a lane split, a measured-baseline
+ratchet, and slow-tail-first `move down` items. Lifecycle cases cover a measured repeated immutable setup
 budget breach, static repetition with incomplete attribution, safe
 amortization, cheap isolated repetition with distinct assertions, and
 success-only cleanup.

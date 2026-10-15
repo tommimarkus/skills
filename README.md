@@ -136,6 +136,7 @@ Lean Audit reports explicit requested-scope coverage for normal Markdown scans a
 
 - “Review this API for inconsistent error responses” loads `api-design`.
 - “Audit this pull request’s test suite” loads `test-quality-audit`.
+- “Our suite takes an hour; plan how to get it under ten minutes” loads `test-quality-audit` in Deep mode with its propose-only recovery program.
 - “Create a user-flow and responsive layout for this dashboard” loads `app-design`.
 - “Prepare this issue for implementation” loads `issue-ops`.
 

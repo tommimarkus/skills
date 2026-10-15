@@ -1,7 +1,7 @@
 ---
 name: test-quality-audit
 description: >-
-  Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, suite gaps, suite strategy, runtime growth, portfolio maintenance, or TDD-generated suite pressure.
+  Use when auditing unit, integration, E2E, browser, or framework tests for brittle assertions, false confidence, weak scope, missing edge coverage, coupling, flakiness, suite gaps, suite strategy, runtime growth, portfolio maintenance, suite recovery programs, or TDD-generated suite pressure.
 ---
 
 # Test Quality Audit
@@ -84,6 +84,13 @@ In every Deep audit, load
 for the required Suite health evidence ladder and output contract. Quick mode
 remains per-test and never loads this procedure.
 
+In Deep mode only, when the Suite health block substantiates a Feedback or
+Efficiency finding (`SH-HC-1`, `SH-HC-2`, `SH-HC-7`, `SH-LC-2`, `SH-LC-4`,
+`SH-LC-5`) or the user asks for a plan to bring a suite under a budget, also load
+[`references/procedures/suite-recovery.md`](references/procedures/suite-recovery.md)
+and append its propose-only program after the worklist. Quick never loads
+it; a healthy suite does not load it.
+
 In Deep mode, when a JUnit XML report is already available, use the bundled
 [`references/scripts/suite_health_snapshot.py`](references/scripts/suite_health_snapshot.py)
 through the host-specific command documented by that procedure. Execute the
@@ -161,7 +168,8 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
    remediated block needs a clean rerun. Quick remains per-test and never emits
    `Gap-*` findings or a remediation worklist. Deep adds rollup, suite
    assessment, required Suite health and Setup/teardown lifecycle blocks, gap
-   report, determinism, mutation section, and remediation worklist.
+   report, determinism, mutation section, remediation worklist, and the suite
+   recovery program when its load condition holds.
 
 ## Rules and Stop Conditions
 
@@ -182,6 +190,9 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
   test the new test supersedes. This audit judges the accumulated suite;
   retirement from similarity or history stays `verify-then-retire` here; test
   count, test-to-code ratio, and “never failed” history are informational alone.
+- The suite recovery program is advisory: the audit edits, deletes,
+  quarantines, or reschedules nothing; executing the program is ordinary work
+  under `tdd-policy`'s in-cycle rules when that policy is initialized.
 
 ## Skill Maintenance
 

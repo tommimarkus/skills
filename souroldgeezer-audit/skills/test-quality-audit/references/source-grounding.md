@@ -102,3 +102,13 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   Handling: linked for the study's finding that frequent maintenance was less
   costly than infrequent large maintenance in its visual GUI-suite setting;
   guidance treats this as qualitative, scoped evidence, not a universal cadence.
+- Source: local `audit-craft.md` §2 read-only stance, the lean-audit
+  propose-only minify lens, the local JUnit snapshot helper's slow-case and
+  share evidence, and the Memon et al. continuous-testing source linked above.
+  Handling: the suite recovery program is propose-only — it orders and gates
+  work but edits, deletes, quarantines, or reschedules nothing, mirroring the
+  minify precedent; suite run time is treated as a slow-tail problem rather
+  than a count problem, from this repository's own observation that a tenth of
+  a suite's tests can hold more than half its time; the ratchet is proposed as
+  the project's declared `feedback-budget` so tdd-policy's existing budget step
+  applies unchanged; tdd-policy executes in-cycle while this audit proposes.

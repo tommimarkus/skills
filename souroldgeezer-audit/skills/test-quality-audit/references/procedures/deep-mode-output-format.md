@@ -225,5 +225,8 @@ Priority is `severity × SUT risk tier` per audit-craft.md §3. Static-only gaps
 are verification work. `referenced-weak` and `referenced-incidental` entries are
 strengthening work. Only `confirmed-mutation` and `confirmed-manual` gaps may
 become implementation work; `dismissed-indirect` gaps do not enter the worklist.
+When the suite-recovery load condition in [../../SKILL.md](../../SKILL.md)
+holds, load [suite-recovery.md](suite-recovery.md) and append its
+`## Suite recovery program` after this worklist; it is propose-only.
 The audit remains advisory and never deletes, quarantines, rewrites, or
 reschedules tests automatically.

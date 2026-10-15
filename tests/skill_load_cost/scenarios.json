@@ -59,6 +59,22 @@
     ]
   },
   {
+    "id": "deep-python-suite-recovery",
+    "skill": "test-quality-audit",
+    "files": [
+      "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
+      "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/audit-reference/materiality.md",
+      "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md",
+      "souroldgeezer-audit/docs/quality-reference/integration-testing.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/deep.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/integration.md",
+      "souroldgeezer-audit/skills/test-quality-audit/references/procedures/suite-recovery.md"
+    ]
+  },
+  {
     "id": "quick-node-e2e",
     "skill": "test-quality-audit",
     "files": [

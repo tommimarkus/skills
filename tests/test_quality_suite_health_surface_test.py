@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from tests.surface_test_lib import REPO_ROOT
 SKILL_ROOT = REPO_ROOT / "souroldgeezer-audit/skills/test-quality-audit"
 SKILL = SKILL_ROOT / "SKILL.md"
 OUTPUT = SKILL_ROOT / "references/procedures/deep-mode-output-format.md"
+RECOVERY = SKILL_ROOT / "references/procedures/suite-recovery.md"
 CATALOG = SKILL_ROOT / "references/smell-catalog.md"
 INTEGRATION = REPO_ROOT / "souroldgeezer-audit/docs/quality-reference/integration-testing.md"
 GROUNDING = SKILL_ROOT / "references/source-grounding.md"
@@ -21,6 +23,13 @@ CODE_PATTERNS = REPO_ROOT / "tests/skill_load_cost/code_patterns.json"
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def frontmatter_description(text: str) -> str:
+    frontmatter = text.split("---", 2)[1]
+    match = re.search(r"^description:\s*(.*?)(?=^\S|\Z)", frontmatter, flags=re.S | re.M)
+    assert match is not None, "frontmatter has no description"
+    return " ".join(match.group(1).replace(">-", "", 1).split())
 
 
 def read_jsonl(path: Path) -> dict[str, dict]:
@@ -346,6 +355,160 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
                 text = read(path)
                 self.assertIn("suite health", text.lower())
                 self.assertIn("setup/teardown lifecycle", text.lower())
+
+    def test_suite_recovery_program_is_propose_only_and_deep_gated(self) -> None:
+        self.assertTrue(RECOVERY.is_file(), RECOVERY)
+        recovery = read(RECOVERY)
+        recovery_compact = " ".join(recovery.split())
+        recovery_lower = recovery_compact.lower()
+
+        headings = (
+            "## Stance",
+            "## Inputs",
+            "## Program steps",
+            "### 1. Baseline",
+            "### 2. Lane split first",
+            "### 3. Ratchet budget",
+            "### 4. Slow tail first",
+            "### 5. Runner levers",
+            "### 6. Cadence and exit",
+            "## Output block",
+            "## Forbidden",
+        )
+        positions = []
+        for heading in headings:
+            with self.subTest(heading=heading):
+                self.assertIn(f"\n{heading}\n", recovery)
+                positions.append(recovery.index(f"\n{heading}\n"))
+        self.assertEqual(positions, sorted(positions))
+        fenced_blocks = re.findall(r"```markdown\n(.*?)```", recovery, flags=re.S)
+        self.assertTrue(any("## Suite recovery program" in block for block in fenced_blocks))
+
+        self.assertIn("The audit edits, deletes, quarantines, or reschedules nothing", recovery_compact)
+        self.assertIn("runs nothing beyond the Deep evidence ladder's already-authorized runs", recovery_compact)
+        self.assertIn("`tdd-policy`", recovery)
+
+        for disposition, gate in (
+            ("`move down`", "the lower-level test fails for the same regression"),
+            ("`consolidate`", "immutable or safely resettable infrastructure"),
+            ("`consolidate`", "never from matching setup text"),
+            ("`schedule later`", "cadence, owner, exit criterion"),
+            ("`verify-then-retire`", "distinct-contract review"),
+            ("`verify-then-retire`", "controlled removal, mutation, or failure attribution"),
+        ):
+            with self.subTest(disposition=disposition, gate=gate):
+                self.assertIn(disposition, recovery)
+                self.assertIn(gate, recovery_compact)
+        self.assertIn("`strengthen`", recovery)
+        self.assertIn("`keep`", recovery)
+        for field in ("evidence gate", "acceptance command", "expected impact", "effort", "owner"):
+            with self.subTest(field=field):
+                self.assertIn(field, recovery_lower)
+        for limit in (
+            "timing coverage",
+            "falls back to static level classification",
+            "configured runner's own report flag",
+            "never a request for new instrumentation",
+        ):
+            with self.subTest(limit=limit):
+                self.assertIn(limit, recovery_lower)
+        for ratchet in (
+            "equal to the measured baseline",
+            "slower than the last recorded run",
+            "`feedback-budget`",
+            "the audit proposes the value, the project declares it",
+        ):
+            with self.subTest(ratchet=ratchet):
+                self.assertIn(ratchet, recovery_lower)
+        for code in ("SH-LC-5", "SH-POS-5", "SH-HC-1", "SH-HC-3", "SH-POS-3"):
+            with self.subTest(code=code):
+                self.assertIn(f"`{code}`", recovery)
+        self.assertIn("## forbidden", recovery_lower)
+        forbidden = recovery_lower[recovery_lower.index("## forbidden"):]
+        for term in ("similarity", "count", "ratio", "never failed", "instrumentation", "healthy suite", "pyramid"):
+            with self.subTest(term=term):
+                self.assertIn(term, forbidden)
+
+        skill = read(SKILL)
+        skill_compact = " ".join(skill.split())
+        load_start = "In Deep mode only, when the Suite health block substantiates"
+        load_end = "a healthy suite does not load it"
+        self.assertIn(load_start, skill_compact)
+        self.assertIn(load_end, skill_compact)
+        begin = skill_compact.index(load_start)
+        load_paragraph = skill_compact[begin : skill_compact.index(load_end, begin) + len(load_end)]
+        for code in ("SH-HC-1", "SH-HC-2", "SH-HC-7", "SH-LC-2", "SH-LC-4", "SH-LC-5"):
+            with self.subTest(code=code):
+                self.assertIn(f"`{code}`", load_paragraph)
+        self.assertIn("references/procedures/suite-recovery.md", load_paragraph)
+        self.assertIn("Quick never loads it", load_paragraph)
+        self.assertIn("suite recovery program when its load condition holds", skill_compact)
+        self.assertIn("## Rules and Stop Conditions", skill)
+        rules_compact = " ".join(skill[skill.index("## Rules and Stop Conditions") :].split())
+        self.assertIn("advisory", rules_compact)
+        self.assertIn("edits, deletes, quarantines, or reschedules nothing", rules_compact)
+
+        output = read(OUTPUT)
+        self.assertIn("## Prioritized remediation worklist", output)
+        worklist_compact = " ".join(output[output.index("## Prioritized remediation worklist") :].split())
+        self.assertIn("suite-recovery.md", worklist_compact)
+        self.assertIn("## Suite recovery program", worklist_compact)
+        self.assertIn("propose-only", worklist_compact)
+        self.assertIn("The audit remains advisory", worklist_compact)
+
+        grounding_compact = " ".join(read(GROUNDING).split())
+        for phrase in ("propose-only", "§2", "lean-audit", "slow-tail", "`feedback-budget`"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, grounding_compact)
+
+        skill_description = frontmatter_description(skill)
+        agent_description = frontmatter_description(read(AGENT))
+        self.assertEqual(skill_description, agent_description)
+        self.assertIn("suite recovery programs", skill_description)
+        self.assertIn("suite strategy, runtime growth, portfolio maintenance", skill_description)
+        self.assertLess(len(skill_description), 1024)
+
+    def test_suite_recovery_evidence_is_declared(self) -> None:
+        scenarios = {row["id"]: row for row in json.loads(read(SCENARIOS))}
+        recovery_path = (
+            "souroldgeezer-audit/skills/test-quality-audit/"
+            "references/procedures/suite-recovery.md"
+        )
+        self.assertIn("deep-python-suite-recovery", scenarios)
+        recovery_files = scenarios["deep-python-suite-recovery"]["files"]
+        self.assertIn(recovery_path, recovery_files)
+        self.assertTrue(set(scenarios["deep-python-suite"]["files"]).issubset(recovery_files))
+        for scenario_id in ("deep-python-suite", "deep-nextjs-suite", "quick-node-unit", "quick-python-unit"):
+            with self.subTest(scenario_id=scenario_id):
+                self.assertNotIn(recovery_path, scenarios[scenario_id]["files"])
+
+        behaviors = read_jsonl(BEHAVIORS)
+        for case_id in (
+            "test-quality-behavior-suite-recovery-program",
+            "test-quality-behavior-suite-recovery-static-only",
+            "test-quality-behavior-suite-recovery-not-emitted-when-healthy",
+        ):
+            with self.subTest(case_id=case_id):
+                self.assertIn(case_id, behaviors)
+                case = behaviors[case_id]
+                self.assertEqual("synthetic", case["source_kind"])
+                self.assertFalse(case["contains_third_party_text"])
+                for field in ("expected_artifacts", "required_checks", "forbidden_behaviors"):
+                    self.assertTrue(case[field], field)
+
+        triggers = read_jsonl(TRIGGERS)
+        self.assertIn("test-quality-trigger-yes-suite-recovery-plan", triggers)
+        self.assertTrue(triggers["test-quality-trigger-yes-suite-recovery-plan"]["expected_activation"])
+
+        golden = read_jsonl(GOLDEN)
+        self.assertIn("TQA-GOLD-0066", golden)
+        case = golden["TQA-GOLD-0066"]
+        self.assertEqual("deep", case["mode"])
+        self.assertEqual(["SH-LC-5", "SH-LC-4", "SH-LC-2"], case["expected_suite_health_smells"])
+        self.assertEqual("move down", case["expected_action"])
+        self.assertTrue(
+            {"delete-from-coverage-alone", "edit-tests", "add-instrumentation"}.issubset(case["forbidden_actions"])
+        )
 
 
 if __name__ == "__main__":

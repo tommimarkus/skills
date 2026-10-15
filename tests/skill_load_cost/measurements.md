@@ -567,3 +567,19 @@ mapping, binding, return, retry or batch contract. Active Claude measures
 6,841/6,850, active Codex 6,940/6,950, and approval handoff 7,988/8,000;
 lookup and repeated live-next bounds remain intact. These are deterministic
 content proxies, not provider usage or measured runtime performance.
+
+## Suite recovery scenario — 2026-10-15
+
+| Scenario | Before | After | Delta |
+|---|---:|---:|---:|
+| `deep-python-suite-recovery` | — (new) | 20,312 | +1,610 vs `deep-python-suite` |
+
+The suite-recovery procedure is Deep-only and conditionally loaded, so the
+existing `deep-python-suite` route measures the unconditional Deep cost and the
+new route measures the cost when the load condition holds. The pointer
+sentences added to `SKILL.md` and `deep-mode-output-format.md` raise
+`deep-python-suite` from the committed snapshot's 18,404 to 18,702 (+298); the
+Quick routes pay only the `SKILL.md` growth (+231 each), since the Deep-only
+load condition and advisory rule sit in the always-loaded workflow. The
+other test-quality Deep routes move by the same +298. These are deterministic
+content proxies, not runtime performance.
