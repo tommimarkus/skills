@@ -54,11 +54,13 @@ debug_log() {
   } 2>/dev/null || true
 }
 
-# Changed files vs main (tracked diff + untracked), sorted unique.
+# Changed files since this branch diverged from main, including local changes.
 # Requires $repo_root (set by stop_hook_init).
 stop_hook_changed_since_main() {
+  local base
+  base=$(git -C "$repo_root" merge-base main HEAD 2>/dev/null) || return 0
   {
-    git -C "$repo_root" diff --name-only main --
+    git -C "$repo_root" diff --name-only "$base" --
     git -C "$repo_root" ls-files --others --exclude-standard
   } 2>/dev/null | sort -u
 }

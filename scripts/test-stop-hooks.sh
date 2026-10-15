@@ -76,6 +76,51 @@ hook_command() {
   jq -r --argjson index "$index" '.hooks.Stop[0].hooks[$index].command' "$repo_root/$config"
 }
 
+# A task branch must not inherit another task's authoring changes when main
+# advances after the branch was created.
+diverged_fixture="$tmp/diverged-repo"
+make_fixture "$diverged_fixture"
+git -C "$diverged_fixture" switch -q main
+mkdir -p "$diverged_fixture/internal-skills/other-task"
+printf '# Another task\n' >"$diverged_fixture/internal-skills/other-task/SKILL.md"
+git -C "$diverged_fixture" add internal-skills/other-task/SKILL.md
+git -C "$diverged_fixture" commit -q -m "another task lands on main"
+git -C "$diverged_fixture" switch -q agents/hook-test
+
+for hook in skill-architecture ip-hygiene lesson-capture; do
+  diverged_output=$(hook_input "$diverged_fixture" "diverged-$hook" false |
+    bash "$diverged_fixture/scripts/agent-hooks/stop-$hook.sh")
+  assert_empty "$diverged_output" "$hook on branch behind main"
+done
+
+# Keep the task's committed, staged, unstaged, and untracked files in scope.
+task_skill="souroldgeezer-design/skills/software-design/SKILL.md"
+printf '\nTask change.\n' >>"$diverged_fixture/$task_skill"
+git -C "$diverged_fixture" add "$task_skill"
+git -C "$diverged_fixture" commit -q -m "task changes a skill"
+printf 'staged\n' >"$diverged_fixture/staged.md"
+git -C "$diverged_fixture" add staged.md
+printf '\n' >>"$diverged_fixture/souroldgeezer-design/.claude-plugin/plugin.json"
+printf 'untracked\n' >"$diverged_fixture/untracked.md"
+diverged_changed=$(source "$diverged_fixture/scripts/agent-hooks/stop-hook-lib.sh"
+  repo_root="$diverged_fixture"
+  stop_hook_changed_since_main)
+expected_diverged_changed=$(printf '%s\n' \
+  "$task_skill" souroldgeezer-design/.claude-plugin/plugin.json staged.md untracked.md | sort -u)
+if [[ "$diverged_changed" != "$expected_diverged_changed" ]]; then
+  printf 'FAIL: changed files must contain only task changes:\n%s\n' "$diverged_changed" >&2
+  exit 1
+fi
+
+# With no common ancestry, preserve the hooks' silent fail-open behavior.
+unrelated_tree=$(git -C "$diverged_fixture" rev-parse 'main^{tree}')
+unrelated_commit=$(printf 'unrelated history\n' | git -C "$diverged_fixture" commit-tree "$unrelated_tree")
+git -C "$diverged_fixture" update-ref refs/heads/main "$unrelated_commit"
+unrelated_changed=$(source "$diverged_fixture/scripts/agent-hooks/stop-hook-lib.sh"
+  repo_root="$diverged_fixture"
+  stop_hook_changed_since_main)
+assert_empty "$unrelated_changed" "unavailable merge base"
+
 skill_fixture="$tmp/skill-repo"
 make_fixture "$skill_fixture"
 printf '\nExtra instruction.\n' >>"$skill_fixture/souroldgeezer-design/skills/software-design/SKILL.md"
