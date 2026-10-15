@@ -20,7 +20,8 @@ For a given test project or test directory:
    unless migration enumeration is active.
 3. Prefer the project's declared source roots and public package entry points;
    if those are absent, inspect the non-test Python modules reached by the
-   selected tests.
+   selected tests, including scripts reached through subprocesses or loaded by
+   file path. Resolve declared CLI entry points to their source modules.
 
 ### Gap classes
 
@@ -49,6 +50,21 @@ import-only, route-status-only, and valid-payload-only tests as
 missing invalid, auth, boundary, throw, migration, or state-change behavior.
 Treat all static-only results as probable until mutation or manual review
 confirms them.
+
+Before assigning `not-referenced`, also match the module's path or stem against
+subprocess argv, `python -m` invocations, loaded-by-path modules, and declared
+CLI entry points in the selected tests and their helpers. Resolve the actual
+target; a matching filename alone is not execution evidence. Trace the invoked
+entry point and arguments to the candidate symbol and its relevant branches.
+
+A CLI test need not name an internal function to cover its contract. When the
+call path reaches that function and output, error, or state assertions prove
+the relevant behavior, classify it `covered-strong` and record
+`dismissed-indirect` confirmation. Invocation alone does not cover every symbol
+in a module: setup-only use stays `referenced-incidental`, exit-status-only
+success stays `referenced-weak`, and unreachable symbols remain
+`not-referenced`. Preserve candidates for unasserted branches; do not report a
+gap solely because a traced, asserted function's name is absent from tests.
 
 ## Determinism verification
 
