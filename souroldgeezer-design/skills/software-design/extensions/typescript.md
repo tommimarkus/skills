@@ -4,12 +4,11 @@ Load for JavaScript/TypeScript `package.json`, `tsconfig.json`, project
 references, source/declaration, JSDoc, `checkJs`, or `allowJs`. Own
 package/module/runtime design; delegate UI, HTTP, security, and test adequacy to
 `app-design`, `api-design`, `devsecops-audit`, and `test-quality-audit`;
-test-code structure idioms are in the test-code lane (Load Map).
+test-code idioms are in the test-code lane (Load Map).
 
-Ambient environment default: machine output passes an explicit locale to
-`Intl`, `toLocaleString`, and `localeCompare` and formats dates with UTC or ISO
-methods; the runtime's default locale and `Date` local-time methods are ambient
-(core `SD-B-5`).
+Ambient default: machine output passes an explicit locale to `Intl`,
+`toLocaleString`, and `localeCompare` and formats dates with UTC/ISO methods,
+not the ambient default locale or `Date` local time (core `SD-B-5`).
 
 Sources: https://www.typescriptlang.org/docs/handbook/project-references.html;
 https://www.typescriptlang.org/docs/handbook/modules/reference.html;

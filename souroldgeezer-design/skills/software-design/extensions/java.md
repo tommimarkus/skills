@@ -7,10 +7,10 @@ sets.
 
 Covers Java package/module/build/API design. Delegate Spring or HTTP contracts
 to `api-design`, security/dependencies to `devsecops-audit`, and test adequacy to
-`test-quality-audit`; test-code structure idioms are in the test-code lane
+`test-quality-audit`; test-code idioms are in the test-code lane
 (Load Map).
 
-Ambient environment default: machine-facing case mapping and formatting use
+Ambient default: machine-facing case mapping and formatting use
 `Locale.ROOT`, text I/O names an explicit `Charset`, and time comes from an
 injected `java.time.Clock`; a project already using forbidden-apis may enable
 its default-locale/charset/timezone checks. Ambient reads are core `SD-B-5`.

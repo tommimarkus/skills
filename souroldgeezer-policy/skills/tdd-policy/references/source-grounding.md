@@ -85,7 +85,7 @@ rationale per rule:
   or history: `test-quality-audit`. Both read the one declared feedback budget.
 - Code/module design and coupling: `software-design`.
 - Commit/branch preflight: `git-workflow-policy`. PR/MR: `pr-ops`. Issues: `issue-ops`.
-- Language-specific test-code idioms: `software-design`, referenced by skill
-  name only, because plugins install independently and a cross-plugin relative
-  path cannot resolve. Without it the neutral rules plus project conventions and
-  runner documentation apply, disclosed as `stack idioms: n/a`.
+- Cross-plugin handoffs go by skill name, never a path: plugins install
+  independently, so a relative link into another plugin cannot resolve. When
+  the named skill is absent the neutral rules still stand on their own, and the
+  footer records the gap as `stack idioms: n/a`.

@@ -34,14 +34,13 @@ loading source. From consumer repository, Claude uses
 Codex uses `python3 "<absolute-loaded-skill-dir>/references/scripts/tool_state.py" --repo-root "<consumer-repository>"`.
 Carry it into raw procedures; never enter the installed skill directory.
 
-For writing or restructuring tests, fixtures, or test helpers, or a `tdd-policy`
-handoff, load only the matched test-code file:
+Writing or restructuring tests, fixtures, or test helpers, or a `tdd-policy`
+handoff, loads only the matched test-code file:
 [csharp](extensions/csharp/test-code.md), [java](extensions/java/test-code.md),
 [python](extensions/python/test-code.md), [rust](extensions/rust/test-code.md),
-[shell](extensions/shell-script/test-code.md), or
-[typescript](extensions/typescript/test-code.md). Skip the core reference and
-`<stack>.md` unless the work also makes production-design claims; then
-escalate to Build/Review. Test adequacy stays with `test-quality-audit`.
+[shell](extensions/shell-script/test-code.md),
+[typescript](extensions/typescript/test-code.md); not core or `<stack>.md`
+unless it also makes production-design claims, then escalate to Build/Review.
 
 For Build/Extract/Review, load the whole core reference
 [../../docs/software-reference/software-design.md](../../docs/software-reference/software-design.md).

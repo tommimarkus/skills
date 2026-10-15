@@ -6,10 +6,10 @@ WSL support.
 
 Covers script/module design. Delegate injection/secrets to `devsecops-audit`,
 provisioning to `infra-design`, endpoint contracts to `api-design`, and test
-adequacy to `test-quality-audit`; test-code structure idioms are in the
+adequacy to `test-quality-audit`; test-code idioms are in the
 test-code lane (Load Map).
 
-Ambient environment default: set `LC_ALL=C` (or the specific `LC_*`) for
+Ambient default: set `LC_ALL=C` (or the specific `LC_*`) for
 machine output, `sort`, `printf`, and parsed tool messages; leave the user's
 locale only for human-facing text (core `SD-B-5`).
 

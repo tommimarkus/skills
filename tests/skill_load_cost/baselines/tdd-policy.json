@@ -1,0 +1,33 @@
+{
+  "codes": [],
+  "sections": [
+    "Behavioral change or refactor",
+    "Boundary Decisions",
+    "Config options",
+    "Default profile",
+    "Delegated work",
+    "Delegation",
+    "Enforcement \u2014 honest limits",
+    "Execution scope",
+    "Graceful degradation",
+    "Honest about enforcement limits",
+    "Invariant",
+    "Opt-out is where user choice lives",
+    "Opt-out ladder (must stay low-friction \u2014 this is where choice lives)",
+    "Output footer",
+    "Passive install, explicit opt-in",
+    "Policy Posture Core",
+    "RED Test Selection Rationale",
+    "REFACTOR includes the suite",
+    "Selecting the RED test",
+    "Standing block template",
+    "TDD Policy",
+    "TDD Policy Core Workflow",
+    "TDD Policy Source Grounding",
+    "Test Authoring Rationale",
+    "The standing line carries the invariant",
+    "The standing line is the enforcement authority",
+    "Variants (both preserve the invariant)",
+    "Writing the test"
+  ]
+}

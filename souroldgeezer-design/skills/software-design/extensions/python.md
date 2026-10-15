@@ -14,10 +14,10 @@ service, application, or library is owned here; only its web/ASGI HTTP
 contract layer (routes, request/response schemas, OpenAPI) delegates to
 `api-design`, and UI to `app-design`. Delegate command injection, secrets,
 supply chain, lockfiles, and permissions to `devsecops-audit`; delegate test
-adequacy to `test-quality-audit`; test-code structure idioms are in the
+adequacy to `test-quality-audit`; test-code idioms are in the
 test-code lane (Load Map).
 
-Ambient environment default: text I/O passes explicit `encoding=` (surface
+Ambient default: text I/O passes explicit `encoding=` (surface
 implicit use with `EncodingWarning`; UTF-8 mode becomes the default from 3.15
 per `PEP 686`), datetimes are timezone-aware, and locale-sensitive APIs (the
 `locale` module, the `n` format type, `time.strftime` names) stay off machine

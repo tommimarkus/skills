@@ -583,3 +583,54 @@ Quick routes pay only the `SKILL.md` growth (+231 each), since the Deep-only
 load condition and advisory rule sit in the always-loaded workflow. The
 other test-quality Deep routes move by the same +298. These are deterministic
 content proxies, not runtime performance.
+
+## Test-code lane and test authoring rules — 2026-10-15
+
+Measured against main `d2e72d8`.
+
+| Scenario | Before | After | Delta |
+|---|---:|---:|---:|
+| `sd-lookup-principle` | 2,496 | 2,644 | +148 |
+| `sd-lookup-data-efficiency` | 2,633 | 2,781 | +148 |
+| `sd-build-data-efficiency` | 7,106 | 7,328 | +222 |
+| `sd-review-data-efficiency` | 10,796 | 11,018 | +222 |
+| `sd-review-fragility` | 10,739 | 10,961 | +222 |
+| `review-api-software-composed` | 19,429 | 19,651 | +222 |
+| `sd-build-csharp` | 8,222 | 8,520 | +298 |
+| `sd-review-typescript` | 11,727 | 12,019 | +292 |
+| `sd-test-code-python` | — (new) | 3,139 | — |
+| `sd-test-code-typescript` | — (new) | 3,089 | — |
+| `tdd-enforce` | 3,055 | 3,714 | +659 |
+
+`tdd-enforce` is new as a scenario; its "before" is the same file pair measured
+at `d2e72d8`. Nearly all of its growth is the on-demand "Writing the test"
+section in `core-workflow.md`; `SKILL.md` grew by about 55 words.
+
+Where the software-design growth comes from:
+
+- **+148 on every route** is the `SKILL.md` test-code route, almost entirely the
+  six test-code links. The craft standard requires the Load Map to name each
+  path, and the links put the files in the skill's fidelity closure.
+- **+74 on routes that load the core reference** is the §3.10 ambient
+  locale/timezone/encoding seam.
+- **+70 to +76 on the stack routes** is each `<stack>.md` ambient default plus
+  its narrowed delegation line.
+
+The test-code content itself loads only on the test-code routes, at about 3.1k
+tokens: `SKILL.md` plus one test-code file, with neither the core reference nor
+`<stack>.md`.
+
+**Budget change.** Two Build/Review routes exceed the 250-token per-change
+allowance in `software_design_data_efficiency_test.py` (+298 and +292) after
+wording was tightened twice: −17 on the route, −16 on §3.10, and −11 to −16 per
+stack sentence. The remaining excess is the link list. The guard's task-relative
+baseline moves to this change and the fragility ceilings to that baseline +250,
+as `a6a53be` did. This needs the owner's acceptance; the alternative is to
+drop the stack ambient defaults from `<stack>.md`, which the plan placed there.
+
+Fidelity floors: `software-design` regenerated (71 codes / 82 sections; nothing
+lost; `SD-Q-6` and §3.11 were stale-floor catch-up from earlier main content,
+plus the six test-code files' sections). `tdd-policy` gains a sections-only
+floor (0 codes / 28 sections), because the skill defines no finding codes. It
+protects the invariant, "Writing the test", and footer headings, not codes.
+These are deterministic content proxies, not runtime performance.

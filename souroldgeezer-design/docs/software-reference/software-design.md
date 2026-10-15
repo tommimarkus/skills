@@ -134,12 +134,11 @@ implementation at the composition edge. Hidden construction inside policy is
 evidence show the hidden dependency. One implementation plus test doubles is
 legitimate at a real isolation boundary. Do not add a wrapper solely for test
 substitution (`SD-W-1`, `SD-W-2`): pure logic needs no seam. Ambient
-locale/culture, timezone, and encoding are seams too: machine-readable formats
-(persisted, exchanged, logged, or parsed by tools) use invariant culture,
-ordinal comparison, and explicit encoding; human-facing output takes an
-explicit culture. A machine-facing path that reads the ambient value is
-`SD-B-5`. Test code is code: its structure follows the stack's test-code file,
-and test judgment narrows to adequacy, delegated to `test-quality-audit`.
+locale, timezone, and encoding are seams too: machine formats (persisted,
+exchanged, logged, or tool-parsed) use invariant culture, ordinal comparison,
+and explicit encoding, human output an explicit culture; a machine path reading
+the ambient value is `SD-B-5`. Test code is code, structured per the stack's
+test-code file; test adequacy goes to `test-quality-audit`.
 
 ### 3.11 Operation Feedback And CLI Progress
 
