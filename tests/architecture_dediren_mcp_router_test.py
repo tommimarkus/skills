@@ -39,6 +39,16 @@ def responses_by_id(result: subprocess.CompletedProcess[str]) -> dict[object, di
     return {response.get("id"): response for response in responses if "id" in response}
 
 
+def wait_for_log_line(path: Path, predicate, timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.exists() and any(
+            predicate(line) for line in path.read_text(encoding="utf-8").splitlines()
+        ):
+            return
+        time.sleep(0.05)
+
+
 def close_process(process: subprocess.Popen[str]) -> None:
     if process.stdin is not None and not process.stdin.closed:
         process.stdin.close()
@@ -967,16 +977,16 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 )
                 process.stdin.flush()
                 self.assertIn("result", json.loads(process.stdout.readline()))
-                deadline = time.monotonic() + 3
-                log_lines: list[str] = []
-                while time.monotonic() < deadline:
-                    if lifecycle_log.exists():
-                        log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
-                        if any(
-                            line.startswith(f"stop {root.resolve()} ") for line in log_lines
-                        ):
-                            break
-                    time.sleep(0.05)
+                wait_for_log_line(
+                    lifecycle_log,
+                    lambda line: line.startswith(f"stop {root.resolve()} "),
+                    timeout=3,
+                )
+                log_lines = (
+                    lifecycle_log.read_text(encoding="utf-8").splitlines()
+                    if lifecycle_log.exists()
+                    else []
+                )
                 self.assertIsNone(process.poll(), "router exited with its catalog backend")
                 process.stdin.write(
                     json.dumps({"jsonrpc": "2.0", "id": 15, "method": "ping", "params": {}}) + "\n"
@@ -1038,7 +1048,11 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 process.wait(timeout=10)
             finally:
                 close_process(process)
-            time.sleep(0.1)
+            # Predicate-based wait: the child flushes its lifecycle log asynchronously after termination.
+            wait_for_log_line(
+                lifecycle_log,
+                lambda line: line.startswith("stop ") and str(workspace.resolve()) in line,
+            )
             log_lines = lifecycle_log.read_text(encoding="utf-8").splitlines()
 
         workspace_events = [line for line in log_lines if str(workspace.resolve()) in line]

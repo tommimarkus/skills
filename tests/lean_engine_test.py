@@ -470,17 +470,31 @@ class CarveOuts(unittest.TestCase):
 
 
 class RepoResidual(unittest.TestCase):
-    def _scan_repo(self, eng, extra_files: dict[str, str] | None = None):
+    # One scan is shared because the corpus is immutable during the run and the
+    # synthetic pair only pairs with itself, so filtering it out recovers the
+    # live residual; this halves the module's dominant cost (lean-audit SH-LC-7
+    # remediation).
+    body = (
+        "## Shared\n"
+        "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+        "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha.\n"
+    )
+    path_a = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-a.md"
+    path_b = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-b.md"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.eng = load_engine()
         root = REPO_ROOT
-        files = eng.read_repo(root, root)
-        if extra_files:
-            files = {**files, **extra_files}
-        reg = eng.load_registry(root / ".lean-audit.toml")
-        return [f for f in eng.scan(files, reg) if f.severity == "block"]
+        files = {**cls.eng.read_repo(root, root),
+                 cls.path_a: cls.body, cls.path_b: cls.body}
+        reg = cls.eng.load_registry(root / ".lean-audit.toml")
+        cls.blocks = tuple(f for f in cls.eng.scan(files, reg) if f.severity == "block")
 
     def test_carveouts_suppress_intentional_categories(self):
-        eng = load_engine()
-        blocks = self._scan_repo(eng)
+        synthetic = {self.path_a, self.path_b}
+        blocks = [f for f in self.blocks
+                  if f.path not in synthetic and f.matched_path not in synthetic]
         pairs = {(f.path, f.matched_path) for f in blocks}
         # built-in subagent mirror gone:
         self.assertNotIn(("souroldgeezer-audit/skills/lean-audit/SKILL.md",
@@ -502,20 +516,11 @@ class RepoResidual(unittest.TestCase):
         # that duplication is legitimately remediated (as it was in 1a9be56).
         # Injecting a synthetic guarded pair proves the scan pipeline still
         # detects real duplication without depending on what's currently unfixed.
-        eng = load_engine()
-        body = (
-            "## Shared\n"
-            "alpha beta gamma delta epsilon zeta eta theta iota kappa "
-            "lambda mu nu xi omicron pi rho sigma tau upsilon phi chi psi omega alpha.\n"
-        )
-        path_a = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-a.md"
-        path_b = "souroldgeezer-audit/docs/quality-reference/zz-synthetic-b.md"
-        self.assertTrue(eng.is_guarded(path_a))
-        self.assertTrue(eng.is_guarded(path_b))
-        blocks = self._scan_repo(eng, extra_files={path_a: body, path_b: body})
-        pairs = {(f.path, f.matched_path) for f in blocks}
-        self.assertIn((path_a, path_b), pairs)
-        self.assertIn((path_b, path_a), pairs)
+        self.assertTrue(self.eng.is_guarded(self.path_a))
+        self.assertTrue(self.eng.is_guarded(self.path_b))
+        pairs = {(f.path, f.matched_path) for f in self.blocks}
+        self.assertIn((self.path_a, self.path_b), pairs)
+        self.assertIn((self.path_b, self.path_a), pairs)
 
 
 class EvaluateAddedBlock(unittest.TestCase):
@@ -834,11 +839,16 @@ class GitEnumerationParityTest(unittest.TestCase):
 
 class RegistryWarningTest(unittest.TestCase):
     def test_missing_registry_path_warns_on_stderr(self):
-        proc = subprocess.run(
-            [sys.executable, str(ENGINE), ".", "--registry", "/nonexistent/reg.toml",
-             "--format", "json"],
-            capture_output=True, text=True, cwd=REPO_ROOT,
-        )
+        # The warning gates on the explicit flag, not on the corpus, so a tiny
+        # corpus proves the same contract.
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "CLAUDE.md").write_text(
+                "# Home\nunique alpha bravo charlie\n", encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(ENGINE), d, "--registry", "/nonexistent/reg.toml",
+                 "--format", "json"],
+                capture_output=True, text=True, cwd=REPO_ROOT,
+            )
         self.assertIn("not found", proc.stderr.lower())
 
     def test_default_run_without_registry_toml_is_silent(self):

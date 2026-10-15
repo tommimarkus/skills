@@ -5,6 +5,7 @@ import copy
 import json
 import os
 from pathlib import Path
+import select
 import subprocess
 import sys
 import tempfile
@@ -279,6 +280,8 @@ class PlanningPolicyPersistenceTest(unittest.TestCase):
             assert writer.stdin is not None
             writer.stdin.write(json.dumps(self.plan))
             writer.stdin.close()
+            readable, _, _ = select.select([ready_read], [], [], 10)
+            self.assertTrue(readable, "writer never reached the publish hook within 10 s")
             self.assertEqual(os.read(ready_read, 1), b"1")
             target = self.root / self.digest
             self.assertFalse((target / "plan.json").exists())

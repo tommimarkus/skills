@@ -655,7 +655,10 @@ clarity or regression coverage, reusing existing fixtures. A pre-existing
 failure counts as RED only when it precisely represents the intended behavior.
 Run the focused scenario per RED/GREEN step and the full suite at the declared
 cadence. REFACTOR includes the suite: retire or consolidate a test the new one
-supersedes, naming its successor.
+supersedes, naming its successor. Budget full-suite: 40s for the closeout
+`unittest discover` lane (measured 38.1 s on 2026-10-15 after the first
+suite-recovery batch; re-record the budget to the latest measured run after
+each landed batch, target 30s).
 
 Design and audit skills share the Build / Extract / Review / Lookup (design) and Quick / Deep (audit) mode dispatch from § "Skill architecture (shared pattern across skills)".
 
