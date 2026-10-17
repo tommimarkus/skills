@@ -625,7 +625,7 @@ managed install in the host's per-plugin writable data directory, then a
 `dediren` on `PATH` that reports at or above the floor, then the migration-only
 fallback to the newest executable already present in the former verified release
 cache — and otherwise installs the pinned, checksum-verified release
-(`2026.09.0`) into that data directory. It discovers that installation's live
+(`2026.10.0`) into that data directory. It discovers that installation's live
 tool catalog and adds a required absolute `workspaceRoot` to every tool schema.
 The same router exposes the installed runtime's product-owned resources through
 `resources/list` and `resources/read`; these calls use the catalog backend and
