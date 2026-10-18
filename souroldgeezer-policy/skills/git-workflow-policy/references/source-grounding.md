@@ -19,6 +19,10 @@ retried without weakening branch-tip, upstream, ancestry, registration, or
 filesystem-ownership checks. Once both owned artifacts are absent, target
 ancestry of the recorded integrated commit is the idempotent completion proof.
 
+Closeout pairing exists because a plan that scheduled only a task branch or
+worktree left it behind after integration: delegated leaves already closed
+through the ledger, but the parent's own task branch had no scheduled closeout.
+
 ## Boundary Decisions
 
 - Developer git movement: `git-workflow-policy`.

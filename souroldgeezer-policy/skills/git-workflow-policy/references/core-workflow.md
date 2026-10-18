@@ -69,6 +69,18 @@ PR/MR handoff; stop before destructive git actions.
 
 Do not mix unrelated tasks in one branch. Re-read live git state before any write action or `pr-ops` handoff.
 
+Pair every task branch or worktree with its closeout. A plan, handoff, or
+checklist that schedules creating one also schedules the closeout as its final
+step: after integration, prove the branch is in `git branch --merged <target>`,
+remove the worktree, prune, and delete the branch with `git branch -d`, never
+force. A branch that never shows as merged still gets a closeout decision: when
+every `git cherry <target> <branch>` row is `-`, rebase it onto the target so
+`git branch -d` succeeds; otherwise ask rather than leave it behind. Approval of
+the plan or task that scheduled the closeout authorizes these steps for the
+task's own branch and worktree; other deletions stay behind the gates below.
+Planning-policy delegated leaves close through
+[planning-worktree closeout](planning-worktree-closeout.md).
+
 Version policy belongs here only as developer guidance: where the version source
 lives, when version files may change, which branches may carry version bumps,
 and what local evidence is needed before a release handoff. Version bump

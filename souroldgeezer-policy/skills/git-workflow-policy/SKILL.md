@@ -41,8 +41,9 @@ Rules: do not enforce just because the plugin is installed. Enforce only when
 loaded repo guidance initializes `git-workflow-policy` or the user explicitly
 asks. Treat a repo guidance initialization line as current-task policy authority
 before matching branch, staging, commit, merge, rebase, force-push, destructive
-git, or PR/MR handoff actions; do not wait for the user to name the skill in the
-task. Initialization may include options, for example
+git, or PR/MR handoff actions, including a plan or handoff that schedules them;
+do not wait for the user to name the skill in the task. Initialization may
+include options, for example
 `git-workflow-policy: feature branches, clean worktree, no direct main`.
 If initialization names no options, apply the default profile in
 `references/core-workflow.md`.
@@ -59,7 +60,8 @@ branch, integration authority, destructive git action, or policy precedence is
 ambiguous, stop and ask instead of guessing.
 
 Stop before history rewrites, branch deletion, force push, tags, publishing, or
-merge/close actions unless a sibling skill has authority. Stop if required
+merge/close actions unless a sibling skill or an approved task closeout in
+`references/core-workflow.md` has authority. Stop if required
 verification cannot run and no documented substitute exists.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
