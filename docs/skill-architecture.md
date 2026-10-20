@@ -165,6 +165,11 @@ Use progressive disclosure deliberately:
   it, or what the ecosystem calls it; collecting every stack's lookup path in
   one reference defeats progressive disclosure.
 - Keep source anchors as links and paraphrase in original wording.
+- Separate authoring inputs from runtime requirements. If a plan or worker
+  instruction uses an author-only cache or unbundled document, ship the derived
+  guidance in original wording or a bundled reference; do not tell installed
+  users to consult that unavailable source. Review delegated edits for this
+  boundary before integration.
 - When a reference prescribes a best-practice that picks a convention, scheme,
   or tool, state the underlying invariant and the major production-proven
   variants rather than mandating one popular option; before settling on one,
