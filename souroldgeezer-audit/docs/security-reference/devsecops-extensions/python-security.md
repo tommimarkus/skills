@@ -174,6 +174,7 @@ access to credentials, internal administration, or a privileged callback path.
 **Severity:** `block` when a session or authentication cookie lacks `Secure` or `HttpOnly` on a production path; `warn` for weakened `SameSite` or other sensitive cookies.
 
 ### `pys.HC-12` — Disallowed or legacy cryptographic primitive used for a security purpose
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's severity split and carve-outs are deliberately restated in dns.HC-18, pys.HC-12, and jsts.HC-14; edit all three together. -->
 
 **Pattern:** `hashlib.md5` / `hashlib.sha1` (or `hashlib.new` naming them) used for signatures, integrity, tokens, or key derivation without `usedforsecurity=False`; `cryptography` `modes.ECB` or PyCryptodome `AES.MODE_ECB`; DES, TripleDES, or ARC4; a constant or reused IV or nonce; PKCS1v15 padding for RSA encryption. Approved primitives are not findings.
 
@@ -182,6 +183,7 @@ access to credentials, internal administration, or a privileged callback path.
 **Severity:** `block`, with a visible security purpose, for a primitive the ASVS 5.0.0 cryptography appendix disallows or does not approve — MD5, DES, TripleDES, ARC4, ECB mode, PKCS1v15 encryption padding, or SHA-1 inside a signature or key derivation — or for a constant or reused IV or nonce; `warn` for one it keeps as legacy: SHA-1 as a plain digest, or HMAC-SHA-1.
 
 ### `pys.HC-13` — Password verifier stored with a fast or reversible scheme
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's pattern and carve-outs are deliberately restated in dns.HC-19, pys.HC-13, and jsts.HC-15; edit all three together. -->
 
 **Pattern:** a stored password verifier comes from `hashlib.sha*` or `hashlib.md5` (salted or not), reversible encryption, or `hashlib.pbkdf2_hmac` / `hashlib.scrypt` with parameters below the approved minimums of the ASVS 5.0.0 cryptography appendix; or Django `PASSWORD_HASHERS` lists an MD5, SHA-1, or unsalted hasher first.
 

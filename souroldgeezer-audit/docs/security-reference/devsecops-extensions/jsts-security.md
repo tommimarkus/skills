@@ -158,6 +158,7 @@ prove deployed listener reachability.
 **Severity:** `block` when a session or authentication cookie lacks `Secure` or `HttpOnly` on a production path; `warn` for weakened `SameSite` or other sensitive cookies.
 
 ### `jsts.HC-14` — Disallowed or legacy cryptographic primitive used for a security purpose
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's severity split and carve-outs are deliberately restated in dns.HC-18, pys.HC-12, and jsts.HC-14; edit all three together. -->
 
 **Pattern:** `crypto.createHash('md5')` or `'sha1'` for signatures, integrity, tokens, or key derivation; `createCipheriv` with an ECB mode, `des`, `des-ede3`, or `rc4`; the deprecated `crypto.createCipher`; a constant or reused IV or nonce; `RSA_PKCS1_PADDING` for encryption. Approved primitives are not findings.
 
@@ -166,6 +167,7 @@ prove deployed listener reachability.
 **Severity:** `block`, with a visible security purpose, for a primitive the ASVS 5.0.0 cryptography appendix disallows or does not approve — MD5, `des`, `des-ede3`, `rc4`, an ECB mode, `crypto.createCipher` (an MD5-based key derivation), `RSA_PKCS1_PADDING` encryption, or SHA-1 inside a signature or key derivation — or for a constant or reused IV or nonce; `warn` for one it keeps as legacy: SHA-1 as a plain digest, or HMAC-SHA-1.
 
 ### `jsts.HC-15` — Password verifier stored with a fast or reversible scheme
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's pattern and carve-outs are deliberately restated in dns.HC-19, pys.HC-13, and jsts.HC-15; edit all three together. -->
 
 **Pattern:** a stored password verifier comes from `createHash` (salted or not), reversible encryption, or `pbkdf2` / `scrypt` with parameters below the approved minimums of the ASVS 5.0.0 cryptography appendix, instead of argon2, bcrypt, or `crypto.scrypt` with adequate parameters.
 
