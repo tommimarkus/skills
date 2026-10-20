@@ -308,6 +308,11 @@ See [devsecops-extensions/jsts-security.md](devsecops-extensions/jsts-security.m
 | `jsts.HC-9` | Outbound URL trust/SSRF policy uncertain |
 | `jsts.HC-10` | Secret material reaches a client bundle |
 | `jsts.HC-11` | Vite dev server externally exposed without a clear boundary |
+| `jsts.HC-12` | Self-contained token validation weakened |
+| `jsts.HC-13` | Sensitive cookie attributes weakened |
+| `jsts.HC-14` | Disallowed or legacy cryptographic primitive used for a security purpose |
+| `jsts.HC-15` | Password verifier stored with a fast or reversible scheme |
+| `jsts.HC-16` | Non-public route, Route Handler, or Server Action lacks authorization enforcement |
 | `jsts.POS-1` | Fixed code/module allowlist |
 | `jsts.POS-2` | Fixed executable and non-shell argument vector |
 | `jsts.POS-3` | Sanitized external HTML or text-node rendering |
@@ -319,3 +324,7 @@ See [devsecops-extensions/jsts-security.md](devsecops-extensions/jsts-security.m
 | `jsts.POS-9` | Controlled outbound destination and DNS/IP policy |
 | `jsts.POS-10` | Server-only secrets absent from client bundle |
 | `jsts.POS-11` | Loopback-only or controlled Vite dev listener |
+| `jsts.POS-12` | Strict token validation |
+| `jsts.POS-13` | Hardened production cookie settings |
+| `jsts.POS-14` | Approved primitives plus an adaptive password KDF |
+| `jsts.POS-15` | Default-deny routing plus in-handler checks in every Route Handler and Server Action |

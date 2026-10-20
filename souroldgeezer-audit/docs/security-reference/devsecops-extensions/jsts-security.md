@@ -9,6 +9,9 @@ route, form, message, CLI, environment supplied by a deployer, uploaded file,
 database field written by a caller, or documented external producer. API names alone are not findings, and a suggestive variable name is not provenance. A
 fixed repository-owned value, explicit finite allowlist, or close-to-sink
 validation can be a carve-out only where it actually constrains the risky use.
+For `jsts.HC-12` to `jsts.HC-16` the HTTP request or response is the trust
+boundary and the sink is the access decision, emitted cookie,
+stored password verifier, protected value, or non-public handler.
 
 ## Smell codes
 
@@ -138,6 +141,46 @@ prove deployed listener reachability.
 
 **Severity:** `warn` with visible configuration and exposure evidence.
 
+### `jsts.HC-12` — Self-contained token validation weakened
+
+**Pattern:** `jsonwebtoken` `jwt.decode()` output drives an access decision instead of `jwt.verify()`; `jwt.verify` is called without an `algorithms` option where key types allow algorithm confusion, allows `none`, or sets `ignoreExpiration: true`; `jose` `decodeJwt` or `decodeProtectedHeader` is used for trust instead of `jwtVerify`, or `jwtVerify` omits issuer or audience where multiple issuers or audiences are accepted. Decoding only parses a token; it proves nothing about who issued it.
+
+**Carve-outs:** decoding a token already verified by `jwtVerify` or `jwt.verify` to render or log its claims; test fixtures; documented gateway validation (emit an info note naming the reliance).
+
+**Severity:** `block` when signature verification, algorithm allowlisting, or trusted-key sourcing is absent or bypassed for a token that gates access; `warn` when only lifetime, issuer, or audience checks are disabled, escalated to `block` when multiple issuers or audiences are accepted.
+
+### `jsts.HC-13` — Sensitive cookie attributes weakened
+
+**Pattern:** `express-session` or `cookie-session` options with `secure: false` or `httpOnly: false` in production configuration; `res.cookie`, Next.js `cookies().set`, or a raw `Set-Cookie` header carrying a session or authentication token without `httpOnly` and `secure`; or `sameSite: 'none'` without `secure`.
+
+**Carve-outs:** development-only configuration guarded by an explicit non-production check; script-readable cookies carrying no secret, including a double-submit CSRF token (`httpOnly` only).
+
+**Severity:** `block` when a session or authentication cookie lacks `Secure` or `HttpOnly` on a production path; `warn` for weakened `SameSite` or other sensitive cookies.
+
+### `jsts.HC-14` — Disallowed or legacy cryptographic primitive used for a security purpose
+
+**Pattern:** `crypto.createHash('md5')` or `'sha1'` for signatures, integrity, tokens, or key derivation; `createCipheriv` with an ECB mode, `des`, `des-ede3`, or `rc4`; the deprecated `crypto.createCipher`; a constant or reused IV or nonce; `RSA_PKCS1_PADDING` for encryption. Classify each primitive by its approved, legacy, or disallowed status in the ASVS 5.0.0 cryptography appendix and paraphrase it; approved primitives are not findings.
+
+**Carve-outs:** non-security uses (ETags, cache keys, non-adversarial checksums, isolated and documented legacy interoperability). `jsts.HC-6` stays the specific rule for randomness.
+
+**Severity:** `block` for a disallowed primitive, mode, or padding, or a reused IV or nonce, with a visible security purpose; `warn` for a legacy one.
+
+### `jsts.HC-15` — Password verifier stored with a fast or reversible scheme
+
+**Pattern:** a stored password verifier comes from `createHash` (salted or not), reversible encryption, or `pbkdf2` / `scrypt` with parameters below the approved minimums of the ASVS 5.0.0 cryptography appendix, instead of argon2, bcrypt, or `crypto.scrypt` with adequate parameters.
+
+**Carve-outs:** fast hashing of high-entropy random API keys or tokens for lookup; breached-password k-anonymity SHA-1 prefixes; a client pre-hash followed by a server-side approved password hash.
+
+**Severity:** `block`
+
+### `jsts.HC-16` — Non-public route, Route Handler, or Server Action lacks authorization enforcement
+
+**Pattern:** Express, Fastify, Koa, or Hono routes on non-public endpoints are registered without the project's auth middleware and are not covered by app- or router-level middleware; Next.js Route Handlers or Server Actions (`'use server'`) change state or return non-public data without an in-handler session or authorization check (middleware matcher coverage alone does not count, because Server Actions are directly invocable POST endpoints); or tRPC `publicProcedure` is used for non-public operations. Object-level ownership stays `DSO-SUB-4`.
+
+**Carve-outs:** routes in a documented public allowlist, and health/status endpoints returning no non-public data.
+
+**Severity:** `block` for a state-changing or non-public-data handler with no enforcement and no covering default-deny; `warn` for an explicit opt-out (`publicProcedure`, a skip-auth flag) on a route absent from a documented public allowlist.
+
 ## Positive signals
 
 ### `jsts.POS-1` — Fixed code/module allowlist
@@ -151,6 +194,10 @@ prove deployed listener reachability.
 ### `jsts.POS-9` — Controlled outbound destination plus redirect/DNS-IP policy
 ### `jsts.POS-10` — Server-only secrets absent from client bundle
 ### `jsts.POS-11` — Loopback-only or explicitly controlled Vite dev listener
+### `jsts.POS-12` — Strict token validation
+### `jsts.POS-13` — Hardened production cookie settings
+### `jsts.POS-14` — Approved primitives plus an adaptive password KDF
+### `jsts.POS-15` — Default-deny routing plus in-handler checks in every Route Handler and Server Action
 
 ## Sources and scope
 
@@ -160,8 +207,15 @@ This pack paraphrases current primary guidance rather than reproducing examples:
 [MDN dynamic import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import),
 [MDN HTML injection sinks](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML),
 [Node TLS](https://nodejs.org/api/tls.html),
-[Vite server options](https://vite.dev/config/server-options), and
-[OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
+[Vite server options](https://vite.dev/config/server-options),
+[OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html),
+[jsonwebtoken](https://github.com/auth0/node-jsonwebtoken),
+[jose jwtVerify](https://github.com/panva/jose/blob/main/docs/jwt/verify/functions/jwtVerify.md),
+[express-session](https://github.com/expressjs/session),
+[Express API reference](https://expressjs.com/en/api.html),
+[Next.js data security](https://nextjs.org/docs/app/guides/data-security),
+[Next.js authentication](https://nextjs.org/docs/app/guides/authentication), and
+[OWASP ASVS 5.0.0 cryptography appendix](https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md).
 
 Static review cannot prove sanitizer behavior, DNS/IP resolution, proxy/egress
 controls, final client bundles, or listener reachability. Require the evidence

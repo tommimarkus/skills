@@ -101,6 +101,17 @@ tables, diagrams, screenshots, or documentation.
   Handling: primary anchors for the .NET `dns.HC-16`..`dns.HC-20` and
   `dns.POS-6`..`dns.POS-9` rules. The pack, catalog, and evals paraphrase them
   in original synthetic wording; no upstream examples or prose are copied.
+- Source: https://github.com/auth0/node-jsonwebtoken,
+  https://github.com/panva/jose/blob/main/docs/jwt/verify/functions/jwtVerify.md,
+  https://github.com/expressjs/session,
+  https://expressjs.com/en/api.html,
+  https://nextjs.org/docs/app/guides/data-security,
+  https://nextjs.org/docs/app/guides/authentication,
+  https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md.
+  Handling: primary anchors for the JavaScript/TypeScript `jsts.HC-12`..`jsts.HC-16`
+  and `jsts.POS-12`..`jsts.POS-15` rules (Node crypto is already anchored). The
+  pack, catalog, and evals paraphrase them in original synthetic wording; no
+  upstream examples or prose are copied.
 - Source: `references/procedures/threat-model-planning.md`.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal
