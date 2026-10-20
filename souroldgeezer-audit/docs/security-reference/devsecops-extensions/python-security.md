@@ -175,11 +175,11 @@ access to credentials, internal administration, or a privileged callback path.
 
 ### `pys.HC-12` — Disallowed or legacy cryptographic primitive used for a security purpose
 
-**Pattern:** `hashlib.md5` / `hashlib.sha1` (or `hashlib.new` naming them) used for signatures, integrity, tokens, or key derivation without `usedforsecurity=False`; `cryptography` `modes.ECB` or PyCryptodome `AES.MODE_ECB`; DES, TripleDES, or ARC4; a constant or reused IV or nonce; PKCS1v15 padding for RSA encryption. Classify each primitive by its approved, legacy, or disallowed status in the ASVS 5.0.0 cryptography appendix and paraphrase it; approved primitives are not findings.
+**Pattern:** `hashlib.md5` / `hashlib.sha1` (or `hashlib.new` naming them) used for signatures, integrity, tokens, or key derivation without `usedforsecurity=False`; `cryptography` `modes.ECB` or PyCryptodome `AES.MODE_ECB`; DES, TripleDES, or ARC4; a constant or reused IV or nonce; PKCS1v15 padding for RSA encryption. Approved primitives are not findings.
 
 **Carve-outs:** `usedforsecurity=False` and other non-security uses (ETags, cache keys, non-adversarial checksums, isolated and documented legacy interoperability). `pys.HC-6` stays the specific rule for randomness.
 
-**Severity:** `block` for a disallowed primitive, mode, or padding, or a reused IV or nonce, with a visible security purpose; `warn` for a legacy one.
+**Severity:** `block`, with a visible security purpose, for a primitive the ASVS 5.0.0 cryptography appendix disallows or does not approve — MD5, DES, TripleDES, ARC4, ECB mode, PKCS1v15 encryption padding, or SHA-1 inside a signature or key derivation — or for a constant or reused IV or nonce; `warn` for one it keeps as legacy: SHA-1 as a plain digest, or HMAC-SHA-1.
 
 ### `pys.HC-13` — Password verifier stored with a fast or reversible scheme
 

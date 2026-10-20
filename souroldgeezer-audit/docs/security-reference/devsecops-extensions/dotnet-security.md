@@ -332,7 +332,7 @@ Then confirm the cookie carries a session, credential, or antiforgery value and 
 
 ### `dns.HC-18` — Disallowed or legacy cryptographic primitive used for a security purpose
 
-**Pattern:** MD5, SHA-1, `HMACMD5`, or `HMACSHA1` used for signatures, integrity checks, tokens, or key derivation; `DES`, `TripleDES`, or `RC2`; `CipherMode.ECB`; a constant, hard-coded, or reused IV or nonce; or `RSAEncryptionPadding.Pkcs1` for encryption. Classify each primitive by its status in the ASVS 5.0.0 cryptography appendix (approved, legacy, or disallowed) and paraphrase that status rather than quoting its tables. Approved primitives are not findings. For random values `dns.HC-10` stays the specific rule.
+**Pattern:** MD5, SHA-1, `HMACMD5`, or `HMACSHA1` used for signatures, integrity checks, tokens, or key derivation; `DES`, `TripleDES`, or `RC2`; `CipherMode.ECB`; a constant, hard-coded, or reused IV or nonce; or `RSAEncryptionPadding.Pkcs1` for encryption. Approved primitives are not findings. For random values `dns.HC-10` stays the specific rule.
 
 **Detection (ripgrep):**
 ```
@@ -341,7 +341,7 @@ rg -n 'CipherMode\.ECB|RSAEncryptionPadding\.Pkcs1|\.IV\s*=\s*(new byte|Encoding
 ```
 Then establish the purpose: only a visible security purpose counts.
 
-**Severity:** `block` for a disallowed primitive, mode, or padding, or a reused IV or nonce, with a visible security purpose. `warn` for a legacy one, for example SHA-1 or HMAC-SHA-1.
+**Severity:** `block`, with a visible security purpose, for a primitive the ASVS 5.0.0 cryptography appendix disallows or does not approve — MD5, `HMACMD5`, DES, `TripleDES`, RC2, `CipherMode.ECB`, `RSAEncryptionPadding.Pkcs1` encryption, or SHA-1 inside a signature or key derivation — or for a constant or reused IV or nonce. `warn` for one it keeps as legacy: SHA-1 as a plain digest, or `HMACSHA1`.
 
 **Rubric:** CWE-327.
 
@@ -499,9 +499,9 @@ new\s+X509Certificate2\s*\(\s*"[^"]+\.pfx"\s*,\s*"
 - **Do not flag `dns.HC-2` on endpoints explicitly listed in `SECURITY.md`** as public.
 - **Do not flag `dns.HC-3` on Static Web Apps routes** — SWA handles auth at the edge via `staticwebapp.config.json` (the legacy `routes.json` is ignored when `staticwebapp.config.json` exists), not via `[Authorize]`. See https://learn.microsoft.com/azure/static-web-apps/configuration.
 - **Do not flag `dns.HC-5` on Blazor WASM projects** — the host (SWA / Functions) is responsible for headers, not the WASM client. For Blazor **Server** / **Web App**, the framework auto-emits `Content-Security-Policy: frame-ancestors 'self'` and Antiforgery emits `X-Frame-Options: SAMEORIGIN`; do not double-flag those specific headers as missing.
+- **Do not flag `dns.HC-15`** when the logged value is sanitized at the logging boundary through explicit CR/LF normalization or removal, `ReplaceLineEndings`-style handling, hashing/tokenization, or a strict identifier allowlist that excludes display-control characters.
 - **Do not flag `dns.HC-16`** when claims are read only for logging, display, or routing hints while a validated principal makes the access decision, in test fixtures, or when validation is delegated to a documented gateway with visible configuration (emit an info note naming the reliance).
 - **Do not flag `dns.HC-17`** on development-only configuration (`appsettings.Development.json` or an `IsDevelopment()` branch), or on script-readable cookies that carry no secret, including a double-submit CSRF token whose design requires script access (`HttpOnly` only).
 - **Do not flag `dns.HC-18`** for non-security uses such as ETags, cache keys, non-adversarial deduplication or corruption checksums, or documented legacy-protocol interoperability isolated from new data.
 - **Do not flag `dns.HC-19`** for fast hashing of high-entropy (at least 128-bit) random API keys or tokens for lookup, SHA-1 prefix queries to a breached-password k-anonymity API, or a client pre-hash followed by a server-side approved password hash.
 - **Do not flag `dns.HC-20`** in isolated test-only fixtures, for `TrustServerCertificate=True` scoped to local development against localhost, or for a callback that validates a pinned certificate or private CA while still enforcing chain and hostname checks.
-- **Do not flag `dns.HC-15`** when the logged value is sanitized at the logging boundary through explicit CR/LF normalization or removal, `ReplaceLineEndings`-style handling, hashing/tokenization, or a strict identifier allowlist that excludes display-control characters.
