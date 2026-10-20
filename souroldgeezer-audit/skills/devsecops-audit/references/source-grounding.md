@@ -70,6 +70,19 @@ tables, diagrams, screenshots, or documentation.
   Handling: primary/official anchors for the Python `pys.*` rule pack's risk
   direction. The pack, catalog, and eval use original paraphrases and synthetic
   scenarios only; they do not reproduce external examples or prose.
+- Source: https://pyjwt.readthedocs.io/en/stable/api.html,
+  https://docs.djangoproject.com/en/stable/ref/settings/,
+  https://docs.djangoproject.com/en/stable/topics/auth/passwords/,
+  https://docs.djangoproject.com/en/stable/ref/middleware/,
+  https://flask.palletsprojects.com/en/stable/web-security/,
+  https://docs.python.org/3/library/hashlib.html,
+  https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/,
+  https://fastapi.tiangolo.com/tutorial/security/,
+  https://www.django-rest-framework.org/api-guide/permissions/,
+  https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md.
+  Handling: primary anchors for the Python `pys.HC-10`..`pys.HC-14` and
+  `pys.POS-6`..`pys.POS-9` rules. The pack, catalog, and evals paraphrase them
+  in original synthetic wording; no upstream examples or prose are copied.
 - Source: Node.js child process, crypto, and TLS documentation; MDN dynamic
   import and HTML sink documentation; Vite server options; OWASP SSRF Prevention
   Cheat Sheet.

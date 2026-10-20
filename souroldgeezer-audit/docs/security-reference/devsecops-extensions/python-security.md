@@ -14,6 +14,9 @@ such as `input`, `url`, or `command` is not evidence by itself. When provenance
 cannot be established, report an `info` investigation note rather than a
 security smell. Explicit validation must be close enough to the sink to show
 that it constrains the value, not merely parses it.
+For `pys.HC-10` to `pys.HC-14` the HTTP request or response is the trust
+boundary and the sink is the access decision, emitted cookie,
+stored password verifier, protected value, or non-public handler.
 
 ## Smell codes
 
@@ -154,6 +157,46 @@ authenticated service boundary and an explicit policy for its target namespace.
 **Severity:** `warn` when boundary evidence is present; escalate to `block` for
 access to credentials, internal administration, or a privileged callback path.
 
+### `pys.HC-10` — Self-contained token validation weakened
+
+**Pattern:** `jwt.decode` (PyJWT) is called with `options` that disable `verify_signature`, `verify_exp`, `verify_aud`, or `verify_iss`; is called without an explicit `algorithms` allowlist, or allows `none`; or an unverified header/claims helper (PyJWT, python-jose, Authlib) drives an access decision. Reading unverified claims only parses the token; it proves nothing about who issued it.
+
+**Carve-outs:** decoding for display, logging, or routing hints after a verified decode makes the access decision; test fixtures; validation delegated to a documented gateway (emit an info note naming the reliance).
+
+**Severity:** `block` when signature verification, algorithm allowlisting, or trusted-key sourcing is absent or bypassed for a token that gates access; `warn` when only lifetime, issuer, or audience checks are disabled, escalated to `block` when multiple issuers or audiences are accepted.
+
+### `pys.HC-11` — Sensitive cookie attributes weakened
+
+**Pattern:** Django `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, or `SESSION_COOKIE_HTTPONLY` set to `False` in production settings; Flask `SESSION_COOKIE_SECURE` or `SESSION_COOKIE_HTTPONLY` set to `False`, or `SESSION_COOKIE_SAMESITE = None` without `Secure`; or `set_cookie` (Django, Flask, Starlette/FastAPI) for a session or authentication value with `secure=False` or `httponly=False`.
+
+**Carve-outs:** development-only settings modules or `DEBUG`-gated branches; script-readable cookies carrying no secret, including a double-submit CSRF token whose design requires script access (`HttpOnly` only).
+
+**Severity:** `block` when a session or authentication cookie lacks `Secure` or `HttpOnly` on a production path; `warn` for weakened `SameSite` or other sensitive cookies.
+
+### `pys.HC-12` — Disallowed or legacy cryptographic primitive used for a security purpose
+
+**Pattern:** `hashlib.md5` / `hashlib.sha1` (or `hashlib.new` naming them) used for signatures, integrity, tokens, or key derivation without `usedforsecurity=False`; `cryptography` `modes.ECB` or PyCryptodome `AES.MODE_ECB`; DES, TripleDES, or ARC4; a constant or reused IV or nonce; PKCS1v15 padding for RSA encryption. Classify each primitive by its approved, legacy, or disallowed status in the ASVS 5.0.0 cryptography appendix and paraphrase it; approved primitives are not findings.
+
+**Carve-outs:** `usedforsecurity=False` and other non-security uses (ETags, cache keys, non-adversarial checksums, isolated and documented legacy interoperability). `pys.HC-6` stays the specific rule for randomness.
+
+**Severity:** `block` for a disallowed primitive, mode, or padding, or a reused IV or nonce, with a visible security purpose; `warn` for a legacy one.
+
+### `pys.HC-13` — Password verifier stored with a fast or reversible scheme
+
+**Pattern:** a stored password verifier comes from `hashlib.sha*` or `hashlib.md5` (salted or not), reversible encryption, or `hashlib.pbkdf2_hmac` / `hashlib.scrypt` with parameters below the approved minimums of the ASVS 5.0.0 cryptography appendix; or Django `PASSWORD_HASHERS` lists an MD5, SHA-1, or unsalted hasher first.
+
+**Carve-outs:** fast hashing of high-entropy random API keys or tokens for lookup; breached-password k-anonymity SHA-1 prefixes; a client pre-hash followed by a server-side approved password hash.
+
+**Severity:** `block`
+
+### `pys.HC-14` — Non-public route lacks authentication/authorization enforcement
+
+**Pattern:** a Django view without `login_required`, `LoginRequiredMixin`, or `permission_required`; a DRF view with `permission_classes` set to `AllowAny` or empty; a Flask view without the project's login decorator; or a FastAPI route without the project's auth dependency, when the handler changes state or returns non-public data and no global default-deny (DRF `DEFAULT_PERMISSION_CLASSES`, Django `LoginRequiredMiddleware`, FastAPI app or router dependencies) covers it. Object-level ownership stays `DSO-SUB-4`.
+
+**Carve-outs:** routes in a documented public allowlist (`SECURITY.md`, route documentation, or an explicit login-exempt marker), and health/status endpoints returning no non-public data.
+
+**Severity:** `block` for a state-changing or non-public-data handler with no enforcement and no covering default-deny; `warn` for an explicit opt-out (`AllowAny`, a login-exempt decorator) on a route absent from a documented public allowlist.
+
 ## Positive signals
 
 `pys.POS-1`: data-only deserialization with a restrictive loader and verified
@@ -162,6 +205,11 @@ producer boundary. `pys.POS-2`: fixed subprocess argument vectors with no shell.
 `pys.POS-4`: `secrets`/CSPRNG for capability values. `pys.POS-5`: verified TLS,
 bound SQL parameters, or an outbound destination allowlist with redirect/DNS-IP
 policy appropriate to the deployment.
+`pys.POS-6`: strict token validation with explicit algorithms, issuer, audience, and
+lifetime checks. `pys.POS-7`: hardened production cookie settings (`Secure`,
+`HttpOnly`, explicit `SameSite`). `pys.POS-8`: approved primitives plus an
+adaptive password KDF. `pys.POS-9`: global default-deny route authorization with
+documented public exceptions.
 
 ## Sources and scope
 
@@ -172,8 +220,18 @@ This pack paraphrases current primary guidance rather than reproducing examples:
 [tarfile extraction filters](https://docs.python.org/3/library/tarfile.html#extraction-filters),
 [Python secrets](https://docs.python.org/3/library/secrets.html),
 [Requests SSL verification](https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification),
-[SQLAlchemy bound parameters](https://docs.sqlalchemy.org/en/20/core/sqlelement.html), and
-[OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
+[SQLAlchemy bound parameters](https://docs.sqlalchemy.org/en/20/core/sqlelement.html),
+[OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html),
+[PyJWT API](https://pyjwt.readthedocs.io/en/stable/api.html),
+[Django settings](https://docs.djangoproject.com/en/stable/ref/settings/),
+[Django password management](https://docs.djangoproject.com/en/stable/topics/auth/passwords/),
+[Django middleware](https://docs.djangoproject.com/en/stable/ref/middleware/),
+[Flask web security](https://flask.palletsprojects.com/en/stable/web-security/),
+[Python hashlib](https://docs.python.org/3/library/hashlib.html),
+[cryptography symmetric encryption](https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/),
+[FastAPI security](https://fastapi.tiangolo.com/tutorial/security/),
+[Django REST framework permissions](https://www.django-rest-framework.org/api-guide/permissions/), and
+[OWASP ASVS 5.0.0 cryptography appendix](https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md).
 
 Static review cannot prove runtime network containment, archive resource limits,
 or a value’s original producer. Require the evidence rule above, report those

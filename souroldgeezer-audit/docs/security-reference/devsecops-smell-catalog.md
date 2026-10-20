@@ -276,11 +276,20 @@ See [devsecops-extensions/python-security.md](devsecops-extensions/python-securi
 | `pys.HC-7` | TLS verification disabled in shipped outbound client |
 | `pys.HC-8` | SQL interpolation with external input |
 | `pys.HC-9` | Outbound URL trust/SSRF policy uncertain |
+| `pys.HC-10` | Self-contained token validation weakened |
+| `pys.HC-11` | Sensitive cookie attributes weakened |
+| `pys.HC-12` | Disallowed or legacy cryptographic primitive used for a security purpose |
+| `pys.HC-13` | Password verifier stored with a fast or reversible scheme |
+| `pys.HC-14` | Non-public route lacks authentication/authorization enforcement |
 | `pys.POS-1` | Restrictive deserialization with verified producer boundary |
 | `pys.POS-2` | Fixed subprocess vector without shell |
 | `pys.POS-3` | Path/archive containment with resource limits |
 | `pys.POS-4` | CSPRNG for a capability value |
 | `pys.POS-5` | Verified TLS, bound SQL, or controlled outbound destination |
+| `pys.POS-6` | Strict token validation |
+| `pys.POS-7` | Hardened production cookie settings |
+| `pys.POS-8` | Approved primitives plus an adaptive password KDF |
+| `pys.POS-9` | Global default-deny route authorization with documented public exceptions |
 
 ### `jsts.*` — JavaScript/TypeScript security extension
 
