@@ -191,6 +191,107 @@ def assert_stack_has_synthetic_eval_coverage(
     tc.assertIn(software_behavior_id, eval_ids(f"{software_evals}/behavior-cases.jsonl"))
 
 
+# --- devsecops-audit per-stack security packs ----------------------------
+# Shared by the dotnet/python/jsts security-rules surface tests: each pins its
+# own codes, cases, and URLs and leaves the reads and contracts to these helpers.
+
+DEVSECOPS_EXTENSIONS = "souroldgeezer-audit/docs/security-reference/devsecops-extensions"
+DEVSECOPS_REFERENCES = "souroldgeezer-audit/skills/devsecops-audit/references"
+
+
+def devsecops_codes(prefix: str, first: int, last: int) -> list[str]:
+    """The inclusive code run `prefix-first` .. `prefix-last`, e.g. ("pys.HC", 10, 14)."""
+    return [f"{prefix}-{n}" for n in range(first, last + 1)]
+
+
+def devsecops_pack_texts(pack: str) -> tuple[str, str, str]:
+    """The (extension pack, smell catalog, source grounding) texts for one pack file."""
+    return (
+        read(f"{DEVSECOPS_EXTENSIONS}/{pack}"),
+        read("souroldgeezer-audit/docs/security-reference/devsecops-smell-catalog.md"),
+        read(f"{DEVSECOPS_REFERENCES}/source-grounding.md"),
+    )
+
+
+def assert_devsecops_codes_catalogued(tc, pack: str, catalog: str, codes, *, heading: bool = True) -> None:
+    """Each code is defined in the pack — as a `### ` heading, or inline (`heading=False`)
+    where the pack lists its positive signals as prose — and has its own catalog row."""
+    for code in codes:
+        tc.assertIn(f"### `{code}`" if heading else f"`{code}`", pack)
+        tc.assertIn(f"| `{code}` |", catalog)
+
+
+def assert_devsecops_golden_cases(tc, target: str, expected: dict) -> None:
+    """Golden cases keep their target, codes, and severity. `expected` maps a case id
+    to (expected_codes, forbidden_codes, expected_severity)."""
+    cases = {
+        case["id"]: case
+        for case in read_jsonl(f"{DEVSECOPS_REFERENCES}/golden-corpus/devsecops-audit-cases.jsonl")
+    }
+    for case_id, (codes, forbidden, severity) in expected.items():
+        case = cases[case_id]
+        tc.assertEqual(target, case["target"])
+        tc.assertEqual(codes, case["expected_codes"])
+        tc.assertEqual(forbidden, case["forbidden_codes"])
+        tc.assertEqual(severity, case["expected_severity"])
+
+
+def devsecops_synthetic_behavior_case(tc, case_id: str) -> dict:
+    """The named behavior eval case, asserted synthetic and free of third-party text."""
+    case = next(
+        item for item in read_jsonl(f"{DEVSECOPS_REFERENCES}/evals/behavior-cases.jsonl")
+        if item["id"] == case_id
+    )
+    tc.assertEqual("synthetic", case["source_kind"])
+    tc.assertFalse(case["contains_third_party_text"])
+    return case
+
+
+def assert_devsecops_rule_set(tc, spec: dict) -> None:
+    """One per-stack rule set's contract, driven by a string-keyed `spec` so each
+    stack's surface test declares data instead of repeating assertion logic:
+
+    - `pack` (extension file name); `codes` defined as `### ` headings and optional
+      `inline_codes` defined inline, each with its own smell-catalog row;
+    - optional `pack_text` / `pack_absent` / `grounding_text` strings;
+    - optional `urls`, cited in the grounding and, unless `urls_in_pack` is false,
+      in the pack;
+    - optional `golden_target` + `golden_cases` (see assert_devsecops_golden_cases);
+    - `behavior_case`, with optional `source_url`, exact `required_checks`,
+      substring `check_mentions`, and exact `forbidden_behaviors`."""
+    pack, catalog, grounding = devsecops_pack_texts(spec["pack"])
+    assert_devsecops_codes_catalogued(tc, pack, catalog, spec["codes"])
+    assert_devsecops_codes_catalogued(tc, pack, catalog, spec.get("inline_codes", ()), heading=False)
+    for text in spec.get("pack_text", ()):
+        tc.assertIn(text, pack)
+    for text in spec.get("pack_absent", ()):
+        tc.assertNotIn(text, pack)
+    for text in spec.get("grounding_text", ()):
+        tc.assertIn(text, grounding)
+    url_texts = (grounding, pack) if spec.get("urls_in_pack", True) else (grounding,)
+    for url in spec.get("urls", ()):
+        for text in url_texts:
+            tc.assertIn(url, text)
+    if "golden_cases" in spec:
+        assert_devsecops_golden_cases(tc, spec["golden_target"], spec["golden_cases"])
+    case = devsecops_synthetic_behavior_case(tc, spec["behavior_case"])
+    if "source_url" in spec:
+        tc.assertEqual(spec["source_url"], case["source_url"])
+    for check in spec.get("required_checks", ()):
+        tc.assertIn(check, case["required_checks"])
+    for mention in spec.get("check_mentions", ()):
+        tc.assertTrue(any(mention in check for check in case["required_checks"]), mention)
+    for behavior in spec.get("forbidden_behaviors", ()):
+        tc.assertIn(behavior, case["forbidden_behaviors"])
+
+
+def assert_devsecops_rule_sets(tc, *specs: dict) -> None:
+    """Check each rule-set spec in its own subTest, labelled by its behavior case."""
+    for spec in specs:
+        with tc.subTest(rule_set=spec["behavior_case"]):
+            assert_devsecops_rule_set(tc, spec)
+
+
 # --- ip-hygiene criterion/corpus authority -------------------------------
 # The skill's reference files are the single authority for which criteria
 # exist. Several surfaces restate that set or the corpus size; each one is
