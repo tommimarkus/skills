@@ -107,7 +107,7 @@ Or the reverse order.
 
 **Severity:** `warn` (because the skill can't know the app's threat model without context)
 
-**Rubric:** devsecops.md §5.1.16; ASVS V14.
+**Rubric:** devsecops.md §5.1.16; ASVS 5.0.0 V3.4.3, V3.4.5.
 
 **Remediation action:**
 > Add explicit middleware for CSP, Referrer-Policy, and Permissions-Policy. Verify `UseHsts()` is present (built-in). For Blazor WASM, headers must be set by the host (SWA `staticwebapp.config.json` or Functions middleware). For Blazor Server / Blazor Web App, headers go in `Program.cs`; note the framework already sets `frame-ancestors` and antiforgery handles XFO — don't override these unless you have a reason.
@@ -292,6 +292,100 @@ plausible but not proven.
 > proving forged line breaks do not survive in structured properties or rendered
 > log text.
 
+### `dns.HC-16` — Self-contained token validation weakened
+
+**Pattern:** a bearer or ID token is accepted although validation is switched off or short-circuited. `TokenValidationParameters` (used by `AddJwtBearer`, `AddOpenIdConnect`, or a manual `ValidateToken` / `ValidateTokenAsync` call) sets `RequireSignedTokens = false`, `ValidateIssuerSigningKey = false`, or a `SignatureValidator` that returns the token without verifying it; or it sets `ValidateLifetime`, `ValidateIssuer`, or `ValidateAudience` to `false`. A second shape is `ReadJwtToken` / `ReadJsonWebToken` claims feeding an authorization decision with no validation step, because reading a token only parses it.
+
+**Detection (ripgrep):**
+```
+rg -n '(RequireSignedTokens|ValidateIssuerSigningKey|ValidateLifetime|ValidateIssuer|ValidateAudience)\s*=\s*false' --glob '*.cs'
+rg -n 'SignatureValidator\s*=' --glob '*.cs'
+rg -n '(ReadJwtToken|ReadJsonWebToken)\s*\(' --glob '*.cs'
+```
+Then check whether the token gates access and whether the result is used for an authorization decision.
+
+**Severity:** `block` when signature verification, trusted-key validation, or validation itself is absent or bypassed for a token that gates access. `warn` when only lifetime, issuer, or audience validation is disabled; escalate to `block` when tokens from multiple issuers or audiences are accepted.
+
+**Rubric:** CWE-347.
+
+**Remediation action:**
+> Leave signature, signing-key, lifetime, issuer, and audience validation enabled and configure the expected issuer, audience, and signing keys explicitly. Use `ReadJwtToken` only to inspect claims that do not drive an access decision; make decisions from the principal produced by the authentication handler.
+
+### `dns.HC-17` — Sensitive cookie attributes weakened
+
+**Pattern:** a session, authentication, or antiforgery cookie is issued with attributes that expose it. `CookieOptions`, cookie-authentication options, session options, or antiforgery cookie options set `Secure = false`, `HttpOnly = false`, `CookieSecurePolicy.None` or `CookieSecurePolicy.SameAsRequest` in production configuration, or `SameSiteMode.None` without `Secure`. A `CookiePolicyOptions` block that weakens the same attributes counts.
+
+**Detection (ripgrep):**
+```
+rg -n '(Secure|HttpOnly)\s*=\s*false' --glob '*.cs'
+rg -n 'CookieSecurePolicy\.(None|SameAsRequest)' --glob '*.cs'
+rg -n 'SameSite(Mode)?\.?\s*=?\s*(SameSiteMode\.)?None' --glob '*.cs'
+```
+Then confirm the cookie carries a session, credential, or antiforgery value and that the line is on a production path.
+
+**Severity:** `block` when a session or authentication cookie lacks `Secure` or `HttpOnly` on a production path. `warn` for a weakened `SameSite` without a documented cross-site need, or for other sensitive cookies.
+
+**Rubric:** CWE-614, CWE-1004.
+
+**Remediation action:**
+> Set `Secure = true`, `HttpOnly = true`, and `SameSite` to `Lax` or `Strict` unless a documented cross-site flow needs `None` (which then requires `Secure`). Use `CookieSecurePolicy.Always` in production and keep relaxed values behind a development-only branch.
+
+### `dns.HC-18` — Disallowed or legacy cryptographic primitive used for a security purpose
+
+**Pattern:** MD5, SHA-1, `HMACMD5`, or `HMACSHA1` used for signatures, integrity checks, tokens, or key derivation; `DES`, `TripleDES`, or `RC2`; `CipherMode.ECB`; a constant, hard-coded, or reused IV or nonce; or `RSAEncryptionPadding.Pkcs1` for encryption. Classify each primitive by its status in the ASVS 5.0.0 cryptography appendix (approved, legacy, or disallowed) and paraphrase that status rather than quoting its tables. Approved primitives are not findings. For random values `dns.HC-10` stays the specific rule.
+
+**Detection (ripgrep):**
+```
+rg -n '(MD5|SHA1|HMACMD5|HMACSHA1|DES|TripleDES|RC2)\.(Create|HashData|ComputeHash)|new (MD5|SHA1|HMACMD5|HMACSHA1|TripleDES|DES|RC2)' --glob '*.cs'
+rg -n 'CipherMode\.ECB|RSAEncryptionPadding\.Pkcs1|\.IV\s*=\s*(new byte|Encoding)' --glob '*.cs'
+```
+Then establish the purpose: only a visible security purpose counts.
+
+**Severity:** `block` for a disallowed primitive, mode, or padding, or a reused IV or nonce, with a visible security purpose. `warn` for a legacy one, for example SHA-1 or HMAC-SHA-1.
+
+**Rubric:** CWE-327.
+
+**Remediation action:**
+> Use an approved authenticated mode such as AES-GCM with a fresh random nonce per message, SHA-256 or stronger for hashing and HMAC, OAEP padding for RSA encryption, and a managed key store for keys. Migrate stored data written under the old primitive with a versioned envelope.
+
+### `dns.HC-19` — Password verifier stored with a fast or reversible scheme
+
+**Pattern:** a password verifier is produced by `SHA256` / `SHA512` / `MD5` hashing (salted or not), by reversible encryption, or by `Rfc2898DeriveBytes` / `Rfc2898DeriveBytes.Pbkdf2` with parameters below the approved minimums of the ASVS 5.0.0 cryptography appendix, instead of ASP.NET Core Identity `PasswordHasher<TUser>` or an approved password-hashing function with adequate parameters.
+
+**Detection (ripgrep):**
+```
+rg -n -i '(password|passwd|pwd)[^;\n]{0,80}(SHA256|SHA512|MD5)\.(HashData|Create)|(SHA256|SHA512|MD5)\.(HashData|Create)[^;\n]{0,80}(password|passwd|pwd)' --glob '*.cs'
+rg -n 'Rfc2898DeriveBytes(\.Pbkdf2)?\s*\(' --glob '*.cs'
+rg -n '(Encrypt|Protect)\w*\([^)]*[Pp]assword' --glob '*.cs'
+```
+Then read the iteration count and hash algorithm against the appendix and confirm the output is stored as a login verifier.
+
+**Severity:** `block`
+
+**Rubric:** CWE-916.
+
+**Remediation action:**
+> Store verifiers with `PasswordHasher<TUser>` or an approved password-hashing function (Argon2id, scrypt, bcrypt, or PBKDF2 at the approved iteration count) and a per-user random salt. Rehash on next successful login when parameters are raised.
+
+### `dns.HC-20` — TLS certificate validation bypassed
+
+**Pattern:** a server-certificate check is disabled for a shipped client. `ServerCertificateCustomValidationCallback` returns `true` or ignores `SslPolicyErrors`; `HttpClientHandler.DangerousAcceptAnyServerCertificateValidator` is assigned; `ServicePointManager.ServerCertificateValidationCallback` accepts everything; `SslClientAuthenticationOptions.RemoteCertificateValidationCallback` ignores errors; or a SQL connection string sets `TrustServerCertificate=True` against a non-local server in shipped configuration.
+
+**Detection (ripgrep):**
+```
+rg -n 'ServerCertificateCustomValidationCallback|DangerousAcceptAnyServerCertificateValidator' --glob '*.cs'
+rg -n '(ServicePointManager\.ServerCertificateValidationCallback|RemoteCertificateValidationCallback)' --glob '*.cs'
+rg -n -i 'TrustServerCertificate\s*=\s*(true|yes)' --glob '*.{cs,json,config}'
+```
+Then read the callback body: a lambda that returns `true` without inspecting `SslPolicyErrors`, or a bare assignment of the always-accept validator, is the finding.
+
+**Severity:** `block` when it can reach a shipped outbound client.
+
+**Rubric:** CWE-295.
+
+**Remediation action:**
+> Remove the bypass and let the platform validate the chain and hostname. For a private CA, add the CA to the trust store or validate against a pinned certificate in the callback while still enforcing chain and hostname checks. Use a real certificate on SQL servers instead of `TrustServerCertificate=True`.
+
 ### `dns.LC-1` — Shadow / zombie function endpoint
 
 **Pattern:** a `[Function]` or `[HttpTrigger]` handler registered in `api/Functions/` whose route does not appear in any OpenAPI / route inventory document.
@@ -383,10 +477,31 @@ new\s+X509Certificate2\s*\(\s*"[^"]+\.pfx"\s*,\s*"
 
 **Pattern:** request DTOs generated from an OpenAPI source-of-truth, or validated against the schema at runtime via a library.
 
+### `dns.POS-6` — Strict token validation
+
+**Pattern:** `TokenValidationParameters` keeps signature, signing-key, lifetime, issuer, and audience validation enabled with explicit expected issuer, audience, and signing keys or an authority.
+
+### `dns.POS-7` — Hardened production cookie policy
+
+**Pattern:** production cookie, session, and antiforgery options set `Secure`, `HttpOnly`, and an explicit `SameSite` value, with `CookieSecurePolicy.Always` or an equivalent policy.
+
+### `dns.POS-8` — Approved primitives plus framework password hasher or adaptive KDF
+
+**Pattern:** AEAD encryption such as AES-GCM with fresh nonces, SHA-256-or-stronger hashing, and password verifiers produced by `PasswordHasher<TUser>` or an approved adaptive password-hashing function.
+
+### `dns.POS-9` — Default or pinned-CA certificate validation
+
+**Pattern:** outbound clients rely on the platform's default certificate validation, or add a private CA or pinned certificate while still enforcing chain and hostname checks.
+
 ## Carve-outs
 
 - **Do not flag `dns.HC-1` on files matching `*.Example.*`** — example files are expected to contain placeholder credentials. Still flag if the placeholder shape matches a real credential format exactly (that's `DSO-HC-1` under a different lens).
 - **Do not flag `dns.HC-2` on endpoints explicitly listed in `SECURITY.md`** as public.
 - **Do not flag `dns.HC-3` on Static Web Apps routes** — SWA handles auth at the edge via `staticwebapp.config.json` (the legacy `routes.json` is ignored when `staticwebapp.config.json` exists), not via `[Authorize]`. See https://learn.microsoft.com/azure/static-web-apps/configuration.
 - **Do not flag `dns.HC-5` on Blazor WASM projects** — the host (SWA / Functions) is responsible for headers, not the WASM client. For Blazor **Server** / **Web App**, the framework auto-emits `Content-Security-Policy: frame-ancestors 'self'` and Antiforgery emits `X-Frame-Options: SAMEORIGIN`; do not double-flag those specific headers as missing.
+- **Do not flag `dns.HC-16`** when claims are read only for logging, display, or routing hints while a validated principal makes the access decision, in test fixtures, or when validation is delegated to a documented gateway with visible configuration (emit an info note naming the reliance).
+- **Do not flag `dns.HC-17`** on development-only configuration (`appsettings.Development.json` or an `IsDevelopment()` branch), or on script-readable cookies that carry no secret, including a double-submit CSRF token whose design requires script access (`HttpOnly` only).
+- **Do not flag `dns.HC-18`** for non-security uses such as ETags, cache keys, non-adversarial deduplication or corruption checksums, or documented legacy-protocol interoperability isolated from new data.
+- **Do not flag `dns.HC-19`** for fast hashing of high-entropy (at least 128-bit) random API keys or tokens for lookup, SHA-1 prefix queries to a breached-password k-anonymity API, or a client pre-hash followed by a server-side approved password hash.
+- **Do not flag `dns.HC-20`** in isolated test-only fixtures, for `TrustServerCertificate=True` scoped to local development against localhost, or for a callback that validates a pinned certificate or private CA while still enforcing chain and hostname checks.
 - **Do not flag `dns.HC-15`** when the logged value is sanitized at the logging boundary through explicit CR/LF normalization or removal, `ReplaceLineEndings`-style handling, hashing/tokenization, or a strict identifier allowlist that excludes display-control characters.

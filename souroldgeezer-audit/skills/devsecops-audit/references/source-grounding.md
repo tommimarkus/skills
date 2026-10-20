@@ -77,6 +77,17 @@ tables, diagrams, screenshots, or documentation.
   direction. The routing card, rule pack, catalog, and evals use original
   synthetic scenarios and paraphrases only; no upstream examples or prose are
   copied.
+- Source: https://learn.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.tokenvalidationparameters,
+  https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.cookieoptions,
+  https://learn.microsoft.com/en-us/aspnet/core/security/samesite,
+  https://learn.microsoft.com/en-us/dotnet/standard/security/vulnerabilities-cbc-mode,
+  https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/password-hashing,
+  https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclienthandler.dangerousacceptanyservercertificatevalidator,
+  https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax,
+  https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md.
+  Handling: primary anchors for the .NET `dns.HC-16`..`dns.HC-20` and
+  `dns.POS-6`..`dns.POS-9` rules. The pack, catalog, and evals paraphrase them
+  in original synthetic wording; no upstream examples or prose are copied.
 - Source: `references/procedures/threat-model-planning.md`.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal

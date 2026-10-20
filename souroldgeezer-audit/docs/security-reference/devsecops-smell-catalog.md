@@ -241,6 +241,11 @@ See [devsecops-extensions/dotnet-security.md](devsecops-extensions/dotnet-securi
 | `dns.HC-13` | Data Protection keys not persisted to a durable store |
 | `dns.HC-14` | Production `DefaultAzureCredential` chain does not establish intended-identity selection |
 | `dns.HC-15` | Log forging / log injection in structured logs |
+| `dns.HC-16` | Self-contained token validation weakened |
+| `dns.HC-17` | Sensitive cookie attributes weakened |
+| `dns.HC-18` | Disallowed or legacy cryptographic primitive used for a security purpose |
+| `dns.HC-19` | Password verifier stored with a fast or reversible scheme |
+| `dns.HC-20` | TLS certificate validation bypassed |
 | `dns.LC-1` | Shadow / zombie function endpoint (registered, not in route inventory) |
 | `dns.LC-2` | Mass assignment / BOPLA risk (deserialization into undocumented fields) |
 | `dns.LC-3` | `new HttpClient(...)` without `IHttpClientFactory` / `PooledConnectionLifetime` |
@@ -251,6 +256,10 @@ See [devsecops-extensions/dotnet-security.md](devsecops-extensions/dotnet-securi
 | `dns.POS-3` | Explicit CSP / security headers middleware |
 | `dns.POS-4` | `[Authorize(Roles=...)]` with specific role checks |
 | `dns.POS-5` | OpenAPI-driven request models validated against schema |
+| `dns.POS-6` | Strict token validation |
+| `dns.POS-7` | Hardened production cookie policy |
+| `dns.POS-8` | Approved primitives plus framework password hasher or adaptive KDF |
+| `dns.POS-9` | Default or pinned-CA certificate validation |
 
 ### `pys.*` — Python security extension
 
