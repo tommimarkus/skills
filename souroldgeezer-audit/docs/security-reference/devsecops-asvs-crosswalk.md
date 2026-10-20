@@ -3,6 +3,7 @@
 - Edition: OWASP ASVS 5.0.0, release tag `v5.0.0_release` (<https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release>).
 - Source asset: `OWASP_Application_Security_Verification_Standard_5.0.0_en.flat.json`, SHA-256 `8201b20eec2908c3380ac600c91c8ba746346fbb808859366abb232027532311`.
 - Licence: ASVS is published by the OWASP Foundation under CC BY-SA 4.0 (<https://creativecommons.org/licenses/by-sa/4.0/legalcode>). This file records requirement IDs, levels, and chapter names only, together with repo-authored classifications; it never reproduces requirement or section text. Read the upstream standard for the wording.
+- Status: an independent mapping maintained in this repository; it is not affiliated with, reviewed by, or endorsed by the OWASP Foundation.
 - Levels are cumulative: L2 includes every L1 requirement, and L3 includes every L1 and L2 requirement.
 - Loading: on demand only, per the devsecops-audit Load Map. This file is the only code-to-ASVS mapping: rule packs and catalog rows carry no ASVS requirement IDs, apart from the fixed citations in `dns.HC-5` and rubric §5.1.16.
 
