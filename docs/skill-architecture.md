@@ -76,6 +76,12 @@ It should contain:
 - Pointers to on-demand references, scripts, fixtures, and templates with
   concrete load conditions.
 
+At each decision step, name the rule the selected mode needs and point to its
+authoritative section on that mode's required read path. A general reference
+load cue alone does not make the decision rule visible. Keep the rule single
+sourced; when correcting a missed rule, verify the pointer with a fresh-context
+mode eval that omits unrelated reference sections before claiming improvement.
+
 Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
