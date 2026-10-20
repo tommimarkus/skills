@@ -58,7 +58,9 @@ Load [`references/procedures/golden-corpus-evals.md`](references/procedures/gold
    static-only. Never retry.
 7. Apply codes only after evidence gates and carve-outs. For the
    same condition, the most-specific applicable loaded rule controls severity;
-   suppress its duplicate general code. If separately applicable rules still
+   suppress its duplicate general code. Positives follow the same rule; a
+   general positive with a broader condition needs evidence for that whole
+   scope (pinned everywhere, not just actions). If separately applicable rules still
    overlap, duplicate overlaps use the highest applicable severity. Separate
    fact from inference; emit output/footer.
 
