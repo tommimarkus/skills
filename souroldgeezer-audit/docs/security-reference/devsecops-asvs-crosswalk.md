@@ -1,8 +1,8 @@
 # DevSecOps ASVS 5.0.0 Crosswalk
 
-- Edition: OWASP ASVS 5.0.0, release tag `v5.0.0_release`.
+- Edition: OWASP ASVS 5.0.0, release tag `v5.0.0_release` (<https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release>).
 - Source asset: `OWASP_Application_Security_Verification_Standard_5.0.0_en.flat.json`, SHA-256 `8201b20eec2908c3380ac600c91c8ba746346fbb808859366abb232027532311`.
-- Licence: ASVS is published by the OWASP Foundation under CC BY-SA 4.0. This file records requirement IDs, levels, and chapter names only, together with repo-authored classifications; it never reproduces requirement or section text. Read the upstream standard for the wording.
+- Licence: ASVS is published by the OWASP Foundation under CC BY-SA 4.0 (<https://creativecommons.org/licenses/by-sa/4.0/legalcode>). This file records requirement IDs, levels, and chapter names only, together with repo-authored classifications; it never reproduces requirement or section text. Read the upstream standard for the wording.
 - Levels are cumulative: L2 includes every L1 requirement, and L3 includes every L1 and L2 requirement.
 - Loading: on demand only, per the devsecops-audit Load Map. This file is the only code-to-ASVS mapping: rule packs and catalog rows carry no ASVS requirement IDs, apart from the fixed citations in `dns.HC-5` and rubric §5.1.16.
 
@@ -22,8 +22,8 @@ Only `static` and `partial` rows list codes; each code is a row in [devsecops-sm
 |---|---|---|---|---|---|---|---|---|---|
 | V1 | 8 | 19 | 3 | 0 | 8 | 0 | 1 | 21 | 30 |
 | V2 | 4 | 7 | 2 | 0 | 2 | 3 | 8 | 0 | 13 |
-| V3 | 8 | 11 | 12 | 0 | 11 | 1 | 4 | 15 | 31 |
-| V4 | 2 | 8 | 6 | 0 | 1 | 0 | 5 | 10 | 16 |
+| V3 | 8 | 11 | 12 | 0 | 10 | 1 | 4 | 16 | 31 |
+| V4 | 2 | 8 | 6 | 0 | 0 | 0 | 5 | 11 | 16 |
 | V5 | 4 | 5 | 4 | 0 | 5 | 1 | 2 | 5 | 13 |
 | V6 | 13 | 22 | 12 | 0 | 3 | 3 | 22 | 19 | 47 |
 | V7 | 6 | 12 | 1 | 0 | 2 | 3 | 10 | 4 | 19 |
@@ -37,7 +37,7 @@ Only `static` and `partial` rows list codes; each code is a row in [devsecops-sm
 | V15 | 3 | 10 | 8 | 1 | 9 | 3 | 2 | 6 | 21 |
 | V16 | 0 | 16 | 1 | 0 | 5 | 1 | 7 | 4 | 17 |
 | V17 | 0 | 7 | 5 | 0 | 0 | 0 | 12 | 0 | 12 |
-| Total | 70 | 183 | 92 | 1 | 83 | 28 | 119 | 114 | 345 |
+| Total | 70 | 183 | 92 | 1 | 81 | 28 | 119 | 116 | 345 |
 
 ## Using this crosswalk
 
@@ -131,7 +131,7 @@ Absence of findings is never evidence for a requirement. Never claim ASVS confor
 | V3.5.4 | L2 | runtime | — |
 | V3.5.5 | L2 | uncovered | — |
 | V3.5.6 | L3 | uncovered | — |
-| V3.5.7 | L3 | partial | `jsts.HC-10`, `jsts.POS-10` |
+| V3.5.7 | L3 | uncovered | — |
 | V3.5.8 | L3 | uncovered | — |
 | V3.6.1 | L3 | uncovered | — |
 | V3.7.1 | L2 | uncovered | — |
@@ -153,7 +153,7 @@ Absence of findings is never evidence for a requirement. Never claim ASVS confor
 | V4.2.2 | L3 | runtime | — |
 | V4.2.3 | L3 | runtime | — |
 | V4.2.4 | L3 | runtime | — |
-| V4.2.5 | L3 | partial | `pys.HC-9`, `jsts.HC-9` |
+| V4.2.5 | L3 | uncovered | — |
 | V4.3.1 | L2 | uncovered | — |
 | V4.3.2 | L2 | uncovered | — |
 | V4.4.1 | L1 | uncovered | — |
@@ -427,7 +427,7 @@ Absence of findings is never evidence for a requirement. Never claim ASVS confor
 | V15.1.5 | L3 | documentation | — |
 | V15.2.1 | L1 | partial | `DSO-LC-9`, `DSO-SUB-12`, `DSO-POS-7` |
 | V15.2.2 | L2 | partial | `docker.HC-9` |
-| V15.2.3 | L2 | partial | `jsts.HC-11`, `docker.HC-10`, `docker.POS-3` |
+| V15.2.3 | L2 | partial | `jsts.HC-11`, `docker.POS-3` |
 | V15.2.4 | L3 | partial | `DSO-HC-2`, `DSO-SUB-1`, `DSO-POS-3` |
 | V15.2.5 | L3 | runtime | — |
 | V15.3.1 | L1 | uncovered | — |
