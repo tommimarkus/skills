@@ -7,6 +7,7 @@ Compact lookup table for every finding code the skill emits. The rubric prose li
 1. Cite codes, do not restate the rubric.
 2. Extensions never override core rules — they add new codes (namespaced) or carve out false positives for idiomatic patterns.
 3. One severity per finding: `block` | `warn` | `info`. Don't stack.
+4. Code-to-ASVS 5.0.0 mapping lives only in [devsecops-asvs-crosswalk.md](devsecops-asvs-crosswalk.md); never add ASVS IDs to code rows.
 
 ## Core codes
 

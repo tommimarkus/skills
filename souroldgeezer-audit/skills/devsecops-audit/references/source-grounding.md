@@ -112,6 +112,16 @@ tables, diagrams, screenshots, or documentation.
   and `jsts.POS-12`..`jsts.POS-15` rules (Node crypto is already anchored). The
   pack, catalog, and evals paraphrase them in original synthetic wording; no
   upstream examples or prose are copied.
+- Source: https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release
+  (asset `OWASP_Application_Security_Verification_Standard_5.0.0_en.flat.json`,
+  SHA-256 `8201b20eec2908c3380ac600c91c8ba746346fbb808859366abb232027532311`)
+  and https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x92-Appendix-C_Cryptography.md.
+  Handling: OWASP ASVS 5.0.0 is published by the OWASP Foundation under CC BY-SA
+  4.0 and is attributed here. `../../../docs/security-reference/devsecops-asvs-crosswalk.md`
+  takes only requirement IDs, levels, and chapter names from the release asset
+  and Appendix C. Its classifications and the ASVS trigger and behavior evals are
+  original repo-authored work; no requirement text, section text, or appendix
+  tables are copied.
 - Source: `references/procedures/threat-model-planning.md`.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal

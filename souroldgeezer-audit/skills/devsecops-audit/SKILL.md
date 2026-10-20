@@ -1,7 +1,7 @@
 ---
 name: devsecops-audit
 description: >-
-  Use when auditing DevSecOps posture for CI/CD, IaC, containers, releases, supply-chain evidence, or code-level security smells. Supports quick PR/file audits and deep repo reviews. Defer non-security design and test-quality work to sibling skills.
+  Use when auditing DevSecOps posture for CI/CD, IaC, containers, releases, supply-chain evidence, or code-level security smells, or checking OWASP ASVS 5.0 verification coverage. Supports quick PR/file audits and deep repo reviews. Defer non-security design and test-quality work to sibling skills.
 ---
 
 # DevSecOps Audit
@@ -39,6 +39,7 @@ Load [`extensions/jsts-security.md`](extensions/jsts-security.md) and [`../../do
 Load [`references/procedures/cost-stance-detection.md`](references/procedures/cost-stance-detection.md) when cost stance is not given by the invocation or `config.yaml` (an explicitly given stance needs only disclosure, not the detection procedure).
 Load [`references/procedures/threat-model-planning.md`](references/procedures/threat-model-planning.md) first when running Deep mode.
 Load [`references/procedures/stage-coverage-matrix.md`](references/procedures/stage-coverage-matrix.md), [`references/procedures/evidence-per-release.md`](references/procedures/evidence-per-release.md), and [`references/procedures/mcp-github-probes.md`](references/procedures/mcp-github-probes.md) when running Deep mode.
+Load [`../../docs/security-reference/devsecops-asvs-crosswalk.md`](../../docs/security-reference/devsecops-asvs-crosswalk.md) in Deep when declared target levels include an ASVS level or an artifact claims ASVS conformance, and in any mode when the user asks for ASVS coverage or requirement IDs.
 Load [`references/procedures/extension-authoring.md`](references/procedures/extension-authoring.md) only when editing extensions.
 Before editing triggers/workflow/extensions/grounding/evals, load [`references/evals`](references/evals) and [`references/source-grounding.md`](references/source-grounding.md); keep evals synthetic.
 Load [`references/procedures/golden-corpus-evals.md`](references/procedures/golden-corpus-evals.md) (corpus: [`references/golden-corpus/`](references/golden-corpus/)) after changing the rubric, smell catalog, output contract, or extensions; record recall per [`audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.

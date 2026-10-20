@@ -174,7 +174,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 13. **Dockerfile `USER root` or no `USER` directive.** Explicit OWASP Docker Security Cheat Sheet violation.
 14. **`TODO: security review` or `FIXME: vuln` older than 90 days.** Intent recorded, never acted on.
 15. **Vulnerability scanner runs, findings dashboard populated, no written remediation SLA.** Decorative control; SSDF RV.2 violation.
-16. **Mixed-content HTTP allowed on a site serving auth.** ASVS V9 violation; trivially detectable from security headers.
+16. **Mixed-content HTTP allowed on a site serving auth.** ASVS 5.0.0 V12.2.1, V3.4.1; trivially detectable from security headers.
 17. **Mandatory MFA not enforced on SCM org or cloud root account.** Scorecard can't see this directly but audit logs can.
 18. **Kubernetes `PodSecurityPolicy` / `PodSecurity` admission missing or set to `privileged`.** CIS Kubernetes Benchmark baseline violation.
 19. **Hardcoded signing keys or long-lived GPG keys in repo / CI secret store.** Sigstore's keyless pattern exists specifically to eliminate this.
@@ -339,14 +339,14 @@ Be explicit about these limits. Ask for commit history, CI run logs, SIEM export
 For each project audited, produce:
 
 1. **Scope statement.** Which repos, workflows, environments, and release artifacts are in scope. Anything explicitly excluded.
-2. **Declared target levels.** ASVS level, SCVS level, SLSA Build level, DSOMM maturity target, SAMM practice targets, NIS2 applicability (essential/important/neither), CRA applicability. If nothing is declared, **that is itself a finding**.
+2. **Declared target levels.** ASVS 5.0.0 level, SCVS level, SLSA Build level, DSOMM maturity target, SAMM practice targets, NIS2 applicability (essential/important/neither), CRA applicability. If nothing is declared, **that is itself a finding**.
 3. **Stage coverage matrix.** For each of the 8 lifecycle stages in §3, which controls are present, which are enforcing, which are decorative, which are missing. Classification per §1 definition.
 4. **Anti-pattern scan.** Which of the 10 CICD-SEC items are observed. One per finding, with file/line or pipeline/job locator.
 5. **Smell matches** from §5.1 and §5.2 with evidence pointers.
 6. **Positive signals matched** from §5.3 — named and cited.
 7. **Supply-chain provenance check.** SBOM presence and format; SLSA level achieved; signing status; pinning density; dependency-update cadence; Scorecard score if available.
 8. **Evidence-per-release check.** For the most recent release: does the pipeline produce the artifacts that would let an external auditor verify the claimed levels? List gaps.
-9. **Framework coupling report.** Which SSDF practices (PO/PS/PW/RV IDs), ENISA CRA Annex I rows, and NIS2 Article 21 letters are demonstrably covered by evidence. Which are claimed but not evidenced. Which are simply missing.
+9. **Framework coupling report.** Which SSDF practices (PO/PS/PW/RV IDs), ENISA CRA Annex I rows, and NIS2 Article 21 letters are demonstrably covered by evidence. Which are claimed but not evidenced. Which are simply missing. When an ASVS level is declared, the report classifies that level's requirements per [devsecops-asvs-crosswalk.md](devsecops-asvs-crosswalk.md).
 10. **Presence-vs-efficacy verdict.** Enforcing program / partial / decorative.
 11. **Severity per finding.** Block / warn / info. One severity per finding — don't stack.
 12. **Recommended action per finding.** Specific diff, config change, or process change. "Improve security" is not an action; "Add `permissions: contents: read` to all workflow jobs and require it via policy-as-code" is.
@@ -381,8 +381,9 @@ Non-derivable directives (§2–§8 ground the full set; these add or sharpen):
 
 ### OWASP — verification standards
 
-- [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) — app-level verification, 14 chapters, L1–L3
+- [OWASP ASVS 5.0.0](https://owasp.org/www-project-application-security-verification-standard/) — app-level verification, 17 chapters, 345 requirements, L1–L3
 - [OWASP ASVS (GitHub)](https://github.com/OWASP/ASVS)
+- [OWASP ASVS v5.0.0 release](https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release)
 - [OWASP SCVS](https://owasp.org/www-project-software-component-verification-standard/) — supply-chain verification, 6 families × L1–L3
 
 ### OWASP — Top 10 risk lists
