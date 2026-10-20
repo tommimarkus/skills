@@ -60,7 +60,8 @@ Load [`references/procedures/golden-corpus-evals.md`](references/procedures/gold
    same condition, the most-specific applicable loaded rule controls severity;
    suppress its duplicate general code. Positives follow the same rule; a
    general positive with a broader condition needs evidence for that whole
-   scope (pinned everywhere, not just actions). If separately applicable rules still
+   scope (pinned everywhere, not just actions). §6 `DSO-SUB-*` subtle-failure
+   codes are separate conditions, never suppressed as duplicates. If separately applicable rules still
    overlap, duplicate overlaps use the highest applicable severity. Separate
    fact from inference; emit output/footer.
 

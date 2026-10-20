@@ -41,7 +41,7 @@ ASVS_APP_RULES = {
     "golden_cases": {
         "DSO-GOLD-0028": (["pys.HC-13"], [], "block"),
         "DSO-GOLD-0029": (["pys.HC-14"], [], "block"),
-        "DSO-GOLD-0030": ([], ["pys.HC-14"], "none"),
+        "DSO-GOLD-0030": ([], ["pys.HC-14", "pys.POS-9"], "none"),
     },
     "behavior_case": "devsecops-audit-behavior-python-asvs-app-rules",
     "source_url": "",

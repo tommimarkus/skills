@@ -6,7 +6,8 @@ the SUBJECT being wrong — never invented business priority.
 ## Risk tier
 `risk_tier = max(signal_tier, declared_tier)`. Tiers: high | medium | low |
 unknown. Every subject resolves to exactly one tier through the steps below;
-a tier no step yields is a guess and is never emitted.
+a tier no step yields is a guess and is never emitted. The tier rates the
+subject's role, never the consequence of a finding on it.
 
 ## signal_tier (observable, no guessing)
 Take the first base that applies:

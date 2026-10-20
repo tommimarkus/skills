@@ -21,7 +21,9 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
 - Professional skepticism: assume the subject may be wrong; corroborate;
   seek contradiction (hunt for controls that cannot fail).
 - Evidence sufficiency/appropriateness: re-performance/observed behavior >
-  entity-asserted (names, comments, badges).
+  entity-asserted (names, comments, badges, supplied context). Asserted
+  evidence may bound scope or satisfy a carve-out, disclosed as asserted; a
+  positive signal needs observed evidence.
 - Positive control before absence: when measuring what a suppression/exemption
   layer hides by stripping its markers, registry, or config, first prove the
   detector still fires under that instrumentation, and never let the
