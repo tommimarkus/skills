@@ -3491,12 +3491,23 @@ def verify_handoff(args):
 
 
 def record_changeset(args):
-    """Record a measured over-budget changeset: the step stops oversized, never retried."""
+    """Record a measured changeset failure on a completed step.
+
+    Over budget stops oversized:changeset, never retried. A path outside the
+    write set takes record-return's repairable scope rejection: the stored
+    return is released so the parent can amend and re-record it.
+    """
     directory, data, plan, leafs = mutating_run(args)
     sid, step = selected_step(data, args.step_id)
     if step["status"] != "completed":
         raise Error("only a completed step can have its changeset recorded")
     verdict = returned_changeset(data, plan, leafs, sid)[0]
+    if verdict["verdict"] == "outside_write_set":
+        step.update(return_path="", return_sha256="")
+        stop_step(step, "oversized", SCOPE_REJECTION_REASON, "scope_expanded",
+                  "changed path outside write_set")
+        event(directory, data, "record-changeset", step_id=sid)
+        return result2("record-changeset", args, sid, step, changeset=verdict)
     if verdict["verdict"] != "oversized:changeset":
         raise Error(f"the measured changeset verdict for {sid} is {verdict['verdict']}; nothing to record")
     summary = (
@@ -3611,7 +3622,7 @@ def record_verify(args):
         "sha256": digest(value),
     }
     step["verify_id"] = ""
-    disposition = ""
+    disposition, failure = "", None
     if value["verdict"] == "reject":
         failure = verify_rejection_return(directory, step, value)
         disposition = reject_verified_step(directory, data, step, failure)

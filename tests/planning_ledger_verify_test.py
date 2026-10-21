@@ -511,6 +511,27 @@ class RejectRoutingTest(VerifyHarness):
         self.assertEqual("oversized", self.call("show", "--run-id", self.run_id,
                                                 "--step-id", "alpha")[1]["step"]["status"])
 
+    def test_record_changeset_applies_the_repairable_scope_rejection_to_an_outside_path(self):
+        packet = self.started()
+        self.commit_file("elsewhere/stray.txt", "x\n")
+        self.returned(packet)
+        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha")
+        self.assertEqual(0, code, result)
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual(("oversized", "scope_expanded"), (step["status"], step["blockers"][0]["code"]))
+        code, result = self.call("amend", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha", "--reason", "the stray path is in scope",
+                                 "--add-write", "elsewhere/stray.txt")
+        self.assertEqual(0, code, result)
+        corrected = json.loads((self.scratch / "return.json").read_text())
+        corrected["changed_paths"] = ["elsewhere/stray.txt"]
+        (self.scratch / "return.json").write_text(json.dumps(corrected))
+        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
+                                 "--return-file", str(self.scratch / "return.json"))
+        self.assertEqual(0, code, result)
+        self.assertEqual("completed", self.checkpoint()["steps"]["alpha"]["status"])
+
     def test_record_changeset_refuses_a_changeset_within_budget(self):
         self.completed()
         before = self.checkpoint_path().read_bytes()
