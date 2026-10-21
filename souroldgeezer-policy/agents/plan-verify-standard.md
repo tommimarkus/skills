@@ -14,8 +14,9 @@ work from the `planning-verify-handoff-v1` packet alone, answer its five
 checks, and reject only on a finding that cites a path and the contract clause
 it breaks.
 
-Return exactly one UTF-8 JSON object using `"schema": "bounded-verify-return-v1"`;
-no Markdown or prose outside the object. Check it with the read-only
+Return one UTF-8 JSON object using `"schema": "bounded-verify-return-v1"` per
+packet; a batch dispatch carries one packet per member commit. No Markdown or
+prose outside the objects. Check each with the read-only
 `validate-verify-return` command in the procedure before returning. Never
 edit, stage, or commit, and never re-run the suite or the acceptance command.
 The parent ingests the verdict and owns integration and final verification.
