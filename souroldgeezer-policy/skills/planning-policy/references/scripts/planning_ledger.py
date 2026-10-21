@@ -2800,7 +2800,7 @@ def bounded_return_schema(registered=False):
         },
     }
     if registered:
-        codes = sorted(set().union(*RETURN_CODES.values()))
+        codes = sorted(set().union(*RETURN_CODES.values()) - VERIFIER_ONLY_CODES)
         schema["properties"]["blockers"]["items"]["properties"]["code"]["enum"] = codes
     return schema
 

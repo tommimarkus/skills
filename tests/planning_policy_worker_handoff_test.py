@@ -293,7 +293,9 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
     def test_stamped_run_packet_carries_registered_schema_and_preflight_enforces_it(self) -> None:
         packet = self.handoff(self.started_run())
         enum = packet["return_schema"]["properties"]["blockers"]["items"]["properties"]["code"]["enum"]
-        self.assertEqual(sorted(code for family in ledger.RETURN_CODES.values() for code in family), enum)
+        returnable = {code for family in ledger.RETURN_CODES.values() for code in family}
+        self.assertEqual(sorted(returnable - ledger.VERIFIER_ONLY_CODES), enum)
+        self.assertNotIn("failed:verification", enum)
         self.assertEqual(packet["return_schema"], ledger.bounded_return_schema(registered=True))
         self.assertEqual("build", ledger.valid_worker_handoff(packet)["step_id"])
         code, result = self.validate_blocked(packet, "blocked:environment")
