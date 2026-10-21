@@ -25,6 +25,9 @@ overrides defaults.
    A fresh worker must finish from its handoff, including shared decisions.
    Refine the whole plan for its parent using the
    [orchestrator readability target](#orchestrator-readability).
+   Size each leaf to its changeset budget (see the
+   [plan contract](plan-contract.md#verification-and-changeset-budget)); split
+   or re-cut rather than raise a limit.
    Review acceptance for actual task coverage; structural validation cannot.
    Leaf acceptance covers its write set; whole-suite verification stays with
    the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
@@ -60,6 +63,14 @@ otherwise use the owning design skill.
 
 Select each leaf's portable tier and weighted readiness under the plan contract;
 the adapter maps tiers or returns its blocker. No per-leaf runtime tuning.
+
+Each completed leaf is also checked once by an independent read-only verifier
+([verify handoff](verify-handoff.md)) unless the plan sets
+`verification: closeout-only`; a run without delegation sets it at planning
+time and discloses it in the footer. The verifier is independent of the builder
+and never replaces the parent's integration or closeout verification. A verdict
+stands across the integration rebase; the scoped-acceptance rule below is
+unchanged.
 
 Final verification runs once, at closeout, never per integration cycle;
 per-integration checks are the helper's ancestry and fast-forward proofs, not
@@ -125,7 +136,7 @@ semantics. An agent reports bounded evidence and never self-escalates, alters
 its contract, or treats an oversized/missing-input stop as retryable work.
 
 The human plan includes one compact **Execution economics** line: expected/high
-attempts; tier mix; largest repeated-context driver; declared-model-token range
+attempts; verify dispatches; tier mix; largest repeated-context driver; declared-model-token range
 or `indeterminate`; final-verification reserve or `indeterminate`;
 `tracing: off`.
 Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
@@ -135,8 +146,9 @@ Adoption template (Codex uses its native approval/delegation wording):
 > `planning-policy: <profile> — before new feature or build work, brainstorm the
 > approach in plan mode and get it approved before implementing. The approved
 > plan says who runs each step; delegate decomposable work unless it states why
-> not, and keep integration and verification in the parent. Scope <globs>. Opt
-> out per task by saying "skip planning" (logged). Enforcement <model>.`
+> not, and keep integration and verification in the parent. Scope <globs>. verify:
+> per-leaf | closeout-only. Opt out per task by saying "skip planning"
+> (logged). Enforcement <model>.`
 
 Explicit scope overrides the bare default of new feature/build/creative
 work. Trivial edits, hotfixes, spikes, and domain-owned work are exceptions
@@ -153,5 +165,6 @@ Source: <initialization line | explicit request>
 Scope/exceptions: <in force>
 Plan mode: <entered | already active | fallback used (reason) | not available (reason)>
 Execution shape: <subagents: N steps (bands) | inline (case) | delegation unavailable (reason)>
+Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>
 Opt-outs: <none | phrase logged>
 ```

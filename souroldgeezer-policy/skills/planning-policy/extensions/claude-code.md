@@ -70,6 +70,14 @@ worker commits each member, runs its own acceptance command, and returns one
 redispatches followers as singles, and lands the batch once no member can
 still progress.
 
+Per-leaf verification dispatches `souroldgeezer-policy:plan-verify-standard`
+(`sonnet`/`medium`) for mechanical and standard builds, or
+`souroldgeezer-policy:plan-verify-analytical` (`opus`/`high`) for analytical and
+deep builds, as named by the packet's `verifier_tier`. Make one `Agent` call per
+`verify-handoff` packet group, passing the packet unchanged and never builder
+context or notes. An unavailable agent is `blocked:model_unavailable`; never
+downgrade.
+
 Never substitute a versioned model identifier for an alias and never silently
 downgrade a requested tier. If Claude Code cannot provide the requested alias or
 effort, return `blocked:model_unavailable` with the requested tier, alias, and

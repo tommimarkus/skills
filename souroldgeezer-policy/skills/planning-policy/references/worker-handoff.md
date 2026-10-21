@@ -45,6 +45,23 @@ checks again. A packet missing required input stops the worker with
 pass. The parent records the original submitted result and any correction as
 observed evidence, without inventing an execution attempt for artifact repair.
 
+In a `leaf_verify_v1` run the packet carries `changeset_budget`
+(`max_changed_lines`, `max_files`, `exempt_paths`, `base_commit`). Before
+committing, preflight the work read-only:
+
+```text
+python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" check-changeset --handoff-file HANDOFF --worktree WORKTREE [--base COMMIT]
+python3 -B "<skill-dir>/references/scripts/planning_ledger.py" check-changeset --handoff-file HANDOFF --worktree WORKTREE [--base COMMIT]
+```
+
+Verdicts are `pass`, `oversized:changeset`, and `outside_write_set` (an
+uncommitted path counts as outside). A batch follower's `base_commit` is empty;
+pass `--base` with the previous member's commit. Budget pressure resolves by
+stopping `oversized:changeset` with the unstarted remainder, never by deleting
+required content. A worker never returns `failed:verification`; only the ledger
+synthesizes it from a verifier reject, and the verifier procedure lives in
+[verify handoff](verify-handoff.md).
+
 The parent still calls `record-return` on the current run. An old packet may be
 internally valid while its attempt has been superseded; local preflight cannot
 establish live freshness. Acceptance, retry, integration and cleanup remain owned

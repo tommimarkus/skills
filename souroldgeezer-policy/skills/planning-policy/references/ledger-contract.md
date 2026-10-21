@@ -458,6 +458,19 @@ re-measures the returned commit, moves a completed step to `oversized` with
 `show --next-only` keeps `verify_pending` immediately before
 `integrate_completed` (land), which already precedes the failure retry.
 
+`init-v5` stamps `verify_policy: leaf_verify_v1` (plan `verification`
+`per-leaf` or absent) or `closeout_only`; a retained run without the stamp
+behaves as before. In `leaf_verify_v1`, `verify-handoff --actor parent` refuses
+unless `check-changeset` passes and emits one `planning-verify-handoff-v1`
+packet per unverified completed member (a batch gets one dispatch).
+`record-verify --actor parent --run-id R --return-file F` binds the verdict to
+the returned commit and refuses a moved HEAD or dirty worktree as verifier
+mutation. `land` and `transition --to integrated` refuse a completed step
+without a pass or inconclusive verdict for its returned commit. A changeset
+`outside_write_set` is recorded by `record-changeset` as record-return's
+repairable scope rejection; the parent may `amend` and re-record. The verifier
+procedure is [verify handoff](verify-handoff.md).
+
 ### Tracing
 
 Version-4 checkpoints contain no usage or trace field. Only an explicit request

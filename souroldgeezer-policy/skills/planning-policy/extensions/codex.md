@@ -66,6 +66,12 @@ first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
 and lands the batch once every member is completed or terminal.
 
+Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
+`verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
+`medium` for mechanical and standard builds, `gpt-5.6-sol` / `high` for
+analytical and deep builds, as named by `verifier_tier`. Never pass builder
+context.
+
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
 availability evidence; the parent reassigns the step or executes it locally.

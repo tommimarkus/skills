@@ -331,5 +331,29 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("validate_plan_contract.py` remains read-only", contract)
 
 
+    def test_verify_loop_is_routed_and_documented(self) -> None:
+        base = "souroldgeezer-policy/skills/planning-policy/"
+        entry = self.text(base + "SKILL.md")
+        workflow = self.text(base + "references/core-workflow.md")
+        handoff = self.text(base + "references/worker-handoff.md")
+        ledger = self.text(base + "references/ledger-contract.md")
+        claude = self.text(base + "extensions/claude-code.md")
+        codex = self.text(base + "extensions/codex.md")
+        self.assertIn("references/verify-handoff.md", entry)
+        self.assertIn("check-changeset", entry)
+        self.assertIn("Verify: <per-leaf (N verified, M rejected)", workflow)
+        self.assertIn("verify:\n> per-leaf | closeout-only", workflow)
+        self.assertIn("verify dispatches", workflow)
+        self.assertIn("stopping `oversized:changeset`", handoff)
+        self.assertIn("leaf_verify_v1", ledger)
+        self.assertIn("record-verify", ledger)
+        for adapter in (claude, codex):
+            self.assertIn("verifier_tier", adapter)
+            self.assertIn("never", adapter)
+        self.assertIn("plan-verify-standard", claude)
+        self.assertIn("plan-verify-analytical", claude)
+        self.assertIn("gpt-5.6-sol", codex)
+
+
 if __name__ == "__main__":
     unittest.main()

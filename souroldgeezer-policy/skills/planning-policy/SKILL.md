@@ -39,7 +39,8 @@ choice invokes its owning design skill before approval.
   in [worker handoff](references/worker-handoff.md). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to
-  recover the next action. The ledger alone owns retry remediation and tier
+  recover the next action. Builders preflight with `check-changeset`; the independent verifier follows
+  [verify handoff](references/verify-handoff.md). The ledger alone owns retry remediation and tier
   selection; approval and dispatch validation remain separate. Slicing an oversized
   plan into a successive series loads [plan series](references/plan-series.md).
 - **Compatibility or audit route only:** read
