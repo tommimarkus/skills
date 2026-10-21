@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .core import Error, WORKTREE_HELPER
+from .core import WORKTREE_HELPER, Error
 
 __all__ = [
     "git_common_dir",
@@ -82,10 +82,10 @@ def registered_worktrees(repo):
     entries, path = {}, None
     for line in result.stdout.splitlines():
         if line.startswith("worktree "):
-            path = Path(line[len("worktree "):]).resolve()
+            path = Path(line[len("worktree ") :]).resolve()
             entries[path] = ""
         elif line.startswith("branch ") and path is not None:
-            entries[path] = line[len("branch "):].removeprefix("refs/heads/")
+            entries[path] = line[len("branch ") :].removeprefix("refs/heads/")
     return entries
 
 
@@ -108,8 +108,7 @@ def verify_worktree_identity(repo, step, leaf, create_from):
     actual = registry[path.resolve()]
     if actual != owner:
         raise Error(
-            f"worktree {path} has branch {actual or 'detached'}, "
-            f"expected worktree_owner {owner}"
+            f"worktree {path} has branch {actual or 'detached'}, expected worktree_owner {owner}"
         )
 
 
@@ -147,7 +146,9 @@ def numstat_rows(worktree, base, commit):
 
 
 def dirty_paths(worktree):
-    entries = git_output(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+    entries = git_output(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split(
+        "\0"
+    )
     paths, index = [], 0
     while index < len(entries):
         entry = entries[index]

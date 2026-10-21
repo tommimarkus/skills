@@ -9,7 +9,8 @@ Module map:
 - vocabulary: constants, schema ids, return-code families, limits and policies.
 - core: Error, UsageError, canonical encoding and digest, identifiers, time, read_json,
   and the script path anchors derived from SCRIPTS_DIR.
-- gitops: the single git helper every git call goes through, plus the worktree-helper subprocess call.
+- gitops: the single git helper every git call goes through, plus the worktree-helper
+  subprocess call.
 - store: ledger root, run layout, atomic write, event append, safe_run_contents.
 - contract: plan validator seam over plancontract, leaves, amendments, effective leaves, capability
   binding and the host tier map.

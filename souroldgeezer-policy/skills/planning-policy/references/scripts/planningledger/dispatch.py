@@ -5,23 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .vocabulary import (
-    AMENDMENT_OPTIONAL,
-    BATCH_STOPPED_STATES,
-    COMMIT,
-    FORWARD_SCHEMA,
-    MAX_WORKER_HANDOFF,
-    MAX_WORKER_PROMPT,
-    PORTABLE_TIERS,
-    PRECISION_POLICIES,
-    REGISTERED_RETURN_CODES,
-    SHA40,
-    WORKTREE_RESULT_FIELDS,
-    WORKTREE_RESULT_OPTIONAL,
-)
-from .core import Error, LEDGER_SCRIPT, canon, digest, ident, read_json, rel, selected_step, uuid4
-from .store import event, write
-from .gitops import git_head, repository_top, verify_worktree_identity
+from .checkpoint import active_run, load_run, mutating_run, valid_remediation, validate_events
 from .contract import (
     effective_leaf,
     leaves_by_id,
@@ -29,7 +13,15 @@ from .contract import (
     valid_stored_binding,
     validator_module,
 )
-from .checkpoint import active_run, load_run, mutating_run, valid_remediation, validate_events
+from .core import LEDGER_SCRIPT, Error, canon, digest, ident, read_json, rel, selected_step, uuid4
+from .gitops import git_head, repository_top, verify_worktree_identity
+from .returns import (
+    advance,
+    bounded_return_schema,
+    step_result,
+    worker_handoff_context,
+    worker_handoff_digest,
+)
 from .schedule import (
     bounded_action_next,
     checkpoint_next,
@@ -43,12 +35,20 @@ from .schedule import (
     step_batches,
     transition_scope,
 )
-from .returns import (
-    advance,
-    bounded_return_schema,
-    step_result,
-    worker_handoff_context,
-    worker_handoff_digest,
+from .store import event, write
+from .vocabulary import (
+    AMENDMENT_OPTIONAL,
+    BATCH_STOPPED_STATES,
+    COMMIT,
+    FORWARD_SCHEMA,
+    MAX_WORKER_HANDOFF,
+    MAX_WORKER_PROMPT,
+    PORTABLE_TIERS,
+    PRECISION_POLICIES,
+    REGISTERED_RETURN_CODES,
+    SHA40,
+    WORKTREE_RESULT_FIELDS,
+    WORKTREE_RESULT_OPTIONAL,
 )
 
 __all__ = [
@@ -72,9 +72,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
     scope = transition_scope(args.plan_id, args.run_id)
     sid = step["id"]
     if step["status"] == "ready":
-        return bounded_action_next(
-            {"command": f"{scope} --step-id {sid} --to in_progress"}
-        )
+        return bounded_action_next({"command": f"{scope} --step-id {sid} --to in_progress"})
     if step["status"] == "in_progress":
         return bounded_action_next(
             {
@@ -160,9 +158,7 @@ def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summar
     """Validate a helper artifact and move one step to `integrated` or `cleaned`."""
     expected = "completed" if new == "integrated" else "integrated"
     old = step["status"]
-    value, result_path, result_sha = worktree_result(
-        path, directory, sid, step, leaf, new, batches
-    )
+    value, result_path, result_sha = worktree_result(path, directory, sid, step, leaf, new, batches)
     advance(step, old, expected, new, summary or new)
     if new == "integrated":
         step.update(
@@ -323,7 +319,13 @@ def store_dispatch_packet(directory, packet, member=None):
 
 
 def build_worker_handoff(
-    plan, step, plan_id, run_id, retry_remediation=None, registered=False, changeset_base=None,
+    plan,
+    step,
+    plan_id,
+    run_id,
+    retry_remediation=None,
+    registered=False,
+    changeset_base=None,
     precision=None,
 ):
     """Build one self-contained v5 worker assignment without mutating a ledger."""
@@ -356,21 +358,26 @@ def build_worker_handoff(
     host, executor = current.get("harness"), current.get("model_or_alias")
     if (
         current.get("agent_id") != agent_id
-        or not isinstance(host, str) or not 1 <= len(host) <= 160 or not host.strip()
-        or not isinstance(executor, str) or not 1 <= len(executor) <= 160 or not executor.strip()
+        or not isinstance(host, str)
+        or not 1 <= len(host) <= 160
+        or not host.strip()
+        or not isinstance(executor, str)
+        or not 1 <= len(executor) <= 160
+        or not executor.strip()
         or step.get("current_tier") not in PORTABLE_TIERS
     ):
         raise Error("worker handoff has an invalid current assignment")
     plan_sha256 = digest(plan)
     binding = step.get("capability_binding")
-    if (
-        digest(binding) != step.get("capability_binding_sha256")
-        or not valid_stored_binding(binding, plan_sha256, sid, leaf, current)
+    if digest(binding) != step.get("capability_binding_sha256") or not valid_stored_binding(
+        binding, plan_sha256, sid, leaf, current
     ):
         raise Error("blocked:capability_unavailable")
     remediation_path = step.get("retry_remediation_path", "")
     if remediation_path:
-        if retry_remediation is None or digest(retry_remediation) != step.get("retry_remediation_sha256"):
+        if retry_remediation is None or digest(retry_remediation) != step.get(
+            "retry_remediation_sha256"
+        ):
             raise Error("retry remediation artifact digest mismatch")
         valid_remediation(retry_remediation)
         if (
@@ -405,14 +412,19 @@ def build_worker_handoff(
     }
     if amendments:
         value["amendments"] = [
-            {key: item[key] for key in ("reason", "add_write", "add_read", *AMENDMENT_OPTIONAL) if key in item}
+            {
+                key: item[key]
+                for key in ("reason", "add_write", "add_read", *AMENDMENT_OPTIONAL)
+                if key in item
+            }
             for item in amendments
         ]
     if precision is not None:
         value["precision"] = precision
     if changeset_base is not None:
         value["changeset_budget"] = {
-            **validator_module().changeset_budget(leaf), "base_commit": changeset_base,
+            **validator_module().changeset_budget(leaf),
+            "base_commit": changeset_base,
         }
     value["handoff_sha256"] = worker_handoff_digest(value)
     if len(canon(value)) > MAX_WORKER_HANDOFF:
@@ -428,7 +440,11 @@ def step_handoff(directory, data, plan, step):
             "missing retry remediation artifact",
         )
     return build_worker_handoff(
-        plan, step, data["plan_id"], data["run_id"], remediation,
+        plan,
+        step,
+        data["plan_id"],
+        data["run_id"],
+        remediation,
         registered=data.get("return_codes") == REGISTERED_RETURN_CODES,
         changeset_base=(
             step.get("base_commit", "") if data.get("verify_policy") == "leaf_verify_v1" else None
@@ -486,9 +502,7 @@ def dispatch(args):
     packets = [step_handoff(directory, data, plan, data["steps"][member]) for member in group]
     batch = leafs[group[0]].get("batch") if len(group) > 1 else None
     entries = [
-        store_dispatch_packet(
-            directory, packet, (index, len(group), batch) if batch else None
-        )
+        store_dispatch_packet(directory, packet, (index, len(group), batch) if batch else None)
         for index, packet in enumerate(packets, 1)
     ]
     for member, old, attempt_id in moves:

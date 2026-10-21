@@ -6,6 +6,16 @@ import json
 import uuid
 from pathlib import Path
 
+from .checkpoint import retained_pipeline_steps, valid_remediation
+from .contract import (
+    binding_for_step,
+    capability_bindings,
+    host_entry,
+    host_step_binding,
+    tier_alias,
+)
+from .core import Error, digest, proxy_tokens, read_json, rel
+from .store import write
 from .vocabulary import (
     BATCH_ACTIVE_STATES,
     BATCH_DEPENDENCY_STATES,
@@ -21,16 +31,6 @@ from .vocabulary import (
     TERMINAL_RETRY_REASONS,
     VERIFY_PASSING,
 )
-from .core import Error, digest, proxy_tokens, read_json, rel
-from .store import write
-from .contract import (
-    binding_for_step,
-    capability_bindings,
-    host_entry,
-    host_step_binding,
-    tier_alias,
-)
-from .checkpoint import retained_pipeline_steps, valid_remediation
 
 __all__ = [
     "bounded_next",
@@ -82,11 +82,7 @@ def bounded_next(value, droppable=(), trimmable=""):
         if proxy_tokens(value) <= MAX_NEXT_TOKENS:
             return value
         value.pop(key, None)
-    while (
-        proxy_tokens(value) > MAX_NEXT_TOKENS
-        and trimmable
-        and len(value.get(trimmable, [])) > 1
-    ):
+    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
         value[trimmable].pop()
         value["truncated"] = True
     return value
@@ -94,11 +90,7 @@ def bounded_next(value, droppable=(), trimmable=""):
 
 def bounded_action_next(value, trimmable=""):
     """Keep the first legal command while trimming a convenience collection."""
-    while (
-        proxy_tokens(value) > MAX_NEXT_TOKENS
-        and trimmable
-        and len(value.get(trimmable, [])) > 1
-    ):
+    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
         value[trimmable].pop()
         value["truncated"] = True
     if proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable:
@@ -138,8 +130,7 @@ def verify_commands(data, step_id):
     return {
         "command": f"{scope} check-changeset --run-id {data['run_id']} --step-id {step_id}",
         "then": (
-            f"{scope} verify-handoff --actor parent --run-id {data['run_id']} "
-            f"--step-id {step_id}"
+            f"{scope} verify-handoff --actor parent --run-id {data['run_id']} --step-id {step_id}"
         ),
     }
 
@@ -371,10 +362,7 @@ def ready(args, directory, data, plan, batches, step):
         }
     current = step["current_assignment"]
     stored = step["capability_binding"]["bindings"][0]
-    if (
-        stored["host"] != current["harness"]
-        or stored["executor"] != current["model_or_alias"]
-    ):
+    if stored["host"] != current["harness"] or stored["executor"] != current["model_or_alias"]:
         if args.capability_binding_file:
             replacement = capability_bindings(args.capability_binding_file, plan)
             resolved = binding_for_step(
@@ -389,7 +377,11 @@ def ready(args, directory, data, plan, batches, step):
             # A host run derives the re-binding exactly as init does, reusing the stored evidence.
             leaf = next(item for item in plan["leaves"] if item["id"] == step["id"])
             item = host_step_binding(
-                leaf, data["host"], host_entry(data["host"]), step["current_tier"], stored["evidence"]
+                leaf,
+                data["host"],
+                host_entry(data["host"]),
+                step["current_tier"],
+                stored["evidence"],
             )
             resolved = {
                 "schema": step["capability_binding"]["schema"],
@@ -480,11 +472,14 @@ def with_concurrent(data, batches, block):
     if block.get("category") in NON_ACTION_CATEGORIES:
         return block
     named = {
-        item for value in block.values()
-        for item in (value if isinstance(value, list) else [value]) if isinstance(item, str)
+        item
+        for value in block.values()
+        for item in (value if isinstance(value, list) else [value])
+        if isinstance(item, str)
     }
     others = [
-        sid for sid in startable_step_ids(data, ordered_steps(data["steps"]), batches)
+        sid
+        for sid in startable_step_ids(data, ordered_steps(data["steps"]), batches)
         if sid not in named
     ][:MAX_CONCURRENT]
     while others:
@@ -508,9 +503,7 @@ def verify_issued(step):
 def primary_next(directory, data, batches, plan):
     """Select one highest-priority legal action from the checkpoint."""
     if data["run_status"] == "closed":
-        return bounded_action_next(
-            {"category": "terminal_closed", "outcome": data["outcome"]}
-        )
+        return bounded_action_next({"category": "terminal_closed", "outcome": data["outcome"]})
 
     stacked = retained_pipeline_steps(data)
     if stacked:
@@ -550,8 +543,11 @@ def primary_next(directory, data, batches, plan):
         completed = [sid for sid in completed if sid not in issued]
         if unverified:
             return bounded_action_next(
-                {"category": "verify_pending", "step_ids": unverified,
-                 **verify_commands(data, unverified[0])},
+                {
+                    "category": "verify_pending",
+                    "step_ids": unverified,
+                    **verify_commands(data, unverified[0]),
+                },
                 "step_ids",
             )
         # A rejected member holds its batch: only a retry routes it onward.

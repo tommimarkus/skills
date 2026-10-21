@@ -6,7 +6,7 @@ import json
 import shutil
 
 from . import core
-from .vocabulary import MAX_TOKENS
+from .checkpoint import refuse_retired, retired_contract, validate_events, validate_run
 from .core import (
     Error,
     bounded_reason,
@@ -18,7 +18,7 @@ from .core import (
     uuid4,
 )
 from .store import root, safe_run_contents
-from .checkpoint import refuse_retired, retired_contract, validate_events, validate_run
+from .vocabulary import MAX_TOKENS
 
 __all__ = [
     "invalid_entry",

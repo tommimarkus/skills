@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .vocabulary import MAX_SERIES_HANDOFF, SERIES_HANDOFF_LIST_FIELDS, SERIES_HANDOFF_SCHEMA
+from .checkpoint import valid_series_handoff, validate_events, validate_run
 from .core import Error, ident, read_json, uuid4
 from .store import safe_run_contents
-from .checkpoint import valid_series_handoff, validate_events, validate_run
+from .vocabulary import MAX_SERIES_HANDOFF, SERIES_HANDOFF_LIST_FIELDS, SERIES_HANDOFF_SCHEMA
 
 __all__ = [
     "load_predecessor_run",

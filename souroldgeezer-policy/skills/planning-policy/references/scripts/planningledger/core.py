@@ -1,4 +1,6 @@
-"""Planning ledger core: errors, canonical encoding, identifiers, time, validation primitives and path anchors."""
+"""Planning ledger core: errors, canonical encoding, identifiers, time, validation primitives and
+path anchors.
+"""
 
 from __future__ import annotations
 
@@ -41,7 +43,9 @@ __all__ = [
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 LEDGER_SCRIPT = SCRIPTS_DIR / "planning_ledger.py"
 HOST_TIERS_FILE = SCRIPTS_DIR.parent / "host-tiers.json"
-WORKTREE_HELPER = SCRIPTS_DIR.parents[2] / "git-workflow-policy/references/scripts/planning_worktree.py"
+WORKTREE_HELPER = (
+    SCRIPTS_DIR.parents[2] / "git-workflow-policy/references/scripts/planning_worktree.py"
+)
 
 
 class Error(Exception):

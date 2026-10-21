@@ -341,7 +341,12 @@ VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
 RETAINED_PIPELINE_POLICY = "provisional_v1"
 
 
-RETAINED_PIPELINE_FIELDS = ("provisional_base", "upstream_stale", "upstream_change", "pending_acceptance")
+RETAINED_PIPELINE_FIELDS = (
+    "provisional_base",
+    "upstream_stale",
+    "upstream_change",
+    "pending_acceptance",
+)
 
 
 RETAINED_PIPELINE_CODE = "blocked:upstream_changed"
@@ -351,7 +356,10 @@ MAX_CONCURRENT = 4
 
 
 NON_ACTION_CATEGORIES = {
-    "terminal_closed", "terminal_blocked", "validate_closeout", "contract_migration_required",
+    "terminal_closed",
+    "terminal_blocked",
+    "validate_closeout",
+    "contract_migration_required",
 }
 
 
@@ -378,7 +386,10 @@ VERIFY_PASSING = {"pass", "inconclusive"}
 
 
 VERIFY_CODES = {
-    "verify:coverage", "verify:decision", "verify:regression", "verify:scope_creep",
+    "verify:coverage",
+    "verify:decision",
+    "verify:regression",
+    "verify:scope_creep",
     "verify:acceptance_gap",
 }
 
@@ -387,10 +398,29 @@ VERIFY_FINDING_FIELDS = {"code", "path", "line", "clause", "summary"}
 
 
 VERIFY_HANDOFF_FIELDS = {
-    "schema", "packet_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "attempt_id",
-    "agent_id", "verify_id", "verifier_tier", "task", "boundary", "settled_decisions",
-    "write_set", "acceptance_command", "cohesive_outcome", "acceptance_exit_code",
-    "base_commit", "returned_commit", "budget", "changeset", "prior_verify", "return_schema",
+    "schema",
+    "packet_sha256",
+    "plan_id",
+    "run_id",
+    "plan_sha256",
+    "step_id",
+    "attempt_id",
+    "agent_id",
+    "verify_id",
+    "verifier_tier",
+    "task",
+    "boundary",
+    "settled_decisions",
+    "write_set",
+    "acceptance_command",
+    "cohesive_outcome",
+    "acceptance_exit_code",
+    "base_commit",
+    "returned_commit",
+    "budget",
+    "changeset",
+    "prior_verify",
+    "return_schema",
 }
 
 
@@ -401,8 +431,10 @@ VERIFY_HANDOFF_OPTIONAL = {"outside_write_set", "outside_write_set_count"}
 # The verifier is read-only: mechanical and standard builds get the standard
 # verifier, analytical and deep builds the analytical one.
 VERIFIER_AGENTS = {
-    "mechanical": "plan-verify-standard", "standard": "plan-verify-standard",
-    "analytical": "plan-verify-analytical", "deep": "plan-verify-analytical",
+    "mechanical": "plan-verify-standard",
+    "standard": "plan-verify-standard",
+    "analytical": "plan-verify-analytical",
+    "deep": "plan-verify-analytical",
 }
 
 
@@ -504,9 +536,25 @@ RAW_USAGE_FIELDS = {
 
 
 WORKER_HANDOFF_FIELDS = {
-    "schema", "contract_version", "handoff_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "agent_id",
-    "attempt_id", "plan_context", "leaf", "work_unit", "worktree", "portable_tier", "host",
-    "executor", "capability_binding", "retry_remediation", "return_schema",
+    "schema",
+    "contract_version",
+    "handoff_sha256",
+    "plan_id",
+    "run_id",
+    "plan_sha256",
+    "step_id",
+    "agent_id",
+    "attempt_id",
+    "plan_context",
+    "leaf",
+    "work_unit",
+    "worktree",
+    "portable_tier",
+    "host",
+    "executor",
+    "capability_binding",
+    "retry_remediation",
+    "return_schema",
 }
 
 

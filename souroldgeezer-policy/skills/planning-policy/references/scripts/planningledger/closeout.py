@@ -9,17 +9,23 @@ import uuid
 from pathlib import Path
 
 from . import contract, core, gitops
-from .vocabulary import (
-    CLOSEOUT_FIELDS,
-    COMMIT,
-    ESCALATING_RETRY_POLICY,
-    FORWARD_SCHEMA,
-    MAX_CHECKPOINT,
-    MAX_CHECK_OUTSIDE,
-    MAX_NEXT_ONLY_TOKENS,
-    MAX_SERIES_HANDOFF,
-    MAX_TOKENS,
-    REGISTERED_RETURN_CODES,
+from .checkpoint import (
+    active_run,
+    load_run,
+    mutating_run,
+    require_no_retained_pipeline,
+    retired_contract,
+    validate_events,
+)
+from .contract import (
+    assignments,
+    binding_for_step,
+    capability_bindings,
+    checked_assignments,
+    checked_binding,
+    derived_setup,
+    leaves_by_id,
+    read_plan,
 )
 from .core import (
     Error,
@@ -35,26 +41,9 @@ from .core import (
     selected_step,
     timestamp,
 )
-from .store import event, initial_event, plan_dir, root, write
+from .dispatch import apply_worktree_result, next_after_transition, require_verified
 from .gitops import helper_error, primary_checkout, repository_top
-from .contract import (
-    assignments,
-    binding_for_step,
-    capability_bindings,
-    checked_assignments,
-    checked_binding,
-    derived_setup,
-    leaves_by_id,
-    read_plan,
-)
-from .checkpoint import (
-    active_run,
-    load_run,
-    mutating_run,
-    require_no_retained_pipeline,
-    retired_contract,
-    validate_events,
-)
+from .retention import collect_ledgers, scan_ledgers
 from .schedule import (
     batch_settled,
     bounded_action_next,
@@ -73,8 +62,19 @@ from .schedule import (
     step_batches,
 )
 from .series import series_close_handoff, series_predecessor_disclosure
-from .dispatch import apply_worktree_result, next_after_transition, require_verified
-from .retention import collect_ledgers, scan_ledgers
+from .store import event, initial_event, plan_dir, root, write
+from .vocabulary import (
+    CLOSEOUT_FIELDS,
+    COMMIT,
+    ESCALATING_RETRY_POLICY,
+    FORWARD_SCHEMA,
+    MAX_CHECK_OUTSIDE,
+    MAX_CHECKPOINT,
+    MAX_NEXT_ONLY_TOKENS,
+    MAX_SERIES_HANDOFF,
+    MAX_TOKENS,
+    REGISTERED_RETURN_CODES,
+)
 
 __all__ = [
     "refuse_unowned_pins",
@@ -109,7 +109,9 @@ def init5(args):
     if args.host and any(supplied):
         raise UsageError("--host derives the assignments and binding; pass neither file")
     if not args.host and not all(supplied):
-        raise UsageError("pass --assignments-file and --capability-binding-file, or --host with --evidence")
+        raise UsageError(
+            "pass --assignments-file and --capability-binding-file, or --host with --evidence"
+        )
     if args.host:
         derived, derived_binding = derived_setup(plan, args.host, args.evidence)
         assigned = checked_assignments(derived, plan)
@@ -200,7 +202,9 @@ def init5(args):
         "close_reason": "",
         "retry_policy": ESCALATING_RETRY_POLICY,
         "return_codes": REGISTERED_RETURN_CODES,
-        "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
+        "verify_policy": "closeout_only"
+        if plan.get("verification") == "closeout-only"
+        else "leaf_verify_v1",
         "precision_policy": "strict_v1" if plan.get("precision") == "strict" else "standard_v1",
         **({"host": args.host} if args.host else {}),
         "steps": steps,
@@ -253,8 +257,16 @@ def land(args):
     repo = repository_top(args)
     leaf = leafs[sid]
     worktree = step["assignment"]["worktree"]
-    base = ("--repo-root", str(repo), "--target", args.target, "--branch", leaf["worktree_owner"],
-            "--worktree", worktree)
+    base = (
+        "--repo-root",
+        str(repo),
+        "--target",
+        args.target,
+        "--branch",
+        leaf["worktree_owner"],
+        "--worktree",
+        worktree,
+    )
     landed = [member for member in group if data["steps"][member]["status"] == "completed"]
     for member in landed:
         require_verified(data, member, data["steps"][member])
@@ -262,7 +274,11 @@ def land(args):
         commits = {member: data["steps"][member]["returned_commit"] for member in landed}
         if not all(COMMIT.fullmatch(commit) for commit in commits.values()):
             raise Error("completed step has no returned commit to integrate")
-        extra = [f"--batch-commit={member}={commits[member]}" for member in landed] if len(group) > 1 else []
+        extra = (
+            [f"--batch-commit={member}={commits[member]}" for member in landed]
+            if len(group) > 1
+            else []
+        )
         value, ok = gitops.run_worktree_helper(
             "integrate", *base, "--source-commit", commits[landed[-1]], *extra
         )
@@ -271,16 +287,27 @@ def land(args):
         with tempfile.TemporaryDirectory() as scratch:
             artifact = Path(scratch) / "integrate.json"
             artifact.write_text(json.dumps(value))
-            # Validate every member before persisting any, so a bad artifact leaves the ledger unchanged.
+            # Validate every member before persisting any, so a bad artifact leaves the ledger
+            # unchanged.
             for member in landed:
                 apply_worktree_result(
-                    str(artifact), directory, member, data["steps"][member],
-                    leafs[member], "integrated", batches, args.summary,
+                    str(artifact),
+                    directory,
+                    member,
+                    data["steps"][member],
+                    leafs[member],
+                    "integrated",
+                    batches,
+                    args.summary,
                 )
         for member in landed:
             event(
-                directory, data, f"transition-v{data['schema']}", step_id=member,
-                from_status="completed", to_status="integrated",
+                directory,
+                data,
+                f"transition-v{data['schema']}",
+                step_id=member,
+                from_status="completed",
+                to_status="integrated",
                 attempt_id=data["steps"][member]["attempt_id"],
             )
     cleanable = [member for member in group if data["steps"][member]["status"] == "integrated"]
@@ -293,20 +320,32 @@ def land(args):
     }
     if cleanable:
         recorded = directory / data["steps"][cleanable[0]]["integration_result_path"]
-        value, ok = gitops.run_worktree_helper("cleanup", *base, "--integrated-result", str(recorded))
+        value, ok = gitops.run_worktree_helper(
+            "cleanup", *base, "--integrated-result", str(recorded)
+        )
         if ok:
             with tempfile.TemporaryDirectory() as scratch:
                 artifact = Path(scratch) / "cleanup.json"
                 artifact.write_text(json.dumps(value))
                 for member in cleanable:
                     apply_worktree_result(
-                        str(artifact), directory, member, data["steps"][member],
-                        leafs[member], "cleaned", batches, args.summary,
+                        str(artifact),
+                        directory,
+                        member,
+                        data["steps"][member],
+                        leafs[member],
+                        "cleaned",
+                        batches,
+                        args.summary,
                     )
             for member in cleanable:
                 event(
-                    directory, data, f"transition-v{data['schema']}", step_id=member,
-                    from_status="integrated", to_status="cleaned",
+                    directory,
+                    data,
+                    f"transition-v{data['schema']}",
+                    step_id=member,
+                    from_status="integrated",
+                    to_status="cleaned",
                     attempt_id=data["steps"][member]["attempt_id"],
                 )
             result["cleaned"] = cleanable
@@ -620,7 +659,5 @@ def validate(args):
         # `series_close_handoff`), so the hinted command names it up front.
         if series_non_final(plan):
             command += " --series-handoff-file <path>"
-        result["next"] = bounded_action_next(
-            series_closeout_overlay(plan, {"command": command})
-        )
+        result["next"] = bounded_action_next(series_closeout_overlay(plan, {"command": command}))
     return result

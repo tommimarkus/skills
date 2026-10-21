@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from planningledger import plancontract as _implementation
+from planningledger.plancontract import main
 
 # Callers and tests reach every module-level name, private ones included.
 globals().update({k: v for k, v in vars(_implementation).items() if not k.startswith("__")})

@@ -6,6 +6,30 @@ import json
 from pathlib import Path
 
 from . import contract
+from .contract import (
+    checkpoint_binding,
+    effective_leaves,
+    host_tiers,
+    leaves_by_id,
+    valid_stored_binding,
+    validate_amendment_events,
+)
+from .core import (
+    Error,
+    canon,
+    dependency_order,
+    digest,
+    ident,
+    parent,
+    read_json,
+    rel,
+    require_sha256,
+    required_file,
+    retained_until,
+    timestamp,
+    uuid4,
+)
+from .store import plan_dir, run_dir, safe_run_contents
 from .vocabulary import (
     CLOSEOUT_FIELDS,
     COMMIT,
@@ -33,30 +57,6 @@ from .vocabulary import (
     STEP_STATES,
     VERIFY_POLICIES,
 )
-from .core import (
-    Error,
-    canon,
-    dependency_order,
-    digest,
-    ident,
-    parent,
-    read_json,
-    rel,
-    require_sha256,
-    required_file,
-    retained_until,
-    timestamp,
-    uuid4,
-)
-from .store import plan_dir, safe_run_contents, run_dir
-from .contract import (
-    checkpoint_binding,
-    effective_leaves,
-    host_tiers,
-    leaves_by_id,
-    valid_stored_binding,
-    validate_amendment_events,
-)
 
 __all__ = [
     "retained_pipeline_steps",
@@ -82,7 +82,8 @@ __all__ = [
 def retained_pipeline_steps(data):
     """Steps still carrying state from the removed provisional-start pipeline."""
     return [
-        sid for sid, step in sorted(data["steps"].items())
+        sid
+        for sid, step in sorted(data["steps"].items())
         if any(step.get(field) is not None for field in RETAINED_PIPELINE_FIELDS)
         or any(
             isinstance(blocker, dict) and blocker.get("code") == RETAINED_PIPELINE_CODE
@@ -208,7 +209,7 @@ def validate_steps(data, leafs):
                 "blocked:plan_tampered",
             )
     # Retained provisional_v1 state stays well-formed so read-only commands can load it.
-    for sid, step in steps.items():
+    for step in steps.values():
         for field, keys in (
             ("upstream_stale", {"step_id", "commit"}),
             ("upstream_change", {"old", "new"}),
@@ -240,8 +241,16 @@ def validate_events(directory, data):
     previous = 0
     # "restack" is accepted only in the history of a retained provisional_v1 run.
     actions = {
-        "init-v5", "transition-v5", "record-return", "close-v5", "reopen-v5",
-        "amend-v5", "verify-handoff", "record-verify", "record-changeset", "restack",
+        "init-v5",
+        "transition-v5",
+        "record-return",
+        "close-v5",
+        "reopen-v5",
+        "amend-v5",
+        "verify-handoff",
+        "record-verify",
+        "record-changeset",
+        "restack",
     }
     try:
         lines = path.read_text().splitlines()
@@ -328,8 +337,13 @@ def validate_run(directory, data, plan_id, run_id):
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
-    plan_result = contract.plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
-    if not plan_result.get("dispatch_ready") or plan_result.get("contract_version") != FORWARD_SCHEMA:
+    plan_result = contract.plan_validator()(
+        plan, capability_binding=checkpoint_binding(data), admission=False
+    )
+    if (
+        not plan_result.get("dispatch_ready")
+        or plan_result.get("contract_version") != FORWARD_SCHEMA
+    ):
         raise Error("blocked:plan_tampered")
     if set(data.get("steps", {})) != set(leaves_by_id(plan)):
         raise Error("blocked:plan_tampered")
@@ -343,7 +357,9 @@ def validate_run(directory, data, plan_id, run_id):
     validate_series_handoff(directory, data, plan)
     for name in ("returns", "retry-remediations"):
         folder = directory / name
-        if folder.exists() and any(step_dir.name not in data["steps"] for step_dir in folder.iterdir()):
+        if folder.exists() and any(
+            step_dir.name not in data["steps"] for step_dir in folder.iterdir()
+        ):
             raise Error(f"unexpected {name} step")
     lifecycle(data)
     return plan, leafs

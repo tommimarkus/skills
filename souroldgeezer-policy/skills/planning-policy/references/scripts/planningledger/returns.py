@@ -7,6 +7,38 @@ import sys
 from pathlib import Path
 
 from . import contract
+from .checkpoint import mutating_run, scope_rejection_state, valid_remediation
+from .contract import (
+    effective_leaf,
+    leaves_by_id,
+    outside_paths,
+    standard_precision,
+    valid_amendments,
+    valid_stored_binding,
+)
+from .core import (
+    Error,
+    bounded_reason,
+    canon,
+    digest,
+    ident,
+    rel,
+    require_sha256,
+    selected_step,
+    uuid4,
+)
+from .schedule import (
+    attempt_return_recorded,
+    batch_settled,
+    bounded_action_next,
+    bounded_next,
+    checkpoint_next,
+    land_command,
+    retry_class,
+    step_batches,
+    verify_commands,
+)
+from .store import event, write
 from .vocabulary import (
     AMENDABLE_STATES,
     CHANGESET_BUDGET_FIELDS,
@@ -17,15 +49,15 @@ from .vocabulary import (
     MAX_ACCEPTANCE_SUMMARY,
     MAX_AMENDED_ATTEMPTS,
     MAX_AMENDED_COMMAND,
-    MAX_AMENDMENTS,
     MAX_AMENDMENT_PATHS,
-    MAX_BLOCKERS,
+    MAX_AMENDMENTS,
     MAX_BLOCKER_CODE,
     MAX_BLOCKER_SUMMARY,
+    MAX_BLOCKERS,
     MAX_CHANGED_PATHS,
     MAX_CHECK_OUTSIDE,
-    MAX_NOTES,
     MAX_NOTE_MESSAGE,
+    MAX_NOTES,
     MAX_PATH,
     MAX_REMAINDER,
     MAX_REMAINDER_ITEM,
@@ -42,38 +74,6 @@ from .vocabulary import (
     SHA,
     VERIFIER_ONLY_CODES,
     WORKER_HANDOFF_FIELDS,
-)
-from .core import (
-    Error,
-    bounded_reason,
-    canon,
-    digest,
-    ident,
-    rel,
-    require_sha256,
-    selected_step,
-    uuid4,
-)
-from .store import event, write
-from .contract import (
-    effective_leaf,
-    leaves_by_id,
-    outside_paths,
-    standard_precision,
-    valid_amendments,
-    valid_stored_binding,
-)
-from .checkpoint import mutating_run, scope_rejection_state, valid_remediation
-from .schedule import (
-    attempt_return_recorded,
-    batch_settled,
-    bounded_action_next,
-    bounded_next,
-    checkpoint_next,
-    land_command,
-    retry_class,
-    step_batches,
-    verify_commands,
 )
 
 __all__ = [
@@ -257,13 +257,17 @@ def valid_return(value, data, step, leaf, registered=None, standard=False):
         raise Error("non-completed returns require blockers")
     if registered:
         if any(blocker["code"] in VERIFIER_ONLY_CODES for blocker in blockers):
-            raise Error("failed:verification is recorded only by the ledger, never returned by a worker")
+            raise Error(
+                "failed:verification is recorded only by the ledger, never returned by a worker"
+            )
         allowed = set().union(*RETURN_CODES.values()) - VERIFIER_ONLY_CODES
         if any(blocker["code"] not in allowed for blocker in blockers):
             raise Error("blocker code is not registered: use " + ", ".join(sorted(allowed)))
         family = RETURN_CODES.get(value["status"], ())
         if family and not any(blocker["code"] in family for blocker in blockers):
-            raise Error(f"{value['status']} return requires a code of its own: " + ", ".join(family))
+            raise Error(
+                f"{value['status']} return requires a code of its own: " + ", ".join(family)
+            )
     if value["status"] == "oversized" and not rem:
         raise Error("oversized return requires unstarted_remainder")
     return value
@@ -280,8 +284,17 @@ def bounded_return_schema(registered=False):
         "type": "object",
         "additionalProperties": False,
         "required": [
-            "schema", "step_id", "attempt_id", "agent_id", "status", "changed_paths",
-            "acceptance", "blockers", "notes", "unstarted_remainder", "commit_hash",
+            "schema",
+            "step_id",
+            "attempt_id",
+            "agent_id",
+            "status",
+            "changed_paths",
+            "acceptance",
+            "blockers",
+            "notes",
+            "unstarted_remainder",
+            "commit_hash",
         ],
         "properties": {
             "schema": {"const": "bounded-step-return-v1"},
@@ -290,11 +303,14 @@ def bounded_return_schema(registered=False):
             "agent_id": {"type": "string", "minLength": 1, "maxLength": 128},
             "status": {"type": "string", "enum": sorted(RETURN_STATUSES)},
             "changed_paths": {
-                "type": "array", "maxItems": MAX_CHANGED_PATHS, "uniqueItems": True,
+                "type": "array",
+                "maxItems": MAX_CHANGED_PATHS,
+                "uniqueItems": True,
                 "items": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
             },
             "acceptance": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": ["command", "exit_code", "summary"],
                 "dependentRequired": {"evidence_path": ["sha256"], "sha256": ["evidence_path"]},
                 "properties": {
@@ -305,9 +321,11 @@ def bounded_return_schema(registered=False):
                 },
             },
             "blockers": {
-                "type": "array", "maxItems": MAX_BLOCKERS,
+                "type": "array",
+                "maxItems": MAX_BLOCKERS,
                 "items": {
-                    "type": "object", "additionalProperties": False,
+                    "type": "object",
+                    "additionalProperties": False,
                     "required": ["code", "summary"],
                     "dependentRequired": {"evidence_path": ["sha256"], "sha256": ["evidence_path"]},
                     "properties": {
@@ -318,9 +336,11 @@ def bounded_return_schema(registered=False):
                 },
             },
             "notes": {
-                "type": "array", "maxItems": MAX_NOTES,
+                "type": "array",
+                "maxItems": MAX_NOTES,
                 "items": {
-                    "type": "object", "additionalProperties": False,
+                    "type": "object",
+                    "additionalProperties": False,
                     "required": ["type", "message"],
                     "properties": {
                         "type": {"type": "string", "enum": sorted(NOTE_TYPES)},
@@ -329,7 +349,8 @@ def bounded_return_schema(registered=False):
                 },
             },
             "unstarted_remainder": {
-                "type": "array", "maxItems": MAX_REMAINDER,
+                "type": "array",
+                "maxItems": MAX_REMAINDER,
                 "items": {"type": "string", "minLength": 1, "maxLength": MAX_REMAINDER_ITEM},
             },
             "commit_hash": {"type": "string", "pattern": COMMIT.pattern[:-1] + "?$"},
@@ -342,10 +363,13 @@ def bounded_return_schema(registered=False):
 
 
 def worker_handoff_digest(value):
-    return digest({
-        key: item for key, item in value.items()
-        if key != "handoff_sha256" and key not in DISPATCH_ENTRY_FIELDS
-    })
+    return digest(
+        {
+            key: item
+            for key, item in value.items()
+            if key != "handoff_sha256" and key not in DISPATCH_ENTRY_FIELDS
+        }
+    )
 
 
 def worker_handoff_context(plan):
@@ -363,7 +387,10 @@ def worker_handoff_context(plan):
         or not 1 <= len(context["scope_summary"]) <= 480
         or not isinstance(context["approved_decisions"], list)
         or not 1 <= len(context["approved_decisions"]) <= 8
-        or any(not isinstance(item, str) or not 1 <= len(item) <= 240 for item in context["approved_decisions"])
+        or any(
+            not isinstance(item, str) or not 1 <= len(item) <= 240
+            for item in context["approved_decisions"]
+        )
     ):
         raise Error("invalid worker handoff plan context")
     return context
@@ -372,10 +399,16 @@ def worker_handoff_context(plan):
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments", "changeset_budget", "precision", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
-            or value.get("contract_version") != FORWARD_SCHEMA):
+    if (
+        set(value) - {"amendments", "changeset_budget", "precision", *DISPATCH_ENTRY_FIELDS}
+        != WORKER_HANDOFF_FIELDS
+        or value.get("schema") != "planning-worker-handoff-v1"
+        or value.get("contract_version") != FORWARD_SCHEMA
+    ):
         raise Error("invalid planning-worker-handoff-v1 schema")
-    if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
+    if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(
+        value["handoff_sha256"]
+    ):
         raise Error("invalid worker handoff sha256")
     if value["handoff_sha256"] != worker_handoff_digest(value):
         raise Error("worker handoff digest mismatch")
@@ -390,8 +423,10 @@ def valid_worker_handoff(value):
     leaf = value.get("leaf")
     unit = value.get("work_unit")
     if (
-        not isinstance(leaf, dict) or leaf.get("id") != sid
-        or not isinstance(unit, dict) or unit.get("id") != leaf.get("work_unit_id")
+        not isinstance(leaf, dict)
+        or leaf.get("id") != sid
+        or not isinstance(unit, dict)
+        or unit.get("id") != leaf.get("work_unit_id")
     ):
         raise Error("invalid worker handoff assignment")
     if (
@@ -404,8 +439,14 @@ def valid_worker_handoff(value):
         raise Error("invalid worker handoff worktree")
     if value.get("portable_tier") not in PORTABLE_TIERS:
         raise Error("invalid worker handoff portable tier")
-    current = {"agent_id": value["agent_id"], "harness": value.get("host"), "model_or_alias": value.get("executor")}
-    if not valid_stored_binding(value.get("capability_binding"), value["plan_sha256"], sid, leaf, current):
+    current = {
+        "agent_id": value["agent_id"],
+        "harness": value.get("host"),
+        "model_or_alias": value.get("executor"),
+    }
+    if not valid_stored_binding(
+        value.get("capability_binding"), value["plan_sha256"], sid, leaf, current
+    ):
         raise Error("invalid worker handoff capability binding")
     if "precision" in value and value["precision"] not in set(PRECISION_POLICIES.values()):
         raise Error("invalid worker handoff precision")
@@ -424,15 +465,18 @@ def valid_worker_handoff(value):
     ):
         raise Error("invalid worker handoff changeset budget")
     amendments = value.get("amendments", [])
-    if not isinstance(amendments, list) or len(amendments) > MAX_AMENDMENTS or (
-        "amendments" in value and not amendments
+    if (
+        not isinstance(amendments, list)
+        or len(amendments) > MAX_AMENDMENTS
+        or ("amendments" in value and not amendments)
     ):
         raise Error("invalid worker handoff amendments")
     remediation = value.get("retry_remediation")
     if remediation is not None:
         valid_remediation(remediation)
         if (
-            remediation["step_id"] != sid or remediation["next_agent_id"] != value["agent_id"]
+            remediation["step_id"] != sid
+            or remediation["next_agent_id"] != value["agent_id"]
             or remediation["next_harness"] != value["host"]
             or remediation["target_portable_tier"] != value["portable_tier"]
         ):
@@ -444,7 +488,9 @@ def valid_worker_handoff(value):
 
 def validate_return(args):
     try:
-        handoff_raw = read_bounded_input(args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff")
+        handoff_raw = read_bounded_input(
+            args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff"
+        )
         return_raw = (
             sys.stdin.buffer.read(MAX_RETURN + 1)
             if args.return_file == "-"
@@ -465,7 +511,10 @@ def validate_return(args):
         "attempt_id": handoff_value["attempt_id"],
     }
     valid_return(
-        return_value, {}, step, handoff_value["leaf"],
+        return_value,
+        {},
+        step,
+        handoff_value["leaf"],
         registered=handoff_value["return_schema"] == bounded_return_schema(True),
         standard=handoff_value.get("precision") == "standard",
     )
@@ -559,8 +608,13 @@ def amend(args):
         paths = list(dict.fromkeys(requested[key]))
         if len(paths) > MAX_AMENDMENT_PATHS:
             raise Error("amendment exceeds 8 paths per list")
-        amendment[key] = [rel(path, "amendment path") for path in paths if path not in current[field]]
-    if args.acceptance_command is not None and args.acceptance_command != current["acceptance_command"]:
+        amendment[key] = [
+            rel(path, "amendment path") for path in paths if path not in current[field]
+        ]
+    if (
+        args.acceptance_command is not None
+        and args.acceptance_command != current["acceptance_command"]
+    ):
         amendment["acceptance_command"] = args.acceptance_command
     if args.max_attempts is not None:
         amendment["max_attempts"] = args.max_attempts
@@ -585,11 +639,20 @@ def amend(args):
         admission=True,
     )
     if not admitted.get("valid") or not admitted.get("approval_ready"):
-        raise Error("amended plan is not approval-ready: " + "; ".join(admitted.get("errors", []))[:200])
+        raise Error(
+            "amended plan is not approval-ready: " + "; ".join(admitted.get("errors", []))[:200]
+        )
     step["amendments"] = amendments
     if "max_attempts" in amendment:
         step["max_attempts"] = amendment["max_attempts"]
-    event(directory, data, "amend-v5", step_id=sid, amendment_sha256=digest(amendment), amendment_count=len(amendments))
+    event(
+        directory,
+        data,
+        "amend-v5",
+        step_id=sid,
+        amendment_sha256=digest(amendment),
+        amendment_count=len(amendments),
+    )
     if scope_rejection_state(step) and amendment["add_write"]:
         following = bounded_action_next(
             {
@@ -604,8 +667,13 @@ def amend(args):
     else:
         following = checkpoint_next(directory, data, step_batches(plan), plan)
     return step_result(
-        "amend-v5", args, sid, step,
-        amendment_count=len(amendments), amendment_sha256=digest(amendment), next=following,
+        "amend-v5",
+        args,
+        sid,
+        step,
+        amendment_count=len(amendments),
+        amendment_sha256=digest(amendment),
+        next=following,
     )
 
 
@@ -657,10 +725,7 @@ def settle_return(data, step, value, fingerprint):
             "attempt limit reached with differing progress fingerprint",
         )
         disposition = "blocked:retry_exhausted"
-    elif (
-        needs_higher_tier(step, *retry)
-        and step["current_tier"] == PORTABLE_TIERS[-1]
-    ):
+    elif needs_higher_tier(step, *retry) and step["current_tier"] == PORTABLE_TIERS[-1]:
         stop_step(
             step,
             "blocked",

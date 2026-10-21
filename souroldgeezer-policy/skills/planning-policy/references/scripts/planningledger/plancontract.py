@@ -69,9 +69,7 @@ SERIES_KEYS = {"series_id", "slice", "final", "end_verification_commands", "pred
 PREDECESSOR_KEYS = {"plan_id", "plan_sha256", "run_id", "outcome", "handoff_sha256"}
 SERIES_OUTCOMES = {"completed", "blocked", "abandoned"}
 SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
-UUID4_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-)
+UUID4_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 HANDOFF_SCHEMA = "planning-approval-handoff-v1"
 HANDOFF_PLAN_MAX = 64 * 1024
 HANDOFF_REFERENCE_MAX = 4 * 1024
@@ -91,7 +89,9 @@ def hashable(value: Any) -> Any:
 
 
 def searchable(value: Any) -> Any:
-    """Membership target for a declared field: containers and strings as-is, other scalars hold nothing."""
+    """Membership target for a declared field: containers and strings as-is, other scalars
+    hold nothing.
+    """
     return value if isinstance(value, (dict, list, str)) else ()
 
 
@@ -177,8 +177,12 @@ def dispatch_groups(leaves: list[dict[str, Any]]) -> list[list[str]]:
     return groups
 
 
-def is_pure_chain_pair(parent: dict[str, Any], entry: dict[str, Any], leaves: list[dict[str, Any]]) -> bool:
-    """A distinct-owner unbatched pair where the dependent has one dependency and the predecessor one dependent."""
+def is_pure_chain_pair(
+    parent: dict[str, Any], entry: dict[str, Any], leaves: list[dict[str, Any]]
+) -> bool:
+    """A distinct-owner unbatched pair where the dependent has one dependency and the
+    predecessor one dependent.
+    """
     if stable_id(parent.get("batch")) or stable_id(entry.get("batch")):
         return False
     if entry.get("dependencies") != [parent.get("id")]:
@@ -197,7 +201,11 @@ def dispatch_depths(leaves: list[dict[str, Any]]) -> list[int]:
     """Depth of each dispatch group: 1 plus the deepest group it depends on."""
     groups = dispatch_groups(leaves)
     group_of = {member: index for index, group in enumerate(groups) for member in group}
-    by_id = {entry["id"]: entry for entry in leaves if isinstance(entry, dict) and stable_id(entry.get("id"))}
+    by_id = {
+        entry["id"]: entry
+        for entry in leaves
+        if isinstance(entry, dict) and stable_id(entry.get("id"))
+    }
     upstream: list[set[int]] = []
     for index, group in enumerate(groups):
         found: set[int] = set()
@@ -212,7 +220,8 @@ def dispatch_depths(leaves: list[dict[str, Any]]) -> list[int]:
     def depth(index: int, visiting: frozenset[int]) -> int:
         if index not in depths:
             depths[index] = 1 + max(
-                (depth(parent, visiting | {index}) for parent in upstream[index] - visiting), default=0
+                (depth(parent, visiting | {index}) for parent in upstream[index] - visiting),
+                default=0,
             )
         return depths[index]
 
@@ -227,7 +236,10 @@ def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
         if isinstance(entry, dict) and stable_id(entry.get("id"))
     }
     for entry in leaves:
-        if not isinstance(entry, dict) or hashable(entry.get("portable_tier")) not in BATCHABLE_TIERS:
+        if (
+            not isinstance(entry, dict)
+            or hashable(entry.get("portable_tier")) not in BATCHABLE_TIERS
+        ):
             continue
         dependencies = entry.get("dependencies")
         if not isinstance(dependencies, list):
@@ -236,7 +248,10 @@ def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
         owner = entry.get("worktree_owner")
         for dependency in dependencies:
             parent = by_id.get(dependency) if isinstance(dependency, str) else None
-            if not isinstance(parent, dict) or hashable(parent.get("portable_tier")) not in BATCHABLE_TIERS:
+            if (
+                not isinstance(parent, dict)
+                or hashable(parent.get("portable_tier")) not in BATCHABLE_TIERS
+            ):
                 continue
             if parent.get("worktree_owner") != owner:
                 if is_pure_chain_pair(parent, entry, leaves):
@@ -253,7 +268,9 @@ def total_declared_weight(plan: dict[str, Any]) -> int:
     if not isinstance(units, list):
         return 0
     return sum(
-        SIZES.get(hashable(unit.get("original_size")), 0) for unit in units if isinstance(unit, dict)
+        SIZES.get(hashable(unit.get("original_size")), 0)
+        for unit in units
+        if isinstance(unit, dict)
     )
 
 
@@ -275,19 +292,18 @@ def safe_exact_write_set(leaf: dict[str, Any]) -> bool:
     if not isinstance(writes, list) or not writes:
         return False
     normalized = normalized_writes(leaf)
-    return (
-        len(normalized) == len(writes)
-        and all(
-            not path.startswith("/")
-            and ".." not in path.split("/")
-            and not any(character in path for character in GLOB_CHARS)
-            for path in normalized
-        )
+    return len(normalized) == len(writes) and all(
+        not path.startswith("/")
+        and ".." not in path.split("/")
+        and not any(character in path for character in GLOB_CHARS)
+        for path in normalized
     )
 
 
 def exact_path_list(value: Any, *, non_empty: bool) -> bool:
-    """Strict-precision test for a path list: safe paths, no glob characters, optionally non-empty."""
+    """Strict-precision test for a path list: safe paths, no glob characters, optionally
+    non-empty.
+    """
     if not isinstance(value, list) or (non_empty and not value):
         return False
     return all(
@@ -304,7 +320,11 @@ def safe_repository_path(value: Any) -> bool:
     """Accept one bounded, repository-relative declaration, including existing glob forms."""
     if not isinstance(value, str) or not value or value != value.strip() or len(value) > 240:
         return False
-    if value.startswith("/") or "\\" in value or any(ord(character) < 32 or ord(character) == 127 for character in value):
+    if (
+        value.startswith("/")
+        or "\\" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
         return False
     return all(segment not in {"", ".", ".."} for segment in value.split("/"))
 
@@ -355,11 +375,15 @@ def write_set_covers(write_set: list[Any], path: str) -> bool:
 
 
 def _walk_files(base: Path) -> list[Path]:
-    """Regular files below base, skipping hidden directories, node_modules, bytecode, and symlinks."""
+    """Regular files below base, skipping hidden directories, node_modules, bytecode, and
+    symlinks.
+    """
     found: list[Path] = []
     for directory, names, files in os.walk(base):
         names[:] = sorted(
-            name for name in names if not name.startswith(".") and name not in {"node_modules", "__pycache__"}
+            name
+            for name in names
+            if not name.startswith(".") and name not in {"node_modules", "__pycache__"}
         )
         for name in sorted(files):
             if name.endswith(".pyc"):
@@ -373,7 +397,9 @@ def _walk_files(base: Path) -> list[Path]:
 def _pin_needles(entry: str, basenames: dict[str, int]) -> tuple[str, ...]:
     """Strings whose presence in a file pins one write_set entry."""
     segments = entry.split("/")
-    glob_at = next((i for i, part in enumerate(segments) if any(c in part for c in GLOB_CHARS)), None)
+    glob_at = next(
+        (i for i, part in enumerate(segments) if any(c in part for c in GLOB_CHARS)), None
+    )
     if glob_at is not None:
         prefix = "/".join(segments[:glob_at])
         return (prefix,) if prefix else ()
@@ -384,7 +410,12 @@ def _pin_needles(entry: str, basenames: dict[str, int]) -> tuple[str, ...]:
 
 
 def pin_scan(
-    leaves: list[Any], roots: list[str], repo_root: Path, *, limit: int = 8, max_bytes: int = 1 << 20
+    leaves: list[Any],
+    roots: list[str],
+    repo_root: Path,
+    *,
+    limit: int = 8,
+    max_bytes: int = 1 << 20,
 ) -> dict[str, Any]:
     """Report files under roots that mention a leaf's write paths but sit in no leaf's write_set."""
     base = repo_root.resolve()
@@ -393,8 +424,14 @@ def pin_scan(
         basenames[path.name] = basenames.get(path.name, 0) + 1
     writes: dict[str, list[str]] = {}
     for entry in leaves:
-        if isinstance(entry, dict) and stable_id(entry.get("id")) and isinstance(entry.get("write_set"), list):
-            writes[entry["id"]] = [item for item in entry["write_set"] if safe_repository_path(item)]
+        if (
+            isinstance(entry, dict)
+            and stable_id(entry.get("id"))
+            and isinstance(entry.get("write_set"), list)
+        ):
+            writes[entry["id"]] = [
+                item for item in entry["write_set"] if safe_repository_path(item)
+            ]
     owned_sets = list(writes.values())
     present: list[str] = []
     missing: list[str] = []
@@ -407,11 +444,15 @@ def pin_scan(
         present.append(root)
         for path in _walk_files(target):
             relative = path.relative_to(base).as_posix()
-            if path.stat().st_size > max_bytes or any(write_set_covers(owned, relative) for owned in owned_sets):
+            if path.stat().st_size > max_bytes or any(
+                write_set_covers(owned, relative) for owned in owned_sets
+            ):
                 continue
             text = path.read_text(encoding="utf-8", errors="ignore")
             for leaf_id, entries in writes.items():
-                if any(needle in text for item in entries for needle in _pin_needles(item, basenames)):
+                if any(
+                    needle in text for item in entries for needle in _pin_needles(item, basenames)
+                ):
                     pinning[leaf_id].add(relative)
     listed: dict[str, list[str]] = {}
     truncated = False
@@ -428,7 +469,9 @@ def band_budget(leaf: dict[str, Any]) -> tuple[int, int]:
 
 
 def changeset_budget(leaf: dict[str, Any]) -> dict[str, Any]:
-    """The only derivation of a leaf's changeset budget: size-band defaults plus declared overrides."""
+    """The only derivation of a leaf's changeset budget: size-band defaults plus declared
+    overrides.
+    """
     lines, files = band_budget(leaf)
     declared = leaf.get("changeset_budget")
     declared = declared if isinstance(declared, dict) else {}
@@ -448,7 +491,7 @@ def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if set(declared) - BUDGET_KEYS:
         errors.append(f"{prefix} has unknown keys: {sorted(set(declared) - BUDGET_KEYS)}")
-    defaults = dict(zip(("max_changed_lines", "max_files"), band_budget(leaf)))
+    defaults = dict(zip(("max_changed_lines", "max_files"), band_budget(leaf), strict=True))
     raised = False
     for key, default in defaults.items():
         if key not in declared:
@@ -460,7 +503,9 @@ def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
             raised = True
     exempt = declared.get("exempt_paths", [])
     if not isinstance(exempt, list) or len(exempt) > BUDGET_EXEMPT_LIMIT:
-        errors.append(f"{prefix}.exempt_paths must be an array of at most {BUDGET_EXEMPT_LIMIT} paths")
+        errors.append(
+            f"{prefix}.exempt_paths must be an array of at most {BUDGET_EXEMPT_LIMIT} paths"
+        )
         exempt = []
     write_set = leaf.get("write_set") if isinstance(leaf.get("write_set"), list) else []
     for index, path in enumerate(exempt):
@@ -470,7 +515,9 @@ def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
             errors.append(f"{prefix}.exempt_paths[{index}] must be covered by write_set")
     reason = declared.get("reason")
     if (raised or exempt) and not nonempty_string_in_range(reason, 1, 240):
-        errors.append(f"{prefix}.reason is required (1 to 240 characters) to raise a limit or exempt paths")
+        errors.append(
+            f"{prefix}.reason is required (1 to 240 characters) to raise a limit or exempt paths"
+        )
     elif "reason" in declared and not nonempty_string_in_range(reason, 1, 240):
         errors.append(f"{prefix}.reason must be a string from 1 to 240 characters")
     return errors
@@ -484,7 +531,10 @@ def declared_path_set_errors(leaf: dict[str, Any], field: str) -> list[str]:
     seen: set[str] = set()
     for index, path in enumerate(value):
         if not safe_repository_path(path):
-            errors.append(f"{field}[{index}] must be a unique safe repository-relative path string from 1 to 240 characters")
+            errors.append(
+                f"{field}[{index}] must be a unique safe repository-relative path string "
+                "from 1 to 240 characters"
+            )
             continue
         if path in seen:
             errors.append(f"{field}[{index}] must be unique")
@@ -533,6 +583,7 @@ def write_coverage_overlaps(first: dict[str, Any], second: dict[str, Any]) -> bo
 
 def dependency_orders(first_id: str, second_id: str, dependencies: dict[str, list[str]]) -> bool:
     """Return whether either leaf transitively depends on the other."""
+
     def reaches(start: str, target: str) -> bool:
         pending = list(dependencies.get(start, []))
         visited: set[str] = set()
@@ -558,7 +609,11 @@ def leaves_are_ordered(
         return True
     first_index, first = leaf_records[first_id]
     second_index, second = leaf_records[second_id]
-    return stable_id(first.get("batch")) and first.get("batch") == second.get("batch") and first_index != second_index
+    return (
+        stable_id(first.get("batch"))
+        and first.get("batch") == second.get("batch")
+        and first_index != second_index
+    )
 
 
 def direct_dependency(first: dict[str, Any], second: dict[str, Any]) -> bool:
@@ -587,7 +642,9 @@ def microleaf_candidates(leaves: list[dict[str, Any]]) -> list[dict[str, Any]]:
             same_acceptance = first.get("acceptance_command") == second.get("acceptance_command")
             overlapping_writes = bool(normalized_writes(first) & normalized_writes(second))
             same_owner_tier_dependency = (
-                same_owner and dependent and first.get("portable_tier") == second.get("portable_tier")
+                same_owner
+                and dependent
+                and first.get("portable_tier") == second.get("portable_tier")
             )
             signals: list[str] = []
             if same_acceptance and same_owner:
@@ -937,13 +994,19 @@ def emit_handoff(plan: Any, mode: str, source: str = "-") -> dict[str, Any]:
 def _overlong_block_path(value: Any, path: str = "$", depth: int = 0) -> str | None:
     """Return the path of the first element whose block line is too long, never its content."""
     if isinstance(value, dict):
-        members = [(json.dumps(key) + ": ", f"{path}.{key}", child) for key, child in sorted(value.items())]
+        members = [
+            (json.dumps(key) + ": ", f"{path}.{key}", child) for key, child in sorted(value.items())
+        ]
     elif isinstance(value, list):
         members = [("", f"{path}[{index}]", child) for index, child in enumerate(value)]
     else:
         return None
     for position, (label, child_path, child) in enumerate(members):
-        opener = ("[" if isinstance(child, list) else "{") if isinstance(child, (dict, list)) and child else json.dumps(child)
+        opener = (
+            ("[" if isinstance(child, list) else "{")
+            if isinstance(child, (dict, list)) and child
+            else json.dumps(child)
+        )
         comma = "," if position < len(members) - 1 else ""
         if depth + 1 + len(label) + len(opener) + len(comma) > HANDOFF_BLOCK_LINE_MAX:
             return child_path
@@ -964,10 +1027,17 @@ def render_handoff_block(handoff: dict[str, Any]) -> str:
 
 def resolve_handoff(handoff: Any) -> tuple[Any, dict[str, Any]]:
     expected = {"schema", "plan_sha256"}
-    if not isinstance(handoff, dict) or set(handoff) not in (expected | {"plan"}, expected | {"plan_path"}):
+    if not isinstance(handoff, dict) or set(handoff) not in (
+        expected | {"plan"},
+        expected | {"plan_path"},
+    ):
         raise HandoffError("expected exactly schema, plan_sha256, and one of plan or plan_path")
     digest = handoff["plan_sha256"]
-    if handoff["schema"] != HANDOFF_SCHEMA or not isinstance(digest, str) or not SHA256_HEX.fullmatch(digest):
+    if (
+        handoff["schema"] != HANDOFF_SCHEMA
+        or not isinstance(digest, str)
+        or not SHA256_HEX.fullmatch(digest)
+    ):
         raise HandoffError("invalid handoff schema or digest")
     reference = "plan_path" in handoff
     limit = HANDOFF_REFERENCE_MAX if reference else HANDOFF_INLINE_MAX
@@ -1003,7 +1073,9 @@ def capability_requirements_valid(value: Any) -> bool:
     )
 
 
-def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]], binding: Any) -> bool:
+def capability_binding_matches(
+    plan: dict[str, Any], leaves: list[dict[str, Any]], binding: Any
+) -> bool:
     """Require one exact resolved binding for every leaf, without making it a plan error."""
     if not isinstance(binding, dict) or set(binding) != {"schema", "plan_sha256", "bindings"}:
         return False
@@ -1023,7 +1095,13 @@ def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]
         return False
     observed: dict[str, Any] = {}
     for item in bindings:
-        if not isinstance(item, dict) or set(item) != {"step_id", "host", "executor", "requirements", "evidence"}:
+        if not isinstance(item, dict) or set(item) != {
+            "step_id",
+            "host",
+            "executor",
+            "requirements",
+            "evidence",
+        }:
             return False
         step_id = item.get("step_id")
         if hashable(step_id) in observed or hashable(step_id) not in expected:
@@ -1071,7 +1149,9 @@ def predecessor_errors(predecessor: Any) -> list[str]:
 
 
 def series_errors(series: Any) -> list[str]:
-    """Validate the optional top-level `series` block, present-only like the analytical exception."""
+    """Validate the optional top-level `series` block, present-only like the analytical
+    exception.
+    """
     prefix = "series"
     if not isinstance(series, dict):
         return [f"{prefix} must be an object"]
@@ -1179,7 +1259,9 @@ def _work_unit_sections(
             unit_records[unit_id] = (index, unit)
         outcome = normalized_outcome(unit.get("cohesive_outcome"))
         if outcome is None:
-            errors.append(f"{prefix}.cohesive_outcome must be a non-empty string from 1 to 240 characters")
+            errors.append(
+                f"{prefix}.cohesive_outcome must be a non-empty string from 1 to 240 characters"
+            )
         elif outcome in cohesive_outcomes:
             errors.append(f"duplicate normalized cohesive_outcome: {outcome}")
         else:
@@ -1221,9 +1303,15 @@ def _leaf_declaration_errors(
 ) -> None:
     if strict:
         if not safe_exact_write_set(leaf):
-            errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
+            errors.append(
+                f"{prefix}.write_set must be a non-empty exact path list without glob characters "
+                "under strict precision"
+            )
         if not exact_path_list(leaf.get("read_set"), non_empty=True):
-            errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
+            errors.append(
+                f"{prefix}.read_set must be a non-empty exact path list without glob characters "
+                "under strict precision"
+            )
     if admission:
         for field in ("read_set", "write_set"):
             errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
@@ -1251,9 +1339,7 @@ def _leaf_contract_errors(prefix: str, leaf: dict[str, Any], errors: list[str]) 
     if hashable(leaf.get("size")) not in SIZES:
         errors.append(f"{prefix}.size must be small, medium, or large")
     if hashable(leaf.get("portable_tier")) not in TIERS:
-        errors.append(
-            f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep"
-        )
+        errors.append(f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep")
     for field in ("model", "model_override", "reasoning_effort", "reasoning_effort_override"):
         if field in leaf:
             errors.append(
@@ -1263,9 +1349,7 @@ def _leaf_contract_errors(prefix: str, leaf: dict[str, Any], errors: list[str]) 
         not isinstance(leaf.get("acceptance_command"), str)
         or not leaf.get("acceptance_command", "").strip()
     ):
-        errors.append(
-            f"{prefix}.acceptance_command must be exactly one non-empty command string"
-        )
+        errors.append(f"{prefix}.acceptance_command must be exactly one non-empty command string")
     attempts = leaf.get("max_attempts")
     if not isinstance(attempts, int) or isinstance(attempts, bool) or not 1 <= attempts <= 5:
         errors.append(
@@ -1402,7 +1486,10 @@ def _batch_errors(
         member_set = set(members)
         for member in members:
             for dependency in dependencies.get(member, []):
-                if dependency in member_set and member_positions[dependency] >= member_positions[member]:
+                if (
+                    dependency in member_set
+                    and member_positions[dependency] >= member_positions[member]
+                ):
                     errors.append(
                         f"batch {batch_id} member {member} depends on later-listed batch "
                         f"member {dependency}"
@@ -1447,11 +1534,13 @@ def _leaf_ordering_errors(
             ordered = leaves_are_ordered(first_id, second_id, dependencies, leaf_records)
             if not ordered and first.get("worktree_owner") == second.get("worktree_owner"):
                 errors.append(
-                    f"leaves {first_id} and {second_id} have shared worktree_owner without dependency or batch ordering"
+                    f"leaves {first_id} and {second_id} have shared worktree_owner without "
+                    "dependency or batch ordering"
                 )
             if not ordered and write_coverage_overlaps(first, second):
                 errors.append(
-                    f"leaves {first_id} and {second_id} have overlapping write coverage without dependency or batch ordering"
+                    f"leaves {first_id} and {second_id} have overlapping write coverage without "
+                    "dependency or batch ordering"
                 )
 
 
@@ -1479,42 +1568,73 @@ def _decomposition_errors(
             continue
         if shape == "parallel":
             if set(decomposition) != {"shape", "basis", "rationale"}:
-                errors.append(f"{prefix} for parallel must have exactly shape, basis, and rationale")
+                errors.append(
+                    f"{prefix} for parallel must have exactly shape, basis, and rationale"
+                )
             if decomposition.get("basis") != "parallel_independence":
                 errors.append(f"{prefix}.basis must be parallel_independence for parallel")
             if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
-                errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
+                errors.append(
+                    f"{prefix}.rationale must be a non-empty string from 1 to 240 characters"
+                )
             if len(members) < 2:
-                errors.append(f"work unit {unit_id} parallel decomposition must map at least two leaves")
+                errors.append(
+                    f"work unit {unit_id} parallel decomposition must map at least two leaves"
+                )
             member_ids = {hashable(member.get("id")) for member in members}
-            if any(set(dependencies.get(hashable(member.get("id")), [])) & member_ids for member in members):
-                errors.append(f"work unit {unit_id} parallel leaves must have no intra-unit dependencies")
+            if any(
+                set(dependencies.get(hashable(member.get("id")), [])) & member_ids
+                for member in members
+            ):
+                errors.append(
+                    f"work unit {unit_id} parallel leaves must have no intra-unit dependencies"
+                )
             if len({hashable(member.get("worktree_owner")) for member in members}) != len(members):
-                errors.append(f"work unit {unit_id} parallel leaves must have distinct worktree_owner values")
+                errors.append(
+                    f"work unit {unit_id} parallel leaves must have distinct worktree_owner values"
+                )
             for member_index, member in enumerate(members):
                 if not safe_exact_write_set(member):
-                    errors.append(f"work unit {unit_id} parallel leaves must have exact safe write_set paths")
+                    errors.append(
+                        f"work unit {unit_id} parallel leaves must have exact safe write_set paths"
+                    )
                 for other in members[member_index + 1 :]:
                     if normalized_writes(member) & normalized_writes(other):
-                        errors.append(f"work unit {unit_id} parallel leaves must have pairwise-disjoint write_set values")
-            batches_in_unit = [member.get("batch") for member in members if stable_id(member.get("batch"))]
+                        errors.append(
+                            f"work unit {unit_id} parallel leaves must have pairwise-disjoint "
+                            "write_set values"
+                        )
+            batches_in_unit = [
+                member.get("batch") for member in members if stable_id(member.get("batch"))
+            ]
             if len(batches_in_unit) != len(set(batches_in_unit)):
                 errors.append(f"work unit {unit_id} parallel leaves must not share a batch")
             continue
         if set(decomposition) != {"shape", "basis", "rationale"}:
-            errors.append(f"{prefix} for checkpointed must have exactly shape, basis, and rationale")
+            errors.append(
+                f"{prefix} for checkpointed must have exactly shape, basis, and rationale"
+            )
         if hashable(decomposition.get("basis")) not in {"failure_isolation", "rollback_boundary"}:
-            errors.append(f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed")
+            errors.append(
+                f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed"
+            )
         if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
             errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
         if len(members) < 2:
-            errors.append(f"work unit {unit_id} checkpointed decomposition must map at least two leaves")
+            errors.append(
+                f"work unit {unit_id} checkpointed decomposition must map at least two leaves"
+            )
         member_ids = {hashable(item.get("id")) for item in members}
         for member_index, member in enumerate(members):
-            intra = [dep for dep in dependencies.get(hashable(member.get("id")), []) if dep in member_ids]
+            intra = [
+                dep for dep in dependencies.get(hashable(member.get("id")), []) if dep in member_ids
+            ]
             expected = [] if member_index == 0 else [members[member_index - 1].get("id")]
             if intra != expected:
-                errors.append(f"work unit {unit_id} checkpointed leaves must form one linear ordered dependency chain")
+                errors.append(
+                    f"work unit {unit_id} checkpointed leaves must form one linear ordered "
+                    "dependency chain"
+                )
                 break
 
 
@@ -1531,7 +1651,10 @@ def _standard_ready_ratio(
         if not members:
             errors.append(f"work unit {unit_id} has no leaves")
             continue
-        if all(hashable(member.get("portable_tier")) in {"mechanical", "standard"} for member in members):
+        if all(
+            hashable(member.get("portable_tier")) in {"mechanical", "standard"}
+            for member in members
+        ):
             ready_weight += weight
     ratio = ready_weight / total_weight if total_weight else 0.0
     exception = plan.get("analytical_heavy_exception")
@@ -1558,7 +1681,10 @@ def _pin_findings(
     scan = pin_scan(leaves, pin_roots, repo_root or Path.cwd())
     for leaf_id, paths in scan["leaves"].items():
         for path in paths:
-            message = f"PLANSCOPE-UNOWNED-PIN: {leaf_id}: {path} pins a write path but no leaf write_set owns it"
+            message = (
+                f"PLANSCOPE-UNOWNED-PIN: {leaf_id}: {path} pins a write path but no leaf write_set "
+                "owns it"
+            )
             (errors if strict else warnings).append(message)
     return scan
 
@@ -1653,9 +1779,14 @@ def main(argv: list[str] | None = None) -> int:
         help="optional planning-capability-binding-v1 JSON for dispatch validation",
     )
     validate_parser.add_argument(
-        "--pin-roots", nargs="+", metavar="ROOT", help="repository-relative roots to scan for unowned pinning tests"
+        "--pin-roots",
+        nargs="+",
+        metavar="ROOT",
+        help="repository-relative roots to scan for unowned pinning tests",
     )
-    validate_parser.add_argument("--repo-root", type=Path, help="repository root for --pin-roots (default: cwd)")
+    validate_parser.add_argument(
+        "--repo-root", type=Path, help="repository root for --pin-roots (default: cwd)"
+    )
     validate_parser.add_argument("--emit-handoff", choices=("reference", "inline"))
     validate_parser.add_argument("--handoff-format", choices=("json", "block"), default="json")
     resolve_parser = subparsers.add_parser("resolve-handoff", help="resolve an approval handoff")
@@ -1673,7 +1804,8 @@ def main(argv: list[str] | None = None) -> int:
             plan = _read_json_source(str(args.plan), 4 * HANDOFF_PLAN_MAX if handoff_mode else None)
             binding = (
                 _read_json_source(str(args.capability_binding))
-                if args.capability_binding is not None else None
+                if args.capability_binding is not None
+                else None
             )
             result = validate(
                 plan, capability_binding=binding, pin_roots=args.pin_roots, repo_root=args.repo_root
@@ -1685,11 +1817,16 @@ def main(argv: list[str] | None = None) -> int:
                     print(render_handoff_block(result["handoff"]))
                     return 0
     except HandoffError as error:
-        print(json.dumps(_error_result(error.code, str(error)), sort_keys=True, separators=(",", ":")))
+        print(
+            json.dumps(_error_result(error.code, str(error)), sort_keys=True, separators=(",", ":"))
+        )
         return 1
     except (OSError, ValueError, RecursionError) as error:
-        result = (_error_result("blocked:missing_input", "unreadable or invalid JSON input")
-                  if handoff_mode else contract_result(None, False, [], [str(error)]))
+        result = (
+            _error_result("blocked:missing_input", "unreadable or invalid JSON input")
+            if handoff_mode
+            else contract_result(None, False, [], [str(error)])
+        )
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 2
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))

@@ -7,13 +7,12 @@ import argparse
 import errno
 import json
 import os
-from pathlib import Path
 import stat
 import sys
+from pathlib import Path
 from typing import Any
 
 import validate_plan_contract as contract
-
 
 RAW_PLAN_MAX = 4 * contract.HANDOFF_PLAN_MAX
 MKDIR_SUPPORTS_DIR_FD = os.mkdir in os.supports_dir_fd
@@ -82,22 +81,32 @@ def read_published(directory_fd: int, canonical: bytes) -> bool:
         return False
     except OSError as exc:
         if exc.errno in {errno.ELOOP, errno.ENOTDIR}:
-            raise contract.HandoffError("published plan target is unsafe", "blocked:plan_tampered") from exc
+            raise contract.HandoffError(
+                "published plan target is unsafe", "blocked:plan_tampered"
+            ) from exc
         raise
     with os.fdopen(descriptor, "rb") as stream:
         info = os.fstat(stream.fileno())
         if not stat.S_ISREG(info.st_mode):
-            raise contract.HandoffError("published plan target is not a regular file", "blocked:plan_tampered")
+            raise contract.HandoffError(
+                "published plan target is not a regular file", "blocked:plan_tampered"
+            )
         raw = stream.read(RAW_PLAN_MAX + 1)
     if len(raw) > RAW_PLAN_MAX:
-        raise contract.HandoffError("published plan exceeds its byte limit", "blocked:plan_tampered")
+        raise contract.HandoffError(
+            "published plan exceeds its byte limit", "blocked:plan_tampered"
+        )
     try:
         existing = json.loads(raw)
         contract._approval_validation(existing)
     except (ValueError, contract.HandoffError, UnicodeDecodeError) as exc:
-        raise contract.HandoffError("published plan is malformed or invalid", "blocked:plan_tampered") from exc
+        raise contract.HandoffError(
+            "published plan is malformed or invalid", "blocked:plan_tampered"
+        ) from exc
     if raw != canonical:
-        raise contract.HandoffError("published plan conflicts with the canonical digest", "blocked:plan_tampered")
+        raise contract.HandoffError(
+            "published plan conflicts with the canonical digest", "blocked:plan_tampered"
+        )
     return True
 
 
@@ -122,7 +131,9 @@ def publish(root: Path, plan: Any) -> Path:
             plan_fd = os.open(digest, flags, dir_fd=root_fd)
         except OSError as exc:
             if exc.errno in {errno.ELOOP, errno.ENOTDIR}:
-                raise contract.HandoffError("plan digest directory is unsafe", "blocked:plan_tampered") from exc
+                raise contract.HandoffError(
+                    "plan digest directory is unsafe", "blocked:plan_tampered"
+                ) from exc
             raise
         if read_published(plan_fd, canonical):
             return root / digest / "plan.json"
@@ -134,10 +145,16 @@ def publish(root: Path, plan: Any) -> Path:
             stream.flush()
             os.fsync(stream.fileno())
         try:
-            os.link(staging_name, "plan.json", src_dir_fd=plan_fd, dst_dir_fd=plan_fd, follow_symlinks=False)
-        except FileExistsError:
+            os.link(
+                staging_name,
+                "plan.json",
+                src_dir_fd=plan_fd,
+                dst_dir_fd=plan_fd,
+                follow_symlinks=False,
+            )
+        except FileExistsError as exists:
             if not read_published(plan_fd, canonical):
-                raise PersistenceError("published plan disappeared during publication")
+                raise PersistenceError("published plan disappeared during publication") from exists
         os.unlink(staging_name, dir_fd=plan_fd)
         staging_name = None
         os.fsync(plan_fd)
@@ -152,7 +169,15 @@ def publish(root: Path, plan: Any) -> Path:
             raise
         if isinstance(exc, contract.HandoffError):
             raise
-        if exc.errno in {errno.EACCES, errno.EDQUOT, errno.EIO, errno.ENOSPC, errno.EROFS, errno.ENOTDIR, errno.ELOOP}:
+        if exc.errno in {
+            errno.EACCES,
+            errno.EDQUOT,
+            errno.EIO,
+            errno.ENOSPC,
+            errno.EROFS,
+            errno.ENOTDIR,
+            errno.ELOOP,
+        }:
             raise PersistenceError("persistent plan storage is unavailable") from exc
         raise PersistenceError("persistent plan publication failed") from exc
     finally:
@@ -169,7 +194,9 @@ def verified_reference(root: Path, plan: Any) -> dict[str, Any]:
         current /= part
         info = os.lstat(current)
         if stat.S_ISLNK(info.st_mode):
-            raise contract.HandoffError("published reference path is unsafe", "blocked:plan_tampered")
+            raise contract.HandoffError(
+                "published reference path is unsafe", "blocked:plan_tampered"
+            )
     handoff = contract.emit_handoff(plan, "reference", str(expected))
     if handoff.get("plan_path") != str(expected):
         raise contract.HandoffError("published reference path changed", "blocked:plan_tampered")
@@ -189,7 +216,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
         return 1
     except (OSError, ValueError, RecursionError):
-        print(json.dumps(error("blocked:missing_input", "unreadable or invalid plan input"), sort_keys=True, separators=(",", ":")))
+        print(
+            json.dumps(
+                error("blocked:missing_input", "unreadable or invalid plan input"),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
         return 1
     try:
         root = checked_root(args.plan_root)
@@ -198,7 +231,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
         return 1
     except (PersistenceError, OSError, ValueError, RecursionError) as exc:
-        print(json.dumps(error("blocked:persistence_unavailable", str(exc)), sort_keys=True, separators=(",", ":")))
+        print(
+            json.dumps(
+                error("blocked:persistence_unavailable", str(exc)),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
         return 2
     try:
         handoff = verified_reference(root, plan)
@@ -206,7 +245,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
         return 1
     except (OSError, ValueError, RecursionError):
-        print(json.dumps(error("blocked:missing_input", "published reference cannot be verified"), sort_keys=True, separators=(",", ":")))
+        print(
+            json.dumps(
+                error("blocked:missing_input", "published reference cannot be verified"),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
         return 1
     print(json.dumps(handoff, sort_keys=True, separators=(",", ":")))
     return 0

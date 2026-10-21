@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 
+from .closeout import close_run, init5, land, reopen_run, show, validate
 from .core import Error, UsageError, out
-from .returns import amend, record, validate_return
 from .dispatch import dispatch, handoff, transition_step
+from .retention import gc, list_runs, purge
+from .returns import amend, record, validate_return
+from .tracing import trace_close, trace_init, trace_record, trace_show
 from .verify import (
     check_changeset,
     record_changeset,
@@ -14,9 +17,6 @@ from .verify import (
     validate_verify_return,
     verify_handoff,
 )
-from .retention import gc, list_runs, purge
-from .closeout import close_run, init5, land, reopen_run, show, validate
-from .tracing import trace_close, trace_init, trace_record, trace_show
 
 __all__ = [
     "parse",

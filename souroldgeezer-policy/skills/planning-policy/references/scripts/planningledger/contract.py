@@ -1,4 +1,6 @@
-"""Planning ledger contract: plan validator bridge, leaves, amendments, capability bindings and host tiers."""
+"""Planning ledger contract: plan validator bridge, leaves, amendments, capability bindings and
+host tiers.
+"""
 
 from __future__ import annotations
 
@@ -8,24 +10,23 @@ import json
 from pathlib import Path
 
 from . import plancontract
-
+from .core import (
+    HOST_TIERS_FILE,
+    Error,
+    UsageError,
+    digest,
+    ident,
+    read_json,
+    rel,
+)
 from .vocabulary import (
     AMENDMENT_FIELDS,
     AMENDMENT_OPTIONAL,
     FORWARD_SCHEMA,
     MAX_AMENDED_ATTEMPTS,
     MAX_AMENDED_COMMAND,
-    MAX_AMENDMENTS,
     MAX_AMENDMENT_PATHS,
-)
-from .core import (
-    Error,
-    HOST_TIERS_FILE,
-    UsageError,
-    digest,
-    ident,
-    read_json,
-    rel,
+    MAX_AMENDMENTS,
 )
 
 __all__ = [
@@ -140,9 +141,7 @@ def validate_amendment_events(directory, data):
             except json.JSONDecodeError as exc:
                 raise Error("blocked:plan_tampered") from exc
             if isinstance(value, dict) and value.get("action") == "amend-v5":
-                recorded.setdefault(value.get("step_id"), []).append(
-                    value.get("amendment_sha256")
-                )
+                recorded.setdefault(value.get("step_id"), []).append(value.get("amendment_sha256"))
     if stored != recorded:
         raise Error("blocked:plan_tampered")
 
@@ -233,14 +232,19 @@ def host_entry(host):
 
 
 def host_step_binding(leaf, host, entry, tier_name, evidence):
-    """One step's binding item for a tier of a host's map; a skill need on a skill-less tier is unavailable."""
+    """One step's binding item for a tier of a host's map; a skill need on a skill-less tier is
+    unavailable.
+    """
     tier = entry["tiers"][tier_name]
     requirements = leaf["capability_requirements"]
     if not tier["skill"] and any(item["kind"] == "skill" for item in requirements["additional"]):
         raise Error("blocked:capability_unavailable")
     return {
-        "step_id": leaf["id"], "host": host, "executor": tier["model"],
-        "requirements": requirements, "evidence": evidence,
+        "step_id": leaf["id"],
+        "host": host,
+        "executor": tier["model"],
+        "requirements": requirements,
+        "evidence": evidence,
     }
 
 
@@ -254,16 +258,27 @@ def derived_setup(plan, host, evidence_text):
     for leaf in plan["leaves"]:
         tier = entry["tiers"][leaf["portable_tier"]]
         bound.append(host_step_binding(leaf, host, entry, leaf["portable_tier"], evidence))
-        assigned.append({
-            "id": leaf["id"], "harness": host, "model_or_alias": tier["model"],
-            "effort": tier["effort"], "worktree": f".worktrees/{leaf['worktree_owner']}",
-        })
-    binding = {"schema": "planning-capability-binding-v1", "plan_sha256": digest(plan), "bindings": bound}
+        assigned.append(
+            {
+                "id": leaf["id"],
+                "harness": host,
+                "model_or_alias": tier["model"],
+                "effort": tier["effort"],
+                "worktree": f".worktrees/{leaf['worktree_owner']}",
+            }
+        )
+    binding = {
+        "schema": "planning-capability-binding-v1",
+        "plan_sha256": digest(plan),
+        "bindings": bound,
+    }
     return assigned, binding
 
 
 def tier_alias(args, data, tier):
-    """A host run's dispatch alias is the map entry for the tier; an explicit value must equal it."""
+    """A host run's dispatch alias is the map entry for the tier; an explicit value must equal
+    it.
+    """
     if args.command != "dispatch" or not data.get("host"):
         return args.model_or_alias
     expected = host_entry(data["host"])["tiers"][tier]["model"]
@@ -289,10 +304,7 @@ def binding_for_step(binding, sid, assignment):
     if len(matches) != 1:
         raise Error("blocked:capability_unavailable")
     item = matches[0]
-    if (
-        item["host"] != assignment["harness"]
-        or item["executor"] != assignment["model_or_alias"]
-    ):
+    if item["host"] != assignment["harness"] or item["executor"] != assignment["model_or_alias"]:
         raise Error("blocked:capability_unavailable")
     return {
         "schema": binding["schema"],

@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from . import core, gitops
+from .core import Error, canon, ident, read_json, uuid4
 from .vocabulary import (
     MAX_CHECKPOINT,
     MAX_USAGE,
@@ -14,7 +15,6 @@ from .vocabulary import (
     USAGE_FIELDS,
     USAGE_STAGES,
 )
-from .core import Error, canon, ident, read_json, uuid4
 
 __all__ = [
     "root",
