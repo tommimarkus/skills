@@ -23,9 +23,11 @@ Do not approve new legacy work—initialize a separate v5 run.
 
 ## Version-5 policy stamps
 
-A retained v5 run without a newer stamp (`retry_policy`, `return_codes`,
-`precision_policy`, `verify_policy`) keeps the behavior the
-[ledger contract](ledger-contract.md) states for that absent stamp.
+A retained v5 run without a newer stamp (`return_codes`, `precision_policy`,
+`verify_policy`) keeps the behavior the [ledger contract](ledger-contract.md)
+states for that absent stamp. Every v5 run carries
+`retry_policy: escalating_remediation_v1`; a v5 checkpoint without it fails load
+as an invalid run checkpoint.
 
 A retained v5 run stamped `pipeline_policy: provisional_v1` (the removed
 provisional-start pipeline) still loads; with no stacked step it resumes under

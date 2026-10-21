@@ -9,7 +9,6 @@ from .vocabulary import (
     AMENDMENT_OPTIONAL,
     BATCH_STOPPED_STATES,
     COMMIT,
-    ESCALATING_RETRY_POLICY,
     FORWARD_SCHEMA,
     MAX_WORKER_HANDOFF,
     MAX_WORKER_PROMPT,
@@ -146,8 +145,7 @@ def unwind(args, data, batches, sid, step):
         agent_id="",
         attempt_id="",
     )
-    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        step["current_assignment"]["agent_id"] = ""
+    step["current_assignment"]["agent_id"] = ""
 
 
 def require_verified(data, sid, step):
@@ -209,8 +207,7 @@ def transition_step(args):
         attempt_id=step["attempt_id"],
     )
     result = step_result("transition", args, sid, step, attempt_id=step["attempt_id"])
-    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        result["next"] = next_after_transition(args, directory, data, batches, step, plan)
+    result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
 

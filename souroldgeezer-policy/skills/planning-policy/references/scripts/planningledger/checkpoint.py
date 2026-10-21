@@ -146,7 +146,7 @@ def active_run(data):
 
 
 def validate_steps(data, leafs):
-    if data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}:
+    if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
         raise Error("invalid run retry policy")
     if data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}:
         raise Error("invalid run return codes")
@@ -166,48 +166,47 @@ def validate_steps(data, leafs):
             or not isinstance(step.get("retry_allowed"), bool)
         ):
             raise Error("blocked:plan_tampered")
-        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            assignment = step.get("current_assignment")
-            assignment_fields = {"agent_id", "harness", "model_or_alias"}
-            if (
-                not RETRY_STATE_FIELDS.issubset(step)
-                or step.get("current_tier") not in PORTABLE_TIERS
-                or PORTABLE_TIERS.index(step["current_tier"])
-                < PORTABLE_TIERS.index(leafs[sid]["portable_tier"])
-                or not isinstance(step.get("same_tier_retry_used"), bool)
-                or not isinstance(assignment, dict)
-                or set(assignment) != assignment_fields
-                or assignment.get("agent_id") != step.get("agent_id")
-                or not isinstance(assignment.get("harness"), str)
-                or not 1 <= len(assignment["harness"]) <= 160
-                or not assignment["harness"].strip()
-                or not isinstance(step.get("retry_remediation_path"), str)
-                or not isinstance(step.get("retry_remediation_sha256"), str)
-                or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
-            ):
-                raise Error("blocked:plan_tampered")
-            binding = step.get("capability_binding")
-            if (
-                not isinstance(assignment.get("model_or_alias"), str)
-                or not 1 <= len(assignment["model_or_alias"]) <= 160
-                or not assignment["model_or_alias"].strip()
-                or not isinstance(binding, dict)
-                or digest(binding) != step.get("capability_binding_sha256")
-                or not valid_stored_binding(
-                    binding,
-                    data.get("plan_hash"),
-                    sid,
-                    leafs[sid],
-                    assignment,
-                )
-            ):
-                raise Error("blocked:plan_tampered")
-            if step["retry_remediation_path"]:
-                rel(step["retry_remediation_path"], "retry remediation path")
-                require_sha256(
-                    step["retry_remediation_sha256"],
-                    "blocked:plan_tampered",
-                )
+        assignment = step.get("current_assignment")
+        assignment_fields = {"agent_id", "harness", "model_or_alias"}
+        if (
+            not RETRY_STATE_FIELDS.issubset(step)
+            or step.get("current_tier") not in PORTABLE_TIERS
+            or PORTABLE_TIERS.index(step["current_tier"])
+            < PORTABLE_TIERS.index(leafs[sid]["portable_tier"])
+            or not isinstance(step.get("same_tier_retry_used"), bool)
+            or not isinstance(assignment, dict)
+            or set(assignment) != assignment_fields
+            or assignment.get("agent_id") != step.get("agent_id")
+            or not isinstance(assignment.get("harness"), str)
+            or not 1 <= len(assignment["harness"]) <= 160
+            or not assignment["harness"].strip()
+            or not isinstance(step.get("retry_remediation_path"), str)
+            or not isinstance(step.get("retry_remediation_sha256"), str)
+            or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
+        ):
+            raise Error("blocked:plan_tampered")
+        binding = step.get("capability_binding")
+        if (
+            not isinstance(assignment.get("model_or_alias"), str)
+            or not 1 <= len(assignment["model_or_alias"]) <= 160
+            or not assignment["model_or_alias"].strip()
+            or not isinstance(binding, dict)
+            or digest(binding) != step.get("capability_binding_sha256")
+            or not valid_stored_binding(
+                binding,
+                data.get("plan_hash"),
+                sid,
+                leafs[sid],
+                assignment,
+            )
+        ):
+            raise Error("blocked:plan_tampered")
+        if step["retry_remediation_path"]:
+            rel(step["retry_remediation_path"], "retry remediation path")
+            require_sha256(
+                step["retry_remediation_sha256"],
+                "blocked:plan_tampered",
+            )
     # Retained provisional_v1 state stays well-formed so read-only commands can load it.
     for sid, step in steps.items():
         for field, keys in (
@@ -316,7 +315,7 @@ def validate_run(directory, data, plan_id, run_id):
     if (
         data.get("plan_id") != plan_id
         or data.get("run_id") != run_id
-        or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
+        or data.get("retry_policy") != ESCALATING_RETRY_POLICY
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
         or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
         or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
@@ -485,8 +484,6 @@ def validate_series_handoff(directory, data, plan):
 
 
 def validate_retry_artifacts(directory, data):
-    if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
-        return
     for step in data["steps"].values():
         path = step["retry_remediation_path"]
         if not path:

@@ -12,7 +12,6 @@ from .vocabulary import (
     CHANGESET_BUDGET_FIELDS,
     COMMIT,
     DISPATCH_ENTRY_FIELDS,
-    ESCALATING_RETRY_POLICY,
     FORWARD_SCHEMA,
     ID,
     MAX_ACCEPTANCE_SUMMARY,
@@ -646,7 +645,7 @@ def settle_return(data, step, value, fingerprint):
             "repeated non-completed progress fingerprint",
         )
         disposition = "blocked:no_progress"
-    elif data.get("retry_policy") == ESCALATING_RETRY_POLICY and not retry[0]:
+    elif not retry[0]:
         step.update(status=value["status"], retry_allowed=False)
         disposition = "ineligible_outcome"
     elif step["attempt_count"] >= step["max_attempts"]:
@@ -659,8 +658,7 @@ def settle_return(data, step, value, fingerprint):
         )
         disposition = "blocked:retry_exhausted"
     elif (
-        data.get("retry_policy") == ESCALATING_RETRY_POLICY
-        and needs_higher_tier(step, *retry)
+        needs_higher_tier(step, *retry)
         and step["current_tier"] == PORTABLE_TIERS[-1]
     ):
         stop_step(
@@ -750,10 +748,7 @@ def record(args):
     result = step_result("record-return", args, sid, step, progress_fingerprint=fingerprint)
     if "scope_notes_count" in step:
         result["scope_notes_count"] = step["scope_notes_count"]
-    # Only the escalating policy owns retries, so only it can state eligibility.
-    # A run without the stamp keeps its original silent result.
-    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        result["next"] = next_after_return(
-            args, directory, data, step_batches(plan), sid, step, value, disposition, plan
-        )
+    result["next"] = next_after_return(
+        args, directory, data, step_batches(plan), sid, step, value, disposition, plan
+    )
     return result

@@ -442,8 +442,7 @@ work; dispatch ready work; await active returns; cleanup integrated work;
 validate closeout; then report terminal blockage or closure. It uses
 the same dependency, attempt, and retry predicates as mutation. Full `show`
 remains unchanged as the at-most-1,200-token diagnostic fallback, especially
-when its wide summary reports truncation. A run without
-`retry_policy: escalating_remediation_v1` rejects `--next-only`.
+when its wide summary reports truncation.
 
 ### Retry policy, remediation, and terminal precedence
 

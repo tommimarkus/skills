@@ -9,7 +9,6 @@ from pathlib import Path
 from .vocabulary import (
     BATCH_ACTIVE_STATES,
     BATCH_DEPENDENCY_STATES,
-    ESCALATING_RETRY_POLICY,
     EXTERNAL_DEPENDENCY_STATES,
     MAX_CONCURRENT,
     MAX_NEXT_TOKENS,
@@ -324,19 +323,17 @@ def ready(args, directory, data, plan, batches, step):
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
         if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
             raise Error(f"invalid {label}")
-    if not isinstance(args.agent_id, str) or not 1 <= len(args.agent_id) <= 128:
-        if step["status"] == "pending" or data.get("retry_policy") != ESCALATING_RETRY_POLICY:
-            raise Error("ready requires bounded --agent-id")
+    if step["status"] == "pending" and (
+        not isinstance(args.agent_id, str) or not 1 <= len(args.agent_id) <= 128
+    ):
+        raise Error("ready requires bounded --agent-id")
     if not ready_status_legal(step):
         raise Error("step cannot be readied")
     retry_state = None
     if step["status"] != "pending":
         if not args.retry:
             raise Error("retry requires --retry")
-        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            retry_state = store_remediation(args, data, directory, step)
-        elif not args.summary:
-            raise Error("retry requires --retry and bounded --summary")
+        retry_state = store_remediation(args, data, directory, step)
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
     if not dependencies_clean(data, step, batches):
@@ -365,14 +362,13 @@ def ready(args, directory, data, plan, batches, step):
     else:
         next_agent_id = args.agent_id
         reason = args.summary or "ready"
-        if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            step["current_assignment"] = {
-                "agent_id": next_agent_id,
-                "harness": args.harness or step["assignment"]["harness"],
-                "model_or_alias": (
-                    tier_alias(args, data, step["current_tier"]) or step["assignment"]["model_or_alias"]
-                ),
-            }
+        step["current_assignment"] = {
+            "agent_id": next_agent_id,
+            "harness": args.harness or step["assignment"]["harness"],
+            "model_or_alias": (
+                tier_alias(args, data, step["current_tier"]) or step["assignment"]["model_or_alias"]
+            ),
+        }
     current = step["current_assignment"]
     stored = step["capability_binding"]["bindings"][0]
     if (

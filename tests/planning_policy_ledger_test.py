@@ -382,6 +382,16 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("", step["retry_remediation_path"])
         self.assertEqual("", step["retry_remediation_sha256"])
 
+    def test_a_v5_checkpoint_without_the_retry_policy_stamp_fails_load(self):
+        run = self.init2()
+        path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
+        checkpoint = json.loads(path.read_text())
+        del checkpoint["retry_policy"]
+        path.write_text(json.dumps(checkpoint))
+        code, result = self.call(*self.common, "show", "--run-id", run)
+        self.assertNotEqual(0, code, result)
+        self.assertEqual("invalid run checkpoint", result["error"])
+
     def test_new_run_stamps_registered_return_codes(self):
         run = self.init2()
         self.assertEqual("registered_v1", self.checkpoint(run)["return_codes"])

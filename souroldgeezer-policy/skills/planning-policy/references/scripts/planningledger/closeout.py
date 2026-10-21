@@ -396,22 +396,13 @@ def reopen_run(args):
     require_no_retained_pipeline(data)
     if timestamp(core.now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
-    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        batches = step_batches(plan)
-        pending = [
-            step
-            for step in ordered_steps(data["steps"])
-            if step["status"] == "pending" and ready_candidate(data, step, batches)
-        ]
-        retryable = pending + [s for s, _outcome, _kind in retryable_steps(directory, data, batches)]
-    else:
-        retryable = [
-            step
-            for step in data["steps"].values()
-            if step["status"] in {"pending", "blocked", "failed"}
-            and step["retry_allowed"]
-            and step["attempt_count"] < step["max_attempts"]
-        ]
+    batches = step_batches(plan)
+    pending = [
+        step
+        for step in ordered_steps(data["steps"])
+        if step["status"] == "pending" and ready_candidate(data, step, batches)
+    ]
+    retryable = pending + [s for s, _outcome, _kind in retryable_steps(directory, data, batches)]
     if not retryable:
         raise Error("blocked run has no retryable step")
     bounded_reason(args.reason, "reopen", required=True)
@@ -440,18 +431,17 @@ def reopen_run(args):
             step["id"] for step in ordered_steps(data["steps"]) if step in retryable
         ],
     }
-    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-        ids = result["retryable_steps"]
-        first = data["steps"][ids[0]]
-        command = (
-            dispatch_command(data["plan_id"], data["run_id"], first["id"])
-            if first["status"] == "pending"
-            else retry_command(data["plan_id"], data["run_id"], first["id"])
-        )
-        result["next"] = bounded_action_next(
-            {"retryable_step_ids": ids, "command": command},
-            "retryable_step_ids",
-        )
+    ids = result["retryable_steps"]
+    first = data["steps"][ids[0]]
+    command = (
+        dispatch_command(data["plan_id"], data["run_id"], first["id"])
+        if first["status"] == "pending"
+        else retry_command(data["plan_id"], data["run_id"], first["id"])
+    )
+    result["next"] = bounded_action_next(
+        {"retryable_step_ids": ids, "command": command},
+        "retryable_step_ids",
+    )
     return result
 
 
@@ -465,14 +455,8 @@ def summary(data, batches):
             "agent_id": s["agent_id"],
             "progress_fingerprint": s["fingerprints"][-1] if s["fingerprints"] else "",
             "reason": s["reason"][:480],
-            **(
-                {
-                    "current_tier": s["current_tier"],
-                    "current_assignment": s["current_assignment"],
-                }
-                if data.get("retry_policy") == ESCALATING_RETRY_POLICY
-                else {}
-            ),
+            "current_tier": s["current_tier"],
+            "current_assignment": s["current_assignment"],
         }
         for s in ordered_steps(steps)
     ]
@@ -491,11 +475,7 @@ def summary(data, batches):
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
-        **(
-            {"retry_policy": data["retry_policy"]}
-            if data.get("retry_policy") == ESCALATING_RETRY_POLICY
-            else {}
-        ),
+        "retry_policy": data["retry_policy"],
         "run_status": data["run_status"],
         "outcome": data["outcome"],
         "closed_at": data["closed_at"],
@@ -532,8 +512,6 @@ def show(args):
         raise Error("show --next-only does not accept --step-id")
     directory, data, plan, leafs = load_run(args)
     if args.next_only:
-        if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
-            raise Error(f"show --next-only requires retry_policy {ESCALATING_RETRY_POLICY}")
         validate_events(directory, data)
         result = {
             "ok": True,
@@ -556,11 +534,7 @@ def show(args):
             "plan_id": data["plan_id"],
             "run_id": data["run_id"],
             "plan_hash": data["plan_hash"],
-            **(
-                {"retry_policy": data["retry_policy"]}
-                if data.get("retry_policy") == ESCALATING_RETRY_POLICY
-                else {}
-            ),
+            "retry_policy": data["retry_policy"],
             "run_status": data["run_status"],
             "outcome": data["outcome"],
             "closed_at": data["closed_at"],
@@ -585,17 +559,11 @@ def show(args):
                 "integration_result_sha256": step["integration_result_sha256"],
                 "cleanup_result_path": step["cleanup_result_path"],
                 "cleanup_result_sha256": step["cleanup_result_sha256"],
-                **(
-                    {
-                        "current_tier": step["current_tier"],
-                        "same_tier_retry_used": step["same_tier_retry_used"],
-                        "current_assignment": step["current_assignment"],
-                        "retry_remediation_path": step["retry_remediation_path"],
-                        "retry_remediation_sha256": step["retry_remediation_sha256"],
-                    }
-                    if data.get("retry_policy") == ESCALATING_RETRY_POLICY
-                    else {}
-                ),
+                "current_tier": step["current_tier"],
+                "same_tier_retry_used": step["same_tier_retry_used"],
+                "current_assignment": step["current_assignment"],
+                "retry_remediation_path": step["retry_remediation_path"],
+                "retry_remediation_sha256": step["retry_remediation_sha256"],
             },
             "omitted_blockers": 0,
         }
@@ -627,11 +595,7 @@ def validate(args):
         "plan_id": data["plan_id"],
         "run_id": data["run_id"],
         "plan_hash": data["plan_hash"],
-        **(
-            {"retry_policy": data["retry_policy"]}
-            if data.get("retry_policy") == ESCALATING_RETRY_POLICY
-            else {}
-        ),
+        "retry_policy": data["retry_policy"],
         "run_status": data["run_status"],
         "outcome": data["outcome"],
         "closed_at": data["closed_at"],
@@ -641,7 +605,6 @@ def validate(args):
     }
     if (
         args.closeout
-        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
         and data["steps"]
         and all(step["status"] == "cleaned" for step in data["steps"].values())
     ):

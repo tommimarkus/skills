@@ -74,8 +74,8 @@ permitted decomposition rationale. A rejected microleaf is merged back into
 its cohesive outcome.
 
 Retries are ledger-owned, add no plan fields, and preserve the approved boundary
-and identity. New v5 uses `escalating_remediation_v1`; old policy-less state is
-unchanged. A running v5 step's execution metadata (`write_set`/`read_set`
+and identity. Every v5 run uses `escalating_remediation_v1`; a v5 checkpoint
+without it is invalid. A running v5 step's execution metadata (`write_set`/`read_set`
 additions, `acceptance_command`, `max_attempts`) is parent-amendable; scope
 fields (task, boundary, decisions, dependencies, tier, owner) need a new plan.
 
