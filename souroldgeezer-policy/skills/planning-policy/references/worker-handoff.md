@@ -129,5 +129,7 @@ tier-specific judgment, escalation, size-band and acceptance wording.
   and name it in `commit_hash`, or revert to a clean tree and report no changed
   paths; never leave edits uncommitted. Do not invent a decision. Your
   verification covers only your own drafting; say plainly what you did not check.
+  Before returning, validate the prepared return read-only with `validate-return`,
+  as described above in this file.
   The packet's `return_schema` and `validate-return` own every count, length and
   size limit.

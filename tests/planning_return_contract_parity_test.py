@@ -80,6 +80,7 @@ class ReturnStatusParityTest(unittest.TestCase):
         for path in AGENTS:
             with self.subTest(document=path.name):
                 self.assertNotIn("v1–v", normalized(path))
+                self.assertNotIn("report its raw output", normalized(path))
 
     def test_codex_handoff_gates_binding_and_decomposition_on_v5_only(self):
         text = normalized(SKILL / "extensions/codex.md")
