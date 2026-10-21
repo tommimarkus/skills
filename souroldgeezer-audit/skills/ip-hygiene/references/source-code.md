@@ -118,8 +118,5 @@ never treat its presence as permission.
 
 ## Non-Goals
 
-Mechanical internal copy-paste duplication is `lean-audit` (`LA-CODE-DUP-*`);
-source dead code is out of scope; semantic DRY belongs to `software-design`;
-code-level security belongs to `devsecops-audit`. This file's interest is
-third-party provenance, notices, permission, and marks in code — not internal
-code quality.
+[SKILL.md § Scope And Load Map](../SKILL.md) owns this lane's sibling
+delegation boundaries and its code interest; they apply here unchanged.
