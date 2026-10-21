@@ -93,7 +93,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # tdd-policy at integration (+13 claude / +21 codex / +21 approval
         # measured), charged to every route that loads core-workflow.md; series
         # keeps its headroom. Each budget still carries 5 slack.
-        self.assertLessEqual(claude["load_total"], 7207)
+        # verify-loop: plan-contract.md gains the verification / changeset_budget
+        # section (+196 measured claude; slack 5 kept).
+        self.assertLessEqual(claude["load_total"], 7408)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -105,7 +107,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # core-workflow.md/plan-contract.md batch additions as claude above.
         # codex was re-baselined once more, from 6350, alongside claude above
         # for the same shared plan-series pointers.
-        self.assertLessEqual(codex["load_total"], 7201)
+        self.assertLessEqual(codex["load_total"], 7402)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -135,7 +137,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # contract and scaffold charged above. Including the orchestrator prose
         # charged above, this route measures 7,038 proxy tokens.
         series = self.measure("planning-policy-series-successor")
-        self.assertLessEqual(series["load_total"], 7105)
+        self.assertLessEqual(series["load_total"], 7285)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -157,7 +159,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # Block-format envelope emission and the 4,096-character line limit
         # answer the same live failure: an over-long envelope line withheld
         # approval and a rejected ExitPlanMode was mistaken for approval.
-        self.assertLessEqual(result["load_total"], 8300)
+        self.assertLessEqual(result["load_total"], 8501)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

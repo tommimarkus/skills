@@ -117,6 +117,20 @@ series slicing. After an oversized return, derive the re-cut from the original
 cohesive outcomes, not a list of remainder items. Successive-plan composition and
 handoff live in [plan series](plan-series.md).
 
+## Verification and changeset budget
+
+Optional top-level `verification` is `per-leaf` (default when absent) or
+`closeout-only`; any other value is a contract error. Optional per-leaf
+`changeset_budget` holds only `max_changed_lines`, `max_files`, `exempt_paths`,
+and `reason`. Defaults: `small` 150 lines and 6 files; `medium`/`large` 400 and
+15 (added plus deleted lines; tests count). Limits are positive integers at most
+2x the default; a raised limit or any exempt path requires a `reason` of 1-240
+characters. `exempt_paths` holds at most 8 safe repository-relative paths, each
+covered by the leaf `write_set` (exact, descendant, or glob), and leaves both
+counts. `changeset_budget(leaf)` in the validator is the only derivation; the
+ledger imports it. The cost advisory adds `verify_dispatches`: the dispatch-group
+count, or 0 for `closeout-only`.
+
 ## Readiness gate
 
 Weights are `small=1`, `medium=2`, `large=3`. A work unit is medium-ready only

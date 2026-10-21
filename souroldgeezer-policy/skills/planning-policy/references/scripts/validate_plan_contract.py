@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import os
@@ -50,6 +51,10 @@ PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 GLOB_CHARS = ("*", "?", "[")
 PLACEHOLDER_DECISIONS = {"tbd", "todo", "unknown", "unresolved"}
 NOOP_ACCEPTANCE_COMMANDS = {"true", ":", "exit 0"}
+VERIFICATION_MODES = {"per-leaf", "closeout-only"}
+BUDGET_KEYS = {"max_changed_lines", "max_files", "exempt_paths", "reason"}
+BUDGET_DEFAULTS = {"small": (150, 6), "medium": (400, 15), "large": (400, 15)}
+BUDGET_EXEMPT_LIMIT = 8
 PLAN_SCALE_LEAF_LIMIT = 12
 PLAN_SCALE_WEIGHT_LIMIT = 20
 MICROLEAF_CANDIDATE_LIMIT = 8
@@ -221,6 +226,81 @@ def safe_repository_path(value: Any) -> bool:
     if value.startswith("/") or "\\" in value or any(ord(character) < 32 or ord(character) == 127 for character in value):
         return False
     return all(segment not in {"", ".", ".."} for segment in value.split("/"))
+
+
+def glob_covers(path_parts: list[str], pattern_parts: list[str]) -> bool:
+    if not pattern_parts:
+        return not path_parts
+    head, rest = pattern_parts[0], pattern_parts[1:]
+    if head == "**":
+        return glob_covers(path_parts, rest) or (
+            bool(path_parts) and glob_covers(path_parts[1:], pattern_parts)
+        )
+    return bool(path_parts) and fnmatch.fnmatchcase(path_parts[0], head) and glob_covers(
+        path_parts[1:], rest
+    )
+
+
+def write_set_covers(write_set: list[Any], path: str) -> bool:
+    """Exact-or-descendant for plain entries, segment-aware glob for glob entries."""
+    for allowed in write_set:
+        if not isinstance(allowed, str):
+            continue
+        if any(character in allowed for character in GLOB_CHARS):
+            if glob_covers(path.split("/"), allowed.split("/")):
+                return True
+        elif path == allowed or path.startswith(allowed.rstrip("/") + "/"):
+            return True
+    return False
+
+
+def changeset_budget(leaf: dict[str, Any]) -> dict[str, Any]:
+    """The only derivation of a leaf's changeset budget: size-band defaults plus declared overrides."""
+    lines, files = BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])
+    declared = leaf.get("changeset_budget")
+    declared = declared if isinstance(declared, dict) else {}
+    exempt = declared.get("exempt_paths")
+    return {
+        "max_changed_lines": declared.get("max_changed_lines", lines),
+        "max_files": declared.get("max_files", files),
+        "exempt_paths": list(exempt) if isinstance(exempt, list) else [],
+    }
+
+
+def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
+    declared = leaf.get("changeset_budget")
+    prefix = "changeset_budget"
+    if not isinstance(declared, dict):
+        return [f"{prefix} must be an object"]
+    errors: list[str] = []
+    if set(declared) - BUDGET_KEYS:
+        errors.append(f"{prefix} has unknown keys: {sorted(set(declared) - BUDGET_KEYS)}")
+    defaults = dict(zip(("max_changed_lines", "max_files"), BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])))
+    raised = False
+    for key, default in defaults.items():
+        if key not in declared:
+            continue
+        value = declared[key]
+        if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 2 * default:
+            errors.append(f"{prefix}.{key} must be an integer from 1 to {2 * default}")
+        elif value > default:
+            raised = True
+    exempt = declared.get("exempt_paths", [])
+    if not isinstance(exempt, list) or len(exempt) > BUDGET_EXEMPT_LIMIT:
+        errors.append(f"{prefix}.exempt_paths must be an array of at most {BUDGET_EXEMPT_LIMIT} paths")
+        exempt = []
+    write_set = leaf.get("write_set") if isinstance(leaf.get("write_set"), list) else []
+    for index, path in enumerate(exempt):
+        if not safe_repository_path(path):
+            errors.append(f"{prefix}.exempt_paths[{index}] must be a safe repository-relative path")
+        elif not write_set_covers(write_set, path):
+            errors.append(f"{prefix}.exempt_paths[{index}] must be covered by write_set")
+    reason = declared.get("reason")
+    if (raised or exempt) and not nonempty_string_in_range(reason, 1, 240):
+        errors.append(f"{prefix}.reason is required (1 to 240 characters) to raise a limit or exempt paths")
+    elif "reason" in declared and not nonempty_string_in_range(reason, 1, 240):
+        errors.append(f"{prefix}.reason must be a string from 1 to 240 characters")
+    return errors
 
 
 def declared_path_set_errors(leaf: dict[str, Any], field: str) -> list[str]:
@@ -404,6 +484,7 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         "final_verification_reserve": "indeterminate",
         "tracing": "off",
         "tier_mix": tier_mix(leaves),
+        "verify_dispatches": 0 if plan.get("verification") == "closeout-only" else len(groups),
     }
     candidates = microleaf_candidates(leaves)
     if candidates:
@@ -1031,6 +1112,8 @@ def validate(
             and "missing_load_bearing_information" not in leaf["stop_conditions"]
         ):
             errors.append(f"{prefix}.stop_conditions must include missing_load_bearing_information")
+        if "changeset_budget" in leaf:
+            errors.extend(f"{prefix}.{error}" for error in changeset_budget_errors(leaf))
         if leaf.get("size") not in SIZES:
             errors.append(f"{prefix}.size must be small, medium, or large")
         if leaf.get("portable_tier") not in TIERS:
@@ -1246,6 +1329,10 @@ def validate(
         errors.append(
             "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
         )
+    if "verification" in plan and not (
+        isinstance(plan["verification"], str) and plan["verification"] in VERIFICATION_MODES
+    ):
+        errors.append("verification must be per-leaf or closeout-only")
     series = plan.get("series")
     if series is not None:
         errors.extend(series_errors(series))
