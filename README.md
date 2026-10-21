@@ -162,7 +162,7 @@ Each skill’s expected output and boundaries are in [using skills](docs/using-s
 ## Validation
 
 The contributor guide defines the ordered changed-surface and clean candidate
-checks. Its fragmentation gate runs metadata validation and
+checks, including the lean-audit markdown engine (`lean_engine.py`, exit 1 on block findings; info and warn stay advisory). Its fragmentation gate runs metadata validation and
 `scripts/test-stop-hooks.sh`, and the full test suite runs once at closeout.
 Evidence from an exact clean candidate survives fast-forward integration. Only
 the documented atomic version cell follow-up uses focused version and metadata

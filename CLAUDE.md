@@ -196,17 +196,26 @@ Run repo-scanning gates (the skill-architecture report, the full unittest suite)
 
 When restructuring files the deterministic engines scan, gate on a **classified** before/after finding-set diff — every difference must be a path rename of a base finding, an in-class declared suppression, or an adjudicated new class; byte/set equality against the pre-refactor baseline is unachievable by design (paths rename, dedupe keying shifts). Residual intentional parallels (identifier-rich test bodies, mandated shim boilerplate) take the whole-file `lean-audit:dup-intentional` line comment on the data/boilerplate file, never on a logic module — a logic module that genuinely needs a declaration scopes it to the clone with a `lean-audit:dup-intentional:begin` … `:end` line-comment pair, which suppresses only the clones fully contained in that span. The marker counts only inside a line comment of the file's own language; in a string literal it declares nothing. A dedupe-to-canonical-core hoist is not done when the shared prose moves: the thinned per-skill citing wrappers it leaves behind predictably become a *new* near-identical **prose** pair, so plan that pair's declaration while designing the hoist — mark it `lean-audit:sync-intentional` (the prose near-duplicate counterpart of the `dup-intentional` code marker above), or carve it out in the registry, with a rationale, and re-run the engine to a clean exit before landing, not as a gate-time surprise.
 
-Primary checks:
+### Primary checks
+
+<!-- lean-audit:sync-intentional: AGENTS.md § Validation › Primary checks states the same check list for Codex; each runtime file stays self-contained, so edit both together. -->
 
 ```bash
 python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
+uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .  # exit 1 on block findings; info/warn stay advisory
 uv run python -m unittest discover -s tests -p '*_test.py'  # one full-suite run at closeout
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```
+
+The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
+
+### Gate order and evidence
+
+<!-- lean-audit:sync-intentional: AGENTS.md § Validation › Gate order and evidence states the same gate-order, evidence-survival, fast-gate, exit-status, zero-test, and host-smoke rules for Codex; each runtime file stays self-contained, so edit those rules in both together. -->
 
 Run focused changed-surface checks first, then these ordered candidate gates
 from the clean persistent task worktree. The version guard follows them and

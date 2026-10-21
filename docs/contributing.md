@@ -93,11 +93,14 @@ integration, preserving each command's exit status:
 python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
+uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .  # exit 1 on block findings; info/warn stay advisory
 uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```
+
+The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
 
 The version guard runs after the candidate gates and before fast-forward
 integration. The fragmentation script runs metadata and stop-hook checks. The explicit

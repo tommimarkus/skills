@@ -323,6 +323,10 @@ Breaking or additive public-surface work requires the repository's in-depth
 
 ## Validation
 
+### Primary checks
+
+<!-- lean-audit:sync-intentional: CLAUDE.md § Repo-local Python® tooling › Primary checks states the same check list for Claude Code; each runtime file stays self-contained, so edit both together. -->
+
 Run the changed-surface checks first. Before integration, run the following
 ordered candidate gates from the clean persistent task worktree at repository
 root, preserving each command's exit status:
@@ -331,11 +335,18 @@ root, preserving each command's exit status:
 python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
+uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .  # exit 1 on block findings; info/warn stay advisory
 uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```
+
+The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
+
+### Gate order and evidence
+
+<!-- lean-audit:sync-intentional: CLAUDE.md § Repo-local Python® tooling › Gate order and evidence states the same gate-order, evidence-survival, fast-gate, exit-status, zero-test, and host-smoke rules for Claude Code; each runtime file stays self-contained, so edit those rules in both together. -->
 
 Run the version guard after the candidate gates and before fast-forward
 integration. The fragmentation script runs metadata and stop-hook checks. The explicit
