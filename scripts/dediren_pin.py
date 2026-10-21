@@ -43,17 +43,17 @@ class PinError(Exception):
     """A refusal or upstream failure carrying its operator-facing exit code."""
 
     def __init__(self, message: str, code: int = EXIT_REFUSED) -> None:
-        super().__init__(message)
         self.code = code
+        super().__init__(message)
 
 
 def calver_key(version: str) -> tuple[int, int, int] | None:
     """Sortable key for a ``YYYY.0M.MICRO`` string, or None when it is not one."""
     match = CALVER_RE.match(version.strip())
-    if match is None or not 1 <= int(match.group(2)) <= 12:
+    if match is None:
         return None
     year, month, micro = (int(group) for group in match.groups())
-    return year, month, micro
+    return (year, month, micro) if 1 <= month <= 12 else None
 
 
 def require_calver(version: str, label: str) -> tuple[int, int, int]:

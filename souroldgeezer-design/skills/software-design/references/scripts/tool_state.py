@@ -13,6 +13,7 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -207,39 +208,56 @@ def put(args: argparse.Namespace, repo: Path) -> int:
     return response("put", "ok", capability=args.capability, record=record)
 
 
-def get(args: argparse.Namespace, repo: Path) -> int:
+def with_assessment(
+    command: str,
+    args: argparse.Namespace,
+    repo: Path,
+    then: Callable[[str, dict[str, str], list[str]], int],
+    *,
+    refuse_unusable: bool = False,
+) -> int:
+    """Assess ``args.capability`` and hand the result to ``then``.
+
+    An absent record, and (with ``refuse_unusable``) a malformed or unknown-schema one,
+    is answered here instead of reaching ``then``.
+    """
     values = cache_records(repo).get(args.capability)
     if values is None:
-        return response("get", "absent", capability=args.capability)
+        return response(command, "absent", capability=args.capability)
     state, record, problems = assess(args.capability, values, utc_today())
-    return response("get", state, capability=args.capability, record=record, problems=problems)
+    if refuse_unusable and state in {"malformed", "unknown_schema"}:
+        return response(command, state, capability=args.capability, record=record, problems=problems)
+    return then(state, record, problems)
+
+
+def get(args: argparse.Namespace, repo: Path) -> int:
+    return with_assessment(
+        "get", args, repo,
+        lambda state, record, problems: response(
+            "get", state, capability=args.capability, record=record, problems=problems
+        ),
+    )
 
 
 def stale(args: argparse.Namespace, repo: Path) -> int:
-    values = cache_records(repo).get(args.capability)
-    if values is None:
-        return response("stale", "absent", capability=args.capability)
-    state, record, problems = assess(args.capability, values, utc_today())
-    if state in {"malformed", "unknown_schema"}:
-        return response("stale", state, capability=args.capability, record=record, problems=problems)
-    stale_on = parse_date(args.stale_on) if args.stale_on else utc_today()
-    section = cache_section(args.capability)
-    git_config(repo, "--replace-all", f"{section}.state", "stale")
-    git_config(repo, "--replace-all", f"{section}.stale-on", date_text(stale_on))
-    git_config(repo, "--replace-all", f"{section}.purge-after", date_text(stale_on + timedelta(days=7)))
-    record.update({"state": "stale", "stale-on": date_text(stale_on), "purge-after": date_text(stale_on + timedelta(days=7))})
-    return response("stale", "ok", capability=args.capability, record=record)
+    def mark_stale(state: str, record: dict[str, str], problems: list[str]) -> int:
+        stale_on = parse_date(args.stale_on) if args.stale_on else utc_today()
+        section = cache_section(args.capability)
+        git_config(repo, "--replace-all", f"{section}.state", "stale")
+        git_config(repo, "--replace-all", f"{section}.stale-on", date_text(stale_on))
+        git_config(repo, "--replace-all", f"{section}.purge-after", date_text(stale_on + timedelta(days=7)))
+        record.update({"state": "stale", "stale-on": date_text(stale_on), "purge-after": date_text(stale_on + timedelta(days=7))})
+        return response("stale", "ok", capability=args.capability, record=record)
+
+    return with_assessment("stale", args, repo, mark_stale, refuse_unusable=True)
 
 
 def clear(args: argparse.Namespace, repo: Path) -> int:
-    values = cache_records(repo).get(args.capability)
-    if values is None:
-        return response("clear", "absent", capability=args.capability)
-    state, record, problems = assess(args.capability, values, utc_today())
-    if state in {"malformed", "unknown_schema"}:
-        return response("clear", state, capability=args.capability, record=record, problems=problems)
-    git_config(repo, "--remove-section", cache_section(args.capability))
-    return response("clear", "ok", capability=args.capability)
+    def remove(state: str, record: dict[str, str], problems: list[str]) -> int:
+        git_config(repo, "--remove-section", cache_section(args.capability))
+        return response("clear", "ok", capability=args.capability)
+
+    return with_assessment("clear", args, repo, remove, refuse_unusable=True)
 
 
 def list_records(args: argparse.Namespace, repo: Path) -> int:

@@ -147,17 +147,28 @@ def validate_item(item: object, line: int) -> list[str]:
     return errors
 
 
-def validate_file(path: Path) -> tuple[dict[str, dict], list[str]]:
-    result: dict[str, dict] = {}
-    errors: list[str] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+def jsonl_records(path: Path, errors: list[str], label: str = ""):
+    """Yield (line number, parsed item) per nonblank JSONL line; record bad JSON in errors."""
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
         try:
-            item = json.loads(line)
+            yield number, json.loads(line)
         except json.JSONDecodeError as error:
-            errors.append(f"line {line_number}: invalid JSON: {error.msg}")
-            continue
+            errors.append(f"{label}line {number}: invalid JSON: {error.msg}")
+
+
+def report_verdict(title: str, errors: list[str]) -> int:
+    print(f"{title}: " + ("PASS" if not errors else "FAIL"))
+    for error in errors:
+        print(error)
+    return 1 if errors else 0
+
+
+def validate_file(path: Path) -> tuple[dict[str, dict], list[str]]:
+    result: dict[str, dict] = {}
+    errors: list[str] = []
+    for line_number, item in jsonl_records(path, errors):
         errors.extend(validate_item(item, line_number))
         if isinstance(item, dict) and isinstance(item.get("case"), str):
             if item["case"] in result:
@@ -169,14 +180,7 @@ def validate_file(path: Path) -> tuple[dict[str, dict], list[str]]:
 def case_ids(path: Path) -> tuple[set[str], list[str]]:
     result: set[str] = set()
     errors: list[str] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        if not line.strip():
-            continue
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError as error:
-            errors.append(f"cases line {line_number}: invalid JSON: {error.msg}")
-            continue
+    for line_number, item in jsonl_records(path, errors, "cases "):
         case = item.get("case") if isinstance(item, dict) else None
         if not isinstance(case, str) or not case:
             errors.append(f"cases line {line_number}: case must be a nonempty string")
@@ -199,10 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         errors.append(f"missing actual case: {case}")
     for case in sorted(set(actual) - expected_cases):
         errors.append(f"unexpected actual case: {case}")
-    print("IP hygiene actual schema: " + ("PASS" if not errors else "FAIL"))
-    for error in errors:
-        print(error)
-    return 1 if errors else 0
+    return report_verdict("IP hygiene actual schema", errors)
 
 
 if __name__ == "__main__":

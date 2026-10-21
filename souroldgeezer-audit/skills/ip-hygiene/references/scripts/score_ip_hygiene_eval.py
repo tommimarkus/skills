@@ -15,6 +15,8 @@ from validate_ip_hygiene_actual import (
     OUTCOMES,
     SEVERITIES,
     case_ids,
+    jsonl_records,
+    report_verdict,
     validate_file,
 )
 
@@ -74,16 +76,9 @@ def is_legal_merits_proposition(proposition: object) -> bool:
 
 
 def expected_records(path: Path) -> tuple[dict[str, dict], list[str]]:
-    result: dict[str, dict] = {}
     errors: list[str] = []
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        if not line.strip():
-            continue
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError as error:
-            errors.append(f"expected line {number}: invalid JSON: {error.msg}")
-            continue
+    result: dict[str, dict] = {}
+    for number, item in jsonl_records(path, errors, "expected "):
         if (
             not isinstance(item, dict)
             or not EXPECTED_REQUIRED_KEYS.issubset(item)
@@ -433,10 +428,7 @@ def main() -> int:
             "failing_cases": {case: failing[case] for case in sorted(failing)},
         }, indent=2, sort_keys=False))
         return 1 if errors else 0
-    print("IP hygiene eval: " + ("PASS" if not errors else "FAIL"))
-    for error in errors:
-        print(error)
-    return 1 if errors else 0
+    return report_verdict("IP hygiene eval", errors)
 
 
 if __name__ == "__main__":

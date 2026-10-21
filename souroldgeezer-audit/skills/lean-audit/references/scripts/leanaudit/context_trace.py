@@ -145,6 +145,18 @@ def _native_codex_usage(record: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return "recognized", usage
 
 
+def _usage_present(
+    usage: dict[str, Any],
+    attrs: dict[str, Any],
+    usage_keys: tuple[str, ...],
+    attr_keys: tuple[str, ...],
+) -> bool:
+    """Whether any usage field or span attribute carries a numeric count."""
+    return any(_is_number(usage.get(key)) for key in usage_keys) or any(
+        _is_number(attrs.get(key)) for key in attr_keys
+    )
+
+
 def _generic_usage_status(
     record: dict[str, Any], usage: dict[str, Any], attrs: dict[str, Any]
 ) -> str:
@@ -155,19 +167,17 @@ def _generic_usage_status(
         return "not-applicable"
 
     total_present = any(_is_number(usage.get(key)) for key in ("total_tokens", "totalTokens"))
-    input_present = any(
-        _is_number(usage.get(key))
-        for key in ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens")
-    ) or any(
-        _is_number(attrs.get(key))
-        for key in ("gen_ai.usage.input_tokens", "llm.token_count.prompt")
+    input_present = _usage_present(
+        usage,
+        attrs,
+        ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens"),
+        ("gen_ai.usage.input_tokens", "llm.token_count.prompt"),
     )
-    output_present = any(
-        _is_number(usage.get(key))
-        for key in ("output_tokens", "outputTokens", "completion_tokens", "completionTokens")
-    ) or any(
-        _is_number(attrs.get(key))
-        for key in ("gen_ai.usage.output_tokens", "llm.token_count.completion")
+    output_present = _usage_present(
+        usage,
+        attrs,
+        ("output_tokens", "outputTokens", "completion_tokens", "completionTokens"),
+        ("gen_ai.usage.output_tokens", "llm.token_count.completion"),
     )
     if total_present or (input_present and output_present):
         return "recognized"
