@@ -56,6 +56,13 @@ If the actual work exceeds its size band, stop and ask the parent to re-cut the
 step. Report what you completed and how the remaining work splits; do not expand
 the scope.
 
+Stay inside the packet's `changeset_budget`: make only the assigned task, with no
+drive-by refactors, reformatting, or renames, and patch rather than regenerate.
+Run `check-changeset` (see the
+[worker handoff procedure](../skills/planning-policy/references/worker-handoff.md))
+before returning `completed`. If the work cannot fit, stop `oversized:changeset`;
+never shrink it by deleting required content.
+
 You may be assigned an ordered batch of members to run in one shared worktree.
 Execute them in listed order; commit each member's work separately; run each
 member's own acceptance command; return one bounded return per member, echoing

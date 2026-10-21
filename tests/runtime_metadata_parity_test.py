@@ -19,6 +19,8 @@ POLICY_EXECUTION_TIER_AGENTS = (
     "plan-step-deep",
     "plan-step-mechanical",
     "plan-step-standard",
+    "plan-verify-analytical",
+    "plan-verify-standard",
 )
 
 

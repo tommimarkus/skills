@@ -62,6 +62,13 @@ If the actual work exceeds its size band, stop and ask the parent to re-cut the
 step. State the current blast-radius boundary and what remains; do not expand
 the investigation or edit scope.
 
+Stay inside the packet's `changeset_budget`: make only the assigned task, with no
+drive-by refactors, reformatting, or renames, and patch rather than regenerate.
+Run `check-changeset` (see the
+[worker handoff procedure](../skills/planning-policy/references/worker-handoff.md))
+before returning `completed`. If the work cannot fit, stop `oversized:changeset`;
+never shrink it by deleting required content.
+
 Run the acceptance check and report its bounded exit code and summary. Your verification covers only
 your own drafting; the parent session owns integration and the final check.
 
