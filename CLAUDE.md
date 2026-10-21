@@ -242,6 +242,16 @@ that surface. Any other source, plan, evidence, surface, or integration drift
 requires the full candidate gates again. The explicit `*_test.py` command owns
 the one full-suite run at closeout. A run that collects zero tests fails.
 
+A plan leaf whose write set touches a surface one of the fast gates covers runs
+that gate in its own acceptance command, from its own worktree, whenever the
+base already passes it: `scripts/validate-fragmentation.sh` for JSON/TOML,
+manifest, marketplace, runtime-metadata, and Stop-hook paths; the stdlib report
+engine `python3 -B scripts/skill_architecture_report.py --strict .` for skill,
+agent, reference, manifest, and repo-guidance paths; and
+`python3 -B -m unittest tests.test_code_clone_ratchet_test` for `tests/`. Each
+takes about a second, so a defect fails the leaf that introduced it rather than
+a later slice's closeout. The full suite and the host smoke stay closeout-only.
+
 When reading a gate's exit status, never let a pipeline stage or a `||` fallback own the reported code — `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's status, not the gate's, and can read green while the gate itself failed. Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and test the bare command, or run the gate unpiped; a status that provably came from a downstream stage is no evidence the gate ran or passed, the same way a 0-collected-tests run is treated as a failed gate.
 
 The cross-runtime host smoke installs supported surfaces into fresh temporary

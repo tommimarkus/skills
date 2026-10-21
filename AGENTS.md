@@ -602,6 +602,16 @@ when it is available, and run `claude plugin validate --strict` through the
 repository report path when the Claude CLI is installed. A test run that
 collects zero tests is a failed gate.
 
+A plan leaf whose write set touches a surface one of the fast gates covers runs
+that gate in its own acceptance command, from its own worktree, whenever the
+base already passes it: `scripts/validate-fragmentation.sh` for JSON/TOML,
+manifest, marketplace, runtime-metadata, and Stop-hook paths; the stdlib report
+engine `python3 -B scripts/skill_architecture_report.py --strict .` for skill,
+agent, reference, manifest, and repo-guidance paths; and
+`python3 -B -m unittest tests.test_code_clone_ratchet_test` for `tests/`. Each
+takes about a second, so a defect fails the leaf that introduced it rather than
+a later slice's closeout. The full suite and the host smoke stay closeout-only.
+
 Never let a pipeline stage or a `||` fallback own a gate's reported exit code —
 `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's
 status, not the gate's, and can read green while the gate itself failed.
