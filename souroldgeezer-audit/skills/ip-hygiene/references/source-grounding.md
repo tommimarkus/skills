@@ -5,7 +5,8 @@ the original internal IP hygiene workflow and references. They do not copy
 legal source text, vendor policies, issue text, examples, schemas, tables, or
 external docs.
 
-- Source: `souroldgeezer-audit/skills/ip-hygiene/SKILL.md`.
+- Source: `souroldgeezer-audit/skills/ip-hygiene/SKILL.md` and its lane procedures
+  `souroldgeezer-audit/skills/ip-hygiene/references/procedures/{in-depth-review,prospective-decision,remediation}.md`.
   Handling: local repo-authored workflow; eval prompts exercise the triage
   contract, false-positive rejection, false-negative rejection, configurable
   conventions, focused scope, and stop conditions.

@@ -267,7 +267,9 @@ is still charged and is never treated as zero.
   the registry the engines read: `[[carve_out]]` glob pairs (declared intentional
   parallels, with `{name}` captures), `[[canonical_home]]`, `exempt_paths`,
   `[[skill_budget]]` (`path` exact repo-relative, `lines` int > 0, non-empty
-  `rationale`; invalid entries are ignored), and `code_extensions`. This repo's file is carve-out-only.
+  `rationale`; invalid entries are ignored), and `code_extensions`. This repo's
+  file declares `exempt_paths`, `[[carve_out]]` pairs, and one `[[skill_budget]]`;
+  it sets no `[[canonical_home]]` or `code_extensions`.
 - `pyproject.toml` (at the marketplace source-repo root) — scopes ruff
   (`[tool.ruff] include`) and mypy (`[tool.mypy] files`) to the bundled-scripts
   trees that adopt this standard (this one, test-quality-audit's, and
