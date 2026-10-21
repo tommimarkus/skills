@@ -31,6 +31,11 @@ def _assistant(text: str) -> dict:
     return _entry("assistant", text)
 
 
+def _skill_call(skill: str) -> dict:
+    return {"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "tool_use", "name": "Skill", "input": {"skill": skill}}]}}
+
+
 class DetectorTest(unittest.TestCase):
     def _detect(self, entry: dict) -> list[str]:
         sig = load_signals()
@@ -67,9 +72,7 @@ class AuditRunTest(unittest.TestCase):
             return sig.detect_audit_runs(_transcript(Path(tmp), entry))
 
     def test_claude_skill_tool_use_is_detected(self):
-        entry = {"type": "assistant", "message": {"role": "assistant", "content": [
-            {"type": "tool_use", "name": "Skill", "input": {"skill": "souroldgeezer-audit:ip-hygiene"}}]}}
-        self.assertEqual(self._detect(entry), ["ip-hygiene"])
+        self.assertEqual(self._detect(_skill_call("souroldgeezer-audit:ip-hygiene")), ["ip-hygiene"])
 
     def test_codex_report_function_call_is_detected(self):
         entry = {"type": "response_item", "payload": {"type": "function_call", "name": "shell",
@@ -85,9 +88,7 @@ class AuditRunTest(unittest.TestCase):
         self.assertEqual(self._detect(_user("please run lean-audit and the skill-architecture-report")), [])
 
     def test_other_skill_is_not_an_audit_run(self):
-        entry = {"type": "assistant", "message": {"role": "assistant", "content": [
-            {"type": "tool_use", "name": "Skill", "input": {"skill": "software-design"}}]}}
-        self.assertEqual(self._detect(entry), [])
+        self.assertEqual(self._detect(_skill_call("software-design")), [])
 
     def test_malformed_and_missing_transcripts_fail_open(self):
         sig = load_signals()
