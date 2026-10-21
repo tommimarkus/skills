@@ -162,6 +162,7 @@ class UpstreamHarness(PipelineHarness):
         git(self.repo, "commit", "-m", "shared")
         alpha, beta = leaf("alpha", "leaf-alpha"), leaf("beta", "leaf-beta", ["alpha"])
         alpha["write_set"] = beta["write_set"] = ["src"]
+        alpha["max_attempts"] = 3
         self.init([alpha, beta])
         self.finished("alpha")
         self.alpha_old = self.issued("alpha")
@@ -170,12 +171,12 @@ class UpstreamHarness(PipelineHarness):
             self.passed("beta")
         return self.step("alpha")["returned_commit"]
 
-    def reject_alpha(self):
+    def reject_alpha(self, code="verify:coverage"):
         code, result = self.record_verify(
-            self.verify_return(self.alpha_old, "reject", [self.finding()]))
+            self.verify_return(self.alpha_old, "reject", [self.finding(code=code)]))
         self.assertEqual(0, code, result)
 
-    def retry(self, step_id, diagnosis, files):
+    def retry(self, step_id, diagnosis, files, tier="standard"):
         """Retry a stopped step with a remediation citing `diagnosis` and commit `files`."""
         step = self.step(step_id)
         path = self.scratch / "remediation.json"
@@ -184,7 +185,7 @@ class UpstreamHarness(PipelineHarness):
             "prior_attempt_id": step["attempt_id"], "prior_return_sha256": step["return_sha256"],
             "diagnosis": diagnosis, "remediation_action": "repair", "executor_mode": "reuse",
             "next_agent_id": "worker", "next_harness": "claude-code",
-            "target_portable_tier": "standard",
+            "target_portable_tier": tier,
         }))
         code, retry = self.dispatch(step_id, "--retry", "--retry-remediation-file", str(path))
         self.assertEqual(0, code, retry)
@@ -193,14 +194,23 @@ class UpstreamHarness(PipelineHarness):
             self.commit_file(name, text)
         return retry["handoffs"][0]
 
-    def alpha_fixed(self, files):
+    def alpha_fixed(self, files, tier="standard", code="verify:coverage"):
         """Reject alpha, retry it, and return its new commit."""
-        self.reject_alpha()
+        self.reject_alpha(code)
         verify = self.step("alpha")["verify"]
         self.returned(self.retry(
-            "alpha", f"verify {verify['sha256'][:12]} rejected {verify['commit'][:12]}", files,
+            "alpha", f"verify {verify['sha256'][:12]} rejected {verify['commit'][:12]}", files, tier,
         ))
         return self.step("alpha")["returned_commit"]
+
+    def moved_target(self, beta_files=None, first=None, second=None):
+        """Restack beta once (pending), then re-reject and re-fix alpha; return alpha's newest commit."""
+        self.stacked(beta_files or {"src/beta.txt": "b\n"})
+        self.alpha_fixed(first or {"src/alpha/g.txt": "g\n"})
+        code, pending = self.restack()
+        self.assertEqual((0, "acceptance_pending"), (code, pending["outcome"]), pending)
+        self.alpha_old = self.issued("alpha")
+        return self.alpha_fixed(second or {"src/alpha/h.txt": "h\n"}, "analytical", "verify:regression")
 
     def restack(self, *extra):
         return self.call("restack", "--actor", "parent", "--run-id", self.run_id,
@@ -211,6 +221,29 @@ class UpstreamHarness(PipelineHarness):
         first, pending = self.restack()
         self.assertEqual((0, "acceptance_pending"), (first, pending["outcome"]), pending)
         return self.restack("--acceptance-exit-code", str(code))
+
+    def completed_restack(self):
+        """The repeat restack with a passing acceptance code; asserts the verdict carried."""
+        code, result = self.restack("--acceptance-exit-code", "0")
+        self.assertEqual(0, code, result)
+        self.assertEqual(("restacked", True), (result["outcome"], result["verdict_carried"]))
+
+    def assert_code_refused(self):
+        """A code on the rebasing call is refused with the worktree unmoved."""
+        before = self.head("beta")
+        code, refused = self.restack("--acceptance-exit-code", "0")
+        self.assertEqual(3, code, refused)
+        self.assertIn("rebases first", refused["error"])
+        self.assertEqual(before, self.head("beta"))
+
+    def assert_conflict_blocked(self, before):
+        """A conflicting restack aborts: eligible for repair, worktree clean at `before`."""
+        code, result = self.restack()
+        self.assertEqual(0, code, result)
+        self.assertEqual("retry_eligible", result["outcome"])
+        self.assertEqual(before, self.head("beta"))
+        self.assertEqual("", git(self.repo / ".worktrees/beta", "status", "--porcelain").stdout)
+        self.assertEqual("blocked:upstream_changed", self.step("beta")["blockers"][0]["code"])
 
     def head(self, step_id):
         return git(self.repo / ".worktrees" / step_id, "rev-parse", "HEAD").stdout.strip()
@@ -261,9 +294,7 @@ class RestackTest(UpstreamHarness):
         self.assertIn("upstream_stale", beta)
         self.assertEqual(fixed, beta["pending_acceptance"]["new"])
         self.assertEqual("restack_acceptance", self.next_only()["category"])
-        code, result = self.restack("--acceptance-exit-code", "0")
-        self.assertEqual(0, code, result)
-        self.assertEqual(("restacked", True), (result["outcome"], result["verdict_carried"]))
+        self.completed_restack()
         beta = self.step("beta")
         self.assertEqual(self.head("beta"), beta["returned_commit"])
         self.assertEqual(fixed, beta["base_commit"])
@@ -287,11 +318,7 @@ class RestackTest(UpstreamHarness):
         self.stacked({SHARED: "one\nBETA\nthree\n"})
         before = self.head("beta")
         self.alpha_fixed({SHARED: "one\nALPHA\nthree\n"})
-        code, result = self.restack()
-        self.assertEqual(0, code, result)
-        self.assertEqual("retry_eligible", result["outcome"])
-        self.assertEqual(before, self.head("beta"))
-        self.assertEqual("", git(self.repo / ".worktrees/beta", "status", "--porcelain").stdout)
+        self.assert_conflict_blocked(before)
         self.assertFalse((self.repo / ".git/worktrees/beta/rebase-merge").exists())
         beta = self.step("beta")
         self.assertEqual("blocked", beta["status"])
@@ -324,14 +351,33 @@ class RestackTest(UpstreamHarness):
     def test_a_code_supplied_to_the_rebasing_call_is_refused_before_the_rebase(self):
         self.stacked({"src/beta.txt": "b\n"})
         self.alpha_fixed({"src/alpha/g.txt": "g\n"})
-        before = self.head("beta")
-        code, refused = self.restack("--acceptance-exit-code", "0")
-        self.assertEqual(3, code, refused)
-        self.assertIn("rebases first", refused["error"])
-        self.assertEqual(before, self.head("beta"))
+        self.assert_code_refused()
         beta = self.step("beta")
         self.assertIn("upstream_stale", beta)
         self.assertNotIn("pending_acceptance", beta)
+
+    def test_a_target_that_moves_after_the_first_phase_rebases_again_and_stays_pending(self):
+        newest = self.moved_target()
+        code, pending = self.restack()
+        self.assertEqual((0, "acceptance_pending"), (code, pending["outcome"]), pending)
+        beta = self.step("beta")
+        self.assertEqual(newest, beta["pending_acceptance"]["new"])
+        self.assertNotEqual(newest, beta["pending_acceptance"]["old"])
+        self.assertEqual(0, git(self.repo / ".worktrees/beta", "merge-base", "--is-ancestor",
+                                newest, "HEAD").returncode)
+        self.completed_restack()
+        beta = self.step("beta")
+        self.assertEqual((newest, self.head("beta")), (beta["base_commit"], beta["returned_commit"]))
+        self.assertNotIn("pending_acceptance", beta)
+
+    def test_a_code_supplied_to_the_moved_target_rebasing_call_is_refused(self):
+        self.moved_target()
+        self.assert_code_refused()
+
+    def test_a_conflict_on_the_second_rebase_blocks_and_leaves_the_worktree_clean(self):
+        self.moved_target({SHARED: "one\ntwo\nTHREE\n"}, {"src/alpha/g.txt": "g\n"},
+                          {SHARED: "ONE\ntwo\nTHREE!\n"})
+        self.assert_conflict_blocked(self.head("beta"))
 
     def test_restack_refuses_a_batch_member(self):
         self.init(*batch_leaves())

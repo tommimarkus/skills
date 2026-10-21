@@ -4136,7 +4136,15 @@ def restack(args):
     ).returncode == 0
     blocked = ""
     if not contained:
-        if head != returned:
+        # A recorded pending restack moves the target again from its rebased base, not the returned commit.
+        anchor = (step.get("pending_acceptance") or {}).get("new", "")
+        if anchor:
+            if subprocess.run(
+                ["git", "-C", str(worktree), "merge-base", "--is-ancestor", anchor, "HEAD"],
+                capture_output=True,
+            ).returncode:
+                raise Error("the step's worktree no longer contains its pending restack base")
+        elif head != returned:
             raise Error("the step's worktree is not at its returned commit")
         if args.acceptance_exit_code is not None:
             raise Error(
@@ -4144,7 +4152,7 @@ def restack(args):
                 "acceptance in the rebased worktree, then repeat with the code"
             )
         rebased = subprocess.run(
-            ["git", "-C", str(worktree), "rebase", "--onto", new, old], text=True, capture_output=True
+            ["git", "-C", str(worktree), "rebase", "--onto", new, anchor or old], text=True, capture_output=True
         )
         if rebased.returncode:
             subprocess.run(["git", "-C", str(worktree), "rebase", "--abort"], capture_output=True)
