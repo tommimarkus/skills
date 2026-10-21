@@ -521,6 +521,11 @@ medium and large leaves exceeded 400 changed lines. Size band tracks effort, not
 diff size, so the budget is a separate deterministic axis checked before
 verification, and over-budget work is re-cut rather than retried.
 
+The run that built this loop showed why the gate measures the real diff. One
+builder edited a test outside its write set and left that path out of its
+reported `changed_paths`, so its return still validated; only the parent's diff
+review, which `check-changeset` now automates, found it.
+
 The synthetic `planning-policy-behavior-verify-*` cases cover pass, coverage-gap
 retry, silent removal, over-budget, outside write set, inconclusive, style-only,
 closeout-only, and batch dispatch. They test the documented workflow, not model

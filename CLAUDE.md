@@ -573,7 +573,22 @@ per-integration `rebased_tree_changed: false` keeps a leaf's recorded
 acceptance, while `true` re-runs only that leaf's scoped acceptance, never the
 full suite.
 
-New v5 runs gate land on a fresh read-only verification of each completed leaf unless the plan sets `verification: closeout-only` (`init-v5` stamps `verify_policy`; retained runs without it behave as before). Builders preflight `check-changeset` against a budget (small 150 lines / 6 files; medium and large 400 / 15; tests count; a leaf `changeset_budget` may raise up to 2x or exempt write-set paths, each with a reason). The parent records it: `oversized:changeset` is never retried and is re-cut, while `outside_write_set` keeps the repairable scope rejection. `verify-handoff` emits `planning-verify-handoff-v1` (one dispatch per batch, never builder notes); `record-verify` stores pass, reject, or inconclusive bound to the commit, and `land` needs pass or inconclusive. A reject is the ledger-synthesized `failed:verification`, a reasoning stop (one same-tier retry, then higher tiers); style alone never blocks, and inconclusive lands as a disclosed verification limit. Footer: `Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>`. Detail lives in the planning-policy references.
+New v5 runs gate land on a fresh read-only verification of each completed leaf
+unless the plan sets `verification: closeout-only` (`init-v5` stamps
+`verify_policy`; retained runs without it behave as before). Builders preflight
+`check-changeset` against a budget (small 150 lines / 6 files; medium and large
+400 / 15; tests count; a leaf `changeset_budget` may raise up to 2x or exempt
+write-set paths, each with a reason). The parent records a failed gate with
+`record-changeset`: `oversized:changeset` is never retried and is re-cut, while
+`outside_write_set` keeps the repairable scope rejection. `verify-handoff` emits
+`planning-verify-handoff-v1` (one dispatch per batch, never builder notes);
+`record-verify` stores pass, reject, or inconclusive bound to the commit, and
+`land` needs pass or inconclusive. A reject is the ledger-synthesized
+`failed:verification`, a reasoning stop (one same-tier retry, then higher
+tiers); style alone never blocks, and inconclusive lands as a disclosed
+verification limit. Footer: `Verify: <per-leaf (N verified, M rejected) |
+closeout-only (opt-out) | unavailable (reason)>`. Detail lives in the
+planning-policy references.
 
 Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
 logs. Every delegated handoff is one at-most-8-KiB

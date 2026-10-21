@@ -480,7 +480,25 @@ measure, or calibrate loads the `trace-init`, `trace-record`, `trace-show`, and
 harness/model provenance, never prompts, completions, arguments, results, or
 raw logs; they live outside the checkpoint and follow run retention/purge.
 
-New v5 runs gate land on a fresh read-only verification of each completed leaf unless the plan sets `verification: closeout-only` (`init-v5` stamps `verify_policy`; retained runs without it behave as before). Builders preflight `check-changeset` against a budget (small 150 lines / 6 files; medium and large 400 / 15; tests count; a leaf `changeset_budget` may raise up to 2x or exempt write-set paths, each with a reason). The parent records it: `oversized:changeset` is never retried and is re-cut, while `outside_write_set` keeps the repairable scope rejection. `verify-handoff` emits `planning-verify-handoff-v1` (one dispatch per batch, never builder notes); `record-verify` stores pass, reject, or inconclusive bound to the commit, and `land` needs pass or inconclusive. A reject is the ledger-synthesized `failed:verification`, a reasoning stop (one same-tier retry, then higher tiers); style alone never blocks, and inconclusive lands as a disclosed verification limit. Two read-only verifiers, `plan-verify-standard` (`gpt-5.6-terra`/`medium`, mechanical and standard builds) and `plan-verify-analytical` (`gpt-5.6-sol`/`high`, analytical and deep builds), have Edit and Write disallowed and are admitted by the metadata parity check beside the four `plan-step-*` names. Footer: `Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>`.
+New v5 runs gate land on a fresh read-only verification of each completed leaf
+unless the plan sets `verification: closeout-only` (`init-v5` stamps
+`verify_policy`; retained runs without it behave as before). Builders preflight
+`check-changeset` against a budget (small 150 lines / 6 files; medium and large
+400 / 15; tests count; a leaf `changeset_budget` may raise up to 2x or exempt
+write-set paths, each with a reason). The parent records a failed gate with
+`record-changeset`: `oversized:changeset` is never retried and is re-cut, while
+`outside_write_set` keeps the repairable scope rejection. `verify-handoff` emits
+`planning-verify-handoff-v1` (one dispatch per batch, never builder notes);
+`record-verify` stores pass, reject, or inconclusive bound to the commit, and
+`land` needs pass or inconclusive. A reject is the ledger-synthesized
+`failed:verification`, a reasoning stop (one same-tier retry, then higher
+tiers); style alone never blocks, and inconclusive lands as a disclosed
+verification limit. Two read-only verifiers, `plan-verify-standard`
+(`gpt-5.6-terra`/`medium`, mechanical and standard builds) and
+`plan-verify-analytical` (`gpt-5.6-sol`/`high`, analytical and deep builds),
+have Edit and Write disallowed and are admitted by the metadata parity check
+beside the four `plan-step-*` names. Footer: `Verify: <per-leaf (N verified, M
+rejected) | closeout-only (opt-out) | unavailable (reason)>`.
 
 Codex maps the portable tiers exactly: `mechanical` → `gpt-5.6-luna`/`low`,
 `standard` → `gpt-5.6-terra`/`medium`, `analytical` → `gpt-5.6-sol`/`high`, and
