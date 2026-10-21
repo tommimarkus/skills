@@ -4,6 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Codex uses the additive runtime guidance in `AGENTS.md`; neither file replaces
 the other runtime's contract.
 
+## Operation status
+
+<!-- lean-audit:sync-intentional: AGENTS.md § Operation status states the same rule for Codex; each runtime file stays self-contained, so edit both together. -->
+
 For every operation that crosses about one second, keep status discoverable.
 Immediately acknowledge known slow foreground work, then report meaningful
 milestones or confirmed waiting within 60 seconds when Claude Code can emit
@@ -49,99 +53,73 @@ When changing plugin packaging, marketplace wiring, install instructions, or age
   the host launcher's inherited cwd, and mirrors child stderr while retaining a
   bounded diagnostic excerpt for adapter errors.
   It discovers the live upstream tool catalog and supports both legacy MCP
-  initialization and current stateless discovery. Dediren is plugin-provisioned:
-  on first use the launcher installs the pinned, checksum-verified release
-  (pin `2026.10.0`, support floor `2026.07.28`, overridable by a CalVer
-  `DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
-  writable data directory — `DEDIREN_HOME` (absolute) first, else
-  `CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
-  appended, with no invented fallback: offered none, the launcher exits 78
-  naming `DEDIREN_HOME`. Executables resolve in order: an explicit
-  `DEDIREN_COMMAND` (honoured without a floor probe — the deliberate lane for
-  pinning one executable for controlled validation), the managed install, a host
-  `dediren` on `PATH` **reporting at or above the floor**, the legacy
-  verified-release-cache migration lane (still never populated), then
-  provisioning the pin. Provisioning fetches `SHA256SUMS` first and reads the
-  archive name from it, verifies SHA-256 before unpacking, sanitises every
-  archive member, and installs atomically under a bounded cross-session lock;
-  `DEDIREN_AUTO_INSTALL=0` disables it for air-gapped hosts. Java stays
-  host-managed and is never downloaded — the release ships jars with no bundled
-  JRE, so Java 21+ is a host prerequisite, diagnosed before the download and
-  again before exec. The plugin still never patches Dediren or resolves below
-  the floor. Cross-check all three
+  initialization and current stateless discovery. Cross-check all three
   adapters against their official plugin references and MCP against the current
-  [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover).
-  Dediren 2026.08.3 adds `export-result.schema.v2` assurance to direct UML/XMI
-  exports; native package-build results do not surface it, so shared guidance
-  preserves the artifact/source and diagnostic evidence path with an explicit
-  assurance limit.
-  Dediren 2026.08.4 moves online export-schema fetching into a bounded Java HTTP
-  client, so exports no longer require `curl`; the plugin launcher may still use
-  `curl` or `wget` as a fallback for release downloads. Its additive inline
-  import and negotiated MCP image fields flow through the live discovered schema
-  and unchanged tool result rather than a runtime-specific adapter fork.
-  Dediren 2026.08.6 adds the non-failing
-  `DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning when the renderer cannot place an
-  edge label without occluding content. The SVG remains available, but the
-  affected view maps to `ARCH-R-3` until visually clear or explicitly disclosed.
-  Dediren 2026.08.7 adds a draw.io® import lane: `dediren_import` accepts a
-  third plugin id, `drawio`, beside `mermaid` and `dot`. An imported draw.io
-  file always lands as `generic-graph` (`generic.node` / `generic.link`) and is
-  never promoted, because draw.io carries relationship semantics only as
-  arrowhead decoration; the non-failing `DEDIREN_DRAWIO_HINT_IGNORED` warning
-  names the geometry and presentation keys ELK re-lays out. The release's
-  draw.io export engine is selected by no build driver, so the tool set stays
-  at eight and the skill's trigger boundary still excludes diagrams the user
-  wants kept in draw.io format.
-  Dediren 2026.08.8 adds an `ascii` render engine — box-drawn text diagrams
-  from the same layout, Unicode by default with a plain-ASCII `text.charset`
-  option — reachable only from the standalone `render` stage and a fourth
-  `dediren_import` output mode, `text`, which returns an inline text diagram
-  beside the imported envelope. No build driver selects it, so the tool set
-  stays at eight and SVG remains the evidence of record. Render policies move
-  to `render-policy.schema.v4`; the runtime refuses a v3 policy with a
-  single-operation `set_version` migration diagnostic, so checked-in packages
-  migrate that one field. Dediren 2026.08.9 converges render-result
-  `artifact_kind` onto the media-suffix form (v7): `svg` → `svg+xml` and text
-  → `ascii+text`, breaking for consumers reading that field. The fixture
-  compatibility baseline moves to 2026.08.9; the support floor stays
-  2026.07.28.
+  [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover);
+  the Dediren provisioning and host-adapter contract follows in
+  § "Dediren MCP adapter contract".
 
-  Dediren 2026.09.0 emits `layout-result.schema.v3`: edges carry a typed
-  `route` (polyline or cubic Bezier) instead of top-level `points`. Regenerate
-  stored layouts and migrate consumers; there is no v2 output fallback. Authored
-  models and render policies remain compatible, so the fixture baseline stays
-  2026.08.9 and the support floor stays 2026.07.28.
+### Dediren MCP adapter contract
 
-  The architecture plugin's Dediren configuration is host-specific, while the
-  shared launcher/router has no harness detection. Its maintained adapters are
-  Claude Code, Codex, and Copilot CLI:
+<!-- lean-audit:sync-intentional: AGENTS.md § Dediren MCP adapter contract states the same contract for Codex; each runtime file stays self-contained, so edit both together. -->
 
-  | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
-  |---|---|---|---|---|
-  | Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command; `DEDIREN_HOME` set explicitly from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
-  | Codex | Agent Plugins root `plugin.json` + `mcp.json`, which declares only `type` / `command` and exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child; the retained legacy `.codex-plugin` + `mcp/codex.mcp.json` lane stays literal (plugin-relative command, `cwd: "."`) and gets no plugin data root at all | Plugin root for the launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` on every host | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; the legacy `startup_timeout_sec` is seconds |
-  | Copilot CLI | Once the root manifest declares the Agent Plugins `$schema`, Copilot consumes that same root `mcp.json` and **ignores** `mcp/copilot.mcp.json` (verified live: it reports `sourcePluginSpec`, resolves the `./` command, and leaves any `env` / `cwd` token verbatim). It exports `PLUGIN_DATA`, `COPILOT_PLUGIN_DATA`, and `CLAUDE_PLUGIN_DATA` into the child as absolute paths. `mcp/copilot.mcp.json` remains the legacy lane for builds without spec support | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds (legacy lane only) |
+Dediren is plugin-provisioned: on first use the launcher installs the pinned,
+checksum-verified release (pin `2026.10.0`, support floor `2026.07.28`, overridable by a CalVer
+`DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
+writable data directory — `DEDIREN_HOME` (absolute) first, else
+`CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
+appended, with no invented fallback: offered none, the launcher exits 78
+naming `DEDIREN_HOME`. Executables resolve in order: an explicit
+`DEDIREN_COMMAND` (honoured without a floor probe — the deliberate lane for
+pinning one executable for controlled validation), the managed install, a host
+`dediren` on `PATH` **reporting at or above the floor**, the legacy
+verified-release-cache migration lane (still never populated), then
+provisioning the pin. Provisioning fetches `SHA256SUMS` first and reads the
+archive name from it, verifies SHA-256 before unpacking, sanitises every
+archive member, and installs atomically under a bounded cross-session lock;
+`DEDIREN_AUTO_INSTALL=0` disables it for air-gapped hosts. Java stays
+host-managed and is never downloaded — the release ships jars with no bundled
+JRE, so Java 21+ is a host prerequisite, diagnosed before the download and
+again before exec. The plugin still never patches Dediren or resolves below
+the floor.
 
-  Because that one file serves two hosts that expand it differently, it declares
-  no `env` and no `cwd`: a token there would reach Codex expanded and Copilot
-  verbatim. Both hosts export the plugin data directory into the child instead,
-  which is what the resolver reads.
+Per-release Dediren behaviour (export assurance, import and render lanes,
+diagnostics, and schema migrations) is recorded in architecture-design's
+[source grounding](souroldgeezer-architecture/skills/architecture-design/references/source-grounding.md)
+and the references it routes to; adopt a new release through
+[docs/maintenance-procedures.md § Dediren upstream release adoption](docs/maintenance-procedures.md#dediren-upstream-release-adoption).
+The repo's fixture compatibility baseline is 2026.08.9; the support floor
+stays 2026.07.28.
 
-  Codex's 30s startup default is safe because the router answers `initialize`
-  itself without touching Dediren; provisioning happens later, on the first
-  `tools/list`.
+The architecture plugin's Dediren configuration is host-specific, while the
+shared launcher/router has no harness detection. Its maintained adapters are
+Claude Code, Codex, and Copilot CLI:
 
-  Generic local-client compatibility means a local stdio process launch with
-  Bash, Python, and Dediren access; `DEDIREN_COMMAND` is optional and every tool
-  call supplies an absolute `workspaceRoot`. A client that offers no plugin data
-  directory must set `DEDIREN_HOME` to an absolute path, or supply the runtime
-  through `DEDIREN_COMMAND`. It does not add another maintained
-  harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
-  is future work only for an explicit remote/shared multi-client service need:
-  it would require authentication, origin validation, port/service lifecycle,
-  session isolation, and workspace authorization. See the MCP
-  [transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+| Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
+|---|---|---|---|---|
+| Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command; `DEDIREN_HOME` set explicitly from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
+| Codex | Agent Plugins root `plugin.json` + `mcp.json`, which declares only `type` / `command` and exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child; the retained legacy `.codex-plugin` + `mcp/codex.mcp.json` lane stays literal (plugin-relative command, `cwd: "."`) and gets no plugin data root at all | Plugin root for the launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` on every host | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; the legacy `startup_timeout_sec` is seconds |
+| Copilot CLI | Once the root manifest declares the Agent Plugins `$schema`, Copilot consumes that same root `mcp.json` and **ignores** `mcp/copilot.mcp.json` (verified live: it reports `sourcePluginSpec`, resolves the `./` command, and leaves any `env` / `cwd` token verbatim). It exports `PLUGIN_DATA`, `COPILOT_PLUGIN_DATA`, and `CLAUDE_PLUGIN_DATA` into the child as absolute paths. `mcp/copilot.mcp.json` remains the legacy lane for builds without spec support | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds (legacy lane only) |
+
+Because that one file serves two hosts that expand it differently, it declares
+no `env` and no `cwd`: a token there would reach Codex expanded and Copilot
+verbatim. Both hosts export the plugin data directory into the child instead,
+which is what the resolver reads.
+
+Codex's 30s startup default is safe because the router answers `initialize`
+itself without touching Dediren; provisioning happens later, on the first
+`tools/list`.
+
+Generic local-client compatibility means a local stdio process launch with
+Bash, Python, and Dediren access; `DEDIREN_COMMAND` is optional and every tool
+call supplies an absolute `workspaceRoot`. A client that offers no plugin data
+directory must set `DEDIREN_HOME` to an absolute path, or supply the runtime
+through `DEDIREN_COMMAND`. It does not add another maintained
+harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
+is future work only for an explicit remote/shared multi-client service need:
+it would require authentication, origin validation, port/service lifecycle,
+session isolation, and workspace authorization. See the MCP
+[transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 
 ## Keeping CLAUDE.md and README.md current (MUST)
 
@@ -432,6 +410,8 @@ Two agent classes live under `<plugin>/agents/`.
 **Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four builder definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier, and stops for a parent re-cut rather than expanding when a step outgrows its size band. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Two read-only verifiers join them: `plan-verify-standard` (sonnet/medium, verifies mechanical and standard builds) and `plan-verify-analytical` (opus/high, verifies analytical and deep builds), tools Read, Grep, Glob, Bash with Edit and Write disallowed. They are contract-bound, not restatements of a native reviewer such as `feature-dev:code-reviewer`: packet-only inputs, fixed checks, a bounded ledger-ingested verdict, and enforced read-only. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 
 ### Planning-policy execution contract (Claude Code)
+
+<!-- lean-audit:sync-intentional: AGENTS.md § Planning-policy execution contract (Codex) is the Codex counterpart; each runtime file stays self-contained, so edit both together. -->
 
 The contract lives in the skill, not here. Load it through the
 [SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which

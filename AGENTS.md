@@ -22,6 +22,22 @@ changes. `AGENTS.md` owns Codex-facing repository guidance; `CLAUDE.md` remains
 the self-contained Claude Code contract. Cross-runtime rules must agree without
 making either runtime load the other's file first.
 
+## Operation status
+
+<!-- lean-audit:sync-intentional: CLAUDE.md § Operation status states the same rule for Claude Code; each runtime file stays self-contained, so edit both together. -->
+
+For every operation that crosses about one second, keep status discoverable.
+Immediately acknowledge known slow foreground work, then report meaningful
+milestones or confirmed waiting within 60 seconds when the host can emit them.
+Use real completed/total progress only when a total is known; otherwise label
+the state indeterminate and never invent a percentage or ETA. Clear busy status
+on usable success, failure, cancellation, or awaiting input; keep housekeeping
+and terminal outcomes inspectable, with actionable failures surfaced. Prefer
+host notifications over polling and aggregate background status without repeated
+interruption. Do not promise an update during an uninterruptible host call;
+disclose that limit when it applies. The timing limits are repository guidance,
+not a host guarantee.
+
 ## Repository shape
 
 - `.agents/plugins/marketplace.json`: native Codex marketplace.
@@ -54,6 +70,8 @@ variables, and UI presentation in the host adapter.
 
 ### Dediren MCP adapter contract
 
+<!-- lean-audit:sync-intentional: CLAUDE.md § Dediren MCP adapter contract states the same contract for Claude Code; each runtime file stays self-contained, so edit both together. -->
+
 The architecture plugin's Dediren configuration is host-specific, while its
 shared launcher/router has no harness detection. The maintained host adapters
 are Claude Code, Codex, and Copilot CLI; the router only launches a local
@@ -76,51 +94,13 @@ bundled procedure at
 is the single place that documents what provisioning does, how to override it,
 how to run air-gapped, and how to diagnose a failure.
 
-Dediren 2026.08.3 adds `export-result.schema.v2` assurance to direct UML/XMI
-exports. Native package-build results do not surface it, so shared guidance
-preserves the artifact/source and diagnostic evidence path with an explicit
-assurance limit.
-
-Dediren 2026.08.4 moves online export-schema fetching into a bounded Java HTTP
-client, so exports no longer require `curl`; the plugin launcher may still use
-`curl` or `wget` as a fallback for release downloads. Its additive inline import
-and negotiated MCP image fields flow through the live discovered schema and
-unchanged tool result rather than a runtime-specific adapter fork.
-
-Dediren 2026.08.6 adds the non-failing
-`DEDIREN_RENDER_EDGE_LABEL_OCCLUDED` warning when the renderer cannot place an
-edge label without occluding content. A render carrying it still returns its
-SVG, but architecture review maps the affected view to `ARCH-R-3` until the
-label is made visually clear or the limitation is disclosed.
-
-Dediren 2026.08.7 adds a draw.io® import lane: `dediren_import` accepts a third
-plugin id, `drawio`, beside `mermaid` and `dot`. An imported draw.io file always
-lands as `generic-graph` (`generic.node` / `generic.link`) rather than a promoted
-model, because draw.io carries relationship semantics only as arrowhead
-decoration, and the non-failing `DEDIREN_DRAWIO_HINT_IGNORED` warning names the
-geometry and presentation keys ELK re-lays out. The release's draw.io export
-engine is reachable from no build driver, so the tool set stays at eight and the
-skill's trigger boundary still excludes diagrams the user wants kept in that
-format.
-
-Dediren 2026.08.8 adds an `ascii` render engine — box-drawn text diagrams from
-the same layout stages, Unicode by default with a plain-ASCII `text.charset`
-option — reachable only from the standalone `render` stage and a fourth
-`dediren_import` output mode, `text`, which returns an inline text diagram as a
-second text content beside the imported envelope. No build driver selects it,
-so the tool set stays at eight and SVG remains the evidence of record. Render
-policies move to `render-policy.schema.v4`: the runtime refuses a v3 policy
-with a single-operation `set_version` migration diagnostic, so checked-in
-packages migrate that one field. Dediren 2026.08.9 converges render-result
-`artifact_kind` onto the media-suffix form (v7): `svg` → `svg+xml` and text →
-`ascii+text`, breaking for consumers reading that field. The repo's fixture
-compatibility baseline moves to 2026.08.9; the support floor stays 2026.07.28.
-
-Dediren 2026.09.0 emits `layout-result.schema.v3`: edges carry a typed
-`route` (polyline or cubic Bezier) instead of top-level `points`. Regenerate
-stored layouts and migrate consumers; there is no v2 output fallback. Authored
-models and render policies remain compatible, so the fixture baseline stays
-2026.08.9 and the support floor stays 2026.07.28.
+Per-release Dediren behaviour (export assurance, import and render lanes,
+diagnostics, and schema migrations) is recorded in architecture-design's
+[source grounding](souroldgeezer-architecture/skills/architecture-design/references/source-grounding.md)
+and the references it routes to; adopt a new release through
+[docs/maintenance-procedures.md § Dediren upstream release adoption](docs/maintenance-procedures.md#dediren-upstream-release-adoption).
+The repo's fixture compatibility baseline is 2026.08.9; the support floor
+stays 2026.07.28.
 
 | Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
 |---|---|---|---|---|
@@ -256,18 +236,6 @@ runtime mapping with a safe fallback. For example, Claude planning retains
 `EnterPlanMode` / `ExitPlanMode`; Codex uses Plan mode when exposed and otherwise
 emits a proposed plan for explicit approval.
 
-For every operation that crosses about one second, keep status discoverable.
-Immediately acknowledge known slow foreground work, then report meaningful
-milestones or confirmed waiting within 60 seconds when the host can emit them.
-Use real completed/total progress only when a total is known; otherwise label
-the state indeterminate and never invent a percentage or ETA. Clear busy status
-on usable success, failure, cancellation, or awaiting input; keep housekeeping
-and terminal outcomes inspectable, with actionable failures surfaced. Prefer
-host notifications over polling and aggregate background status without repeated
-interruption. Do not promise an update during an uninterruptible host call;
-disclose that limit when it applies. The timing limits are repository guidance,
-not a host guarantee.
-
 ### Bounded audit-lane gate
 
 The shared audit craft contract defines a bounded-lane gate: `Quick gate: <status>`
@@ -295,6 +263,8 @@ file as evidence and disclose conflicting policies before applying paid-control
 criteria. Do not treat this repository's guidance as the target's policy.
 
 ### Planning-policy execution contract (Codex)
+
+<!-- lean-audit:sync-intentional: CLAUDE.md § Planning-policy execution contract (Claude Code) is the Claude Code counterpart; each runtime file stays self-contained, so edit both together. -->
 
 The contract lives in the skill, not here. Load it through the
 [SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which
