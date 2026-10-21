@@ -87,8 +87,10 @@ for `claude-code` and `codex`: model and effort per tier, a `skill` flag, and
 verifier entries; the adapter tier tables are tested against it.
 `init-v5 --host H --evidence TEXT` (1 to 8 lines, each at most 240 characters)
 derives assignments (harness `H`, model and effort from each leaf's
-`portable_tier`, worktree `.worktrees/<worktree_owner>` under the primary checkout, the Git common directory's parent, even when invoked from a linked worktree) and the
-`planning-capability-binding-v1` binding, then validates as for supplied files.
+`portable_tier`, worktree `.worktrees/<worktree_owner>` under the primary
+checkout, the Git common directory's parent, even when invoked from a linked
+worktree) and the `planning-capability-binding-v1` binding, then validates as
+for supplied files.
 `--host` with either supplied file, or neither, is a usage error; a derived
 additional skill requirement on a tier whose `skill` is false is
 `blocked:capability_unavailable`. A strict plan needs `--pin-roots` at init and
@@ -106,7 +108,8 @@ absolute `packet_path` and `prompt`: host-neutral text of at most 1,200
 characters naming the packet path, worktree, the `validate-return` command with
 `--return-file -`, and the rule that the final message is exactly the bounded
 return JSON (for a batch member: one JSON array, one return per member run, in
-listed order). The parent passes it unchanged; adapters may append host facts only.
+listed order). The parent passes it unchanged; adapters may append host facts
+only.
 `validate-return` accepts `-` (stdin) under the same 8 KiB bound.
 
 In a `leaf_verify_v1` run `init-v5` also stamps `pipeline_policy:
@@ -141,8 +144,8 @@ the step (a code supplied to the call that rebases is refused before the
 rebase; if the target moves before the repeat call, restack rebases again from
 the recorded `pending_acceptance` base and stays pending); `restack` refuses a
 batch member, which remediates through retry. A non-zero code, or a rebase
-conflict (aborted, worktree left clean), moves the step to `blocked` with `blocked:upstream_changed`. That code is registered in the
-blocked family, never returned by a worker (excluded from the worker return
+conflict (aborted, worktree left clean), moves the step to `blocked` with
+`blocked:upstream_changed`. That code is registered in the blocked family, never returned by a worker (excluded from the worker return
 schema like `failed:verification`), and repairable: a same-tier retry that does
 not spend the same-tier retry, with remediation citing the prerequisite's old
 and new commits.
