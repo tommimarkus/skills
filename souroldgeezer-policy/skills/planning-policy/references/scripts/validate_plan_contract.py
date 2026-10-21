@@ -1114,36 +1114,22 @@ def contract_result(
     }
 
 
-def validate(
-    plan: Any,
-    capability_binding: Any = None,
-    *,
-    admission: bool = True,
-    pin_roots: list[str] | None = None,
-    repo_root: Path | None = None,
-) -> dict[str, Any]:
-    errors: list[str] = []
-    warnings: list[str] = []
-    if not isinstance(plan, dict):
-        return contract_result(None, False, warnings, ["plan must be an object"])
-    has_version_alias = "version" in plan
-    if has_version_alias:
-        errors.append("version is not a valid plan discriminator; use `contract_version`")
+def _contract_version(
+    plan: dict[str, Any], has_version_alias: bool, errors: list[str], warnings: list[str]
+) -> int | None:
     raw_version = plan.get("contract_version")
     if raw_version is None:
         if has_version_alias:
-            contract_version = None
-        else:
-            contract_version = 1
-            warnings.append(
-                "unversioned plan is legacy contract version 1; "
-                "migrate to contract_version 5 before approval or dispatch"
-            )
-    elif raw_version in {2, 3, 4, 5} and isinstance(raw_version, int):
-        contract_version = raw_version
+            return None
+        warnings.append(
+            "unversioned plan is legacy contract version 1; "
+            "migrate to contract_version 5 before approval or dispatch"
+        )
+        return 1
+    if raw_version in {2, 3, 4, 5} and isinstance(raw_version, int):
         for field in V2_REQUIRED:
             if field not in plan:
-                errors.append(f"{field} is required for contract version {contract_version}")
+                errors.append(f"{field} is required for contract version {raw_version}")
         if not nonempty_string_in_range(plan.get("objective"), 1, 240):
             errors.append("objective must be a non-empty string from 1 to 240 characters")
         if not nonempty_string_in_range(plan.get("scope_summary"), 1, 480):
@@ -1155,24 +1141,14 @@ def validate(
             errors.append(
                 "approved_decisions entries must be non-empty strings from 1 to 240 characters"
             )
-    else:
-        contract_version = None
-        errors.append("contract_version must be 2, 3, 4, or 5 when specified")
-    if contract_version == 5 and admission and has_placeholder_decision(plan.get("approved_decisions")):
-        errors.append("approved_decisions cannot contain a standalone placeholder")
-    precision = plan.get("precision", "standard")
-    if "precision" in plan and precision not in PRECISION_MODES:
-        errors.append("precision must be standard or strict")
-    strict = precision == "strict"
-    leaves = plan.get("leaves")
-    units = plan.get("work_units")
-    if not isinstance(leaves, list) or not leaves:
-        errors.append("leaves must be a non-empty array")
-        leaves = []
-    if not isinstance(units, list) or not units:
-        errors.append("work_units must be a non-empty array")
-        units = []
+        return raw_version
+    errors.append("contract_version must be 2, 3, 4, or 5 when specified")
+    return None
 
+
+def _work_unit_sections(
+    units: list[Any], contract_version: int | None, errors: list[str]
+) -> tuple[dict[str, int], dict[str, tuple[int, dict[str, Any]]]]:
     unit_sizes: dict[str, int] = {}
     unit_records: dict[str, tuple[int, dict[str, Any]]] = {}
     cohesive_outcomes: set[str] = set()
@@ -1201,7 +1177,134 @@ def validate(
                 cohesive_outcomes.add(outcome)
             if not isinstance(unit.get("decomposition"), dict):
                 errors.append(f"{prefix}.decomposition must be an object")
+    return unit_sizes, unit_records
 
+
+def _selective_audit_errors(prefix: str, audit: Any, errors: list[str]) -> None:
+    if not isinstance(audit, dict):
+        errors.append(f"{prefix}.selective_audit must be an object")
+        return
+    required_audit = ("owner", "question", "evidence_surface")
+    for field in required_audit:
+        if not nonempty(audit.get(field)):
+            errors.append(f"{prefix}.selective_audit.{field} is required")
+    for field in (
+        "initial_inspection",
+        "domain_match",
+        "materially_changes_approach_or_acceptance",
+        "targeted_inspection_or_focused_tests_cannot_resolve",
+    ):
+        if audit.get(field) is not True:
+            errors.append(f"{prefix}.selective_audit.{field} must be true")
+    if audit.get("owner") not in AUDIT_OWNERS:
+        errors.append(f"{prefix}.selective_audit.owner must be an owning audit")
+    question = audit.get("question")
+    if vague_audit_question(question):
+        errors.append(f"{prefix}.selective_audit.question must be bounded")
+
+
+def _leaf_declaration_errors(
+    prefix: str,
+    leaf: dict[str, Any],
+    contract_version: int | None,
+    strict: bool,
+    admission: bool,
+    errors: list[str],
+) -> None:
+    if strict and contract_version == 5:
+        if not safe_exact_write_set(leaf):
+            errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
+        if not exact_path_list(leaf.get("read_set"), non_empty=True):
+            errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
+    if contract_version == 5 and admission:
+        for field in ("read_set", "write_set"):
+            errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
+        if leaf.get("write_set") == [] and leaf.get("read_set", []) == []:
+            errors.append(f"{prefix}.read_set and {prefix}.write_set cannot both be empty")
+        if nonempty(leaf.get("worktree_owner")) and not valid_branch_name(
+            leaf.get("worktree_owner")
+        ):
+            errors.append(f"{prefix}.worktree_owner must be a valid git branch name")
+        if has_placeholder_decision(leaf.get("settled_decisions")):
+            errors.append(f"{prefix}.settled_decisions cannot contain a standalone placeholder")
+        command = leaf.get("acceptance_command")
+        if isinstance(command, str) and command.strip().lower() in NOOP_ACCEPTANCE_COMMANDS:
+            errors.append(f"{prefix}.acceptance_command cannot be a known no-op command")
+    if (
+        isinstance(leaf.get("stop_conditions"), list)
+        and "missing_load_bearing_information" not in leaf["stop_conditions"]
+    ):
+        errors.append(f"{prefix}.stop_conditions must include missing_load_bearing_information")
+    if "changeset_budget" in leaf:
+        errors.extend(f"{prefix}.{error}" for error in changeset_budget_errors(leaf))
+
+
+def _leaf_contract_errors(
+    prefix: str, leaf: dict[str, Any], contract_version: int | None, errors: list[str]
+) -> None:
+    if leaf.get("size") not in SIZES:
+        errors.append(f"{prefix}.size must be small, medium, or large")
+    if leaf.get("portable_tier") not in TIERS:
+        errors.append(
+            f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep"
+        )
+    for field in ("model", "model_override", "reasoning_effort", "reasoning_effort_override"):
+        if field in leaf:
+            errors.append(
+                f"{prefix}.{field} is host-adapter controlled; select portable_tier instead"
+            )
+    if (
+        not isinstance(leaf.get("acceptance_command"), str)
+        or not leaf.get("acceptance_command", "").strip()
+    ):
+        errors.append(
+            f"{prefix}.acceptance_command must be exactly one non-empty command string"
+        )
+    if contract_version in {2, 3, 4, 5}:
+        attempts = leaf.get("max_attempts")
+        if (
+            not isinstance(attempts, int)
+            or isinstance(attempts, bool)
+            or not 1 <= attempts <= 5
+        ):
+            errors.append(
+                f"{prefix}.max_attempts must be an integer from 1 to 5 for "
+                f"contract version {contract_version}"
+            )
+        if leaf.get("return_contract") != V2_RETURN_CONTRACT:
+            errors.append(
+                f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
+                f"for contract version {contract_version}"
+            )
+    if contract_version in {4, 5} and not capability_requirements_valid(
+        leaf.get("capability_requirements")
+    ):
+        errors.append(
+            f"{prefix}.capability_requirements must be an exact {CAPABILITY_BASELINE} "
+            "requirements object"
+        )
+    if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(
+        leaf.get("irreducible_unknown_or_risk")
+    ):
+        errors.append(
+            f"{prefix}.irreducible_unknown_or_risk is required for analytical or deep work"
+        )
+
+
+def _leaf_sections(
+    leaves: list[Any],
+    unit_sizes: dict[str, int],
+    contract_version: int | None,
+    strict: bool,
+    admission: bool,
+    errors: list[str],
+) -> tuple[
+    set[str],
+    dict[str, list[dict[str, Any]]],
+    dict[str, list[str]],
+    dict[str, tuple[int, dict[str, Any]]],
+    dict[str, list[str]],
+]:
     leaf_ids: set[str] = set()
     unit_leaves: dict[str, list[dict[str, Any]]] = {key: [] for key in unit_sizes}
     dependencies: dict[str, list[str]] = {}
@@ -1261,79 +1364,8 @@ def validate(
                 continue
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
-        if strict and contract_version == 5:
-            if not safe_exact_write_set(leaf):
-                errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
-            if not exact_path_list(leaf.get("read_set"), non_empty=True):
-                errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
-        if contract_version == 5 and admission:
-            for field in ("read_set", "write_set"):
-                errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
-            if leaf.get("write_set") == [] and leaf.get("read_set", []) == []:
-                errors.append(f"{prefix}.read_set and {prefix}.write_set cannot both be empty")
-            if nonempty(leaf.get("worktree_owner")) and not valid_branch_name(
-                leaf.get("worktree_owner")
-            ):
-                errors.append(f"{prefix}.worktree_owner must be a valid git branch name")
-            if has_placeholder_decision(leaf.get("settled_decisions")):
-                errors.append(f"{prefix}.settled_decisions cannot contain a standalone placeholder")
-            command = leaf.get("acceptance_command")
-            if isinstance(command, str) and command.strip().lower() in NOOP_ACCEPTANCE_COMMANDS:
-                errors.append(f"{prefix}.acceptance_command cannot be a known no-op command")
-        if (
-            isinstance(leaf.get("stop_conditions"), list)
-            and "missing_load_bearing_information" not in leaf["stop_conditions"]
-        ):
-            errors.append(f"{prefix}.stop_conditions must include missing_load_bearing_information")
-        if "changeset_budget" in leaf:
-            errors.extend(f"{prefix}.{error}" for error in changeset_budget_errors(leaf))
-        if leaf.get("size") not in SIZES:
-            errors.append(f"{prefix}.size must be small, medium, or large")
-        if leaf.get("portable_tier") not in TIERS:
-            errors.append(
-                f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep"
-            )
-        for field in ("model", "model_override", "reasoning_effort", "reasoning_effort_override"):
-            if field in leaf:
-                errors.append(
-                    f"{prefix}.{field} is host-adapter controlled; select portable_tier instead"
-                )
-        if (
-            not isinstance(leaf.get("acceptance_command"), str)
-            or not leaf.get("acceptance_command", "").strip()
-        ):
-            errors.append(
-                f"{prefix}.acceptance_command must be exactly one non-empty command string"
-            )
-        if contract_version in {2, 3, 4, 5}:
-            attempts = leaf.get("max_attempts")
-            if (
-                not isinstance(attempts, int)
-                or isinstance(attempts, bool)
-                or not 1 <= attempts <= 5
-            ):
-                errors.append(
-                    f"{prefix}.max_attempts must be an integer from 1 to 5 for "
-                    f"contract version {contract_version}"
-                )
-            if leaf.get("return_contract") != V2_RETURN_CONTRACT:
-                errors.append(
-                    f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
-                    f"for contract version {contract_version}"
-                )
-        if contract_version in {4, 5} and not capability_requirements_valid(
-            leaf.get("capability_requirements")
-        ):
-            errors.append(
-                f"{prefix}.capability_requirements must be an exact {CAPABILITY_BASELINE} "
-                "requirements object"
-            )
-        if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(
-            leaf.get("irreducible_unknown_or_risk")
-        ):
-            errors.append(
-                f"{prefix}.irreducible_unknown_or_risk is required for analytical or deep work"
-            )
+        _leaf_declaration_errors(prefix, leaf, contract_version, strict, admission, errors)
+        _leaf_contract_errors(prefix, leaf, contract_version, errors)
         unit_id = leaf.get("work_unit_id")
         if unit_id not in unit_sizes:
             errors.append(f"{prefix}.work_unit_id must name a declared work unit")
@@ -1342,29 +1374,18 @@ def validate(
         audit = leaf.get("selective_audit")
         if audit is not None:
             audit_routes += 1
-            if not isinstance(audit, dict):
-                errors.append(f"{prefix}.selective_audit must be an object")
-            else:
-                required_audit = ("owner", "question", "evidence_surface")
-                for field in required_audit:
-                    if not nonempty(audit.get(field)):
-                        errors.append(f"{prefix}.selective_audit.{field} is required")
-                for field in (
-                    "initial_inspection",
-                    "domain_match",
-                    "materially_changes_approach_or_acceptance",
-                    "targeted_inspection_or_focused_tests_cannot_resolve",
-                ):
-                    if audit.get(field) is not True:
-                        errors.append(f"{prefix}.selective_audit.{field} must be true")
-                if audit.get("owner") not in AUDIT_OWNERS:
-                    errors.append(f"{prefix}.selective_audit.owner must be an owning audit")
-                question = audit.get("question")
-                if vague_audit_question(question):
-                    errors.append(f"{prefix}.selective_audit.question must be bounded")
+            _selective_audit_errors(prefix, audit, errors)
     if audit_routes > 1:
         errors.append("a plan may route initial inspection to exactly one owning audit")
+    return leaf_ids, unit_leaves, dependencies, leaf_records, batches
 
+
+def _batch_errors(
+    batches: dict[str, list[str]],
+    leaf_records: dict[str, tuple[int, dict[str, Any]]],
+    dependencies: dict[str, list[str]],
+    errors: list[str],
+) -> None:
     for batch_id, members in batches.items():
         if not 2 <= len(members) <= 8:
             errors.append(
@@ -1389,6 +1410,10 @@ def validate(
                         f"member {dependency}"
                     )
 
+
+def _dependency_graph_errors(
+    dependencies: dict[str, list[str]], leaf_ids: set[str], errors: list[str]
+) -> None:
     for leaf_id, deps in dependencies.items():
         for dep in deps:
             if dep not in leaf_ids:
@@ -1412,76 +1437,94 @@ def validate(
     for leaf_id in dependencies:
         visit(leaf_id)
 
-    if contract_version == 5 and admission:
-        ordered_records = list(leaf_records.items())
-        for first_position, (first_id, (_first_index, first)) in enumerate(ordered_records):
-            for second_id, (_second_index, second) in ordered_records[first_position + 1 :]:
-                ordered = leaves_are_ordered(first_id, second_id, dependencies, leaf_records)
-                if not ordered and first.get("worktree_owner") == second.get("worktree_owner"):
-                    errors.append(
-                        f"leaves {first_id} and {second_id} have shared worktree_owner without dependency or batch ordering"
-                    )
-                if not ordered and write_coverage_overlaps(first, second):
-                    errors.append(
-                        f"leaves {first_id} and {second_id} have overlapping write coverage without dependency or batch ordering"
-                    )
 
-    if contract_version == 5:
-        for unit_id, members in unit_leaves.items():
-            unit_index, unit = unit_records[unit_id]
-            prefix = f"work_units[{unit_index}].decomposition"
-            decomposition = unit.get("decomposition")
-            if not isinstance(decomposition, dict):
-                continue
-            shape = decomposition.get("shape")
-            if shape not in {"single", "parallel", "checkpointed"}:
-                errors.append(f"{prefix}.shape must be single, parallel, or checkpointed")
-                continue
-            if shape == "single":
-                if set(decomposition) != {"shape"}:
-                    errors.append(f"{prefix} for single must have exactly the key shape")
-                if len(members) != 1:
-                    errors.append(f"work unit {unit_id} single decomposition must map exactly one leaf")
-                continue
-            if shape == "parallel":
-                if set(decomposition) != {"shape", "basis", "rationale"}:
-                    errors.append(f"{prefix} for parallel must have exactly shape, basis, and rationale")
-                if decomposition.get("basis") != "parallel_independence":
-                    errors.append(f"{prefix}.basis must be parallel_independence for parallel")
-                if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
-                    errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
-                if len(members) < 2:
-                    errors.append(f"work unit {unit_id} parallel decomposition must map at least two leaves")
-                member_ids = {member.get("id") for member in members}
-                if any(set(dependencies.get(member.get("id"), [])) & member_ids for member in members):
-                    errors.append(f"work unit {unit_id} parallel leaves must have no intra-unit dependencies")
-                if len({member.get("worktree_owner") for member in members}) != len(members):
-                    errors.append(f"work unit {unit_id} parallel leaves must have distinct worktree_owner values")
-                for member_index, member in enumerate(members):
-                    if not safe_exact_write_set(member):
-                        errors.append(f"work unit {unit_id} parallel leaves must have exact safe write_set paths")
-                    for other in members[member_index + 1 :]:
-                        if normalized_writes(member) & normalized_writes(other):
-                            errors.append(f"work unit {unit_id} parallel leaves must have pairwise-disjoint write_set values")
-                batches_in_unit = [member.get("batch") for member in members if stable_id(member.get("batch"))]
-                if len(batches_in_unit) != len(set(batches_in_unit)):
-                    errors.append(f"work unit {unit_id} parallel leaves must not share a batch")
-                continue
+def _leaf_ordering_errors(
+    dependencies: dict[str, list[str]],
+    leaf_records: dict[str, tuple[int, dict[str, Any]]],
+    errors: list[str],
+) -> None:
+    ordered_records = list(leaf_records.items())
+    for first_position, (first_id, (_first_index, first)) in enumerate(ordered_records):
+        for second_id, (_second_index, second) in ordered_records[first_position + 1 :]:
+            ordered = leaves_are_ordered(first_id, second_id, dependencies, leaf_records)
+            if not ordered and first.get("worktree_owner") == second.get("worktree_owner"):
+                errors.append(
+                    f"leaves {first_id} and {second_id} have shared worktree_owner without dependency or batch ordering"
+                )
+            if not ordered and write_coverage_overlaps(first, second):
+                errors.append(
+                    f"leaves {first_id} and {second_id} have overlapping write coverage without dependency or batch ordering"
+                )
+
+
+def _decomposition_errors(
+    unit_leaves: dict[str, list[dict[str, Any]]],
+    unit_records: dict[str, tuple[int, dict[str, Any]]],
+    dependencies: dict[str, list[str]],
+    errors: list[str],
+) -> None:
+    for unit_id, members in unit_leaves.items():
+        unit_index, unit = unit_records[unit_id]
+        prefix = f"work_units[{unit_index}].decomposition"
+        decomposition = unit.get("decomposition")
+        if not isinstance(decomposition, dict):
+            continue
+        shape = decomposition.get("shape")
+        if shape not in {"single", "parallel", "checkpointed"}:
+            errors.append(f"{prefix}.shape must be single, parallel, or checkpointed")
+            continue
+        if shape == "single":
+            if set(decomposition) != {"shape"}:
+                errors.append(f"{prefix} for single must have exactly the key shape")
+            if len(members) != 1:
+                errors.append(f"work unit {unit_id} single decomposition must map exactly one leaf")
+            continue
+        if shape == "parallel":
             if set(decomposition) != {"shape", "basis", "rationale"}:
-                errors.append(f"{prefix} for checkpointed must have exactly shape, basis, and rationale")
-            if decomposition.get("basis") not in {"failure_isolation", "rollback_boundary"}:
-                errors.append(f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed")
+                errors.append(f"{prefix} for parallel must have exactly shape, basis, and rationale")
+            if decomposition.get("basis") != "parallel_independence":
+                errors.append(f"{prefix}.basis must be parallel_independence for parallel")
             if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
                 errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
             if len(members) < 2:
-                errors.append(f"work unit {unit_id} checkpointed decomposition must map at least two leaves")
+                errors.append(f"work unit {unit_id} parallel decomposition must map at least two leaves")
+            member_ids = {member.get("id") for member in members}
+            if any(set(dependencies.get(member.get("id"), [])) & member_ids for member in members):
+                errors.append(f"work unit {unit_id} parallel leaves must have no intra-unit dependencies")
+            if len({member.get("worktree_owner") for member in members}) != len(members):
+                errors.append(f"work unit {unit_id} parallel leaves must have distinct worktree_owner values")
             for member_index, member in enumerate(members):
-                intra = [dep for dep in dependencies.get(member.get("id"), []) if dep in {item.get("id") for item in members}]
-                expected = [] if member_index == 0 else [members[member_index - 1].get("id")]
-                if intra != expected:
-                    errors.append(f"work unit {unit_id} checkpointed leaves must form one linear ordered dependency chain")
-                    break
+                if not safe_exact_write_set(member):
+                    errors.append(f"work unit {unit_id} parallel leaves must have exact safe write_set paths")
+                for other in members[member_index + 1 :]:
+                    if normalized_writes(member) & normalized_writes(other):
+                        errors.append(f"work unit {unit_id} parallel leaves must have pairwise-disjoint write_set values")
+            batches_in_unit = [member.get("batch") for member in members if stable_id(member.get("batch"))]
+            if len(batches_in_unit) != len(set(batches_in_unit)):
+                errors.append(f"work unit {unit_id} parallel leaves must not share a batch")
+            continue
+        if set(decomposition) != {"shape", "basis", "rationale"}:
+            errors.append(f"{prefix} for checkpointed must have exactly shape, basis, and rationale")
+        if decomposition.get("basis") not in {"failure_isolation", "rollback_boundary"}:
+            errors.append(f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed")
+        if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
+            errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
+        if len(members) < 2:
+            errors.append(f"work unit {unit_id} checkpointed decomposition must map at least two leaves")
+        for member_index, member in enumerate(members):
+            intra = [dep for dep in dependencies.get(member.get("id"), []) if dep in {item.get("id") for item in members}]
+            expected = [] if member_index == 0 else [members[member_index - 1].get("id")]
+            if intra != expected:
+                errors.append(f"work unit {unit_id} checkpointed leaves must form one linear ordered dependency chain")
+                break
 
+
+def _standard_ready_ratio(
+    plan: dict[str, Any],
+    unit_sizes: dict[str, int],
+    unit_leaves: dict[str, list[dict[str, Any]]],
+    errors: list[str],
+) -> tuple[float, int, int, bool]:
     ready_weight = 0
     total_weight = sum(unit_sizes.values())
     for unit_id, weight in unit_sizes.items():
@@ -1502,6 +1545,69 @@ def validate(
         errors.append(
             "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
         )
+    return ratio, ready_weight, total_weight, exception_valid
+
+
+def _pin_findings(
+    leaves: list[Any],
+    pin_roots: list[str],
+    repo_root: Path | None,
+    strict: bool,
+    errors: list[str],
+    warnings: list[str],
+) -> dict[str, Any]:
+    scan = pin_scan(leaves, pin_roots, repo_root or Path.cwd())
+    for leaf_id, paths in scan["leaves"].items():
+        for path in paths:
+            message = f"PLANSCOPE-UNOWNED-PIN: {leaf_id}: {path} pins a write path but no leaf write_set owns it"
+            (errors if strict else warnings).append(message)
+    return scan
+
+
+def validate(
+    plan: Any,
+    capability_binding: Any = None,
+    *,
+    admission: bool = True,
+    pin_roots: list[str] | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not isinstance(plan, dict):
+        return contract_result(None, False, warnings, ["plan must be an object"])
+    has_version_alias = "version" in plan
+    if has_version_alias:
+        errors.append("version is not a valid plan discriminator; use `contract_version`")
+    contract_version = _contract_version(plan, has_version_alias, errors, warnings)
+    if contract_version == 5 and admission and has_placeholder_decision(plan.get("approved_decisions")):
+        errors.append("approved_decisions cannot contain a standalone placeholder")
+    precision = plan.get("precision", "standard")
+    if "precision" in plan and precision not in PRECISION_MODES:
+        errors.append("precision must be standard or strict")
+    strict = precision == "strict"
+    leaves = plan.get("leaves")
+    units = plan.get("work_units")
+    if not isinstance(leaves, list) or not leaves:
+        errors.append("leaves must be a non-empty array")
+        leaves = []
+    if not isinstance(units, list) or not units:
+        errors.append("work_units must be a non-empty array")
+        units = []
+
+    unit_sizes, unit_records = _work_unit_sections(units, contract_version, errors)
+    leaf_ids, unit_leaves, dependencies, leaf_records, batches = _leaf_sections(
+        leaves, unit_sizes, contract_version, strict, admission, errors
+    )
+    _batch_errors(batches, leaf_records, dependencies, errors)
+    _dependency_graph_errors(dependencies, leaf_ids, errors)
+    if contract_version == 5 and admission:
+        _leaf_ordering_errors(dependencies, leaf_records, errors)
+    if contract_version == 5:
+        _decomposition_errors(unit_leaves, unit_records, dependencies, errors)
+    ratio, ready_weight, total_weight, exception_valid = _standard_ready_ratio(
+        plan, unit_sizes, unit_leaves, errors
+    )
     if "verification" in plan and not (
         isinstance(plan["verification"], str) and plan["verification"] in VERIFICATION_MODES
     ):
@@ -1511,11 +1617,7 @@ def validate(
         errors.extend(series_errors(series))
     scan = None
     if pin_roots and not errors:
-        scan = pin_scan(leaves, pin_roots, repo_root or Path.cwd())
-        for leaf_id, paths in scan["leaves"].items():
-            for path in paths:
-                message = f"PLANSCOPE-UNOWNED-PIN: {leaf_id}: {path} pins a write path but no leaf write_set owns it"
-                (errors if strict else warnings).append(message)
+        scan = _pin_findings(leaves, pin_roots, repo_root, strict, errors, warnings)
     if contract_version in {2, 3, 4}:
         warnings.append("blocked:contract_migration_required")
     binding_matches = contract_version in {4, 5} and capability_binding_matches(plan, leaves, capability_binding)
