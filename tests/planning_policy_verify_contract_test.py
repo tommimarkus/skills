@@ -1,6 +1,6 @@
 import unittest
 
-from tests.planning_policy_shared_contract_test import MODULE, leaf, v5_plan
+from tests.planning_policy_shared_contract_test import ABSENT, MODULE, assert_mode_field, leaf, v5_plan
 
 
 def plan_with(**leaf_fields):
@@ -14,19 +14,9 @@ def errors_of(plan):
 
 
 class VerificationFieldTest(unittest.TestCase):
-    def test_absent_and_known_modes_are_valid(self):
-        for extra in ({}, {"verification": "per-leaf"}, {"verification": "closeout-only"}):
-            plan = plan_with()
-            plan.update(extra)
-            self.assertEqual([], errors_of(plan), extra)
-
-    def test_other_values_are_contract_errors(self):
-        for value in ("never", "", None, ["per-leaf"], 1):
-            plan = plan_with()
-            plan["verification"] = value
-            self.assertTrue(
-                any("verification" in error for error in errors_of(plan)), value
-            )
+    def test_absent_and_known_modes_are_valid_and_others_are_contract_errors(self):
+        assert_mode_field(self, "verification", (ABSENT, "per-leaf", "closeout-only"),
+                          ("never", "", None, ["per-leaf"], 1), plan_with)
 
 
 class ChangesetBudgetTest(unittest.TestCase):

@@ -19,10 +19,28 @@ class ChangesetHarness(DispatchHarness):
 
     def started(self, leaves=None, **extra):
         self.init(leaves or [leaf("alpha", "leaf-alpha")], **extra)
+        return self.start_alpha()
+
+    def start_alpha(self):
         code, result = self.dispatch("alpha", "--create-from", "main")
         self.assertEqual(0, code, result)
         self.worktree = self.repo / ".worktrees/alpha"
         return result["handoffs"][0]
+
+    def assert_stamp(self, key, default, declared, **extra):
+        """init stamps `default` for the key unless the plan declares `extra`, which stamps `declared`."""
+        self.init([leaf("alpha", "leaf-alpha")])
+        self.assertEqual(default, self.checkpoint()[key])
+        self.init([leaf("alpha", "leaf-alpha")], **extra)
+        self.assertEqual(declared, self.checkpoint()[key])
+
+    def assert_record_changeset_refused(self):
+        """record-changeset exits 3 and leaves the checkpoint byte-identical."""
+        before = self.checkpoint_path().read_bytes()
+        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha")
+        self.assertEqual(3, code, result)
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
 
     def commit_file(self, relative, content, message="work"):
         path = self.worktree / relative
@@ -31,7 +49,8 @@ class ChangesetHarness(DispatchHarness):
         git(self.worktree, "add", "-A")
         git(self.worktree, "commit", "-m", message)
 
-    def returned(self, packet, status="completed", blockers=(), commit=None, **fields):
+    def return_file(self, packet, status="completed", blockers=(), commit=None, **fields):
+        """Write the bounded return for a packet and return its path."""
         value = {
             "schema": "bounded-step-return-v1", "step_id": packet["step_id"],
             "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
@@ -44,24 +63,38 @@ class ChangesetHarness(DispatchHarness):
         }
         path = self.scratch / "return.json"
         path.write_text(json.dumps(value))
-        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
-                                 "--return-file", str(path))
+        return path
+
+    def record_return_file(self, path):
+        return self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
+                         "--return-file", str(path))
+
+    def returned(self, packet, status="completed", blockers=(), commit=None, **fields):
+        code, result = self.record_return_file(
+            self.return_file(packet, status, blockers, commit, **fields))
         self.assertEqual(0, code, result)
         return result
 
-    def check(self, packet, *extra):
+    def handoff_file(self, packet):
         handoff = self.scratch / "handoff.json"
         handoff.write_text(json.dumps(packet))
-        return self.call("check-changeset", "--handoff-file", str(handoff),
+        return handoff
+
+    def check(self, packet, *extra):
+        return self.call("check-changeset", "--handoff-file", str(self.handoff_file(packet)),
                          "--worktree", str(self.worktree), *extra)
+
+    def dirtied(self, packet):
+        """Commit one in-scope file, then leave an uncommitted stray beside it."""
+        self.commit_file("src/alpha/a.txt", "one\n")
+        (self.worktree / "src/alpha/stray.txt").write_text("uncommitted\n")
+        return self.check(packet)
 
 
 class VerifyPolicyAndPacketTest(ChangesetHarness):
     def test_init_stamps_leaf_verify_by_default_and_closeout_only_when_declared(self):
-        self.init([leaf("alpha", "leaf-alpha")])
-        self.assertEqual("leaf_verify_v1", self.checkpoint()["verify_policy"])
-        self.init([leaf("alpha", "leaf-alpha")], verification="closeout-only")
-        self.assertEqual("closeout_only", self.checkpoint()["verify_policy"])
+        self.assert_stamp("verify_policy", "leaf_verify_v1", "closeout_only",
+                          verification="closeout-only")
 
     def test_unknown_verify_policy_fails_ledger_load(self):
         self.init([leaf("alpha", "leaf-alpha")])
@@ -187,10 +220,7 @@ class CheckChangesetTest(ChangesetHarness):
         self.assertEqual((0, 2), (result["lines"], result["files"]))
 
     def test_dirty_worktree_fails_the_gate(self):
-        packet = self.started()
-        self.commit_file("src/alpha/a.txt", "one\n")
-        (self.worktree / "src/alpha/stray.txt").write_text("uncommitted\n")
-        code, result = self.check(packet)
+        code, result = self.dirtied(self.started())
         self.assertEqual(1, code, result)
         self.assertFalse(result["ok"])
         self.assertEqual(["src/alpha/stray.txt"], result["outside"])

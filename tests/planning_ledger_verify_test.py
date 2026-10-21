@@ -507,11 +507,7 @@ class RejectRoutingTest(VerifyHarness):
 
     def test_record_changeset_refuses_a_changeset_within_budget(self):
         self.completed()
-        before = self.checkpoint_path().read_bytes()
-        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
-                                 "--step-id", "alpha")
-        self.assertEqual(3, code, result)
-        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assert_record_changeset_refused()
 
 
 if __name__ == "__main__":

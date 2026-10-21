@@ -22,41 +22,19 @@ class PrecisionHarness(VerifyHarness):
         """A retained run: initialised, its stamp removed, then dispatched."""
         self.init([leaf("alpha", "leaf-alpha")])
         self.stamp(None)
-        code, result = self.dispatch("alpha", "--create-from", "main")
-        self.assertEqual(0, code, result)
-        self.worktree = self.repo / ".worktrees/alpha"
-        return result["handoffs"][0]
-
-    def return_file(self, packet, paths):
-        value = {
-            "schema": "bounded-step-return-v1", "step_id": packet["step_id"],
-            "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
-            "status": "completed", "changed_paths": paths,
-            "acceptance": {"command": "uv run test", "exit_code": 0, "summary": "ok"},
-            "blockers": [], "notes": [], "unstarted_remainder": [],
-            "commit_hash": git(self.worktree, "rev-parse", "HEAD").stdout.strip(),
-        }
-        path = self.scratch / "return.json"
-        path.write_text(json.dumps(value))
-        return path
+        return self.start_alpha()
 
     def validate_return(self, packet, paths):
-        handoff = self.scratch / "handoff.json"
-        handoff.write_text(json.dumps(packet))
-        return self.call("validate-return", "--handoff-file", str(handoff),
-                         "--return-file", str(self.return_file(packet, paths)))
+        return self.call("validate-return", "--handoff-file", str(self.handoff_file(packet)),
+                         "--return-file", str(self.return_file(packet, changed_paths=paths)))
 
     def record_return(self, packet, paths):
-        return self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
-                         "--return-file", str(self.return_file(packet, paths)))
+        return self.record_return_file(self.return_file(packet, changed_paths=paths))
 
 
 class PrecisionStampTest(PrecisionHarness):
     def test_init_stamps_standard_by_default_and_strict_when_declared(self):
-        self.init([leaf("alpha", "leaf-alpha")])
-        self.assertEqual("standard_v1", self.checkpoint()["precision_policy"])
-        self.init([leaf("alpha", "leaf-alpha")], precision="strict")
-        self.assertEqual("strict_v1", self.checkpoint()["precision_policy"])
+        self.assert_stamp("precision_policy", "standard_v1", "strict_v1", precision="strict")
 
     def test_unknown_precision_policy_fails_ledger_load(self):
         self.init([leaf("alpha", "leaf-alpha")])
@@ -122,10 +100,7 @@ class PrecisionChangesetTest(PrecisionHarness):
         self.assertEqual(("pass", True, [OUTSIDE]), (result["verdict"], result["ok"], result["outside"]))
 
     def test_standard_still_fails_a_dirty_worktree(self):
-        packet = self.started()
-        self.commit_file("src/alpha/a.txt", "one\n")
-        (self.worktree / "src/alpha/stray.txt").write_text("uncommitted\n")
-        code, result = self.check(packet)
+        code, result = self.dirtied(self.started())
         self.assertEqual(1, code, result)
         self.assertEqual("outside_write_set", result["verdict"])
 
@@ -140,11 +115,7 @@ class PrecisionChangesetTest(PrecisionHarness):
         packet = self.started()
         self.commit_file(OUTSIDE, "x\n")
         self.returned(packet)
-        before = self.checkpoint_path().read_bytes()
-        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
-                                 "--step-id", "alpha")
-        self.assertEqual(3, code, result)
-        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assert_record_changeset_refused()
 
     def test_verify_packet_names_the_committed_outside_paths(self):
         packet = self.started()

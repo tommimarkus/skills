@@ -1,6 +1,6 @@
 import unittest
 
-from tests.planning_policy_shared_contract_test import MODULE, leaf, v5_plan
+from tests.planning_policy_shared_contract_test import ABSENT, MODULE, assert_mode_field, leaf, v5_plan
 
 
 def plan_with(precision=None, **leaf_fields):
@@ -18,14 +18,8 @@ def errors_of(plan):
 
 class PrecisionFieldTest(unittest.TestCase):
     def test_absent_and_known_modes_are_valid(self):
-        for precision in (None, "standard", "strict"):
-            self.assertEqual([], errors_of(plan_with(precision)), precision)
-
-    def test_other_values_are_contract_errors(self):
-        for value in ("loose", "", None, ["strict"], 1):
-            plan = plan_with()
-            plan["precision"] = value
-            self.assertTrue(any("precision" in error for error in errors_of(plan)), value)
+        assert_mode_field(self, "precision", (ABSENT, "standard", "strict"),
+                          ("loose", "", None, ["strict"], 1), plan_with)
 
     def test_standard_allows_absent_read_set_and_areas(self):
         plan = plan_with(write_set=["outputs", "src/**/*.py"], read_set=["docs"])

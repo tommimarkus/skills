@@ -85,6 +85,22 @@ def v5_plan(*leaves, work_units=None, **overrides):
     return plan
 
 
+ABSENT = object()
+
+
+def assert_mode_field(case, field, valid, invalid, build):
+    """A plan field accepts each `valid` value (ABSENT leaves it out) and errors on each `invalid` one."""
+    for value in valid:
+        plan = build()
+        if value is not ABSENT:
+            plan[field] = value
+        case.assertEqual([], MODULE.validate(plan)["errors"], value)
+    for value in invalid:
+        plan = build()
+        plan[field] = value
+        case.assertTrue(any(field in error for error in MODULE.validate(plan)["errors"]), value)
+
+
 def capability_binding(plan):
     plan_sha256 = hashlib.sha256(
         json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()

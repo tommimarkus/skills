@@ -1258,7 +1258,7 @@ def validate(
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
         if strict and contract_version == 5:
-            if not exact_path_list(leaf.get("write_set"), non_empty=True):
+            if not safe_exact_write_set(leaf):
                 errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
             if not exact_path_list(leaf.get("read_set"), non_empty=True):
                 errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
