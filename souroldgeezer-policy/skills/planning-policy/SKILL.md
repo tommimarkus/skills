@@ -39,7 +39,11 @@ choice invokes its owning design skill before approval.
   in [worker handoff](references/worker-handoff.md). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to
-  recover the next action. Builders preflight with `check-changeset`; the
+  recover the next action. Plans declare `precision` (`standard` default,
+  `strict` opt-in) and run `validate --pin-roots` before approval; the ledger
+  derives setup with `init-v5 --host` and `dispatch` returns a generated worker
+  prompt, per the plan and ledger contracts. Builders preflight with
+  `check-changeset`; the
   independent verifier follows [verify handoff](references/verify-handoff.md).
   The ledger alone owns retry remediation and tier
   selection; approval and dispatch validation remain separate. Slicing an oversized

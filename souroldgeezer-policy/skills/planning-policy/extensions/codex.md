@@ -58,6 +58,12 @@ Use this settled mapping:
 
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
+Initialize with `init-v5 --host codex --evidence ...` to derive assignments and
+the binding from the shared tier map; this table stays pinned to it. Pass the
+generated `prompt` from `dispatch` to the agent unchanged, appending host facts
+only. Launch a provisionally ready dependent and its prerequisite's verifier
+concurrently (concurrent `spawn_agent` calls in the same turn).
+
 A `batch` dispatches once: one `spawn_agent` call with ordered member handoffs.
 `dispatch` on the first member starts every member in listed order and returns
 one packet per member. The worker commits

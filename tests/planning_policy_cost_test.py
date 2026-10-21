@@ -40,7 +40,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         self.assertLessEqual(lookup["load_total"], 900)
         # verify-loop contract docs: the load-map names check-changeset and
         # verify-handoff.md (+27 measured; slack 5 kept).
-        self.assertLessEqual(direct["load_total"], 781)
+        self.assertLessEqual(direct["load_total"], 842)  # precision and pipeline docs (measured 837; slack 5)
         self.assertLessEqual(agent_lookup["total"], 900)
         # claude and codex were re-baselined together, from 4000/4200, to carry the
         # downward tier test. The contract gated only escalation: analytical/deep had
@@ -99,7 +99,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # section (+196 measured claude; slack 5 kept).
         # verify-loop contract docs: verifier procedure, Verify footer/option and
         # adapter dispatch (+314 measured claude; slack 5 kept).
-        self.assertLessEqual(claude["load_total"], 8012)  # plan-contract precision, chain advisory, pin scan (measured 8007; slack 5)
+        self.assertLessEqual(claude["load_total"], 8545)  # precision and pipeline docs (measured 8540; slack 5)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -113,13 +113,13 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # for the same shared plan-series pointers.
         # verify-loop contract docs: same shared additions plus codex verifier dispatch
         # (+287 measured; slack 5 kept).
-        self.assertLessEqual(codex["load_total"], 7979)  # plan-contract precision, chain advisory, pin scan (+148 over prior pin; slack 5)
+        self.assertLessEqual(codex["load_total"], 8508)  # precision and pipeline docs (measured 8503; slack 5)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
         # verify-loop contract docs: SKILL.md pointer and worker-handoff
         # budget/preflight (+70 measured; slack 5 kept).
-        self.assertLessEqual(live_next["load_total"], 2274)
+        self.assertLessEqual(live_next["load_total"], 2347)  # SKILL.md precision pointer (measured 2342; slack 5)
         self.assertFalse(
             any(row["file"].endswith("ledger-contract.md") for row in live_next["rows"])
         )
@@ -147,7 +147,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         series = self.measure("planning-policy-series-successor")
         # verify-loop contract docs: SKILL.md pointer and core-workflow verifier
         # paragraph (+206 measured; slack 5 kept).
-        self.assertLessEqual(series["load_total"], 7781)  # plan-contract precision, chain advisory, pin scan (measured 7776; slack 5)
+        self.assertLessEqual(series["load_total"], 8230)  # precision and pipeline docs (measured 8225; slack 5)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -171,7 +171,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval and a rejected ExitPlanMode was mistaken for approval.
         # verify-loop contract docs: same shared core-workflow/SKILL.md additions (+287
         # measured; slack 5 kept).
-        self.assertLessEqual(result["load_total"], 9078)  # plan-contract precision, chain advisory, pin scan (measured 9073; slack 5)
+        self.assertLessEqual(result["load_total"], 9607)  # precision and pipeline docs (measured 9602; slack 5)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

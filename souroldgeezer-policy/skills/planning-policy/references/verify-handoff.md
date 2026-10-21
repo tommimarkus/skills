@@ -8,7 +8,7 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `agent_id`, `verify_id`, `verifier_tier`, `task`, `boundary`,
 `settled_decisions`, `write_set`, `acceptance_command`, `cohesive_outcome`,
 `acceptance_exit_code`, `base_commit`, `returned_commit`, `budget`,
-`changeset`, and `return_schema`. A retry's packet also carries `prior_verify`
+`changeset`, `outside_write_set`, and `return_schema`. A retry's packet also carries `prior_verify`
 (`verify_id`, `rejected_commit`, `findings`).
 
 ## Inputs and reads
@@ -26,7 +26,9 @@ commit, and never re-run the test suite or the acceptance command; the packet's
 2. Settled decisions: each entry of `settled_decisions` is respected.
 3. Silent removal: no behavior, rule, test, or assertion was removed without
    the task asking for it.
-4. Scope creep: no unrequested change inside the write set.
+4. Scope creep: no unrequested change inside the write set. For each
+   `outside_write_set` path (committed outside the write set under standard
+   precision), reject only when the task did not require it.
 5. Acceptance: the acceptance command actually exercises the change.
 
 ## Rejection gate

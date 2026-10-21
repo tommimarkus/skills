@@ -66,6 +66,75 @@ It retains the resolved binding with each assigned step. An assignment change
 requires an exact re-binding before the step can become ready; otherwise stop
 `blocked:capability_unavailable`, never silently substitute or downgrade.
 
+### Precision, derived setup, and pipelining
+
+`init-v5` stamps `precision_policy` from the plan's `precision`: `standard_v1`
+or `strict_v1`; any other value fails ledger load, and a retained run without the
+stamp keeps the hard scope rejection. Worker packets in stamped runs carry
+`precision`. Under `standard_v1`, `validate-return` and `record-return` accept
+`changed_paths` outside the write set; `record-return` stores at most 8 as
+`scope_notes` and the completed `next` block carries `outside_paths`.
+`check-changeset` lists committed outside paths in `outside` with `ok` still true
+and verdict `pass` unless the budget fails; an uncommitted outside path remains
+`outside_write_set`, and `record-changeset` refuses an outside-only result as
+nothing to record. The verify packet gains `outside_write_set` (at most 8 paths)
+for the verifier's scope-creep check. `strict_v1` keeps the scope rejection.
+
+`references/host-tiers.json` (`planning-host-tiers-v1`) is the single tier map
+for `claude-code` and `codex`: model and effort per tier, a `skill` flag, and
+verifier entries; the adapter tier tables are tested against it.
+`init-v5 --host H --evidence TEXT` (1 to 8 lines, each at most 240 characters)
+derives assignments (harness `H`, model and effort from each leaf's
+`portable_tier`, worktree `.worktrees/<worktree_owner>`) and the
+`planning-capability-binding-v1` binding, then validates as for supplied files.
+`--host` with either supplied file, or neither, is a usage error; a derived
+additional skill requirement on a tier whose `skill` is false is
+`blocked:capability_unavailable`. A strict plan needs `--pin-roots` at init and
+is refused, listing the unowned pins, when the pin scan reports any. In a run
+initialized with `--host`, `dispatch` defaults `--model-or-alias` to the map
+entry for the step's current tier; an explicit value must equal it.
+
+`dispatch` stores each issued packet at
+`<run>/handoffs/<step>/<attempt_id>.json` and each handoff entry gains an
+absolute `packet_path` and `prompt`: host-neutral text of at most 1,200
+characters naming the packet path, worktree, the `validate-return` command with
+`--return-file -`, and the rule that the final message is exactly the bounded
+return JSON. The parent passes it unchanged; adapters may append host facts only.
+`validate-return` accepts `-` (stdin) under the same 8 KiB bound.
+
+In a `leaf_verify_v1` run `init-v5` also stamps `pipeline_policy:
+provisional_v1` (`closeout_only` and retained runs keep integrated-or-cleaned
+readiness). A pending step is provisionally ready when every dependency is
+integrated or cleaned except exactly one, which is completed with an issued
+`verify_id` or a stored pass or inconclusive verdict for its returned commit; two
+or more unintegrated prerequisites wait. Dispatching it (or a batch whose first
+member is) creates its worktree from the prerequisite's returned commit, records
+`provisional_base {step_id, commit}`, and sets `base_commit` to it; an existing
+assigned worktree must already contain that commit. The packet carries
+`provisional_base`. `land` and `transition --to integrated` refuse the step until
+that prerequisite is integrated or cleaned. A `next` block or `show --next-only`
+also lists up to 4 other startable step ids in `concurrent`, within the 120 and
+240 proxy-token caps.
+
+When a prerequisite with provisional dependents moves from completed to failed,
+blocked, or oversized, or is re-dispatched, each dependent gains `upstream_stale
+{step_id, commit}` (an in-progress dependent keeps working and its return is
+recorded normally); `verify-handoff`, `land`, and `transition --to integrated`
+refuse it until restacked. `restack --actor parent --run-id R --step-id S
+[--acceptance-exit-code N]` acts on a completed stale step once its prerequisite
+has a new completed commit or is integrated: it runs `git rebase --onto NEW OLD`
+in the step's worktree, records the new `returned_commit` and `base_commit`, and
+clears `upstream_stale`. A stored pass or inconclusive verdict carries over only
+when `git patch-id --stable` of the step's own diff is unchanged; otherwise it
+needs verification again. A tree-changing restack requires
+`--acceptance-exit-code` from the parent's re-run of the scoped acceptance; a
+non-zero code, or a rebase conflict (aborted, worktree left clean), moves the
+step to `blocked` with `blocked:upstream_changed`. That code is registered in the
+blocked family, never returned by a worker (excluded from the worker return
+schema like `failed:verification`), and repairable: a same-tier retry that does
+not spend the same-tier retry, with remediation citing the prerequisite's old
+and new commits.
+
 ### Driving transitions and validate --closeout
 
 `init-v5` requires `--plan-id`, the approved version-5 plan, the complete

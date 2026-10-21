@@ -19,6 +19,17 @@ object unchanged, inline or in an explicitly supplied persistent file, together
 with the host dispatch instructions. A batch carries one packet per member.
 Do not give a worker the whole plan or reconstruct a packet from prose.
 
+`dispatch` also stores the packet under the run and returns its absolute
+`packet_path` with a generated, host-neutral `prompt` (at most 1,200 characters)
+built only from packet facts. Pass that prompt unchanged to the tier agent; a
+host adapter may append host facts only. The worker may run `validate-return`
+with `--return-file -` to read its return from stdin. The packet's `precision`
+governs scope: under `standard` a changed path outside the write set is allowed,
+recorded by the parent, and judged by the verifier, so a worker names such paths
+in `changed_paths` rather than stopping; under `strict` it is a hard stop. A
+packet naming `provisional_base` means the worktree was stacked on a prerequisite
+commit still being verified; build on it and do not rebase or alter it.
+
 `planning-worker-handoff-v1` is at most 32 KiB. It carries the plan digest and
 plan/run/step/agent/attempt identities, exact assigned leaf (the effective leaf, with a bounded `amendments` summary
 after a parent `amend`) and work unit,
@@ -55,7 +66,8 @@ python3 -B "<skill-dir>/references/scripts/planning_ledger.py" check-changeset -
 ```
 
 Verdicts are `pass`, `oversized:changeset`, and `outside_write_set` (an
-uncommitted path counts as outside). A batch follower's `base_commit` is empty;
+uncommitted path counts as outside; under `standard` precision a committed
+outside path is listed in `outside` and the verdict stays `pass`). A batch follower's `base_commit` is empty;
 pass `--base` with the previous member's commit. Budget pressure resolves by
 stopping `oversized:changeset` with the unstarted remainder, never by deleting
 required content. A worker never returns `failed:verification`; only the ledger

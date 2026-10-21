@@ -28,6 +28,12 @@ overrides defaults.
    Size each leaf to its changeset budget (see the
    [plan contract](plan-contract.md#verification-and-changeset-budget)): split
    or re-cut a leaf that would exceed it, or give the reason a raise requires.
+   Choose `precision` once: `standard` (default) declares write areas, treats
+   `read_set` as optional orientation, and records a change outside the write
+   set for the verifier to judge; `strict` requires exact paths, a non-empty
+   `read_set`, and a clean pin scan, and stops on an out-of-set change. Run
+   `validate --pin-roots` before approval in both modes and act on each
+   `PLANSCOPE-UNOWNED-PIN` (see the [plan contract](plan-contract.md)).
    Review acceptance for actual task coverage; structural validation cannot.
    Leaf acceptance covers its write set; whole-suite verification stays with
    the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
@@ -38,7 +44,8 @@ overrides defaults.
    contract. Leave unavailable token ranges unknown; never infer them from a
    size, tier, model name, or stable-proxy count. Contract validation calculates
    the advisory in the same invocation. Act on its codes before approval:
-   re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN`, re-tier
+   re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN` (this
+   includes a pure chain whose leaves have distinct owners: batch it), re-tier
    for `PLANCOST-TIER-OVER-ASSIGNED`, and merge unjustified split candidates for
    `PLANCOST-MICROLEAF-RISK` unless the permitted evidence-backed decomposition
    rationale applies. Then assess `PLANCOST-PLAN-SCALE`; only a still-oversized
@@ -71,6 +78,23 @@ time and discloses it in the footer. The verifier is independent of the builder
 and never replaces the parent's integration or closeout verification. A verdict
 stands across the integration rebase; the scoped-acceptance rule below is
 unchanged.
+
+In a `leaf_verify_v1` run the ledger stamps `pipeline_policy: provisional_v1`.
+A pending step becomes provisionally ready when exactly one prerequisite is
+unintegrated and that prerequisite is completed with an issued verify packet (or
+a stored pass or inconclusive verdict); its dispatch stacks on the prerequisite's
+returned commit and its packet names the `provisional_base`. Launch such a
+dependent and the prerequisite's verifier together rather than waiting. `land`
+keeps dependency order and refuses the dependent until its prerequisite is
+integrated, so unverified work never reaches the parent branch. When the
+prerequisite leaves `completed` without integrating, its provisional dependents
+are marked stale (`upstream_stale`); the parent runs `restack`, which rebases the
+dependent and keeps a stored verdict only when `git patch-id --stable` of its own
+diff is unchanged. A tree-changing restack needs the parent's re-run of the leaf's
+scoped acceptance (`--acceptance-exit-code`); a rebase conflict or a failed
+re-run is the repairable `blocked:upstream_changed`. `next` and `show --next-only`
+list other startable steps in a `concurrent` field. Detail:
+[ledger contract](ledger-contract.md).
 
 Final verification runs once, at closeout, never per integration cycle;
 per-integration checks are the helper's ancestry and fast-forward proofs, not
@@ -147,7 +171,7 @@ Adoption template (Codex uses its native approval/delegation wording):
 > approach in plan mode and get it approved before implementing. The approved
 > plan says who runs each step; delegate decomposable work unless it states why
 > not, and keep integration and verification in the parent. Scope <globs>. verify:
-> per-leaf | closeout-only. Opt out per task by saying "skip planning"
+> per-leaf | closeout-only. precision: standard | strict. Opt out per task by saying "skip planning"
 > (logged). Enforcement <model>.`
 
 Explicit scope overrides the bare default of new feature/build/creative
@@ -166,5 +190,6 @@ Scope/exceptions: <in force>
 Plan mode: <entered | already active | fallback used (reason) | not available (reason)>
 Execution shape: <subagents: N steps (bands) | inline (case) | delegation unavailable (reason)>
 Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>
+Precision: <standard | strict>
 Opt-outs: <none | phrase logged>
 ```
