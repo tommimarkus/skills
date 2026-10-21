@@ -126,8 +126,11 @@ has a new completed commit or is integrated: it runs `git rebase --onto NEW OLD`
 in the step's worktree, records the new `returned_commit` and `base_commit`, and
 clears `upstream_stale`. A stored pass or inconclusive verdict carries over only
 when `git patch-id --stable` of the step's own diff is unchanged; otherwise it
-needs verification again. A tree-changing restack requires
-`--acceptance-exit-code` from the parent's re-run of the scoped acceptance; a
+needs verification again. A tree-changing restack without
+`--acceptance-exit-code` rebases, keeps the step stale with a recorded
+`pending_acceptance` (old and new base) and returns ok with a `next` naming the
+scoped-acceptance re-run, and the repeat call with the code completes or blocks
+the step; `restack` refuses a batch member, which remediates through retry. A
 non-zero code, or a rebase conflict (aborted, worktree left clean), moves the
 step to `blocked` with `blocked:upstream_changed`. That code is registered in the
 blocked family, never returned by a worker (excluded from the worker return

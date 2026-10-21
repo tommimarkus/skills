@@ -309,14 +309,9 @@ class ReferencedReturnCodeParityTest(unittest.TestCase):
         REPO_ROOT / "scripts/planning_policy_forward_eval.py",
     )
 
-    # Documented ahead of the ledger registering it (the upstream-change leaf);
-    # redundant, and removable, once RETURN_CODES carries it.
-    DOCUMENTED_AHEAD = {"blocked:upstream_changed"}
-
     @classmethod
     def allowed(cls) -> set[str]:
         codes = {code for family in ledger.RETURN_CODES.values() for code in family}
-        codes |= cls.DOCUMENTED_AHEAD
         for script in cls.EMITTER_SCRIPTS:
             codes.update(cls.CODE.findall(script.read_text(encoding="utf-8")))
         return codes
