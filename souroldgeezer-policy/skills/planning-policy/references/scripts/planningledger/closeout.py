@@ -14,10 +14,8 @@ from .vocabulary import (
     COMMIT,
     ESCALATING_RETRY_POLICY,
     FORWARD_SCHEMA,
-    LIVE_NEXT_SCHEMAS,
     MAX_CHECKPOINT,
     MAX_CHECK_OUTSIDE,
-    MAX_LEGACY_CHECKPOINT,
     MAX_NEXT_ONLY_TOKENS,
     MAX_SERIES_HANDOFF,
     MAX_TOKENS,
@@ -54,9 +52,9 @@ from .checkpoint import (
     load2,
     mutating_run,
     require_no_retained_pipeline,
+    retired_contract,
     validate_events2,
 )
-from .legacy import legacy_fields, load1, parse_v1, validate_events1
 from .schedule import (
     batch_settled,
     bounded_action_next,
@@ -67,7 +65,6 @@ from .schedule import (
     land_command,
     ordered_steps,
     ready_candidate,
-    ready_command,
     ready_status_legal,
     retry_command,
     retryable_steps,
@@ -80,7 +77,6 @@ from .dispatch import apply_worktree_result, next_after_transition, require_veri
 from .retention import collect_ledgers, scan_ledgers
 
 __all__ = [
-    "init1",
     "refuse_unowned_pins",
     "init5",
     "land",
@@ -91,35 +87,6 @@ __all__ = [
     "show",
     "validate",
 ]
-
-
-def init1(args):
-    approved_parent(args)
-    directory = plan_dir(args)
-    if directory.exists():
-        raise Error("ledger already exists; init is not an overwrite operation")
-    steps = parse_v1(args.steps_json)
-    collect_ledgers(root(args), None, timestamp(core.now()), remove=True)
-    created_at = core.now()
-    data = {
-        "schema_version": 1,
-        "plan_id": args.plan_id,
-        "approved": True,
-        "created_at": created_at,
-        "updated_at": created_at,
-        "event_sequence": 1,
-        "steps": steps,
-    }
-    write(directory / "checkpoint.json", data, MAX_LEGACY_CHECKPOINT)
-    initial_event(directory, created_at, "init", args.plan_id, step_count=len(data["steps"]))
-    return {
-        **legacy_fields(),
-        "ok": True,
-        "action": "init",
-        "ledger": str(directory),
-        "plan_id": args.plan_id,
-        "step_count": len(data["steps"]),
-    }
 
 
 def refuse_unowned_pins(args, plan, top):
@@ -136,7 +103,7 @@ def refuse_unowned_pins(args, plan, top):
 
 def init5(args):
     approved_parent(args)
-    plan = read_plan(args.plan_file, FORWARD_SCHEMA)
+    plan = read_plan(args.plan_file)
     top = repository_top(args)
     refuse_unowned_pins(args, plan, top)
     supplied = (args.assignments_file, args.capability_binding_file)
@@ -173,7 +140,7 @@ def init5(args):
     existing, invalid = scan_ledgers(ledger_root, args.plan_id, timestamp(core.now()))
     if invalid:
         raise Error("target plan ledger directory is invalid")
-    if any(entry["legacy"] for entry in existing):
+    if retired_contract(directory, plan_level=True)[0]:
         raise Error("cannot add a v5 run inside a legacy ledger directory")
     run_id = str(uuid.uuid4())
     run = directory / run_id
@@ -273,8 +240,6 @@ def init5(args):
 def land(args):
     """Integrate and clean a completed leaf, or a settled batch, through the helper."""
     directory, data, plan, leafs = mutating_run(args)
-    if data.get("schema") != FORWARD_SCHEMA:
-        raise Error("land requires a version-5 run")
     batches = step_batches(plan)
     sid, step = selected_step(data, args.step_id)
     group = list(batches.get(sid, ())) or [sid]
@@ -431,10 +396,7 @@ def reopen2(args):
     require_no_retained_pipeline(data)
     if timestamp(core.now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
-    if (
-        data.get("schema") in LIVE_NEXT_SCHEMAS
-        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
-    ):
+    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         batches = step_batches(plan)
         pending = [
             step
@@ -478,14 +440,11 @@ def reopen2(args):
             step["id"] for step in ordered_steps(data["steps"]) if step in retryable
         ],
     }
-    if (
-        data.get("schema") in LIVE_NEXT_SCHEMAS
-        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
-    ):
+    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         ids = result["retryable_steps"]
         first = data["steps"][ids[0]]
         command = (
-            ready_command(data, first["id"])
+            dispatch_command(data["plan_id"], data["run_id"], first["id"])
             if first["status"] == "pending"
             else retry_command(data["plan_id"], data["run_id"], first["id"])
         )
@@ -569,17 +528,12 @@ def bounded_step_summary(result):
 
 
 def show(args):
+    if args.next_only and args.step_id:
+        raise Error("show --next-only does not accept --step-id")
+    directory, data, plan, leafs = load2(args)
     if args.next_only:
-        if not args.run_id:
-            raise Error("show --next-only requires a version-4 or version-5 run")
-        if args.step_id:
-            raise Error("show --next-only does not accept --step-id")
-        directory, data, plan, _leafs = load2(args)
-        if (
-            data.get("schema") not in LIVE_NEXT_SCHEMAS
-            or data.get("retry_policy") != ESCALATING_RETRY_POLICY
-        ):
-            raise Error("show --next-only requires a version-4 or version-5 run")
+        if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
+            raise Error(f"show --next-only requires retry_policy {ESCALATING_RETRY_POLICY}")
         validate_events2(directory, data)
         result = {
             "ok": True,
@@ -591,19 +545,6 @@ def show(args):
         if proxy_tokens(result) > MAX_NEXT_ONLY_TOKENS:
             raise Error("show --next-only exceeds 240 proxy tokens")
         return result
-    if not args.run_id:
-        data = load1(plan_dir(args))
-        result = {
-            **legacy_fields(),
-            "ok": True,
-            "plan_id": data["plan_id"],
-            "steps": list(data["steps"].values()),
-        }
-        result["summary_proxy_tokens"] = proxy_tokens(result)
-        if result["summary_proxy_tokens"] > MAX_TOKENS:
-            raise Error("legacy ledger summary exceeds 1200 proxy tokens")
-        return result
-    directory, data, plan, leafs = load2(args)
     if args.step_id:
         sid = ident(args.step_id, "step id")
         if sid not in data["steps"]:
@@ -671,15 +612,6 @@ def show(args):
 
 
 def validate(args):
-    if not args.run_id:
-        data = load1(plan_dir(args))
-        validate_events1(plan_dir(args), data)
-        return {
-            **legacy_fields(),
-            "ok": True,
-            "plan_id": data["plan_id"],
-            "errors": [],
-        }
     directory, data, plan, leafs = load2(args)
     if args.closeout:
         unfinished = [
@@ -709,7 +641,6 @@ def validate(args):
     }
     if (
         args.closeout
-        and data.get("schema") in LIVE_NEXT_SCHEMAS
         and data.get("retry_policy") == ESCALATING_RETRY_POLICY
         and data["steps"]
         and all(step["status"] == "cleaned" for step in data["steps"].values())

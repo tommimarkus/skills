@@ -141,7 +141,7 @@ def selected_step(data, step_id):
 
 
 def dependency_order(steps):
-    """Reject unknown or cyclic dependencies in either ledger schema."""
+    """Reject unknown or cyclic step dependencies."""
     if any(dep not in steps for step in steps.values() for dep in step["dependencies"]):
         raise Error("unknown dependency")
     visiting, visited = set(), set()

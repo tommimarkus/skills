@@ -7,11 +7,11 @@ from pathlib import Path
 
 from . import contract
 from .vocabulary import (
-    CAPABILITY_SCHEMAS,
     CLOSEOUT_FIELDS,
     COMMIT,
     ESCALATING_RETRY_POLICY,
     FORWARD_SCHEMA,
+    LAST_RETIRED_RELEASE,
     LIFECYCLE_FIELDS,
     MAX_CHECKPOINT,
     MAX_REMEDIATION,
@@ -23,8 +23,8 @@ from .vocabulary import (
     RETAINED_PIPELINE_CODE,
     RETAINED_PIPELINE_FIELDS,
     RETAINED_PIPELINE_POLICY,
+    RETIRED_RUN_SCHEMAS,
     RETRY_STATE_FIELDS,
-    RUN_SCHEMAS,
     SCOPE_REJECTION_REASON,
     SERIES_HANDOFF_FIELDS,
     SERIES_HANDOFF_LIST_FIELDS,
@@ -66,9 +66,8 @@ __all__ = [
     "active_run",
     "validate_steps2",
     "validate_events2",
-    "init2",
-    "init3",
-    "init4",
+    "retired_contract",
+    "refuse_retired",
     "validate_run",
     "load2",
     "mutating_run",
@@ -115,7 +114,7 @@ def scope_rejection_state(step):
 
 
 def lifecycle(data):
-    """Validate lifecycle fields, accepting old active v2 checkpoints in memory."""
+    """Validate lifecycle fields, reading a checkpoint without them as active, in memory."""
     present = LIFECYCLE_FIELDS.intersection(data)
     if not present:
         data.update(run_status="active", outcome=None, closed_at=None, purge_after=None)
@@ -169,9 +168,7 @@ def validate_steps2(data, leafs):
             raise Error("blocked:plan_tampered")
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
             assignment = step.get("current_assignment")
-            assignment_fields = {"agent_id", "harness"}
-            if data.get("schema") in CAPABILITY_SCHEMAS:
-                assignment_fields.add("model_or_alias")
+            assignment_fields = {"agent_id", "harness", "model_or_alias"}
             if (
                 not RETRY_STATE_FIELDS.issubset(step)
                 or step.get("current_tier") not in PORTABLE_TIERS
@@ -189,23 +186,22 @@ def validate_steps2(data, leafs):
                 or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
             ):
                 raise Error("blocked:plan_tampered")
-            if data.get("schema") in CAPABILITY_SCHEMAS:
-                binding = step.get("capability_binding")
-                if (
-                    not isinstance(assignment.get("model_or_alias"), str)
-                    or not 1 <= len(assignment["model_or_alias"]) <= 160
-                    or not assignment["model_or_alias"].strip()
-                    or not isinstance(binding, dict)
-                    or digest(binding) != step.get("capability_binding_sha256")
-                    or not valid_stored_binding(
-                        binding,
-                        data.get("plan_hash"),
-                        sid,
-                        leafs[sid],
-                        assignment,
-                    )
-                ):
-                    raise Error("blocked:plan_tampered")
+            binding = step.get("capability_binding")
+            if (
+                not isinstance(assignment.get("model_or_alias"), str)
+                or not 1 <= len(assignment["model_or_alias"]) <= 160
+                or not assignment["model_or_alias"].strip()
+                or not isinstance(binding, dict)
+                or digest(binding) != step.get("capability_binding_sha256")
+                or not valid_stored_binding(
+                    binding,
+                    data.get("plan_hash"),
+                    sid,
+                    leafs[sid],
+                    assignment,
+                )
+            ):
+                raise Error("blocked:plan_tampered")
             if step["retry_remediation_path"]:
                 rel(step["retry_remediation_path"], "retry remediation path")
                 require_sha256(
@@ -241,19 +237,13 @@ def validate_steps2(data, leafs):
 
 
 def validate_events2(directory, data):
-    schema = data.get("schema")
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
+    # "restack" is accepted only in the history of a retained provisional_v1 run.
     actions = {
-        f"init-v{schema}",
-        f"transition-v{schema}",
-        "record-return",
-        f"close-v{schema}",
-        f"reopen-v{schema}",
+        "init-v5", "transition-v5", "record-return", "close-v5", "reopen-v5",
+        "amend-v5", "verify-handoff", "record-verify", "record-changeset", "restack",
     }
-    if schema == FORWARD_SCHEMA:
-        # "restack" is accepted only in the history of a retained provisional_v1 run.
-        actions.update({"amend-v5", "verify-handoff", "record-verify", "record-changeset", "restack"})
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
@@ -278,16 +268,39 @@ def validate_events2(directory, data):
         raise Error("v2 event sequence mismatch")
 
 
-def init2(args):
-    raise Error("blocked:contract_migration_required")
+def retired_contract(directory, plan_level=False):
+    """(retired, version) for a retained ledger directory of a retired contract (1-4).
+
+    Version 1 kept checkpoint.json directly in its plan directory, so a plan-level
+    checkpoint is retired whatever it holds; versions 2-4 stamp `schema` in a run
+    directory's checkpoint. `version` is the recorded version, or None when it
+    cannot be read. Nothing deeper is read: such a run is refused, listed and kept.
+    """
+    path = directory / "checkpoint.json"
+    if directory.is_symlink() or path.is_symlink() or not path.is_file():
+        return False, None
+    try:
+        value = json.loads(path.read_text())
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        value = None
+    if plan_level:
+        return True, 1 if isinstance(value, dict) and value.get("schema_version") == 1 else None
+    version = value.get("schema") if isinstance(value, dict) else None
+    retired = isinstance(version, int) and version in RETIRED_RUN_SCHEMAS
+    return retired, version if retired else None
 
 
-def init3(args):
-    raise Error("blocked:contract_migration_required")
-
-
-def init4(args):
-    raise Error("blocked:contract_migration_required")
+def refuse_retired(args):
+    """Refuse a command aimed at a retained run of a retired contract, before any load."""
+    plan = plan_dir(args)
+    retired, version = retired_contract(plan, plan_level=True)
+    if not retired and args.run_id:
+        retired, version = retired_contract(v2_dir(args))
+    if retired:
+        raise Error(
+            f"blocked:contract_migration_required: this run uses retired contract version "
+            f"{version or 'unknown'}; finish or close it with {LAST_RETIRED_RELEASE} or earlier"
+        )
 
 
 def validate_run(directory, data, plan_id, run_id):
@@ -298,7 +311,7 @@ def validate_run(directory, data, plan_id, run_id):
     checked against amendment-aware effective leaves, so an amended run is never
     reported as tampered.
     """
-    if data.get("schema") not in RUN_SCHEMAS:
+    if data.get("schema") != FORWARD_SCHEMA:
         raise Error("unknown checkpoint schema")
     if (
         data.get("plan_id") != plan_id
@@ -317,8 +330,7 @@ def validate_run(directory, data, plan_id, run_id):
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
     plan_result = contract.plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
-    ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
-    if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
+    if not plan_result.get("dispatch_ready") or plan_result.get("contract_version") != FORWARD_SCHEMA:
         raise Error("blocked:plan_tampered")
     if set(data.get("steps", {})) != set(leaves_by_id(plan)):
         raise Error("blocked:plan_tampered")
@@ -339,6 +351,7 @@ def validate_run(directory, data, plan_id, run_id):
 
 
 def load2(args):
+    refuse_retired(args)
     parent_directory = plan_dir(args)
     if parent_directory.is_symlink() or not parent_directory.is_dir():
         raise Error("unknown run id")

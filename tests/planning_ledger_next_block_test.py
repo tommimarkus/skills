@@ -432,27 +432,22 @@ class LifecycleNextBlockTest(LedgerHarness):
 
 
 class ExternalDependencyGateTest(unittest.TestCase):
-    def data(self, schema: int, status: str) -> dict:
+    def data(self, status: str) -> dict:
         return {
-            "schema": schema,
+            "schema": 5,
             "steps": {
                 "a": {"id": "a", "status": status, "dependencies": []},
                 "b": {"id": "b", "status": "pending", "dependencies": ["a"]},
             },
         }
 
-    def test_only_schema_5_externals_unblock_at_integrated(self):
-        for schema, expected in ((5, True), (4, False), (3, False), (2, False)):
-            with self.subTest(schema=schema):
-                data = self.data(schema, "integrated")
+    def test_externals_unblock_at_integrated_or_cleaned(self):
+        for status, expected in (("integrated", True), ("cleaned", True), ("completed", False)):
+            with self.subTest(status=status):
+                data = self.data(status)
                 self.assertEqual(
                     expected, ledger.dependencies_clean(data, data["steps"]["b"], {})
                 )
-        for schema in (2, 4, 5):
-            data = self.data(schema, "cleaned")
-            self.assertTrue(ledger.dependencies_clean(data, data["steps"]["b"], {}))
-            data = self.data(schema, "completed")
-            self.assertFalse(ledger.dependencies_clean(data, data["steps"]["b"], {}))
 
 
 class NextOnlyRehydrationTest(LedgerHarness):
@@ -780,15 +775,6 @@ class RepairableRetryTest(LedgerHarness):
         block = self.give("blocked", ENV, marker="b")["next"]
         self.assertEqual("blocked:retry_exhausted", block["outcome"])
 
-    def test_a_retained_v4_run_keeps_the_exactly_one_blocker_rule(self):
-        step = {"attempt_id": "a", "amendments": []}
-        value = {"status": "blocked", "blockers": [ENV]}
-        self.assertEqual(("", ""), ledger.retry_class({"schema": 4}, step, value))
-        value = {"status": "failed", "blockers": [FAIL, EXEC]}
-        self.assertEqual(("", ""), ledger.retry_class({"schema": 4}, step, value))
-        value = {"status": "failed", "blockers": [FAIL]}
-        self.assertEqual(("reasoning", "failed:acceptance"), ledger.retry_class({"schema": 4}, step, value))
-
 
 class BatchNextBlockTest(LedgerHarness):
     """A batch integrates its shared tip once, so a completed member waits.
@@ -835,103 +821,6 @@ class BatchNextBlockTest(LedgerHarness):
         self.assertEqual(0, code, unwound)
         # `b1` is retryable and `b2` will be redispatched, so `b0` keeps waiting.
         self.assertEqual("remediate_failure", self.show_next()[1]["next"]["category"])
-
-
-class LegacySilenceTest(LedgerHarness):
-    def downgrade_to_policyless(self, version: int = 2) -> None:
-        directory = self.root / "planning-policy/ledgers" / self.plan_id / self.run_id
-        plan_path = directory / "plan.json"
-        plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        plan["contract_version"] = version
-        for entry in plan["leaves"]:
-            entry.pop("capability_requirements")
-        plan_path.write_text(json.dumps(plan), encoding="utf-8")
-
-        checkpoint_path = directory / "checkpoint.json"
-        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
-        checkpoint["schema"] = version
-        checkpoint["plan_hash"] = ledger.digest(plan)
-        checkpoint.pop("retry_policy")
-        for step in checkpoint["steps"].values():
-            step.pop("capability_binding")
-            step.pop("capability_binding_sha256")
-            for field in (
-                "current_tier",
-                "same_tier_retry_used",
-                "current_assignment",
-                "retry_remediation_path",
-                "retry_remediation_sha256",
-            ):
-                step.pop(field)
-        checkpoint_path.write_text(json.dumps(checkpoint), encoding="utf-8")
-
-        events_path = directory / "events.jsonl"
-        events = [json.loads(line) for line in events_path.read_text().splitlines()]
-        for entry in events:
-            entry["action"] = entry["action"].replace("-v5", f"-v{version}")
-            if "plan_hash" in entry:
-                entry["plan_hash"] = checkpoint["plan_hash"]
-        events_path.write_text(
-            "".join(json.dumps(entry) + "\n" for entry in events), encoding="utf-8"
-        )
-
-    def test_policyless_v2_and_v3_runs_stay_silent_and_reject_next_only(self):
-        for version in (2, 3):
-            with self.subTest(version=version):
-                self.init([leaf("build", []), leaf("later", ["build"])])
-                self.downgrade_to_policyless(version)
-                code, ready = self.transition(
-                    "build", "ready", "--agent-id", "agent-1"
-                )
-                self.assertEqual(0, code, ready)
-                self.assertNotIn("next", ready)
-                code, active = self.transition("build", "in_progress")
-                self.assertEqual(0, code, active)
-                self.assertNotIn("next", active)
-                result = self.give("blocked", OTHER, marker="a")
-                self.assertNotIn("next", result)
-                self.assertNotIn("retry_policy", self.checkpoint())
-
-                code, rejected = self.show_next()
-                self.assertEqual(3, code, rejected)
-                self.assertEqual(
-                    "show --next-only requires a version-4 or version-5 run", rejected["error"]
-                )
-
-    def test_a_version_one_ledger_stays_silent(self):
-        steps = json.dumps(
-            [
-                {
-                    "id": name,
-                    "dependencies": [],
-                    "harness": "codex",
-                    "tier": "standard",
-                    "model_or_alias": "gpt-5.6-terra",
-                    "effort": "medium",
-                    "worktree": f".worktrees/{name}",
-                }
-                for name in ("one", "two")
-            ]
-        )
-        legacy = ["--ledger-root", str(self.root), "--plan-id", "legacy-plan"]
-        code, result = self.call(
-            *legacy, "init", "--actor", "parent", "--approved", "--steps-json", steps
-        )
-        self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
-        self.assertEqual("legacy_unbounded", result["retry_policy"])
-
-        code, result = self.call(
-            *legacy, "transition", "--actor", "parent", "--step-id", "one", "--to", "ready"
-        )
-        self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
-
-        code, rejected = self.call(*legacy, "show", "--next-only")
-        self.assertEqual(3, code, rejected)
-        self.assertEqual(
-            "show --next-only requires a version-4 or version-5 run", rejected["error"]
-        )
 
 
 class SeriesOverlayNextBlockTest(LedgerHarness):

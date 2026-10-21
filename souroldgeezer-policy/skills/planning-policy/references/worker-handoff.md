@@ -3,8 +3,8 @@
 Use for ledger-backed v5 delegation. The parent resolves approval and capability
 binding; `dispatch` verifies the worktree identity (creating it with
 `--create-from`), starts the assigned attempt and returns the packet. The generated packet transports those decisions; it grants no
-approval, permission or new retry. Existing single-step or legacy manual
-handoffs retain their versioned contract and must carry relevant shared decisions.
+approval, permission or new retry. Existing single-step manual handoffs retain
+their versioned contract and must carry relevant shared decisions.
 
 After `in_progress`, generate the packet from the current stored assignment:
 

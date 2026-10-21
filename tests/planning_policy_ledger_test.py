@@ -25,13 +25,6 @@ class PlanningLedgerTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.common = ["--ledger-root", str(self.root), "--plan-id", "plan"]
-        self.assignment = {
-            "harness": "codex",
-            "tier": "standard",
-            "model_or_alias": "inherit",
-            "effort": "inherit",
-            "worktree": ".worktrees/a",
-        }
 
     def tearDown(self):
         self.temp.cleanup()
@@ -40,14 +33,6 @@ class PlanningLedgerTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as stream:
             code = ledger.main(args)
         return code, json.loads(stream.getvalue())
-
-    def v1(self):
-        return json.dumps(
-            [
-                {"id": "build", **self.assignment},
-                {"id": "verify", "dependencies": ["build"], **self.assignment},
-            ]
-        )
 
     def plan(self, count=2, max_attempts=2, portable_tier="standard"):
         leaves = []
@@ -132,7 +117,8 @@ class PlanningLedgerTest(unittest.TestCase):
         )
         return path
 
-    def downgrade_run_to_v2(self, run, *, policyless=False):
+    def downgrade_run_to_v2(self, run):
+        """Rewrite a v5 run into the retained policy-less version-2 shape."""
         directory = self.root / "planning-policy/ledgers/plan" / run
         plan_path = directory / "plan.json"
         plan = json.loads(plan_path.read_text())
@@ -146,22 +132,18 @@ class PlanningLedgerTest(unittest.TestCase):
         checkpoint["schema"] = 2
         checkpoint["plan_hash"] = ledger.digest(plan)
         checkpoint.pop("return_codes")
-        if policyless:
-            checkpoint.pop("retry_policy")
+        checkpoint.pop("retry_policy")
         for step in checkpoint["steps"].values():
             step.pop("capability_binding")
             step.pop("capability_binding_sha256")
-            if policyless:
-                for field in (
-                    "current_tier",
-                    "same_tier_retry_used",
-                    "current_assignment",
-                    "retry_remediation_path",
-                    "retry_remediation_sha256",
-                ):
-                    step.pop(field)
-            else:
-                step["current_assignment"].pop("model_or_alias")
+            for field in (
+                "current_tier",
+                "same_tier_retry_used",
+                "current_assignment",
+                "retry_remediation_path",
+                "retry_remediation_sha256",
+            ):
+                step.pop(field)
         checkpoint_path.write_text(json.dumps(checkpoint))
 
         events_path = directory / "events.jsonl"
@@ -370,22 +352,20 @@ class PlanningLedgerTest(unittest.TestCase):
         ]
         if agent_id:
             arguments += ["--agent-id", agent_id]
-        checkpoint = self.checkpoint(run)
-        if checkpoint.get("schema") in {4, 5}:
-            sid = remediation["step_id"]
-            executor = checkpoint["steps"][sid]["current_assignment"]["model_or_alias"]
-            plan_path = self.root / "planning-policy/ledgers/plan" / run / "plan.json"
-            binding_path = self.capability_binding(
-                plan_path,
-                host_overrides={sid: remediation["next_harness"]},
-                executor_overrides={sid: executor},
-            )
-            arguments += [
-                "--model-or-alias",
-                executor,
-                "--capability-binding-file",
-                str(binding_path),
-            ]
+        sid = remediation["step_id"]
+        executor = self.checkpoint(run)["steps"][sid]["current_assignment"]["model_or_alias"]
+        plan_path = self.root / "planning-policy/ledgers/plan" / run / "plan.json"
+        binding_path = self.capability_binding(
+            plan_path,
+            host_overrides={sid: remediation["next_harness"]},
+            executor_overrides={sid: executor},
+        )
+        arguments += [
+            "--model-or-alias",
+            executor,
+            "--capability-binding-file",
+            str(binding_path),
+        ]
         return self.call(*arguments)
 
     def test_new_v2_stamps_escalating_retry_state(self):
@@ -434,7 +414,7 @@ class PlanningLedgerTest(unittest.TestCase):
                 value = self.returned(step, status, code=1, blockers=[self.blocker(blocker_code)])
                 self.assertEqual(0, self.record(run, value)[0])
 
-    def test_v5_trace_init_is_available_but_v2_stays_rejected(self):
+    def test_v5_trace_init_is_available_but_a_retained_v2_run_is_refused(self):
         run = self.init2()
         code, initialized = self.call(
             *self.common,
@@ -448,7 +428,7 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("trace-init", initialized["action"])
 
         legacy_run = self.init2()
-        self.downgrade_run_to_v2(legacy_run, policyless=True)
+        self.downgrade_run_to_v2(legacy_run)
         code, rejected = self.call(
             *self.common,
             "trace-init",
@@ -458,42 +438,7 @@ class PlanningLedgerTest(unittest.TestCase):
             legacy_run,
         )
         self.assertEqual(3, code, rejected)
-        self.assertEqual(
-            "tracing requires a contract version 3, 4, or 5 run", rejected["error"]
-        )
-
-    def test_policyless_v2_keeps_legacy_retry_behavior_without_new_state(self):
-        run = self.init2()
-        self.downgrade_run_to_v2(run, policyless=True)
-        checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
-        before = checkpoint_path.read_bytes()
-        self.assertEqual(0, self.call(*self.common, "show", "--run-id", run)[0])
-        self.assertEqual(before, checkpoint_path.read_bytes())
-
-        step = self.start(run)
-        blocked = self.returned(step, "blocked", blockers=[self.blocker("arbitrary")])
-        self.assertEqual(0, self.record(run, blocked)[0])
-        code, _ = self.call(
-            *self.common,
-            "transition",
-            "--actor",
-            "parent",
-            "--run-id",
-            run,
-            "--step-id",
-            "step0",
-            "--to",
-            "ready",
-            "--agent-id",
-            "legacy-next",
-            "--retry",
-            "--summary",
-            "legacy evidence",
-        )
-        self.assertEqual(0, code)
-        current = self.checkpoint(run)
-        self.assertNotIn("retry_policy", current)
-        self.assertNotIn("current_tier", current["steps"]["step0"])
+        self.assertTrue(rejected["error"].startswith("blocked:contract_migration_required"))
 
     def test_same_tier_retry_persists_validated_remediation_and_assignment(self):
         run = self.init2(max_attempts=3)
@@ -616,151 +561,6 @@ class PlanningLedgerTest(unittest.TestCase):
             self.retry(
                 run,
                 self.remediation(failed, target_tier="deep", next_agent_id="deep-agent"),
-            )[0],
-        )
-
-    def test_v1_lifecycle_byte_shape_and_disclosure(self):
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common, "init", "--actor", "parent", "--approved", "--steps-json", self.v1()
-            )[0],
-        )
-        original = json.loads(
-            (self.root / "planning-policy/ledgers/plan/checkpoint.json").read_text()
-        )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--step-id",
-                "build",
-                "--to",
-                "ready",
-            )[0],
-        )
-        code, shown = self.call(*self.common, "show")
-        self.assertEqual(0, code)
-        self.assertEqual(1, shown["legacy_schema"])
-        self.assertTrue(shown["rehydration_incomplete"])
-        self.assertEqual("legacy_unbounded", shown["retry_policy"])
-        current = json.loads(
-            (self.root / "planning-policy/ledgers/plan/checkpoint.json").read_text()
-        )
-        self.assertEqual(set(original), set(current))
-        self.assertEqual(1, current["schema_version"])
-
-    def test_v1_full_retry_integration_and_event_validation(self):
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common, "init", "--actor", "parent", "--approved", "--steps-json", self.v1()
-            )[0],
-        )
-        for target in ("ready", "in_progress"):
-            self.assertEqual(
-                0,
-                self.call(
-                    *self.common,
-                    "transition",
-                    "--actor",
-                    "parent",
-                    "--step-id",
-                    "build",
-                    "--to",
-                    target,
-                )[0],
-            )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--step-id",
-                "build",
-                "--to",
-                "blocked",
-                "--blocker-code",
-                "blocked:model_unavailable",
-            )[0],
-        )
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--step-id",
-                "build",
-                "--to",
-                "ready",
-                "--retry",
-                "--evidence-path",
-                "evidence/retry.json",
-                "--summary",
-                "model restored",
-            )[0],
-        )
-        for target in ("in_progress", "completed", "integrated"):
-            arguments = [
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--step-id",
-                "build",
-                "--to",
-                target,
-            ]
-            if target == "integrated":
-                arguments += ["--summary", "integrated"]
-            self.assertEqual(0, self.call(*arguments)[0])
-        self.assertEqual(
-            0,
-            self.call(
-                *self.common,
-                "transition",
-                "--actor",
-                "parent",
-                "--step-id",
-                "verify",
-                "--to",
-                "ready",
-            )[0],
-        )
-        code, validated = self.call(*self.common, "validate")
-        self.assertEqual(0, code)
-        self.assertTrue(validated["ok"])
-        checkpoint = json.loads(
-            (self.root / "planning-policy/ledgers/plan/checkpoint.json").read_text()
-        )
-        self.assertEqual(2, checkpoint["steps"]["build"]["attempt"])
-        self.assertEqual("codex", checkpoint["steps"]["build"]["harness"])
-        events = [
-            json.loads(line)
-            for line in (self.root / "planning-policy/ledgers/plan/events.jsonl")
-            .read_text()
-            .splitlines()
-        ]
-        self.assertEqual(list(range(1, len(events) + 1)), [event["sequence"] for event in events])
-
-    def test_v1_init_rejects_dependency_cycles(self):
-        cyclic = json.dumps(
-            [
-                {"id": "build", "dependencies": ["verify"], **self.assignment},
-                {"id": "verify", "dependencies": ["build"], **self.assignment},
-            ]
-        )
-        self.assertEqual(
-            3,
-            self.call(
-                *self.common, "init", "--actor", "parent", "--approved", "--steps-json", cyclic
             )[0],
         )
 
@@ -1180,7 +980,7 @@ class PlanningLedgerTest(unittest.TestCase):
         success = {**integrated, "action": "cleanup"}
         self.assertEqual(0, self.transition_result(run, "step0", "cleaned", success)[0])
 
-    def test_older_v2_checkpoint_backfills_closeout_fields_but_v1_is_unchanged(self):
+    def test_checkpoint_without_closeout_fields_reads_them_as_empty(self):
         run = self.init2()
         checkpoint_path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
         checkpoint = json.loads(checkpoint_path.read_text())
@@ -1199,17 +999,6 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual("", shown["step"]["returned_commit"])
         self.assertEqual("", shown["step"]["integrated_commit"])
-
-        legacy_common = ["--ledger-root", str(self.root), "--plan-id", "legacy"]
-        self.assertEqual(
-            0,
-            self.call(
-                *legacy_common, "init", "--actor", "parent", "--approved", "--steps-json", self.v1()
-            )[0],
-        )
-        legacy_path = self.root / "planning-policy/ledgers/legacy/checkpoint.json"
-        legacy = json.loads(legacy_path.read_text())
-        self.assertTrue(all("cleaned" not in step for step in legacy["steps"].values()))
 
     def test_record_return_refuses_omitted_run_and_persists_copy_digest(self):
         run = self.init2()
@@ -1360,6 +1149,111 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertFalse(state["retry_allowed"])
         self.assertEqual("blocked:retry_exhausted", state["blockers"][0]["code"])
 
+
+    def assertRetiredRefusal(self, code, result):
+        self.assertEqual(3, code, result)
+        self.assertTrue(result["error"].startswith("blocked:contract_migration_required"), result)
+        self.assertIn("souroldgeezer-policy 2026.10.9 or earlier", result["error"])
+
+    def ledger_tree(self):
+        base = self.root / "planning-policy/ledgers"
+        return {
+            str(path.relative_to(base)): path.read_bytes()
+            for path in sorted(base.rglob("*"))
+            if path.is_file()
+        }
+
+    def collect_leaves_untouched(self, unsupported):
+        for arguments in (("gc", "--dry-run"), ("gc", "--actor", "parent")):
+            with self.subTest(gc=arguments):
+                code, collected = self.call("--ledger-root", str(self.root), *arguments)
+                self.assertEqual(0, code, collected)
+                self.assertEqual(unsupported, collected["unsupported_count"])
+                self.assertEqual(0, collected["counts"]["removed"])
+
+    def test_a_retained_v2_run_is_refused_listed_and_never_collected(self):
+        run = self.init2()
+        self.downgrade_run_to_v2(run)
+        before = self.ledger_tree()
+        scoped = ("--actor", "parent", "--run-id", run)
+        for command in (
+            ("show", "--run-id", run),
+            ("show", "--run-id", run, "--next-only"),
+            ("validate", "--run-id", run),
+            ("transition", *scoped, "--step-id", "step0", "--to", "ready", "--agent-id", "a"),
+            ("dispatch", *scoped, "--step-id", "step0", "--agent-id", "a"),
+            ("record-return", *scoped, "--return-file", str(self.root / "absent.json")),
+            ("amend", *scoped, "--step-id", "step0", "--reason", "r", "--add-read", "docs"),
+            ("land", *scoped, "--step-id", "step0", "--target", "main"),
+            ("handoff", "--run-id", run, "--step-id", "step0"),
+            ("close", *scoped, "--outcome", "abandoned", "--reason", "r"),
+            ("reopen", *scoped, "--reason", "r"),
+            ("purge", *scoped, "--before-retention", "--reason", "r"),
+            ("trace-show", *scoped),
+        ):
+            with self.subTest(command=command[0]):
+                self.assertRetiredRefusal(*self.call(*self.common, *command))
+        code, listed = self.call(*self.common, "list")
+        self.assertEqual(0, code, listed)
+        self.assertEqual(
+            [
+                {
+                    "plan_id": "plan",
+                    "run_id": run,
+                    "contract_version": 2,
+                    "run_status": "unsupported",
+                    "legacy": True,
+                }
+            ],
+            listed["runs"],
+        )
+        self.collect_leaves_untouched(1)
+        self.assertEqual(before, self.ledger_tree())
+        # A new version-5 run may still start beside the retained one.
+        self.assertNotEqual(run, self.init2())
+        self.assertEqual(before, {k: v for k, v in self.ledger_tree().items() if k in before})
+
+    def test_a_retained_v1_ledger_is_refused_listed_and_never_collected(self):
+        base = self.root / "planning-policy/ledgers"
+        for plan_id, checkpoint in (
+            ("legacy", json.dumps({"schema_version": 1, "plan_id": "legacy", "steps": {}})),
+            ("unreadable", "{"),
+        ):
+            (base / plan_id).mkdir(parents=True)
+            (base / plan_id / "checkpoint.json").write_text(checkpoint)
+            (base / plan_id / "events.jsonl").write_text("")
+        before = self.ledger_tree()
+        for plan_id in ("legacy", "unreadable"):
+            scope = ["--ledger-root", str(self.root), "--plan-id", plan_id]
+            for command in (
+                ("show",),
+                ("show", "--run-id", str(uuid.uuid4())),
+                ("validate",),
+                ("transition", "--actor", "parent", "--step-id", "build", "--to", "ready"),
+                ("purge", "--actor", "parent", "--run-id", str(uuid.uuid4()), "--reason", "r"),
+            ):
+                with self.subTest(plan_id=plan_id, command=command):
+                    self.assertRetiredRefusal(*self.call(*scope, *command))
+        code, listed = self.call("--ledger-root", str(self.root), "list")
+        self.assertEqual(0, code, listed)
+        self.assertEqual(0, listed["counts"]["invalid"])
+        self.assertEqual(
+            [("legacy", "", 1, "unsupported"), ("unreadable", "", None, "unsupported")],
+            [
+                (run["plan_id"], run["run_id"], run["contract_version"], run["run_status"])
+                for run in listed["runs"]
+            ],
+        )
+        self.collect_leaves_untouched(2)
+        plan_path = self.plan()
+        code, refused = self.call(
+            "--ledger-root", str(self.root), "--plan-id", "legacy",
+            "init-v5", "--actor", "parent", "--approved", "--plan-file", str(plan_path),
+            "--assignments-file", str(self.assignments()),
+            "--capability-binding-file", str(self.capability_binding(plan_path)),
+        )
+        self.assertEqual(3, code, refused)
+        self.assertEqual(before, self.ledger_tree())
 
 class WorktreeResultBatchArtifactTest(unittest.TestCase):
     """`worktree_result` admits the Git-policy helper's optional batch fields.

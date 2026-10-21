@@ -11,7 +11,6 @@ from .vocabulary import (
     COMMIT,
     ESCALATING_RETRY_POLICY,
     FORWARD_SCHEMA,
-    LIVE_NEXT_SCHEMAS,
     MAX_WORKER_HANDOFF,
     MAX_WORKER_PROMPT,
     PORTABLE_TIERS,
@@ -35,13 +34,12 @@ from .checkpoint import active_run, load2, mutating_run, valid_remediation, vali
 from .schedule import (
     bounded_action_next,
     checkpoint_next,
-    cleanup_command,
     commit_verified,
     dispatch_command,
+    land_command,
     ordered_steps,
     ready,
     ready_candidate,
-    ready_command,
     series_closeout_overlay,
     step_batches,
     transition_scope,
@@ -87,12 +85,11 @@ def next_after_transition(args, directory, data, batches, step, plan):
             }
         )
     if step["status"] == "integrated":
-        value = {"command": cleanup_command(data, sid)}
+        value = {"command": land_command(data, sid)}
         unblocked = [
             candidate["id"]
             for candidate in ordered_steps(data["steps"])
-            if data.get("schema") == FORWARD_SCHEMA
-            and candidate["status"] == "pending"
+            if candidate["status"] == "pending"
             and sid in candidate["dependencies"]
             and ready_candidate(data, candidate, batches)
         ]
@@ -115,7 +112,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
         return bounded_action_next(
             {
                 "ready_step_ids": newly_unblocked,
-                "command": ready_command(data, newly_unblocked[0]),
+                "command": dispatch_command(args.plan_id, args.run_id, newly_unblocked[0]),
             },
             "ready_step_ids",
         )
@@ -212,10 +209,7 @@ def transition2(args):
         attempt_id=step["attempt_id"],
     )
     result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
-    if (
-        data.get("schema") in LIVE_NEXT_SCHEMAS
-        and data.get("retry_policy") == ESCALATING_RETRY_POLICY
-    ):
+    if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
@@ -346,7 +340,7 @@ def build_worker_handoff(
     leaf = leaves_by_id(plan).get(sid)
     amendments = step.get("amendments") or []
     if leaf is not None:
-        leaf = effective_leaf(leaf, valid_amendments(step, leaf, FORWARD_SCHEMA))
+        leaf = effective_leaf(leaf, valid_amendments(step, leaf))
     units = {unit.get("id"): unit for unit in plan.get("work_units", []) if isinstance(unit, dict)}
     work_unit = units.get(leaf.get("work_unit_id") if leaf else None)
     if leaf is None or work_unit is None:
@@ -461,8 +455,6 @@ def handoff(args):
 def dispatch(args):
     """Ready and start a leaf, or a whole pending batch, and return its packets."""
     directory, data, plan, leafs = mutating_run(args)
-    if data.get("schema") != FORWARD_SCHEMA:
-        raise Error("dispatch requires a version-5 run")
     batches = step_batches(plan)
     sid, _step = selected_step(data, args.step_id)
     members = batches.get(sid, ())

@@ -71,7 +71,7 @@ from .schedule import (
     bounded_action_next,
     bounded_next,
     checkpoint_next,
-    integrate_command,
+    land_command,
     retry_class,
     step_batches,
     verify_commands,
@@ -527,15 +527,13 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
             # The gate is not droppable convenience: it is the next legal action.
             block.update(verify_commands(data, sid))
             return bounded_action_next(block, "outside_paths")
-        block["command"] = integrate_command(data, sid)
+        block["command"] = land_command(data, sid)
     return bounded_next(block, droppable=("command",), trimmable="outside_paths")
 
 
 def amend(args):
     """Parent-only execution-metadata amendment; plan.json and plan_hash never change."""
     directory, data, plan, leafs = mutating_run(args)
-    if data.get("schema") != FORWARD_SCHEMA:
-        raise Error("amend requires a version-5 run")
     sid, step = selected_step(data, args.step_id)
     if step["status"] not in AMENDABLE_STATES:
         raise Error(f"a {step['status']} step cannot be amended")
@@ -580,7 +578,7 @@ def amend(args):
     )
     amendments = [*step.get("amendments", []), amendment]
     approved = leaves_by_id(plan)[sid]
-    valid_amendments({"amendments": amendments}, approved, data["schema"])
+    valid_amendments({"amendments": amendments}, approved)
     candidate = {**leafs, sid: effective_leaf(current, [amendment])}
     admitted = contract.plan_validator()(
         {**plan, "leaves": [candidate[leaf["id"]] for leaf in plan["leaves"]]},
@@ -753,7 +751,7 @@ def record(args):
     if "scope_notes_count" in step:
         result["scope_notes_count"] = step["scope_notes_count"]
     # Only the escalating policy owns retries, so only it can state eligibility.
-    # A policy-less v2/v3 run keeps its original silent result.
+    # A run without the stamp keeps its original silent result.
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         result["next"] = next_after_return(
             args, directory, data, step_batches(plan), sid, step, value, disposition, plan

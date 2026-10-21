@@ -202,12 +202,33 @@ class PlanningPolicyCostTest(unittest.TestCase):
             )
 
     def test_representative_delegated_checkpoint_is_bounded_and_rehydratable(self):
-        assignment = {"harness": "codex", "tier": "standard", "model_or_alias": "gpt-5.6-terra", "effort": "medium", "worktree": ".worktrees/cost-run"}
-        steps = json.dumps([
-            {"id": "prepare", "summary": "Prepare bounded handoff", **assignment},
-            {"id": "implement", "dependencies": ["prepare"], "summary": "Implement one concern", **assignment},
-            {"id": "verify", "dependencies": ["implement"], "summary": "Run focused acceptance", **assignment},
-        ])
+        ids = ("prepare", "implement", "verify")
+        plan = {
+            "contract_version": 5,
+            "verification": "closeout-only",
+            "objective": "Ship one bounded change through three delegated steps",
+            "scope_summary": "One source file per step and its focused test",
+            "approved_decisions": ["Keep each step to one concern"],
+            "work_units": [
+                {"id": sid, "original_size": "small", "cohesive_outcome": f"Complete {sid}",
+                 "decomposition": {"shape": "single"}}
+                for sid in ids
+            ],
+            "leaves": [
+                {
+                    "id": sid, "dependencies": ids[:number][-1:], "task": f"{sid.title()} one concern",
+                    "boundary": "Only the named file", "read_set": ["src/input.py"],
+                    "write_set": [f"src/{sid}.py"], "settled_decisions": {"shape": "settled"},
+                    "size": "small", "portable_tier": "standard", "worktree_owner": f"task/{sid}",
+                    "acceptance_command": "uv run python -m unittest tests.focused_test",
+                    "return_contract": "bounded-step-return-v1",
+                    "stop_conditions": ["missing_load_bearing_information"],
+                    "work_unit_id": sid, "max_attempts": 2,
+                    "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
+                }
+                for number, sid in enumerate(ids)
+            ],
+        }
         with tempfile.TemporaryDirectory() as temporary:
             common = ["--ledger-root", temporary, "--plan-id", "cost-run"]
             def call(*args):
@@ -215,18 +236,31 @@ class PlanningPolicyCostTest(unittest.TestCase):
                 with contextlib.redirect_stdout(output):
                     self.assertEqual(0, ledger.main([*common, *args]))
                 return json.loads(output.getvalue())
-            call("init", "--actor", "parent", "--approved", "--steps-json", steps)
-            for step in ("prepare", "implement"):
-                call("transition", "--actor", "parent", "--step-id", step, "--to", "ready")
-                call("transition", "--actor", "parent", "--step-id", step, "--to", "in_progress")
-                call("transition", "--actor", "parent", "--step-id", step, "--to", "completed")
-                call("transition", "--actor", "parent", "--step-id", step, "--to", "integrated", "--summary", "focused acceptance passed", "--evidence-path", "evidence/focused.json")
-            shown = call("show")
-            checkpoint = Path(temporary) / "planning-policy/ledgers/cost-run/checkpoint.json"
-            self.assertLessEqual(checkpoint.stat().st_size, 16 * 1024)
+            plan_file = Path(temporary) / "plan.json"
+            plan_file.write_text(json.dumps(plan), encoding="utf-8")
+            run_id = call(
+                "init-v5", "--actor", "parent", "--approved", "--plan-file", str(plan_file),
+                "--host", "codex", "--evidence", "test fixture capability inventory",
+            )["run_id"]
+            scope = ("--actor", "parent", "--run-id", run_id, "--step-id", "prepare")
+            call("transition", *scope, "--to", "ready", "--agent-id", "prepare-worker")
+            call("transition", *scope, "--to", "in_progress")
+            checkpoint = Path(temporary) / "planning-policy/ledgers/cost-run" / run_id / "checkpoint.json"
+            step = json.loads(checkpoint.read_text(encoding="utf-8"))["steps"]["prepare"]
+            returned = Path(temporary) / "return.json"
+            returned.write_text(json.dumps({
+                "schema": "bounded-step-return-v1", "step_id": "prepare",
+                "attempt_id": step["attempt_id"], "agent_id": step["agent_id"], "status": "completed",
+                "changed_paths": [], "commit_hash": "", "blockers": [], "unstarted_remainder": [],
+                "acceptance": {"command": plan["leaves"][0]["acceptance_command"], "exit_code": 0,
+                               "summary": "focused acceptance passed"},
+                "notes": [{"type": "finding", "message": "bounded handoff prepared"}],
+            }), encoding="utf-8")
+            call("record-return", "--actor", "parent", "--run-id", run_id, "--return-file", str(returned))
+            shown = call("show", "--run-id", run_id)
+            self.assertLessEqual(checkpoint.stat().st_size, ledger.MAX_CHECKPOINT)
             self.assertLessEqual(shown["summary_proxy_tokens"], 1200)
             self.assertEqual(shown["summary_proxy_tokens"], len(ledger.PROXY_TOKEN_RE.findall(json.dumps({key: value for key, value in shown.items() if key != "summary_proxy_tokens"}, sort_keys=True, separators=(",", ":")))))
-
 
 if __name__ == "__main__":
     unittest.main()

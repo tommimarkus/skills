@@ -10,7 +10,6 @@ from pathlib import Path
 from . import core
 from .vocabulary import (
     MAX_CHECKPOINT,
-    MAX_LEGACY_CHECKPOINT,
     MAX_USAGE,
     RAW_USAGE_FIELDS,
     USAGE_FIELDS,
@@ -76,11 +75,7 @@ def write(path, value, maximum=MAX_CHECKPOINT):
 def event(directory, data, action, **facts):
     data["event_sequence"] += 1
     data["updated_at"] = core.now()
-    write(
-        directory / "checkpoint.json",
-        data,
-        MAX_LEGACY_CHECKPOINT if data.get("schema_version") == 1 else MAX_CHECKPOINT,
-    )
+    write(directory / "checkpoint.json", data)
     with (directory / "events.jsonl").open("ab") as file:
         file.write(
             canon(

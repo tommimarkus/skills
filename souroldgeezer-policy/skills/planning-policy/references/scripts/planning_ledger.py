@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parent-owned checkpoint ledger with byte-compatible legacy commands."""
+"""Parent-owned checkpoint ledger for version-5 plans."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from planningledger.store import *  # noqa: F403
 from planningledger.gitops import *  # noqa: F403
 from planningledger.contract import *  # noqa: F403
 from planningledger.checkpoint import *  # noqa: F403
-from planningledger.legacy import *  # noqa: F403
 from planningledger.schedule import *  # noqa: F403
 from planningledger.series import *  # noqa: F403
 from planningledger.returns import *  # noqa: F403

@@ -105,9 +105,9 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 "blocked:needs_higher_tier", "parent re-runs only that leaf's own scoped acceptance",
             ),
             "references/ledger-compatibility.md": (
-                "retry_policy: legacy_unbounded", "terminal `integrated` state is unchanged",
-                "does not gain `cleaned`", "Do not approve new legacy work",
-                "initialize a separate v5 run", "Existing ledgers remain mutable",
+                "blocked:contract_migration_required", "souroldgeezer-policy 2026.10.9 or earlier",
+                "run_status: unsupported", "unsupported_count", "Do not approve new legacy work",
+                "initialize a separate v5 run",
             ),
             "references/usage-tracing.md": (
                 "trace-init", "trace-record", "trace-show", "trace-close",
@@ -165,7 +165,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 "blocked:needs_higher_tier", "`portable_tier` is the initial tier only",
                 "amend-v5", "new approved plan",
             ),
-            "references/ledger-compatibility.md": ("retry_policy: legacy_unbounded",),
+            "references/ledger-compatibility.md": ("run_status: unsupported",),
             "references/usage-tracing.md": ("trace-init", "trace-close"),
             "references/approval-handoff.md": (
                 "Prose summaries never replace the canonical execution JSON",
@@ -256,7 +256,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md"
         ).split())
         for fact in (
-            "an external dependency still requires `cleaned`, except that a version-5 run accepts `integrated` or `cleaned`",
+            "an external dependency requires `integrated` or `cleaned`",
             "an in-batch dependency on an earlier-listed same-batch member",
             "readiness at `ready`, `in_progress`, or `completed`",
         ):

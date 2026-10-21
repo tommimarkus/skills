@@ -231,13 +231,8 @@ class BoundedCapParityTest(unittest.TestCase):
 class NextBlockScopeParityTest(unittest.TestCase):
     """The doc's claim about which commands emit a live `next` block must match code.
 
-    This repo's own plan for the `next` feature assumed `TRANS` was the general
-    v2-v5 state machine and that `transition` could derive a legal-successor
-    block from it. It is not: `TRANS`'s keys equal `V1_STATES` exactly, it has
-    one call site (`transition1()`, the v1-only path), and using it for v2-v4
-    would misreport every stage and raise `KeyError` on the `cleaned`
-    transition. The doc was drafted once on that wrong premise before being
-    corrected. This gate derives the actual emitter set from
+    The doc was once drafted on a wrong premise about which commands emit `next`
+    before being corrected. This gate derives the actual emitter set from
     `planning_ledger.py`'s own source, so a future change that starts (or
     stops) a command emitting `next` — or a doc edit that re-claims a command
     the code does not cover — fails here instead of drifting back to the same
@@ -279,23 +274,6 @@ class NextBlockScopeParityTest(unittest.TestCase):
                         f"ledger-contract.md never names {cli!r} as next-emitting, "
                         "but planning_ledger.py's own source shows it is",
                     )
-
-    def test_ledger_contract_does_not_claim_trans_governs_v2_plus(self):
-        # A plain char-count window, not `states_cap`'s `[^.]` window: the doc
-        # names `planning_ledger.py` near this claim, and that literal period
-        # would otherwise cut the window short before reaching `V1_STATES`.
-        text = normalized(REFERENCE)
-        self.assertRegex(
-            text,
-            r"TRANS.{0,200}?\bV1_STATES\b",
-            "ledger-contract.md must state TRANS's keys equal V1_STATES (v1-only)",
-        )
-        self.assertNotRegex(
-            text,
-            r"TRANS.{0,120}?\bsole source of truth\b",
-            "ledger-contract.md must not claim TRANS is authoritative for v2-v4 transitions "
-            "(it governs only the legacy v1 transition1() path)",
-        )
 
 
 class ReferencedReturnCodeParityTest(unittest.TestCase):

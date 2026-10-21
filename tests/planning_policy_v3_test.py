@@ -257,21 +257,7 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
         self.assertEqual(0, code, result)
         return result["run_id"]
 
-    def test_v2_v3_and_v4_init_refuse_new_run_and_v5_has_no_trace_state_by_default(self) -> None:
-        for command in ("init-v2", "init-v3"):
-            code, result = self.call(
-                *self.common,
-                command,
-                "--actor",
-                "parent",
-                "--approved",
-                "--plan-file",
-                str(self.plan_file),
-                "--assignments-file",
-                str(self.assignments_file),
-            )
-            self.assertEqual(3, code)
-            self.assertEqual("blocked:contract_migration_required", result["error"])
+    def test_v5_has_no_trace_state_by_default(self) -> None:
         run_id = self.init5()
         run = self.root / "planning-policy/ledgers/plan" / run_id
         checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
@@ -343,73 +329,6 @@ class PlanningPolicyV3LedgerTest(unittest.TestCase):
             *self.common, "trace-close", "--actor", "parent", "--run-id", run_id
         )
         self.assertEqual(0, code, closed)
-
-    def test_existing_v2_run_resumes_without_rewriting_checkpoint(self) -> None:
-        run_id = self.init5()
-        run = self.root / "planning-policy/ledgers/plan" / run_id
-        old_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
-        old_plan["contract_version"] = 2
-        for leaf in old_plan["leaves"]:
-            leaf.pop("capability_requirements")
-        checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
-        checkpoint["schema"] = 2
-        checkpoint["plan_hash"] = ledger.digest(old_plan)
-        for step in checkpoint["steps"].values():
-            step.pop("capability_binding")
-            step.pop("capability_binding_sha256")
-            step["current_assignment"].pop("model_or_alias")
-        event = json.loads((run / "events.jsonl").read_text(encoding="utf-8"))
-        event["action"] = "init-v2"
-        event["plan_hash"] = checkpoint["plan_hash"]
-        ledger.write(run / "plan.json", old_plan, 64 * 1024)
-        ledger.write(run / "checkpoint.json", checkpoint)
-        (run / "events.jsonl").write_bytes(ledger.canon(event) + b"\n")
-        before = (run / "checkpoint.json").read_bytes()
-        code, shown = self.call(*self.common, "show", "--run-id", run_id)
-        self.assertEqual(0, code, shown)
-        self.assertEqual(2, shown["contract_version"])
-        self.assertEqual(before, (run / "checkpoint.json").read_bytes())
-
-    def test_existing_v3_run_resumes_and_mutates_without_capability_binding(self) -> None:
-        run_id = self.init5()
-        run = self.root / "planning-policy/ledgers/plan" / run_id
-        prior_plan = json.loads((run / "plan.json").read_text(encoding="utf-8"))
-        prior_plan["contract_version"] = 3
-        for leaf in prior_plan["leaves"]:
-            leaf.pop("capability_requirements")
-        checkpoint = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
-        checkpoint["schema"] = 3
-        checkpoint["plan_hash"] = ledger.digest(prior_plan)
-        for step in checkpoint["steps"].values():
-            step.pop("capability_binding")
-            step.pop("capability_binding_sha256")
-            step["current_assignment"].pop("model_or_alias")
-        event = json.loads((run / "events.jsonl").read_text(encoding="utf-8"))
-        event["action"] = "init-v3"
-        event["plan_hash"] = checkpoint["plan_hash"]
-        ledger.write(run / "plan.json", prior_plan, 64 * 1024)
-        ledger.write(run / "checkpoint.json", checkpoint)
-        (run / "events.jsonl").write_bytes(ledger.canon(event) + b"\n")
-
-        code, result = self.call(
-            *self.common,
-            "transition",
-            "--actor",
-            "parent",
-            "--run-id",
-            run_id,
-            "--step-id",
-            "build",
-            "--to",
-            "ready",
-            "--agent-id",
-            "resumed-v3-worker",
-        )
-        self.assertEqual(0, code, result)
-        resumed = json.loads((run / "checkpoint.json").read_text(encoding="utf-8"))
-        self.assertEqual(3, resumed["schema"])
-        self.assertEqual("ready", resumed["steps"]["build"]["status"])
-        self.assertNotIn("capability_binding", resumed["steps"]["build"])
 
     def test_trace_validates_stage_identity_and_follows_run_purge(self) -> None:
         run_id = self.init5()

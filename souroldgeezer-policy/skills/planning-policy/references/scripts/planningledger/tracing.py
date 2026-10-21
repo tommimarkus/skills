@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from . import contract, core
-from .vocabulary import LIVE_NEXT_SCHEMAS, MAX_USAGE, MAX_USAGE_TOKENS
+from .vocabulary import MAX_USAGE, MAX_USAGE_TOKENS
 from .core import Error, digest, parent, proxy_tokens, read_json
 from .store import valid_usage_summary, write
 from .checkpoint import active_run, load2
@@ -28,8 +28,6 @@ def usage_path(directory):
 def trace_run(args, require_usage=True, require_open=False):
     parent(args.actor)
     directory, data, plan, leafs = load2(args)
-    if data["schema"] != 3 and data["schema"] not in LIVE_NEXT_SCHEMAS:
-        raise Error("tracing requires a contract version 3, 4, or 5 run")
     usage = usage_path(directory)
     if require_usage and not usage.exists():
         raise Error("trace-init is required")

@@ -18,7 +18,7 @@ IMPORT_ORDER = (
     ("core",),
     ("store",),
     ("gitops", "contract"),
-    ("checkpoint", "legacy"),
+    ("checkpoint",),
     ("schedule", "series"),
     ("returns", "dispatch", "verify", "retention", "closeout", "tracing"),
     ("cli",),

@@ -6,7 +6,6 @@ import re
 
 __all__ = [
     "MAX_CHECKPOINT",
-    "MAX_LEGACY_CHECKPOINT",
     "MAX_RETURN",
     "MAX_WORKER_HANDOFF",
     "MAX_WORKER_HANDOFF_RAW",
@@ -22,8 +21,6 @@ __all__ = [
     "SHA40",
     "COMMIT",
     "PROXY_TOKEN_RE",
-    "V1_STATES",
-    "TRANS",
     "NOTE_TYPES",
     "RETURN_STATUSES",
     "MAX_CHANGED_PATHS",
@@ -79,10 +76,9 @@ __all__ = [
     "VERIFY_HANDOFF_FIELDS",
     "VERIFY_HANDOFF_OPTIONAL",
     "VERIFIER_AGENTS",
-    "RUN_SCHEMAS",
-    "CAPABILITY_SCHEMAS",
-    "LIVE_NEXT_SCHEMAS",
     "FORWARD_SCHEMA",
+    "RETIRED_RUN_SCHEMAS",
+    "LAST_RETIRED_RELEASE",
     "PORTABLE_TIERS",
     "RETRY_STATE_FIELDS",
     "REMEDIATION_FIELDS",
@@ -98,12 +94,9 @@ __all__ = [
 ]
 
 
-# A v4/v5 checkpoint retains one bounded capability binding per step. Keep the
+# A checkpoint retains one bounded capability binding per step. Keep the
 # record bounded while leaving the established 40-step summary lane viable.
 MAX_CHECKPOINT = 64 * 1024
-
-
-MAX_LEGACY_CHECKPOINT = 16 * 1024
 
 
 MAX_RETURN = 8 * 1024
@@ -151,32 +144,6 @@ COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 
 
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
-
-
-V1_STATES = {
-    "pending",
-    "ready",
-    "in_progress",
-    "completed",
-    "integrated",
-    "blocked",
-    "failed",
-    "superseded",
-    "discarded",
-}
-
-
-TRANS = {
-    "pending": {"ready", "superseded", "discarded"},
-    "ready": {"in_progress", "blocked", "superseded", "discarded"},
-    "in_progress": {"completed", "blocked", "failed", "superseded", "discarded"},
-    "blocked": {"ready", "superseded", "discarded"},
-    "failed": {"ready", "superseded", "discarded"},
-    "completed": {"integrated", "discarded"},
-    "integrated": set(),
-    "superseded": set(),
-    "discarded": set(),
-}
 
 
 NOTE_TYPES = {"finding", "decision_needed", "residual_risk", "untouched", "verification_limit"}
@@ -439,16 +406,15 @@ VERIFIER_AGENTS = {
 }
 
 
-RUN_SCHEMAS = {2, 3, 4, 5}
-
-
-CAPABILITY_SCHEMAS = {4, 5}
-
-
-LIVE_NEXT_SCHEMAS = {4, 5}
-
-
 FORWARD_SCHEMA = 5
+
+
+# Contract versions 1-4 are retired. A retained run of one is refused, listed and never
+# collected: version 1 by its plan-level checkpoint, versions 2-4 by the `schema` stamp.
+RETIRED_RUN_SCHEMAS = {2, 3, 4}
+
+
+LAST_RETIRED_RELEASE = "souroldgeezer-policy 2026.10.9"
 
 
 PORTABLE_TIERS = ("mechanical", "standard", "analytical", "deep")

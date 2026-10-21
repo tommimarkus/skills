@@ -9,10 +9,8 @@ from pathlib import Path
 from .vocabulary import (
     BATCH_ACTIVE_STATES,
     BATCH_DEPENDENCY_STATES,
-    CAPABILITY_SCHEMAS,
     ESCALATING_RETRY_POLICY,
     EXTERNAL_DEPENDENCY_STATES,
-    FORWARD_SCHEMA,
     MAX_CONCURRENT,
     MAX_NEXT_TOKENS,
     MAX_REMEDIATION,
@@ -43,9 +41,6 @@ __all__ = [
     "dispatch_command",
     "land_command",
     "verify_commands",
-    "integrate_command",
-    "cleanup_command",
-    "ready_command",
     "dependencies_clean",
     "attempt_available",
     "amended_after_return",
@@ -131,7 +126,7 @@ def dispatch_command(plan_id, run_id, step_id):
 
 
 def land_command(data, step_id):
-    """Integrate and clean a step: composite land in v5, granular transitions before."""
+    """Integrate and clean a step through the composite land."""
     return (
         f"--plan-id {data['plan_id']} land --actor parent --run-id {data['run_id']} "
         f"--step-id {step_id} --target <target-branch>"
@@ -150,41 +145,12 @@ def verify_commands(data, step_id):
     }
 
 
-def integrate_command(data, step_id):
-    if data.get("schema") == FORWARD_SCHEMA:
-        return land_command(data, step_id)
-    return (
-        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
-        "--to integrated --worktree-result <planning-worktree-result-v1.json>"
-    )
-
-
-def cleanup_command(data, step_id):
-    if data.get("schema") == FORWARD_SCHEMA:
-        return land_command(data, step_id)
-    return (
-        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
-        "--to cleaned --worktree-result <planning-worktree-result-v1.json>"
-    )
-
-
-def ready_command(data, step_id):
-    """Start a pending step: composite dispatch in v5, granular ready before."""
-    if data.get("schema") == FORWARD_SCHEMA:
-        return dispatch_command(data["plan_id"], data["run_id"], step_id)
-    return (
-        f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
-        "--to ready --agent-id <agent-id>"
-    )
-
-
 def dependencies_clean(data, step, batches):
-    """Dependencies are satisfied; schema-5 externals unblock at `integrated`."""
+    """Dependencies are satisfied; an external dependency unblocks at `integrated`."""
     members = batches.get(step["id"], ())
-    external = EXTERNAL_DEPENDENCY_STATES if data.get("schema") == FORWARD_SCHEMA else {"cleaned"}
     return all(
         data["steps"][dep]["status"]
-        in (BATCH_DEPENDENCY_STATES if dep in members else external)
+        in (BATCH_DEPENDENCY_STATES if dep in members else EXTERNAL_DEPENDENCY_STATES)
         for dep in step["dependencies"]
     )
 
@@ -293,17 +259,9 @@ def retry_class(data, step, value):
     `blocked:needs_higher_tier`) keep the
     same-tier-then-escalate rules. Repairable stops (`blocked:environment`, or
     any other blocked/failed stop amended after its return) retry at the same
-    tier. Retained runs below schema 5 keep the exactly-one-blocker rule.
+    tier.
     """
     status = value.get("status")
-    if data.get("schema") != FORWARD_SCHEMA:
-        blockers = value.get("blockers", [])
-        code = ""
-        if isinstance(blockers, list) and len(blockers) == 1 and isinstance(blockers[0], dict):
-            code = blockers[0].get("code")
-        if (status, code) in {("failed", "failed:acceptance"), ("blocked", "blocked:needs_higher_tier")}:
-            return "reasoning", code
-        return "", ""
     code = primary_code(value)
     if (status, code) in REASONING_STOPS:
         return "reasoning", code
@@ -382,11 +340,7 @@ def ready(args, directory, data, plan, batches, step):
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
     if not dependencies_clean(data, step, batches):
-        raise Error(
-            "dependencies are not integrated or cleaned"
-            if data.get("schema") == FORWARD_SCHEMA
-            else "dependencies are not cleaned"
-        )
+        raise Error("dependencies are not integrated or cleaned")
     if not attempt_available(step):
         raise Error("blocked:retry_exhausted")
     if retry_state:
@@ -394,12 +348,11 @@ def ready(args, directory, data, plan, batches, step):
         current_assignment = {
             "agent_id": remediation["next_agent_id"],
             "harness": remediation["next_harness"],
-        }
-        if data.get("schema") in CAPABILITY_SCHEMAS:
-            current_assignment["model_or_alias"] = (
+            "model_or_alias": (
                 tier_alias(args, data, remediation["target_portable_tier"])
                 or step["current_assignment"]["model_or_alias"]
-            )
+            ),
+        }
         step.update(
             current_tier=remediation["target_portable_tier"],
             same_tier_retry_used=step["same_tier_retry_used"] or same_tier,
@@ -413,47 +366,44 @@ def ready(args, directory, data, plan, batches, step):
         next_agent_id = args.agent_id
         reason = args.summary or "ready"
         if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
-            current_assignment = {
+            step["current_assignment"] = {
                 "agent_id": next_agent_id,
                 "harness": args.harness or step["assignment"]["harness"],
-            }
-            if data.get("schema") in CAPABILITY_SCHEMAS:
-                current_assignment["model_or_alias"] = (
+                "model_or_alias": (
                     tier_alias(args, data, step["current_tier"]) or step["assignment"]["model_or_alias"]
-                )
-            step["current_assignment"] = current_assignment
-    if data.get("schema") in CAPABILITY_SCHEMAS:
-        current = step["current_assignment"]
-        stored = step["capability_binding"]["bindings"][0]
-        if (
-            stored["host"] != current["harness"]
-            or stored["executor"] != current["model_or_alias"]
-        ):
-            if args.capability_binding_file:
-                replacement = capability_bindings(args.capability_binding_file, plan)
-                resolved = binding_for_step(
-                    replacement,
-                    step["id"],
-                    {
-                        "harness": current["harness"],
-                        "model_or_alias": current["model_or_alias"],
-                    },
-                )
-            elif data.get("host") and data["host"] == current["harness"]:
-                # A host run derives the re-binding exactly as init does, reusing the stored evidence.
-                leaf = next(item for item in plan["leaves"] if item["id"] == step["id"])
-                item = host_step_binding(
-                    leaf, data["host"], host_entry(data["host"]), step["current_tier"], stored["evidence"]
-                )
-                resolved = {
-                    "schema": step["capability_binding"]["schema"],
-                    "plan_sha256": step["capability_binding"]["plan_sha256"],
-                    "bindings": [item],
-                }
-            else:
-                raise Error("blocked:capability_unavailable")
-            step["capability_binding"] = resolved
-            step["capability_binding_sha256"] = digest(resolved)
+                ),
+            }
+    current = step["current_assignment"]
+    stored = step["capability_binding"]["bindings"][0]
+    if (
+        stored["host"] != current["harness"]
+        or stored["executor"] != current["model_or_alias"]
+    ):
+        if args.capability_binding_file:
+            replacement = capability_bindings(args.capability_binding_file, plan)
+            resolved = binding_for_step(
+                replacement,
+                step["id"],
+                {
+                    "harness": current["harness"],
+                    "model_or_alias": current["model_or_alias"],
+                },
+            )
+        elif data.get("host") and data["host"] == current["harness"]:
+            # A host run derives the re-binding exactly as init does, reusing the stored evidence.
+            leaf = next(item for item in plan["leaves"] if item["id"] == step["id"])
+            item = host_step_binding(
+                leaf, data["host"], host_entry(data["host"]), step["current_tier"], stored["evidence"]
+            )
+            resolved = {
+                "schema": step["capability_binding"]["schema"],
+                "plan_sha256": step["capability_binding"]["plan_sha256"],
+                "bindings": [item],
+            }
+        else:
+            raise Error("blocked:capability_unavailable")
+        step["capability_binding"] = resolved
+        step["capability_binding_sha256"] = digest(resolved)
     step["attempt_count"] += 1
     step["agent_id"] = next_agent_id
     step["attempt_id"] = str(uuid.uuid4())
@@ -560,7 +510,7 @@ def verify_issued(step):
 
 
 def primary_next(directory, data, batches, plan):
-    """Select one highest-priority legal v4/v5 action from the checkpoint."""
+    """Select one highest-priority legal action from the checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next(
             {"category": "terminal_closed", "outcome": data["outcome"]}
@@ -583,13 +533,11 @@ def primary_next(directory, data, batches, plan):
             {
                 "category": "cleanup_integrated",
                 "step_ids": integrated,
-                "command": cleanup_command(data, integrated[0]),
+                "command": land_command(data, integrated[0]),
             },
             "step_ids",
         )
-    # Schema 5 keeps the critical path moving: cleanup waits behind dispatch.
-    if cleanup and data.get("schema") != FORWARD_SCHEMA:
-        return cleanup
+    # Cleanup waits behind dispatch, which keeps the critical path moving.
 
     # A batch shares one worktree and integrates its tip once, so a completed
     # member waits until no sibling can still commit to that worktree.
@@ -617,7 +565,7 @@ def primary_next(directory, data, batches, plan):
             {
                 "category": "integrate_completed",
                 "step_ids": completed,
-                "command": integrate_command(data, completed[0]),
+                "command": land_command(data, completed[0]),
             },
             "step_ids",
         )
@@ -645,7 +593,7 @@ def primary_next(directory, data, batches, plan):
             {
                 "category": "ready_pending",
                 "ready_step_ids": pending,
-                "command": ready_command(data, pending[0]),
+                "command": dispatch_command(plan_id, run_id, pending[0]),
             },
             "ready_step_ids",
         )

@@ -1,4 +1,4 @@
-"""Regressions for v5 capability binding and resumable v4 checkpoints."""
+"""Regressions for v5 capability binding and refused retained v4 checkpoints."""
 
 from __future__ import annotations
 
@@ -295,27 +295,7 @@ class CapabilityLedgerTest(unittest.TestCase):
             self.checkpoint(run_id)["steps"]["build"]["capability_binding"]["bindings"][0]["executor"],
         )
 
-    def test_init_v4_requires_contract_migration(self) -> None:
-        legacy_plan = plan(version=4)
-        self.plan_file.write_text(json.dumps(legacy_plan), encoding="utf-8")
-        self.binding_file.write_text(json.dumps(binding(legacy_plan)), encoding="utf-8")
-        code, result = self.call(
-            *self.common,
-            "init-v4",
-            "--actor",
-            "parent",
-            "--approved",
-            "--plan-file",
-            str(self.plan_file),
-            "--assignments-file",
-            str(self.assignments_file),
-            "--capability-binding-file",
-            str(self.binding_file),
-        )
-        self.assertEqual(3, code)
-        self.assertEqual("blocked:contract_migration_required", result["error"])
-
-    def test_existing_v4_checkpoint_resumes_without_serialized_shape_change(self) -> None:
+    def test_a_retained_v4_checkpoint_is_refused_unchanged_and_listed(self) -> None:
         run_id = self.init5()
         run = self.root / "planning-policy/ledgers/capability-plan" / run_id
         legacy_plan = plan(version=4)
@@ -340,39 +320,25 @@ class CapabilityLedgerTest(unittest.TestCase):
         checkpoint_path = run / "checkpoint.json"
         before = checkpoint_path.read_bytes()
 
-        code, result = self.call(*self.common, "show", "--run-id", run_id)
-
-        self.assertEqual(0, code, result)
-        self.assertEqual(4, result["contract_version"])
+        for command in (
+            ("show", "--run-id", run_id),
+            ("show", "--run-id", run_id, "--next-only"),
+            (
+                "transition", "--actor", "parent", "--run-id", run_id, "--step-id", "build",
+                "--to", "ready", "--agent-id", "legacy-v4-agent",
+            ),
+        ):
+            code, result = self.call(*self.common, *command)
+            with self.subTest(command=command):
+                self.assertEqual(3, code, result)
+                self.assertTrue(result["error"].startswith("blocked:contract_migration_required"))
         self.assertEqual(before, checkpoint_path.read_bytes())
-
-        code, next_result = self.call(
-            *self.common, "show", "--run-id", run_id, "--next-only"
-        )
-        self.assertEqual(0, code, next_result)
-        self.assertEqual("ready_pending", next_result["next"]["category"])
-
-        code, ready = self.call(
-            *self.common,
-            "transition",
-            "--actor",
-            "parent",
-            "--run-id",
-            run_id,
-            "--step-id",
-            "build",
-            "--to",
-            "ready",
-            "--agent-id",
-            "legacy-v4-agent",
-        )
-        self.assertEqual(0, code, ready)
-        self.assertIn("next", ready)
 
         code, listed = self.call(*self.common, "list")
         self.assertEqual(0, code, listed)
         [entry] = listed["runs"]
         self.assertEqual(4, entry["contract_version"])
+        self.assertEqual("unsupported", entry["run_status"])
 
 
 class CapabilityAdapterTest(unittest.TestCase):

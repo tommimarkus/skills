@@ -6,7 +6,7 @@ import json
 import shutil
 
 from . import core
-from .vocabulary import MAX_TOKENS, RUN_SCHEMAS
+from .vocabulary import MAX_TOKENS
 from .core import (
     Error,
     bounded_reason,
@@ -14,17 +14,15 @@ from .core import (
     parent,
     proxy_tokens,
     read_json,
-    retained_until,
     timestamp,
     uuid4,
 )
 from .store import root, safe_run_contents
-from .checkpoint import validate_events2, validate_run
-from .legacy import load1, validate_events1
+from .checkpoint import refuse_retired, retired_contract, validate_events2, validate_run
 
 __all__ = [
     "invalid_entry",
-    "classify_legacy",
+    "unsupported_entry",
     "classify_v2",
     "scan_ledgers",
     "public_entry",
@@ -49,45 +47,16 @@ def invalid_entry(base, path, code, summary):
     }
 
 
-def classify_legacy(directory, current):
-    data = load1(directory)
-    validate_events1(directory, data)
-    if data["plan_id"] != directory.name:
-        raise Error("legacy directory identity mismatch")
-    timestamp(data["updated_at"], "legacy updated_at")
-    states = {step["state"] for step in data["steps"].values()}
-    entry = {
-        "plan_id": data["plan_id"],
-        "run_id": "",
-        "contract_version": 1,
-        "updated_at": data["updated_at"],
+def unsupported_entry(plan_id, run_id, version, directory):
+    """A retained retired-contract run: listed without validation, never collected."""
+    return {
+        "plan_id": plan_id,
+        "run_id": run_id,
+        "contract_version": version,
+        "run_status": "unsupported",
         "legacy": True,
         "_path": directory,
     }
-    if states == {"integrated"}:
-        outcome = "completed"
-    elif states and states.issubset({"discarded", "superseded"}):
-        outcome = (
-            "discarded"
-            if states == {"discarded"}
-            else ("superseded" if states == {"superseded"} else "abandoned")
-        )
-    elif states.issubset({"integrated", "discarded", "superseded"}):
-        raise Error("ambiguous legacy terminal state")
-    else:
-        entry.update(run_status="active", outcome=None, closed_at=None, purge_after=None)
-        entry["retention_state"] = "active"
-        return entry
-    closed_at = data["updated_at"]
-    purge_after = retained_until(closed_at, outcome)
-    entry.update(
-        run_status="closed",
-        outcome=outcome,
-        closed_at=closed_at,
-        purge_after=purge_after,
-        retention_state="eligible" if current >= timestamp(purge_after, "purge_after") else "kept",
-    )
-    return entry
 
 
 def classify_v2(plan_id, directory, current):
@@ -164,27 +133,8 @@ def scan_ledgers(base, plan_filter, current):
                     )
                 )
                 continue
-            try:
-                raw = read_json(plan / "checkpoint.json", "malformed legacy checkpoint")
-                if raw.get("schema_version") != 1:
-                    raise Error("unknown checkpoint schema")
-                entries.append(classify_legacy(plan, current))
-            except (Error, OSError, json.JSONDecodeError, TypeError) as exc:
-                message = str(exc)
-                code = (
-                    "ambiguous_legacy"
-                    if "ambiguous legacy" in message
-                    else (
-                        "unknown_schema"
-                        if "unknown checkpoint schema" in message
-                        else (
-                            "malformed_checkpoint"
-                            if "malformed" in message
-                            else "invalid_checkpoint"
-                        )
-                    )
-                )
-                invalid.append(invalid_entry(base, plan, code, message))
+            _retired, version = retired_contract(plan, plan_level=True)
+            entries.append(unsupported_entry(plan.name, "", version, plan))
             continue
         if not children or any(not child.is_dir() for child in children):
             invalid.append(
@@ -194,7 +144,12 @@ def scan_ledgers(base, plan_filter, current):
         for run in sorted(children, key=lambda path: path.name):
             try:
                 uuid4(run.name)
-                entries.append(classify_v2(plan.name, run, current))
+                retired, version = retired_contract(run)
+                entries.append(
+                    unsupported_entry(plan.name, run.name, version, run)
+                    if retired
+                    else classify_v2(plan.name, run, current)
+                )
             except (Error, OSError, json.JSONDecodeError, TypeError) as exc:
                 message = str(exc)
                 code = (
@@ -233,30 +188,24 @@ def remove_entry(entry):
     path = entry["_path"]
     if path.is_symlink() or not path.is_dir():
         raise Error("refusing changed purge target")
-    if entry["contract_version"] in RUN_SCHEMAS:
-        safe_run_contents(path)
-        returns = path / "returns"
-        if returns.exists() and any(
-            step_dir.name not in entry["_step_ids"] for step_dir in returns.iterdir()
-        ):
-            raise Error("refusing changed returns purge target")
-    else:
-        children = list(path.iterdir())
-        if {child.name for child in children} != {"checkpoint.json", "events.jsonl"} or any(
-            child.is_symlink() or not child.is_file() for child in children
-        ):
-            raise Error("refusing changed legacy purge target")
+    safe_run_contents(path)
+    returns = path / "returns"
+    if returns.exists() and any(
+        step_dir.name not in entry["_step_ids"] for step_dir in returns.iterdir()
+    ):
+        raise Error("refusing changed returns purge target")
     parent_path = path.parent
     shutil.rmtree(path)
-    if entry["contract_version"] in RUN_SCHEMAS:
-        try:
-            parent_path.rmdir()
-        except OSError:
-            pass
+    try:
+        parent_path.rmdir()
+    except OSError:
+        pass
 
 
 def collect_ledgers(base, plan_filter, current, remove):
-    entries, invalid = scan_ledgers(base, plan_filter, current)
+    """Collect eligible closed runs; a retained retired-contract run is only counted."""
+    scanned, invalid = scan_ledgers(base, plan_filter, current)
+    entries = [entry for entry in scanned if not entry["legacy"]]
     kept = [entry for entry in entries if entry["retention_state"] != "eligible"]
     eligible = [entry for entry in entries if entry["retention_state"] == "eligible"]
     removed = []
@@ -271,6 +220,7 @@ def collect_ledgers(base, plan_filter, current, remove):
         "gc",
         {"kept": kept, "eligible": eligible, "removed": removed, "invalid": invalid},
         dry_run=not remove,
+        unsupported_count=len(scanned) - len(entries),
     )
 
 
@@ -290,19 +240,14 @@ def gc(args):
 def purge(args):
     parent(args.actor)
     plan_id = ident(args.plan_id, "plan id")
-    if bool(args.run_id) == bool(args.legacy):
-        raise Error("purge requires exactly one of --run-id or --legacy")
+    target_run = uuid4(args.run_id)
+    refuse_retired(args)
     if args.before_retention:
         bounded_reason(args.reason, "--before-retention", required=True)
     else:
         bounded_reason(args.reason, "purge")
-    target_run = "" if args.legacy else uuid4(args.run_id)
     entries, invalid = scan_ledgers(root(args), plan_id, timestamp(core.now()))
-    matches = [
-        entry
-        for entry in entries
-        if (entry["legacy"] if args.legacy else entry["run_id"] == target_run)
-    ]
+    matches = [entry for entry in entries if entry["run_id"] == target_run]
     if not matches:
         detail = invalid[0]["summary"] if invalid else "exact closed run not found"
         raise Error(detail)

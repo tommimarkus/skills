@@ -11,8 +11,8 @@ Module map:
 - gitops: every git and worktree-helper subprocess call.
 - contract: plan validator bridge, leaves, amendments, effective leaves, capability
   binding and the host tier map.
-- checkpoint: run integrity, the single run validator, load2, mutating_run.
-- legacy: version-1 checkpoint paths.
+- checkpoint: run integrity, the single run validator, retired-contract refusal, load2,
+  mutating_run.
 - schedule: readiness, batches, retry selection, the live next block, primary_next.
 - series: series handoff artifacts and the predecessor cross-check.
 - returns: return validation, retry and remediation, record-return, amend.
@@ -26,8 +26,8 @@ Module map:
 Import order, lowest first. A module imports only an earlier group, or a same-group
 module without a cycle; nothing imports cli; a helper several modules use lives in the
 lowest module all of them may import (this is why run validation helpers sit in
-checkpoint and the init commands in closeout):
-vocabulary < core < store < {gitops, contract} < {checkpoint, legacy} < {schedule, series}
+checkpoint and the init command in closeout):
+vocabulary < core < store < {gitops, contract} < checkpoint < {schedule, series}
 < {returns, dispatch, verify, retention, closeout, tracing} < cli.
 
 Substitution seams (now in core, run_worktree_helper in gitops, plan_validator and

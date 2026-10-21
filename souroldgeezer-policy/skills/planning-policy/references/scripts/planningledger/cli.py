@@ -5,8 +5,6 @@ from __future__ import annotations
 import argparse
 
 from .core import Error, UsageError, out
-from .checkpoint import init2, init3, init4
-from .legacy import transition1
 from .returns import amend, record, validate_return
 from .dispatch import dispatch, handoff, transition2
 from .verify import (
@@ -17,7 +15,7 @@ from .verify import (
     verify_handoff,
 )
 from .retention import gc, list_runs, purge
-from .closeout import close2, init1, init5, land, reopen2, show, validate
+from .closeout import close2, init5, land, reopen2, show, validate
 from .tracing import trace_close, trace_init, trace_record, trace_show
 
 __all__ = [
@@ -32,26 +30,6 @@ def parse():
     parser.add_argument("--ledger-root")
     parser.add_argument("--plan-id")
     commands = parser.add_subparsers(dest="command", required=True)
-    init = commands.add_parser("init")
-    init.add_argument("--actor", required=True)
-    init.add_argument("--approved", action="store_true")
-    init.add_argument("--steps-json", required=True)
-    init2 = commands.add_parser("init-v2")
-    init2.add_argument("--actor", required=True)
-    init2.add_argument("--approved", action="store_true")
-    init2.add_argument("--plan-file", required=True)
-    init2.add_argument("--assignments-file", required=True)
-    init3_parser = commands.add_parser("init-v3")
-    init3_parser.add_argument("--actor", required=True)
-    init3_parser.add_argument("--approved", action="store_true")
-    init3_parser.add_argument("--plan-file", required=True)
-    init3_parser.add_argument("--assignments-file", required=True)
-    init4_parser = commands.add_parser("init-v4")
-    init4_parser.add_argument("--actor", required=True)
-    init4_parser.add_argument("--approved", action="store_true")
-    init4_parser.add_argument("--plan-file", required=True)
-    init4_parser.add_argument("--assignments-file", required=True)
-    init4_parser.add_argument("--capability-binding-file", required=True)
     init5_parser = commands.add_parser("init-v5")
     init5_parser.add_argument("--actor", required=True)
     init5_parser.add_argument("--approved", action="store_true")
@@ -73,8 +51,6 @@ def parse():
     trans.add_argument("--summary", default="")
     trans.add_argument("--retry", action="store_true")
     trans.add_argument("--retry-remediation-file", default="")
-    trans.add_argument("--evidence-path", default="")
-    trans.add_argument("--blocker-code", default="")
     trans.add_argument("--worktree-result", default="")
     dispatching = commands.add_parser("dispatch")
     dispatching.add_argument("--actor", required=True)
@@ -170,8 +146,7 @@ def parse():
     garbage.add_argument("--dry-run", action="store_true")
     purging = commands.add_parser("purge")
     purging.add_argument("--actor", required=True)
-    purging.add_argument("--run-id")
-    purging.add_argument("--legacy", action="store_true")
+    purging.add_argument("--run-id", required=True)
     purging.add_argument("--before-retention", action="store_true")
     purging.add_argument("--reason", default="")
     return parser
@@ -180,18 +155,10 @@ def parse():
 def main(argv=None):
     args = parse().parse_args(argv)
     try:
-        if args.command == "init":
-            value = init1(args)
-        elif args.command == "init-v2":
-            value = init2(args)
-        elif args.command == "init-v3":
-            value = init3(args)
-        elif args.command == "init-v4":
-            value = init4(args)
-        elif args.command == "init-v5":
+        if args.command == "init-v5":
             value = init5(args)
         elif args.command == "transition":
-            value = transition2(args) if args.run_id else transition1(args)
+            value = transition2(args)
         elif args.command == "dispatch":
             value = dispatch(args)
         elif args.command == "land":

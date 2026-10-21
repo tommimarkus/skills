@@ -1,7 +1,7 @@
 # Parent Ledger Contract
 
-This is the exception-only reference for ledger errors, legacy resumption,
-diagnosis, retention operations, and ledger authoring or audit. Normal
+This is the exception-only reference for ledger errors, a refused retained
+pre-v5 run, diagnosis, retention operations, and ledger authoring or audit. Normal
 version-5 execution follows each command's bounded live `next` result and uses
 read-only `show --next-only` after a long pause or context compaction. The
 ledger records lifecycle facts; it does not approve a plan, select a model, or
@@ -23,11 +23,10 @@ Only one parent writes a run. Its isolated ledger directory is
 is the stable approved-plan identifier and `run-id` is the contractually
 canonical lowercase UUID4. A delegated leaf returns one `bounded-step-return-v1`
 object to the parent and never mutates the ledger. Independent leaves may run concurrently only when their dependencies
-are already `cleaned` (`integrated` or `cleaned` for a version-5 run) and they do not share a worktree or write path — except
+are already `integrated` or `cleaned` and they do not share a worktree or write path — except
 that an in-batch dependency on an earlier-listed same-batch member satisfies
 readiness at `ready`, `in_progress`, or `completed`, since a batch shares one
-worktree; an external dependency still requires `cleaned`, except that a
-version-5 run accepts `integrated` or `cleaned`. Each step
+worktree; an external dependency requires `integrated` or `cleaned`. Each step
 has exactly one current attempt at a time.
 
 The binding a parent must construct before calling `init-v5` is
@@ -43,7 +42,7 @@ bounded opaque `attempt_id`, its first attempt count (`1`), tier, and
 worktree; it cannot replace the plan's portable tier or worktree owner.
 
 At initialization the parent stores a canonical approved-plan copy and its
-lowercase 64-hex-character SHA-256 hash. Every version-2/3/4/5 lifecycle command
+lowercase 64-hex-character SHA-256 hash. Every lifecycle command
 compares the supplied or stored plan hash with that copy before changing or
 trusting state. A missing copy, hash mismatch, or changed leaf contract is
 `blocked:plan_tampered`; do not dispatch, retry, or silently reinitialize it.
@@ -128,10 +127,9 @@ paragraph, as authoritative for what to run next.
 All lifecycle commands require the same `--run-id` after `init-v5` returns it:
 `transition`, `show`, and `validate`. Parent mutations use `--actor parent`.
 `transition` names a `--step-id` and a `--to` target status; it checks that
-exactly one attempt is current and records a bounded reason plus an optional
-safe relative evidence path. A step may move to `ready` from `pending`,
-`blocked`, or `failed`, provided every dependency is already `cleaned` — or, in a version-5 run,
-`integrated` or `cleaned` (an
+exactly one attempt is current and records a bounded reason. A step may move to `ready` from `pending`,
+`blocked`, or `failed`, provided every dependency is already `integrated` or
+`cleaned` (an
 in-batch dependency on an earlier-listed same-batch member instead needs only
 `ready`, `in_progress`, or `completed`), the
 attempt limit is not exhausted, and — for a retry — the call passes `--retry`;
@@ -152,8 +150,7 @@ expected prior status (`completed` for `integrated`, `integrated` for
 `cleaned`); the ledger stores the returned commit, rebased/integrated commit,
 and bounded helper-result evidence without changing `bounded-step-return-v1`.
 Any other `--to` value is rejected. These per-status checks are dedicated,
-hardcoded logic in the script (not the legacy `TRANS` lookup table described
-under "State machine and legal transitions" below), so a `transition` call's
+hardcoded logic in the script, so a `transition` call's
 own error or success result is the authoritative statement of whether a given
 move is legal right now.
 
@@ -177,13 +174,13 @@ For a version-5 run, successful transitions add bounded live guidance: `ready`
 names the `in_progress` command; `in_progress` names the agent and attempt to
 await; `integrated` names cleanup plus any newly unblocked pending steps; and
 `cleaned` names newly unblocked pending steps plus the first ready command, or
-`validate --closeout` when every step is cleaned. In a version-5 run `init-v5`,
+`validate --closeout` when every step is cleaned. `init-v5`,
 `integrated`, `cleaned`, `reopen` and the next-only `ready_pending` category
 name `dispatch` as that command, `integrated` leads with the dispatch of an
 unblocked dependent and keeps its own cleanup as `cleanup_step_id`, and the
 record-return `completed` block and the next-only integrate and cleanup
 categories name `land`. These results are derived after the checkpoint is
-written and do not alter v1 or policy-less v2/v3 output.
+written.
 
 ### Composite land
 
@@ -334,9 +331,8 @@ Load the Git-policy-owned
 [planning worktree closeout](../../git-workflow-policy/references/planning-worktree-closeout.md)
 procedure and ingest each successful helper result. Leave a cleanup failure at
 `integrated` so it can be retried. Create a dependent leaf's worktree only
-after its prerequisites are integrated (version 5) or cleaned (earlier
-versions), from the then-current parent tip; cleanup stays mandatory before
-closeout.
+after its prerequisites are integrated, from the then-current parent tip;
+cleanup stays mandatory before closeout.
 
 A terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`failed`
 — still owns a worktree. Close it out too: from the bounded return, integrate the
@@ -358,8 +354,8 @@ to `discarded`. Closed runs refuse step transitions and returned handoffs.
 blocked run whose retention period has not elapsed and which still has at least
 one retryable pending, blocked, or failed step below its attempt limit. Reopen
 clears the terminal lifecycle fields and returns the run to `active`; it does
-not assign or start an attempt. A dependency is ready-compatible only after it
-is `cleaned`. A successful v5 `reopen` result names its retryable step IDs and
+not assign or start an attempt. A dependency is ready-compatible once it is
+`integrated` or `cleaned`. A successful v5 `reopen` result names its retryable step IDs and
 the first ready/remediation command. `close` is terminal and emits no `next`.
 
 `close --series-handoff-file <path>` exists only on a plan carrying a
@@ -375,8 +371,10 @@ the full close/handoff mechanics and the init-v5 predecessor cross-check.
 
 `list` scans either the bounded `--plan-id` scope or the ledger root and emits
 bounded run summaries plus counts. `gc [--dry-run]` reports bounded `kept`,
-`eligible`, `removed`, and `invalid` groups; mutation requires `--actor parent`.
-Active runs are always kept regardless of age. Closed version-2/3/4 runs retain
+`eligible`, `removed`, and `invalid` groups plus `unsupported_count`, the
+retained pre-v5 runs it never touches ([ledger compatibility](ledger-compatibility.md));
+mutation requires `--actor parent`.
+Active runs are always kept regardless of age. Closed runs retain
 completed outcomes for 30 days, blocked outcomes for 90 days, and abandoned
 outcomes for 7 days. The boundary is exact: a run becomes eligible at
 `purge_after`, not one second earlier. Initialization and successful closure run
@@ -385,15 +383,13 @@ handoff survives `reopen` unchanged; a later `close --series-handoff-file`
 overwrites it atomically, so the latest close's artifact is the one retention
 and `gc` see, while prior digests stay in the preserved event log.
 
-`purge --actor parent` deletes exactly one closed target: use `--plan-id` plus
-`--run-id` for version 2, or `--plan-id` plus `--legacy` for one terminal
-version-1 ledger. Before `purge_after`, deletion additionally requires both
+`purge --actor parent --plan-id <id> --run-id <uuid4>` deletes exactly one
+closed run. Before `purge_after`, deletion additionally requires both
 `--before-retention` and a bounded `--reason`. There is no clear-all command.
 
 Scanning never follows or removes a symlink. An unknown schema, malformed
-checkpoint, unexpected directory content, invalid plan/run identity, or
-ambiguous legacy terminal state is reported in `invalid` and preserved. A v2
-run directory contains only `checkpoint.json`, `events.jsonl`, `plan.json`, and
+checkpoint, unexpected directory content, or invalid plan/run identity is
+reported in `invalid` and preserved. A run directory contains only `checkpoint.json`, `events.jsonl`, `plan.json`, and
 the optional validated `returns/` and `worktree-results/` trees; conservative
 validation wins over age.
 
@@ -405,22 +401,16 @@ reading for a normal in-flight v5 run because lifecycle JSON results and
 restating it ahead of time — exactly the prose-drifts-from-code
 risk `tests/planning_return_contract_parity_test.py`'s own docstring documents
 for the `bounded-step-return-v1` contract. Read this section when authoring or
-auditing `planning_ledger.py` itself, when reconstructing the full mechanics
-for a rare edge case, or when resuming a legacy v1/v2 ledger.
+auditing `planning_ledger.py` itself, or when reconstructing the full mechanics
+for a rare edge case.
 
 ### State machine and legal transitions
 
-Successful steps move `completed` → `integrated` → `cleaned`. The `TRANS`
-table in `references/scripts/planning_ledger.py` is **not** the general state
-machine — its keys equal `V1_STATES` exactly, and it has exactly one call
-site, `transition1()`, reached only when `--run-id` is absent (the legacy
-version-1 path; version-1 also allows `superseded`, which the v2+ state set
-drops). For a version-2/3/4 run, `transition2()` never reads `TRANS`: it
-validates each move through dedicated hardcoded per-status checks (via
-`advance()`), and `V2_STATES` adds `cleaned` and `oversized` on top of the v1
-set. See "Driving transitions and validate --closeout" above for the v2–v5
-mechanics; a v1 `transition` call's own result is the authoritative statement
-of what `TRANS` permits from a given status.
+Successful steps move `completed` → `integrated` → `cleaned`. There is no
+transition table: `transition2()` validates each move through dedicated
+hardcoded per-status checks (via `advance()`), over the `V2_STATES` set, which
+includes `cleaned` and `oversized`. See "Driving transitions and validate
+--closeout" above for the mechanics.
 
 ### `show` output shape
 
@@ -441,19 +431,19 @@ work; dispatch ready work; await active returns; cleanup integrated work;
 validate closeout; then report terminal blockage or closure. It uses
 the same dependency, attempt, and retry predicates as mutation. Full `show`
 remains unchanged as the at-most-1,200-token diagnostic fallback, especially
-when its wide summary reports truncation. Version 1 and policy-less v2/v3 reject
-`--next-only` without migration.
+when its wide summary reports truncation. A run without
+`retry_policy: escalating_remediation_v1` rejects `--next-only`.
 
 ### Retry policy, remediation, and terminal precedence
 
 The step-wide attempt count starts at 1 and may never exceed the leaf's
-version-2/3/4 `max_attempts` (1 through 5). The parent assigns each attempt a
+`max_attempts` (1 through 5). The parent assigns each attempt a
 helper-generated bounded opaque `attempt_id` (an implementation may use UUID4),
 which the returned handoff echoes with the same `step_id` and `agent_id`; an
 agent cannot borrow another step's remaining attempts. Under
 `escalating_remediation_v1`, the ledger is the sole retry owner. One predicate
 (`retry_class`) classifies a return by its first blocker whose code belongs to
-its status family (v2–v4 runs keep the exactly-one-blocker rule) and serves
+its status family and serves
 `record-return`, `retryable_steps`, `show --next-only`, and remediation.
 Reasoning stops are an exact `failed:acceptance` and
 `blocked:needs_higher_tier`. A `failed:acceptance` gets at most one same-tier
@@ -525,18 +515,15 @@ procedure is [verify handoff](verify-handoff.md).
 
 ### Tracing
 
-Version-4 checkpoints contain no usage or trace field. Only an explicit request
+Checkpoints contain no usage or trace field. Only an explicit request
 loads the separate usage-tracing procedure and creates `usage/` metadata outside
 the checkpoint. It follows the same retention and purge safeguards; ordinary
 `show` remains trace-free unless tracing was initialized.
 
-### Legacy and version compatibility
+### Retired contract versions
 
-Policy-less existing v2/v3 checkpoints and all version-1 ledgers retain
-their existing behavior. `init-v2` returns
-`blocked:contract_migration_required`; stored version-2 plans remain
-`resume_ready: true` and keep their original hashes and byte-compatible records.
-
-When resuming a v1 or v2 record, load
-[legacy ledger compatibility](ledger-compatibility.md); never rewrite it merely
-to inspect or migrate it.
+Contract versions 1–4 are retired: `init`, `init-v2`, `init-v3`, and `init-v4`
+no longer exist, and a command aimed at a retained run of one refuses with
+`blocked:contract_migration_required`. Load
+[ledger compatibility](ledger-compatibility.md) for how `list` and `gc` treat
+such a run; never rewrite it merely to inspect or migrate it.

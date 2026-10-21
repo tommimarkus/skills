@@ -69,12 +69,10 @@ def leaves_by_id(plan):
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
 
 
-def valid_amendments(step, approved, schema):
+def valid_amendments(step, approved):
     """Return a step's stored amendments, failing closed on any malformed record."""
     value = step.get("amendments", [])
-    if not isinstance(value, list) or len(value) > MAX_AMENDMENTS or (
-        value and schema != FORWARD_SCHEMA
-    ):
+    if not isinstance(value, list) or len(value) > MAX_AMENDMENTS:
         raise Error("blocked:plan_tampered")
     attempts = approved["max_attempts"]
     try:
@@ -169,7 +167,7 @@ def effective_leaves(plan, data):
     return {
         sid: effective_leaf(
             leaf,
-            valid_amendments(steps[sid], leaf, data.get("schema")) if sid in steps else [],
+            valid_amendments(steps[sid], leaf) if sid in steps else [],
         )
         for sid, leaf in leaves_by_id(plan).items()
     }
@@ -205,14 +203,13 @@ def plan_validator():
     return validator_module().validate
 
 
-def read_plan(path, contract_version=FORWARD_SCHEMA):
+def read_plan(path):
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
-    ready_key = "approval_ready" if contract_version == FORWARD_SCHEMA else "resume_ready"
     if (
         not result.get("valid")
-        or not result.get(ready_key)
-        or result.get("contract_version") != contract_version
+        or not result.get("approval_ready")
+        or result.get("contract_version") != FORWARD_SCHEMA
     ):
         raise Error("plan is not dispatch-ready")
     return data
@@ -271,7 +268,7 @@ def tier_alias(args, data, tier):
 
 
 def capability_bindings(path, plan):
-    """Load one complete v4/v5 binding and retain assigned-step evidence."""
+    """Load one complete binding and retain assigned-step evidence."""
     return checked_binding(read_json(path, "cannot read capability binding file"), plan)
 
 
