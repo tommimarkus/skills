@@ -4,20 +4,7 @@ import json
 import unittest
 
 from tests.planning_ledger_changeset_test import ChangesetHarness
-from tests.planning_ledger_dispatch_test import git, leaf, ledger
-
-
-def batch_leaves():
-    members = [
-        leaf("first", "batch-owner", batch="group"),
-        leaf("second", "batch-owner", ["first"], batch="group"),
-    ]
-    units = [{
-        "id": "unit", "original_size": "medium", "cohesive_outcome": "One batch outcome",
-        "decomposition": {"basis": "failure_isolation", "rationale": "Separate failure surfaces",
-                          "shape": "checkpointed"},
-    }]
-    return members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"}
+from tests.planning_ledger_dispatch_test import batch_leaves, git, leaf, ledger
 
 
 class VerifyHarness(ChangesetHarness):
@@ -27,6 +14,19 @@ class VerifyHarness(ChangesetHarness):
         self.commit_file("src/alpha/a.txt", "one\n")
         result = self.returned(packet)
         return packet, result
+
+    def completed_batch(self):
+        """Dispatch the two-member batch and return both members completed."""
+        members, units, worktrees = batch_leaves()
+        self.init(members, units, worktrees)
+        code, started = self.dispatch("first", "--create-from", "main")
+        self.assertEqual(0, code, started)
+        first, second = started["handoffs"]
+        self.worktree = self.repo / ".worktrees/batch"
+        self.commit_file("src/first/a.txt", "a\n")
+        self.returned(first)
+        self.commit_file("src/second/b.txt", "b\n")
+        self.returned(second)
 
     def verify_handoff(self, step_id="alpha"):
         return self.call("verify-handoff", "--actor", "parent", "--run-id", self.run_id,
@@ -110,20 +110,8 @@ class VerifyHandoffTest(VerifyHarness):
     def test_packet_never_carries_builder_notes_blockers_or_remainder(self):
         packet = self.started()
         self.commit_file("src/alpha/a.txt", "one\n")
-        value = {
-            "schema": "bounded-step-return-v1", "step_id": "alpha",
-            "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
-            "status": "completed", "changed_paths": [],
-            "acceptance": {"command": "uv run test", "exit_code": 0, "summary": "ok"},
-            "blockers": [], "notes": [{"type": "finding", "message": "BUILDER-SECRET"}],
-            "unstarted_remainder": ["BUILDER-REMAINDER"],
-            "commit_hash": git(self.worktree, "rev-parse", "HEAD").stdout.strip(),
-        }
-        path = self.scratch / "return.json"
-        path.write_text(json.dumps(value))
-        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
-                                 "--return-file", str(path))
-        self.assertEqual(0, code, result)
+        self.returned(packet, notes=[{"type": "finding", "message": "BUILDER-SECRET"}],
+                      unstarted_remainder=["BUILDER-REMAINDER"])
         code, issued = self.verify_handoff()
         self.assertEqual(0, code, issued)
         text = json.dumps(issued)
@@ -166,15 +154,7 @@ class VerifyHandoffTest(VerifyHarness):
         self.assertIn("leaf verification", result["error"])
 
     def test_batch_emits_one_packet_per_completed_member(self):
-        members, units, worktrees = batch_leaves()
-        self.init(members, units, worktrees)
-        code, started = self.dispatch("first", "--create-from", "main")
-        first, second = started["handoffs"]
-        self.worktree = self.repo / ".worktrees/batch"
-        self.commit_file("src/first/a.txt", "a\n")
-        self.returned(first)
-        self.commit_file("src/second/b.txt", "b\n")
-        self.returned(second)
+        self.completed_batch()
         code, issued = self.verify_handoff("first")
         self.assertEqual(0, code, issued)
         self.assertEqual(["first", "second"], [item["step_id"] for item in issued["handoffs"]])
@@ -320,15 +300,7 @@ class LandGateTest(VerifyHarness):
         self.assertEqual(0, code, landed)
 
     def test_batch_land_waits_for_every_completed_member_verdict(self):
-        members, units, worktrees = batch_leaves()
-        self.init(members, units, worktrees)
-        code, started = self.dispatch("first", "--create-from", "main")
-        first, second = started["handoffs"]
-        self.worktree = self.repo / ".worktrees/batch"
-        self.commit_file("src/first/a.txt", "a\n")
-        self.returned(first)
-        self.commit_file("src/second/b.txt", "b\n")
-        self.returned(second)
+        self.completed_batch()
         code, issued = self.verify_handoff("first")
         one, two = issued["handoffs"]
         code, result = self.record_verify(self.verify_return(one))
@@ -370,8 +342,8 @@ class RejectRoutingTest(VerifyHarness):
         step = self.checkpoint()["steps"]["alpha"]
         return f"verify {step['verify']['sha256'][:12]} rejected {step['verify']['commit'][:12]}"
 
-    def retried_and_returned(self, finding):
-        """Retry the rejected step, rebuild, and reject the new commit with `finding`."""
+    def reverified(self):
+        """Retry the rejected step, rebuild, and issue the new commit's verify packet."""
         code, retry = self.retry_flow(self.cited_diagnosis(), "standard")
         self.assertEqual(0, code, retry)
         self.commit_file("src/alpha/a.txt", "two\n")
@@ -379,6 +351,11 @@ class RejectRoutingTest(VerifyHarness):
         code, issued = self.verify_handoff()
         self.assertEqual(0, code, issued)
         (verify,) = issued["handoffs"]
+        return verify
+
+    def retried_and_returned(self, finding):
+        """Retry the rejected step, rebuild, and reject the new commit with `finding`."""
+        verify = self.reverified()
         return verify, self.record_verify(self.verify_return(verify, "reject", [finding]))
 
     def test_reject_fails_the_step_with_the_verify_evidence_and_names_the_retry(self):
@@ -482,13 +459,7 @@ class RejectRoutingTest(VerifyHarness):
         first, _ = self.rejected(leaves=[dict(leaf("alpha", "leaf-alpha"), max_attempts=3)])
         self.assertIsNone(first["prior_verify"])
         rejected_commit = self.checkpoint()["steps"]["alpha"]["returned_commit"]
-        code, retry = self.retry_flow(self.cited_diagnosis())
-        self.assertEqual(0, code, retry)
-        self.commit_file("src/alpha/a.txt", "two\n")
-        self.returned(retry["handoffs"][0])
-        code, issued = self.verify_handoff()
-        self.assertEqual(0, code, issued)
-        (second,) = issued["handoffs"]
+        second = self.reverified()
         self.assertEqual(
             {"verify_id": first["verify_id"], "rejected_commit": rejected_commit,
              "findings": [self.finding()]},
@@ -496,13 +467,17 @@ class RejectRoutingTest(VerifyHarness):
         )
         self.assertEqual(0, self.validate_verify(second, self.verify_return(second))[0])
 
+    def record_changeset(self):
+        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha")
+        self.assertEqual(0, code, result)
+        return result
+
     def test_record_changeset_moves_a_measured_overrun_to_oversized(self):
         packet = self.started()
         self.commit_file("src/alpha/a.txt", "x\n" * 151)
         self.returned(packet)
-        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
-                                 "--step-id", "alpha")
-        self.assertEqual(0, code, result)
+        result = self.record_changeset()
         self.assertEqual("oversized", result["status"])
         self.assertEqual(151, result["changeset"]["lines"])
         step = self.checkpoint()["steps"]["alpha"]
@@ -515,9 +490,7 @@ class RejectRoutingTest(VerifyHarness):
         packet = self.started()
         self.commit_file("elsewhere/stray.txt", "x\n")
         self.returned(packet)
-        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
-                                 "--step-id", "alpha")
-        self.assertEqual(0, code, result)
+        result = self.record_changeset()
         step = self.checkpoint()["steps"]["alpha"]
         self.assertEqual(("oversized", "scope_expanded"), (step["status"], step["blockers"][0]["code"]))
         code, result = self.call("amend", "--actor", "parent", "--run-id", self.run_id,

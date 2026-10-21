@@ -6,7 +6,7 @@ import unittest
 
 from tests.surface_test_lib import LEAN_AUDIT_SCRIPTS, REPO_ROOT, load_leanaudit_module
 
-CEILING = 166
+CEILING = 164
 
 
 class TestCodeCloneRatchetTest(unittest.TestCase):

@@ -56,6 +56,19 @@ def leaf(sid, owner, dependencies=(), batch=None):
     return value
 
 
+def batch_leaves():
+    members = [
+        leaf("first", "batch-owner", batch="group"),
+        leaf("second", "batch-owner", ["first"], batch="group"),
+    ]
+    units = [{
+        "id": "unit", "original_size": "medium", "cohesive_outcome": "One batch outcome",
+        "decomposition": {"basis": "failure_isolation", "rationale": "Separate failure surfaces",
+                          "shape": "checkpointed"},
+    }]
+    return members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"}
+
+
 class DispatchHarness(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -226,24 +239,7 @@ class DispatchCommandTest(DispatchHarness):
         self.assertFalse((self.repo / ".worktrees/beta").exists())
 
     def test_batch_dispatch_starts_every_member_in_order_with_one_packet_each(self):
-        members = [
-            leaf("first", "batch-owner", batch="group"),
-            leaf("second", "batch-owner", ["first"], batch="group"),
-        ]
-        units = [
-            {
-                "id": "unit",
-                "original_size": "medium",
-                "cohesive_outcome": "One batch outcome",
-                "decomposition": {
-                    "basis": "failure_isolation",
-                    "rationale": "Separate failure surfaces",
-                    "shape": "checkpointed",
-                },
-            }
-        ]
-        shared = {"first": ".worktrees/batch", "second": ".worktrees/batch"}
-        self.init(members, units, shared)
+        self.init(*batch_leaves())
         code, result = self.dispatch("first", "--create-from", "main")
         self.assertEqual(0, code, result)
         self.assertEqual(["first", "second"], result["step_ids"])

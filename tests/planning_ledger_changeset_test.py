@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from tests.planning_ledger_dispatch_test import DispatchHarness, git, leaf
+from tests.planning_ledger_dispatch_test import DispatchHarness, batch_leaves, git, leaf
 
 
 class ChangesetHarness(DispatchHarness):
@@ -24,7 +24,7 @@ class ChangesetHarness(DispatchHarness):
         git(self.worktree, "add", "-A")
         git(self.worktree, "commit", "-m", message)
 
-    def returned(self, packet, status="completed", blockers=(), commit=None):
+    def returned(self, packet, status="completed", blockers=(), commit=None, **fields):
         value = {
             "schema": "bounded-step-return-v1", "step_id": packet["step_id"],
             "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
@@ -33,6 +33,7 @@ class ChangesetHarness(DispatchHarness):
                            "summary": status},
             "blockers": list(blockers), "notes": [], "unstarted_remainder": [],
             "commit_hash": commit or git(self.worktree, "rev-parse", "HEAD").stdout.strip(),
+            **fields,
         }
         path = self.scratch / "return.json"
         path.write_text(json.dumps(value))
@@ -94,17 +95,9 @@ class VerifyPolicyAndPacketTest(ChangesetHarness):
         self.assertEqual(base, result["handoffs"][0]["changeset_budget"]["base_commit"])
 
     def test_batch_follower_measures_from_the_previous_member_commit(self):
-        members = [
-            leaf("first", "batch-owner", batch="group"),
-            leaf("second", "batch-owner", ["first"], batch="group"),
-        ]
+        members, units, worktrees = batch_leaves()
         members[1]["write_set"] = ["src"]
-        units = [{
-            "id": "unit", "original_size": "medium", "cohesive_outcome": "One batch outcome",
-            "decomposition": {"basis": "failure_isolation", "rationale": "Separate failure surfaces",
-                              "shape": "checkpointed"},
-        }]
-        self.init(members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"})
+        self.init(members, units, worktrees)
         code, result = self.dispatch("first", "--create-from", "main")
         self.assertEqual(0, code, result)
         first, second = result["handoffs"]
@@ -129,19 +122,11 @@ class VerifyPolicyAndPacketTest(ChangesetHarness):
             "oversized:changeset",
             packet["return_schema"]["properties"]["blockers"]["items"]["properties"]["code"]["enum"],
         )
-        value = {
-            "schema": "bounded-step-return-v1", "step_id": "alpha",
-            "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
-            "status": "oversized", "changed_paths": [],
-            "acceptance": {"command": "uv run test", "exit_code": None, "summary": "stopped"},
-            "blockers": [{"code": "oversized:changeset", "summary": "diff over budget"}],
-            "notes": [], "unstarted_remainder": ["rest"], "commit_hash": "",
-        }
-        path = self.scratch / "return.json"
-        path.write_text(json.dumps(value))
-        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
-                                 "--return-file", str(path))
-        self.assertEqual(0, code, result)
+        self.returned(
+            packet, "oversized", [{"code": "oversized:changeset", "summary": "diff over budget"}],
+            acceptance={"command": "uv run test", "exit_code": None, "summary": "stopped"},
+            unstarted_remainder=["rest"], commit_hash="",
+        )
         step = self.checkpoint()["steps"]["alpha"]
         self.assertEqual(("oversized", False), (step["status"], step["retry_allowed"]))
 
@@ -215,19 +200,7 @@ class CheckChangesetTest(ChangesetHarness):
     def test_parent_mode_measures_the_returned_commit(self):
         packet = self.started()
         self.commit_file("src/alpha/a.txt", "x\n" * 151)
-        commit = git(self.worktree, "rev-parse", "HEAD").stdout.strip()
-        value = {
-            "schema": "bounded-step-return-v1", "step_id": "alpha",
-            "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
-            "status": "completed", "changed_paths": ["src/alpha/a.txt"],
-            "acceptance": {"command": "uv run test", "exit_code": 0, "summary": "ok"},
-            "blockers": [], "notes": [], "unstarted_remainder": [], "commit_hash": commit,
-        }
-        path = self.scratch / "return.json"
-        path.write_text(json.dumps(value))
-        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
-                                 "--return-file", str(path))
-        self.assertEqual(0, code, result)
+        self.returned(packet, changed_paths=["src/alpha/a.txt"])
         code, result = self.call("check-changeset", "--run-id", self.run_id, "--step-id", "alpha")
         self.assertEqual(1, code, result)
         self.assertEqual("oversized:changeset", result["verdict"])
