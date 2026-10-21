@@ -228,35 +228,58 @@ def safe_repository_path(value: Any) -> bool:
     return all(segment not in {"", ".", ".."} for segment in value.split("/"))
 
 
-def glob_covers(path_parts: list[str], pattern_parts: list[str]) -> bool:
-    if not pattern_parts:
-        return not path_parts
-    head, rest = pattern_parts[0], pattern_parts[1:]
-    if head == "**":
-        return glob_covers(path_parts, rest) or (
-            bool(path_parts) and glob_covers(path_parts[1:], pattern_parts)
-        )
-    return bool(path_parts) and fnmatch.fnmatchcase(path_parts[0], head) and glob_covers(
-        path_parts[1:], rest
-    )
+def repository_glob_matches(path: str, pattern: str) -> bool:
+    """Match a repository-relative path with segment-aware ``**`` support."""
+    path_parts = path.split("/")
+    pattern_parts = pattern.split("/")
+    pending = [(0, 0)]
+    visited: set[tuple[int, int]] = set()
+    while pending:
+        path_index, pattern_index = pending.pop()
+        state = (path_index, pattern_index)
+        if state in visited:
+            continue
+        visited.add(state)
+        if pattern_index == len(pattern_parts):
+            if path_index == len(path_parts):
+                return True
+            continue
+        pattern_part = pattern_parts[pattern_index]
+        if pattern_part == "**":
+            pending.append((path_index, pattern_index + 1))
+            if path_index < len(path_parts):
+                pending.append((path_index + 1, pattern_index))
+        elif path_index < len(path_parts) and fnmatch.fnmatchcase(
+            path_parts[path_index], pattern_part
+        ):
+            pending.append((path_index + 1, pattern_index + 1))
+    return False
 
 
 def write_set_covers(write_set: list[Any], path: str) -> bool:
-    """Exact-or-descendant for plain entries, segment-aware glob for glob entries."""
+    """Exact-or-descendant for plain entries, segment-aware glob for glob entries.
+
+    The ledger's changed-path scope check delegates here, so plan admission and
+    returned-diff checks share one matcher.
+    """
     for allowed in write_set:
         if not isinstance(allowed, str):
             continue
         if any(character in allowed for character in GLOB_CHARS):
-            if glob_covers(path.split("/"), allowed.split("/")):
+            if repository_glob_matches(path, allowed):
                 return True
         elif path == allowed or path.startswith(allowed.rstrip("/") + "/"):
             return True
     return False
 
 
+def band_budget(leaf: dict[str, Any]) -> tuple[int, int]:
+    return BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])
+
+
 def changeset_budget(leaf: dict[str, Any]) -> dict[str, Any]:
     """The only derivation of a leaf's changeset budget: size-band defaults plus declared overrides."""
-    lines, files = BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])
+    lines, files = band_budget(leaf)
     declared = leaf.get("changeset_budget")
     declared = declared if isinstance(declared, dict) else {}
     exempt = declared.get("exempt_paths")
@@ -275,7 +298,7 @@ def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if set(declared) - BUDGET_KEYS:
         errors.append(f"{prefix} has unknown keys: {sorted(set(declared) - BUDGET_KEYS)}")
-    defaults = dict(zip(("max_changed_lines", "max_files"), BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])))
+    defaults = dict(zip(("max_changed_lines", "max_files"), band_budget(leaf)))
     raised = False
     for key, default in defaults.items():
         if key not in declared:

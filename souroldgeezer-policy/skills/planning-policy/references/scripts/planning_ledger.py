@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import hashlib
+import functools
 import importlib.util
 import json
 import os
@@ -314,44 +314,8 @@ def rel(value, label="path", maximum=MAX_PATH):
     return value
 
 
-def repository_glob_matches(path, pattern):
-    """Match a repository-relative path with segment-aware ``**`` support."""
-    path_parts = path.split("/")
-    pattern_parts = pattern.split("/")
-    pending = [(0, 0)]
-    visited = set()
-    while pending:
-        path_index, pattern_index = pending.pop()
-        state = (path_index, pattern_index)
-        if state in visited:
-            continue
-        visited.add(state)
-        if pattern_index == len(pattern_parts):
-            if path_index == len(path_parts):
-                return True
-            continue
-        pattern_part = pattern_parts[pattern_index]
-        if pattern_part == "**":
-            pending.append((path_index, pattern_index + 1))
-            if path_index < len(path_parts):
-                pending.append((path_index + 1, pattern_index))
-        elif path_index < len(path_parts) and fnmatch.fnmatchcase(
-            path_parts[path_index], pattern_part
-        ):
-            pending.append((path_index + 1, pattern_index + 1))
-    return False
-
-
 def changed_path_allowed(path, write_set):
-    for allowed in write_set:
-        if not isinstance(allowed, str):
-            continue
-        if any(character in allowed for character in ("*", "?", "[")):
-            if repository_glob_matches(path, allowed):
-                return True
-        elif path == allowed or path.startswith(allowed.rstrip("/") + "/"):
-            return True
-    return False
+    return validator_module().write_set_covers(write_set, path)
 
 
 def root(args):
@@ -1164,14 +1128,19 @@ def transition1(args):
     }
 
 
-def plan_validator():
+@functools.cache
+def validator_module():
     spec = importlib.util.spec_from_file_location(
         "plan_contract", Path(__file__).with_name("validate_plan_contract.py")
     )
     module = importlib.util.module_from_spec(spec)
     assert spec.loader
     spec.loader.exec_module(module)
-    return module.validate
+    return module
+
+
+def plan_validator():
+    return validator_module().validate
 
 
 def read_plan(path, contract_version=FORWARD_SCHEMA):
