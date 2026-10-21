@@ -371,6 +371,18 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         value["acceptance"]["command"] = command
         return value
 
+    def test_list_and_gc_classify_a_raised_max_attempts_run_as_valid(self):
+        run_id = self.init2("raised", max_attempts=2)
+        self.assertEqual(0, self.amend("raised", run_id, "step0", "--max-attempts", "3")[0])
+        code, listed = self.call("--ledger-root", str(self.root), "list")
+        self.assertEqual(0, code, listed)
+        self.assertEqual([run_id], [run["run_id"] for run in listed["runs"]])
+        self.assertEqual([], listed["invalid"])
+        code, dry = self.call("--ledger-root", str(self.root), "gc", "--dry-run")
+        self.assertEqual(0, code, dry)
+        self.assertEqual([], dry["invalid"])
+        self.assertEqual([run_id], [run["run_id"] for run in dry["kept"]])
+
     def test_amend_repairs_a_scope_rejection_without_touching_the_plan(self):
         run_id = self.init2("amended", precision="strict")
         run_dir = self.root / "planning-policy/ledgers/amended" / run_id

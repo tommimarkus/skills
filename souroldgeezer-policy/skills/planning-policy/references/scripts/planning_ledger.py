@@ -1427,41 +1427,66 @@ def init4(args):
     raise Error("blocked:contract_migration_required")
 
 
+def validate_run(directory, data, plan_id, run_id):
+    """The single run validator for load2, classify_v2 and load_predecessor_run.
+
+    Everything but the event log: callers read their checkpoint, map errors to
+    their own codes, and validate events once on their own path. Steps are
+    checked against amendment-aware effective leaves, so an amended run is never
+    reported as tampered.
+    """
+    if data.get("schema") not in RUN_SCHEMAS:
+        raise Error("unknown checkpoint schema")
+    if (
+        data.get("plan_id") != plan_id
+        or data.get("run_id") != run_id
+        or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
+        or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
+        or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
+        or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
+        or data.get("pipeline_policy") not in {None, RETAINED_PIPELINE_POLICY}
+        or (data.get("host") is not None and data["host"] not in host_tiers().get("hosts", {}))
+    ):
+        raise Error("invalid run checkpoint")
+    if len(canon(data) + b"\n") > MAX_CHECKPOINT:
+        raise Error("v2 checkpoint exceeds bounded limit")
+    plan = read_json(directory / "plan.json", "blocked:plan_tampered")
+    if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
+        raise Error("blocked:plan_tampered")
+    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
+    ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
+    if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
+        raise Error("blocked:plan_tampered")
+    if set(data.get("steps", {})) != set(leaves_by_id(plan)):
+        raise Error("blocked:plan_tampered")
+    validate_amendment_events(directory, data)
+    leafs = effective_leaves(plan, data)
+    for step in data["steps"].values():
+        for field, default in CLOSEOUT_FIELDS.items():
+            step.setdefault(field, default)
+    validate_steps2(data, leafs)
+    validate_retry_artifacts(directory, data)
+    validate_series_handoff(directory, data, plan)
+    for name in ("returns", "retry-remediations"):
+        folder = directory / name
+        if folder.exists() and any(step_dir.name not in data["steps"] for step_dir in folder.iterdir()):
+            raise Error(f"unexpected {name} step")
+    lifecycle(data)
+    return plan, leafs
+
+
 def load_predecessor_run(ledger_root, plan_id, run_id):
     """Load and fully re-validate a predecessor run's checkpoint and plan.
 
-    Mirrors `load2`'s validation depth without depending on `args`, since a
-    predecessor's plan_id/run_id differ from the successor's. Any failure here
-    is the predecessor's fault, never the successor's, so every caller treats
-    this raising as "unresolvable" rather than propagating the error.
+    Any failure here is the predecessor's fault, never the successor's, so every
+    caller treats this raising as "unresolvable" rather than propagating the error.
     """
     directory = ledger_root / plan_id / run_id
     if directory.is_symlink() or not directory.is_dir():
         raise Error("unresolvable predecessor run")
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "unresolvable predecessor checkpoint")
-    if (
-        checkpoint.get("schema") not in RUN_SCHEMAS
-        or checkpoint.get("plan_id") != plan_id
-        or checkpoint.get("run_id") != run_id
-    ):
-        raise Error("unresolvable predecessor checkpoint")
-    plan = read_json(directory / "plan.json", "unresolvable predecessor plan")
-    if digest(plan) != checkpoint.get("plan_hash") or not SHA.fullmatch(
-        checkpoint.get("plan_hash", "")
-    ):
-        raise Error("unresolvable predecessor plan")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint), admission=False)
-    ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
-    if (
-        not plan_result.get(ready_key)
-        or plan_result.get("contract_version") != checkpoint["schema"]
-    ):
-        raise Error("unresolvable predecessor plan")
-    validate_steps2(checkpoint, leaves_by_id(plan))
-    validate_retry_artifacts(directory, checkpoint)
-    validate_series_handoff(directory, checkpoint, plan)
-    lifecycle(checkpoint)
+    plan, _ = validate_run(directory, checkpoint, plan_id, run_id)
     validate_events2(directory, checkpoint)
     return checkpoint, plan
 
@@ -1663,37 +1688,12 @@ def load2(args):
     safe_run_contents(directory)
     path = required_file(directory, "checkpoint.json", "unknown run id")
     data = read_json(path, "invalid v2 checkpoint")
-    if (
-        data.get("schema") not in RUN_SCHEMAS
-        or data.get("plan_id") != args.plan_id
-        or data.get("run_id") != args.run_id
-        or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
-        or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
-        or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
-        or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
-        or data.get("pipeline_policy") not in {None, RETAINED_PIPELINE_POLICY}
-        or (data.get("host") is not None and data["host"] not in host_tiers().get("hosts", {}))
-    ):
-        raise Error("invalid run checkpoint")
-    plan = read_json(directory / "plan.json", "blocked:plan_tampered")
-    if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
-        raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
-    ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
-    if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
-        raise Error("blocked:plan_tampered")
-    leafs = leaves_by_id(plan)
-    if set(data.get("steps", {})) != set(leafs):
-        raise Error("blocked:plan_tampered")
-    validate_amendment_events(directory, data)
-    leafs = effective_leaves(plan, data)
-    for step in data["steps"].values():
-        for field, default in CLOSEOUT_FIELDS.items():
-            step.setdefault(field, default)
-    validate_steps2(data, leafs)
-    validate_retry_artifacts(directory, data)
-    validate_series_handoff(directory, data, plan)
-    lifecycle(data)
+    try:
+        plan, leafs = validate_run(directory, data, args.plan_id, args.run_id)
+    except Error as exc:
+        if str(exc) == "unknown checkpoint schema":
+            raise Error("invalid run checkpoint") from exc
+        raise
     return directory, data, plan, leafs
 
 
@@ -4427,38 +4427,7 @@ def classify_legacy(directory, current):
 def classify_v2(plan_id, directory, current):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
-    if checkpoint.get("schema") not in RUN_SCHEMAS:
-        raise Error("unknown checkpoint schema")
-    if checkpoint.get("plan_id") != plan_id or checkpoint.get("run_id") != directory.name:
-        raise Error("v2 directory identity mismatch")
-    if len(canon(checkpoint) + b"\n") > MAX_CHECKPOINT:
-        raise Error("v2 checkpoint exceeds bounded limit")
-    plan = read_json(directory / "plan.json", "blocked:plan_tampered")
-    if digest(plan) != checkpoint.get("plan_hash") or not SHA.fullmatch(
-        checkpoint.get("plan_hash", "")
-    ):
-        raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(checkpoint), admission=False)
-    ready_key = "dispatch_ready" if checkpoint["schema"] == FORWARD_SCHEMA else "resume_ready"
-    if (
-        not plan_result.get(ready_key)
-        or plan_result.get("contract_version") != checkpoint["schema"]
-    ):
-        raise Error("blocked:plan_tampered")
-    validate_steps2(checkpoint, leaves_by_id(plan))
-    validate_retry_artifacts(directory, checkpoint)
-    validate_series_handoff(directory, checkpoint, plan)
-    returns = directory / "returns"
-    if returns.exists() and any(
-        step_dir.name not in checkpoint["steps"] for step_dir in returns.iterdir()
-    ):
-        raise Error("unexpected returns step")
-    remediations = directory / "retry-remediations"
-    if remediations.exists() and any(
-        step_dir.name not in checkpoint["steps"] for step_dir in remediations.iterdir()
-    ):
-        raise Error("unexpected retry-remediations step")
-    lifecycle(checkpoint)
+    plan, _ = validate_run(directory, checkpoint, plan_id, directory.name)
     validate_events2(directory, checkpoint)
     entry = {
         "plan_id": plan_id,

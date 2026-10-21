@@ -724,10 +724,19 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
             str(self.capability_binding(selected_plan)),
         )
 
-    def build_predecessor(self, plan_id="pred", outcome="completed", **series_overrides):
+    def build_predecessor(
+        self, plan_id="pred", outcome="completed", amend_attempts=None, **series_overrides
+    ):
         """Init, drive, and close a real predecessor run, returning its digests."""
         series = {**self.default_series(), **series_overrides}
         run_id = self.init4(plan_id=plan_id, series=series)
+        if amend_attempts:
+            code, result = self.call(
+                *self.common(plan_id), "amend", "--actor", "parent", "--run-id", run_id,
+                "--step-id", "step0", "--reason", "more attempts",
+                "--max-attempts", str(amend_attempts),
+            )
+            self.assertEqual(0, code, result)
         if outcome == "completed":
             self.drive_to_cleaned(plan_id, run_id)
         code, close_result = self.close(
@@ -786,6 +795,15 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         code, result = self.init4_full("succ", series=series)
         self.assertEqual(0, code, result)
         self.assertEqual("mismatch:end_commands", result["series_predecessor"])
+
+    def disclosure(self, predecessor):
+        code, result = self.init4_full("succ", series=self.successor_series_from(predecessor))
+        self.assertEqual(0, code, result)
+        return result["series_predecessor"]
+
+    def test_amended_predecessor_still_resolves_matched(self):
+        predecessor = self.build_predecessor("pred-amended", amend_attempts=3)
+        self.assertEqual("matched", self.disclosure(predecessor))
 
     def test_gcd_predecessor_is_unresolvable(self):
         predecessor = self.build_predecessor()
