@@ -9,7 +9,7 @@ import unittest
 from tests.surface_test_lib import LEAN_AUDIT_SCRIPTS, REPO_ROOT, load_leanaudit_module
 
 TESTS_CEILING = 156
-SOURCE_CEILING = 9
+SOURCE_CEILING = 3
 
 
 def _in_tests(path: str) -> bool:

@@ -7,7 +7,6 @@ from __future__ import annotations
 import argparse
 import copy
 import functools
-import json
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -23,6 +22,7 @@ from .core import (
     digest,
     ident,
     read_json,
+    read_jsonl,
     rel,
 )
 from .vocabulary import (
@@ -137,15 +137,7 @@ def validate_amendment_events(directory: Path, data: JsonObject) -> None:
     recorded: dict[JsonValue, list[JsonValue]] = {}
     path = directory / "events.jsonl"
     if path.is_file() and not path.is_symlink():
-        try:
-            lines = path.read_text().splitlines()
-        except OSError as exc:
-            raise Error("blocked:plan_tampered") from exc
-        for line in lines:
-            try:
-                value = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise Error("blocked:plan_tampered") from exc
+        for value in read_jsonl(path, "blocked:plan_tampered", "blocked:plan_tampered"):
             if isinstance(value, dict) and value.get("action") == "amend-v5":
                 recorded.setdefault(value.get("step_id"), []).append(value.get("amendment_sha256"))
     if stored != recorded:

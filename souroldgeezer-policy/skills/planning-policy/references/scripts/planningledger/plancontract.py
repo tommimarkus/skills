@@ -1552,6 +1552,27 @@ def _leaf_ordering_errors(
                 )
 
 
+def _grouped_decomposition_errors(
+    shape: Any,
+    prefix: str,
+    unit_id: Any,
+    decomposition: dict[str, Any],
+    member_count: int,
+    basis_valid: bool,
+    basis_names: str,
+    errors: list[str],
+) -> None:
+    """The checks a parallel and a checkpointed decomposition share, in their one order."""
+    if set(decomposition) != {"shape", "basis", "rationale"}:
+        errors.append(f"{prefix} for {shape} must have exactly shape, basis, and rationale")
+    if not basis_valid:
+        errors.append(f"{prefix}.basis must be {basis_names} for {shape}")
+    if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
+        errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
+    if member_count < 2:
+        errors.append(f"work unit {unit_id} {shape} decomposition must map at least two leaves")
+
+
 def _decomposition_errors(
     unit_leaves: dict[str, list[dict[str, Any]]],
     unit_records: dict[str, tuple[int, dict[str, Any]]],
@@ -1575,20 +1596,16 @@ def _decomposition_errors(
                 errors.append(f"work unit {unit_id} single decomposition must map exactly one leaf")
             continue
         if shape == "parallel":
-            if set(decomposition) != {"shape", "basis", "rationale"}:
-                errors.append(
-                    f"{prefix} for parallel must have exactly shape, basis, and rationale"
-                )
-            if decomposition.get("basis") != "parallel_independence":
-                errors.append(f"{prefix}.basis must be parallel_independence for parallel")
-            if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
-                errors.append(
-                    f"{prefix}.rationale must be a non-empty string from 1 to 240 characters"
-                )
-            if len(members) < 2:
-                errors.append(
-                    f"work unit {unit_id} parallel decomposition must map at least two leaves"
-                )
+            _grouped_decomposition_errors(
+                shape,
+                prefix,
+                unit_id,
+                decomposition,
+                len(members),
+                decomposition.get("basis") == "parallel_independence",
+                "parallel_independence",
+                errors,
+            )
             member_ids = {hashable(member.get("id")) for member in members}
             if any(
                 set(dependencies.get(hashable(member.get("id")), [])) & member_ids
@@ -1618,20 +1635,16 @@ def _decomposition_errors(
             if len(batches_in_unit) != len(set(batches_in_unit)):
                 errors.append(f"work unit {unit_id} parallel leaves must not share a batch")
             continue
-        if set(decomposition) != {"shape", "basis", "rationale"}:
-            errors.append(
-                f"{prefix} for checkpointed must have exactly shape, basis, and rationale"
-            )
-        if hashable(decomposition.get("basis")) not in {"failure_isolation", "rollback_boundary"}:
-            errors.append(
-                f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed"
-            )
-        if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
-            errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
-        if len(members) < 2:
-            errors.append(
-                f"work unit {unit_id} checkpointed decomposition must map at least two leaves"
-            )
+        _grouped_decomposition_errors(
+            shape,
+            prefix,
+            unit_id,
+            decomposition,
+            len(members),
+            hashable(decomposition.get("basis")) in {"failure_isolation", "rollback_boundary"},
+            "failure_isolation or rollback_boundary",
+            errors,
+        )
         member_ids = {hashable(item.get("id")) for item in members}
         for member_index, member in enumerate(members):
             intra = [

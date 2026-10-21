@@ -25,6 +25,7 @@ __all__ = [
     "event",
     "initial_event",
     "safe_run_contents",
+    "safe_step_json_tree",
     "validate_usage_dir",
     "valid_usage_summary",
 ]
@@ -130,42 +131,9 @@ def safe_run_contents(directory: Path) -> None:
     handoff = directory / "series-handoff.json"
     if handoff.exists() and (handoff.is_symlink() or not handoff.is_file()):
         raise Error("unexpected series-handoff.json contents")
-    returns = directory / "returns"
-    if returns.exists():
-        if returns.is_symlink() or not returns.is_dir():
-            raise Error("unexpected returns contents")
-        for step_dir in returns.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected returns contents")
-            ident(step_dir.name, "return step id")
-            for returned in step_dir.iterdir():
-                if returned.is_symlink() or not returned.is_file() or returned.suffix != ".json":
-                    raise Error("unexpected returns contents")
-                uuid4(returned.stem, "return attempt id")
-    verifies = directory / "verifies"
-    if verifies.exists():
-        if verifies.is_symlink() or not verifies.is_dir():
-            raise Error("unexpected verifies contents")
-        for step_dir in verifies.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected verifies contents")
-            ident(step_dir.name, "verify step id")
-            for stored in step_dir.iterdir():
-                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
-                    raise Error("unexpected verifies contents")
-                uuid4(stored.stem, "verify id")
-    stored_packets = directory / "handoffs"
-    if stored_packets.exists():
-        if stored_packets.is_symlink() or not stored_packets.is_dir():
-            raise Error("unexpected handoffs contents")
-        for step_dir in stored_packets.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected handoffs contents")
-            ident(step_dir.name, "handoff step id")
-            for stored in step_dir.iterdir():
-                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
-                    raise Error("unexpected handoffs contents")
-                uuid4(stored.stem, "handoff attempt id")
+    safe_step_json_tree(directory / "returns", "returns", "return step id", "return attempt id")
+    safe_step_json_tree(directory / "verifies", "verifies", "verify step id", "verify id")
+    safe_step_json_tree(directory / "handoffs", "handoffs", "handoff step id", "handoff attempt id")
     results = directory / "worktree-results"
     if results.exists():
         if results.is_symlink() or not results.is_dir():
@@ -198,6 +166,22 @@ def safe_run_contents(directory: Path) -> None:
     usage = directory / "usage"
     if usage.exists():
         validate_usage_dir(usage)
+
+
+def safe_step_json_tree(root: Path, name: str, step_label: str, child_label: str) -> None:
+    """Fail closed unless `root` is absent or holds only step dirs of `<uuid4>.json` files."""
+    if not root.exists():
+        return
+    if root.is_symlink() or not root.is_dir():
+        raise Error(f"unexpected {name} contents")
+    for step_dir in root.iterdir():
+        if step_dir.is_symlink() or not step_dir.is_dir():
+            raise Error(f"unexpected {name} contents")
+        ident(step_dir.name, step_label)
+        for child in step_dir.iterdir():
+            if child.is_symlink() or not child.is_file() or child.suffix != ".json":
+                raise Error(f"unexpected {name} contents")
+            uuid4(child.stem, child_label)
 
 
 def validate_usage_dir(usage: Path) -> None:

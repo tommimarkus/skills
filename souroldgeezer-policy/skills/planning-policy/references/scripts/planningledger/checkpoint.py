@@ -20,6 +20,7 @@ from .core import (
     Error,
     JsonObject,
     JsonValue,
+    bounded_text,
     canon,
     dependency_order,
     digest,
@@ -27,6 +28,7 @@ from .core import (
     parent,
     read_bounded_json,
     read_json,
+    read_jsonl,
     rel,
     require_sha256,
     required_file,
@@ -187,9 +189,7 @@ def validate_steps(data: JsonObject, leafs: dict[str, JsonObject]) -> None:
             or not isinstance(assignment, dict)
             or set(assignment) != assignment_fields
             or assignment.get("agent_id") != step.get("agent_id")
-            or not isinstance(assignment.get("harness"), str)
-            or not 1 <= len(assignment["harness"]) <= 160
-            or not assignment["harness"].strip()
+            or not bounded_text(assignment.get("harness"), 160)
             or not isinstance(step.get("retry_remediation_path"), str)
             or not isinstance(step.get("retry_remediation_sha256"), str)
             or bool(step["retry_remediation_path"]) != bool(step["retry_remediation_sha256"])
@@ -197,9 +197,7 @@ def validate_steps(data: JsonObject, leafs: dict[str, JsonObject]) -> None:
             raise Error("blocked:plan_tampered")
         binding = step.get("capability_binding")
         if (
-            not isinstance(assignment.get("model_or_alias"), str)
-            or not 1 <= len(assignment["model_or_alias"]) <= 160
-            or not assignment["model_or_alias"].strip()
+            not bounded_text(assignment.get("model_or_alias"), 160)
             or not isinstance(binding, dict)
             or digest(binding) != step.get("capability_binding_sha256")
             or not valid_stored_binding(
@@ -261,15 +259,7 @@ def validate_events(directory: Path, data: JsonObject) -> None:
         "record-changeset",
         "restack",
     }
-    try:
-        lines = path.read_text().splitlines()
-    except OSError as exc:
-        raise Error("invalid run events") from exc
-    for line in lines:
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise Error("invalid run event") from exc
+    for value in read_jsonl(path, "invalid run events", "invalid run event"):
         if (
             not isinstance(value, dict)
             or value.get("sequence") != previous + 1
@@ -427,17 +417,9 @@ def valid_remediation(value: JsonValue) -> JsonObject:
     for field in ("diagnosis", "remediation_action"):
         if not isinstance(value[field], str) or not value[field] or len(value[field]) > 480:
             raise Error(f"retry remediation requires bounded {field}")
-    if (
-        not isinstance(value["next_agent_id"], str)
-        or not 1 <= len(value["next_agent_id"]) <= 128
-        or not value["next_agent_id"].strip()
-    ):
+    if not bounded_text(value["next_agent_id"], 128):
         raise Error("retry remediation requires bounded next_agent_id")
-    if (
-        not isinstance(value["next_harness"], str)
-        or not 1 <= len(value["next_harness"]) <= 160
-        or not value["next_harness"].strip()
-    ):
+    if not bounded_text(value["next_harness"], 160):
         raise Error("retry remediation requires bounded next_harness")
     if ("evidence_path" in value) != ("sha256" in value):
         raise Error("retry remediation evidence digest pair required")

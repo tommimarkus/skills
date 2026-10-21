@@ -18,6 +18,7 @@ from .core import (
     Error,
     JsonObject,
     JsonValue,
+    bounded_text,
     canon,
     digest,
     ident,
@@ -78,8 +79,20 @@ __all__ = [
     "build_worker_handoff",
     "step_handoff",
     "handoff",
+    "newly_ready_ids",
     "dispatch",
 ]
+
+
+def newly_ready_ids(data: JsonObject, batches: Batches, sid: str) -> list[JsonValue]:
+    """Pending steps that depend on `sid` and are now ready, in plan order."""
+    return [
+        candidate["id"]
+        for candidate in ordered_steps(data["steps"])
+        if candidate["status"] == "pending"
+        and sid in candidate["dependencies"]
+        and ready_candidate(data, candidate, batches)
+    ]
 
 
 def next_after_transition(
@@ -104,13 +117,7 @@ def next_after_transition(
         )
     if step["status"] == "integrated":
         value: JsonObject = {"command": land_command(data, sid)}
-        unblocked = [
-            candidate["id"]
-            for candidate in ordered_steps(data["steps"])
-            if candidate["status"] == "pending"
-            and sid in candidate["dependencies"]
-            and ready_candidate(data, candidate, batches)
-        ]
+        unblocked = newly_ready_ids(data, batches, sid)
         if unblocked:
             # Dispatch keeps the critical path moving; cleanup waits behind it.
             value = {
@@ -119,13 +126,7 @@ def next_after_transition(
                 "cleanup_step_id": sid,
             }
         return bounded_action_next(value, "ready_step_ids")
-    newly_unblocked = [
-        candidate["id"]
-        for candidate in ordered_steps(data["steps"])
-        if candidate["status"] == "pending"
-        and sid in candidate["dependencies"]
-        and ready_candidate(data, candidate, batches)
-    ]
+    newly_unblocked = newly_ready_ids(data, batches, sid)
     if newly_unblocked:
         return bounded_action_next(
             {
@@ -389,7 +390,7 @@ def build_worker_handoff(
     if leaf is None or work_unit is None:
         raise Error("worker handoff has no assigned leaf or work unit")
     agent_id = step.get("agent_id")
-    if not isinstance(agent_id, str) or not 1 <= len(agent_id) <= 128 or not agent_id.strip():
+    if not bounded_text(agent_id, 128):
         raise Error("worker handoff requires a bounded agent_id")
     attempt_id = uuid4(step.get("attempt_id"), "attempt id")
     assignment = step.get("assignment")
@@ -402,12 +403,8 @@ def build_worker_handoff(
     host, executor = current.get("harness"), current.get("model_or_alias")
     if (
         current.get("agent_id") != agent_id
-        or not isinstance(host, str)
-        or not 1 <= len(host) <= 160
-        or not host.strip()
-        or not isinstance(executor, str)
-        or not 1 <= len(executor) <= 160
-        or not executor.strip()
+        or not bounded_text(host, 160)
+        or not bounded_text(executor, 160)
         or step.get("current_tier") not in PORTABLE_TIERS
     ):
         raise Error("worker handoff has an invalid current assignment")

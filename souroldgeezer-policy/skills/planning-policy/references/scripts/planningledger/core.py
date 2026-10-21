@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeAlias
@@ -32,6 +33,8 @@ __all__ = [
     "read_bounded_bytes",
     "read_bounded_json",
     "read_json",
+    "read_jsonl",
+    "bounded_text",
     "required_file",
     "require_sha256",
     "proxy_tokens",
@@ -200,6 +203,24 @@ def read_bounded_json(path: str | Path, limit: int, invalid: str, oversize: str)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise Error(invalid) from exc
     return value
+
+
+def read_jsonl(path: Path, unreadable: str, invalid: str) -> Iterator[JsonValue]:
+    """Yield each line of a JSON-lines file parsed, so a caller's checks stay line by line."""
+    try:
+        lines = path.read_text().splitlines()
+    except OSError as exc:
+        raise Error(unreadable) from exc
+    for line in lines:
+        try:
+            yield json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise Error(invalid) from exc
+
+
+def bounded_text(value: object, maximum: int) -> bool:
+    """A string of 1..maximum characters that is not blank."""
+    return isinstance(value, str) and 1 <= len(value) <= maximum and bool(value.strip())
 
 
 def required_file(directory: Path, name: str, message: str) -> Path:
