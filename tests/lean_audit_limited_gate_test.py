@@ -12,6 +12,7 @@ BEHAVIOR_CASES = (
 ENGINE_LEDGER = REPO_ROOT / "tests/lean_engine_ledger.jsonl"
 CODE_LEDGER = REPO_ROOT / "tests/lean_code_ledger.jsonl"
 WORKFLOW_LEDGER = REPO_ROOT / "tests/lean_workflow_ledger.jsonl"
+PROCEDURE = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/references/procedures/code-adjudication.md"
 
 
 def rows(path: Path) -> dict[str, dict]:
@@ -72,6 +73,49 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
         self.assertFalse(code["LCD-T0004"]["expect_block"])
         self.assertIn("LA-RUN-1", workflow["workflow-unbounded-raw"]["expected_codes"])
         self.assertEqual(workflow["workflow-bounded-compact"]["expected_codes"], [])
+
+    def test_directory_scope_is_limited_and_mixed_scope_emits_no_gate(self) -> None:
+        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
+        self.assertIn(
+            "any scope short of a full-repo enumeration (a file, named files, a diff, a directory,"
+            " or a mix) derives `limited`",
+            skill,
+        )
+        self.assertIn("only a full-repo enumeration derives `reasonable`", skill)
+        self.assertIn(
+            "any scope that contains a directory is a rollup and emits no gate, even when it also"
+            " names files; its scope line lists the named files",
+            skill,
+        )
+
+    def test_carve_out_disclosure_lists_suppressed_pairs_never_a_bare_zero(self) -> None:
+        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
+        self.assertIn(
+            "a carve-out disclosure names its rule and lists the engine's `coverage.suppressed`"
+            " in-scope pairs, or the `by_rule` counts when truncated",
+            skill,
+        )
+        self.assertIn("a zero is never reported bare while `suppressed.count` is nonzero", skill)
+
+    def test_code_adjudication_procedure_is_linked_and_states_its_four_rules(self) -> None:
+        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
+        self.assertIn("](references/procedures/code-adjudication.md)", skill)
+        text = " ".join(PROCEDURE.read_text(encoding="utf-8").split())
+        self.assertIn("LA-CODE-DUP-", text)
+        self.assertIn("messages, limits, names and constants are parameters", text)
+        self.assertIn("Clear a candidate only for genuinely different contracts", text)
+        self.assertIn("compare the copies with any canonical sibling they cite", text)
+        self.assertIn("Apply one criterion to every candidate", text)
+
+    def test_new_behavior_cases_exist(self) -> None:
+        cases = rows(BEHAVIOR_CASES)
+        for case_id in (
+            "lean-audit-behavior-mixed-scope-limited",
+            "lean-audit-behavior-carve-out-disclosure",
+            "lean-audit-behavior-clone-adjudication",
+        ):
+            with self.subTest(case_id=case_id):
+                self.assertEqual(cases[case_id]["source_kind"], "synthetic")
 
 
 if __name__ == "__main__":

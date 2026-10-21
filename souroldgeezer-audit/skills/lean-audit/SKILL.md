@@ -50,9 +50,10 @@ fact-vs-inference, and severity, see
 ## One adaptive path (no mode dispatch)
 
 This skill has no Quick/Deep modes — its detection is deterministic, so it runs
-one path and DERIVES the assurance level from coverage: a file or diff scope →
-`limited`; a full-repo enumeration → `reasonable`. State the assurance on one
-line (audit-craft §4, by named principle — as `ip-hygiene` does).
+one path and DERIVES the assurance level from coverage: any scope short of a
+full-repo enumeration (a file, named files, a diff, a directory, or a mix)
+derives `limited`; only a full-repo enumeration derives `reasonable`. State the
+assurance on one line (audit-craft §4, by named principle — as `ip-hygiene` does).
 
 The surface-gated cost lenses and explicit opt-in lenses do not introduce a
 second mode; coverage still derives assurance.
@@ -97,6 +98,7 @@ second mode; coverage still derives assurance.
   proposal. It carries the Locate → Propose → Fidelity-verify → Emit protocol,
   the shadow-workspace mechanics, the rejection taxonomy, and the emit fields.
   The procedure owns `LA-MIN-*`; do not restate it.
+- Load [`references/procedures/code-adjudication.md`](references/procedures/code-adjudication.md) when the code lens nominates `LA-CODE-DUP-*` candidates to clear or report.
 - Cite core waste codes from [`references/smell-catalog.md`](references/smell-catalog.md)
   and conditional-lens codes from their owning procedure; never restate either.
 
@@ -122,7 +124,9 @@ second mode; coverage still derives assurance.
    in-scope paths; never invent or silently suppress engine findings.
 2b. If source files are in scope, run the same host-specific forms with
    `code_lens.py`; keep clone pairs where either path is in scope. Exit handling
-   matches step 2. Otherwise record `no source surfaces — code lens silent`.
+   matches step 2. When it nominates candidates, adjudicate them with
+   [`references/procedures/code-adjudication.md`](references/procedures/code-adjudication.md).
+   Otherwise record `no source surfaces — code lens silent`.
 3. Add the judgment-only checks from [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) —
    `LA-STALE-2` (prose describing a removed/renamed structure), `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context), and `LA-VERBOSE-2`
@@ -149,11 +153,12 @@ second mode; coverage still derives assurance.
    Combine severity × risk into the P0–P3 worklist (audit-craft §3 grid). Per-use
    findings carry their own dial-adjusted priority (see procedure); merge them into
    the worklist under the `LA-PUC-*` band with their separate priority rationale.
-7. Report against what was actually examined. Derive assurance from the in-scope coverage: a file / named-files / diff scope → `limited`; a full-repo enumeration → `reasonable`. A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
+7. Report against what was actually examined. Derive assurance from the in-scope coverage as set out in "One adaptive path". A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
 
    **Limited-scope gate.** Emit `limited-scope gate: <status>` only for a file,
-   named-file, or diff coverage — never for a directory or whole-repo rollup.
-   Derive it after scope filtering and declared carve-outs; never derive it from
+   named-file, or diff coverage — never for a directory or whole-repo rollup: any scope that contains a
+   directory is a rollup and emits no gate, even when it also names files; its
+   scope line lists the named files. Derive it after scope filtering and declared carve-outs; never derive it from
    a directory-wide engine exit alone. If a confirmed in-scope block exists,
    `fail` wins: high-band `LA-DUP-1`, `LA-DUP-2`, `LA-CODE-DUP-1`, `LA-RUN-2`,
    or `LA-RUN-3` when the expected lane exceeds declared capacity. Otherwise
@@ -184,7 +189,7 @@ and source clones become `LA-MIN-3` referrals.
   explicitly requested. Separate audit from repair (audit-craft §2). The
   minify lens is that explicit-request path — and even then it only PRODUCES
   the edit (see the minify bullet below); it never applies one.
-- Intentional structural duplication — declared via `[[carve_out]]` (optional `except` globs exempt either path of a pair from that entry) / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding. Run-viability catalog/example files may instead use the exact file-wide `<!-- lean-audit:workflow-intentional — rationale -->` HTML comment defined by `run-viability.md`; it counts only outside fenced code and does not belong on runnable entry workflows.
+- Intentional structural duplication — declared via `[[carve_out]]` (optional `except` globs exempt either path of a pair from that entry) / `exempt_paths` in the registry, or marked `<!-- lean-audit:sync-intentional -->` — is exempt; report it as disclosed, not as a finding: a carve-out disclosure names its rule and lists the engine's `coverage.suppressed` in-scope pairs, or the `by_rule` counts when truncated; a zero is never reported bare while `suppressed.count` is nonzero. Run-viability catalog/example files may instead use the exact file-wide `<!-- lean-audit:workflow-intentional — rationale -->` HTML comment defined by `run-viability.md`; it counts only outside fenced code and does not belong on runnable entry workflows.
 - Suppress false positives: before asserting a finding, confirm the matched
   passage is independent duplication, not a quote, cross-reference, or code
   example; if the duplication claim is not supported by evidence, note it as a non-finding with the reason.
