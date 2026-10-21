@@ -502,13 +502,31 @@ same validator call emits `planning-cost-advisory-v1` within 600 proxy tokens.
 Unknown model-token estimates stay unknown; proxy, declared-model-token, and
 provider-measured lanes never mix. Three advisory codes flag planning-cost signals:
 `PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
-mechanical/standard pair), `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20
+mechanical/standard pair, or a pure distinct-owner chain; it reports critical path
+and width), `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20
 declared work-unit weight), and `PLANCOST-MICROLEAF-RISK` (merge candidates
 into their work unit's cohesive outcome unless its v5 decomposition evidence
 justifies the split). Groom microleaves first; if the plan remains over the
 scale signal, slice it into successive plans. Grooming acts on all three signals
 before approval, never as a validity gate. The human plan renders compact **Execution
 economics** with `tracing: off`; cost findings never govern execution.
+
+Plans declare `precision`: `standard` (default) lets `write_set` name areas,
+makes `read_set` optional, and records a change outside the write set for the
+verifier to judge; `strict` requires exact paths and a non-empty `read_set`,
+blocks on an unowned pinning test, and hard-stops on an out-of-set change. The
+ledger stamps `precision_policy` per run; a retained unstamped run keeps the hard
+rejection. `validate --pin-roots` scans for tests pinning a leaf's write paths
+that no leaf owns (`PLANSCOPE-UNOWNED-PIN`: advisory standard, blocking strict).
+`init-v5 --host H --evidence TEXT` derives assignments and the capability
+binding from `references/host-tiers.json`, and `dispatch` stores each packet and
+returns a generated worker prompt that the parent passes to the tier agent
+unchanged. In `leaf_verify_v1` runs (`pipeline_policy: provisional_v1`) a
+dependent may start from a completed prerequisite whose verify packet is issued;
+`land` keeps dependency order, a prerequisite that leaves completed makes
+dependents stale, and `restack` rebases them, carrying a verdict only for an
+unchanged patch, with failures routed to the repairable
+`blocked:upstream_changed`.
 
 A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
 one worktree owner dispatch once, in leaves-array order, in that one shared

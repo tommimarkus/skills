@@ -89,6 +89,17 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-verify-style-only-no-block",
             "planning-policy-behavior-verify-closeout-only-opt-out",
             "planning-policy-behavior-verify-batch-one-dispatch",
+            "planning-policy-behavior-precision-standard-outside-lands",
+            "planning-policy-behavior-precision-strict-outside-hard-stop",
+            "planning-policy-behavior-precision-strict-init-unowned-pins",
+            "planning-policy-behavior-precision-pin-scan-advises-standard",
+            "planning-policy-behavior-chain-distinct-owner-batch",
+            "planning-policy-behavior-derived-setup-host-init",
+            "planning-policy-behavior-generated-prompt-unchanged",
+            "planning-policy-behavior-pipeline-dependent-starts-during-verify",
+            "planning-policy-behavior-pipeline-land-order",
+            "planning-policy-behavior-pipeline-reject-stale-restack",
+            "planning-policy-behavior-pipeline-restack-conflict-upstream-changed",
         }
         self.assertTrue(required.issubset(self.behavior))
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]

@@ -530,3 +530,21 @@ The synthetic `planning-policy-behavior-verify-*` cases cover pass, coverage-gap
 retry, silent removal, over-budget, outside write set, inconclusive, style-only,
 closeout-only, and batch dispatch. They test the documented workflow, not model
 reliability. No third-party text is copied.
+
+## Throughput evidence
+
+The 2026-10-07 friction review traced most mid-run stops to one root cause: an
+immutable plan turns prediction errors into stops, and path-exact write sets are
+the commonest case, since a builder that needs one adjacent file halts the leaf.
+That is why standard precision records out-of-area paths for the verifier instead
+of stopping, and why strict precision stays an explicit opt-in.
+
+The 2026-10-21 run had seven leaves with a single parallel pair, spent roughly
+six to ten parent calls per leaf on setup and lifecycle, and found two pinning
+tests only mid-run. Those observations motivate the pin scan before approval, the
+broadened chain advisory, derived setup, the generated worker prompt, and letting
+a dependent build while its prerequisite's verifier runs.
+
+The synthetic `planning-policy-behavior-precision-*`, `chain-*`, `derived-*`,
+`generated-*`, and `pipeline-*` cases cover that workflow. They test the
+documented behavior, not model reliability. No third-party text is copied.

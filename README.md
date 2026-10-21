@@ -35,6 +35,11 @@ returns pass, reject, or inconclusive. A reject retries through the existing
 policy. Plans can opt out with `verification: closeout-only`, and the footer
 reports a `Verify:` line. See the
 [verifier procedure](souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md).
+Plans default to `standard` precision, which lets write sets name areas and
+records out-of-area changes for the verifier, with `strict` available as an
+opt-in for exact paths. Builders proceed while verifiers run: a dependent can
+start from a prerequisite that is awaiting verification, and landing still
+follows dependency order.
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or
