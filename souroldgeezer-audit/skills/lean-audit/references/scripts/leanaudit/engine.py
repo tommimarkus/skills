@@ -359,24 +359,55 @@ def strip_frontmatter(text: str) -> str:
     return text
 
 
-def scan_bloat(files: dict[str, str]) -> list[Finding]:
-    """Flag SKILL.md bodies (frontmatter stripped) that exceed BLOAT_BUDGET_LINES."""
-    findings: list[Finding] = []
+def _skill_body_budgets(
+    files: dict[str, str], reg: Registry | None
+) -> list[tuple[str, int, int, str | None]]:
+    """(path, body_lines, limit, rationale) per SKILL.md; rationale is set only when
+    the exact path's declared [[skill_budget]] supplied the limit."""
+    declared = {p: (n, why) for p, n, why in reg.skill_budgets} if reg else {}
+    rows: list[tuple[str, int, int, str | None]] = []
     for path, text in files.items():
         if posixpath.basename(path) != "SKILL.md":
             continue
         lines = len(strip_frontmatter(text).splitlines())
-        if lines > BLOAT_BUDGET_LINES:
+        if path in declared:
+            rows.append((path, lines, declared[path][0], declared[path][1]))
+        else:
+            rows.append((path, lines, BLOAT_BUDGET_LINES, None))
+    return rows
+
+
+def scan_bloat(files: dict[str, str], reg: Registry | None = None) -> list[Finding]:
+    """Flag SKILL.md bodies (frontmatter stripped) over their limit: the exact path's
+    declared [[skill_budget]] lines, else BLOAT_BUDGET_LINES."""
+    findings: list[Finding] = []
+    for path, lines, limit, why in _skill_body_budgets(files, reg):
+        if lines > limit:
+            basis = f"declared budget {limit} lines ({why})" if why is not None else f"{limit}"
             findings.append(
                 _flag(
                     "LA-BLOAT-1",
                     "warn",
                     path,
-                    f"SKILL.md body is {lines} lines (> {BLOAT_BUDGET_LINES}); "
+                    f"SKILL.md body is {lines} lines (> {basis}); "
                     "move heavy detail to references/.",
                 )
             )
     return findings
+
+
+def _declared_budget_coverage(
+    files: dict[str, str], reg: Registry, in_scope: set[str]
+) -> list[dict[str, object]]:
+    """In-scope SKILL.md bodies above the default budget that sit within a declared one."""
+    return sorted(
+        (
+            {"path": path, "lines": limit, "body_lines": lines, "rationale": why}
+            for path, lines, limit, why in _skill_body_budgets(files, reg)
+            if why is not None and path in in_scope and BLOAT_BUDGET_LINES < lines <= limit
+        ),
+        key=lambda row: str(row["path"]),
+    )
 
 
 # --- LA-VERBOSE-1: deterministic verbosity nominator ---------------------------
@@ -569,6 +600,12 @@ def _emit(findings: list[Finding], fmt: str, coverage: dict[str, object] | None 
                     f"listed={len(suppressed['pairs'])} "
                     f"truncated={str(suppressed['truncated']).lower()}"
                 )
+            budgets = coverage.get("declared_budgets")
+            if isinstance(budgets, list):
+                print(
+                    f"declared budgets: count={len(budgets)}"
+                    + "".join(f" {b['path']}" for b in budgets)
+                )
         for f in findings:
             print(
                 f'{f.code} [{f.severity}] {f.path} §"{f.heading}" '
@@ -640,7 +677,7 @@ def main(argv: list[str]) -> int:
                 scan(files, reg, suppressions)
                 + scan_stale_refs(files, root)
                 + find_dead_refs(files, reg)
-                + scan_bloat(files)
+                + scan_bloat(files, reg)
                 + scan_verbosity(files, reg)
             )
             findings = [
@@ -649,6 +686,7 @@ def main(argv: list[str]) -> int:
                 if finding.path in in_scope or finding.matched_path in in_scope
             ]
             coverage["suppressed"] = _suppressed_coverage(suppressions, set(in_scope))
+            coverage["declared_budgets"] = _declared_budget_coverage(files, reg, set(in_scope))
     # Each stable CLI keeps its own named error prefix and exit contract.
     # lean-audit:dup-intentional:begin
     except (OSError, ValueError, tomllib.TOMLDecodeError, re.error) as exc:

@@ -409,6 +409,92 @@ class SuppressedCoverage(unittest.TestCase):
         self.assertNotIn("coverage", json.loads(r.stdout))
 
 
+class DeclaredSkillBudget(unittest.TestCase):
+    """A reviewed [[skill_budget]] raises the LA-BLOAT-1 limit for one exact path."""
+
+    WHY = "one cohesive workflow"
+
+    def _skill(self, n: int) -> str:
+        return "---\nname: x\n---\n" + "\n".join(f"line {i}" for i in range(n))
+
+    def _reg(self, eng, toml: str):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".lean-audit.toml"
+            path.write_text(toml, encoding="utf-8")
+            return eng.load_registry(path)
+
+    def _budget(self, eng, lines: str = "300", rationale: str = f'"{WHY}"'):
+        return self._reg(
+            eng, f'[[skill_budget]]\npath = "x/SKILL.md"\nlines = {lines}\nrationale = {rationale}\n')
+
+    def test_body_at_or_under_declared_lines_passes(self):
+        eng = load_engine()
+        reg = self._budget(eng)
+        for n in (eng.BLOAT_BUDGET_LINES + 20, 300):
+            self.assertEqual(eng.scan_bloat({"x/SKILL.md": self._skill(n)}, reg), [])
+
+    def test_over_declared_lines_fires_and_cites_budget(self):
+        eng = load_engine()
+        found = eng.scan_bloat({"x/SKILL.md": self._skill(301)}, self._budget(eng))
+        self.assertEqual([f.code for f in found], ["LA-BLOAT-1"])
+        self.assertEqual(found[0].severity, "warn")
+        self.assertIn("declared budget 300 lines", found[0].action)
+        self.assertIn(self.WHY, found[0].action)
+
+    def test_other_path_keeps_default_limit(self):
+        eng = load_engine()
+        files = {"y/SKILL.md": self._skill(eng.BLOAT_BUDGET_LINES + 5)}
+        self.assertEqual(
+            [f.code for f in eng.scan_bloat(files, self._budget(eng))], ["LA-BLOAT-1"])
+
+    def test_invalid_entries_are_ignored(self):
+        eng = load_engine()
+        for lines, why in (("300", '""'), ("300", '"  "'), ("0", '"r"'), ("true", '"r"'),
+                           ('"300"', '"r"'), ("300", "5")):
+            reg = self._budget(eng, lines, why)
+            self.assertEqual(reg.skill_budgets, (), (lines, why))
+            files = {"x/SKILL.md": self._skill(eng.BLOAT_BUDGET_LINES + 5)}
+            self.assertEqual(len(eng.scan_bloat(files, reg)), 1)
+
+    def test_without_reg_unchanged(self):
+        eng = load_engine()
+        files = {"x/SKILL.md": self._skill(eng.BLOAT_BUDGET_LINES + 5)}
+        findings = eng.scan_bloat(files)
+        self.assertEqual(len(findings), 1)
+        self.assertNotIn("declared budget", findings[0].action)
+
+    def _scan(self, root: Path, *args: str) -> tuple[int, str]:
+        eng = load_engine()
+        out = io.StringIO()
+        with mock.patch.dict(eng.read_repo.__globals__, {"git_worktree_root": lambda _: None}), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = eng.main([*args, "--corpus-root", str(root)])
+        return code, out.getvalue()
+
+    def test_coverage_lists_only_in_scope_bodies_relying_on_budget(self):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name, n in (("a", eng.BLOAT_BUDGET_LINES + 20), ("b", 10), ("c", 400)):
+                (root / name).mkdir()
+                (root / name / "SKILL.md").write_text(self._skill(n), encoding="utf-8")
+            (root / ".lean-audit.toml").write_text(
+                "".join(f'[[skill_budget]]\npath = "{n}/SKILL.md"\nlines = 300\nrationale = "{self.WHY}"\n'
+                        for n in "abc"), encoding="utf-8")
+            _, out = self._scan(root, str(root), "--format", "json")
+            _, scoped = self._scan(root, str(root / "b"), "--format", "json")
+            _, text = self._scan(root, str(root))
+            (root / "empty").mkdir()
+            _, err = self._scan(root, str(root / "empty"), "--format", "json")
+        self.assertEqual(
+            json.loads(out)["coverage"]["declared_budgets"],
+            [{"path": "a/SKILL.md", "lines": 300, "body_lines": eng.BLOAT_BUDGET_LINES + 20,
+              "rationale": self.WHY}])
+        self.assertEqual(json.loads(scoped)["coverage"]["declared_budgets"], [])
+        self.assertEqual(text.splitlines()[2], "declared budgets: count=1 a/SKILL.md")
+        self.assertNotIn("declared_budgets", json.loads(err)["coverage"])
+
+
 class StaleRefs(unittest.TestCase):
     def test_broken_file_link(self):
         eng = load_engine()

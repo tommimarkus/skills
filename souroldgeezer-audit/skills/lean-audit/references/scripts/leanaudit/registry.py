@@ -51,6 +51,8 @@ class Registry:
     # Optional per-entry `except` globs, index-aligned with carve_outs; a pair is
     # not carved out when either path matches an entry's except list.
     carve_excepts: tuple[tuple[str, ...], ...] = ()
+    # Reviewed per-file SKILL.md body budgets: (exact repo-relative path, lines, rationale).
+    skill_budgets: tuple[tuple[str, int, str], ...] = ()
 
 
 def _parse_verbosity(data: dict[str, object]) -> VerbosityConfig:
@@ -102,6 +104,20 @@ def load_registry(path: Path | None) -> Registry:
         for c in entries
     )
     exempt = tuple(data.get("exempt_paths", []))
+    # Lenient: keep only entries with a non-empty path, an int (not bool) lines > 0,
+    # and a non-empty rationale; anything else is ignored, never aborts.
+    budgets = tuple(
+        (b["path"], b["lines"], b["rationale"])
+        for b in data.get("skill_budget", [])
+        if isinstance(b, dict)
+        and isinstance(b.get("path"), str)
+        and b["path"]
+        and isinstance(b.get("lines"), int)
+        and not isinstance(b["lines"], bool)
+        and b["lines"] > 0
+        and isinstance(b.get("rationale"), str)
+        and b["rationale"].strip()
+    )
     verbosity = _parse_verbosity(data.get("verbosity", {}))
     return Registry(
         canonical_homes=homes,
@@ -109,6 +125,7 @@ def load_registry(path: Path | None) -> Registry:
         exempt_paths=exempt,
         verbosity=verbosity,
         carve_excepts=excepts,
+        skill_budgets=budgets,
     )
 
 

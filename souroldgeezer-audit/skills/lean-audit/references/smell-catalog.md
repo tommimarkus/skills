@@ -48,7 +48,7 @@ pair does not close the outer region); an unclosed `:begin` runs to end of file.
   mentions. Severity: info. Source: engine.
 
 ## Context bloat — Lean: over-processing
-- `LA-BLOAT-1` — `SKILL.md` body exceeds the line budget (frontmatter excluded).
+- `LA-BLOAT-1` — `SKILL.md` body exceeds the line budget (frontmatter excluded); a reviewed `[[skill_budget]]` registry entry with a required rationale may raise the limit for one exact file.
   Severity: warn. Source: engine.
 - `LA-BLOAT-2` — heavy reference material (rubric / table / taxonomy) inlined in
   always-loaded context that belongs behind a load condition. Severity: warn.
