@@ -179,7 +179,8 @@ class CheckChangesetTest(ChangesetHarness):
         self.assertEqual(0, code, result)
         self.assertEqual(
             {"ok": True, "verdict": "pass", "lines": 2, "files": 1,
-             "limits": {"max_changed_lines": 150, "max_files": 6}, "outside": []},
+             "limits": {"max_changed_lines": 150, "max_files": 6}, "outside": [],
+             "outside_count": 0},
             result,
         )
 
@@ -207,7 +208,7 @@ class CheckChangesetTest(ChangesetHarness):
         code, result = self.check(packet)
         self.assertEqual(1, code, result)
         self.assertEqual("outside_write_set", result["verdict"])
-        self.assertEqual(8, len(result["outside"]))
+        self.assertEqual((8, 10), (len(result["outside"]), result["outside_count"]))
 
     def test_binary_counts_one_file_zero_lines_and_pure_rename_one_file(self):
         packet = self.started()

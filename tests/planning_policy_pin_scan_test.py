@@ -33,6 +33,15 @@ class PinScanTest(unittest.TestCase):
     def scan(self, plan, roots=("tests",)):
         return MODULE.validate(plan, pin_roots=list(roots), repo_root=self.root)
 
+    def test_bytecode_never_pins_or_counts_toward_basename_uniqueness(self):
+        self.write("src/mod.py")
+        self.write("tests/__pycache__/path_test.cpython-312.pyc", "src/mod.py")
+        self.write("tests/stale.pyc", "src/mod.py")
+        self.write("tests/__pycache__/mod.py", "twin")
+        self.write("tests/base_test.py", "import mod.py")
+        result = self.scan(plan_for(["src/mod.py"]))
+        self.assertEqual(["tests/base_test.py"], result["pin_scan"]["leaves"]["a"])
+
     def test_no_scan_without_roots(self):
         self.write("tests/t_test.py", "src/mod.py")
         self.assertNotIn("pin_scan", MODULE.validate(plan_for(["src/mod.py"])))

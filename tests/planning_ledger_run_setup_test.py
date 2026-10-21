@@ -115,6 +115,39 @@ class DerivedDispatchTest(DerivedHarness):
         self.assertEqual(0, code, result)
 
 
+class DerivedRetryRebindingTest(DerivedHarness):
+    def escalated_retry(self, *extra):
+        self.init_derived([leaf("alpha", "owner-a")], "--host", "claude-code", "--evidence", EVIDENCE)
+        packet = self.dispatch("alpha", "--create-from", "main")[1]["handoffs"][0]
+        stopped = {
+            "schema": "bounded-step-return-v1", "step_id": "alpha", "attempt_id": packet["attempt_id"],
+            "agent_id": packet["agent_id"], "status": "blocked", "changed_paths": [],
+            "acceptance": {"command": "uv run test", "exit_code": None, "summary": "stuck"},
+            "blockers": [{"code": "blocked:needs_higher_tier", "summary": "needs deeper reasoning"}],
+            "notes": [], "unstarted_remainder": [], "commit_hash": "",
+        }
+        (self.scratch / "return.json").write_text(json.dumps(stopped))
+        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
+                                 "--return-file", str(self.scratch / "return.json"))
+        self.assertEqual(0, code, result)
+        step = self.checkpoint()["steps"]["alpha"]
+        (self.scratch / "remediation.json").write_text(json.dumps({
+            "schema": "retry-remediation-v1", "step_id": "alpha", "prior_attempt_id": step["attempt_id"],
+            "prior_return_sha256": step["return_sha256"], "diagnosis": "needs deeper reasoning",
+            "remediation_action": "escalate", "executor_mode": "reuse", "next_agent_id": "worker",
+            "next_harness": "claude-code", "target_portable_tier": "analytical",
+        }))
+        return self.dispatch("alpha", "--retry", "--retry-remediation-file",
+                             str(self.scratch / "remediation.json"), *extra)
+
+    def test_host_run_derives_the_binding_for_the_escalated_tier(self):
+        code, result = self.escalated_retry()
+        self.assertEqual(0, code, result)
+        bound = self.checkpoint()["steps"]["alpha"]["capability_binding"]["bindings"][0]
+        self.assertEqual(("claude-code", "opus", [EVIDENCE]), (bound["host"], bound["executor"], bound["evidence"]))
+        self.assertEqual("opus", result["handoffs"][0]["executor"])
+
+
 class StrictInitPinTest(DerivedHarness):
     def init_strict(self, *extra):
         return self.init_derived(

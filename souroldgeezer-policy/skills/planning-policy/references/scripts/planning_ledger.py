@@ -200,7 +200,7 @@ VERIFY_HANDOFF_FIELDS = {
     "base_commit", "returned_commit", "budget", "changeset", "prior_verify", "return_schema",
 }
 # Added to a packet only for a run stamped with a precision policy.
-VERIFY_HANDOFF_OPTIONAL = {"outside_write_set"}
+VERIFY_HANDOFF_OPTIONAL = {"outside_write_set", "outside_write_set_count"}
 # The verifier is read-only: mechanical and standard builds get the standard
 # verifier, analytical and deep builds the analytical one.
 VERIFIER_AGENTS = {
@@ -1300,6 +1300,18 @@ def host_entry(host):
     return entry
 
 
+def host_step_binding(leaf, host, entry, tier_name, evidence):
+    """One step's binding item for a tier of a host's map; a skill need on a skill-less tier is unavailable."""
+    tier = entry["tiers"][tier_name]
+    requirements = leaf["capability_requirements"]
+    if not tier["skill"] and any(item["kind"] == "skill" for item in requirements["additional"]):
+        raise Error("blocked:capability_unavailable")
+    return {
+        "step_id": leaf["id"], "host": host, "executor": tier["model"],
+        "requirements": requirements, "evidence": evidence,
+    }
+
+
 def derived_setup(plan, host, evidence_text):
     """Derive the assignments and capability binding of a host run from the tier map."""
     entry = host_entry(host)
@@ -1309,16 +1321,10 @@ def derived_setup(plan, host, evidence_text):
     assigned, bound = [], []
     for leaf in plan["leaves"]:
         tier = entry["tiers"][leaf["portable_tier"]]
-        requirements = leaf["capability_requirements"]
-        if not tier["skill"] and any(item["kind"] == "skill" for item in requirements["additional"]):
-            raise Error("blocked:capability_unavailable")
+        bound.append(host_step_binding(leaf, host, entry, leaf["portable_tier"], evidence))
         assigned.append({
             "id": leaf["id"], "harness": host, "model_or_alias": tier["model"],
             "effort": tier["effort"], "worktree": f".worktrees/{leaf['worktree_owner']}",
-        })
-        bound.append({
-            "step_id": leaf["id"], "host": host, "executor": tier["model"],
-            "requirements": requirements, "evidence": evidence,
         })
     binding = {"schema": "planning-capability-binding-v1", "plan_sha256": digest(plan), "bindings": bound}
     return assigned, binding
@@ -2084,17 +2090,29 @@ def ready(args, directory, data, plan, batches, step, allow_provisional=False):
             stored["host"] != current["harness"]
             or stored["executor"] != current["model_or_alias"]
         ):
-            if not args.capability_binding_file:
+            if args.capability_binding_file:
+                replacement = capability_bindings(args.capability_binding_file, plan)
+                resolved = binding_for_step(
+                    replacement,
+                    step["id"],
+                    {
+                        "harness": current["harness"],
+                        "model_or_alias": current["model_or_alias"],
+                    },
+                )
+            elif data.get("host") and data["host"] == current["harness"]:
+                # A host run derives the re-binding exactly as init does, reusing the stored evidence.
+                leaf = next(item for item in plan["leaves"] if item["id"] == step["id"])
+                item = host_step_binding(
+                    leaf, data["host"], host_entry(data["host"]), step["current_tier"], stored["evidence"]
+                )
+                resolved = {
+                    "schema": step["capability_binding"]["schema"],
+                    "plan_sha256": step["capability_binding"]["plan_sha256"],
+                    "bindings": [item],
+                }
+            else:
                 raise Error("blocked:capability_unavailable")
-            replacement = capability_bindings(args.capability_binding_file, plan)
-            resolved = binding_for_step(
-                replacement,
-                step["id"],
-                {
-                    "harness": current["harness"],
-                    "model_or_alias": current["model_or_alias"],
-                },
-            )
             step["capability_binding"] = resolved
             step["capability_binding_sha256"] = digest(resolved)
     if step["status"] != "pending":
@@ -3616,6 +3634,7 @@ def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
         "files": files,
         "limits": {key: budget[key] for key in ("max_changed_lines", "max_files")},
         "outside": listed[:MAX_CHECK_OUTSIDE],
+        "outside_count": len(listed),
     }
 
 
@@ -3811,6 +3830,7 @@ def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
     }
     if data.get("precision_policy") is not None:
         value["outside_write_set"] = verdict["outside"]
+        value["outside_write_set_count"] = verdict["outside_count"]
     value["packet_sha256"] = verify_handoff_digest(value)
     if len(canon(value)) > MAX_VERIFY_HANDOFF:
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
@@ -4414,9 +4434,10 @@ def record(args):
         raise
     fingerprint = return_fingerprint(value)
     if standard_precision(data):
-        notes = outside_paths(value["changed_paths"], leafs[sid]["write_set"])[:MAX_CHECK_OUTSIDE]
-        if notes:
-            step["scope_notes"] = notes
+        outside = outside_paths(value["changed_paths"], leafs[sid]["write_set"])
+        step["scope_notes_count"] = len(outside)
+        if outside:
+            step["scope_notes"] = outside[:MAX_CHECK_OUTSIDE]
         else:
             step.pop("scope_notes", None)
     copy = directory / "returns" / sid / f"{step['attempt_id']}.json"
@@ -4439,6 +4460,8 @@ def record(args):
         fingerprint=fingerprint,
     )
     result = result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
+    if "scope_notes_count" in step:
+        result["scope_notes_count"] = step["scope_notes_count"]
     # Only the escalating policy owns retries, so only it can state eligibility.
     # A policy-less v2/v3 run keeps its original silent result.
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:

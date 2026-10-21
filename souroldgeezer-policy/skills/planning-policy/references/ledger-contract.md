@@ -73,12 +73,14 @@ or `strict_v1`; any other value fails ledger load, and a retained run without th
 stamp keeps the hard scope rejection. Worker packets in stamped runs carry
 `precision`. Under `standard_v1`, `validate-return` and `record-return` accept
 `changed_paths` outside the write set; `record-return` stores at most 8 as
-`scope_notes` and the completed `next` block carries `outside_paths`.
-`check-changeset` lists committed outside paths in `outside` with `ok` still true
+`scope_notes` (with `scope_notes_count`, the full count, also in `record-return`'s
+result) and the completed `next` block carries `outside_paths`.
+`check-changeset` lists committed outside paths in `outside` (capped at 8, with
+the full `outside_count`) with `ok` still true
 and verdict `pass` unless the budget fails; an uncommitted outside path remains
 `outside_write_set`, and `record-changeset` refuses an outside-only result as
 nothing to record. The verify packet gains `outside_write_set` (at most 8 paths)
-for the verifier's scope-creep check. `strict_v1` keeps the scope rejection.
+and `outside_write_set_count` for the verifier's scope-creep check. `strict_v1` keeps the scope rejection.
 
 `references/host-tiers.json` (`planning-host-tiers-v1`) is the single tier map
 for `claude-code` and `codex`: model and effort per tier, a `skill` flag, and
@@ -92,7 +94,11 @@ additional skill requirement on a tier whose `skill` is false is
 `blocked:capability_unavailable`. A strict plan needs `--pin-roots` at init and
 is refused, listing the unowned pins, when the pin scan reports any. In a run
 initialized with `--host`, `dispatch` defaults `--model-or-alias` to the map
-entry for the step's current tier; an explicit value must equal it.
+entry for the step's current tier; an explicit value must equal it. A tier-escalated
+`dispatch --retry` there without `--capability-binding-file` derives the step binding
+as init does (host, the tier's model as executor, the leaf's
+`capability_requirements`, the stored binding evidence); an explicit file still wins
+and must match exactly.
 
 `dispatch` stores each issued packet at
 `<run>/handoffs/<step>/<attempt_id>.json` and each handoff entry gains an

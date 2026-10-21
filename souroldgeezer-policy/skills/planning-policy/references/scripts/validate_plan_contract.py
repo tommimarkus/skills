@@ -333,11 +333,15 @@ def write_set_covers(write_set: list[Any], path: str) -> bool:
 
 
 def _walk_files(base: Path) -> list[Path]:
-    """Regular files below base, skipping hidden directories, node_modules, and symlinks."""
+    """Regular files below base, skipping hidden directories, node_modules, bytecode, and symlinks."""
     found: list[Path] = []
     for directory, names, files in os.walk(base):
-        names[:] = sorted(name for name in names if not name.startswith(".") and name != "node_modules")
+        names[:] = sorted(
+            name for name in names if not name.startswith(".") and name not in {"node_modules", "__pycache__"}
+        )
         for name in sorted(files):
+            if name.endswith(".pyc"):
+                continue
             path = Path(directory) / name
             if path.is_file() and not path.is_symlink():
                 found.append(path)

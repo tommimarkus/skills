@@ -78,6 +78,8 @@ class PrecisionReturnTest(PrecisionHarness):
         code, result = self.record_return(packet, paths)
         self.assertEqual(0, code, result)
         self.assertEqual(8, len(self.checkpoint()["steps"]["alpha"]["scope_notes"]))
+        self.assertEqual((12, 12), (self.checkpoint()["steps"]["alpha"]["scope_notes_count"],
+                                    result["scope_notes_count"]))
         self.assertLessEqual(ledger.proxy_tokens(result["next"]), 120)
 
     def test_strict_and_unstamped_runs_keep_the_hard_scope_rejection(self):
@@ -125,14 +127,15 @@ class PrecisionChangesetTest(PrecisionHarness):
         code, issued = self.verify_handoff()
         self.assertEqual(0, code, issued)
         verify = issued["handoffs"][0]
-        self.assertEqual([OUTSIDE], verify["outside_write_set"])
+        self.assertEqual(([OUTSIDE], 1), (verify["outside_write_set"], verify["outside_write_set_count"]))
         self.assertEqual(0, self.validate_verify(verify, self.verify_return(verify))[0])
 
     def test_verify_packet_outside_list_is_empty_when_none(self):
         self.completed()
         code, issued = self.verify_handoff()
         self.assertEqual(0, code, issued)
-        self.assertEqual([], issued["handoffs"][0]["outside_write_set"])
+        self.assertEqual(([], 0), (issued["handoffs"][0]["outside_write_set"],
+                                   issued["handoffs"][0]["outside_write_set_count"]))
 
 
 if __name__ == "__main__":

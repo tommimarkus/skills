@@ -28,7 +28,8 @@ commit, and never re-run the test suite or the acceptance command; the packet's
    the task asking for it.
 4. Scope creep: no unrequested change inside the write set. For each
    `outside_write_set` path (committed outside the write set under standard
-   precision), reject only when the task did not require it.
+   precision), reject only when the task did not require it;
+   `outside_write_set_count` above the list length means the list is truncated.
 5. Acceptance: the acceptance command actually exercises the change.
 
 ## Rejection gate

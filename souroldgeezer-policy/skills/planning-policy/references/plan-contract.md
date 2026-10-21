@@ -36,7 +36,7 @@ modes keep exact disjoint parallel write sets and the overlap ordering rule.
 
 `validate PLAN --pin-roots ROOT [ROOT ...] [--repo-root DIR]` adds a read-only
 pin scan: files under the repository-relative roots (hidden directories,
-`node_modules`, and files over 1 MiB skipped) that mention a leaf's write paths
+`node_modules`, `__pycache__`, `*.pyc`, and files over 1 MiB skipped) that mention a leaf's write paths
 (exact path, a repository-unique basename, or an area's literal prefix) but sit
 in no leaf's `write_set`. Each yields `PLANSCOPE-UNOWNED-PIN`: a warning under
 standard precision, an error (approval blocked) under strict. `pin_scan` reports
