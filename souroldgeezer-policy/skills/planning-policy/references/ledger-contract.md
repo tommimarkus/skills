@@ -154,16 +154,18 @@ hardcoded logic in the script, so a `transition` call's
 own error or success result is the authoritative statement of whether a given
 move is legal right now.
 
-A batch member's `blocked:environment` return does not halt the batch: the worker
-continues and later members' returns are recorded in member order. The parent
-re-runs that member's identical acceptance command at its returned commit
-wherever the environment allows (for example outside a sandbox, in a detached
-checkout under the primary checkout's `.worktrees/`): exit 0 records the member
-`completed` with the parent's acceptance evidence and a `verification_limit`
-note disclosing the stop; a non-environmental failure records
-`failed:acceptance`; if the parent cannot run it either, it records the
-`blocked:environment` return for a same-tier retry. The batch lands only once
-every member is `completed` or terminal.
+For any step, single or batch member, the parent repairs a `blocked:environment`
+return before recording it: it re-runs the step's identical acceptance command
+at the returned commit wherever the environment allows (for example outside a
+sandbox, in a detached checkout under the primary checkout's `.worktrees/`).
+Exit 0 records the step `completed` with the parent's acceptance evidence and a
+`verification_limit` note disclosing the stop; a non-environmental failure
+records `failed:acceptance`; if the parent cannot run it either, it records the
+`blocked:environment` return for a same-tier retry.
+
+A batch member's environment stop does not halt the batch: the worker continues
+to later members, returns are recorded in member order, and the batch lands
+only once every member is `completed` or terminal.
 
 A completed batch member becomes eligible to integrate only once no sibling
 member can still commit to their shared worktree — none is still active, and

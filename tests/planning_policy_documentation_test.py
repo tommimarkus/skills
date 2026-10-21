@@ -230,6 +230,18 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn("Repairable stops (`blocked:environment`", text)
             self.assertIn("only reasoning stops escalate", text)
 
+    def test_environment_stop_rerun_is_one_general_rule(self) -> None:
+        root = "souroldgeezer-policy/skills/planning-policy/"
+        ledger = " ".join(self.text(root + "references/ledger-contract.md").split())
+        for fact in (
+            "For any step, single or batch member, the parent repairs a `blocked:environment` return",
+            "it re-runs the step's identical acceptance command at the returned commit",
+            "a `verification_limit` note disclosing the stop",
+        ):
+            self.assertIn(fact, ledger)
+        adapters = " ".join(self.text(root + f"extensions/{a}.md") for a in ("claude-code", "codex"))
+        self.assertEqual(" ".join(adapters.split()).count("environment-stop rule"), 2)
+
     def test_craft_standard_preserves_declared_value_consumer_loop(self) -> None:
         standard = self.text("docs/skill-architecture.md")
         standard = " ".join(standard.split())

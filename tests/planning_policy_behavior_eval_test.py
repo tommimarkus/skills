@@ -77,6 +77,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-verify-closeout-only-opt-out",
             "planning-policy-behavior-verify-batch-one-dispatch",
             "planning-policy-behavior-batch-environment-stop-continues",
+            "planning-policy-behavior-single-step-environment-stop-rerun",
             "planning-policy-behavior-precision-standard-outside-lands",
             "planning-policy-behavior-precision-strict-outside-hard-stop",
             "planning-policy-behavior-precision-strict-init-unowned-pins",

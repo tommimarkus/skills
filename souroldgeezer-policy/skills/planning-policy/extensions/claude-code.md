@@ -76,8 +76,8 @@ worker commits each member, runs its own acceptance command, and returns one
 stop halts the batch. The parent unwinds un-run followers with
 `transition --to pending`, remediates a stopped member in its same worktree,
 redispatches followers as singles, and lands the batch once every member is
-completed or terminal. An environment-stopped member is repaired per the
-[ledger contract](../references/ledger-contract.md) batch rule.
+completed or terminal. An environment stop follows the
+[ledger contract](../references/ledger-contract.md) environment-stop rule.
 
 Per-leaf verification dispatches `souroldgeezer-policy:plan-verify-standard`
 (`sonnet`/`medium`) for mechanical and standard builds, or

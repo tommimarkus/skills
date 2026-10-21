@@ -70,8 +70,8 @@ the worker continues to the next member; any other stop halts the batch at the
 first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
 and lands the batch once every member is completed or terminal. An
-environment-stopped member is repaired per the
-[ledger contract](../references/ledger-contract.md) batch rule.
+environment stop follows the
+[ledger contract](../references/ledger-contract.md) environment-stop rule.
 
 Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
 `verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
