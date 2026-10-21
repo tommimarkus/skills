@@ -142,6 +142,9 @@ authorization responsibilities.
 - Use `jq` for JSON and Mike Farah `yq` for YAML frontmatter, TOML, and XML.
 - Use `rg` or `rg --files` for repository search.
 - Preserve the existing Python 3.11 floor and repo-local `uv` configuration.
+  The lean-audit, test-quality-audit, and planning-policy bundled scripts
+  follow the enforced ruff + `mypy --strict` standard (config in
+  `pyproject.toml`, gate test `tests/lean_audit_python_standard_test.py`).
 - Lean Audit's metadata-only `workflow_cost.py --trace` lane streams native
   Codex rollout JSONL, sums complete `last_token_usage` records rather than
   cumulative totals, and reports explicit coverage plus bounded content-free

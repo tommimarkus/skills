@@ -1,4 +1,8 @@
-"""Enforces the lean-audit Python standard (ruff + mypy) inside `python -m unittest`."""
+"""Enforces the bundled-scripts Python standard (ruff + mypy) inside `python -m unittest`.
+
+It covers the lean-audit, test-quality-audit, and planning-policy scripts that
+`pyproject.toml` scopes ruff and mypy to.
+"""
 import subprocess
 import unittest
 

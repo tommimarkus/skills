@@ -19,6 +19,7 @@ dev = [
 include = [
     "souroldgeezer-audit/skills/lean-audit/references/scripts/**/*.py",
     "souroldgeezer-audit/skills/test-quality-audit/references/scripts/**/*.py",
+    "souroldgeezer-policy/skills/planning-policy/references/scripts/**/*.py",
 ]
 target-version = "py311"
 line-length = 100
@@ -30,6 +31,7 @@ select = ["E", "F", "W", "I", "UP", "B"]
 files = [
     "souroldgeezer-audit/skills/lean-audit/references/scripts",
     "souroldgeezer-audit/skills/test-quality-audit/references/scripts",
+    "souroldgeezer-policy/skills/planning-policy/references/scripts",
 ]
 python_version = "3.11"
 strict = true
