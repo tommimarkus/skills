@@ -173,6 +173,8 @@ REASONING_STOPS = {
     ("blocked", "blocked:needs_higher_tier"),
 }
 VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
+# The stamp maps to the plan's precision word; a run without it keeps the hard scope rejection.
+PRECISION_POLICIES = {"standard_v1": "standard", "strict_v1": "strict"}
 CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
 MAX_CHECK_OUTSIDE = 8
 MAX_VERIFY_HANDOFF = 16 * 1024
@@ -190,6 +192,8 @@ VERIFY_HANDOFF_FIELDS = {
     "write_set", "acceptance_command", "cohesive_outcome", "acceptance_exit_code",
     "base_commit", "returned_commit", "budget", "changeset", "prior_verify", "return_schema",
 }
+# Added to a packet only for a run stamped with a precision policy.
+VERIFY_HANDOFF_OPTIONAL = {"outside_write_set"}
 # The verifier is read-only: mechanical and standard builds get the standard
 # verifier, analytical and deep builds the analytical one.
 VERIFIER_AGENTS = {
@@ -348,6 +352,16 @@ def rel(value, label="path", maximum=MAX_PATH):
 
 def changed_path_allowed(path, write_set):
     return validator_module().write_set_covers(write_set, path)
+
+
+def standard_precision(data):
+    """True for a run stamped standard_v1; an unstamped retained run stays strict."""
+    return data.get("precision_policy") == "standard_v1"
+
+
+def outside_paths(paths, write_set):
+    """The returned or committed paths no write_set entry covers, in first-seen order."""
+    return [path for path in dict.fromkeys(paths) if not changed_path_allowed(path, write_set)]
 
 
 def root(args):
@@ -1442,6 +1456,7 @@ def init5(args):
         "retry_policy": ESCALATING_RETRY_POLICY,
         "return_codes": REGISTERED_RETURN_CODES,
         "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
+        "precision_policy": "strict_v1" if plan.get("precision") == "strict" else "standard_v1",
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
@@ -1496,6 +1511,7 @@ def load2(args):
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
         or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
+        or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
     ):
         raise Error("invalid run checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
@@ -2602,7 +2618,7 @@ def reopen2(args):
     return result
 
 
-def valid_return(value, data, step, leaf, registered=None):
+def valid_return(value, data, step, leaf, registered=None, standard=False):
     if registered is None:
         registered = data.get("return_codes") == REGISTERED_RETURN_CODES
     if not isinstance(value, dict) or len(canon(value)) > MAX_RETURN:
@@ -2640,7 +2656,7 @@ def valid_return(value, data, step, leaf, registered=None):
         raise Error("invalid changed_paths")
     for path in paths:
         rel(path, "changed path")
-        if not changed_path_allowed(path, leaf["write_set"]):
+        if not standard and not changed_path_allowed(path, leaf["write_set"]):
             raise Error("changed path outside write_set")
     accept = value["acceptance"]
     if (
@@ -2838,7 +2854,8 @@ def worker_handoff_context(plan):
 
 
 def build_worker_handoff(
-    plan, step, plan_id, run_id, retry_remediation=None, registered=False, changeset_base=None
+    plan, step, plan_id, run_id, retry_remediation=None, registered=False, changeset_base=None,
+    precision=None,
 ):
     """Build one self-contained v5 worker assignment without mutating a ledger."""
     ident(plan_id, "plan id")
@@ -2922,6 +2939,8 @@ def build_worker_handoff(
             {key: item[key] for key in ("reason", "add_write", "add_read", *AMENDMENT_OPTIONAL) if key in item}
             for item in amendments
         ]
+    if precision is not None:
+        value["precision"] = precision
     if changeset_base is not None:
         value["changeset_budget"] = {
             **validator_module().changeset_budget(leaf), "base_commit": changeset_base,
@@ -2935,7 +2954,7 @@ def build_worker_handoff(
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments", "changeset_budget"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments", "changeset_budget", "precision"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -2970,6 +2989,8 @@ def valid_worker_handoff(value):
     current = {"agent_id": value["agent_id"], "harness": value.get("host"), "model_or_alias": value.get("executor")}
     if not valid_stored_binding(value.get("capability_binding"), value["plan_sha256"], sid, leaf, current):
         raise Error("invalid worker handoff capability binding")
+    if "precision" in value and value["precision"] not in set(PRECISION_POLICIES.values()):
+        raise Error("invalid worker handoff precision")
     budget = value.get("changeset_budget")
     if "changeset_budget" in value and not (
         isinstance(budget, dict)
@@ -3016,6 +3037,7 @@ def step_handoff(directory, data, plan, step):
         changeset_base=(
             step.get("base_commit", "") if data.get("verify_policy") == "leaf_verify_v1" else None
         ),
+        precision=PRECISION_POLICIES.get(data.get("precision_policy")),
     )
 
 
@@ -3176,6 +3198,7 @@ def validate_return(args):
     valid_return(
         return_value, {}, step, handoff_value["leaf"],
         registered=handoff_value["return_schema"] == bounded_return_schema(True),
+        standard=handoff_value.get("precision") == "standard",
     )
     return {
         "ok": True,
@@ -3235,7 +3258,7 @@ def dirty_paths(worktree):
     return paths
 
 
-def changeset_verdict(worktree, base, commit, leaf, budget):
+def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
     exempt = budget["exempt_paths"]
     covers = validator_module().write_set_covers
     lines = files = 0
@@ -3252,12 +3275,13 @@ def changeset_verdict(worktree, base, commit, leaf, budget):
     # Uncommitted work is outside what the measured commit records, so it fails
     # the same way a path outside the write set does.
     stray = dirty_paths(worktree)
-    if outside or stray:
+    # Standard precision lists committed outside paths for the verifier without failing the gate.
+    if stray or (outside and not standard):
         verdict, listed = "outside_write_set", outside or stray
     elif lines > budget["max_changed_lines"] or files > budget["max_files"]:
         verdict, listed = "oversized:changeset", []
     else:
-        verdict, listed = "pass", []
+        verdict, listed = "pass", outside
     return {
         "ok": verdict == "pass",
         "verdict": verdict,
@@ -3283,7 +3307,10 @@ def returned_changeset(data, plan, leafs, sid):
     if not base:
         raise UsageError("the step has no recorded base commit")
     budget = validator_module().changeset_budget(leafs[sid])
-    verdict = changeset_verdict(step["assignment"]["worktree"], base, commit, leafs[sid], budget)
+    verdict = changeset_verdict(
+        step["assignment"]["worktree"], base, commit, leafs[sid], budget,
+        standard=standard_precision(data),
+    )
     return verdict, base, commit, budget
 
 
@@ -3310,7 +3337,9 @@ def check_changeset(args):
         return returned_changeset(data, plan, leafs, sid)[0]
     else:
         raise UsageError("pass --handoff-file with --worktree, or --run-id with --step-id")
-    return changeset_verdict(worktree, base, commit, leaf, budget)
+    return changeset_verdict(
+        worktree, base, commit, leaf, budget, standard=packet.get("precision") == "standard"
+    )
 
 
 def bounded_verify_return_schema():
@@ -3390,7 +3419,7 @@ def verify_handoff_digest(value):
 def valid_verify_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_HANDOFF:
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
-    if set(value) != VERIFY_HANDOFF_FIELDS or value["schema"] != "planning-verify-handoff-v1":
+    if set(value) - VERIFY_HANDOFF_OPTIONAL != VERIFY_HANDOFF_FIELDS or value["schema"] != "planning-verify-handoff-v1":
         raise Error("invalid planning-verify-handoff-v1 schema")
     if not isinstance(value["packet_sha256"], str) or value["packet_sha256"] != verify_handoff_digest(value):
         raise Error("verify handoff digest mismatch")
@@ -3453,6 +3482,8 @@ def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
         "prior_verify": prior_verify(directory, step),
         "return_schema": bounded_verify_return_schema(),
     }
+    if data.get("precision_policy") is not None:
+        value["outside_write_set"] = verdict["outside"]
     value["packet_sha256"] = verify_handoff_digest(value)
     if len(canon(value)) > MAX_VERIFY_HANDOFF:
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
@@ -3677,12 +3708,14 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
         )
     block = {"retry_eligible": False, "outcome": disposition}
     if disposition == "completed":
+        if step.get("scope_notes"):
+            block["outside_paths"] = list(step["scope_notes"])
         if data.get("verify_policy") == "leaf_verify_v1":
             # The gate is not droppable convenience: it is the next legal action.
             block.update(verify_commands(data, sid))
-            return bounded_action_next(block)
+            return bounded_action_next(block, "outside_paths")
         block["command"] = integrate_command(data, sid)
-    return bounded_next(block, droppable=("command",))
+    return bounded_next(block, droppable=("command",), trimmable="outside_paths")
 
 
 def amend(args):
@@ -3863,7 +3896,7 @@ def record(args):
         )
         raise Error("bounded-step-return-v1 exceeds 8 KiB")
     try:
-        value = valid_return(value, data, step, leafs[sid])
+        value = valid_return(value, data, step, leafs[sid], standard=standard_precision(data))
     except Error as exc:
         if str(exc) == "changed path outside write_set":
             reject_return(
@@ -3877,6 +3910,12 @@ def record(args):
             )
         raise
     fingerprint = return_fingerprint(value)
+    if standard_precision(data):
+        notes = outside_paths(value["changed_paths"], leafs[sid]["write_set"])[:MAX_CHECK_OUTSIDE]
+        if notes:
+            step["scope_notes"] = notes
+        else:
+            step.pop("scope_notes", None)
     copy = directory / "returns" / sid / f"{step['attempt_id']}.json"
     write(copy, value, MAX_RETURN)
     step["return_path"] = str(copy.relative_to(directory))

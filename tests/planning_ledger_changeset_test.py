@@ -161,7 +161,7 @@ class CheckChangesetTest(ChangesetHarness):
         self.assertEqual((0, 0), (result["lines"], result["files"]))
 
     def test_outside_write_set_lists_at_most_eight_paths(self):
-        packet = self.started()
+        packet = self.started(precision="strict")
         for index in range(10):
             self.commit_file(f"elsewhere/f{index}.txt", "x\n", f"c{index}")
         code, result = self.check(packet)

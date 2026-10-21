@@ -206,6 +206,13 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(0, code)
         return data["run_id"]
 
+    def stamp_strict(self, run):
+        """Opt a run into the hard scope rejection; strict plans cannot carry write_set globs."""
+        path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
+        data = json.loads(path.read_text())
+        data["precision_policy"] = "strict_v1"
+        path.write_text(json.dumps(data))
+
     def checkpoint(self, run):
         return json.loads(
             (self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json").read_text()
@@ -954,6 +961,7 @@ class PlanningLedgerTest(unittest.TestCase):
         value = self.returned(step, "blocked", blockers=[])
         self.assertEqual(3, self.record(run, value)[0])
         run = self.init2()
+        self.stamp_strict(run)
         step = self.start(run)
         value = self.returned(step, changed=["other/file"])
         self.assertEqual(3, self.record(run, value)[0])
@@ -983,12 +991,14 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual("completed", self.checkpoint(run)["steps"]["step0"]["status"])
 
         run = self.init2(plan_path=plan)
+        self.stamp_strict(run)
         step = self.start(run)
         returned = self.returned(step, changed=["tests/test_campaign_authoring.py"])
         self.assertEqual(3, self.record(run, returned)[0])
         self.assertEqual("oversized", self.checkpoint(run)["steps"]["step0"]["status"])
 
         run = self.init2(plan_path=plan)
+        self.stamp_strict(run)
         step = self.start(run)
         returned = self.returned(step, changed=["tests/test_editor_locations/nested.py"])
         self.assertEqual(3, self.record(run, returned)[0])
@@ -999,6 +1009,7 @@ class PlanningLedgerTest(unittest.TestCase):
         value["leaves"][0]["write_set"] = ["tests/test_editor_locations*.py"]
         plan.write_text(json.dumps(value))
         run = self.init2(plan_path=plan)
+        self.stamp_strict(run)
         step = self.start(run)
         returned = self.returned(step, changed=["tests/test_editor_locations_http.py"])
 

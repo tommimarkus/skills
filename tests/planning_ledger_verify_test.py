@@ -487,7 +487,7 @@ class RejectRoutingTest(VerifyHarness):
                                                 "--step-id", "alpha")[1]["step"]["status"])
 
     def test_record_changeset_applies_the_repairable_scope_rejection_to_an_outside_path(self):
-        packet = self.started()
+        packet = self.started(precision="strict")
         self.commit_file("elsewhere/stray.txt", "x\n")
         self.returned(packet)
         result = self.record_changeset()

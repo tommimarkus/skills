@@ -41,6 +41,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         dependent=False,
         max_attempts=2,
         portable_tier="standard",
+        precision=None,
     ):
         path = self.root / f"{plan_id}-plan.json"
         leaves = []
@@ -92,6 +93,8 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                 "rationale": "exercise retry terminal precedence",
                 "user_approved_by": "test fixture",
             }
+        if precision:
+            plan["precision"] = precision
         path.write_text(json.dumps(plan))
         return path
 
@@ -146,8 +149,9 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         dependent=False,
         max_attempts=2,
         portable_tier="standard",
+        precision=None,
     ):
-        selected_plan = self.plan(plan_id, count, dependent, max_attempts, portable_tier)
+        selected_plan = self.plan(plan_id, count, dependent, max_attempts, portable_tier, precision)
         code, result = self.call(
             *self.common(plan_id),
             "init-v5",
@@ -360,7 +364,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         return value
 
     def test_amend_repairs_a_scope_rejection_without_touching_the_plan(self):
-        run_id = self.init2("amended")
+        run_id = self.init2("amended", precision="strict")
         run_dir = self.root / "planning-policy/ledgers/amended" / run_id
         plan_before = (run_dir / "plan.json").read_bytes()
         step = self.start("amended", run_id, "step0")
@@ -368,7 +372,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertEqual(3, self.record("amended", run_id, value)[0])
         self.assertEqual("oversized", self.checkpoint("amended", run_id)["steps"]["step0"]["status"])
 
-        code, result = self.amend("amended", run_id, "step0", "--add-write", "lib/**")
+        code, result = self.amend("amended", run_id, "step0", "--add-write", "lib/new.py")
         self.assertEqual(0, code, result)
         self.assertEqual("amend-v5", result["action"])
         self.assertEqual(0, self.record("amended", run_id, value)[0])
