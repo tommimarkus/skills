@@ -332,6 +332,71 @@ def write_set_covers(write_set: list[Any], path: str) -> bool:
     return False
 
 
+def _walk_files(base: Path) -> list[Path]:
+    """Regular files below base, skipping hidden directories, node_modules, and symlinks."""
+    found: list[Path] = []
+    for directory, names, files in os.walk(base):
+        names[:] = sorted(name for name in names if not name.startswith(".") and name != "node_modules")
+        for name in sorted(files):
+            path = Path(directory) / name
+            if path.is_file() and not path.is_symlink():
+                found.append(path)
+    return found
+
+
+def _pin_needles(entry: str, basenames: dict[str, int]) -> tuple[str, ...]:
+    """Strings whose presence in a file pins one write_set entry."""
+    segments = entry.split("/")
+    glob_at = next((i for i, part in enumerate(segments) if any(c in part for c in GLOB_CHARS)), None)
+    if glob_at is not None:
+        prefix = "/".join(segments[:glob_at])
+        return (prefix,) if prefix else ()
+    needles = [entry]
+    if basenames.get(segments[-1]) == 1:
+        needles.append(segments[-1])
+    return tuple(needles)
+
+
+def pin_scan(
+    leaves: list[Any], roots: list[str], repo_root: Path, *, limit: int = 8, max_bytes: int = 1 << 20
+) -> dict[str, Any]:
+    """Report files under roots that mention a leaf's write paths but sit in no leaf's write_set."""
+    base = repo_root.resolve()
+    basenames: dict[str, int] = {}
+    for path in _walk_files(base):
+        basenames[path.name] = basenames.get(path.name, 0) + 1
+    writes: dict[str, list[str]] = {}
+    for entry in leaves:
+        if isinstance(entry, dict) and stable_id(entry.get("id")) and isinstance(entry.get("write_set"), list):
+            writes[entry["id"]] = [item for item in entry["write_set"] if safe_repository_path(item)]
+    owned_sets = list(writes.values())
+    present: list[str] = []
+    missing: list[str] = []
+    pinning: dict[str, set[str]] = {leaf_id: set() for leaf_id in writes}
+    for root in roots:
+        target = (base / root).resolve() if safe_repository_path(root) else None
+        if target is None or not target.is_dir() or base not in (target, *target.parents):
+            missing.append(root)
+            continue
+        present.append(root)
+        for path in _walk_files(target):
+            relative = path.relative_to(base).as_posix()
+            if path.stat().st_size > max_bytes or any(write_set_covers(owned, relative) for owned in owned_sets):
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for leaf_id, entries in writes.items():
+                if any(needle in text for item in entries for needle in _pin_needles(item, basenames)):
+                    pinning[leaf_id].add(relative)
+    listed: dict[str, list[str]] = {}
+    truncated = False
+    for leaf_id, found in pinning.items():
+        if found:
+            ordered = sorted(found)
+            truncated = truncated or len(ordered) > limit
+            listed[leaf_id] = ordered[:limit]
+    return {"roots": present, "roots_missing": missing, "leaves": listed, "truncated": truncated}
+
+
 def band_budget(leaf: dict[str, Any]) -> tuple[int, int]:
     return BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])
 
@@ -1046,7 +1111,12 @@ def contract_result(
 
 
 def validate(
-    plan: Any, capability_binding: Any = None, *, admission: bool = True
+    plan: Any,
+    capability_binding: Any = None,
+    *,
+    admission: bool = True,
+    pin_roots: list[str] | None = None,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1435,6 +1505,13 @@ def validate(
     series = plan.get("series")
     if series is not None:
         errors.extend(series_errors(series))
+    scan = None
+    if pin_roots and not errors:
+        scan = pin_scan(leaves, pin_roots, repo_root or Path.cwd())
+        for leaf_id, paths in scan["leaves"].items():
+            for path in paths:
+                message = f"PLANSCOPE-UNOWNED-PIN: {leaf_id}: {path} pins a write path but no leaf write_set owns it"
+                (errors if strict else warnings).append(message)
     if contract_version in {2, 3, 4}:
         warnings.append("blocked:contract_migration_required")
     binding_matches = contract_version in {4, 5} and capability_binding_matches(plan, leaves, capability_binding)
@@ -1454,6 +1531,8 @@ def validate(
         advisory,
     )
     result["plan_sha256"] = canonical_plan_sha256(plan)
+    if scan is not None:
+        result["pin_scan"] = scan
     return result
 
 
@@ -1467,6 +1546,10 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="optional planning-capability-binding-v1 JSON for dispatch validation",
     )
+    validate_parser.add_argument(
+        "--pin-roots", nargs="+", metavar="ROOT", help="repository-relative roots to scan for unowned pinning tests"
+    )
+    validate_parser.add_argument("--repo-root", type=Path, help="repository root for --pin-roots (default: cwd)")
     validate_parser.add_argument("--emit-handoff", choices=("reference", "inline"))
     validate_parser.add_argument("--handoff-format", choices=("json", "block"), default="json")
     resolve_parser = subparsers.add_parser("resolve-handoff", help="resolve an approval handoff")
@@ -1486,7 +1569,9 @@ def main(argv: list[str] | None = None) -> int:
                 _read_json_source(str(args.capability_binding))
                 if args.capability_binding is not None else None
             )
-            result = validate(plan, capability_binding=binding)
+            result = validate(
+                plan, capability_binding=binding, pin_roots=args.pin_roots, repo_root=args.repo_root
+            )
             result["plan_sha256"] = canonical_plan_sha256(plan)
             if args.emit_handoff:
                 result["handoff"] = emit_handoff(plan, args.emit_handoff, str(args.plan))
