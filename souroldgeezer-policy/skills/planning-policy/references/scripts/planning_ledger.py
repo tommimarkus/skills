@@ -173,6 +173,10 @@ REASONING_STOPS = {
     ("blocked", "blocked:needs_higher_tier"),
 }
 VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
+# Stamped only on leaf_verify_v1 runs: a dependent may start on a completed prerequisite whose verify is issued.
+PIPELINE_POLICY = "provisional_v1"
+MAX_CONCURRENT = 4
+NON_ACTION_CATEGORIES = {"terminal_closed", "terminal_blocked", "validate_closeout"}
 # The stamp maps to the plan's precision word; a run without it keeps the hard scope rejection.
 PRECISION_POLICIES = {"standard_v1": "standard", "strict_v1": "strict"}
 CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
@@ -651,6 +655,49 @@ def dependencies_clean(data, step, batches):
     )
 
 
+def provisional_prerequisite(data, step, batches):
+    """The one unlanded prerequisite a pending step may build on, or "".
+
+    Every other dependency must be integrated or cleaned; the unlanded one must
+    be completed with a verify packet issued, or a passing verdict, for its
+    returned commit. A batch is stacked once, through its first member.
+    """
+    if data.get("pipeline_policy") != PIPELINE_POLICY or step["status"] != "pending":
+        return ""
+    members = batches.get(step["id"], ())
+    if members and members[0] != step["id"]:
+        return ""
+    unlanded = [
+        dep for dep in step["dependencies"]
+        if data["steps"][dep]["status"] not in EXTERNAL_DEPENDENCY_STATES
+    ]
+    if len(unlanded) != 1:
+        return ""
+    prerequisite = data["steps"][unlanded[0]]
+    commit = prerequisite.get("returned_commit", "")
+    issued = prerequisite.get("verify_id") and prerequisite.get("verify_commit") == commit
+    if (
+        prerequisite["status"] != "completed"
+        or not commit
+        or prerequisite.get("upstream_stale")
+        or not (issued or commit_verified(prerequisite))
+    ):
+        return ""
+    return unlanded[0]
+
+
+def dependencies_ready(data, step, batches, allow_provisional=True):
+    """Dependencies are satisfied, or the step may start provisionally (or resume as such)."""
+    if dependencies_clean(data, step, batches):
+        return True
+    if not allow_provisional:
+        return False
+    if provisional_prerequisite(data, step, batches):
+        return True
+    base = step.get("provisional_base")
+    return bool(base) and data["steps"][base["step_id"]]["status"] == "completed"
+
+
 def attempt_available(step):
     return step["attempt_count"] < step["max_attempts"]
 
@@ -684,7 +731,7 @@ def ready_status_legal(step):
 def ready_candidate(data, step, batches):
     return (
         ready_status_legal(step)
-        and dependencies_clean(data, step, batches)
+        and dependencies_ready(data, step, batches)
         and attempt_available(step)
     )
 
@@ -950,6 +997,17 @@ def validate_steps2(data, leafs):
                     step["retry_remediation_sha256"],
                     "blocked:plan_tampered",
                 )
+    for sid, step in steps.items():
+        base = step.get("provisional_base")
+        if base is not None and not (
+            isinstance(base, dict)
+            and set(base) == {"step_id", "commit"}
+            and base["step_id"] in steps
+            and base["step_id"] in step["dependencies"]
+            and isinstance(base["commit"], str)
+            and COMMIT.fullmatch(base["commit"])
+        ):
+            raise Error("blocked:plan_tampered")
     dependency_order(steps)
 
 
@@ -1535,6 +1593,7 @@ def init5(args):
         "return_codes": REGISTERED_RETURN_CODES,
         "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
         "precision_policy": "strict_v1" if plan.get("precision") == "strict" else "standard_v1",
+        **({} if plan.get("verification") == "closeout-only" else {"pipeline_policy": PIPELINE_POLICY}),
         **({"host": args.host} if args.host else {}),
         "steps": steps,
     }
@@ -1591,6 +1650,7 @@ def load2(args):
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
         or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
         or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
+        or data.get("pipeline_policy") not in {None, PIPELINE_POLICY}
         or (data.get("host") is not None and data["host"] not in host_tiers().get("hosts", {}))
     ):
         raise Error("invalid run checkpoint")
@@ -1933,7 +1993,7 @@ def validate_retry_artifacts(directory, data):
             raise Error("retry remediation artifact digest mismatch")
 
 
-def ready(args, directory, data, plan, batches, step):
+def ready(args, directory, data, plan, batches, step, allow_provisional=False):
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
         if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
             raise Error(f"invalid {label}")
@@ -1952,7 +2012,7 @@ def ready(args, directory, data, plan, batches, step):
             raise Error("retry requires --retry and bounded --summary")
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
-    if not dependencies_clean(data, step, batches):
+    if not dependencies_ready(data, step, batches, allow_provisional):
         raise Error(
             "dependencies are not integrated or cleaned"
             if data.get("schema") == FORWARD_SCHEMA
@@ -2066,7 +2126,54 @@ def series_closeout_overlay(plan, block):
     return block
 
 
+def startable_step_ids(data, steps, batches):
+    """Steps a parent could start now: dispatch-ready, provisionally ready, or verify-pending."""
+    leaf_verify = data.get("verify_policy") == "leaf_verify_v1"
+    result = []
+    for step in steps:
+        if step["status"] == "pending":
+            startable = ready_candidate(data, step, batches)
+        elif step["status"] == "ready":
+            startable = True
+        else:
+            startable = (
+                leaf_verify
+                and step["status"] == "completed"
+                and batch_settled(data, batches, step["id"])
+                and stored_verdict(step) is None
+                and not step.get("verify_id")
+            )
+        if startable:
+            result.append(step["id"])
+    return result
+
+
+def with_concurrent(data, batches, block):
+    """List up to four other startable steps beside the one action a block names."""
+    if block.get("category") in NON_ACTION_CATEGORIES:
+        return block
+    named = {
+        item for value in block.values()
+        for item in (value if isinstance(value, list) else [value]) if isinstance(item, str)
+    }
+    others = [
+        sid for sid in startable_step_ids(data, ordered_steps(data["steps"]), batches)
+        if sid not in named
+    ][:MAX_CONCURRENT]
+    while others:
+        trial = {**block, "concurrent": others}
+        if proxy_tokens(trial) <= MAX_NEXT_TOKENS:
+            return trial
+        others = others[:-1]
+    return block
+
+
 def checkpoint_next(directory, data, batches, plan):
+    """The one highest-priority legal action, plus other steps that could start now."""
+    return with_concurrent(data, batches, primary_next(directory, data, batches, plan))
+
+
+def primary_next(directory, data, batches, plan):
     """Select one highest-priority legal v4/v5 action from the checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next(
@@ -2107,6 +2214,8 @@ def checkpoint_next(directory, data, batches, plan):
             )
         # A rejected member holds its batch: only a retry routes it onward.
         completed = [sid for sid in completed if group_landable(data, batches, sid)]
+    # A provisional step waits for the prerequisite it stacked on to land first.
+    completed = [sid for sid in completed if not unlanded_base(data, data["steps"][sid])]
     if completed:
         return bounded_action_next(
             {
@@ -2287,10 +2396,29 @@ def commit_verified(step):
 
 
 def require_verified(data, sid, step):
+    require_prerequisite_landed(data, sid, step)
     if data.get("verify_policy") == "leaf_verify_v1" and not commit_verified(step):
         raise Error(
             f"step {sid} has no pass or inconclusive verification for its returned commit; "
             "run check-changeset, verify-handoff and record-verify first"
+        )
+
+
+def unlanded_base(data, step):
+    """The prerequisite a provisionally built step stacked on, while it is not yet landed."""
+    base = step.get("provisional_base")
+    if base and data["steps"][base["step_id"]]["status"] not in EXTERNAL_DEPENDENCY_STATES:
+        return base["step_id"]
+    return ""
+
+
+def require_prerequisite_landed(data, sid, step):
+    """A provisionally built step lands only after the prerequisite it stacked on."""
+    prerequisite = unlanded_base(data, step)
+    if prerequisite:
+        raise Error(
+            f"step {sid} is built on {prerequisite}, which is not integrated or cleaned; "
+            "land the prerequisite first"
         )
 
 
@@ -3054,6 +3182,8 @@ def build_worker_handoff(
         ]
     if precision is not None:
         value["precision"] = precision
+    if step.get("provisional_base"):
+        value["provisional_base"] = dict(step["provisional_base"])
     if changeset_base is not None:
         value["changeset_budget"] = {
             **validator_module().changeset_budget(leaf), "base_commit": changeset_base,
@@ -3067,7 +3197,7 @@ def build_worker_handoff(
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments", "changeset_budget", "precision", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments", "changeset_budget", "precision", "provisional_base", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -3104,6 +3234,16 @@ def valid_worker_handoff(value):
         raise Error("invalid worker handoff capability binding")
     if "precision" in value and value["precision"] not in set(PRECISION_POLICIES.values()):
         raise Error("invalid worker handoff precision")
+    base = value.get("provisional_base")
+    if "provisional_base" in value and not (
+        isinstance(base, dict)
+        and set(base) == {"step_id", "commit"}
+        and isinstance(base["step_id"], str)
+        and ID.fullmatch(base["step_id"])
+        and isinstance(base["commit"], str)
+        and COMMIT.fullmatch(base["commit"])
+    ):
+        raise Error("invalid worker handoff provisional base")
     budget = value.get("changeset_budget")
     if "changeset_budget" in value and not (
         isinstance(budget, dict)
@@ -3243,21 +3383,37 @@ def dispatch(args):
     # Every change stays in memory until identity and packets are proven, so a
     # failure anywhere leaves the checkpoint untouched.
     moves = []
+    prerequisite = provisional_prerequisite(data, data["steps"][group[0]], batches)
+    stacked = data["steps"][prerequisite]["returned_commit"] if prerequisite else ""
     for member in group:
         step = data["steps"][member]
         old = step["status"]
-        ready(args, directory, data, plan, batches, step)
+        ready(args, directory, data, plan, batches, step, allow_provisional=True)
         moves.append((member, old, step["attempt_id"]))
         advance(step, "ready", "ready", "in_progress", args.summary or "in progress")
     repo = repository_top(args)
     for member in group:
-        verify_worktree_identity(repo, data["steps"][member], leafs[member], args.create_from)
+        verify_worktree_identity(
+            repo, data["steps"][member], leafs[member], stacked or args.create_from
+        )
+    if stacked:
+        tree = data["steps"][group[0]]["assignment"]["worktree"]
+        contained = subprocess.run(
+            ["git", "-C", tree if Path(tree).is_absolute() else str(repo / tree),
+             "merge-base", "--is-ancestor", stacked, "HEAD"],
+            capture_output=True,
+        )
+        if contained.returncode:
+            raise Error(f"worktree {tree} does not contain provisional base {stacked[:12]}")
     if data.get("verify_policy") == "leaf_verify_v1":
         # The first member measures from the worktree HEAD at its first start; a
         # batch follower's base is the previous member's returned commit, which
         # does not exist yet, so it stays empty until the gate resolves it.
         step = data["steps"][group[0]]
-        if "base_commit" not in step:
+        if stacked:
+            step["provisional_base"] = {"step_id": prerequisite, "commit": stacked}
+            step["base_commit"] = stacked
+        elif "base_commit" not in step:
             step["base_commit"] = git_head(step["assignment"]["worktree"], repo)
         for member in group[1:]:
             data["steps"][member].setdefault("base_commit", "")
