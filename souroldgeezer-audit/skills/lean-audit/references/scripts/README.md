@@ -259,8 +259,9 @@ is still charged and is never treated as zero.
   parallels, with `{name}` captures), `[[canonical_home]]`, `exempt_paths`, and
   `code_extensions`. This repo's file is carve-out-only.
 - `pyproject.toml` (at the marketplace source-repo root) — scopes ruff
-  (`[tool.ruff] include`) and mypy (`[tool.mypy] files`) to **this scripts tree
-  only**, and sets the repo-local `uv` cache.
+  (`[tool.ruff] include`) and mypy (`[tool.mypy] files`) to the bundled-scripts
+  trees that adopt this standard (this one, test-quality-audit's, and
+  planning-policy's), and sets the repo-local `uv` cache.
 
 **Read by the per-use harness and the Stop guard, under
 `tests/skill_load_cost/` (at the marketplace source-repo root):**
