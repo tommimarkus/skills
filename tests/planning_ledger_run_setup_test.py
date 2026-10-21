@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.planning_ledger_dispatch_test import DispatchHarness, ledger, leaf
+from tests.planning_ledger_dispatch_test import DispatchHarness, git, ledger, leaf
 
 MAP_PATH = Path(__file__).resolve().parents[1] / "souroldgeezer-policy/skills/planning-policy/references/host-tiers.json"
 EVIDENCE = "host inventory line"
@@ -79,6 +79,25 @@ class DerivedInitTest(DerivedHarness):
         self.assertEqual(("claude-code", "opus", [EVIDENCE, "second line"]),
                          (bound["host"], bound["executor"], bound["evidence"]))
         self.assertEqual(skill_leaf("beta", "analytical")["capability_requirements"], bound["requirements"])
+
+    def test_derived_worktrees_resolve_under_the_primary_checkout_from_a_linked_worktree(self):
+        primary = self.repo
+        linked = primary / ".worktrees/throughput"
+        git(primary, "worktree", "add", "-b", "throughput", str(linked), "main")
+        self.repo = linked
+        try:
+            code, result = self.init_derived(
+                [leaf("alpha", "owner-a"), leaf("beta", "owner-b")],
+                "--host", "claude-code", "--evidence", EVIDENCE,
+            )
+        finally:
+            self.repo = primary
+        self.assertEqual(0, code, result)
+        for sid, owner in (("alpha", "owner-a"), ("beta", "owner-b")):
+            self.assertEqual(
+                str(primary.resolve() / ".worktrees" / owner),
+                self.checkpoint()["steps"][sid]["assignment"]["worktree"],
+            )
 
     def test_file_and_host_inputs_are_mutually_exclusive(self):
         leaves = [leaf("alpha", "owner-a")]

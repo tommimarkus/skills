@@ -1518,6 +1518,18 @@ def refuse_unowned_pins(args, plan, top):
         raise Error("; ".join(pins[:MAX_CHECK_OUTSIDE])[:480])
 
 
+def primary_checkout(args, top):
+    """The checkout holding the Git common directory, so a derived worktree is never nested."""
+    result = subprocess.run(
+        ["git", "-C", str(top), "rev-parse", "--git-common-dir"], text=True, capture_output=True
+    )
+    if result.returncode:
+        return top
+    common = Path(result.stdout.strip())
+    common = (top / common).resolve() if not common.is_absolute() else common.resolve()
+    return common.parent if common.name == ".git" else top
+
+
 def init5(args):
     approved_parent(args)
     plan = read_plan(args.plan_file, FORWARD_SCHEMA)
@@ -1535,8 +1547,9 @@ def init5(args):
         assigned = assignments(args.assignments_file, plan)
     # Resolve a relative worktree once, so every later command and every
     # artifact comparison sees one absolute path whatever its cwd.
+    anchor = primary_checkout(args, top) if args.host else top
     assigned = {
-        sid: {**item, "worktree": os.path.normpath(top / item["worktree"])}
+        sid: {**item, "worktree": os.path.normpath(anchor / item["worktree"])}
         for sid, item in assigned.items()
     }
     bindings = (

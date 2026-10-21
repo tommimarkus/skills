@@ -87,7 +87,7 @@ for `claude-code` and `codex`: model and effort per tier, a `skill` flag, and
 verifier entries; the adapter tier tables are tested against it.
 `init-v5 --host H --evidence TEXT` (1 to 8 lines, each at most 240 characters)
 derives assignments (harness `H`, model and effort from each leaf's
-`portable_tier`, worktree `.worktrees/<worktree_owner>`) and the
+`portable_tier`, worktree `.worktrees/<worktree_owner>` under the primary checkout, the Git common directory's parent, even when invoked from a linked worktree) and the
 `planning-capability-binding-v1` binding, then validates as for supplied files.
 `--host` with either supplied file, or neither, is a usage error; a derived
 additional skill requirement on a tier whose `skill` is false is
