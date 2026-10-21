@@ -72,6 +72,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             leaves.append(leaf)
         plan = {
             "contract_version": 5,
+            "verification": "closeout-only",
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],
@@ -1159,6 +1160,7 @@ class PlanningLedgerBatchTest(unittest.TestCase):
             json.dumps(
                 {
                     "contract_version": 5,
+                    "verification": "closeout-only",
                     "objective": "objective",
                     "scope_summary": "scope",
                     "approved_decisions": ["settled"],

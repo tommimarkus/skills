@@ -167,6 +167,27 @@ RETURN_CODES = {
 VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
 CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
 MAX_CHECK_OUTSIDE = 8
+MAX_VERIFY_HANDOFF = 16 * 1024
+MAX_VERIFY_RETURN = 4 * 1024
+VERIFY_VERDICTS = {"pass", "reject", "inconclusive"}
+VERIFY_PASSING = {"pass", "inconclusive"}
+VERIFY_CODES = {
+    "verify:coverage", "verify:decision", "verify:regression", "verify:scope_creep",
+    "verify:acceptance_gap",
+}
+VERIFY_FINDING_FIELDS = {"code", "path", "line", "clause", "summary"}
+VERIFY_HANDOFF_FIELDS = {
+    "schema", "packet_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "attempt_id",
+    "agent_id", "verify_id", "verifier_tier", "task", "boundary", "settled_decisions",
+    "write_set", "acceptance_command", "cohesive_outcome", "acceptance_exit_code",
+    "base_commit", "returned_commit", "budget", "changeset", "return_schema",
+}
+# The verifier is read-only: mechanical and standard builds get the standard
+# verifier, analytical and deep builds the analytical one.
+VERIFIER_AGENTS = {
+    "mechanical": "plan-verify-standard", "standard": "plan-verify-standard",
+    "analytical": "plan-verify-analytical", "deep": "plan-verify-analytical",
+}
 RUN_SCHEMAS = {2, 3, 4, 5}
 CAPABILITY_SCHEMAS = {4, 5}
 LIVE_NEXT_SCHEMAS = {4, 5}
@@ -557,6 +578,18 @@ def land_command(data, step_id):
     )
 
 
+def verify_commands(data, step_id):
+    """The leaf_verify_v1 gate: check-changeset first, then verify-handoff."""
+    scope = f"--plan-id {data['plan_id']}"
+    return {
+        "command": f"{scope} check-changeset --run-id {data['run_id']} --step-id {step_id}",
+        "then": (
+            f"{scope} verify-handoff --actor parent --run-id {data['run_id']} "
+            f"--step-id {step_id}"
+        ),
+    }
+
+
 def integrate_command(data, step_id):
     if data.get("schema") == FORWARD_SCHEMA:
         return land_command(data, step_id)
@@ -910,7 +943,7 @@ def validate_events2(directory, data):
         f"reopen-v{schema}",
     }
     if schema == FORWARD_SCHEMA:
-        actions.add("amend-v5")
+        actions.update({"amend-v5", "verify-handoff", "record-verify"})
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
@@ -1951,6 +1984,16 @@ def checkpoint_next(directory, data, batches, plan):
         for step in steps
         if step["status"] == "completed" and batch_settled(data, batches, step["id"])
     ]
+    if data.get("verify_policy") == "leaf_verify_v1":
+        unverified = [sid for sid in completed if stored_verdict(data["steps"][sid]) is None]
+        if unverified:
+            return bounded_action_next(
+                {"category": "verify_completed", "step_ids": unverified,
+                 **verify_commands(data, unverified[0])},
+                "step_ids",
+            )
+        # A rejected member holds its batch: only a retry routes it onward.
+        completed = [sid for sid in completed if group_landable(data, batches, sid)]
     if completed:
         return bounded_action_next(
             {
@@ -2118,6 +2161,44 @@ def unwind(args, data, batches, sid, step):
         step["current_assignment"]["agent_id"] = ""
 
 
+def stored_verdict(step):
+    """The verdict recorded for the step's current returned commit, or None."""
+    stored = step.get("verify")
+    if isinstance(stored, dict) and stored.get("commit") == step.get("returned_commit"):
+        return stored.get("verdict")
+    return None
+
+
+def commit_verified(step):
+    return stored_verdict(step) in VERIFY_PASSING
+
+
+def require_verified(data, sid, step):
+    if data.get("verify_policy") == "leaf_verify_v1" and not commit_verified(step):
+        raise Error(
+            f"step {sid} has no pass or inconclusive verification for its returned commit; "
+            "run check-changeset, verify-handoff and record-verify first"
+        )
+
+
+def group_landable(data, batches, sid):
+    """Every completed member of the step's batch holds a passing verdict."""
+    return all(
+        commit_verified(data["steps"][member])
+        for member in (batches.get(sid) or (sid,))
+        if data["steps"][member]["status"] == "completed"
+    )
+
+
+def unverified_members(data, batches, sid):
+    """Completed members of the step's batch with no verdict yet for their returned commit."""
+    steps = data["steps"]
+    return [
+        member for member in (batches.get(sid) or (sid,))
+        if steps[member]["status"] == "completed" and stored_verdict(steps[member]) is None
+    ]
+
+
 def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summary=""):
     """Validate a helper artifact and move one step to `integrated` or `cleaned`."""
     expected = "completed" if new == "integrated" else "integrated"
@@ -2152,6 +2233,8 @@ def transition2(args):
     elif new == "pending":
         unwind(args, data, batches, sid, step)
     elif new in {"integrated", "cleaned"}:
+        if new == "integrated":
+            require_verified(data, sid, step)
         apply_worktree_result(
             args.worktree_result, directory, sid, step, leafs[sid], new, batches, args.summary
         )
@@ -2297,6 +2380,8 @@ def land(args):
     base = ("--repo-root", str(repo), "--target", args.target, "--branch", leaf["worktree_owner"],
             "--worktree", worktree)
     landed = [member for member in group if data["steps"][member]["status"] == "completed"]
+    for member in landed:
+        require_verified(data, member, data["steps"][member])
     if landed:
         commits = {member: data["steps"][member]["returned_commit"] for member in landed}
         if not all(COMMIT.fullmatch(commit) for commit in commits.values()):
@@ -3165,6 +3250,25 @@ def changeset_verdict(worktree, base, commit, leaf, budget):
     }
 
 
+def returned_changeset(data, plan, leafs, sid):
+    """Measure a step's returned commit: (verdict, base, commit, budget)."""
+    step = data["steps"][sid]
+    if data.get("verify_policy") != "leaf_verify_v1":
+        raise UsageError("this run does not use leaf verification")
+    commit = step["returned_commit"]
+    if not commit:
+        raise UsageError("the step has no returned commit")
+    base = step.get("base_commit", "")
+    members = step_batches(plan).get(sid, ())
+    if not base and sid in members and members.index(sid) > 0:
+        base = data["steps"][members[members.index(sid) - 1]]["returned_commit"]
+    if not base:
+        raise UsageError("the step has no recorded base commit")
+    budget = validator_module().changeset_budget(leafs[sid])
+    verdict = changeset_verdict(step["assignment"]["worktree"], base, commit, leafs[sid], budget)
+    return verdict, base, commit, budget
+
+
 def check_changeset(args):
     """Read-only changeset gate: builder preflight on HEAD, or the parent on a returned commit."""
     if args.handoff_file:
@@ -3184,23 +3288,230 @@ def check_changeset(args):
     elif args.run_id and args.step_id:
         directory, data, plan, leafs = load2(args)
         validate_events2(directory, data)
-        sid, step = selected_step(data, args.step_id)
-        if data.get("verify_policy") != "leaf_verify_v1":
-            raise UsageError("this run does not use leaf verification")
-        commit = step["returned_commit"]
-        if not commit:
-            raise UsageError("the step has no returned commit")
-        base = step.get("base_commit", "")
-        members = step_batches(plan).get(sid, ())
-        if not base and sid in members and members.index(sid) > 0:
-            base = data["steps"][members[members.index(sid) - 1]]["returned_commit"]
-        if not base:
-            raise UsageError("the step has no recorded base commit")
-        budget = validator_module().changeset_budget(leafs[sid])
-        worktree, leaf = step["assignment"]["worktree"], leafs[sid]
+        sid, _step = selected_step(data, args.step_id)
+        return returned_changeset(data, plan, leafs, sid)[0]
     else:
         raise UsageError("pass --handoff-file with --worktree, or --run-id with --step-id")
     return changeset_verdict(worktree, base, commit, leaf, budget)
+
+
+def bounded_verify_return_schema():
+    finding = {
+        "type": "object", "additionalProperties": False, "required": sorted(VERIFY_FINDING_FIELDS),
+        "properties": {
+            "code": {"enum": sorted(VERIFY_CODES)},
+            "path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
+            "line": {"type": ["integer", "null"], "minimum": 1},
+            "clause": {"type": "string", "minLength": 1, "maxLength": MAX_BLOCKER_SUMMARY},
+            "summary": {"type": "string", "minLength": 1, "maxLength": MAX_BLOCKER_SUMMARY},
+        },
+    }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object", "additionalProperties": False,
+        "required": ["schema", "step_id", "verify_id", "verdict", "findings", "notes"],
+        "properties": {
+            "schema": {"const": "bounded-verify-return-v1"},
+            "step_id": {"type": "string"},
+            "verify_id": {"type": "string", "format": "uuid"},
+            "verdict": {"enum": sorted(VERIFY_VERDICTS)},
+            "findings": {"type": "array", "maxItems": 8, "items": finding},
+            "notes": {
+                "type": "array", "maxItems": 8,
+                "items": {"type": "string", "maxLength": MAX_BLOCKER_SUMMARY},
+            },
+        },
+    }
+
+
+def valid_verify_return(value):
+    """Shape-check one bounded-verify-return-v1 object."""
+    if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_RETURN:
+        raise Error("bounded-verify-return-v1 exceeds 4 KiB")
+    if (
+        set(value) != {"schema", "step_id", "verify_id", "verdict", "findings", "notes"}
+        or value["schema"] != "bounded-verify-return-v1"
+    ):
+        raise Error("invalid bounded-verify-return-v1 schema")
+    ident(value["step_id"], "step id")
+    uuid4(value["verify_id"], "verify id")
+    findings, notes = value["findings"], value["notes"]
+    if value["verdict"] not in VERIFY_VERDICTS:
+        raise Error("invalid verify verdict")
+    if not isinstance(findings, list) or len(findings) > 8:
+        raise Error("verify return carries at most 8 findings")
+    if not isinstance(notes, list) or len(notes) > 8 or any(
+        not isinstance(note, str) or len(note) > MAX_BLOCKER_SUMMARY for note in notes
+    ):
+        raise Error("verify return carries at most 8 notes of 240 characters")
+    for finding in findings:
+        line = finding.get("line") if isinstance(finding, dict) else 0
+        if (
+            not isinstance(finding, dict)
+            or set(finding) != VERIFY_FINDING_FIELDS
+            or finding["code"] not in VERIFY_CODES
+            or not all(
+                isinstance(finding[key], str) and finding[key].strip()
+                for key in ("path", "clause", "summary")
+            )
+            or len(finding["path"]) > MAX_PATH
+            or len(finding["clause"]) > MAX_BLOCKER_SUMMARY
+            or len(finding["summary"]) > MAX_BLOCKER_SUMMARY
+            or not (line is None or (isinstance(line, int) and not isinstance(line, bool) and line >= 1))
+        ):
+            raise Error("invalid verify finding")
+    if (value["verdict"] == "reject") != bool(findings) and value["verdict"] != "inconclusive":
+        raise Error("a reject carries a finding and a pass carries none")
+    return value
+
+
+def verify_handoff_digest(value):
+    return digest({key: item for key, item in value.items() if key != "packet_sha256"})
+
+
+def valid_verify_handoff(value):
+    if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_HANDOFF:
+        raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
+    if set(value) != VERIFY_HANDOFF_FIELDS or value["schema"] != "planning-verify-handoff-v1":
+        raise Error("invalid planning-verify-handoff-v1 schema")
+    if not isinstance(value["packet_sha256"], str) or value["packet_sha256"] != verify_handoff_digest(value):
+        raise Error("verify handoff digest mismatch")
+    ident(value["step_id"], "step id")
+    uuid4(value["verify_id"], "verify id")
+    return value
+
+
+def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
+    """Build one planning-verify-handoff-v1 packet for a completed step, without mutating."""
+    verdict, base, commit, budget = returned_changeset(data, plan, leafs, sid)
+    if not verdict["ok"]:
+        raise Error(f"check-changeset verdict for {sid} is {verdict['verdict']}; verification refused")
+    leaf = leafs[sid]
+    unit = next(item for item in plan["work_units"] if item["id"] == leaf["work_unit_id"])
+    returned = json.loads((directory / step["return_path"]).read_text())
+    value = {
+        "schema": "planning-verify-handoff-v1",
+        "packet_sha256": "",
+        "plan_id": data["plan_id"],
+        "run_id": data["run_id"],
+        "plan_sha256": data["plan_hash"],
+        "step_id": sid,
+        "attempt_id": step["attempt_id"],
+        "agent_id": step["agent_id"],
+        "verify_id": verify_id,
+        "verifier_tier": VERIFIER_AGENTS[step["current_tier"]],
+        "task": leaf["task"],
+        "boundary": leaf["boundary"],
+        "settled_decisions": leaf["settled_decisions"],
+        "write_set": leaf["write_set"],
+        "acceptance_command": leaf["acceptance_command"],
+        "cohesive_outcome": unit["cohesive_outcome"],
+        "acceptance_exit_code": returned["acceptance"]["exit_code"],
+        "base_commit": base,
+        "returned_commit": commit,
+        "budget": budget,
+        "changeset": verdict,
+        "return_schema": bounded_verify_return_schema(),
+    }
+    value["packet_sha256"] = verify_handoff_digest(value)
+    if len(canon(value)) > MAX_VERIFY_HANDOFF:
+        raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
+    return value
+
+
+def verify_handoff(args):
+    """Issue verifier packets for a completed step, or every completed member of its batch."""
+    directory, data, plan, leafs = mutating_run(args)
+    if data.get("verify_policy") != "leaf_verify_v1":
+        raise Error("this run does not use leaf verification")
+    sid, step = selected_step(data, args.step_id)
+    if step["status"] != "completed":
+        raise Error("only a completed step can be verified")
+    members = unverified_members(data, step_batches(plan), sid)
+    if not members:
+        raise Error("every completed member already has a verdict for its returned commit")
+    packets = []
+    for member in members:
+        packets.append(verify_handoff_packet(
+            directory, data, plan, leafs, member, data["steps"][member], str(uuid.uuid4())
+        ))
+    for packet in packets:
+        issued_step = data["steps"][packet["step_id"]]
+        issued_step["verify_id"] = packet["verify_id"]
+        issued_step["verify_commit"] = packet["returned_commit"]
+    event(directory, data, "verify-handoff", step_id=sid, verify_step_ids=members)
+    return {
+        "ok": True,
+        "action": "verify-handoff",
+        "run_id": args.run_id,
+        "step_id": sid,
+        "step_ids": members,
+        "handoffs": packets,
+    }
+
+
+def validate_verify_return(args):
+    try:
+        packet = json.loads(read_bounded_input(args.handoff_file, MAX_VERIFY_HANDOFF + 1024, "verify handoff"))
+        value = json.loads(read_bounded_input(args.return_file, MAX_VERIFY_RETURN, "verify return"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid verify handoff or return JSON") from exc
+    packet = valid_verify_handoff(packet)
+    valid_verify_return(value)
+    if value["step_id"] != packet["step_id"] or value["verify_id"] != packet["verify_id"]:
+        raise Error("stale or foreign verify return identity")
+    return {
+        "ok": True,
+        "action": "validate-verify-return",
+        "step_id": packet["step_id"],
+        "verify_id": packet["verify_id"],
+        "verdict": value["verdict"],
+        "packet_sha256": packet["packet_sha256"],
+        "return_sha256": digest(value),
+    }
+
+
+def record_verify(args):
+    """Store a verifier verdict bound to the step's returned commit."""
+    directory, data, plan, leafs = mutating_run(args)
+    raw = read_bounded_input(args.return_file, MAX_VERIFY_RETURN, "verify return")
+    try:
+        value = valid_verify_return(json.loads(raw))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid verify return JSON") from exc
+    sid = value["step_id"]
+    step = data["steps"].get(sid)
+    if data.get("verify_policy") != "leaf_verify_v1" or step is None or step["status"] != "completed":
+        raise Error("verify return is not for a completed step of a leaf-verification run")
+    if not step.get("verify_id") or step["verify_id"] != value["verify_id"]:
+        raise Error("stale or foreign verify_id")
+    if step.get("verify_commit") != step["returned_commit"]:
+        raise Error("the step's returned commit changed since verify-handoff")
+    batches = step_batches(plan)
+    group = batches.get(sid) or (sid,)
+    # A batch shares one worktree, so its HEAD is the tip: the last completed member's commit.
+    tip = data["steps"][[m for m in group if data["steps"][m]["status"] == "completed"][-1]]["returned_commit"]
+    worktree = step["assignment"]["worktree"]
+    if git_head(worktree, repository_top(args)) != tip or dirty_paths(worktree):
+        raise Error("worktree changed since the returned commit: verifier mutation refused")
+    copy = directory / "verifies" / sid / f"{value['verify_id']}.json"
+    write(copy, value, MAX_VERIFY_RETURN)
+    step["verify"] = {
+        "verdict": value["verdict"],
+        "commit": step["returned_commit"],
+        "verify_id": value["verify_id"],
+        "path": str(copy.relative_to(directory)),
+        "sha256": digest(value),
+    }
+    step["verify_id"] = ""
+    event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
+    result = result2("record-verify", args, sid, step, verdict=value["verdict"])
+    if value["verdict"] in VERIFY_PASSING:
+        if group_landable(data, batches, sid) and not unverified_members(data, batches, sid):
+            result["next"] = bounded_next({"command": land_command(data, sid)})
+        else:
+            result["next"] = checkpoint_next(directory, data, batches, plan)
+    return result
 
 
 def read_bounded_input(path, maximum, label):
@@ -3240,6 +3551,10 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
         )
     block = {"retry_eligible": False, "outcome": disposition}
     if disposition == "completed":
+        if data.get("verify_policy") == "leaf_verify_v1":
+            # The gate is not droppable convenience: it is the next legal action.
+            block.update(verify_commands(data, sid))
+            return bounded_action_next(block)
         block["command"] = integrate_command(data, sid)
     return bounded_next(block, droppable=("command",))
 
@@ -3474,6 +3789,7 @@ def safe_run_contents(directory):
         "plan.json",
         "returns",
         "retry-remediations",
+        "verifies",
         "worktree-results",
         "usage",
         "series-handoff.json",
@@ -3504,6 +3820,18 @@ def safe_run_contents(directory):
                 if returned.is_symlink() or not returned.is_file() or returned.suffix != ".json":
                     raise Error("unexpected returns contents")
                 uuid4(returned.stem, "return attempt id")
+    verifies = directory / "verifies"
+    if verifies.exists():
+        if verifies.is_symlink() or not verifies.is_dir():
+            raise Error("unexpected verifies contents")
+        for step_dir in verifies.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected verifies contents")
+            ident(step_dir.name, "verify step id")
+            for stored in step_dir.iterdir():
+                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
+                    raise Error("unexpected verifies contents")
+                uuid4(stored.stem, "verify id")
     results = directory / "worktree-results"
     if results.exists():
         if results.is_symlink() or not results.is_dir():
@@ -4384,6 +4712,17 @@ def parse():
     check_parser.add_argument("--base")
     check_parser.add_argument("--run-id")
     check_parser.add_argument("--step-id")
+    verify_parser = commands.add_parser("verify-handoff")
+    verify_parser.add_argument("--actor", required=True)
+    verify_parser.add_argument("--run-id", required=True)
+    verify_parser.add_argument("--step-id", required=True)
+    validate_verify_parser = commands.add_parser("validate-verify-return")
+    validate_verify_parser.add_argument("--handoff-file", required=True)
+    validate_verify_parser.add_argument("--return-file", required=True)
+    record_verify_parser = commands.add_parser("record-verify")
+    record_verify_parser.add_argument("--actor", required=True)
+    record_verify_parser.add_argument("--run-id", required=True)
+    record_verify_parser.add_argument("--return-file", required=True)
     commands.add_parser("list")
     close = commands.add_parser("close")
     close.add_argument("--actor", required=True)
@@ -4451,6 +4790,12 @@ def main(argv=None):
             value = handoff(args)
         elif args.command == "validate-return":
             value = validate_return(args)
+        elif args.command == "verify-handoff":
+            value = verify_handoff(args)
+        elif args.command == "validate-verify-return":
+            value = validate_verify_return(args)
+        elif args.command == "record-verify":
+            value = record_verify(args)
         elif args.command == "check-changeset":
             value = check_changeset(args)
             return out(value, 0 if value["ok"] else 1)

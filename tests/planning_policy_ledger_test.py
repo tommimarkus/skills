@@ -87,6 +87,7 @@ class PlanningLedgerTest(unittest.TestCase):
         path = self.root / "plan.json"
         plan = {
             "contract_version": 5,
+            "verification": "closeout-only",
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["decision"],

@@ -129,7 +129,7 @@ class ComplexPlanEvalTest(unittest.TestCase):
                 'work_unit_id': name, 'max_attempts': 2,
                 'capability_requirements': {'baseline': 'plan-step-base-v1', 'additional': []},
             } for name, deps in modules]
-            plan = {'contract_version': 5, 'objective': 'Deliver consistent catalog exports.',
+            plan = {'contract_version': 5, 'verification': 'closeout-only', 'objective': 'Deliver consistent catalog exports.',
                 'scope_summary': 'The four named Python modules only.',
                 'approved_decisions': ['IDs use strip then casefold.', 'Reject duplicates; do not merge them.',
                                        'Validate empty ID before amount before duplicate ID.', 'Never mutate caller records.'],

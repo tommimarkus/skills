@@ -247,6 +247,7 @@ class NextBlockScopeParityTest(unittest.TestCase):
     NEXT_EMIT_CANDIDATES = {
         "init5": "init-v5",
         "record": "record-return",
+        "record_verify": "record-verify",
         "transition2": "transition",
         "close2": "close",
         "reopen2": "reopen",
@@ -258,14 +259,14 @@ class NextBlockScopeParityTest(unittest.TestCase):
         source = inspect.getsource(getattr(ledger, function_name))
         return "bounded_next(" in source or "next_after_return(" in source
 
-    def test_code_derived_emitters_are_exactly_init_v5_and_record_return(self):
+    def test_code_derived_emitters_are_exactly_init_v5_record_return_and_record_verify(self):
         """Pin the current, intentional scope so a silent expansion is visible."""
         emitters = {
             cli
             for name, cli in self.NEXT_EMIT_CANDIDATES.items()
             if self._emits_next(name)
         }
-        self.assertEqual({"init-v5", "record-return"}, emitters)
+        self.assertEqual({"init-v5", "record-return", "record-verify"}, emitters)
 
     def test_ledger_contract_names_every_code_derived_emitter(self):
         text = normalized(REFERENCE)

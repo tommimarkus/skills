@@ -64,6 +64,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
             )
         plan = {
             "contract_version": 5,
+            "verification": "closeout-only",
             "objective": "objective",
             "scope_summary": "scope",
             "approved_decisions": ["settled"],

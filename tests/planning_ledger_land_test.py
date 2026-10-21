@@ -10,6 +10,10 @@ leaf = base.leaf
 
 
 class LandCommandTest(base.DispatchHarness):
+    def init(self, leaves, units=None, worktrees=None, **plan_fields):
+        plan_fields.setdefault("verification", "closeout-only")
+        return super().init(leaves, units, worktrees, **plan_fields)
+
     def work(self, packet, relative):
         """Commit one file in the packet's worktree and return its commit."""
         tree = packet["worktree"]

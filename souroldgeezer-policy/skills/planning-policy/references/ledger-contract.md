@@ -433,8 +433,10 @@ result (`blocked:no_progress`), then ineligible outcome, exhaustion
 
 `record-return`'s own result states retry eligibility, target tier, and
 terminal precedence for the specific step and outcome it just recorded; treat
-that live `next` block as authoritative over this narrative summary. No other
-command emits this.
+that live `next` block as authoritative over this narrative summary. In a
+`leaf_verify_v1` run a `completed` block names `check-changeset` then
+`verify-handoff` instead of `land`, and `record-verify` with a pass or
+inconclusive verdict names `land`. No other command emits this.
 
 ### Tracing
 

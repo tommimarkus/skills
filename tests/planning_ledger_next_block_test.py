@@ -87,6 +87,7 @@ def batch_leaf(sid: str, dependencies: list[str], attempts: int = 3) -> dict:
 def make_plan(leaves: list[dict], series: dict | None = None) -> dict:
     plan = {
         "contract_version": 5,
+        "verification": "closeout-only",
         "objective": "Emit a bounded next block at the point of use",
         "scope_summary": "Only the declared steps are in scope.",
         "approved_decisions": ["The ledger states its own next action."],
